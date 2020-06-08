@@ -1,0 +1,16 @@
+package config
+
+// This is used for windows_perf_counters, which requires instances field,
+// but for some Object who doesn't support instances, we still need to specify
+// Instances = ["------"]
+
+// Ideally we don't need to check this, if customer doesn't specify resource, we assume there is no instance, and use "------"
+// This is for backwards compatible purpose, if customer using these windows Object names, and specify instance using "*" or something else, we don't want eliminate their metric silently
+// TODO: fail the translation if we find customer provide resources fields, after that we can remove this check. https://issues.amazon.com/issues/CWAgent-2824
+
+var Instances_disabled_plugins = []string{
+	"System",
+	"Memory",
+	"TCPv4",
+	"TCPv6",
+}

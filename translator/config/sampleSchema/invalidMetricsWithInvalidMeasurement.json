@@ -1,0 +1,53 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "resources": [
+          "*"
+        ],
+        "totalcpu": false,
+        "metrics_collection_interval": -1,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      },
+      "disk": {
+        "resources": [
+          "/",
+          "/tmp"
+        ],
+        "measurement": [
+          {"name": "", "rename": "DISK_FREE", "unit": 11},
+          "total",
+          "used"
+        ],
+        "metrics_collection_interval": 1.9,
+        "append_dimensions": {
+          "d3": "foo3",
+          "d4": "bar4"
+        }
+      },
+      "diskio": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "reads",
+          "writes",
+          "read_time",
+          "read_time",
+          "io_time"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "swap": {
+        "measurement": [
+          "swap_used",
+          "",
+          "swap_used_percent"
+        ]
+      }
+    }
+  }
+}

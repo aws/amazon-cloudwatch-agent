@@ -1,0 +1,148 @@
+========================================================================
+Amazon CloudWatch Agent 1.242486.0 (2020-03-24)
+========================================================================
+
+New Features and Enhancements:
+
+* Add support to publish multiple log files under one file config
+* Fix issue with meta character is used in the middle of the file_path for logs collected on Windows
+* Fix error log when directory matches the file_path for logs collected
+* Fix Agent may not send k8sapiserver metrics due to k8sapiserver OnStoppedLeading
+* Add support to use STS regional endpoints as default behavior to avoid availability risks   
+
+========================================================================
+Amazon CloudWatch Agent 1.237768.0 (2020-02-12)
+========================================================================
+
+New Features and Enhancements:
+
+* Better error logging for getting in cluster config for k8s related plugins
+
+========================================================================
+Amazon CloudWatch Agent 1.229195.0 (2019-10-07)
+========================================================================
+
+New Features and Enhancements:
+
+* Support automatic removal of old log files that sent to CloudWatch Logs
+
+========================================================================
+Amazon CloudWatch Agent 1.227496.0 (2019-09-03)
+========================================================================
+
+New Features and Enhancements:
+
+* Make AmazonCloudWatchAgent service depend on LanmanServer on Windows
+
+* Fix the issue of huge value of disk iops_in_progress metrics
+
+* Add backoff retry when calling ec2 describe tag failure
+
+========================================================================
+Amazon CloudWatch Agent 1.226589.0 (2019-08-19)
+========================================================================
+
+New Features and Enhancements:
+
+* Release Container Insights
+
+* Fix metric delay under some edge cases
+
+* Fix dropping log events after log truncate happens
+
+========================================================================
+Amazon CloudWatch Agent 1.219020.0 (2019-05-28)
+========================================================================
+
+New Features and Enhancements:
+
+* New Feature which allow cloudwatch-agent to run as non-root on Linux
+* CloudWatch-Agent will not keep restarting if no Json configuration files exist.
+* Remove the support of Windows Server 2003
+
+========================================================================
+Amazon CloudWatch Agent 1.207573.0 (2019-01-11)
+========================================================================
+
+New Features and Enhancements:
+
+* Support in EC2 A1 instance (ARM64)
+
+* procstat support - Collect process related metrics
+  https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-procstat-process-metrics.html
+
+* Multiple agent config support - Optionally provide more than one agent config
+  https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-common-scenarios.html#CloudWatch-Agent-multiple-config-files
+
+========================================================================
+Amazon CloudWatch Agent 1.203420.0 (2018-09-28)
+========================================================================
+
+New Features and Enhancements:
+
+* StatsD support - CloudWatch Agent serves as StatsD server/daemon to
+  receive request from StatsD clients.
+  https://github.com/etsy/statsd/wiki#client-implementations
+
+* CollectD support - CloudWatch Agent receives metrics in CollectD
+  binary format from CollectD network output plugin.
+  https://collectd.org/wiki/index.php/Networking_introduction#Client_setup
+
+* Vended metrics/logs support - send metrics or logs to a different AWS
+  account.
+
+* Supports new regions: AWS GovCloud (us-gov-west-1) and China regions
+  (cn-north-1, cn-northwest-1)
+
+========================================================================
+Amazon CloudWatch Agent 1.75.0 (2018-01-08)
+========================================================================
+
+New Features and Enhancements:
+
+* Windows Server 2003 64-bit operating system support is added.
+
+========================================================================
+Amazon CloudWatch Agent 1.70.0 (2017-12-05)
+========================================================================
+
+New Features and Enhancements:
+
+* Introducing Amazon CloudWatch Agent - a unified, cross-platform
+  metrics and logs monitoring solution
+
+* Supports both EC2 and on-premises servers, with optional
+  installation and management from AWS Systems Manager
+
+* Collects metrics such as CPU, Memory, Disk, Swap utilization and
+  more (including custom metrics for Windows through Performance
+  Counters)
+
+* Supports collection of high-resolution metrics (sub-minute
+  granularity)
+
+* Optionally produces metrics at a sub-resource level (per cpu-thread,
+  per mounted-filesystem, per network-interface)
+
+* Collects logs from text files and Windows Event Logs
+
+* Optionally adds EC2 instance information as CloudWatch Dimensions
+  (instance ID, image ID (AMI), instance type, AutoScaling Group name)
+
+* Optionally adds customizable CloudWatch Dimensions
+
+* Provides customizable aggregation on CloudWatch Dimensions
+  (producing instance-level vs fleet-level metrics in Amazon
+  CloudWatch)
+
+* HTTP Proxy support
+
+The Amazon CloudWatch Agent is supported on the following 64-bit
+operating systems:
+
+* Amazon Linux version 2014.03.02 or later
+* Ubuntu Server version 16.04 and 14.04
+* CentOS version 7.0 and 6.5
+* RedHat Enterprise Linux (RHEL) version 7.4, 7.0, and 6.5
+* Debian 8.0
+* Windows Server 2016, Windows Server 2012, and Windows Server 2008

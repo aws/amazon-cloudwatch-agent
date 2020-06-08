@@ -1,0 +1,17 @@
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "multi_line_start_pattern": "{timestampe_format}",
+            "timestamp_format":"%H:%M:%S %y %b %d"
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME"
+  }
+}

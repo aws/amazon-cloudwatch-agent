@@ -1,0 +1,61 @@
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "multi_line_start_pattern": "{timestamp_format}",
+            "timestamp_format": "%d %b %Y %H:%M:%S",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/*",
+            "blacklist": "agent.log*|env.log|profiler.log|\\.\\d$",
+            "publish_multi_logs": true,
+            "log_group_name": "EC2-System-Logs",
+            "log_stream_name": "multi_log_stream",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME",
+    "force_flush_interval": 60
+  },
+  "scroll": {
+    "endpoint_override":"https://ingress.cell0001.prod.us-east-1.scroll.aws.a2z.com",
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_type": "SERVICE",
+            "multi_line_start_pattern": "(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2})"
+          },
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "multi_line_start_pattern": "{timestamp_format}",
+            "timestamp_format": "%d %b %Y %H:%M:%S",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    },
+    "force_flush_interval": 60,
+    "credentials": {
+      "role_arn": "log_role_arn_value_test"
+    }
+  }
+}

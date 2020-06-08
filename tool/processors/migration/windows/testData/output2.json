@@ -1,0 +1,24 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "logs": {
+    "logs_collected": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "Application",
+            "event_levels": [
+              "ERROR",
+              "WARNING",
+              "INFORMATION"
+            ],
+            "event_format": "text",
+            "log_group_name": "Application",
+            "log_stream_name": "{instance_id}"
+          }
+        ]
+      }
+    }
+  }
+}

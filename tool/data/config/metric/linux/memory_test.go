@@ -1,0 +1,20 @@
+package linux
+
+import (
+	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestMemory_ToMap(t *testing.T) {
+	expectedKey := "mem"
+	expectedValue := map[string]interface{}{"measurement": []string{"mem_used_percent"}}
+	ctx := &runtime.Context{}
+	conf := new(Memory)
+	conf.Enable()
+	key, value := conf.ToMap(ctx)
+	assert.Equal(t, expectedKey, key)
+	assert.Equal(t, expectedValue, value)
+}

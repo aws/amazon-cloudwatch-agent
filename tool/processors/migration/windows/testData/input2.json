@@ -1,0 +1,30 @@
+{
+  "IsEnabled": true,
+  "EngineConfiguration": {
+    "Components": [
+      {
+        "FullName": "AWS.EC2.Windows.CloudWatch.EventLog.EventLogInputComponent,AWS.EC2.Windows.CloudWatch",
+        "Id": "ApplicationEventLog",
+        "Parameters": {
+          "Levels": "7",
+          "LogName": "Application"
+        }
+      },
+      {
+        "FullName": "AWS.EC2.Windows.CloudWatch.CloudWatchLogsOutput,AWS.EC2.Windows.CloudWatch",
+        "Id": "CloudWatchLogs",
+        "Parameters": {
+          "LogGroup": "Application",
+          "LogStream": "{instance_id}",
+          "Region": "us-west-2"
+        }
+      }
+    ],
+    "Flows": {
+      "Flows": [
+        "ApplicationEventLog,CloudWatchLogs"
+      ]
+    },
+    "PollInterval": "00:00:05"
+  }
+}

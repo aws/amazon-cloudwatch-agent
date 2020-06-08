@@ -1,0 +1,75 @@
+package util
+
+import (
+	"encoding/json"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestSetWithSameKeyIfFound(t *testing.T) {
+	var rawJsonString = `
+{
+  "itemA": "valueA",
+  "itemB": "1",
+  "itemC": "valueC",
+  "tagC": {
+    "key1": "value1",
+    "key2": "value2"
+  },
+  "tagD": {
+    "key3": "value3",
+    "key4": "value4"
+  }
+}
+`
+	var input interface{}
+
+	target_key_list := []string{"itemA", "itemB", "tagC"}
+	var expected = map[string]interface{}{
+		"itemA": "valueA",
+		"itemB": "1",
+		"tagC":  map[string]interface{}{"key1": "value1", "key2": "value2"},
+	}
+	var actual = map[string]interface{}{}
+	error := json.Unmarshal([]byte(rawJsonString), &input)
+	if error == nil {
+		SetWithSameKeyIfFound(input, target_key_list, actual)
+		assert.Equal(t, expected, actual)
+	} else {
+		panic(error)
+	}
+}
+
+func TestSetWithCustomizedKeyIfFound(t *testing.T) {
+	var rawJsonString = `
+{
+  "itemA": "valueA",
+  "itemB": "1",
+  "itemC": "valueC",
+  "tagC": {
+    "key1": "value1",
+    "key2": "value2"
+  },
+  "tagD": {
+    "key3": "value3",
+    "key4": "value4"
+  }
+}
+`
+	var input interface{}
+
+	targetKeyMap := map[string]string{"itemA": "itemAMapped", "itemB": "itemBMapped", "tagC": "tagCMapped"}
+	var expected = map[string]interface{}{
+		"itemAMapped": "valueA",
+		"itemBMapped": "1",
+		"tagCMapped":  map[string]interface{}{"key1": "value1", "key2": "value2"},
+	}
+	var actual = map[string]interface{}{}
+	error := json.Unmarshal([]byte(rawJsonString), &input)
+	if error == nil {
+		SetWithCustomizedKeyIfFound(input, targetKeyMap, actual)
+		assert.Equal(t, expected, actual)
+	} else {
+		panic(error)
+	}
+}

@@ -1,0 +1,76 @@
+// +build windows
+
+package wineventlog
+
+import (
+	"fmt"
+	"strconv"
+	"time"
+)
+
+const (
+	FormatXml       = "xml"
+	FormatPlainText = "text"
+	FormatDefault   = ""
+)
+
+type eventMessage struct {
+	Message string `xml:"RenderingInfo>Message"`
+}
+
+// For Windows versions later than 2003
+type windowsEventLogRecord struct {
+	windowsEventLog *windowsEventLog
+
+	XmlFormatContent string
+
+	System struct {
+		Description   string
+		Level         string `xml:"Level"`
+		EventRecordID string `xml:"EventRecordID"`
+
+		TimeCreated struct {
+			SystemTime time.Time `xml:"SystemTime,attr"`
+		} `xml:"TimeCreated"`
+		Channel         string `xml:"Channel"`
+		Computer        string `xml:"Computer"`
+		EventIdentifier struct {
+			ID string `xml:",chardata"`
+		} `xml:"EventID"`
+		Provider struct {
+			Name string `xml:"Name,attr"`
+		} `xml:"Provider"`
+	} `xml:"System"`
+}
+
+func newEventLogRecord(l *windowsEventLog) *windowsEventLogRecord {
+	record := new(windowsEventLogRecord)
+	record.windowsEventLog = l
+	return record
+}
+
+func (record *windowsEventLogRecord) RecordId() string {
+	return record.System.EventRecordID
+}
+
+func (record *windowsEventLogRecord) Value() (valueString string, err error) {
+	switch record.windowsEventLog.renderFormat {
+	case FormatXml, FormatDefault:
+		//XML format
+		valueString = record.XmlFormatContent
+	case FormatPlainText:
+		//old SSM agent Windows format
+		levelId, _ := strconv.ParseInt(record.System.Level, 10, 32)
+		valueString = fmt.Sprintf("[%s] [%s] [%s] [%s] [%s] [%s]", record.System.Channel,
+			WindowsEventLogLevelName(int32(levelId)), record.System.EventIdentifier.ID, record.System.Provider.Name,
+			record.System.Computer, record.System.Description)
+	default:
+		err = fmt.Errorf("renderFormat %s is not recognized", record.windowsEventLog.renderFormat)
+	}
+
+	return valueString, err
+}
+
+func (record *windowsEventLogRecord) Timestamp() string {
+	return fmt.Sprint(record.System.TimeCreated.SystemTime.UnixNano())
+}

@@ -1,0 +1,45 @@
+{
+  "agent": {
+    "credentials": {
+      "role_arn": "global_role_arn_value"
+    },
+    "internal": true
+  },
+  "csm": {
+    "port": 4000
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "collectd": {
+        "collectd_auth_file": "/etc/collectd/auth_file",
+        "collectd_security_level": "encrypt",
+        "collectd_typesdb": [
+          "/usr/share/collectd/types.db"
+        ],
+        "metrics_aggregation_interval": 60,
+        "name_prefix": "collectd_",
+        "service_address": "udp://127.0.0.1:25826"
+      },
+      "statsd": {
+        "metric_separator": "_",
+        "metrics_aggregation_interval": 60,
+        "metrics_collection_interval": 10,
+        "service_address": ":8125"
+      }
+    }
+  }
+}
