@@ -1,0 +1,14 @@
+{
+  "logs": {
+    "log_stream_name": "LOG_STREAM_NAME_2",
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+          }
+        ]
+      }
+    }
+  }
+}

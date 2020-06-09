@@ -1,0 +1,18 @@
+package agent
+
+import (
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+)
+
+type RoundInterval struct {
+}
+
+func (r *RoundInterval) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+	returnKey, returnVal = translator.DefaultCase("round_interval", false, input)
+	return
+}
+
+func init() {
+	r := new(RoundInterval)
+	RegisterRule("round_interval", r)
+}

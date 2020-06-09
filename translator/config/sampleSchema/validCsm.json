@@ -1,0 +1,6 @@
+{
+  "csm": {
+    "port": 4000,
+    "memory_limit_in_mb": 15
+  }
+}

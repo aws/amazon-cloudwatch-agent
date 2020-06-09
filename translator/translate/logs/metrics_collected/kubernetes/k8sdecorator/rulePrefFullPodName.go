@@ -1,0 +1,20 @@
+package k8sdecorator
+
+import (
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+)
+
+const (
+	SectionKeyPrefFullPodName = "prefer_full_pod_name"
+)
+
+type PrefFullPodName struct {
+}
+
+func (t *PrefFullPodName) ApplyRule(input interface{}) (string, interface{}) {
+	return translator.DefaultCase(SectionKeyPrefFullPodName, false, input)
+}
+
+func init() {
+	RegisterRule(SectionKeyPrefFullPodName, new(PrefFullPodName))
+}

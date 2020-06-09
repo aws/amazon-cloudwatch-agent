@@ -1,0 +1,10 @@
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": []
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME"
+  }
+}

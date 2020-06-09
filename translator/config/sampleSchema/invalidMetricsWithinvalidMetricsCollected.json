@@ -1,0 +1,48 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "resources": [
+          "asdas", "*"
+        ],
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_USAGE_IDLE",
+            "unit": "unit"
+          },
+          {
+            "name": "cpu_usage_nice",
+            "unit": "unit"
+          },
+          "cpu_usage_guest"
+        ],
+        "totalcpu": "false"
+      },
+      "diskio": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "reads",
+          "writes",
+          "read_time",
+          "write_time",
+          "io_time"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "net": {
+        "resources": [
+          "eth0"
+        ],
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv",
+          "drop_in",
+          "drop_out"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "kubernetes": {
+        "cluster_name": "TestCluster"
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

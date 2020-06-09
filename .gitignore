@@ -1,0 +1,6 @@
+.idea
+vendor
+release
+.DS_Store
+.vscode
+*.iml

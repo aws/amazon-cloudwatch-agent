@@ -1,0 +1,10 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "logfile": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
+    "internal": true,
+    "credentials": {
+      "role_arn": "global_role_arn_value"
+    }
+  }
+}

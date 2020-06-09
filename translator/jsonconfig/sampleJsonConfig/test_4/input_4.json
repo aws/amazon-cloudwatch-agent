@@ -1,0 +1,26 @@
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\test.log"
+          }
+        ]
+      },
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_format": "xml",
+            "event_levels": [
+              "INFORMATION"
+            ],
+            "event_name": "Application",
+            "log_group_name": "Application",
+            "log_stream_name": "Application"
+          }
+        ]
+      }
+    }
+  }
+}

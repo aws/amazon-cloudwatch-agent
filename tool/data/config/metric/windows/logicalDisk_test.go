@@ -1,0 +1,20 @@
+package windows
+
+import (
+	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestLogicalDisk_ToMap(t *testing.T) {
+	expectedKey := "LogicalDisk"
+	expectedValue := map[string]interface{}{"resources": []string{"*"}, "measurement": []string{"% Free Space"}}
+	ctx := &runtime.Context{}
+	conf := new(LogicalDisk)
+	conf.Enable()
+	key, value := conf.ToMap(ctx)
+	assert.Equal(t, expectedKey, key)
+	assert.Equal(t, expectedValue, value)
+}

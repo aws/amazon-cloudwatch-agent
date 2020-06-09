@@ -1,0 +1,23 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          {"name": "cpu_usage_idle", "rename": "CPU_USAGE_IDLE", "unit": "unit"},
+          {"name": "cpu_usage_nice", "unit": "unit"},
+          "cpu_usage_guest"
+        ],
+        "totalcpu": false,
+        "metrics_collection_interval": 10,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      }
+    },
+    "aggregation_dimensions" : ["InstanceId", "InstanceType", []]
+  }
+}

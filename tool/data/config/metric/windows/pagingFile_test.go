@@ -1,0 +1,20 @@
+package windows
+
+import (
+	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestPagingFile_ToMap(t *testing.T) {
+	expectedKey := "Paging File"
+	expectedValue := map[string]interface{}{"resources": []string{"*"}, "measurement": []string{"% Usage"}}
+	ctx := &runtime.Context{}
+	conf := new(PagingFile)
+	conf.Enable()
+	key, value := conf.ToMap(ctx)
+	assert.Equal(t, expectedKey, key)
+	assert.Equal(t, expectedValue, value)
+}

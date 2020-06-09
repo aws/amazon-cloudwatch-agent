@@ -1,0 +1,94 @@
+package windows
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
+	"testing"
+)
+
+func TestMapOldWindowsConfigToNewConfig(t *testing.T) {
+	testCases := []struct {
+		inputFile  string
+		outputFile string
+	}{
+		{inputFile: "testData/input1.json", outputFile: "testData/output1.json"},
+		{inputFile: "testData/input2.json", outputFile: "testData/output2.json"},
+		{inputFile: "testData/input3.json", outputFile: "testData/output3.json"},
+		{inputFile: "testData/input4.json", outputFile: "testData/output4.json"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s, %s", tc.inputFile, tc.outputFile), func(t *testing.T) {
+			// Get input
+			absPath, _ := filepath.Abs(tc.inputFile)
+			oldConfig, err := ReadOldConfigFromPath(absPath)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			// Get actual output
+			newConfig := MapOldWindowsConfigToNewConfig(oldConfig)
+
+			// Get the expected
+			absPath, _ = filepath.Abs(tc.outputFile)
+			expectedConfig, err := ReadNewConfigFromPath(absPath)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			// Assert
+			if !AreTwoConfigurationsEqual(newConfig, expectedConfig) {
+				t.Errorf("The generated new config is incorrect, got:\n %v\n, want:\n %v.\n", newConfig, expectedConfig)
+			}
+		})
+	}
+}
+
+func TestInvalidOldWindowsConfig(t *testing.T) {
+	testCases := []struct {
+		inputFile string
+	}{
+		{inputFile: "invalidTestData/input1.json"},
+		{inputFile: "invalidTestData/input2.json"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s", tc.inputFile), func(t *testing.T) {
+			// Get input
+			absPath, _ := filepath.Abs(tc.inputFile)
+			oldConfig, err := ReadOldConfigFromPath(absPath)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			// Run the function - expect it to exit(1) as the input is invalid
+			// Ref: https://stackoverflow.com/questions/26225513/how-to-test-os-exit-scenarios-in-go
+			if os.Getenv("BE_CRASHER") == "1" {
+				MapOldWindowsConfigToNewConfig(oldConfig)
+				return
+			}
+			cmd := exec.Command(os.Args[0], "-test.run=TestInvalidOldWindowsConfig")
+			cmd.Env = append(os.Environ(), "BE_CRASHER=1")
+			err = cmd.Run()
+			if e, ok := err.(*exec.ExitError); ok && !e.Success() {
+				return
+			}
+			t.Fatalf("process ran with err %v, want exit status 1", err)
+		})
+	}
+}
+
+func TestMapLogLevelsStringToSlice(t *testing.T) {
+	levels := mapLogLevelsStringToSlice("7")
+	expected := []string{ERROR, WARNING, INFORMATION}
+
+	if !reflect.DeepEqual(levels, expected) {
+		t.Errorf("The generated levels are incorrect, got:\n %s\n, want:\n %s.\n", levels, expected)
+	}
+}
