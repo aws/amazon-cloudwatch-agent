@@ -65,6 +65,9 @@ func TestLogs(t *testing.T) {
 	done := make(chan struct{})
 	lsrc := lsrcs[0]
 	lsrc.SetOutput(func(e logs.LogEvent) {
+		if e == nil {
+			return
+		}
 		if e.Message() != logEntryString {
 			t.Errorf("Log entry string does not match:\nExpect: %v\nFound : %v", logEntryString, e.Message())
 		}
@@ -105,6 +108,9 @@ func TestLogsEncoding(t *testing.T) {
 	done := make(chan struct{})
 	lsrc := lsrcs[0]
 	lsrc.SetOutput(func(e logs.LogEvent) {
+		if e == nil {
+			return
+		}
 		if e.Message() != logEntryString {
 			t.Errorf("Log entry string does not match:\nExpect: %v\nFound : %v", logEntryString, e.Message())
 		}
@@ -155,7 +161,7 @@ func TestLogsEncodingUtf16(t *testing.T) {
 	expected := []string{"ab\n\n", "c", "d\r昊"}
 	for _, expect := range expected {
 		e := <-evts
-		if e.Message() != expect {
+		if e != nil && e.Message() != expect {
 			t.Errorf("Log message does not match expectation, expect %q but found %q", expect, e.Message())
 		}
 	}

@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
@@ -29,14 +30,14 @@ type LogFile struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	configs map[*FileConfig]map[string]*tailerSrc
+	configs map[*FileConfig]*destMap
 	done    chan struct{}
 	started bool
 }
 
 func NewLogFile() *LogFile {
 	return &LogFile{
-		configs: make(map[*FileConfig]map[string]*tailerSrc),
+		configs: make(map[*FileConfig]*destMap),
 		done:    make(chan struct{}),
 	}
 }
@@ -132,6 +133,30 @@ func (t *LogFile) Stop() {
 	close(t.done)
 }
 
+type destMap struct {
+	sync.RWMutex
+	m map[string]*tailerSrc
+}
+
+func (dm *destMap) Set(name string, ts *tailerSrc) {
+	dm.Lock()
+	dm.m[name] = ts
+	dm.Unlock()
+}
+
+func (dm *destMap) Delete(name string) {
+	dm.Lock()
+	delete(dm.m, name)
+	dm.Unlock()
+}
+
+func (dm *destMap) Get(name string) (*tailerSrc, bool) {
+	dm.RLock()
+	ts, ok := dm.m[name]
+	dm.RUnlock()
+	return ts, ok
+}
+
 //Try to find if there is any new file needs to be added for monitoring.
 func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	if !t.started {
@@ -152,11 +177,11 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 		for _, filename := range targetFiles {
 			dests, ok := t.configs[fileconfig]
 			if !ok {
-				dests = make(map[string]*tailerSrc)
+				dests = &destMap{m: make(map[string]*tailerSrc)}
 				t.configs[fileconfig] = dests
 			}
 
-			if _, ok := dests[filename]; ok {
+			if _, ok := dests.Get(filename); ok {
 				continue
 			}
 
@@ -227,10 +252,11 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
+				func() { dests.Delete(filename) },
 			)
 			srcs = append(srcs, src)
 
-			dests[filename] = src
+			dests.Set(filename, src)
 		}
 	}
 
