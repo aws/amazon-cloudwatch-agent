@@ -114,10 +114,16 @@ func (l *LogAgent) Run(ctx context.Context) {
 func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	eventsCh := make(chan LogEvent)
 
-	src.SetOutput(func(e LogEvent) { eventsCh <- e })
+	src.SetOutput(func(e LogEvent) {
+		if e == nil {
+			close(eventsCh)
+			log.Printf("I! [logagent] Log src has stopped for %v/%v", src.Group(), src.Stream())
+			return
+		}
+		eventsCh <- e
+	})
 
-	for {
-		e := <-eventsCh
+	for e := range eventsCh {
 		err := dest.Publish([]LogEvent{e})
 		if err == ErrOutputStopped {
 			log.Printf("I! [logagent] Log destination %v has stopped, finalizing %v/%v", l.destNames[dest], src.Group(), src.Stream())

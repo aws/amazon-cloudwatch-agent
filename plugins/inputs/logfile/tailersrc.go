@@ -28,6 +28,7 @@ type tailerSrc struct {
 	enc            encoding.Encoding
 	maxEventSize   int
 	truncateSuffix string
+	onExit         func()
 
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
@@ -45,6 +46,7 @@ func NewTailerSrc(
 	enc encoding.Encoding,
 	maxEventSize int,
 	truncateSuffix string,
+	onExit func(),
 ) *tailerSrc {
 	ts := &tailerSrc{
 		group:          group,
@@ -58,6 +60,7 @@ func NewTailerSrc(
 		enc:            enc,
 		maxEventSize:   maxEventSize,
 		truncateSuffix: truncateSuffix,
+		onExit:         onExit,
 
 		offsetCh: make(chan int64, 100),
 		done:     make(chan struct{}),
@@ -102,6 +105,10 @@ func (ts *tailerSrc) Stop() {
 func (ts *tailerSrc) runTail() {
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
+	defer func() {
+		ts.onExit()
+		ts.outputFn(nil)
+	}()
 	var msg, init string
 	var cnt int
 	var offset int64
