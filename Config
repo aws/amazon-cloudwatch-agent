@@ -1,0 +1,93 @@
+# If the current branch does not yet exist in Brazil, you can create and push
+# it simultaneously using the following command:
+# 'git push -u origin BRANCH_NAME_HERE'
+
+package.Go3p-Github-Aws-AmazonCloudwatchAgent = {
+  # Please read http://tiny/inaap63w/3PMajorVersionScheme before changing the
+  # suggested major version.
+  interfaces = (0.x);
+  scope = third-party;
+
+  third-party-configuration = {
+    # This is important, please do not remove it.
+    thirdPartyName       = "github.com/aws/amazon-cloudwatch-agent";
+    thirdPartyVersion    = "amazon-cloudwatch-agent-20200610-4ca8916";
+    licenseType          = (UNKNOWN, Apache-2.0, BSD-2-Clause, BSD-3-Clause, MIT, MPL-2.0, Zlib);
+    licenseFile          = (amazon-cloudwatch-container-insights/LICENSE, licensing/LICENSE, licensing/THIRD-PARTY-LICENSES, plugins/inputs/logfile/tail/LICENSE.txt, );
+    approvedTicketNumber = "526b2d16-6ecc-4f85-a89c-ccfb739f5136";
+    repository           = "golang";
+    downloadType         = "source";
+  };
+
+  build-system = bgo-wrap-make;
+
+  build-tools = {
+    0.x = {
+      GoLang = 1.x;
+      BrazilMakeGo = 2.0;
+    };
+  };
+
+  dependencies = {
+    0.x = {
+      Go3p-Github-Influxdata-Telegraf = 1.x;
+      Go3p-Gopkg-Tomb-V1 = 0.x;
+      # No major versions found that satisfy dependency on github.com/aws/aws-sdk-go from golang with a version = .
+      # Recommended to import version v1.31.15
+      # and update the Config to depend on Go3p-Github-Aws-AwsSdkGo = 1.x.
+      Go3p-Github-Aws-AwsSdkGo = ?;
+      # No major versions found that satisfy dependency on github.com/google/cadvisor from golang with a version = .
+      # Recommended to import version v0.36.0
+      # and update the Config to depend on Go3p-Github-Google-Cadvisor = 0.x.
+      Go3p-Github-Google-Cadvisor = ?;
+      Go3p-Github-BurntSushi-Toml = 1.x;
+      Go3p-Github-Shirou-Gopsutil = 2.x;
+      Go3p-Github-Kardianos-Service = 1.x;
+      # No major versions found that satisfy dependency on gopkg.in/natefinch/lumberjack.v2 from golang with a version = .
+      # Recommended to import version v2.1
+      # and update the Config to depend on Go3p-Gopkg-Natefinch-Lumberjack-V2 = 2.x.
+      Go3p-Gopkg-Natefinch-Lumberjack-V2 = ?;
+      # No major versions found that satisfy dependency on github.com/bigkevmcd/go-configparser from golang with a version = .
+      # Recommended to import version v1.1
+      # and update the Config to depend on Go3p-Github-Bigkevmcd-GoConfigparser = 1.x.
+      Go3p-Github-Bigkevmcd-GoConfigparser = ?;
+      # No major versions found that satisfy dependency on github.com/Jeffail/gabs from golang with a version = .
+      # Recommended to import version v2.5.1
+      # and update the Config to depend on Go3p-Github-Jeffail-Gabs = 2.x.
+      Go3p-Github-Jeffail-Gabs = ?;
+      Go3p-Github-Stretchr-Testify = 1.x;
+      Go3p-Github-Xeipuuv-Gojsonschema = 1.x;
+      Go3p-Github-Gobwas-Glob = 1.x;
+      # No major versions found that satisfy dependency on github.com/opencontainers/runc from golang with a version = .
+      # Recommended to import version v1.0.0-rc90
+      # and update the Config to depend on Go3p-Github-Opencontainers-Runc = 1.x.
+      Go3p-Github-Opencontainers-Runc = ?;
+      Go3p-Gopkg-Fsnotify-V1 = 1.x;
+    };
+  };
+
+  test-dependencies = {
+    0.x = {
+      # No major versions found that satisfy dependency on github.com/docker/docker from golang with a version = .
+      # Recommended to import version v19.03.11
+      # and update the Config to depend on Go3p-Github-Docker-Docker = 19.x.
+      Go3p-Github-Docker-Docker = ?;
+      # No major versions found that satisfy dependency on github.com/influxdata/toml from golang with a version = .
+      # Recommended to import version toml-20180606-2a2e301
+      # and update the Config to depend on Go3p-Github-Influxdata-Toml = 0.x.
+      Go3p-Github-Influxdata-Toml = ?;
+      # No major versions found that satisfy dependency on github.com/influxdata/wlog from golang with a version = .
+      # Recommended to import version wlog-20160411-7c63b0a
+      # and update the Config to depend on Go3p-Github-Influxdata-Wlog = 0.x.
+      Go3p-Github-Influxdata-Wlog = ?;
+    };
+  };
+
+  deploy = {
+    map = (default, -gopath/**);
+  };
+
+  targets = {
+  };
+};
+# vim: set ft=perl ts=2 sw=2 tw=79 :
