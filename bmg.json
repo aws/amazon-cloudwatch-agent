@@ -1,1 +1,5 @@
-{"alias": "github.com/aws/amazon-cloudwatch-agent"}
+{
+  "alias": "github.com/aws/amazon-cloudwatch-agent",
+  "makefile": "BrazilMakefile"
+}
+
