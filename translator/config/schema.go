@@ -167,6 +167,9 @@ var schema = `{
             },
             "procstat": {
               "$ref": "#/definitions/metricsDefinition/definitions/procstatDefinitions"
+            },
+            "ethtool": {
+              "$ref": "#/definitions/metricsDefinition/definitions/ethtoolDefinitions"
             }
           },
           "minProperties": 1,
@@ -426,7 +429,37 @@ var schema = `{
                }
             ]
           }
-	},
+  },
+  "ethtoolDefinitions": {
+    "type": "object",
+    "properties": {
+      "interface_include": {
+        "type": "array",
+        "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+        }
+      },
+      "interface_exclude": {
+        "type": "array",
+        "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+        }
+      },
+      "metrics_include": {
+        "type": "array",
+        "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+        }
+      }
+    },
+    "additionalProperties": false
+  },
 	"metricsMeasurementWithoutDecorationDefinition": {
           "type": "array",
           "items": {

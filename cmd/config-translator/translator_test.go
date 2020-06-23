@@ -156,6 +156,10 @@ func TestProcstatConfig(t *testing.T) {
 	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/validProcstatConfig.json", true, map[string]int{})
 }
 
+func TestEthtoolConfig(t *testing.T) {
+	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/validEthtoolConfig.json", true, map[string]int{})
+}
+
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
 	if files, err := ioutil.ReadDir("../../translator/totomlconfig/sampleConfig/"); err == nil {
