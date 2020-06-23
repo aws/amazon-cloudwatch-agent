@@ -173,7 +173,9 @@ var schema = `{
             }
           },
           "minProperties": 1,
-          "additionalProperties": { "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"}
+          "additionalProperties": {
+            "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
+          }
         },
         "force_flush_interval": {
           "description": "Max time to wait before batch publishing the metrics, unit is second.",
@@ -312,8 +314,8 @@ var schema = `{
                   },
                   "maxItems": 256
                 },
-                "drop_device":{
-                    "type":"boolean"
+                "drop_device": {
+                  "type": "boolean"
                 }
               }
             }
@@ -381,86 +383,86 @@ var schema = `{
           "maxItems": 255,
           "items": {
             "allOf": [
-                {
-                  "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                      "pid_file": {
-                	  "type": "string",
-                	  "minLength": 1,
-                	  "maxLength": 255,
-                	  "descriptions": "the path of pid_file"
-                      },
-                      "exe": {
-                	  "type": "string",
-                	  "minLength": 1,
-                	  "maxLength": 255,
-                	  "descriptions": "a regex matches the names of processes"
-                      },
-                      "pattern": {
-                	  "type": "string",
-                	  "minLength": 1,
-                	  "maxLength": 255,
-                	  "descriptions": "a regex matches the whole command of processes"
-                      },
-                      "measurement": {
-                          "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementWithoutDecorationDefinition"
-                      }
+              {
+                "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "pid_file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "descriptions": "the path of pid_file"
                   },
-                  "anyOf": [
-                      {
-                	  "required": [
-                	    "pid_file"
-                	  ]
-                      },
-                      {
-                	  "required": [
-                	    "exe"
-                	  ]
-                      },
-                      {
-                	  "required": [
-                	    "pattern"
-                	  ]
-                      }
-                   ]
-               }
+                  "exe": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "descriptions": "a regex matches the names of processes"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "descriptions": "a regex matches the whole command of processes"
+                  },
+                  "measurement": {
+                    "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementWithoutDecorationDefinition"
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "pid_file"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "exe"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "pattern"
+                    ]
+                  }
+                ]
+              }
             ]
           }
-  },
-  "ethtoolDefinitions": {
-    "type": "object",
-    "properties": {
-      "interface_include": {
-        "type": "array",
-        "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-        }
-      },
-      "interface_exclude": {
-        "type": "array",
-        "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-        }
-      },
-      "metrics_include": {
-        "type": "array",
-        "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-        }
-      }
-    },
-    "additionalProperties": false
-  },
-	"metricsMeasurementWithoutDecorationDefinition": {
+        },
+        "ethtoolDefinitions": {
+          "type": "object",
+          "properties": {
+            "interface_include": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "interface_exclude": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "metrics_include": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "metricsMeasurementWithoutDecorationDefinition": {
           "type": "array",
           "items": {
             "type": "string",
@@ -469,7 +471,7 @@ var schema = `{
           },
           "uniqueItems": true
         },
-	"metricsMeasurementDefinition": {
+        "metricsMeasurementDefinition": {
           "type": "array",
           "items": {
             "oneOf": [
@@ -631,7 +633,7 @@ var schema = `{
                     "maxLength": 4096
                   },
                   "publish_multi_logs": {
-                   "type": "boolean"
+                    "type": "boolean"
                   }
                 },
                 "required": [
