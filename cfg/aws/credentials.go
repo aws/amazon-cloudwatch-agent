@@ -5,10 +5,25 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
+)
+
+const (
+	bjsPartition          = "aws-cn"
+	pdtPartition          = "aws-us-gov"
+	lckPartition          = "aws-iso-b"
+	dcaPartition          = "aws-iso"
+	classicFallbackRegion = "us-east-1"
+	bjsFallbackRegion     = "cn-north-1"
+	pdtFallbackRegion     = "us-gov-west-1"
+	lckFallbackRegion     = "us-isob-east-1"
+	dcaFallbackRegion     = "us-iso-east-1"
 )
 
 type CredentialConfig struct {
@@ -19,6 +34,17 @@ type CredentialConfig struct {
 	Profile   string
 	Filename  string
 	Token     string
+}
+
+type stsCredentialProvider struct {
+	regional, partitional, fallbackProvider *stscreds.AssumeRoleProvider
+}
+
+func (s *stsCredentialProvider) IsExpired() bool {
+	if s.fallbackProvider != nil {
+		return s.fallbackProvider.IsExpired()
+	}
+	return s.regional.IsExpired()
 }
 
 type RootCredentialsProvider struct {
@@ -75,7 +101,7 @@ func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 	config := &aws.Config{
 		Region: aws.String(c.Region),
 	}
-	config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleARN)
+	config.Credentials = newStsCredentials(rootCredentials, c.RoleARN, c.Region)
 	return getSession(config)
 }
 
@@ -85,6 +111,83 @@ func (c *CredentialConfig) Credentials() client.ConfigProvider {
 	} else {
 		return c.rootCredentials()
 	}
+}
+
+func (s *stsCredentialProvider) Retrieve() (credentials.Value, error) {
+	if s.fallbackProvider != nil {
+		return s.fallbackProvider.Retrieve()
+	}
+
+	v, err := s.regional.Retrieve()
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == sts.ErrCodeRegionDisabledException {
+			log.Printf("D! The regional STS endpoint is deactivated and going to fall back to partitional STS endpoint\n")
+			s.fallbackProvider = s.partitional
+			return s.partitional.Retrieve()
+		}
+	}
+
+	return v, err
+}
+
+func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *credentials.Credentials {
+	regional := &stscreds.AssumeRoleProvider{
+		Client: sts.New(c, &aws.Config{
+			Region:              aws.String(region),
+			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
+		}),
+		RoleARN:  roleARN,
+		Duration: stscreds.DefaultDuration,
+	}
+
+	fallbackRegion := getFallbackRegion(region)
+
+	partitional := &stscreds.AssumeRoleProvider{
+		Client: sts.New(c, &aws.Config{
+			Region:              aws.String(fallbackRegion),
+			Endpoint:            aws.String(getFallbackEndpoint(fallbackRegion)),
+			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
+		}),
+		RoleARN:  roleARN,
+		Duration: stscreds.DefaultDuration,
+	}
+
+	return credentials.NewCredentials(&stsCredentialProvider{regional: regional, partitional: partitional})
+}
+
+// The partitional STS endpoint used to fallback when regional STS endpoint is not activated.
+func getFallbackEndpoint(region string) string {
+	partition := getPartition(region)
+	endpoint, _ := partition.EndpointFor("sts", region)
+	log.Printf("D! STS partitional endpoint retrieved: %s", endpoint.URL)
+	return endpoint.URL
+}
+
+// Get the region in the partition where STS endpoint cannot be deactivated by customers which is used to fallback.
+// NOTE: Some Regions are not enabled by default, such as the Asia Pacific Hong Kong Region. In that case, when you
+// manually enable the Region, the regional STS endpoints will always be activated and cannot be deactivated.
+// Refer to: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html
+func getFallbackRegion(region string) string {
+	partition := getPartition(region)
+	switch partition.ID() {
+	case bjsPartition:
+		return bjsFallbackRegion
+	case pdtPartition:
+		return pdtFallbackRegion
+	case dcaPartition:
+		return dcaFallbackRegion
+	case lckPartition:
+		return lckFallbackRegion
+	default:
+		return classicFallbackRegion
+	}
+}
+
+// Get the partition information based on the region name
+func getPartition(region string) endpoints.Partition {
+	partition, _ := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
+	return partition
 }
 
 func init() {
