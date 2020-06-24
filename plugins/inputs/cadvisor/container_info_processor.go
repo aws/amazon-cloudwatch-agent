@@ -1,10 +1,12 @@
 package cadvisor
 
 import (
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"path"
 	"strconv"
+	"strings"
 	"time"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor/extractors"
 	cinfo "github.com/google/cadvisor/info/v1"
@@ -16,6 +18,7 @@ const (
 	namespaceLable     = "io.kubernetes.pod.namespace"
 	podIdLable         = "io.kubernetes.pod.uid"
 	containerNameLable = "io.kubernetes.container.name"
+	cadvisorPathPrefix = "kubepods"
 )
 
 type podKey struct {
@@ -70,6 +73,15 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 	var result []*extractors.CAdvisorMetric
 	var pKey *podKey
 
+	// For "container in container" case, cadvisor will provide multiple stats for same container, for example:
+	// /kubepods/burstable/<pod-id>/<container-id>
+	// /kubepods/burstable/<pod-id>/<container-id>/kubepods/burstable/<pod-id>/<container-id>
+	// In above example, the second path is actually for the container in container, which should be ignored
+	keywordCount := strings.Count(info.Name, cadvisorPathPrefix)
+	if keywordCount > 1 {
+		return result, pKey
+	}
+
 	tags := map[string]string{}
 
 	var containerType string
@@ -120,6 +132,15 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 
 func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extractors.CAdvisorMetric {
 	var result []*extractors.CAdvisorMetric
+
+	// For "container in container" case, cadvisor will provide multiple stats for same pod, for example:
+	// /kubepods/burstable/<pod-id>
+	// /kubepods/burstable/<pod-id>/<container-id>/kubepods/burstable/<pod-id>
+	// In above example, the second path is actually for the container in container, which should be ignored
+	keywordCount := strings.Count(info.Name, cadvisorPathPrefix)
+	if keywordCount > 1 {
+		return result
+	}
 
 	podKey := getPodKey(info, podKeys)
 	if podKey == nil {
