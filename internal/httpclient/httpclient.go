@@ -2,6 +2,7 @@ package httpclient
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math"
@@ -61,14 +62,27 @@ func (h *HttpClient) request(endpoint string) ([]byte, error) {
 		return nil, fmt.Errorf("unable to get response from %s, status code: %d", endpoint, resp.StatusCode)
 	}
 
-	if resp.ContentLength == -1 || resp.ContentLength >= maxHttpResponseLength {
+	if resp.ContentLength >= maxHttpResponseLength {
 		return nil, fmt.Errorf("get response with unexpected length from %s, response length: %d", endpoint, resp.ContentLength)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	var reader io.Reader
+	//value -1 indicates that the length is unknown, see https://golang.org/src/net/http/response.go
+	//In this case, we read until the limit is reached
+	//This might happen with chunked responses from ECS Introspection API
+	if resp.ContentLength == -1 {
+		reader = io.LimitReader(resp.Body, maxHttpResponseLength)
+	} else {
+		reader = resp.Body
+	}
+
+	body, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from %s, error: %v", endpoint, err)
 	}
 
+	if len(body) == maxHttpResponseLength {
+		return nil, fmt.Errorf("response from %s, execeeds the maximum length: %v", endpoint, maxHttpResponseLength)
+	}
 	return body, nil
 }
