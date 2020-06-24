@@ -35,6 +35,12 @@ package.Go3p-Github-Aws-AmazonCloudwatchAgent = {
     };
   };
 
+  remove-dependencies = {
+    1.0 = {
+      Go3p-Golang-X-Sys = 1.x;
+    };
+  };
+
   test-dependencies = {
     1.0 = {
     };
