@@ -12,7 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -130,35 +130,52 @@ func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	go leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
-		Lock: lock,
-		// IMPORTANT: you MUST ensure that any code you have that
-		// is protected by the lease must terminate **before**
-		// you call cancel. Otherwise, you could have a background
-		// loop still running and another process could
-		// get elected before your background loop finished, violating
-		// the stated goal of the lease.
-		LeaseDuration: 60 * time.Second,
-		RenewDeadline: 15 * time.Second,
-		RetryPeriod:   5 * time.Second,
-		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(ctx context.Context) {
-				log.Printf("I! k8sapiserver OnStartedLeading: %s", k.NodeName)
-				// we're notified when we start
-				k.leading = true
-			},
-			OnStoppedLeading: func() {
-				log.Printf("I! k8sapiserver OnStoppedLeading: %s", k.NodeName)
-				// we can do cleanup here, or after the RunOrDie method returns
-				k.leading = false
-				//node and pod are only used for cluster level metrics, endpoint is used for decorator too.
-				k8sclient.Get().Node.Shutdown()
-				k8sclient.Get().Pod.Shutdown()
-			},
-		},
-	})
+	go k.startLeaderElection(ctx, lock)
 
 	return nil
+}
+
+func (k *K8sAPIServer) startLeaderElection(ctx context.Context, lock resourcelock.Interface) {
+
+	for {
+		leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+			Lock: lock,
+			// IMPORTANT: you MUST ensure that any code you have that
+			// is protected by the lease must terminate **before**
+			// you call cancel. Otherwise, you could have a background
+			// loop still running and another process could
+			// get elected before your background loop finished, violating
+			// the stated goal of the lease.
+			LeaseDuration: 60 * time.Second,
+			RenewDeadline: 15 * time.Second,
+			RetryPeriod:   5 * time.Second,
+			Callbacks: leaderelection.LeaderCallbacks{
+				OnStartedLeading: func(ctx context.Context) {
+					log.Printf("I! k8sapiserver OnStartedLeading: %s", k.NodeName)
+					// we're notified when we start
+					k.leading = true
+				},
+				OnStoppedLeading: func() {
+					log.Printf("I! k8sapiserver OnStoppedLeading: %s", k.NodeName)
+					// we can do cleanup here, or after the RunOrDie method returns
+					k.leading = false
+					//node and pod are only used for cluster level metrics, endpoint is used for decorator too.
+					k8sclient.Get().Node.Shutdown()
+					k8sclient.Get().Pod.Shutdown()
+				},
+				OnNewLeader: func(identity string) {
+					log.Printf("I! k8sapiserver Switch New Leader: %s", identity)
+				},
+			},
+		})
+
+		select {
+		case <-ctx.Done(): //when leader election ends, the channel ctx.Done() will be closed
+			log.Printf("I! k8sapiserver shutdown Leader Election: %s", k.NodeName)
+			return
+		default:
+		}
+	}
 }
 
 func (k *K8sAPIServer) Stop() {

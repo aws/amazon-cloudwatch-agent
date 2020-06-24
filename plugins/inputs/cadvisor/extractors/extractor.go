@@ -1,10 +1,11 @@
 package extractors
 
 import (
-	"fmt"
+	"log"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	cinfo "github.com/google/cadvisor/info/v1"
-	"time"
 )
 
 const (
@@ -65,9 +66,13 @@ func (c *CAdvisorMetric) AddTags(tags map[string]string) {
 }
 
 func (c *CAdvisorMetric) Merge(src *CAdvisorMetric) {
+	// If there is any conflict, keep the fields with earlier timestamp
 	for k, v := range src.fields {
 		if _, ok := c.fields[k]; ok {
-			panic(fmt.Errorf("metric being merged has conflict in fields, src: %v, dest: %v", *src, *c))
+			log.Printf("D! metric being merged has conflict in fields, src: %v, dest: %v \n", *src, *c)
+			if c.tags[containerinsightscommon.Timestamp] < src.tags[containerinsightscommon.Timestamp] {
+				continue
+			}
 		}
 		c.fields[k] = v
 	}
