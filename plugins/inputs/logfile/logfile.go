@@ -275,6 +275,11 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	var targetFileName string
 	var targetModTime time.Time
 	for matchedFileName, matchedFileInfo := range g.Match() {
+		// we do not allow customer to monitor the file in t.FileStateFolder, it will monitor all of the state files
+		if t.FileStateFolder != "" && strings.HasPrefix(matchedFileName, t.FileStateFolder) {
+			continue
+		}
+
 		if isCompressedFile(matchedFileName) {
 			continue
 		}

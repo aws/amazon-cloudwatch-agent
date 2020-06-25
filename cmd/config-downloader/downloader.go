@@ -210,7 +210,7 @@ func main() {
 
 	if multiConfig != "remove" {
 		outputFilePath = filepath.Join(outputDir, outputFilePath+context.TmpFileSuffix)
-		err = ioutil.WriteFile(outputFilePath, []byte(config), os.ModePerm)
+		err = ioutil.WriteFile(outputFilePath, []byte(config), 0644)
 		if err != nil {
 			panic(fmt.Sprintf("Failed to write the json file %v: %v\n", outputFilePath, err))
 		} else {
