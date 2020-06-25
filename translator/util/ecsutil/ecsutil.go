@@ -2,12 +2,13 @@ package ecsutil
 
 import (
 	"encoding/json"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/httpclient"
 	"log"
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/httpclient"
 )
 
 const (
@@ -42,9 +43,10 @@ func initECSUtilSingleton() (newInstance *ecsUtil) {
 	if os.Getenv(config.RUN_IN_CONTAINER) != config.RUN_IN_CONTAINER_TRUE {
 		return
 	}
+	log.Println("I! attempt to access ECS task metadata to determine whether I'm running in ECS.")
 	ecsMetadataResponse, err := newInstance.getECSMetadata()
 	if err != nil {
-		log.Println("E! getting information from ECS task metadata fail: ", err)
+		log.Printf("I! access ECS task metadata fail with response %v, assuming I'm not running in ECS.\n", err)
 		return
 	}
 
