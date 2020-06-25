@@ -1,12 +1,13 @@
 package util
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"log"
 	"net"
 	"os"
-
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
 const (
@@ -14,10 +15,12 @@ const (
 	hostnamePlaceholder      = "{hostname}"
 	localHostnamePlaceholder = "{local_hostname}" //regardless of ec2 metadata
 	ipAddressPlaceholder     = "{ip_address}"
+	awsRegionPlaceholder     = "{aws_region}"
 
 	unknownInstanceId = "i-UNKNOWN"
 	unknownHostname   = "UNKNOWN-HOST"
 	unknownIpAddress  = "UNKNOWN-IP"
+	unknownAwsRegion  = "UNKNOWN-REGION"
 )
 
 //resolve place holder for log group and log stream.
@@ -49,8 +52,14 @@ func GetMetadataInfo() map[string]string {
 	if ipAddress == "" {
 		ipAddress = getIpAddress()
 	}
+
+	awsRegion := agent.Global_Config.Region
+	if awsRegion == "" {
+		awsRegion = unknownAwsRegion
+	}
+
 	return map[string]string{instanceIdPlaceholder: instanceID, hostnamePlaceholder: hostname,
-		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress}
+		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress, awsRegionPlaceholder: awsRegion}
 }
 
 func getHostName() string {
