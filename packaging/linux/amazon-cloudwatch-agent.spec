@@ -82,7 +82,7 @@ if ! grep "^cwagent:" /etc/group >/dev/null 2>&1; then
 fi
 
 if ! id cwagent >/dev/null 2>&1; then
-    useradd -r -M cwagent -d /home/cwagent -g cwagent >/dev/null 2>&1
+    useradd -r -M cwagent -d /home/cwagent -g cwagent -c "Cloudwatch Agent" -s $(test -x /sbin/nologin && echo /sbin/nologin || (test -x /usr/sbin/nologin && echo /usr/sbin/nologin || (test -x /bin/false && echo /bin/false || echo /bin/sh))) >/dev/null 2>&1
     echo "create user cwagent, result: $?"
 fi
 
