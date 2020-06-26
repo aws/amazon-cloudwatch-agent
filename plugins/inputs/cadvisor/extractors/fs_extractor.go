@@ -4,10 +4,16 @@ import (
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	cinfo "github.com/google/cadvisor/info/v1"
 	"log"
+	"regexp"
 	"time"
 )
 
+const (
+	allowList = "^tmpfs$|^/dev/|^overlay$"
+)
+
 type FileSystemMetricExtractor struct {
+	allowListRegexP *regexp.Regexp
 }
 
 func (f *FileSystemMetricExtractor) HasValue(info *cinfo.ContainerInfo) bool {
@@ -22,11 +28,16 @@ func (f *FileSystemMetricExtractor) GetValue(info *cinfo.ContainerInfo, containe
 
 	containerType = getFSMetricType(containerType)
 	stats := GetStats(info)
+
 	for _, v := range stats.Filesystem {
 		metric := newCadvisorMetric(containerType)
 		if v.Device == "" {
 			continue
 		}
+		if f.allowListRegexP != nil && !f.allowListRegexP.MatchString(v.Device) {
+			continue
+		}
+
 		metric.tags[DiskDev] = v.Device
 		metric.tags[FSType] = v.Type
 
@@ -52,7 +63,15 @@ func (f *FileSystemMetricExtractor) CleanUp(now time.Time) {
 }
 
 func NewFileSystemMetricExtractor() *FileSystemMetricExtractor {
-	return &FileSystemMetricExtractor{}
+	fse := &FileSystemMetricExtractor{}
+	if p, err := regexp.Compile(allowList); err == nil {
+		log.Printf("I! NewFileSystemMetricExtractor set regex succeed")
+		fse.allowListRegexP = p
+	} else {
+		log.Printf("E! NewFileSystemMetricExtractor set regex failed: %v", err)
+	}
+
+	return fse
 }
 
 func getFSMetricType(containerType string) string {
