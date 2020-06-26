@@ -3,7 +3,6 @@ package cloudwatchlogs
 import (
 	"context"
 	"log"
-	"regexp"
 	"runtime"
 	"sort"
 	"time"
@@ -18,8 +17,6 @@ const (
 	reqSizeLimit   = 1024 * 1024
 	reqEventsLimit = 10000
 )
-
-var seqTokenRegexp = regexp.MustCompile(`sequenceToken(?:\sis)?: ([^\s]+)`)
 
 type CloudWatchLogsService interface {
 	PutLogEvents(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)
@@ -213,22 +210,21 @@ func (p *pusher) send() {
 		return
 	}
 
-	switch awsErr.Code() {
-	case cloudwatchlogs.ErrCodeResourceNotFoundException:
+	switch e := awsErr.(type) {
+	case *cloudwatchlogs.ResourceNotFoundException:
 		err := p.createLogGroupAndStream()
 		if err != nil {
-			log.Printf("E! [cloudwatchlogs] Unable to create log stream %v/%v: %v", p.Group, p.Stream, awsErr)
+			log.Printf("E! [cloudwatchlogs] Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
 			return
 		}
 		p.send()
-	case cloudwatchlogs.ErrCodeInvalidSequenceTokenException:
-		log.Printf("W! [cloudwatchlogs] Invalid SequenceToken used, will use new token and retry: %v", awsErr)
-		matches := seqTokenRegexp.FindStringSubmatch(awsErr.Message())
-		if len(matches) < 1 {
-			log.Printf("E! [cloudwatchlogs] Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
+	case *cloudwatchlogs.InvalidSequenceTokenException:
+		log.Printf("W! [cloudwatchlogs] Invalid SequenceToken used, will use new token and retry: %v", e.Message())
+		if e.ExpectedSequenceToken == nil {
+			log.Printf("E! [cloudwatchlogs] Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, e.Message())
 			return
 		}
-		p.sequenceToken = &matches[1]
+		p.sequenceToken = e.ExpectedSequenceToken
 		p.send()
 	default:
 		log.Printf("E! [cloudwatchlogs] Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
