@@ -431,13 +431,12 @@ func TestCreateLogGroupAndLogSteamWhenNotFound(t *testing.T) {
 		var e error
 		switch plec {
 		case 0:
-			e = awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "", nil)
+			e = &cloudwatchlogs.ResourceNotFoundException{}
 		case 1:
-			e = awserr.New(
-				cloudwatchlogs.ErrCodeInvalidSequenceTokenException,
-				"sequenceToken: NEW_SEQ_TOKEN",
-				nil,
-			)
+			e = &cloudwatchlogs.InvalidSequenceTokenException{
+				Message_: aws.String("Invalid SequenceToken"),
+				ExpectedSequenceToken: &nst,
+			}
 		case 2:
 			e = awserr.New("Unknown Error", "", nil)
 		case 3:
