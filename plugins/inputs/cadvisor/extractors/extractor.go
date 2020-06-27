@@ -22,11 +22,6 @@ type MetricExtractor interface {
 	CleanUp(time.Time)
 }
 
-type CloudWatchMetrics struct {
-	metrics    []string
-	dimensions []string
-}
-
 type CAdvisorMetric struct {
 	fields     map[string]interface{}
 	tags       map[string]string
