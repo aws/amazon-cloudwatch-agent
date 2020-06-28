@@ -1,0 +1,50 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest] # windows-latest to be added later
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.13
+      id: go
+
+    - name: Configure git with longpath enabled (for windows)
+      run: git config --global core.longpaths true
+
+    - name: Check out telegraf private fork (temporary, remove after going public)
+      uses: actions/checkout@v2
+      with:
+        repository: aws/telegraf-private-fork
+        ssh-key: ${{ secrets.TELEGRAF_PRIVATE_FORK_TEMP_KEY }}
+        path: telegraf
+
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        path: amazon-cloudwatch-agent
+
+    - name: Replace telegraf with local copy (temporary, remove after going public)
+      run: go mod edit -replace github.com/influxdata/telegraf=../telegraf
+      working-directory: amazon-cloudwatch-agent
+
+    - name: Debug go.mod
+      run: cat go.mod
+      working-directory: amazon-cloudwatch-agent
+
+    - name: Build
+      run: make test build
+      working-directory: amazon-cloudwatch-agent
