@@ -48,6 +48,8 @@ func TestWindowsMigration(t *testing.T) {
 	absPath, _ := filepath.Abs("../../tool/processors/migration/windows/testData/input1.json")
 	addWindowsMigrationInputs(absPath, "", "", false)
 	processors.StartProcessor = basicInfo.Processor
+
+	*isNonInteractiveWindowsMigration = true
 	startProcessing()
 
 	// Assert expected behaviour

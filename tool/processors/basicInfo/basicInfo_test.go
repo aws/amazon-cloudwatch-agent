@@ -1,11 +1,12 @@
 package basicInfo
 
 import (
+	"testing"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/agentconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 
@@ -19,6 +20,11 @@ func TestProcessor_Process(t *testing.T) {
 	conf := new(data.Config)
 
 	testutil.Type(inputChan, "", "1")
+	Processor.Process(ctx, conf)
+	assert.Equal(t, util.CurOS(), ctx.OsParameter)
+	assert.Equal(t, false, ctx.IsOnPrem)
+
+	testutil.Type(inputChan, "1", "1")
 	Processor.Process(ctx, conf)
 	assert.Equal(t, util.OsTypeLinux, ctx.OsParameter)
 	assert.Equal(t, false, ctx.IsOnPrem)

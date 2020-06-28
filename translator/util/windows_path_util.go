@@ -12,7 +12,7 @@ const (
 )
 
 func GetWindowsSystemDrivePath() string {
-	return getEnvWithDefaultVal(SystemDrive, "c:")
+	return getEnvWithDefaultVal(SystemDrive, "C:")
 }
 
 func GetWindowsProgramDataPath() string {

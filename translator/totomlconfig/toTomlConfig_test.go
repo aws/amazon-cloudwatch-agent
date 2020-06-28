@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -26,7 +27,7 @@ func ReadFromFile(filename string) string {
 		panic(err)
 	}
 	str := string(data)
-	return str
+	return strings.ReplaceAll(str, "\r\n", "\n")
 }
 
 func checkIfTranslateSucceed(t *testing.T, jsonStr string, desiredTomlPath string, targetOs string) {
