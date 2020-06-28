@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
@@ -30,15 +29,17 @@ type LogFile struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	configs map[*FileConfig]*destMap
-	done    chan struct{}
-	started bool
+	configs           map[*FileConfig]map[string]*tailerSrc
+	done              chan struct{}
+	removeTailerSrcCh chan *tailerSrc
+	started           bool
 }
 
 func NewLogFile() *LogFile {
 	return &LogFile{
-		configs: make(map[*FileConfig]*destMap),
-		done:    make(chan struct{}),
+		configs:           make(map[*FileConfig]map[string]*tailerSrc),
+		done:              make(chan struct{}),
+		removeTailerSrcCh: make(chan *tailerSrc, 100),
 	}
 }
 
@@ -130,31 +131,9 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 }
 
 func (t *LogFile) Stop() {
+	// Tailer srcs are stopped by log agent after the output plugin is stopped instead of here
+	// because the tailersrc would like to record an accurate uploaded offset
 	close(t.done)
-}
-
-type destMap struct {
-	sync.RWMutex
-	m map[string]*tailerSrc
-}
-
-func (dm *destMap) Set(name string, ts *tailerSrc) {
-	dm.Lock()
-	dm.m[name] = ts
-	dm.Unlock()
-}
-
-func (dm *destMap) Delete(name string) {
-	dm.Lock()
-	delete(dm.m, name)
-	dm.Unlock()
-}
-
-func (dm *destMap) Get(name string) (*tailerSrc, bool) {
-	dm.RLock()
-	ts, ok := dm.m[name]
-	dm.RUnlock()
-	return ts, ok
 }
 
 //Try to find if there is any new file needs to be added for monitoring.
@@ -164,6 +143,8 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	}
 
 	var srcs []logs.LogSrc
+
+	t.cleanUpStoppedTailerSrc()
 
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
@@ -177,17 +158,21 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 		for _, filename := range targetFiles {
 			dests, ok := t.configs[fileconfig]
 			if !ok {
-				dests = &destMap{m: make(map[string]*tailerSrc)}
+				dests = make(map[string]*tailerSrc)
 				t.configs[fileconfig] = dests
 			}
 
-			if _, ok := dests.Get(filename); ok {
+			if _, ok := dests[filename]; ok {
 				continue
+			} else if fileconfig.AutoRemoval { // This logic means auto_removal does not work with public_multi_logs
+				for _, dst := range dests {
+					dst.tailer.StopAtEOF() // Stop all other tailers in favor of the newly found file
+				}
 			}
 
 			var seekFile *tail.SeekInfo
 			offset, err := t.restoreState(filename)
-			if err != nil {
+			if err == nil { // Missing state file would be an error too
 				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: offset}
 			} else if !fileconfig.Pipe && !fileconfig.FromBeginning {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
@@ -212,10 +197,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			if err != nil {
 				t.Log.Errorf("Failed to tail file %v with error: %v", filename, err)
 				continue
-			}
-
-			if fileconfig.AutoRemoval {
-				tailer.StopAtEOF()
 			}
 
 			var mlCheck func(string) bool
@@ -252,11 +233,21 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
-				func() { dests.Delete(filename) },
 			)
+
+			src.AddCleanUpFn(func(ts *tailerSrc) func() {
+				return func() {
+					select {
+					case <-t.done: // No clean up needed after input plugin is stopped
+					case t.removeTailerSrcCh <- ts:
+					}
+
+				}
+			}(src))
+
 			srcs = append(srcs, src)
 
-			dests.Set(filename, src)
+			dests[filename] = src
 		}
 	}
 
@@ -275,6 +266,7 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	var targetFileName string
 	var targetModTime time.Time
 	for matchedFileName, matchedFileInfo := range g.Match() {
+
 		// we do not allow customer to monitor the file in t.FileStateFolder, it will monitor all of the state files
 		if t.FileStateFolder != "" && strings.HasPrefix(matchedFileName, t.FileStateFolder) {
 			continue
@@ -376,6 +368,24 @@ func (t *LogFile) cleanupStateFolder() {
 		}
 		if err = os.Remove(file); err != nil {
 			t.Log.Errorf("Error happens when deleting old state file %s: %v", file, err)
+		}
+	}
+}
+
+func (t *LogFile) cleanUpStoppedTailerSrc() {
+	// Clean up stopped tailer sources
+	for {
+		select {
+		case rts := <-t.removeTailerSrcCh:
+			for _, dsts := range t.configs {
+				for n, ts := range dsts {
+					if ts == rts {
+						delete(dsts, n)
+					}
+				}
+			}
+		default:
+			return
 		}
 	}
 }
