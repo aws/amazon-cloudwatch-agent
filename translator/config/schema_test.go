@@ -1,9 +1,11 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetJsonSchema(t *testing.T) {
@@ -11,7 +13,8 @@ func TestGetJsonSchema(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assert.Equal(t, string(jsonFile), GetJsonSchema(), "Json schema is inconsistent")
+	str := strings.ReplaceAll(string(jsonFile), "\r\n", "\n")
+	assert.Equal(t, str, GetJsonSchema(), "Json schema is inconsistent")
 }
 
 func TestGetFormattedPath(t *testing.T) {

@@ -36,7 +36,7 @@ config-downloader:
 	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/windows_amd64/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 
 test:
-	go test -failfast ./...
+	go test -v -failfast ./...
 
 clean::
 	rm -rf release/ build/

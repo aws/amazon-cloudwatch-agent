@@ -35,7 +35,7 @@ func TestApplyRule(t *testing.T) {
 		"windows_event_log": []interface{}{
 			map[string]interface{}{
 				"destination":       "cloudwatchlogs",
-				"file_state_folder": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\state",
+				"file_state_folder": "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\state",
 			},
 		},
 	}

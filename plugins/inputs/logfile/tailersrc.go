@@ -18,6 +18,10 @@ const (
 	bufferLimit   = 50
 )
 
+var (
+	multilineWaitPeriod = 1 * time.Second
+)
+
 type tailerSrc struct {
 	group, stream  string
 	destination    string
@@ -28,13 +32,13 @@ type tailerSrc struct {
 	enc            encoding.Encoding
 	maxEventSize   int
 	truncateSuffix string
-	onExit         func()
 
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
 	offsetCh        chan int64
 	done            chan struct{}
 	startTailerOnce sync.Once
+	cleanUpFns      []func()
 }
 
 func NewTailerSrc(
@@ -46,7 +50,6 @@ func NewTailerSrc(
 	enc encoding.Encoding,
 	maxEventSize int,
 	truncateSuffix string,
-	onExit func(),
 ) *tailerSrc {
 	ts := &tailerSrc{
 		group:          group,
@@ -60,7 +63,6 @@ func NewTailerSrc(
 		enc:            enc,
 		maxEventSize:   maxEventSize,
 		truncateSuffix: truncateSuffix,
-		onExit:         onExit,
 
 		offsetCh: make(chan int64, 100),
 		done:     make(chan struct{}),
@@ -95,20 +97,16 @@ func (ts tailerSrc) Done(offset int64) {
 
 func (ts *tailerSrc) Stop() {
 	close(ts.done)
-	if ts.autoRemoval {
-		if err := os.Remove(ts.tailer.Filename); err != nil {
-			log.Printf("W! [logfile] Failed to auto remove file %v: %v", ts.tailer.Filename, err)
-		}
-	}
+}
+
+func (ts *tailerSrc) AddCleanUpFn(f func()) {
+	ts.cleanUpFns = append(ts.cleanUpFns, f)
 }
 
 func (ts *tailerSrc) runTail() {
-	t := time.NewTicker(time.Second)
+	defer ts.cleanUp()
+	t := time.NewTicker(multilineWaitPeriod)
 	defer t.Stop()
-	defer func() {
-		ts.onExit()
-		ts.outputFn(nil)
-	}()
 	var msg, init string
 	var cnt int
 	var offset int64
@@ -117,6 +115,15 @@ func (ts *tailerSrc) runTail() {
 		select {
 		case line, ok := <-ts.tailer.Lines:
 			if !ok {
+				if msg != "" {
+					e := &LogEvent{
+						msg:    msg,
+						t:      ts.timestampFn(msg),
+						offset: offset,
+						src:    ts,
+					}
+					ts.outputFn(e)
+				}
 				return
 			}
 
@@ -139,7 +146,7 @@ func (ts *tailerSrc) runTail() {
 				msg = text
 				offset = line.Offset
 				init = ""
-			} else if ts.isMLStart(text) {
+			} else if ts.isMLStart(text) || msg == "" {
 				init = text
 				offset = line.Offset
 			} else if len(msg) > ts.maxEventSize {
@@ -187,6 +194,20 @@ func (ts *tailerSrc) runTail() {
 		case <-ts.done:
 			return
 		}
+	}
+}
+
+func (ts *tailerSrc) cleanUp() {
+	if ts.autoRemoval {
+		if err := os.Remove(ts.tailer.Filename); err != nil {
+			log.Printf("W! [logfile] Failed to auto remove file %v: %v", ts.tailer.Filename, err)
+		}
+	}
+	for _, clf := range ts.cleanUpFns {
+		clf()
+	}
+	if ts.outputFn != nil {
+		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
 	}
 }
 

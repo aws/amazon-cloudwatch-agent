@@ -2,6 +2,7 @@ package util
 
 import (
 	"io/ioutil"
+	"runtime"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
@@ -23,7 +24,7 @@ var expectResult = `{
 }`
 
 func TestCurOS(t *testing.T) {
-	assert.NotEqual(t, OsTypeWindows, CurOS())
+	assert.Equal(t, runtime.GOOS, CurOS())
 }
 
 func TestReadConfigFromJsonFile(t *testing.T) {

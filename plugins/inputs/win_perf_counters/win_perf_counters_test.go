@@ -283,7 +283,7 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	objectname := "Processor Information"
 	instances[0] = "_Total"
 	counters[0] = "% Processor Time"
-	counters[1] = "% Processor TimeERROR"
+	counters[1] = "% Counter may appear later"
 	counters[2] = "% Idle Time"
 
 	var measurement string = "test"
@@ -308,18 +308,10 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	err := m.ParseConfig(&metrics)
 	require.NoError(t, err)
 
-	if len(metrics.items) == 2 {
-		require.NoError(t, nil)
-	} else if len(metrics.items) < 2 {
-		var errorstring1 string = "Too few results returned from the query: " +
-			string(len(metrics.items))
-		err2 := errors.New(errorstring1)
-		require.NoError(t, err2)
-	} else if len(metrics.items) > 2 {
-		var errorstring1 string = "Too many results returned from the query: " +
-			string(len(metrics.items))
-		err2 := errors.New(errorstring1)
-		require.NoError(t, err2)
+	// We made change to allow non-existent counter to be parsed so counters that initially not
+	// showing up at agent start up time would still possbily be picked up later
+	if len(metrics.items) != 3 {
+		t.Errorf("expecting exactly 3 result from query but got: %v", metrics.items)
 	}
 }
 
