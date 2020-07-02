@@ -101,7 +101,7 @@ func TestAddSingleEvent(t *testing.T) {
 	}
 	p.FlushTimeout = 10 * time.Millisecond
 	p.resetFlushTimer()
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)
 	if !called {
 		t.Errorf("PutLogEvents has not been called after FlushTimeout has been reached.")
 	}
@@ -328,7 +328,7 @@ func TestAddMultipleEvents(t *testing.T) {
 
 	p.FlushTimeout = 10 * time.Millisecond
 	p.resetFlushTimer()
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)
 
 	if p.sequenceToken == nil || *p.sequenceToken != nst {
 		t.Errorf("Pusher did not capture the NextSequenceToken")
@@ -406,7 +406,7 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	p := NewPusher(Target{"G", "S"}, &s, 1*time.Hour)
 	p.AddEvent(evtMock{"msg", time.Now(), nil})
 	p.FlushTimeout = 10 * time.Millisecond
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)
 
 	logline := logbuf.String()
 	if !strings.Contains(logline, "E!") || !strings.Contains(logline, "unhandled error") {
@@ -434,7 +434,7 @@ func TestCreateLogGroupAndLogSteamWhenNotFound(t *testing.T) {
 			e = &cloudwatchlogs.ResourceNotFoundException{}
 		case 1:
 			e = &cloudwatchlogs.InvalidSequenceTokenException{
-				Message_: aws.String("Invalid SequenceToken"),
+				Message_:              aws.String("Invalid SequenceToken"),
 				ExpectedSequenceToken: &nst,
 			}
 		case 2:
