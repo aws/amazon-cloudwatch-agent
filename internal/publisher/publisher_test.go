@@ -2,7 +2,9 @@ package publisher
 
 import (
 	"github.com/stretchr/testify/assert"
+	"log"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -83,7 +85,9 @@ func TestPublisher_PublishWithBlockingFifoQueue(t *testing.T) {
 	publisher.Publish("req3")
 	publisher.Publish("req4")
 	// queue size is 1, so the forth publish should block util the first req is published( because then second req get semphore, and third req get dequeued)
-	assert.True(t, time.Now().Sub(start) > 1*time.Second)
+	since := time.Since(start)
+	log.Printf("since: %v\n", since)
+	assert.True(t, since > 1*time.Second)
 	time.Sleep(3 * time.Second)
 	publisher.Close()
 	assert.Equal(t, []string{"req1", "req2", "req3", "req4"}, c.getResult())
@@ -102,12 +106,12 @@ func TestPublisher_DrainTimeout(t *testing.T) {
 
 // testClientNoMutex is to test whether need memory barrier when concurrency of publisher is 1
 type testClientNoMutex struct {
-	counter int
+	counter int32
 }
 
 func (c *testClientNoMutex) publish(req interface{}) {
 	r := req.(int)
-	c.counter += r
+	atomic.AddInt32(&c.counter, int32(r))
 }
 
 func TestPublisher_ClientNoMutex(t *testing.T) {
@@ -117,17 +121,17 @@ func TestPublisher_ClientNoMutex(t *testing.T) {
 		publisher.Publish(1)
 	}
 	publisher.Close()
-	assert.Equal(t, 100000, c.counter)
+	assert.Equal(t, int32(100000), c.counter)
 }
 
 // testClientLongDelay is to test publisher latency with nonBlockingQueue
 type testClientLongDelay struct {
-	counter int
+	counter int32
 }
 
 func (c *testClientLongDelay) publish(req interface{}) {
 	r := req.(int)
-	c.counter += r
+	atomic.AddInt32(&c.counter, int32(r))
 	time.Sleep(time.Minute)
 }
 func TestPublisher_ClientLongDelay(t *testing.T) {
@@ -142,5 +146,5 @@ func TestPublisher_ClientLongDelay(t *testing.T) {
 	assert.True(t, time.Now().Sub(start) < 10*time.Millisecond)
 	publisher.Close()
 	// only 10 requests are published since the concurrency is 10
-	assert.Equal(t, 10, c.counter)
+	assert.Equal(t, int32(10), c.counter)
 }
