@@ -1,7 +1,6 @@
 package cloudwatch
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"reflect"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	handlers "github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
@@ -41,8 +41,6 @@ const (
 const (
 	opPutLogEvents  = "PutLogEvents"
 	opPutMetricData = "PutMetricData"
-	CWAgent         = "CWAgent"
-	Version         = "1.0"
 )
 
 type CloudWatch struct {
@@ -137,10 +135,7 @@ func (c *CloudWatch) Connect() error {
 		})
 
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
-	//TODO: work on this when we have a proper versioning mechanism
-	//TODO: we need to find a way to expose enabled plugins like this commit: https://code.amazon.com/reviews/CR-2685612/revisions/1#/details
-	userAgent := fmt.Sprintf("%s/%s (%s; %s; %s) %s", CWAgent, Version, runtime.Version(), runtime.GOOS, runtime.GOARCH, "list of enabled input/output plugins")
-	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", userAgent))
+	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
 
 	//Format unique roll up list
 	c.RollupDimensions = GetUniqueRollupList(c.RollupDimensions)

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
@@ -130,8 +131,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			cloudwatchlogs.ErrCodeServiceUnavailableException,
 		}))
 
-	// FIXME: Replace with correct user agent with cwagent version
-	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", "CWAgent: FIX MY USER AGENT NAME"))
+	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
 
 	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration)
 	cwd := &cwDest{pusher: pusher}
