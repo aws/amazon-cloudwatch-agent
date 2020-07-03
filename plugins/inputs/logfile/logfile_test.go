@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -311,6 +311,9 @@ func TestLogsMultilineEvent(t *testing.T) {
 
 //When file is removed, the related tail routing should exit
 func TestLogsFileRemove(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.SkipNow()
+	}
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
 	tmpfile, err := ioutil.TempFile("", "")
@@ -356,6 +359,9 @@ func TestLogsFileRemove(t *testing.T) {
 
 //When another file is created for the same file config and the file config has auto_removal as true, the old files will stop at EOF and removed afterwards
 func TestLogsFileAutoRemoval(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.SkipNow()
+	}
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
 	filePrefix := "file_auto_removal"
@@ -610,11 +616,11 @@ func TestLogsFileWithOffset(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("/tmp", "state")
+	stateDir, err := ioutil.TempDir("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, strings.Replace(tmpfile.Name(), "/", "_", -1))
+	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
@@ -660,11 +666,11 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("/tmp", "state")
+	stateDir, err := ioutil.TempDir("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, strings.Replace(tmpfile.Name(), "/", "_", -1))
+	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("100")
@@ -701,6 +707,9 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 }
 
 func TestLogsFileRecreate(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.SkipNow()
+	}
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 	expectedContent := "ContentAfterOffset"
@@ -711,11 +720,11 @@ func TestLogsFileRecreate(t *testing.T) {
 	_, err = tmpfile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("/tmp", "state")
+	stateDir, err := ioutil.TempDir("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	stateFileName := filepath.Join(stateDir, strings.Replace(tmpfile.Name(), "/", "_", -1))
+	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
@@ -836,15 +845,21 @@ func TestLogsPartialLineReading(t *testing.T) {
 func TestLogFileMultiLogsReading(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
-
-	agentLog, err := ioutil.TempFile("", "test_agent.log")
+	dir, e := ioutil.TempDir("", "test")
+	if e != nil {
+		if runtime.GOOS == "windows" {
+			t.SkipNow()
+		}
+	}
+	defer os.Remove(dir)
+	agentLog, err := ioutil.TempFile(dir, "test_agent.log")
 	defer os.Remove(agentLog.Name())
 	require.NoError(t, err)
 
 	_, err = agentLog.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
-
-	serviceLog, err := ioutil.TempFile("", "test_service.log")
+	os.Remove(os.TempDir() + string(os.PathListSeparator) + "test_service.log*")
+	serviceLog, err := ioutil.TempFile(dir, "test_service.log")
 	defer os.Remove(serviceLog.Name())
 	require.NoError(t, err)
 
@@ -867,7 +882,7 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 	for _, lsrc := range lsrcs {
 		wg.Add(1)
 		switch lsrc.Group() {
-		case agentLog.Name():
+		case generateLogGroupName(agentLog.Name()):
 			lsrc.SetOutput(func(e logs.LogEvent) {
 				if e != nil {
 					if e.Message() != "This is from Agent log" {
@@ -876,7 +891,7 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 					wg.Done()
 				}
 			})
-		case serviceLog.Name():
+		case generateLogGroupName(serviceLog.Name()):
 			lsrc.SetOutput(func(e logs.LogEvent) {
 				if e != nil {
 					if e.Message() != "This is from Service log" {
@@ -897,8 +912,15 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
+	dir, e := ioutil.TempDir("", "test")
+	if e != nil {
+		if runtime.GOOS == "windows" {
+			t.SkipNow()
+		}
+	}
+	defer os.Remove(dir)
 
-	agentLog, err := ioutil.TempFile("", "test_agent.log")
+	agentLog, err := ioutil.TempFile(dir, "test_agent.log")
 	defer os.Remove(agentLog.Name())
 	require.NoError(t, err)
 
@@ -924,7 +946,7 @@ func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 
 		time.Sleep(2 * time.Second)
 
-		serviceLog, err = ioutil.TempFile("", "test_service.log")
+		serviceLog, err = ioutil.TempFile(dir, "test_service.log")
 		require.NoError(t, err)
 
 		logEntryString = "This is from Service log"
@@ -939,7 +961,7 @@ func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 		for _, lsrc := range lsrcs {
 			wg.Add(1)
 			switch lsrc.Group() {
-			case agentLog.Name():
+			case generateLogGroupName(agentLog.Name()):
 				lsrc.SetOutput(func(e logs.LogEvent) {
 					if e != nil {
 						if e.Message() != "This is from Agent log" {

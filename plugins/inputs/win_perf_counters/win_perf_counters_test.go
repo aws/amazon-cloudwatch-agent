@@ -380,7 +380,7 @@ func TestWinPerfcountersConfigError2(t *testing.T) {
 	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigError2", Object: perfobjects}
 
 	err := m.ParseConfig(&metrics)
-	require.Error(t, err)
+	require.Nil(t, err)
 }
 
 func TestWinPerfcountersConfigError3(t *testing.T) {
@@ -444,7 +444,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "Collect1", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, TestName: "Collect1", Object: perfobjects, DisableReplacer: true}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
@@ -459,6 +459,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 	fields := map[string]interface{}{
 		counters[0]: float32(0),
 	}
+
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 
 }
@@ -490,7 +491,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "Collect2", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, TestName: "Collect2", Object: perfobjects, DisableReplacer: true}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
