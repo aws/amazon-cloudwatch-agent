@@ -18,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 
@@ -161,7 +162,7 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	log.Printf("I! Starting Telegraf %s", version)
+	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
 	//load the environment variables that's saved in json env config file
 	err := loadEnvironmentVariables(*fEnvConfig)
 	if err != nil {
@@ -235,6 +236,9 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 	log.Printf("I! Tags enabled: %s", c.ListTags())
 
+	agentinfo.InputPlugins = c.InputNames()
+	agentinfo.OutputPlugins = c.OutputNames()
+
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -288,29 +292,6 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func formatFullVersion() string {
-	var parts = []string{"Telegraf"}
-
-	if version != "" {
-		parts = append(parts, version)
-	} else {
-		parts = append(parts, "unknown")
-	}
-
-	if branch != "" || commit != "" {
-		if branch == "" {
-			branch = "unknown"
-		}
-		if commit == "" {
-			commit = "unknown"
-		}
-		git := fmt.Sprintf("(git: %s %s)", branch, commit)
-		parts = append(parts, git)
-	}
-
-	return strings.Join(parts, " ")
-}
-
 func main() {
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
@@ -357,7 +338,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Println(formatFullVersion())
+			fmt.Println(agentinfo.FullVersion())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -396,7 +377,7 @@ func main() {
 		}
 		return
 	case *fVersion:
-		fmt.Println(formatFullVersion())
+		fmt.Println(agentinfo.FullVersion())
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
@@ -415,16 +396,6 @@ func main() {
 		}
 		return
 	}
-
-	shortVersion := version
-	if shortVersion == "" {
-		shortVersion = "unknown"
-	}
-
-	// Configure version
-	//if err := internal.SetVersion(shortVersion); err != nil {
-	//log.Println("Telegraf version already configured to: " + internal.Version())
-	//}
 
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		programFiles := os.Getenv("ProgramFiles")
