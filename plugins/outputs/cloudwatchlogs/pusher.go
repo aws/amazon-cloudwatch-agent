@@ -2,20 +2,25 @@ package cloudwatchlogs
 
 import (
 	"context"
-	"log"
-	"runtime"
+	"math/rand"
 	"sort"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/influxdata/telegraf"
 )
 
 const (
 	reqSizeLimit   = 1024 * 1024
 	reqEventsLimit = 10000
+)
+
+var (
+	seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 type CloudWatchLogsService interface {
@@ -26,8 +31,10 @@ type CloudWatchLogsService interface {
 
 type pusher struct {
 	Target
-	Service      CloudWatchLogsService
-	FlushTimeout time.Duration
+	Service       CloudWatchLogsService
+	FlushTimeout  time.Duration
+	RetryDuration time.Duration
+	Log           telegraf.Logger
 
 	events        []*cloudwatchlogs.InputLogEvent
 	minT, maxT    *time.Time
@@ -42,7 +49,7 @@ type pusher struct {
 	cancelFn      func()
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
 	ctx, cancel := context.WithCancel(context.Background())
 	cwl, ok := service.(*cloudwatchlogs.CloudWatchLogs)
 	if ok {
@@ -51,9 +58,11 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		})
 	}
 	p := &pusher{
-		Target:       target,
-		Service:      service,
-		FlushTimeout: flushTimeout,
+		Target:        target,
+		Service:       service,
+		FlushTimeout:  flushTimeout,
+		RetryDuration: retryDuration,
+		Log:           logger,
 
 		events:     make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:   make(chan logs.LogEvent, 100),
@@ -67,7 +76,7 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 
 func (p *pusher) AddEvent(e logs.LogEvent) {
 	if !hasValidTime(e) {
-		log.Printf("E! [cloudwatchlogs]: the log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, e.Time(), time.Now())
+		p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, e.Time(), time.Now())
 		return
 	}
 	p.eventsCh <- e
@@ -75,7 +84,7 @@ func (p *pusher) AddEvent(e logs.LogEvent) {
 
 func (p *pusher) AddEventNonBlocking(e logs.LogEvent) {
 	if !hasValidTime(e) {
-		log.Printf("E! [cloudwatchlogs]: the log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, e.Time(), time.Now())
+		p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, e.Time(), time.Now())
 		return
 	}
 	// Drain the channel until new event can be added
@@ -176,62 +185,88 @@ func (p *pusher) send() {
 		SequenceToken: p.sequenceToken,
 	}
 
-	output, err := p.Service.PutLogEvents(input)
-	if err == nil {
-		if output.NextSequenceToken != nil {
-			p.sequenceToken = output.NextSequenceToken
-		}
-		if output.RejectedLogEventsInfo != nil {
-			info := output.RejectedLogEventsInfo
-			if info.TooOldLogEventEndIndex != nil {
-				log.Printf("W! [cloudwatchlogs] %d log events for log '%s/%s' are too old", *info.TooOldLogEventEndIndex, p.Group, p.Stream)
-			}
-			if info.TooNewLogEventStartIndex != nil {
-				log.Printf("W! [cloudwatchlogs] %d log events for log '%s/%s' are too new", *info.TooNewLogEventStartIndex, p.Group, p.Stream)
-			}
-			if info.ExpiredLogEventEndIndex != nil {
-				log.Printf("W! [cloudwatchlogs] %d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
-			}
-		}
+	startTime := time.Now()
 
-		for _, done := range p.doneCallbacks {
-			done()
-		}
-		p.reset()
-		runtime.GC()
-		return
-	}
+	retryCount := 0
+	for {
+		output, err := p.Service.PutLogEvents(input)
+		if err == nil {
+			if output.NextSequenceToken != nil {
+				p.sequenceToken = output.NextSequenceToken
+			}
+			if output.RejectedLogEventsInfo != nil {
+				info := output.RejectedLogEventsInfo
+				if info.TooOldLogEventEndIndex != nil {
+					p.Log.Warnf("%d log events for log '%s/%s' are too old", *info.TooOldLogEventEndIndex, p.Group, p.Stream)
+				}
+				if info.TooNewLogEventStartIndex != nil {
+					p.Log.Warnf("%d log events for log '%s/%s' are too new", *info.TooNewLogEventStartIndex, p.Group, p.Stream)
+				}
+				if info.ExpiredLogEventEndIndex != nil {
+					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
+				}
+			}
 
-	awsErr, ok := err.(awserr.Error)
-	if !ok {
-		log.Printf("E! [cloudwatchlogs] Non aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, err)
-		// Messages will be discarded but done callbacks not called
-		p.reset()
-		return
-	}
+			for _, done := range p.doneCallbacks {
+				done()
+			}
+			p.reset()
 
-	switch e := awsErr.(type) {
-	case *cloudwatchlogs.ResourceNotFoundException:
-		err := p.createLogGroupAndStream()
-		if err != nil {
-			log.Printf("E! [cloudwatchlogs] Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
+			p.Log.Debugf("Pusher published %v log events with size %v KB in %v.", len(p.events), p.bufferredSize/1024, time.Since(startTime))
+			p.addStats("rawSize", float64(p.bufferredSize))
+
 			return
 		}
-		p.send()
-	case *cloudwatchlogs.InvalidSequenceTokenException:
-		log.Printf("W! [cloudwatchlogs] Invalid SequenceToken used, will use new token and retry: %v", e.Message())
-		if e.ExpectedSequenceToken == nil {
-			log.Printf("E! [cloudwatchlogs] Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, e.Message())
+
+		awsErr, ok := err.(awserr.Error)
+		if !ok {
+			p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, err)
+			// Messages will be discarded but done callbacks not called
+			p.reset()
 			return
 		}
-		p.sequenceToken = e.ExpectedSequenceToken
-		p.send()
-	default:
-		log.Printf("E! [cloudwatchlogs] Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
-		p.reset()
-		return
+
+		switch e := awsErr.(type) {
+		case *cloudwatchlogs.ResourceNotFoundException:
+			err := p.createLogGroupAndStream()
+			if err != nil {
+				p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
+			}
+		case *cloudwatchlogs.InvalidSequenceTokenException:
+			p.Log.Warnf("Invalid SequenceToken used, will use new token and retry: %v", e.Message())
+			if e.ExpectedSequenceToken == nil {
+				p.Log.Errorf("Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, e.Message())
+			}
+			p.sequenceToken = e.ExpectedSequenceToken
+		case *cloudwatchlogs.InvalidParameterException,
+			*cloudwatchlogs.DataAlreadyAcceptedException:
+			p.Log.Errorf("%v, will not retry the request", e)
+			p.reset()
+			return
+		default:
+			p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
+		}
+
+		wait := retryWait(retryCount)
+		if time.Since(startTime)+wait > p.RetryDuration {
+			p.Log.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", p.Group, p.Stream, retryCount)
+		}
+
+		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCount, wait)
+		time.Sleep(wait)
+		retryCount++
 	}
 
+}
+
+func retryWait(n int) time.Duration {
+	const base = 200 * time.Millisecond
+	const max = 1 * time.Minute
+	d := base * time.Duration(1<<int64(n))
+	if n > 5 {
+		d = max
+	}
+	return time.Duration(seededRand.Int63n(int64(d/2)) + int64(d/2))
 }
 
 func (p *pusher) createLogGroupAndStream() error {
@@ -282,6 +317,11 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 		Message:   &message,
 		Timestamp: &t,
 	}
+}
+
+func (p *pusher) addStats(statsName string, value float64) {
+	statsKey := []string{"cloudwatchlogs", p.Group, statsName}
+	profiler.Profiler.AddStats(statsKey, value)
 }
 
 type ByTimestamp []*cloudwatchlogs.InputLogEvent
