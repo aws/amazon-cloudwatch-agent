@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
@@ -30,20 +29,10 @@ const (
 	truncatedSuffix     = "[Truncated...]"
 	msgSizeLimit        = 256 * 1024
 
+	maxRetryTimeout    = 14*24*time.Hour + 10*time.Minute
+	metricRetryTimeout = 2 * time.Minute
+
 	attributesInFields = "attributesInFields"
-)
-
-var (
-	retry14Days = client.DefaultRetryer{
-		NumMaxRetries:    14*60*24 + 10 + 9, // 14 days and 10min, retry every 1min after the first 9 retries
-		MinThrottleDelay: 200 * time.Millisecond,
-		MaxThrottleDelay: 1 * time.Minute,
-	}
-
-	retry6Times = client.DefaultRetryer{
-		NumMaxRetries:    6,
-		MinThrottleDelay: 200 * time.Millisecond,
-	}
 )
 
 type CloudWatchLogs struct {
@@ -119,21 +108,12 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		credentialConfig.Credentials(),
 		&aws.Config{
 			Endpoint: aws.String(c.EndpointOverride),
-			Retryer:  retry14Days,
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
-
-	// Backoff retry for OperationAborted and ServiceUnavailable
-	client.Handlers.Build.PushBackNamed(
-		handlers.NewThrottleErrorCodeHandler([]string{
-			cloudwatchlogs.ErrCodeOperationAbortedException,
-			cloudwatchlogs.ErrCodeServiceUnavailableException,
-		}))
-
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
 
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration)
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log)
 	cwd := &cwDest{pusher: pusher}
 	c.cwDests[t] = cwd
 	return cwd
@@ -150,7 +130,7 @@ func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
 		return
 	}
 	cwd.switchToEMF()
-	cwd.setRetryer(retry6Times)
+	cwd.pusher.RetryDuration = metricRetryTimeout
 
 	e := c.getLogEventFromMetric(m)
 	if e == nil {
