@@ -14,7 +14,8 @@ build: amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent a
 create-version-file:
 	@echo Version: ${VERSION}
 	@echo Building time: ${BUILD}
-	echo ${VERSION} > CWAGENT_VERSION
+	mkdir -p build/bin/
+	echo ${VERSION} > build/bin/CWAGENT_VERSION
 
 amazon-cloudwatch-agent: create-version-file
 	@echo Building amazon-cloudwatch-agent
