@@ -1,5 +1,8 @@
 include build/private/bgo_exports.makefile
 
+VERSION = $(shell echo `git describe --tag --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
+BUILD = $(shell date --iso-8601=seconds)
+
 release:: fmt build
 check_secrets::
 	if grep --exclude-dir=build -E "(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}|(\"|')?(AWS|aws|Aws)?_?(SECRET|secret|Secret)?_?(ACCESS|access|Access)?_?(KEY|key|Key)(\"|')?\\s*(:|=>|=)\\s*(\"|')?[A-Za-z0-9/\\+=]{40}(\"|')?" -Rn .; then echo "check_secrets failed"; exit 1; fi;
@@ -18,34 +21,40 @@ export BUILD_SPACE=$(BASE_SPACE)/build
 
 build: amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
 
-amazon-cloudwatch-agent:
+create-version-file:
+	@echo Version: ${VERSION}
+	@echo Building time: ${BUILD}
+	mkdir -p build/bin/
+	echo "$(VERSION)" | sed -e "s/-/_/g" > $(BUILD_SPACE)/bin/CWAGENT_VERSION
+
+amazon-cloudwatch-agent: create-version-file
 	@echo Building amazon-cloudwatch-agent
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/linux_amd64/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
-	GOOS=linux GOARCH=arm64 go build -o $(BUILD_SPACE)/bin/linux_arm64/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
-	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/windows_amd64/amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 
-config-translator:
+config-translator: create-version-file
 	@echo Building config-translator
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/linux_amd64/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
-	GOOS=linux GOARCH=arm64 go build -o $(BUILD_SPACE)/bin/linux_arm64/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
-	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/windows_amd64/config-translator.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/config-translator.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
-start-amazon-cloudwatch-agent:
+start-amazon-cloudwatch-agent: create-version-file
 	@echo Building start-amazon-cloudwatch-agent
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/linux_amd64/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
-	GOOS=linux GOARCH=arm64 go build -o $(BUILD_SPACE)/bin/linux_arm64/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
-	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/windows_amd64/start-amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/start-amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 
-amazon-cloudwatch-agent-config-wizard:
+amazon-cloudwatch-agent-config-wizard: create-version-file
 	@echo Building amazon-cloudwatch-agent-config-wizard
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/linux_amd64/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
-	GOOS=linux GOARCH=arm64 go build -o $(BUILD_SPACE)/bin/linux_arm64/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
-	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/windows_amd64/amazon-cloudwatch-agent-config-wizard.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+	GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+	GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/amazon-cloudwatch-agent-config-wizard.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 
-config-downloader:
+config-downloader: create-version-file
 	@echo Building config-downloader
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/linux_amd64/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
-	GOOS=linux GOARCH=arm64 go build -o $(BUILD_SPACE)/bin/linux_arm64/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
-	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_SPACE)/bin/windows_amd64/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 
 
