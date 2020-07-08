@@ -189,6 +189,7 @@ func (p *pusher) send() {
 
 	retryCount := 0
 	for {
+		input.SequenceToken = p.sequenceToken
 		output, err := p.Service.PutLogEvents(input)
 		if err == nil {
 			if output.NextSequenceToken != nil {
