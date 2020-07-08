@@ -27,7 +27,7 @@ const (
 	defaultFlushTimeout = 5 * time.Second
 	eventHeaderSize     = 26
 	truncatedSuffix     = "[Truncated...]"
-	msgSizeLimit        = 256 * 1024
+	msgSizeLimit        = 256*1024 - eventHeaderSize
 
 	maxRetryTimeout    = 14*24*time.Hour + 10*time.Minute
 	metricRetryTimeout = 2 * time.Minute
