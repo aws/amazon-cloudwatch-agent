@@ -178,17 +178,18 @@ func (p *pusher) send() {
 		sort.Stable(ByTimestamp(p.events))
 	}
 
-	input := &cloudwatchlogs.PutLogEventsInput{
-		LogEvents:     p.events,
-		LogGroupName:  &p.Group,
-		LogStreamName: &p.Stream,
-		SequenceToken: p.sequenceToken,
-	}
-
 	startTime := time.Now()
 
 	retryCount := 0
 	for {
+
+		input := &cloudwatchlogs.PutLogEventsInput{
+			LogEvents:     p.events,
+			LogGroupName:  &p.Group,
+			LogStreamName: &p.Stream,
+			SequenceToken: p.sequenceToken,
+		}
+
 		output, err := p.Service.PutLogEvents(input)
 		if err == nil {
 			if output.NextSequenceToken != nil {
