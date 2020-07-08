@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.245315.0 (2020-05-20)
+========================================================================
+
+New Features and Enhancements:
+
+* Fix Agent may not send k8sapiserver metrics due to k8sapiserver OnStoppedLeading
+* Add support to use STS regional endpoints as default behavior to avoid availability risks
+
+
+========================================================================
 Amazon CloudWatch Agent 1.242486.0 (2020-03-24)
 ========================================================================
 
