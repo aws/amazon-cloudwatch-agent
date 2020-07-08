@@ -114,7 +114,16 @@
           "sleeping",
           "dead"
         ]
-      }
+      },
+      "procstat": [
+        {
+          "pid_file": "/var/run/example1.pid",
+          "measurement": [
+            "cpu_usage",
+            "memory_rss"
+          ]
+        }
+      ]
     },
     "append_dimensions": {
       "ImageId": "${aws:ImageId}",
