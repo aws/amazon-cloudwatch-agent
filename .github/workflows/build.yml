@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ "*" ]
   pull_request:
-    branches: [ master ]
+    branches: [ "*"]
 
 jobs:
 
@@ -36,6 +36,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         path: amazon-cloudwatch-agent
+        fetch-depth: 0
 
     - name: Replace telegraf with local copy (temporary, remove after going public)
       run: go mod edit -replace github.com/influxdata/telegraf=../telegraf
