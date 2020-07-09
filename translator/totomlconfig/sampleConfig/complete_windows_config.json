@@ -91,7 +91,16 @@
           "d1": "win_foo",
           "d2": "win_bar"
         }
-      }
+      },
+      "procstat": [
+        {
+          "exe": "agent",
+          "measurement": [
+            "cpu_time_system",
+            "cpu_time_user"
+          ]
+        }
+      ]
     },
     "append_dimensions": {
       "ImageId": "${aws:ImageId}",
