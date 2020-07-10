@@ -2,6 +2,10 @@ export BASE_SPACE=$(shell pwd)
 export BUILD_SPACE=$(BASE_SPACE)/build
 
 VERSION = $(shell echo `git describe --tag --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
+# In case building outside of a git repo, use the version presented in the CWAGENT_VERSION file as a fallback
+ifeq ($(VERSION),)
+VERSION := `cat CWAGENT_VERSION`
+endif
 BUILD = $(shell date --iso-8601=seconds)
 LDFLAGS = -s -w
 LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.VersionStr=${VERSION}
@@ -15,7 +19,8 @@ create-version-file:
 	@echo Version: ${VERSION}
 	@echo Building time: ${BUILD}
 	mkdir -p build/bin/
-	echo "$(VERSION)" | sed -e "s/-/_/g" > $(BUILD_SPACE)/bin/CWAGENT_VERSION
+	echo "$(VERSION)" > CWAGENT_VERSION
+	cp CWAGENT_VERSION $(BUILD_SPACE)/bin/CWAGENT_VERSION
 
 amazon-cloudwatch-agent: create-version-file
 	@echo Building amazon-cloudwatch-agent
