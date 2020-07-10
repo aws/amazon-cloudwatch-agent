@@ -19,7 +19,7 @@ create-version-file:
 	@echo Version: ${VERSION}
 	@echo Building time: ${BUILD}
 	mkdir -p build/bin/
-	echo "$(VERSION)" | sed -e "s/-/_/g" > CWAGENT_VERSION
+	echo "$(VERSION)" > CWAGENT_VERSION
 	cp CWAGENT_VERSION $(BUILD_SPACE)/bin/CWAGENT_VERSION
 
 amazon-cloudwatch-agent: create-version-file
