@@ -2,6 +2,7 @@ export BASE_SPACE=$(shell pwd)
 export BUILD_SPACE=$(BASE_SPACE)/build
 
 VERSION = $(shell echo `git describe --tag --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
+VERSION := $(shell echo ${VERSION} | sed -e "s/^v//")
 # In case building outside of a git repo, use the version presented in the CWAGENT_VERSION file as a fallback
 ifeq ($(VERSION),)
 VERSION := `cat CWAGENT_VERSION`
