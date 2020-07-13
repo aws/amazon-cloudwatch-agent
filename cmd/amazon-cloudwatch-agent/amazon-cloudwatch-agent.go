@@ -12,6 +12,7 @@ import (
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -35,6 +36,10 @@ import (
 	//_ "github.com/influxdata/telegraf/plugins/processors/all"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/kardianos/service"
+)
+
+const (
+	defaultEnvCfgFileName = "env-config.json"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -163,7 +168,14 @@ func runAgent(ctx context.Context,
 	outputFilters []string,
 ) error {
 	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
+	if *fConfig == "" {
+		return fmt.Errorf("No config file specified")
+	}
 	//load the environment variables that's saved in json env config file
+	if *fEnvConfig == "" {
+		dir, _ := filepath.Split(*fConfig)
+		*fEnvConfig = filepath.Join(dir, defaultEnvCfgFileName)
+	}
 	err := loadEnvironmentVariables(*fEnvConfig)
 	if err != nil {
 		log.Printf("W! Failed to load environment variables due to %s", err.Error())
@@ -172,9 +184,6 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	if *fConfig == "" {
-		return fmt.Errorf("No config file specified")
-	}
 	err = c.LoadConfig(*fConfig)
 	if err != nil {
 		return err
