@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
@@ -251,6 +252,7 @@ func (e *structuredLogEvent) Done() {}
 
 type cwDest struct {
 	*pusher
+	sync.Mutex
 	isEMF   bool
 	stopped bool
 }
@@ -285,10 +287,14 @@ func (cd *cwDest) AddEvent(e logs.LogEvent) {
 }
 
 func (cd *cwDest) switchToEMF() {
-	cd.isEMF = true
-	cwl, ok := cd.Service.(*cloudwatchlogs.CloudWatchLogs)
-	if ok {
-		cwl.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("x-amzn-logs-format", "json/emf"))
+	cd.Lock()
+	defer cd.Unlock()
+	if !cd.isEMF {
+		cd.isEMF = true
+		cwl, ok := cd.Service.(*cloudwatchlogs.CloudWatchLogs)
+		if ok {
+			cwl.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("x-amzn-logs-format", "json/emf"))
+		}
 	}
 }
 
