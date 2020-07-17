@@ -2,7 +2,7 @@ module github.com/aws/amazon-cloudwatch-agent
 
 go 1.13
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf-private-fork v0.0.0-20200608232200-b26dcc402df7
+replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.0.0-20200608232200-b26dcc402df7
 
 require (
 	github.com/BurntSushi/toml v0.3.1

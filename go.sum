@@ -132,8 +132,8 @@ github.com/aws/aws-sdk-go v1.30.9 h1:DntpBUKkchINPDbhEzDRin1eEn1TG9TZFlzWPf0i8to
 github.com/aws/aws-sdk-go v1.30.9/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/aws/aws-sdk-go v1.30.15 h1:Sd8QDVzzE8Sl+xNccmdj0HwMrFowv6uVUx9tGsCE1ZE=
 github.com/aws/aws-sdk-go v1.30.15/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
-github.com/aws/telegraf-private-fork v0.0.0-20200608232200-b26dcc402df7 h1:lXrBzu+rfOG8D2tn7FtUcGyFFwGxthpwT8WE9bNBRDg=
-github.com/aws/telegraf-private-fork v0.0.0-20200608232200-b26dcc402df7/go.mod h1:klLKIYh/pKoNn68ZgTyp2aGO+jigfkuUef4g7giWW/8=
+github.com/aws/telegraf v0.0.0-20200608232200-b26dcc402df7 h1:PqEOcPGN0Xvfuq6qUqlFxbAT+QoaSxKAdEVSV8nzl9Q=
+github.com/aws/telegraf v0.0.0-20200608232200-b26dcc402df7/go.mod h1:klLKIYh/pKoNn68ZgTyp2aGO+jigfkuUef4g7giWW/8=
 github.com/benbjohnson/clock v1.0.0 h1:78Jk/r6m4wCi6sndMpty7A//t4dw/RW5fV4ZgDVfX1w=
 github.com/benbjohnson/clock v1.0.0/go.mod h1:bGMdMPoPVvcYyt1gHDf4J2KE153Yf9BuiUKYMaxlTDM=
 github.com/beorn7/perks v0.0.0-20150223135152-b965b613227f/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
