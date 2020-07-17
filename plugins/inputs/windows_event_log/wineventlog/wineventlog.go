@@ -84,6 +84,10 @@ func (l *windowsEventLog) Stream() string {
 	return l.logStreamName
 }
 
+func (l *windowsEventLog) Description() string {
+	return fmt.Sprintf("%v%v", l.name, l.levels)
+}
+
 func (l *windowsEventLog) Destination() string {
 	return l.destination
 }

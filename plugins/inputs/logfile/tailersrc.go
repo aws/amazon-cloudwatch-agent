@@ -87,6 +87,10 @@ func (ts tailerSrc) Stream() string {
 	return ts.stream
 }
 
+func (ts tailerSrc) Description() string {
+	return ts.tailer.Filename
+}
+
 func (ts tailerSrc) Destination() string {
 	return ts.destination
 }

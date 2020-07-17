@@ -29,6 +29,7 @@ type LogSrc interface {
 	Group() string
 	Stream() string
 	Destination() string
+	Description() string
 	Stop()
 }
 
@@ -96,12 +97,12 @@ func (l *LogAgent) Run(ctx context.Context) {
 					dname := src.Destination()
 					backend, ok := l.backends[dname]
 					if !ok {
-						log.Printf("E! [logagent] Failed to find destination %v/%v for log source %v ", dname, src.Group(), src.Stream())
+						log.Printf("E! [logagent] Failed to find destination %v for log source %v/%v(%v) ", dname, src.Group(), src.Stream(), src.Description())
 						continue
 					}
 					dest := backend.CreateDest(src.Group(), src.Stream())
 					l.destNames[dest] = dname
-					log.Printf("I! [logagent] piping log from %v/%v to %v", src.Group(), src.Stream(), dname)
+					log.Printf("I! [logagent] piping log from %v/%v(%v) to %v", src.Group(), src.Stream(), src.Description(), dname)
 					go l.runSrcToDest(src, dest)
 				}
 			}
@@ -117,7 +118,7 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	src.SetOutput(func(e LogEvent) {
 		if e == nil {
 			close(eventsCh)
-			log.Printf("I! [logagent] Log src has stopped for %v/%v", src.Group(), src.Stream())
+			log.Printf("I! [logagent] Log src has stopped for %v/%v(%v)", src.Group(), src.Stream(), src.Description())
 			return
 		}
 		eventsCh <- e
