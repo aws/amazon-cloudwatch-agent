@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package translator
 
 // Don't modify map1 or map2, it's hard to make sure we don't reference map1 or map2 reference in whole proj

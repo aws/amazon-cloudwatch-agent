@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package translator
 
 //ProcessDefaultConfig process the input when user want to use the default configuration.

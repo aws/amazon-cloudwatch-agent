@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package translator
 
 //set sectionKey as routing-tags to all input plugins, all the metrics will go to the output plugins.
