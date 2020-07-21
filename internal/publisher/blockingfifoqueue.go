@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package publisher
 
 // It is a FIFO queue with the functionality that block the caller if the queue size reaches to the maxSize

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package translator
 
 //ProcessRuleToApply check if the specification configuration provide some configs that need translation with some rules

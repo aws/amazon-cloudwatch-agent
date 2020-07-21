@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package disk
 
 import "github.com/aws/amazon-cloudwatch-agent/translator"

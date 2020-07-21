@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package awscsmmetrics
 
 // FrequencyMetric represents a metric that is a numeric value.

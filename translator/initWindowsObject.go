@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package translator
 
 func InitWindowsObject(objectName, instances, counters, measurement string) map[string]interface{} {
