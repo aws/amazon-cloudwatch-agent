@@ -1,7 +1,6 @@
-[![Build Status](https://travis-ci.org/hpcloud/tail.svg)](https://travis-ci.org/hpcloud/tail)
-[![Build status](https://ci.appveyor.com/api/projects/status/kohpsf3rvhjhrox6?svg=true)](https://ci.appveyor.com/project/HelionCloudFoundry/tail) 
-
 # Go package for tail-ing files
+
+*This is a fork of the tail library from https://github.com/influxdata/tail*
 
 A Go package striving to emulate the features of the BSD `tail` program. 
 
