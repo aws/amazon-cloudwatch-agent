@@ -9,18 +9,19 @@ The Amazon CloudWatch Agent enables you to do the following:
 - Retrieve custom metrics from your applications or services using the StatsD and collectd protocols. StatsD is supported on both Linux servers and servers running Windows Server. collectd is supported only on Linux servers.
 - Collect logs from Amazon EC2 instances and on-premises servers, running either Linux or Windows Server.
 
-Amazon Cloudwatch Agent uses the opensource project [telegraf](https://github.com/influxdata/telegraf) as its dependency, operating by staring a telegraf agent with a few original or customized plugins.
+Amazon Cloudwatch Agent uses the open-source project [telegraf](https://github.com/influxdata/telegraf) as its dependency. It operates by starting a telegraf agent with some original plugins and some customized plugins.
 
 ### Setup
 * [Configuring IAM Roles](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html)
 * [Installation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/install-CloudWatch-Agent-on-EC2-Instance.html)
 * [Configuring the Cloudwatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-cloudwatch-agent-configuration-file.html)
+
 ### Troubleshooting
 * [Troubleshooting Cloudwatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html)
 
 ## Building and Running from source
-* Install go [Getting started](https://golang.org/doc/install)
-    * It is using go.mod to manage the dependencies. In some special cases, you need to run `export GOPROXY=direct` before `make`.
+* Install go. For more information, see [Getting started](https://golang.org/doc/install)
+* The agent uses go modules for dependency management. For more information, see [Go Modules](https://github.com/golang/go/wiki/Modules)
 
 * Install rpm-build
 ```
@@ -30,7 +31,7 @@ sudo yum install -y rpmdevtools rpm-build
 
 * Run `make build` to build the Cloudwatch Agent for Linux, Debian, Windows environment.
 
-* Run `make release` to build the agent and also packages it into a RPM, DEB and ZIP package.
+* Run `make release` to build the agent. This also packages it into a RPM, DEB and ZIP package.
 
 The following folders are generated when the build completes:
 ```
@@ -44,15 +45,18 @@ build/bin/windows/amd64/amazon-cloudwatch-agent.zip
 * Install your own build of the agent
 
     1. rpm package
-    
+
         * `rpm -Uvh amazon-cloudwatch-agent.rpm`
+
     1. deb package
-    
+
         * `dpkg -i -E ./amazon-cloudwatch-agent.deb`
+
     1. windows package
+
         * unzip `amazon-cloudwatch-agent.zip`
         * `./install.ps1`
-    
+
 
 ### Make Targets
 The following targets are available. Each may be run with `make <target>`.
