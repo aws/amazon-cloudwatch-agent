@@ -60,6 +60,7 @@ test:
 
 clean::
 	rm -rf release/ build/
+	rm -f CWAGENT_VERSION
 
 package-prepare-rpm:
 	# amd64 rpm
