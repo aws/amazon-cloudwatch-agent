@@ -170,7 +170,6 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
 	if *fConfig == "" {
 		return fmt.Errorf("No config file specified")
 	}
@@ -236,6 +235,7 @@ func runAgent(ctx context.Context,
 	}
 
 	logger.SetupLogging(logConfig)
+	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
 
 	if *fTest || *fTestWait != 0 {
 		testWaitDuration := time.Duration(*fTestWait) * time.Second
