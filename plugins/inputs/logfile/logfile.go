@@ -188,13 +188,14 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 			tailer, err := tail.TailFile(filename,
 				tail.Config{
-					ReOpen:    false,
-					Follow:    true,
-					Location:  seekFile,
-					MustExist: true,
-					Pipe:      fileconfig.Pipe,
-					Poll:      true,
-					IsUTF16:   isutf16,
+					ReOpen:      false,
+					Follow:      true,
+					Location:    seekFile,
+					MustExist:   true,
+					Pipe:        fileconfig.Pipe,
+					Poll:        true,
+					MaxLineSize: fileconfig.MaxEventSize,
+					IsUTF16:     isutf16,
 				})
 
 			if err != nil {
