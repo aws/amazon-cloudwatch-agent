@@ -285,8 +285,9 @@ func (cd *cwDest) AddEvent(e logs.LogEvent) {
 	// Drop events for metric path logs when queue is full
 	if cd.isEMF {
 		cd.pusher.AddEventNonBlocking(e)
+	} else {
+		cd.pusher.AddEvent(e)
 	}
-	cd.pusher.AddEvent(e)
 }
 
 func (cd *cwDest) switchToEMF() {
