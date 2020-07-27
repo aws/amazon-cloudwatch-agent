@@ -214,10 +214,11 @@ func (p *pusher) send() {
 			for _, done := range p.doneCallbacks {
 				done()
 			}
-			p.reset()
 
 			p.Log.Debugf("Pusher published %v log events with size %v KB in %v.", len(p.events), p.bufferredSize/1024, time.Since(startTime))
 			p.addStats("rawSize", float64(p.bufferredSize))
+
+			p.reset()
 
 			return
 		}
