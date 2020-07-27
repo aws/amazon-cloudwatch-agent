@@ -129,8 +129,8 @@ func (p *pusher) start() {
 
 			// A batch of log events in a single request cannot span more than 24 hours.
 			et := e.Time()
-			if (p.minT != nil && et.Sub(*p.minT) > 24*time.Hour) ||
-				(p.maxT != nil && p.maxT.Sub(et) > 24*time.Hour) {
+			if !et.IsZero() && // event with zero time is handled by convertEvent method
+				((p.minT != nil && et.Sub(*p.minT) > 24*time.Hour) || (p.maxT != nil && p.maxT.Sub(et) > 24*time.Hour)) {
 				p.send()
 			}
 
@@ -147,7 +147,7 @@ func (p *pusher) start() {
 			p.events = append(p.events, ce)
 			p.doneCallbacks = append(p.doneCallbacks, e.Done)
 			p.bufferredSize += size
-			if p.minT == nil || p.minT.After(et) {
+			if p.minT == nil || (!et.IsZero() && p.minT.After(et)) {
 				p.minT = &et
 			}
 			if p.maxT == nil || p.maxT.Before(et) {
