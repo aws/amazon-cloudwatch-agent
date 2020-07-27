@@ -215,7 +215,7 @@ func (p *pusher) send() {
 				done()
 			}
 
-			p.Log.Debugf("Pusher published %v log events with size %v KB in %v.", len(p.events), p.bufferredSize/1024, time.Since(startTime))
+			p.Log.Debugf("Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(p.events), p.Group, p.Stream, p.bufferredSize/1024, time.Since(startTime))
 			p.addStats("rawSize", float64(p.bufferredSize))
 
 			p.reset()
