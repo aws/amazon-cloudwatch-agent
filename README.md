@@ -71,6 +71,9 @@ It is using [Semantic versioning](https://semver.org/)
 ## Distributions
 You can download the offical release from S3, refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/download-cloudwatch-agent-commandline.html)
 
+## Security disclosures
+If you think you’ve found a potential security issue, please do not post it in the Issues.  Instead, please follow the instructions [here](https://aws.amazon.com/security/vulnerability-reporting/) or [email AWS security directly](mailto:aws-security@amazon.com).
+
 ## License
 
 MIT License
