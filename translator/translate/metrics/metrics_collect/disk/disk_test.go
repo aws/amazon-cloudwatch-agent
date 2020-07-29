@@ -42,6 +42,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 			"ignore_fs":    []interface{}{"sysfs", "devtmpfs"},
 			"mount_points": []interface{}{"/", "/dev", "/sys"},
 			"fieldpass":    []string{"free", "total", "used"},
+			"tagexclude":   []string{"mode"},
 		},
 		}
 		assert.Equal(t, expectedVal, actualVal, "Expect to be equal")
@@ -71,7 +72,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 			"ignore_fs":    []interface{}{"sysfs", "devtmpfs"},
 			"mount_points": []interface{}{"/", "/dev", "/sys"},
 			"fieldpass":    []string{"free", "total", "used"},
-			"tagexclude":   []string{"device"},
+			"tagexclude":   []string{"device", "mode"},
 		},
 		}
 		assert.Equal(t, expectedValue, actualValue, "Expect to be equal")
@@ -101,6 +102,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 			"ignore_fs":    []interface{}{"sysfs", "devtmpfs"},
 			"mount_points": []interface{}{"/", "/dev", "/sys"},
 			"fieldpass":    []string{"free", "total", "used"},
+			"tagexclude":   []string{"mode"},
 		},
 		}
 		assert.Equal(t, expectedValue, actualValue, "Expect to be equal")

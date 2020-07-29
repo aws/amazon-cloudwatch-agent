@@ -10,10 +10,12 @@ const (
 	dropDeviceKey = "drop_device"
 )
 
-type DropDevice struct {
+var tagExcludeValues = []string{"mode"}
+
+type DropTags struct {
 }
 
-func (i *DropDevice) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (i *DropTags) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
 	shouldDropDevice := false //default to be false
 	if val, ok := m[dropDeviceKey]; ok {
@@ -22,17 +24,16 @@ func (i *DropDevice) ApplyRule(input interface{}) (returnKey string, returnVal i
 	}
 
 	if shouldDropDevice {
-		returnKey, returnVal = translator.DefaultCase(tagExcludeKey, []string{"device"}, input)
+		returnKey, returnVal = translator.DefaultCase(tagExcludeKey, append([]string{"device"}, tagExcludeValues...), input)
 	} else {
-		//empty key, value will be ignored when setting the config
-		returnKey = ""
-		returnVal = ""
+		returnKey = tagExcludeKey
+		returnVal = tagExcludeValues
 	}
 
 	return
 }
 
 func init() {
-	i := new(DropDevice)
-	RegisterRule("drop_device", i)
+	i := new(DropTags)
+	RegisterRule("dropTags", i)
 }
