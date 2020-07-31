@@ -6,6 +6,7 @@ package plugins
 import (
 	//Enable cloudwatch-agent process plugins
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/delta"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ecsdecorator"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/k8sdecorator"
 
@@ -41,5 +42,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/procstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/socket_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/swap"
-	_ "github.com/influxdata/telegraf/plugins/processors/ec2tagger"
 )
