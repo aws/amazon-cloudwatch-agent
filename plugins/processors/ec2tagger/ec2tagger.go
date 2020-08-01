@@ -439,7 +439,7 @@ func (t *Tagger) retrieveTagsVolumesOnce(prevTagSuccess, prevVolumesSuccess bool
 	volumesSuccess = prevVolumesSuccess
 	if !prevTagSuccess {
 		if err := t.updateTags(); err != nil {
-			t.Log.Warnf("ec2tagger: Unable to describe ec2 volume for initial retrieval: %v", err)
+			t.Log.Warnf("ec2tagger: Unable to describe ec2 tags for initial retrieval: %v", err)
 		} else {
 			tagsSuccess = true
 		}
@@ -509,13 +509,13 @@ func sleepUntilHostJitter(max time.Duration) {
 
 // init adds this plugin to the framework's "processors" registry
 func init() {
-	mdCredentialConfig := &internalaws.CredentialConfig{}
-	mdConfigProvider := mdCredentialConfig.Credentials()
-	ec2Provider := func(ec2CredentialConfig *internalaws.CredentialConfig) ec2iface.EC2API {
-		ec2ConfigProvider := ec2CredentialConfig.Credentials()
-		return ec2.New(ec2ConfigProvider)
-	}
 	processors.Add("ec2tagger", func() telegraf.Processor {
+		mdCredentialConfig := &internalaws.CredentialConfig{}
+		mdConfigProvider := mdCredentialConfig.Credentials()
+		ec2Provider := func(ec2CredentialConfig *internalaws.CredentialConfig) ec2iface.EC2API {
+			ec2ConfigProvider := ec2CredentialConfig.Credentials()
+			return ec2.New(ec2ConfigProvider)
+		}
 		return &Tagger{
 			ec2metadata: ec2metadata.New(mdConfigProvider),
 			ec2Provider: ec2Provider,
