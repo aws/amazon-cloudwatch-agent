@@ -204,6 +204,8 @@ func runAgent(ctx context.Context,
 		if err != nil {
 			return err
 		}
+
+		agentinfo.BuildStr += "_M"
 	} else {
 		err = c.LoadConfig(*fConfig)
 		if err != nil {
