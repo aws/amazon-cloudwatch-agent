@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 
@@ -187,9 +188,27 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err = c.LoadConfig(*fConfig)
+
+	isOld, err := migrate.IsOldConfig(*fConfig)
 	if err != nil {
-		return err
+		log.Printf("W! Failed to detect if config file is old format: %v", err)
+	}
+
+	if isOld {
+		migratedConfFile, err := migrate.MigrateFile(*fConfig)
+		if err != nil {
+			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
+		}
+
+		err = c.LoadConfig(migratedConfFile)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = c.LoadConfig(*fConfig)
+		if err != nil {
+			return err
+		}
 	}
 
 	if *fConfigDirectory != "" {
