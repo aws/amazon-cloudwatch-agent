@@ -4,7 +4,6 @@
 package cloudwatchlogs
 
 import (
-	"context"
 	"math/rand"
 	"sort"
 	"time"
@@ -12,7 +11,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 )
@@ -48,18 +46,10 @@ type pusher struct {
 	sequenceToken *string
 	lastValidTime int64
 	needSort      bool
-	ctx           context.Context
-	cancelFn      func()
+	stop          chan struct{}
 }
 
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
-	ctx, cancel := context.WithCancel(context.Background())
-	cwl, ok := service.(*cloudwatchlogs.CloudWatchLogs)
-	if ok {
-		cwl.Handlers.Build.PushBack(func(req *request.Request) {
-			req.SetContext(ctx)
-		})
-	}
 	p := &pusher{
 		Target:        target,
 		Service:       service,
@@ -70,8 +60,7 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		events:     make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:   make(chan logs.LogEvent, 100),
 		flushTimer: time.NewTimer(flushTimeout),
-		ctx:        ctx,
-		cancelFn:   cancel,
+		stop:       make(chan struct{}),
 	}
 	go p.start()
 	return p
@@ -116,7 +105,7 @@ func hasValidTime(e logs.LogEvent) bool {
 }
 
 func (p *pusher) Stop() {
-	p.cancelFn()
+	close(p.stop)
 }
 
 func (p *pusher) start() {
@@ -158,7 +147,7 @@ func (p *pusher) start() {
 			if len(p.events) > 0 {
 				p.send()
 			}
-		case <-p.ctx.Done():
+		case <-p.stop:
 			if len(p.events) > 0 {
 				p.send()
 			}
