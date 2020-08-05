@@ -155,7 +155,6 @@ func (ts *tailerSrc) runTail() {
 				init = ""
 			} else if ts.isMLStart(text) || msg == "" {
 				init = text
-				offset = line.Offset
 			} else if len(msg) > ts.maxEventSize {
 				continue
 			} else {
@@ -179,6 +178,7 @@ func (ts *tailerSrc) runTail() {
 			}
 
 			msg = init
+			offset = line.Offset
 			cnt = 0
 		case <-t.C:
 			if msg != "" {
