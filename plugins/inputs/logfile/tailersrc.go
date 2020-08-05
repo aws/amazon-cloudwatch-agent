@@ -117,6 +117,8 @@ func (ts *tailerSrc) runTail() {
 	var msg, init string
 	var cnt int
 	var offset int64
+
+	ignoreUntilNextEvent := false
 	for {
 
 		select {
@@ -153,18 +155,20 @@ func (ts *tailerSrc) runTail() {
 				msg = text
 				offset = line.Offset
 				init = ""
-			} else if ts.isMLStart(text) || msg == "" {
+			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msg == "") {
 				init = text
-			} else if len(msg) > ts.maxEventSize {
+				ignoreUntilNextEvent = false
+			} else if ignoreUntilNextEvent || len(msg) >= ts.maxEventSize {
+				ignoreUntilNextEvent = true
+				offset = line.Offset
 				continue
 			} else {
 				msg += "\n" + text
+				if len(msg) > ts.maxEventSize {
+					msg = msg[:ts.maxEventSize-len(ts.truncateSuffix)] + ts.truncateSuffix
+				}
 				offset = line.Offset
 				continue
-			}
-
-			if len(msg) > ts.maxEventSize {
-				msg = msg[:ts.maxEventSize-len(ts.truncateSuffix)] + ts.truncateSuffix
 			}
 
 			if msg != "" {
