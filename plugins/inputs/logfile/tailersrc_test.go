@@ -59,13 +59,17 @@ func TestTailerSrc(t *testing.T) {
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
 	)
+	multilineWaitPeriod = 100 * time.Millisecond
 
 	lines := []string{
 		logLine("A", 100, time.Now()),
 		logLine("B", 256*1024, time.Now()),
 		logLine("M", 1023, time.Now()) + strings.Repeat("\n "+logLine("M", 1022, time.Time{}), 255), // 256k multiline
 		logLine("C", 256*1024+64, time.Now()),
-		logLine("M", 1023, time.Now()) + strings.Repeat("\n "+logLine("M", 1022, time.Time{}), 258), // 256k multiline
+		logLine("M", 1023, time.Now()) + strings.Repeat("\n "+logLine("M", 1022, time.Time{}), 258), // 258k multiline
+		logLine("m", 1023, time.Now()) + strings.Repeat("\n "+logLine("m", 1022, time.Time{}), 258), // 386k multiline split into 2 events
+		strings.Repeat("\n "+logLine("m", 1022, time.Time{}), 128),
+		logLine("B", 256*1024, time.Now()),
 	}
 
 	done := make(chan struct{})
@@ -89,19 +93,36 @@ func TestTailerSrc(t *testing.T) {
 		case 4, 5:
 			// Know bug: truncated single line log event would be broken into 2n events
 		case 6:
-			//expected := lines[4][:256*1024]
-			//if msg != expected {
-			//t.Errorf("Log Event %d should be truncated, does not match expectation, end of the logs are '%v'(%v) != '%v'(%v)", i, msg[len(msg)-50:], len(msg), expected[len(expected)-50:], len(expected))
-			//}
+			expected := lines[4][:256*1024-len(defaultTruncateSuffix)] + defaultTruncateSuffix
+			if msg != expected {
+				t.Errorf("Log Event %d should be truncated, does not match expectation, end of the logs are '%v ... %v'(%v) != '%v ... %v'(%v)", i, msg[:50], msg[len(msg)-50:], len(msg), expected[:50], expected[len(expected)-50:], len(expected))
+			}
+		case 7:
+			expected := lines[5][:256*1024-len(defaultTruncateSuffix)] + defaultTruncateSuffix
+			if msg != expected {
+				t.Errorf("Log Event %d should be truncated, does not match expectation, end of the logs are '%v ... %v'(%v) != '%v ... %v'(%v)", i, msg[:50], msg[len(msg)-50:], len(msg), expected[:50], expected[len(expected)-50:], len(expected))
+			}
+		case 8:
+			expected := lines[7]
+			if msg != expected {
+				t.Errorf("Log Event %d does not match expectation, end of the logs are '%v ... %v'(%v) != '%v ... %v'(%v)", i, msg[:50], msg[len(msg)-50:], len(msg), expected[:50], expected[len(expected)-50:], len(expected))
+			}
 		default:
 			t.Errorf("unexpected log event: %v", evt)
 		}
 		i++
 	})
 
+	// Slow send
 	for _, l := range lines {
 		fmt.Fprintln(file, l)
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(1 * time.Second)
+	}
+
+	// Fast send
+	i = 0
+	for _, l := range lines {
+		fmt.Fprintln(file, l)
 	}
 
 	os.Remove(file.Name())

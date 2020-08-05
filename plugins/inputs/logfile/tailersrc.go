@@ -157,19 +157,18 @@ func (ts *tailerSrc) runTail() {
 				init = ""
 			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msg == "") {
 				init = text
-				offset = line.Offset
 				ignoreUntilNextEvent = false
-			} else if ignoreUntilNextEvent || len(msg) > ts.maxEventSize {
+			} else if ignoreUntilNextEvent || len(msg) >= ts.maxEventSize {
 				ignoreUntilNextEvent = true
+				offset = line.Offset
 				continue
 			} else {
 				msg += "\n" + text
+				if len(msg) > ts.maxEventSize {
+					msg = msg[:ts.maxEventSize-len(ts.truncateSuffix)] + ts.truncateSuffix
+				}
 				offset = line.Offset
 				continue
-			}
-
-			if len(msg) > ts.maxEventSize {
-				msg = msg[:ts.maxEventSize-len(ts.truncateSuffix)] + ts.truncateSuffix
 			}
 
 			if msg != "" {
@@ -183,6 +182,7 @@ func (ts *tailerSrc) runTail() {
 			}
 
 			msg = init
+			offset = line.Offset
 			cnt = 0
 		case <-t.C:
 			if msg != "" {
@@ -247,7 +247,7 @@ func (ts *tailerSrc) runSaveState() {
 			if err != nil {
 				log.Printf("E! [logfile] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", ts.tailer.Filename, ts.stateFilePath, err)
 			}
-			break
+			return
 		}
 	}
 }
