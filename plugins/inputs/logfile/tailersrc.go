@@ -243,7 +243,7 @@ func (ts *tailerSrc) runSaveState() {
 			if err != nil {
 				log.Printf("E! [logfile] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", ts.tailer.Filename, ts.stateFilePath, err)
 			}
-			break
+			return
 		}
 	}
 }
