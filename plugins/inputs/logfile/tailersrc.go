@@ -224,6 +224,7 @@ func (ts *tailerSrc) cleanUp() {
 
 func (ts *tailerSrc) runSaveState() {
 	t := time.NewTicker(100 * time.Millisecond)
+	defer t.Stop()
 
 	var offset, lastSavedOffset int64
 	for {

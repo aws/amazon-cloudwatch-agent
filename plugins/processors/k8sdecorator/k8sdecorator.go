@@ -81,6 +81,7 @@ func (k *K8sDecorator) start() {
 
 	go func() {
 		refreshTicker := time.NewTicker(time.Second)
+		defer refreshTicker.Stop()
 		for {
 			select {
 			case <-refreshTicker.C:

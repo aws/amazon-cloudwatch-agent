@@ -125,6 +125,7 @@ func reloadLoop(
 
 		go func(ctx context.Context) {
 			profilerTicker := time.NewTicker(60 * time.Second)
+			defer profilerTicker.Stop()
 			for {
 				select {
 				case <-profilerTicker.C:

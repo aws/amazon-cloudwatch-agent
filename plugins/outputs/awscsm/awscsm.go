@@ -217,6 +217,7 @@ func (c *CSM) publishJob() {
 	queue := []awscsmmetrics.Metric{}
 	ring := newRecordRing(int64(c.MemoryLimitInMb) * 1024 * 1024)
 	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
 
 	// Sleeping here to prevent the agent from hitting the
 	// service all at once if multiple instance of the agent
