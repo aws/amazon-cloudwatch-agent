@@ -110,6 +110,7 @@ func newECSInfo(hostIP string) (e *ecsInfo) {
 	e.updateRunningTaskCount()
 	go func() {
 		refreshTicker := time.NewTicker(e.refreshInterval)
+		defer refreshTicker.Stop()
 		for {
 			select {
 			case <-refreshTicker.C:

@@ -204,6 +204,7 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 // request can have so we process one Point at a time.
 func (c *CloudWatch) pushMetricDatum() {
 	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case point := <-c.metricChan:
@@ -269,6 +270,7 @@ func (c *CloudWatch) publish() {
 	log.Printf("I! cloudwatch: publish with ForceFlushInterval: %v, Publish Jitter: %v", forceFlushInterval, publishJitter)
 	time.Sleep(now.Truncate(forceFlushInterval).Add(publishJitter).Sub(now))
 	c.pushTicker = time.NewTicker(c.ForceFlushInterval.Duration)
+	defer c.pushTicker.Stop()
 	shouldPublish := false
 	for {
 		select {

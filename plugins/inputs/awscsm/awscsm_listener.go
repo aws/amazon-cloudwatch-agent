@@ -80,6 +80,7 @@ func (aws *AwsCsmListener) Stop() {
 
 func (aws *AwsCsmListener) aggregate() {
 	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
 	records := &AggregationRecords{}
 	inputChannel := models.AwsCsmInputChannel
 

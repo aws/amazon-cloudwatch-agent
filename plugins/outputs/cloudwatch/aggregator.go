@@ -123,6 +123,7 @@ func (durationAgg *durationAggregator) aggregating() {
 	now := time.Now()
 	time.Sleep(now.Truncate(durationAgg.aggregationDuration).Add(durationAgg.aggregationDuration).Sub(now))
 	durationAgg.ticker = time.NewTicker(durationAgg.aggregationDuration)
+	defer durationAgg.ticker.Stop()
 	for {
 		select {
 		case m := <-durationAgg.aggregationChan:
