@@ -116,14 +116,14 @@ func (p *pusher) start() {
 				p.resetFlushTimer()
 			}
 
+			ce := p.convertEvent(e)
+			et := time.Unix(*ce.Timestamp/1000, *ce.Timestamp%1000) // Cloudwatch Log Timestamp is in Millisecond
+
 			// A batch of log events in a single request cannot span more than 24 hours.
-			et := e.Time()
-			if !et.IsZero() && // event with zero time is handled by convertEvent method
-				((p.minT != nil && et.Sub(*p.minT) > 24*time.Hour) || (p.maxT != nil && p.maxT.Sub(et) > 24*time.Hour)) {
+			if (p.minT != nil && et.Sub(*p.minT) > 24*time.Hour) || (p.maxT != nil && p.maxT.Sub(et) > 24*time.Hour) {
 				p.send()
 			}
 
-			ce := p.convertEvent(e)
 			size := len(*ce.Message) + eventHeaderSize
 			if p.bufferredSize+size > reqSizeLimit || len(p.events) == reqEventsLimit {
 				p.send()
@@ -136,7 +136,7 @@ func (p *pusher) start() {
 			p.events = append(p.events, ce)
 			p.doneCallbacks = append(p.doneCallbacks, e.Done)
 			p.bufferredSize += size
-			if p.minT == nil || (!et.IsZero() && p.minT.After(et)) {
+			if p.minT == nil || p.minT.After(et) {
 				p.minT = &et
 			}
 			if p.maxT == nil || p.maxT.Before(et) {
