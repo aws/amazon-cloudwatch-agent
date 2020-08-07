@@ -180,7 +180,7 @@ func runAgent(ctx context.Context,
 		*fEnvConfig = filepath.Join(dir, defaultEnvCfgFileName)
 	}
 	err := loadEnvironmentVariables(*fEnvConfig)
-	if err != nil {
+	if err != nil && !*fSchemaTest {
 		log.Printf("W! Failed to load environment variables due to %s", err.Error())
 	}
 	// If no other options are specified, load the config file and run.
@@ -216,6 +216,9 @@ func runAgent(ctx context.Context,
 	}
 
 	if *fSchemaTest {
+		//up to this point, the given config file must be valid
+		fmt.Println(agentinfo.FullVersion())
+		fmt.Printf("The given config: %v is valid\n", *fConfig)
 		os.Exit(0)
 	}
 
