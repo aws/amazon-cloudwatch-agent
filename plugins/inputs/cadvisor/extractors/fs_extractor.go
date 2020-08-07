@@ -4,11 +4,12 @@
 package extractors
 
 import (
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	cinfo "github.com/google/cadvisor/info/v1"
 	"log"
 	"regexp"
 	"time"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	cinfo "github.com/google/cadvisor/info/v1"
 )
 
 const (
@@ -68,7 +69,6 @@ func (f *FileSystemMetricExtractor) CleanUp(now time.Time) {
 func NewFileSystemMetricExtractor() *FileSystemMetricExtractor {
 	fse := &FileSystemMetricExtractor{}
 	if p, err := regexp.Compile(allowList); err == nil {
-		log.Printf("I! NewFileSystemMetricExtractor set regex succeed")
 		fse.allowListRegexP = p
 	} else {
 		log.Printf("E! NewFileSystemMetricExtractor set regex failed: %v", err)
