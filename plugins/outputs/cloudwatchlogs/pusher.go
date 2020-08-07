@@ -47,6 +47,7 @@ type pusher struct {
 	lastValidTime int64
 	needSort      bool
 	stop          chan struct{}
+	lastSentTime  time.Time
 }
 
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
@@ -144,7 +145,7 @@ func (p *pusher) start() {
 			}
 
 		case <-p.flushTimer.C:
-			if len(p.events) > 0 {
+			if time.Since(p.lastSentTime) > p.FlushTimeout && len(p.events) > 0 {
 				p.send()
 			}
 		case <-p.stop:
@@ -208,6 +209,7 @@ func (p *pusher) send() {
 			p.addStats("rawSize", float64(p.bufferredSize))
 
 			p.reset()
+			p.lastSentTime = time.Now()
 
 			return
 		}
