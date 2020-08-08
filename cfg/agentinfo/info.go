@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 const versionFilename = "CWAGENT_VERSION"
@@ -22,6 +24,8 @@ var (
 	BuildStr      string = "No Build Date"
 	InputPlugins  []string
 	OutputPlugins []string
+
+	userAgent string
 )
 
 func Version() string {
@@ -49,7 +53,14 @@ func Plugins() string {
 }
 
 func UserAgent() string {
-	return fmt.Sprintf("%s %s", FullVersion(), Plugins())
+	if userAgent == "" {
+		ua := os.Getenv(envconfig.CWAGENT_USER_AGENT)
+		if ua == "" {
+			ua = fmt.Sprintf("%s %s", FullVersion(), Plugins())
+		}
+		userAgent = ua
+	}
+	return userAgent
 }
 
 func FullVersion() string {

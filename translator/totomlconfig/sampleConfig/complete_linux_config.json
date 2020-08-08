@@ -3,6 +3,7 @@
     "metrics_collection_interval": 10,
     "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
     "internal": true,
+    "user_agent": "CUSTOM USER AGENT VALUE",
     "credentials": {
       "role_arn": "global_role_arn_value"
     }

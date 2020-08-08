@@ -72,7 +72,9 @@ func TestLogMetricAndLog(t *testing.T) {
 
 func TestCompleteConfig(t *testing.T) {
 	resetContext()
-	expectedEnvVars := map[string]string{}
+	expectedEnvVars := map[string]string{
+		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
+	}
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/complete_linux_config.json"), "linux", expectedEnvVars)
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/complete_windows_config.json"), "windows", expectedEnvVars)
 }
