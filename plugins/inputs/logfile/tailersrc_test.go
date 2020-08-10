@@ -9,12 +9,14 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/winfile"
 )
 
 func TestTailerSrc(t *testing.T) {
@@ -24,6 +26,18 @@ func TestTailerSrc(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create temp file: %v", err)
 	}
+
+	if runtime.GOOS == "windows" { // winfile open with FILE_SHARE_DELETE, allows the log file be deleted
+		if err := file.Close(); err != nil {
+			t.Errorf("Failed to close created temp file %v: %v", file.Name(), err)
+		}
+
+		file, err = winfile.OpenFile(file.Name(), os.O_RDWR, 0)
+		if err != nil {
+			t.Errorf("Failed to open temp file for writing %v: %v", file.Name(), err)
+		}
+	}
+
 	statefile, err := ioutil.TempFile("", "tailsrctest-state-*.log")
 	defer os.Remove(statefile.Name())
 	if err != nil {
@@ -125,7 +139,10 @@ func TestTailerSrc(t *testing.T) {
 		fmt.Fprintln(file, l)
 	}
 
-	os.Remove(file.Name())
+	// Removal of log file should stop tailersrc
+	if err := os.Remove(file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
+	}
 	<-done
 }
 
