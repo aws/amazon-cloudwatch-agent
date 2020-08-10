@@ -11,14 +11,24 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/csm"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
+
+const userAgentKey = "user_agent"
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 	envVars := make(map[string]string)
 	// If csm has a configuration section, then also turn on csm for the agent itself
 	if _, ok := jsonConfigValue[csm.JSONSectionKey]; ok {
 		envVars[envconfig.AWS_CSM_ENABLED] = "TRUE"
+	}
+
+	// Set CWAGENT_USER_AGENT to env config if specified by the json config in agent section
+	if agentMap, ok := jsonConfigValue[agent.SectionKey].(map[string]interface{}); ok {
+		if userAgent, ok := agentMap[userAgentKey].(string); ok {
+			envVars[envconfig.CWAGENT_USER_AGENT] = userAgent
+		}
 	}
 
 	proxy := util.GetHttpProxy(context.CurrentContext().Proxy())
