@@ -19,11 +19,12 @@ import (
 
 func TestTailerSrc(t *testing.T) {
 
-	file, err := ioutil.TempFile("", "tailsrctest-*.log")
+	file, err := createTempFile("", "tailsrctest-*.log")
 	defer os.Remove(file.Name())
 	if err != nil {
 		t.Errorf("Failed to create temp file: %v", err)
 	}
+
 	statefile, err := ioutil.TempFile("", "tailsrctest-state-*.log")
 	defer os.Remove(statefile.Name())
 	if err != nil {
@@ -125,7 +126,10 @@ func TestTailerSrc(t *testing.T) {
 		fmt.Fprintln(file, l)
 	}
 
-	os.Remove(file.Name())
+	// Removal of log file should stop tailersrc
+	if err := os.Remove(file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
+	}
 	<-done
 }
 

@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -47,7 +46,7 @@ func (tl TestLogger) Info(args ...interface{})                  { log.Println(ar
 func TestLogs(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "cpu,mytag=foo usage_idle=100"
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 
 	if err != nil {
@@ -94,7 +93,7 @@ func TestLogsEncoding(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	//2 * rune_len when it is coded in gbk encoding.
 	logEntryString := "测试"
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -133,7 +132,7 @@ func TestLogsEncoding(t *testing.T) {
 
 func TestLogsEncodingUtf16(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	f, err := ioutil.TempFile("", "")
+	f, err := createTempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 	inputBytesArray := []byte{
@@ -216,7 +215,7 @@ func TestRestoreState(t *testing.T) {
 
 func TestMultipleFilesForSameConfig(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	tmpfile1, err := ioutil.TempFile("", "tmp1_")
+	tmpfile1, err := createTempFile("", "tmp1_")
 	defer os.Remove(tmpfile1.Name())
 	require.NoError(t, err)
 
@@ -226,7 +225,7 @@ func TestMultipleFilesForSameConfig(t *testing.T) {
 	//make file stat reflect the diff of file ModTime
 	time.Sleep(time.Second * 2)
 
-	tmpfile2, err := ioutil.TempFile("", "tmp2_")
+	tmpfile2, err := createTempFile("", "tmp2_")
 	defer os.Remove(tmpfile2.Name())
 	require.NoError(t, err)
 
@@ -271,7 +270,7 @@ func TestMultipleFilesForSameConfig(t *testing.T) {
 func TestLogsMultilineEvent(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "multiline begin1\n append line1\nmultiline begin2\n append line2"
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -314,12 +313,9 @@ func TestLogsMultilineEvent(t *testing.T) {
 
 //When file is removed, the related tail routing should exit
 func TestLogsFileRemove(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.SkipNow()
-	}
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -342,7 +338,9 @@ func TestLogsFileRemove(t *testing.T) {
 
 	go func() {
 		time.Sleep(500 * time.Millisecond)
-		os.Remove(tmpfile.Name())
+		if err := os.Remove(tmpfile.Name()); err != nil {
+			t.Errorf("Failed to remove tmp file '%v': %v", tmpfile.Name(), err)
+		}
 	}()
 
 	stopped := make(chan struct{})
@@ -362,18 +360,16 @@ func TestLogsFileRemove(t *testing.T) {
 
 //When another file is created for the same file config and the file config has auto_removal as true, the old files will stop at EOF and removed afterwards
 func TestLogsFileAutoRemoval(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.SkipNow()
-	}
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
 	filePrefix := "file_auto_removal"
-	tmpfile1, err := ioutil.TempFile("", filePrefix)
+	tmpfile1, err := createTempFile("", filePrefix)
 	require.NoError(t, err)
 
 	_, err = tmpfile1.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 	tmpfile1.Sync()
+	tmpfile1.Close()
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
@@ -408,7 +404,7 @@ func TestLogsFileAutoRemoval(t *testing.T) {
 		time.Sleep(1 * time.Second)
 
 		// create a new file matching configured pattern
-		tmpfile2, err = ioutil.TempFile("", filePrefix)
+		tmpfile2, err = createTempFile("", filePrefix)
 		require.NoError(t, err)
 
 		_, err = tmpfile2.WriteString(logEntryString + "\n")
@@ -442,7 +438,7 @@ func TestLogsFileAutoRemoval(t *testing.T) {
 		t.Errorf("Wrong log found from 2nd file: \n% x\nExpecting:\n% x\n", e.Message(), logEntryString)
 	}
 
-	_, err = os.Stat(tmpfile1.Name())
+	_, err = os.Open(tmpfile1.Name())
 	assert.True(t, os.IsNotExist(err))
 
 	lsrc.Stop()
@@ -455,7 +451,7 @@ func TestLogsTimestampAsMultilineStarter(t *testing.T) {
 append line
 multiline starter is not in beginning 15:04:06 18 Nov 2
 append line`
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -512,7 +508,7 @@ func TestLogsMultilineTimeout(t *testing.T) {
  append line`
 	logEntryString2 := " append line"
 
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -562,7 +558,7 @@ func TestLogsFileTruncate(t *testing.T) {
 	lineBeforeFileTruncate := "lineBeforeFileTruncate"
 	lineAfterFileTruncate := "lineAfterFileTruncate"
 
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -615,7 +611,7 @@ func TestLogsFileWithOffset(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -665,7 +661,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -710,14 +706,11 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 }
 
 func TestLogsFileRecreate(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.SkipNow()
-	}
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 	expectedContent := "ContentAfterOffset"
 
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 	_, err = tmpfile.WriteString(logEntryString + "\n")
@@ -759,6 +752,7 @@ func TestLogsFileRecreate(t *testing.T) {
 		// recreate file
 		err = os.Remove(tmpfile.Name())
 		require.NoError(t, err)
+		require.NoError(t, tmpfile.Close())
 		time.Sleep(time.Millisecond * 100)
 		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 		require.NoError(t, err)
@@ -803,7 +797,7 @@ func TestLogsPartialLineReading(t *testing.T) {
 	logEntryPartialLine := "hello "
 	logEntryComplish := " world"
 
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -849,20 +843,16 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
 	dir, e := ioutil.TempDir("", "test")
-	if e != nil {
-		if runtime.GOOS == "windows" {
-			t.SkipNow()
-		}
-	}
+	require.NoError(t, e)
 	defer os.Remove(dir)
-	agentLog, err := ioutil.TempFile(dir, "test_agent.log")
+	agentLog, err := createTempFile(dir, "test_agent.log")
 	defer os.Remove(agentLog.Name())
 	require.NoError(t, err)
 
 	_, err = agentLog.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 	os.Remove(os.TempDir() + string(os.PathListSeparator) + "test_service.log*")
-	serviceLog, err := ioutil.TempFile(dir, "test_service.log")
+	serviceLog, err := createTempFile(dir, "test_service.log")
 	defer os.Remove(serviceLog.Name())
 	require.NoError(t, err)
 
@@ -916,14 +906,10 @@ func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
 	dir, e := ioutil.TempDir("", "test")
-	if e != nil {
-		if runtime.GOOS == "windows" {
-			t.SkipNow()
-		}
-	}
+	require.NoError(t, e)
 	defer os.Remove(dir)
 
-	agentLog, err := ioutil.TempFile(dir, "test_agent.log")
+	agentLog, err := createTempFile(dir, "test_agent.log")
 	defer os.Remove(agentLog.Name())
 	require.NoError(t, err)
 
@@ -949,7 +935,7 @@ func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 
 		time.Sleep(2 * time.Second)
 
-		serviceLog, err = ioutil.TempFile(dir, "test_service.log")
+		serviceLog, err = createTempFile(dir, "test_service.log")
 		require.NoError(t, err)
 
 		logEntryString = "This is from Service log"
@@ -996,7 +982,7 @@ func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
 
-	agentLog, err := ioutil.TempFile("", "test_agent.log")
+	agentLog, err := createTempFile("", "test_agent.log")
 	defer os.Remove(agentLog.Name())
 	require.NoError(t, err)
 
@@ -1023,7 +1009,7 @@ func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
 
 		time.Sleep(2 * time.Second)
 
-		serviceLog, err = ioutil.TempFile("", "test_service.log")
+		serviceLog, err = createTempFile("", "test_service.log")
 		require.NoError(t, err)
 
 		logEntryString = "This is from Service log"
