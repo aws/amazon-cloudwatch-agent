@@ -24,13 +24,13 @@ import (
 // Reminder, keep this in sync with the plugin's README.md
 const sampleConfig = `
   ##
-  ## ec2tagger calls AWS api to fetch EC2 Metadata and Instance Tags and EBS Volumes associated with the  
+  ## ec2tagger calls AWS api to fetch EC2 Metadata and Instance Tags and EBS Volumes associated with the
   ## current EC2 Instance and attched those values as tags to the metric.
-  ## 
+  ##
   ## Frequency for the plugin to refresh the EC2 Instance Tags and ebs Volumes associated with this Instance.
   ## Defaults to 0 (no refresh).
   ## When it is zero, ec2tagger doesn't do refresh to keep the ec2 tags and ebs volumes updated. However, as the
-  ## AWS api request made by ec2tagger might not return the complete values (e.g. initial api call might return a 
+  ## AWS api request made by ec2tagger might not return the complete values (e.g. initial api call might return a
   ## subset of ec2 tags), ec2tagger will retry every 3 minutes until all the tags/volumes (as specified by
   ## "ec2_instance_tag_keys"/"ebs_device_keys") are retrieved successfully. (Note when the specified list is ["*"],
   ## there is no way to check if all tags/volumes are retrieved, so there is no retry in that case)
@@ -49,7 +49,7 @@ const sampleConfig = `
   # ec2_instance_tag_keys = ["aws:autoscaling:groupName", "Name"]
   ##
   ## Retrieve ebs_volume_id for the specified devices, add ebs_volume_id as tag. The specified devices are
-  ## the values corresponding to the tag key "disk_device_tag_key" in the input metric.  
+  ## the values corresponding to the tag key "disk_device_tag_key" in the input metric.
   ## If this configuration is not provided, or has an empty list, no ebs volume is applied.
   ## If this configuration contains one entry and its value is "*", then all ebs volume for the instance are applied.
   # ebs_device_keys = ["/dev/xvda", "/dev/nvme0n1"]
@@ -85,7 +85,7 @@ const (
 var (
 	defaultRefreshInterval = 180 * time.Second
 	// backoff retry for ec2 describe instances API call. Assuming the throttle limit is 20 per second. 10 mins allow 12000 API calls.
-	backoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
+	backoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
 )
 
 type metadataLookup struct {
@@ -153,6 +153,10 @@ func (t *Tagger) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// this batch then will all get the same tags.
 	t.RLock()
 	defer t.RUnlock()
+
+	if !t.started {
+		return []telegraf.Metric{}
+	}
 
 	for _, metric := range in {
 		if t.ec2TagCache != nil {
@@ -368,10 +372,11 @@ func (t *Tagger) Init() error {
 			Token:     t.Token,
 		}
 		t.ec2 = t.ec2Provider(ec2CredentialConfig)
-		t.initialRetrievalOfTagsAndVolumes() //keep retries until successful retrieval
+		go t.initialRetrievalOfTagsAndVolumes() //Async start of initial retrieval to prevent block of agent start
 		t.refreshLoopToUpdateTagsAndVolumes()
 	}
-	t.Log.Infof("EC2 tagger has started.")
+
+	t.Log.Infof("ec2tagger: EC2 tagger has started initialization.")
 	return nil
 }
 
@@ -397,10 +402,12 @@ func (t *Tagger) refreshLoopToUpdateTagsAndVolumes() {
 	}
 
 	if needRefresh {
-		// randomly stagger the time of the first refresh to mitigate throttling if a whole fleet is
-		// restarted at the same time
-		sleepUntilHostJitter(refreshInterval)
-		go t.refreshLoop(refreshInterval, stopAfterFirstSuccess)
+		go func() {
+			// randomly stagger the time of the first refresh to mitigate throttling if a whole fleet is
+			// restarted at the same time
+			sleepUntilHostJitter(refreshInterval)
+			t.refreshLoop(refreshInterval, stopAfterFirstSuccess)
+		}()
 	}
 }
 
@@ -437,68 +444,78 @@ func (t *Tagger) updateVolumes() error {
 	return nil
 }
 
-func (t *Tagger) retrieveTagsVolumesOnce(prevTagSuccess, prevVolumesSuccess bool) (tagsSuccess, volumesSuccess bool) {
-	tagsSuccess = prevTagSuccess
-	volumesSuccess = prevVolumesSuccess
-	if !prevTagSuccess {
-		if err := t.updateTags(); err != nil {
-			t.Log.Warnf("ec2tagger: Unable to describe ec2 tags for initial retrieval: %v", err)
-		} else {
-			tagsSuccess = true
-		}
-	}
-
-	if !prevVolumesSuccess {
-		if err := t.updateVolumes(); err != nil {
-			t.Log.Errorf("ec2tagger: Unable to describe ec2 volume for initial retrieval: %v", err)
-		} else {
-			volumesSuccess = true
-		}
-	}
-
-	return
+func (t *Tagger) setStarted() {
+	t.Lock()
+	t.started = true
+	t.Unlock()
+	t.Log.Infof("ec2tagger: EC2 tagger has started, finished initial retrieval of tags and Volumes")
 }
 
 // This function never return until calling updateTags() and updateVolumes() succeed or shutdown happen.
 func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
-	retrieveTagsSuccess := len(t.EC2InstanceTagKeys) == 0
-	retrieveVolumesSuccess := len(t.EBSDeviceKeys) == 0
+	tagsRetrieved := len(t.EC2InstanceTagKeys) == 0
+	volsRetrieved := len(t.EBSDeviceKeys) == 0
 
-	retrieveTagsSuccess, retrieveVolumesSuccess = t.retrieveTagsVolumesOnce(retrieveTagsSuccess, retrieveVolumesSuccess)
-	if retrieveTagsSuccess && retrieveVolumesSuccess {
-		return
+	if tagsRetrieved && volsRetrieved {
+		t.setStarted()
+		return // Quick return when no retrieval is needed
 	}
 
-	index := 0
-	// Adding jitter for the first retry
-	sleepUntilHostJitter(backoffSleepArray[index])
-	// start retry
-	retryTicker := time.NewTicker(backoffSleepArray[index])
+	retry := 0
 	for {
-		if index < len(backoffSleepArray) {
-			if index > 0 && backoffSleepArray[index] != backoffSleepArray[index-1] {
-				// create a new ticker when the delay is not same as previous one
-				retryTicker.Stop()
-				retryTicker = time.NewTicker(backoffSleepArray[index])
-			}
-			index += 1
+		var waitDuration time.Duration
+		if retry == 0 {
+			waitDuration = hostJitter(backoffSleepArray[0])
+		} else if retry < len(backoffSleepArray) {
+			waitDuration = backoffSleepArray[retry]
+		} else {
+			waitDuration = backoffSleepArray[len(backoffSleepArray)-1]
 		}
 
+		wait := time.NewTimer(waitDuration)
 		select {
 		case <-t.shutdownC:
-			retryTicker.Stop()
-		case <-retryTicker.C:
-			retrieveTagsSuccess, retrieveVolumesSuccess = t.retrieveTagsVolumesOnce(retrieveTagsSuccess, retrieveVolumesSuccess)
-			if retrieveTagsSuccess && retrieveVolumesSuccess {
-				t.Log.Infof("ec2tagger: Initial retrieval of tags/volumes succeded")
-				retryTicker.Stop()
-				return
+			wait.Stop()
+			return
+		case <-wait.C:
+		}
+
+		if retry > 0 {
+			t.Log.Infof("ec2tagger: %v retry for initial retrieval of tags and volumes", retry)
+		}
+
+		if !tagsRetrieved {
+			if err := t.updateTags(); err != nil {
+				t.Log.Warnf("ec2tagger: Unable to describe ec2 tags for initial retrieval: %v", err)
+			} else {
+				tagsRetrieved = true
 			}
 		}
+
+		if !volsRetrieved {
+			if err := t.updateVolumes(); err != nil {
+				t.Log.Errorf("ec2tagger: Unable to describe ec2 volume for initial retrieval: %v", err)
+			} else {
+				volsRetrieved = true
+			}
+		}
+
+		if tagsRetrieved { // volsRetrieved is not checked to keep behavior consistency
+			t.Log.Infof("ec2tagger: Initial retrieval of tags succeded")
+			t.setStarted()
+			return
+		}
+
+		retry++
 	}
+
 }
 
 func sleepUntilHostJitter(max time.Duration) {
+	time.Sleep(hostJitter(max))
+}
+
+func hostJitter(max time.Duration) time.Duration {
 	hostName, err := os.Hostname()
 	if err != nil {
 		hostName = "Unknown"
@@ -507,7 +524,7 @@ func sleepUntilHostJitter(max time.Duration) {
 	hash.Write([]byte(hostName))
 	// Right shift the uint64 hash by one to make sure the jitter duration is always positive
 	hostSleepJitter := time.Duration(int64(hash.Sum64()>>1)) % max
-	time.Sleep(hostSleepJitter)
+	return hostSleepJitter
 }
 
 // init adds this plugin to the framework's "processors" registry

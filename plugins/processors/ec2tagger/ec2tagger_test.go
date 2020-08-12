@@ -590,3 +590,146 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expectedOutputUpdated, outputUpdated)
 }
+
+// Test metrics are dropped before the initial retrieval is done
+func TestMetricsDroppedBeforeStarted(t *testing.T) {
+	assert := assert.New(t)
+	mockMetadata := &mockEC2Metadata{
+		IsAvailable:              true,
+		InstanceIdentityDocument: mockedInstanceIdentityDoc,
+	}
+	ec2Client := &mockEC2Client{
+		tagsCallCount:       0,
+		tagsFailLimit:       0,
+		tagsPartialLimit:    1,
+		UseUpdatedTags:      false,
+		volumesCallCount:    0,
+		volumesFailLimit:    -1,
+		volumesPartialLimit: 0,
+		UseUpdatedVolumes:   false,
+	}
+	ec2Provider := func(*internalaws.CredentialConfig) ec2iface.EC2API {
+		return ec2Client
+	}
+	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	defaultRefreshInterval = 50 * time.Millisecond
+	tagger := Tagger{
+		Log:                    testutil.Logger{},
+		RefreshIntervalSeconds: internal.Duration{Duration: 0},
+		ec2Provider:            ec2Provider,
+		ec2:                    ec2Client,
+		ec2metadata:            mockMetadata,
+		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+		EC2InstanceTagKeys:     []string{"*"},
+		EBSDeviceKeys:          []string{"*"},
+	}
+
+	input := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"host": "example.org",
+			},
+			map[string]interface{}{
+				"cpu": 0.11,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"disk",
+			map[string]string{
+				"device": "/dev/xvdc",
+			},
+			map[string]interface{}{
+				"write_bytes": 200,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"disk",
+			map[string]string{
+				"device": "/dev/xvdf",
+			},
+			map[string]interface{}{
+				"write_bytes": 135,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	err := tagger.Init()
+	assert.Nil(err)
+	assert.Equal(tagger.started, false)
+
+	results := tagger.Apply(input...)
+	assert.Equal(len(results), 0)
+
+	//assume one second is long enough for the api to be called many times (potentially)
+	time.Sleep(time.Second)
+	//check only partial tags/volumes are returned
+	assert.Equal(2, ec2Client.tagsCallCount)
+	assert.Equal(1, ec2Client.volumesCallCount)
+	//check partial tags/volumes are saved
+	expectedTags := map[string]string{
+		"tagKey1": "tagVal1",
+	}
+	assert.Equal(expectedTags, tagger.ec2TagCache)
+	expectedVolumes := map[string]string{
+		"/dev/xvdc": "aws://us-east-1a/vol-0303a1cc896c42d28",
+	}
+	assert.Equal(expectedVolumes, tagger.ebsVolume.dev2Vol)
+
+	assert.Equal(tagger.started, true)
+	results = tagger.Apply(input...)
+
+	assert.Equal(len(results), 3)
+}
+
+// Test ec2tagger init does not block for a long time
+func TestTaggerInitDoesNotBlock(t *testing.T) {
+	assert := assert.New(t)
+	mockMetadata := &mockEC2Metadata{
+		IsAvailable:              true,
+		InstanceIdentityDocument: mockedInstanceIdentityDoc,
+	}
+	ec2Client := &mockEC2Client{
+		tagsCallCount:       0,
+		tagsFailLimit:       0,
+		tagsPartialLimit:    1,
+		UseUpdatedTags:      false,
+		volumesCallCount:    0,
+		volumesFailLimit:    -1,
+		volumesPartialLimit: 0,
+		UseUpdatedVolumes:   false,
+	}
+	ec2Provider := func(*internalaws.CredentialConfig) ec2iface.EC2API {
+		return ec2Client
+	}
+	backoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
+	defaultRefreshInterval = 180 * time.Second
+	tagger := Tagger{
+		Log:                    testutil.Logger{},
+		RefreshIntervalSeconds: internal.Duration{Duration: 0},
+		ec2Provider:            ec2Provider,
+		ec2:                    ec2Client,
+		ec2metadata:            mockMetadata,
+		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+		EC2InstanceTagKeys:     []string{"*"},
+		EBSDeviceKeys:          []string{"*"},
+	}
+
+	deadline := time.NewTimer(1 * time.Second)
+	inited := make(chan struct{})
+	go func() {
+		select {
+		case <-deadline.C:
+			t.Errorf("Tagger Init took too long to finish")
+		case <-inited:
+		}
+	}()
+	err := tagger.Init()
+	assert.Nil(err)
+	assert.Equal(tagger.started, false)
+	close(inited)
+
+}
