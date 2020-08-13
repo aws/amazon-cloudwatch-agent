@@ -12,14 +12,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
-)
-
-const (
-	// Magic number that only start trying gzip compression when payload is larger
-	// https://webmasters.stackexchange.com/questions/31750/what-is-recommended-minimum-object-size-for-gzip-performance-benefits
-	startCompressionSize = 350
 )
 
 var gzipPool = sync.Pool{
@@ -34,24 +27,19 @@ func NewRequestCompressionHandler(opNames []string) request.NamedHandler {
 		Fn: func(req *request.Request) {
 			match := false
 			for _, opName := range opNames {
-				if req.Operation.Name != opName {
+				if req.Operation.Name == opName {
 					match = true
 				}
 			}
-			if !match {
-				return
-			}
 
-			body := req.GetBody()
-			size, err := aws.SeekerLen(body)
-			if err == nil && size < startCompressionSize {
+			if !match {
 				return
 			}
 
 			buf := new(bytes.Buffer)
 			g := gzipPool.Get().(*gzip.Writer)
 			g.Reset(buf)
-			size, err = io.Copy(g, body)
+			size, err := io.Copy(g, req.GetBody())
 			if err != nil {
 				log.Printf("I! Error occurred when trying to compress payload for operation %v, uncompressed request is sent, error: %v", req.Operation.Name, err)
 				req.ResetBody()
