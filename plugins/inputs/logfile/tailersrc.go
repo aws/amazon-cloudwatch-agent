@@ -67,7 +67,7 @@ func NewTailerSrc(
 		maxEventSize:   maxEventSize,
 		truncateSuffix: truncateSuffix,
 
-		offsetCh: make(chan int64, 100),
+		offsetCh: make(chan int64, 2000),
 		done:     make(chan struct{}),
 	}
 	go ts.runSaveState()
