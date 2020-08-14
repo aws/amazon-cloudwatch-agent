@@ -99,7 +99,13 @@ func (ts tailerSrc) Destination() string {
 }
 
 func (ts tailerSrc) Done(offset int64) {
-	ts.offsetCh <- offset
+	// ts.offsetCh will only be blocked when the runSaveState func has exited,
+	// which only happens when the original file has been removed, thus making
+	// Keeping its offset useless
+	select {
+	case ts.offsetCh <- offset:
+	default:
+	}
 }
 
 func (ts *tailerSrc) Stop() {
