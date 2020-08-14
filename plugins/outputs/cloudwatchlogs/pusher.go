@@ -201,7 +201,8 @@ func (p *pusher) send() {
 				}
 			}
 
-			for _, done := range p.doneCallbacks {
+			for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
+				done := p.doneCallbacks[i]
 				done()
 			}
 
