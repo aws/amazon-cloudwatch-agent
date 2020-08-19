@@ -25,6 +25,36 @@ var (
 	multilineWaitPeriod = 1 * time.Second
 )
 
+type fileOffset struct {
+	seq, offset int64 // Seq handles file trucation, when file is trucated, we increase the offset seq
+}
+
+func (fo *fileOffset) SetOffset(o int64) {
+	if o < fo.offset { // Increment the sequence number when a smaller offset is given (truncated)
+		fo.seq++
+	}
+	fo.offset = o
+}
+
+type LogEvent struct {
+	msg    string
+	t      time.Time
+	offset fileOffset
+	src    *tailerSrc
+}
+
+func (le LogEvent) Message() string {
+	return le.msg
+}
+
+func (le LogEvent) Time() time.Time {
+	return le.t
+}
+
+func (le LogEvent) Done() {
+	le.src.Done(le.offset)
+}
+
 type tailerSrc struct {
 	group, stream  string
 	destination    string
@@ -38,7 +68,7 @@ type tailerSrc struct {
 
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
-	offsetCh        chan int64
+	offsetCh        chan fileOffset
 	done            chan struct{}
 	startTailerOnce sync.Once
 	cleanUpFns      []func()
@@ -67,7 +97,7 @@ func NewTailerSrc(
 		maxEventSize:   maxEventSize,
 		truncateSuffix: truncateSuffix,
 
-		offsetCh: make(chan int64, 2000),
+		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
 	}
 	go ts.runSaveState()
@@ -98,7 +128,7 @@ func (ts tailerSrc) Destination() string {
 	return ts.destination
 }
 
-func (ts tailerSrc) Done(offset int64) {
+func (ts tailerSrc) Done(offset fileOffset) {
 	// ts.offsetCh will only be blocked when the runSaveState func has exited,
 	// which only happens when the original file has been removed, thus making
 	// Keeping its offset useless
@@ -122,7 +152,7 @@ func (ts *tailerSrc) runTail() {
 	defer t.Stop()
 	var msg, init string
 	var cnt int
-	var offset int64
+	fo := &fileOffset{}
 
 	ignoreUntilNextEvent := false
 	for {
@@ -134,7 +164,7 @@ func (ts *tailerSrc) runTail() {
 					e := &LogEvent{
 						msg:    msg,
 						t:      ts.timestampFn(msg),
-						offset: offset,
+						offset: *fo,
 						src:    ts,
 					}
 					ts.outputFn(e)
@@ -159,21 +189,21 @@ func (ts *tailerSrc) runTail() {
 
 			if ts.isMLStart == nil {
 				msg = text
-				offset = line.Offset
+				fo.SetOffset(line.Offset)
 				init = ""
 			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msg == "") {
 				init = text
 				ignoreUntilNextEvent = false
 			} else if ignoreUntilNextEvent || len(msg) >= ts.maxEventSize {
 				ignoreUntilNextEvent = true
-				offset = line.Offset
+				fo.SetOffset(line.Offset)
 				continue
 			} else {
 				msg += "\n" + text
 				if len(msg) > ts.maxEventSize {
 					msg = msg[:ts.maxEventSize-len(ts.truncateSuffix)] + ts.truncateSuffix
 				}
-				offset = line.Offset
+				fo.SetOffset(line.Offset)
 				continue
 			}
 
@@ -181,14 +211,14 @@ func (ts *tailerSrc) runTail() {
 				e := &LogEvent{
 					msg:    msg,
 					t:      ts.timestampFn(msg),
-					offset: offset,
+					offset: *fo,
 					src:    ts,
 				}
 				ts.outputFn(e)
 			}
 
 			msg = init
-			offset = line.Offset
+			fo.SetOffset(line.Offset)
 			cnt = 0
 		case <-t.C:
 			if msg != "" {
@@ -202,7 +232,7 @@ func (ts *tailerSrc) runTail() {
 			e := &LogEvent{
 				msg:    msg,
 				t:      ts.timestampFn(msg),
-				offset: offset,
+				offset: *fo,
 				src:    ts,
 			}
 			ts.outputFn(e)
@@ -232,25 +262,25 @@ func (ts *tailerSrc) runSaveState() {
 	t := time.NewTicker(100 * time.Millisecond)
 	defer t.Stop()
 
-	var offset, lastSavedOffset int64
+	var offset, lastSavedOffset fileOffset
 	for {
 		select {
 		case o := <-ts.offsetCh:
-			if o > offset {
+			if o.seq > offset.seq || (o.seq == offset.seq && o.offset > offset.offset) {
 				offset = o
 			}
 		case <-t.C:
 			if offset == lastSavedOffset {
 				continue
 			}
-			err := ts.saveState(offset)
+			err := ts.saveState(offset.offset)
 			if err != nil {
 				log.Printf("E! [logfile] Error happened when saving file state %s to file state folder %s: %v", ts.tailer.Filename, ts.stateFilePath, err)
 				continue
 			}
 			lastSavedOffset = offset
 		case <-ts.done:
-			err := ts.saveState(offset)
+			err := ts.saveState(offset.offset)
 			if err != nil {
 				log.Printf("E! [logfile] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", ts.tailer.Filename, ts.stateFilePath, err)
 			}
