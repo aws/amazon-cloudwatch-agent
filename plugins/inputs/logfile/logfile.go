@@ -454,25 +454,6 @@ func isDirectory(filename string) (bool, error) {
 	return false, nil
 }
 
-type LogEvent struct {
-	msg    string
-	t      time.Time
-	offset int64
-	src    *tailerSrc
-}
-
-func (le LogEvent) Message() string {
-	return le.msg
-}
-
-func (le LogEvent) Time() time.Time {
-	return le.t
-}
-
-func (le LogEvent) Done() {
-	le.src.Done(le.offset)
-}
-
 func init() {
 	inputs.Add("logfile", func() telegraf.Input {
 		return NewLogFile()

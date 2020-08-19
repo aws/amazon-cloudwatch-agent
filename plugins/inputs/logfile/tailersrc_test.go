@@ -4,11 +4,13 @@
 package logfile
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -131,6 +133,148 @@ func TestTailerSrc(t *testing.T) {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
 	}
 	<-done
+}
+
+func TestOffsetDoneCallBack(t *testing.T) {
+
+	file, err := createTempFile("", "tailsrctest-*.log")
+	defer os.Remove(file.Name())
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	statefile, err := ioutil.TempFile("", "tailsrctest-state-*.log")
+	defer os.Remove(statefile.Name())
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	tailer, err := tail.TailFile(file.Name(),
+		tail.Config{
+			ReOpen:      false,
+			Follow:      true,
+			Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
+			MustExist:   true,
+			Pipe:        false,
+			Poll:        true,
+			MaxLineSize: defaultMaxEventSize,
+			IsUTF16:     false,
+		})
+
+	if err != nil {
+		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
+		return
+	}
+
+	ts := NewTailerSrc(
+		"groupName", "streamName",
+		"destination",
+		statefile.Name(),
+		tailer,
+		false, // AutoRemoval
+		regexp.MustCompile("^[\\S]").MatchString,
+		parseRFC3339Timestamp,
+		nil, // encoding
+		defaultMaxEventSize,
+		defaultTruncateSuffix,
+	)
+	multilineWaitPeriod = 100 * time.Millisecond
+
+	done := make(chan struct{})
+	i := 0
+	ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(done)
+			return
+		}
+		evt.Done()
+		i++
+
+		if i == 10 { // Test before first truncate
+			time.Sleep(1 * time.Second)
+			b, err := ioutil.ReadFile(statefile.Name())
+			if err != nil {
+				t.Errorf("Failed to read state file: %v", err)
+			}
+			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
+			if err != nil {
+				t.Errorf("Failed to parse offset: %v, from '%s'", err, b)
+			}
+
+			if offset != 1010 {
+				t.Errorf("Wrong offset %v is written to state file, expecting 1010", offset)
+			}
+		}
+
+		if i == 15 { // Test after first truncate, saved offset should decrease
+			time.Sleep(1 * time.Second)
+			b, err := ioutil.ReadFile(statefile.Name())
+			if err != nil {
+				t.Errorf("Failed to read state file: %v", err)
+			}
+			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
+			if err != nil {
+				t.Errorf("Failed to parse offset: %v, from '%s'", err, b)
+			}
+
+			if offset != 505 {
+				t.Errorf("Wrong offset %v is written to state file, after truncate and write shorter logs expecting 505", offset)
+			}
+		}
+
+		if i == 35 { // Test after 2nd truncate, the offset should be larger
+			time.Sleep(1 * time.Second)
+			b, err := ioutil.ReadFile(statefile.Name())
+			if err != nil {
+				t.Errorf("Failed to read state file: %v", err)
+			}
+			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
+			if err != nil {
+				t.Errorf("Failed to parse offset: %v, from '%s'", err, b)
+			}
+			if offset != 2020 {
+				t.Errorf("Wrong offset %v is written to state file, after truncate and write longer logs expecting 2020", offset)
+			}
+		}
+
+	})
+
+	// Write 100 lines (save state should record 1010 bytes)
+	for i := 0; i < 10; i++ {
+		fmt.Fprintln(file, logLine("A", 100, time.Now()))
+	}
+	time.Sleep(1 * time.Second)
+
+	// First truncate then write 50 lines (save state should record 505 bytes)
+	if err := file.Truncate(0); err != nil {
+		t.Errorf("Failed to truncate log file '%v': %v", file.Name(), err)
+	}
+	time.Sleep(1 * time.Second)
+	file.Seek(io.SeekStart, 0)
+	for i := 0; i < 5; i++ {
+		fmt.Fprintln(file, logLine("B", 100, time.Now()))
+	}
+	time.Sleep(1 * time.Second)
+
+	// Second truncate then write 20 lines (save state should record 2020 bytes)
+	if err := file.Truncate(0); err != nil {
+		t.Errorf("Failed to truncate log file '%v': %v", file.Name(), err)
+	}
+	time.Sleep(1 * time.Second)
+	file.Seek(io.SeekStart, 0)
+	for i := 0; i < 20; i++ {
+		fmt.Fprintln(file, logLine("C", 100, time.Now()))
+	}
+	time.Sleep(1 * time.Second)
+
+	// Removal of log file should stop tailersrc
+	if err := os.Remove(file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
+	}
+	<-done
+	if i < 35 {
+		t.Errorf("Not enough logs have been processed, only %v are processed", i)
+	}
 }
 
 func parseRFC3339Timestamp(line string) time.Time {
