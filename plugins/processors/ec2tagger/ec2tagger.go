@@ -372,8 +372,10 @@ func (t *Tagger) Init() error {
 			Token:     t.Token,
 		}
 		t.ec2 = t.ec2Provider(ec2CredentialConfig)
-		go t.initialRetrievalOfTagsAndVolumes() //Async start of initial retrieval to prevent block of agent start
-		t.refreshLoopToUpdateTagsAndVolumes()
+		go func() { //Async start of initial retrieval to prevent block of agent start
+			t.initialRetrievalOfTagsAndVolumes()
+			t.refreshLoopToUpdateTagsAndVolumes()
+		}()
 	}
 
 	t.Log.Infof("ec2tagger: EC2 tagger has started initialization.")
