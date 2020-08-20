@@ -35,7 +35,7 @@ func TestExeConfig(t *testing.T) {
 		"exe":        "amazon-cloudwat",
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
-		"tagexclude": []string{"user"},
+		"tagexclude": []string{"user", "result"},
 	}}
 	checkResult(t, input, expectedVal)
 }
@@ -54,7 +54,7 @@ func TestPidFileConfig(t *testing.T) {
 		"pid_file":   "/var/run/sshd",
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
-		"tagexclude": []string{"user"},
+		"tagexclude": []string{"user", "result"},
 	}}
 	checkResult(t, input, expectedVal)
 }
@@ -73,7 +73,7 @@ func TestPatternConfig(t *testing.T) {
 		"pattern":    "sshd",
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
-		"tagexclude": []string{"user"},
+		"tagexclude": []string{"user", "result"},
 	}}
 	checkResult(t, input, expectedVal)
 }
@@ -96,7 +96,7 @@ func TestMultiLookupConfig(t *testing.T) {
 		"pattern":    "sshd",
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
-		"tagexclude": []string{"user"},
+		"tagexclude": []string{"user", "result"},
 	}}
 	checkResult(t, input, expectedVal)
 }
@@ -118,7 +118,7 @@ func TestIntervalConfig(t *testing.T) {
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
 		"interval":   "30s",
 		"tags":       map[string]interface{}{"aws:StorageResolution": "true"},
-		"tagexclude": []string{"user"},
+		"tagexclude": []string{"user", "result"},
 	}}
 	checkResult(t, input, expectedVal)
 }
@@ -145,13 +145,13 @@ func TestMultiProcessesConfig(t *testing.T) {
 			"pid_file":   "/var/run/sshd",
 			"pid_finder": "native",
 			"fieldpass":  []string{"cpu_usage", "memory_rss"},
-			"tagexclude": []string{"user"},
+			"tagexclude": []string{"user", "result"},
 		},
 		map[string]interface{}{
 			"exe":        "cloudwatch",
 			"pid_finder": "native",
 			"fieldpass":  []string{"cpu_usage", "memory_rss"},
-			"tagexclude": []string{"user"},
+			"tagexclude": []string{"user", "result"},
 		},
 	}
 	checkResult(t, input, expectedVal)
@@ -179,7 +179,7 @@ func TestIntervalErrorConfig(t *testing.T) {
 		"pid_file":   "/var/run/sshd",
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage"},
-		"tagexclude": []string{"user"},
+		"tagexclude": []string{"user", "result"},
 	}}
 	checkResult(t, input, expectedVal)
 }

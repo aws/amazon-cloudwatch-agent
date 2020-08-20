@@ -8,7 +8,7 @@ const (
 )
 
 var (
-	tagExcludeValues = []string{"user"}
+	tagExcludeValues = []string{"user", "result"}
 )
 
 type DropTags struct {
