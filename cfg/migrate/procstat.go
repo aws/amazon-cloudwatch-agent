@@ -9,7 +9,7 @@ func init() {
 //    fieldpass = ["cpu_usage", "memory_rss"]
 //    pid_file = "/var/run/example1.pid"
 //    pid_finder = "native"
-//+   tagexclude = ["user"]
+//+   tagexclude = ["user", "result"]
 func ProcStatRule(conf map[string]interface{}) error {
 	ps := getItem(conf, "inputs", "procstat")
 
@@ -19,7 +19,7 @@ func ProcStatRule(conf map[string]interface{}) error {
 		if ok {
 			newTagEx = append(newTagEx, tagexclude...)
 		}
-		newTagEx = append(newTagEx, "user")
+		newTagEx = append(newTagEx, "user", "result")
 
 		p["tagexclude"] = newTagEx
 	}
