@@ -733,3 +733,32 @@ func TestTaggerInitDoesNotBlock(t *testing.T) {
 	close(inited)
 
 }
+
+// Test ec2tagger init does not block for a long time
+func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
+	assert := assert.New(t)
+	mockMetadata := &mockEC2Metadata{
+		IsAvailable:              true,
+		InstanceIdentityDocument: mockedInstanceIdentityDoc,
+	}
+	tagger := Tagger{
+		Log:                    testutil.Logger{},
+		RefreshIntervalSeconds: internal.Duration{Duration: 0},
+		ec2metadata:            mockMetadata,
+		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+	}
+
+	deadline := time.NewTimer(1 * time.Second)
+	inited := make(chan struct{})
+	go func() {
+		select {
+		case <-deadline.C:
+			t.Errorf("Tagger Init took too long to finish")
+		case <-inited:
+		}
+	}()
+	err := tagger.Init()
+	assert.Nil(err)
+	assert.Equal(tagger.started, true)
+	close(inited)
+}

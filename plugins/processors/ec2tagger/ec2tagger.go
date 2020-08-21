@@ -376,9 +376,12 @@ func (t *Tagger) Init() error {
 			t.initialRetrievalOfTagsAndVolumes()
 			t.refreshLoopToUpdateTagsAndVolumes()
 		}()
+		t.Log.Infof("ec2tagger: EC2 tagger has started initialization.")
+
+	} else {
+		t.setStarted()
 	}
 
-	t.Log.Infof("ec2tagger: EC2 tagger has started initialization.")
 	return nil
 }
 
@@ -457,11 +460,6 @@ func (t *Tagger) setStarted() {
 func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 	tagsRetrieved := len(t.EC2InstanceTagKeys) == 0
 	volsRetrieved := len(t.EBSDeviceKeys) == 0
-
-	if tagsRetrieved && volsRetrieved {
-		t.setStarted()
-		return // Quick return when no retrieval is needed
-	}
 
 	retry := 0
 	for {
