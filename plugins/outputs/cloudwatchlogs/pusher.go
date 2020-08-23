@@ -59,7 +59,7 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		Log:           logger,
 
 		events:     make([]*cloudwatchlogs.InputLogEvent, 0, 10),
-		eventsCh:   make(chan logs.LogEvent, 100),
+		eventsCh:   make(chan logs.LogEvent, reqEventsLimit*2),
 		flushTimer: time.NewTimer(flushTimeout),
 		stop:       make(chan struct{}),
 	}
@@ -87,6 +87,7 @@ func (p *pusher) AddEventNonBlocking(e logs.LogEvent) {
 			return
 		default:
 			<-p.eventsCh
+			p.addStats("emfMetricDrop", 1)
 		}
 	}
 }
