@@ -465,9 +465,7 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 	retry := 0
 	for {
 		var waitDuration time.Duration
-		if retry == 0 {
-			waitDuration = 0
-		} else if retry < len(backoffSleepArray) {
+		if retry < len(backoffSleepArray) {
 			waitDuration = backoffSleepArray[retry]
 		} else {
 			waitDuration = backoffSleepArray[len(backoffSleepArray)-1]
