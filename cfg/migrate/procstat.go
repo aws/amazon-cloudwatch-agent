@@ -19,7 +19,12 @@ func ProcStatRule(conf map[string]interface{}) error {
 		if ok {
 			newTagEx = append(newTagEx, tagexclude...)
 		}
-		newTagEx = append(newTagEx, "user", "result")
+
+		_, hasUser := p["user"].(string)
+		if !hasUser {
+			newTagEx = append(newTagEx, "user")
+		}
+		newTagEx = append(newTagEx, "result")
 
 		p["tagexclude"] = newTagEx
 	}
