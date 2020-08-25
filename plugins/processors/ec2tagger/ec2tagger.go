@@ -85,7 +85,7 @@ const (
 var (
 	defaultRefreshInterval = 180 * time.Second
 	// backoff retry for ec2 describe instances API call. Assuming the throttle limit is 20 per second. 10 mins allow 12000 API calls.
-	backoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
+	backoffSleepArray = []time.Duration{0, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
 )
 
 type metadataLookup struct {
@@ -227,6 +227,7 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 	for {
 		select {
 		case <-refreshTicker.C:
+			t.Log.Debugf("ec2tagger refreshing: EC2InstanceTags needed %v, retrieved: %v, ebs device needed %v, retrieved: %v", len(t.EC2InstanceTagKeys), t.ec2TagsRetrieved(), len(t.EBSDeviceKeys), t.ebsVolumesRetrieved())
 			refreshTags := len(t.EC2InstanceTagKeys) > 0
 			refreshVolumes := len(t.EBSDeviceKeys) > 0
 
@@ -236,7 +237,7 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 				// need refresh volumes when it is configured and not all volumes are retrieved
 				refreshVolumes = refreshVolumes && !t.ebsVolumesRetrieved()
 				if !refreshTags && !refreshVolumes {
-					t.Log.Infof("ec2tagger: All tags/volumes are retrieved. Stop refreshTicker.")
+					t.Log.Infof("ec2tagger: Refresh is no longer needed, stop refreshTicker.")
 					return
 				}
 			}
@@ -465,7 +466,7 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 	for {
 		var waitDuration time.Duration
 		if retry == 0 {
-			waitDuration = hostJitter(backoffSleepArray[0])
+			waitDuration = 0
 		} else if retry < len(backoffSleepArray) {
 			waitDuration = backoffSleepArray[retry]
 		} else {
