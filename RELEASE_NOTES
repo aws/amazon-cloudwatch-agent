@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247345.27 (2020-08-26)
+========================================================================
+
+New Features and Enhancements:
+
+* Amazon CloudWatch Agent goes opensource, released under MIT license
+* Upgrade dependency of telegraf project to version 1.15
+* Allow override of user-agent string used by the agent when making calls to cloudwatch backend
+
+========================================================================
 Amazon CloudWatch Agent 1.245315.0 (2020-05-20)
 ========================================================================
 
