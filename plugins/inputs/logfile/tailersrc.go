@@ -4,6 +4,7 @@
 package logfile
 
 import (
+	"bytes"
 	"io/ioutil"
 	"log"
 	"os"
@@ -150,7 +151,8 @@ func (ts *tailerSrc) runTail() {
 	defer ts.cleanUp()
 	t := time.NewTicker(multilineWaitPeriod)
 	defer t.Stop()
-	var msg, init string
+	var init string
+	var msgBuf bytes.Buffer
 	var cnt int
 	fo := &fileOffset{}
 
@@ -160,7 +162,8 @@ func (ts *tailerSrc) runTail() {
 		select {
 		case line, ok := <-ts.tailer.Lines:
 			if !ok {
-				if msg != "" {
+				if msgBuf.Len() > 0 {
+					msg := msgBuf.String()
 					e := &LogEvent{
 						msg:    msg,
 						t:      ts.timestampFn(msg),
@@ -188,26 +191,30 @@ func (ts *tailerSrc) runTail() {
 			}
 
 			if ts.isMLStart == nil {
-				msg = text
+				msgBuf.Reset()
+				msgBuf.WriteString(text)
 				fo.SetOffset(line.Offset)
 				init = ""
-			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msg == "") {
+			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msgBuf.Len() == 0) {
 				init = text
 				ignoreUntilNextEvent = false
-			} else if ignoreUntilNextEvent || len(msg) >= ts.maxEventSize {
+			} else if ignoreUntilNextEvent || msgBuf.Len() >= ts.maxEventSize {
 				ignoreUntilNextEvent = true
 				fo.SetOffset(line.Offset)
 				continue
 			} else {
-				msg += "\n" + text
-				if len(msg) > ts.maxEventSize {
-					msg = msg[:ts.maxEventSize-len(ts.truncateSuffix)] + ts.truncateSuffix
+				msgBuf.WriteString("\n")
+				msgBuf.WriteString(text)
+				if msgBuf.Len() > ts.maxEventSize {
+					msgBuf.Truncate(ts.maxEventSize - len(ts.truncateSuffix))
+					msgBuf.WriteString(ts.truncateSuffix)
 				}
 				fo.SetOffset(line.Offset)
 				continue
 			}
 
-			if msg != "" {
+			if msgBuf.Len() > 0 {
+				msg := msgBuf.String()
 				e := &LogEvent{
 					msg:    msg,
 					t:      ts.timestampFn(msg),
@@ -217,11 +224,12 @@ func (ts *tailerSrc) runTail() {
 				ts.outputFn(e)
 			}
 
-			msg = init
+			msgBuf.Reset()
+			msgBuf.WriteString(init)
 			fo.SetOffset(line.Offset)
 			cnt = 0
 		case <-t.C:
-			if msg != "" {
+			if msgBuf.Len() > 0 {
 				cnt++
 			}
 
@@ -229,6 +237,7 @@ func (ts *tailerSrc) runTail() {
 				continue
 			}
 
+			msg := msgBuf.String()
 			e := &LogEvent{
 				msg:    msg,
 				t:      ts.timestampFn(msg),
@@ -236,7 +245,7 @@ func (ts *tailerSrc) runTail() {
 				src:    ts,
 			}
 			ts.outputFn(e)
-			msg = ""
+			msgBuf.Reset()
 			cnt = 0
 		case <-ts.done:
 			return
