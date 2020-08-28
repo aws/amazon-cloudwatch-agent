@@ -159,7 +159,13 @@ func (p *pusher) start() {
 }
 
 func (p *pusher) reset() {
+	for i := 0; i < len(p.events); i++ {
+		p.events[i] = nil
+	}
 	p.events = p.events[:0]
+	for i := 0; i < len(p.doneCallbacks); i++ {
+		p.doneCallbacks[i] = nil
+	}
 	p.doneCallbacks = p.doneCallbacks[:0]
 	p.bufferredSize = 0
 	p.needSort = false
