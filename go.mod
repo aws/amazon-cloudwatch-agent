@@ -2,7 +2,7 @@ module github.com/aws/amazon-cloudwatch-agent
 
 go 1.13
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.0.0-20200608232200-b26dcc402df7
+replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20200830042012-5f03a659e705
 
 require (
 	github.com/BurntSushi/toml v0.3.1
@@ -18,7 +18,7 @@ require (
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/kardianos/service v1.0.0
 	github.com/opencontainers/runc v1.0.0-rc10
-	github.com/shirou/gopsutil v2.20.2+incompatible
+	github.com/shirou/gopsutil v2.20.5+incompatible
 	github.com/stretchr/testify v1.5.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
