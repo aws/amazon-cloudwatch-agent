@@ -2,7 +2,9 @@ module github.com/aws/amazon-cloudwatch-agent
 
 go 1.13
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.0.0-20200608232200-b26dcc402df7
+replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20200830235304-c4cd2e3d15ec
+
+replace github.com/StackExchange/wmi => ./internal/wmi
 
 require (
 	github.com/BurntSushi/toml v0.3.1
@@ -13,7 +15,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cadvisor v0.36.0
 	github.com/imdario/mergo v0.3.8 // indirect
-	github.com/influxdata/telegraf v0.10.2-0.20200225205246-ffabd6b5cffa
+	github.com/influxdata/telegraf v1.15.2
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/kardianos/service v1.0.0
