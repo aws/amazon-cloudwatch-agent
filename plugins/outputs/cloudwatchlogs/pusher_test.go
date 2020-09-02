@@ -578,3 +578,46 @@ func TestLogRejectedLogEntryInfo(t *testing.T) {
 	p.Stop()
 	time.Sleep(10 * time.Millisecond)
 }
+
+func TestAddEventNonBlocking(t *testing.T) {
+	var s svcMock
+	nst := "NEXT_SEQ_TOKEN"
+	const N = 100
+
+	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+
+		if len(in.LogEvents) != N {
+			t.Errorf("PutLogEvents called with incorrect number of message, only %v received", len(in.LogEvents))
+		}
+
+		return &cloudwatchlogs.PutLogEventsOutput{
+			NextSequenceToken: &nst,
+		}, nil
+	}
+
+	var evts []evtMock
+	start := time.Now().Add(-N * time.Millisecond)
+	for i := 0; i < N; i++ {
+		e := evtMock{
+			fmt.Sprintf("MSG - %v", i),
+			start.Add(time.Duration(i) * time.Millisecond),
+			nil,
+		}
+		evts = append(evts, e)
+	}
+	p := NewPusher(Target{"G", "S"}, &s, 1*time.Hour, maxRetryTimeout, models.NewLogger("cloudwatchlogs", "test", ""))
+	p.FlushTimeout = 10 * time.Millisecond
+	p.resetFlushTimer()
+	time.Sleep(200 * time.Millisecond) // Wait until pusher started, merge channel is blocked
+
+	for _, e := range evts {
+		p.AddEventNonBlocking(e)
+	}
+
+	time.Sleep(2000 * time.Millisecond)
+
+	if p.sequenceToken == nil || *p.sequenceToken != nst {
+		t.Errorf("Pusher did not capture the NextSequenceToken")
+	}
+	p.Stop()
+}
