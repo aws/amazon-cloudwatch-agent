@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"math/rand"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -37,17 +38,21 @@ type pusher struct {
 	RetryDuration time.Duration
 	Log           telegraf.Logger
 
-	events        []*cloudwatchlogs.InputLogEvent
-	minT, maxT    *time.Time
-	doneCallbacks []func()
-	eventsCh      chan logs.LogEvent
-	bufferredSize int
-	flushTimer    *time.Timer
-	sequenceToken *string
-	lastValidTime int64
-	needSort      bool
-	stop          chan struct{}
-	lastSentTime  time.Time
+	events              []*cloudwatchlogs.InputLogEvent
+	minT, maxT          *time.Time
+	doneCallbacks       []func()
+	eventsCh            chan logs.LogEvent
+	nonBlockingEventsCh chan logs.LogEvent
+	bufferredSize       int
+	flushTimer          *time.Timer
+	sequenceToken       *string
+	lastValidTime       int64
+	needSort            bool
+	stop                chan struct{}
+	lastSentTime        time.Time
+
+	initNonBlockingChOnce sync.Once
+	startNonBlockCh       chan struct{}
 }
 
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
@@ -58,10 +63,11 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		RetryDuration: retryDuration,
 		Log:           logger,
 
-		events:     make([]*cloudwatchlogs.InputLogEvent, 0, 10),
-		eventsCh:   make(chan logs.LogEvent, reqEventsLimit*2),
-		flushTimer: time.NewTimer(flushTimeout),
-		stop:       make(chan struct{}),
+		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
+		eventsCh:        make(chan logs.LogEvent, 100),
+		flushTimer:      time.NewTimer(flushTimeout),
+		stop:            make(chan struct{}),
+		startNonBlockCh: make(chan struct{}),
 	}
 	go p.start()
 	return p
@@ -80,13 +86,19 @@ func (p *pusher) AddEventNonBlocking(e logs.LogEvent) {
 		p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, e.Time(), time.Now())
 		return
 	}
+
+	p.initNonBlockingChOnce.Do(func() {
+		p.nonBlockingEventsCh = make(chan logs.LogEvent, reqEventsLimit*2)
+		p.startNonBlockCh <- struct{}{} // Unblock the select loop to recogonize the channel merge
+	})
+
 	// Drain the channel until new event can be added
 	for {
 		select {
-		case p.eventsCh <- e:
+		case p.nonBlockingEventsCh <- e:
 			return
 		default:
-			<-p.eventsCh
+			<-p.nonBlockingEventsCh
 			p.addStats("emfMetricDrop", 1)
 		}
 	}
@@ -111,9 +123,27 @@ func (p *pusher) Stop() {
 }
 
 func (p *pusher) start() {
+	ec := make(chan logs.LogEvent)
+
+	// Merge events from both blocking and non-blocking channel
+	go func() {
+		for {
+			select {
+			case e := <-p.eventsCh:
+				ec <- e
+			case e := <-p.nonBlockingEventsCh:
+				ec <- e
+			case <-p.startNonBlockCh:
+			case <-p.stop:
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
-		case e := <-p.eventsCh:
+		case e := <-ec:
+			// Start timer when first event of the batch is added (happens after a flush timer timeout)
 			if len(p.events) == 0 {
 				p.resetFlushTimer()
 			}
@@ -146,8 +176,10 @@ func (p *pusher) start() {
 			}
 
 		case <-p.flushTimer.C:
-			if time.Since(p.lastSentTime) > p.FlushTimeout && len(p.events) > 0 {
+			if time.Since(p.lastSentTime) >= p.FlushTimeout && len(p.events) > 0 {
 				p.send()
+			} else {
+				p.resetFlushTimer()
 			}
 		case <-p.stop:
 			if len(p.events) > 0 {
@@ -174,6 +206,7 @@ func (p *pusher) reset() {
 }
 
 func (p *pusher) send() {
+	defer p.resetFlushTimer() // Reset the flush timer after sending the request
 	if p.needSort {
 		sort.Stable(ByTimestamp(p.events))
 	}

@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247345.30 (2020-09-02)
+========================================================================
+
+New Features and Enhancements:
+
+* Upgrade procstat to 2.20.5 preventing memory leak on windows 2016
+* Refactor cloudwatchlogs pusher flush timer management
+* Create dedicated channel for non-blocking events cloudwathlogs pusher
+
+========================================================================
 Amazon CloudWatch Agent 1.247345.27 (2020-08-26)
 ========================================================================
 
