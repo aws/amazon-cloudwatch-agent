@@ -2,7 +2,7 @@ Summary:    Amazon CloudWatch Agent
 Name:       amazon-cloudwatch-agent
 Version:    %{AGENT_VERSION}
 Release:    1
-License:    Amazon Software License. Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+License:    MIT License. Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. 
 Group:      Applications/CloudWatch-Agent
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
