@@ -270,6 +270,7 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	var targetFileName string
 	var targetModTime time.Time
 	for matchedFileName, matchedFileInfo := range g.Match() {
+
 		// we do not allow customer to monitor the file in t.FileStateFolder, it will monitor all of the state files
 		if t.FileStateFolder != "" && strings.HasPrefix(matchedFileName, t.FileStateFolder) {
 			continue
@@ -280,7 +281,7 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 		}
 
 		// If it's a dir or a symbolic link pointing to a dir, ignore it
-		if isDir, err := isDirectory(matchedFileName, matchedFileInfo); err != nil {
+		if isDir, err := isDirectory(matchedFileName); err != nil {
 			return nil, fmt.Errorf("error tailing file %v with error: %v", matchedFileName, err)
 		} else if isDir {
 			continue
@@ -437,40 +438,19 @@ func generateLogStreamName(fileName string, streamName string) string {
 
 // Directory should be skipped.
 // This func is to determine whether the file is actually a directory or a symbolic link pointing to a directory
-func isDirectory(filename string, matchedFileInfo os.FileInfo) (bool, error) {
-	//path, err := filepath.EvalSymlinks(filename)
-	//if err != nil {
-	//	return false, err
-	//}
-	//
-	//info, err := os.Stat(path)
-	//if err != nil {
-	//	return false, err
-	//}
-	//if info != nil {
-	//	return info.IsDir(), nil
-	//}
-	//return false, nil
-
-
-	if matchedFileInfo.IsDir() {
-		return true, nil
+func isDirectory(filename string) (bool, error) {
+	path, err := filepath.EvalSymlinks(filename)
+	if err != nil {
+		return false, err
 	}
 
-	if matchedFileInfo.Mode() & os.ModeSymlink != 0  {
-		path, err := filepath.EvalSymlinks(filename)
-		if err != nil {
-			return false, err
-		}
-		info, err := os.Stat(path)
-		if err != nil {
-			return false, err
-		}
-		if info != nil && info.IsDir(){
-			return true, err
-		}
+	info, err := os.Stat(path)
+	if err != nil {
+		return false, err
 	}
-
+	if info != nil {
+		return info.IsDir(), nil
+	}
 	return false, nil
 }
 
