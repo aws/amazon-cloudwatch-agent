@@ -307,20 +307,29 @@ func retryWait(n int) time.Duration {
 }
 
 func (p *pusher) createLogGroupAndStream() error {
-	_, err := p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
-		LogGroupName: &p.Group,
-	})
-	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if !ok || awsErr.Code() != cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
-			return err
-		}
-	}
-
-	_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
+	_, err := p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,
 	})
+
+	if err != nil {
+		p.Log.Debugf("creating stream fail due to : %v \n", err)
+		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
+			_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
+				LogGroupName: &p.Group,
+			})
+
+			// create stream again if group created successfully.
+			if err == nil {
+				_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
+					LogGroupName:  &p.Group,
+					LogStreamName: &p.Stream,
+				})
+			} else {
+				p.Log.Errorf("creating group fail due to : %v \n", err)
+			}
+		}
+	}
 
 	return err
 }
