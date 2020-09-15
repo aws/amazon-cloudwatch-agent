@@ -497,35 +497,86 @@ func TestCreateLogGroupWithError(t *testing.T) {
 	var s svcMock
 	p := NewPusher(Target{"G", "S"}, &s, 1*time.Hour, maxRetryTimeout, models.NewLogger("cloudwatchlogs", "test", ""))
 
-	var cnt int
+	// test normal case. 1. creating stream fails, 2, creating group succeeds, 3, creating stream succeeds.
+	var cnt_clg int
+	var cnt_cls int
 	s.clg = func(in *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
-		cnt++
-		return nil, errors.New("Any Error")
+		cnt_clg++
+		return nil, nil
 	}
 	s.cls = func(in *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+		cnt_cls++
+		if cnt_cls == 1 {
+			return nil, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "", nil)
+		}
+
+		if cnt_cls == 2 {
+			return nil, nil
+		}
+
 		t.Errorf("CreateLogStream should not be called when CreateLogGroup failed.")
 		return nil, nil
 	}
 
 	p.createLogGroupAndStream()
 
-	if cnt != 1 {
+	if cnt_clg != 1 {
 		t.Errorf("CreateLogGroup was not called.")
 	}
 
-	cnt = 0
+	if cnt_cls != 2 {
+		t.Errorf("CreateLogStream was not called.")
+	}
+
+	// test creating stream succeeds
+	cnt_clg = 0
+	cnt_cls = 0
 	s.clg = func(in *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
+		cnt_clg++
 		return nil, awserr.New(cloudwatchlogs.ErrCodeResourceAlreadyExistsException, "", nil)
 	}
 	s.cls = func(in *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
-		cnt++
+		cnt_cls++
 		return nil, nil
 	}
 
 	p.createLogGroupAndStream()
 
-	if cnt != 1 {
+	if cnt_cls != 1 {
 		t.Errorf("CreateLogSteam was not called after CreateLogGroup returned ResourceAlreadyExistsException.")
+	}
+
+	if cnt_clg != 0 {
+		t.Errorf("CreateLogGroup should not be called when logstream is created successfully at first time.")
+	}
+
+	// test creating group fails
+	cnt_clg = 0
+	cnt_cls = 0
+	s.clg = func(in *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
+		cnt_clg++
+		return nil, awserr.New(cloudwatchlogs.ErrCodeOperationAbortedException, "", nil)
+	}
+	s.cls = func(in *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+		cnt_cls++
+		return nil, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "", nil)
+	}
+
+	err := p.createLogGroupAndStream()
+	if err == nil {
+		t.Errorf("createLogGroupAndStream should return err.")
+	}
+
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() != cloudwatchlogs.ErrCodeOperationAbortedException{
+		t.Errorf("createLogGroupAndStream should return ErrCodeOperationAbortedException.")
+	}
+
+	if cnt_cls != 1 {
+		t.Errorf("CreateLogSteam should be called for one time.")
+	}
+
+	if cnt_clg != 1 {
+		t.Errorf("CreateLogGroup should be called for one time.")
 	}
 
 	p.Stop()
