@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247345.34 (2020-09-18)
+========================================================================
+
+Bug fixes:
+
+* Fix ignore empty value tags for cloudwatch dimension
+* Fix logs loop does not break out loop when exit
+* Fix win_perf_counter plugin test case int to string conversion
+
+========================================================================
 Amazon CloudWatch Agent 1.247345.33 (2020-09-15)
 ========================================================================
 
