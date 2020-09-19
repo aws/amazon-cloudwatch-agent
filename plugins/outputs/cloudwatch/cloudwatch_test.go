@@ -5,6 +5,7 @@ package cloudwatch
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"math"
 	"sort"
 	"testing"
@@ -548,4 +549,25 @@ func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 	default:
 	}
 
+}
+
+func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
+	c := &CloudWatch{
+		datumBatchChan:     make(chan []*cloudwatch.MetricDatum, 0),
+		datumBatchFullChan: make(chan bool, 1),
+	}
+	input := testutil.MustMetric(
+		"cpu",
+		map[string]string{
+			"host": "example.org",
+			"foo":  "",
+		},
+		map[string]interface{}{
+			"value": int64(42),
+		},
+		time.Unix(0, 0),
+	)
+
+	datums := c.BuildMetricDatum(input)
+	require.Len(t, datums[0].Dimensions, 1)
 }
