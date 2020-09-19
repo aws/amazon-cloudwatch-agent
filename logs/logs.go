@@ -110,7 +110,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 				}
 			}
 		case <-ctx.Done():
-			break
+			return
 		}
 	}
 }
