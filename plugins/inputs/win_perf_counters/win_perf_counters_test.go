@@ -7,6 +7,7 @@ package win_perf_counters
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -84,11 +85,11 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 	if len(metrics.items) == 1 {
 		require.NoError(t, nil)
 	} else if len(metrics.items) == 0 {
-		var errorstring1 string = "No results returned from the query: " + string(len(metrics.items))
+		var errorstring1 string = fmt.Sprintf("No results returned from the query: %d", len(metrics.items))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(metrics.items) > 1 {
-		var errorstring1 string = "Too many results returned from the query: " + string(len(metrics.items))
+		var errorstring1 string = fmt.Sprintf("Too many results returned from the query: %d", len(metrics.items))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
@@ -132,12 +133,12 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 		require.NoError(t, nil)
 	} else if len(metrics.items) < 2 {
 
-		var errorstring1 string = "Too few results returned from the query. " + string(len(metrics.items))
+		var errorstring1 string = fmt.Sprintf("Too few results returned from the query. %d", len(metrics.items))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(metrics.items) > 2 {
 
-		var errorstring1 string = "Too many results returned from the query: " + string(len(metrics.items))
+		var errorstring1 string = fmt.Sprintf("Too many results returned from the query: %d", len(metrics.items))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
@@ -181,12 +182,12 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 		require.NoError(t, nil)
 	} else if len(metrics.items) < 2 {
 
-		var errorstring1 string = "Too few results returned from the query: " + string(len(metrics.items))
+		var errorstring1 string = fmt.Sprintf("Too few results returned from the query. %d", len(metrics.items))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(metrics.items) > 2 {
 
-		var errorstring1 string = "Too many results returned from the query: " + string(len(metrics.items))
+		var errorstring1 string = fmt.Sprintf("Too many results returned from the query: %d", len(metrics.items))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
@@ -230,13 +231,11 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 	if len(metrics.items) == 4 {
 		require.NoError(t, nil)
 	} else if len(metrics.items) < 4 {
-		var errorstring1 string = "Too few results returned from the query: " +
-			string(len(metrics.items))
+		var errorstring1 string = fmt.Sprintf("Too few results returned from the query. %d", len(metrics.items))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(metrics.items) > 4 {
-		var errorstring1 string = "Too many results returned from the query: " +
-			string(len(metrics.items))
+		var errorstring1 string = fmt.Sprintf("Too many results returned from the query: %d", len(metrics.items))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
