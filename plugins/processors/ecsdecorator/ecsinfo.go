@@ -61,17 +61,17 @@ func (e *ecsInfo) updateRunningTaskCount() {
 		if task.KnownStatus != taskStatusRunning {
 			continue
 		}
-		taskId, err := e.getTaskCgroupPathFromARN(task.ARN)
+		taskId, err := getTaskCgroupPathFromARN(task.ARN)
 		if err != nil {
 			log.Printf("W! failed to get ecs taskid from arn: %v", err)
 			continue
 		}
 
 		// ignore the one only consume 2 shares which is the default value in cgroup
-		if cr := e.cgroup.getCPUReserved(taskId); cr > 2 {
+		if cr := e.cgroup.getCPUReserved(taskId, e.clusterName); cr > 2 {
 			cpuReserved += cr
 		}
-		memReserved += e.cgroup.getMEMReserved(taskId, task.Containers)
+		memReserved += e.cgroup.getMEMReserved(taskId, e.clusterName, task.Containers)
 
 		runningTaskCount += 1
 	}
@@ -196,19 +196,21 @@ func (e *ecsInfo) getTasksInfo() (ecsTasksInfo *ECSTasksInfo) {
 }
 
 // There are two formats of Task ARN (https://docs.aws.amazon.com/AmazonECS/latest/userguide/ecs-account-settings.html#ecs-resource-ids)
-// arn:aws:ecs:region:aws_account_id:task/task-id, we should get "task-id" as result in this case
-// arn:aws:ecs:region:aws_account_id:task/cluster-name/task-id, we should get "cluster-name/task-id" as result in this case
-// This function will return either "task-id" or "cluster-name/task-id" depending on the ARN format
-func (e *ecsInfo) getTaskCgroupPathFromARN(arn string) (string, error) {
+// arn:aws:ecs:region:aws_account_id:task/task-id
+// arn:aws:ecs:region:aws_account_id:task/cluster-name/task-id
+// we should get "task-id" as result no matter what format the ARN is.
+func getTaskCgroupPathFromARN(arn string) (string, error) {
 	result := strings.Split(arn, ":")
 	if len(result) < 6 {
 		return "", fmt.Errorf("invalid ecs task arn: %v", result)
 	}
 
-	result = strings.SplitN(result[5], "/", 2)
-	if len(result) < 2 {
+	result = strings.Split(result[5], "/")
+	if len(result) == 2 {
+		return result[1], nil
+	} else if len(result) == 3 {
+		return result[2], nil
+	} else {
 		return "", fmt.Errorf("invalid ecs task arn: %v", result)
 	}
-
-	return result[1], nil
 }

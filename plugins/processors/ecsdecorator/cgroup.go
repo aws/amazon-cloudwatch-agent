@@ -23,8 +23,6 @@ const (
 
 type cgroupScanner struct {
 	mountPoint string
-	cpuRoot    string
-	memRoot    string
 }
 
 func newCGroupScanner(mountConfigPath string) (c *cgroupScanner) {
@@ -36,8 +34,6 @@ func newCGroupScanner(mountConfigPath string) (c *cgroupScanner) {
 
 	c = &cgroupScanner{
 		mountPoint: mp,
-		cpuRoot:    path.Join(mp, "cpu"),
-		memRoot:    path.Join(mp, "memory"),
 	}
 	return c
 }
@@ -45,8 +41,12 @@ func newCGroupScannerForContainer() *cgroupScanner {
 	return newCGroupScanner(ecsInstanceMountConfigPath)
 }
 
-func (c *cgroupScanner) getCPUReserved(taskID string) int64 {
-	cpuPath := path.Join(c.cpuRoot, "ecs", taskID)
+func (c *cgroupScanner) getCPUReserved(taskID string, clusterName string) int64 {
+	cpuPath, err := getCGroupPathForTask(c.mountPoint, "cpu", taskID, clusterName)
+	if err != nil {
+		log.Printf("E! failed to get cpu cgroup path for task: %v", err)
+		return int64(0)
+	}
 
 	// check if hard limit is configured
 	if cfsQuota, err := readInt64(cpuPath, "cpu.cfs_quota_us"); err == nil && cfsQuota != -1 {
@@ -62,8 +62,12 @@ func (c *cgroupScanner) getCPUReserved(taskID string) int64 {
 	return int64(0)
 }
 
-func (c *cgroupScanner) getMEMReserved(taskID string, containers []ECSContainer) int64 {
-	memPath := path.Join(c.memRoot, "ecs", taskID)
+func (c *cgroupScanner) getMEMReserved(taskID string, clusterName string, containers []ECSContainer) int64 {
+	memPath, err := getCGroupPathForTask(c.mountPoint, "memory", taskID, clusterName)
+	if err != nil {
+		log.Printf("E! failed to get memory cgroup path for task: %v", err)
+		return int64(0)
+	}
 
 	if memReserved, err := readInt64(memPath, "memory.limit_in_bytes"); err == nil && memReserved != kernelMagicCodeNotSet {
 		return memReserved
@@ -72,17 +76,17 @@ func (c *cgroupScanner) getMEMReserved(taskID string, containers []ECSContainer)
 	// sum the containers' memory if the task's memory limit is not configured
 	sum := int64(0)
 	for _, container := range containers {
-		memPath = path.Join(c.memRoot, "ecs", taskID, container.DockerId)
+		containerPath := path.Join(memPath, container.DockerId)
 
 		//soft limit first
 
-		if softLimit, err := readInt64(memPath, "memory.soft_limit_in_bytes"); err == nil && softLimit != kernelMagicCodeNotSet {
+		if softLimit, err := readInt64(containerPath, "memory.soft_limit_in_bytes"); err == nil && softLimit != kernelMagicCodeNotSet {
 			sum += softLimit
 			continue
 		}
 
 		// try hard limit when soft limit is not configured
-		if hardLimit, err := readInt64(memPath, "memory.limit_in_bytes"); err == nil && hardLimit != kernelMagicCodeNotSet {
+		if hardLimit, err := readInt64(containerPath, "memory.limit_in_bytes"); err == nil && hardLimit != kernelMagicCodeNotSet {
 			sum += hardLimit
 		}
 	}
@@ -153,4 +157,18 @@ func getCGroupMountPoint(mountConfigPath string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("mount point not existed")
+}
+
+func getCGroupPathForTask(cgroupMount, controller, taskID, clusterName string) (string, error) {
+	taskPath := path.Join(cgroupMount, controller, "ecs", taskID)
+	if _, err := os.Stat(taskPath); os.IsNotExist(err) {
+		// Task cgroup path does not exist, fallback to try legacy Task cgroup path,
+		// legacy cgroup path of task with new format ARN used to contain cluster name,
+		// before ECS Agent PR https://github.com/aws/amazon-ecs-agent/pull/2497/
+		taskPath = path.Join(cgroupMount, controller, "ecs", clusterName, taskID)
+		if _, err := os.Stat(taskPath); os.IsNotExist(err) {
+			return "", fmt.Errorf("CGroup Path %q does not exist", taskPath)
+		}
+	}
+	return taskPath, nil
 }
