@@ -127,6 +127,11 @@ func TestCsmOnlyConfig(t *testing.T) {
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/csm_only_config.json"), "./sampleConfig/csm_only_config_linux.conf", "linux")
 }
 
+func TestDeltaConfigLinux(t *testing.T) {
+	resetContext()
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/delta_config_linux.json"), "./sampleConfig/delta_config_linux.conf", "linux")
+}
+
 func TestCsmServiceAdressesConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/csm_service_addresses.json"), "./sampleConfig/csm_service_addresses_windows.conf", "windows")
