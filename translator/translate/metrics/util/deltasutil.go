@@ -39,10 +39,21 @@ func ProcessReportDeltasForDiskIO(input interface{}, result map[string]interface
 	if val, ok := m[Measurement_Key]; ok {
 		fieldsPass := val.([]interface{})
 		for _, field := range fieldsPass {
-			if field.(string) == Ignored_fields_for_delta {
-				tagsMap := result[Tags_Key].(map[string]interface{})
-				tagsMap[Ignored_fields_for_delta_Key] = field
-				break
+			switch t := field.(type) {
+			case string:
+				if t == Ignored_fields_for_delta || t == "diskio_" + Ignored_fields_for_delta {
+					tagsMap := result[Tags_Key].(map[string]interface{})
+					tagsMap[Ignored_fields_for_delta_Key] = Ignored_fields_for_delta
+					return
+				}
+			case map[string]interface{}:
+				if name, ok := t["name"].(string); ok && (name == Ignored_fields_for_delta  || name == "diskio_" + Ignored_fields_for_delta){
+					tagsMap := result[Tags_Key].(map[string]interface{})
+					tagsMap[Ignored_fields_for_delta_Key] = Ignored_fields_for_delta
+					return
+				}
+			default:
+				continue
 			}
 		}
 	}
