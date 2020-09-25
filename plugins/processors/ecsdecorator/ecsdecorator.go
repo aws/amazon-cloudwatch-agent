@@ -52,10 +52,6 @@ func (e *ECSDecorator) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	var out []telegraf.Metric
 
 	for _, metric := range in {
-		fmt.Printf("clusterNameKey: %v\n", ClusterNameKey)
-		fmt.Printf("e: %v\n", e)
-		fmt.Printf("e.ecsInfo: %v\n", e.ecsInfo)
-		fmt.Printf("clusterNameKey: %v, clusterName: %v\n", ClusterNameKey, e.ecsInfo.clusterName)
 		metric.AddTag(ClusterNameKey, e.ecsInfo.clusterName)
 		tags := metric.Tags()
 		fields := metric.Fields()
