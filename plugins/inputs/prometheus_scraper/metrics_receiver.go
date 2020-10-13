@@ -7,6 +7,7 @@ import (
 	"github.com/prometheus/prometheus/pkg/value"
 	"github.com/prometheus/prometheus/storage"
 	"log"
+	"math"
 )
 
 type PrometheusMetricBatch []*PrometheusMetric
@@ -20,7 +21,7 @@ type PrometheusMetric struct {
 }
 
 func (pm *PrometheusMetric) isValueStale() bool {
-	return value.IsStaleNaN(pm.metricValue)
+	return value.IsStaleNaN(pm.metricValue) || math.IsNaN(pm.metricValue)
 }
 
 // metricsReceiver implement interface Appender for prometheus scarper to append metrics
@@ -48,7 +49,6 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 
 func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, error) {
 	metricName := ""
-	metricType := ""
 
 	labelMap := make(map[string]string, len(ls))
 	for _, l := range ls {
@@ -68,7 +68,6 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 	pm := &PrometheusMetric{
 		metricName:  metricName,
 		metricValue: v,
-		metricType:  metricType,
 		timeInMS:    t,
 	}
 
