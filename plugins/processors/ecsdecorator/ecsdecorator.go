@@ -113,7 +113,11 @@ func (e *ECSDecorator) decorateTaskCount(metric telegraf.Metric, tags map[string
 }
 
 func (e *ECSDecorator) tagMetricRule(metric telegraf.Metric) {
-	structuredlogscommon.AttachMetricRule(metric, staticMetricRule, cloudwatchNamespace)
+	rules, ok := staticMetricRule[metric.Tags()[MetricType]]
+	if !ok {
+		return
+	}
+	structuredlogscommon.AttachMetricRule(metric, rules)
 }
 
 func (e *ECSDecorator) tagMetricSource(metric telegraf.Metric, tags map[string]string) {

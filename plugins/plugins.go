@@ -8,6 +8,7 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/delta"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ecsdecorator"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/emfProcessor"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/k8sdecorator"
 
 	// Enabled parsers registry

@@ -122,5 +122,9 @@ var staticMetricRule = map[string][]structuredlogscommon.MetricRule{
 }
 
 func TagMetricRule(metric telegraf.Metric) {
-	structuredlogscommon.AttachMetricRule(metric, staticMetricRule, cloudwatchNamespace)
+	rules, ok := staticMetricRule[metric.Tags()[MetricType]]
+	if !ok {
+		return
+	}
+	structuredlogscommon.AttachMetricRule(metric, rules)
 }

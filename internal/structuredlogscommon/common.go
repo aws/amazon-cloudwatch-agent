@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-
 	"github.com/influxdata/telegraf"
 )
 
@@ -97,40 +95,20 @@ type MetricAttr struct {
 	Name string `json:"Name"`
 }
 
-func AttachMetricRule(metric telegraf.Metric, staticMetricRule map[string][]MetricRule, cloudwatchNamespace string) {
-	rules, ok := staticMetricRule[metric.Tags()[containerinsightscommon.MetricType]]
-	if !ok {
-		return
-	}
-
-	var filterredRule []MetricRule
-	for _, rule := range rules {
-		var filteredMetrics []MetricAttr
-		var filteredDimensionSets [][]string
-		for _, ruleMetric := range rule.Metrics {
-			if metric.HasField(ruleMetric.Name) {
-				filteredMetrics = append(filteredMetrics, ruleMetric)
-			}
-		}
-
-		for _, ruleDimensionSet := range rule.DimensionSets {
-			anyDimensionMiss := false
-			for _, ruleDimension := range ruleDimensionSet {
-				if !metric.HasTag(ruleDimension) {
-					anyDimensionMiss = true
-				}
-			}
-			if !anyDimensionMiss {
-				filteredDimensionSets = append(filteredDimensionSets, ruleDimensionSet)
-			}
-		}
-		// If dimension doesn't exactly match or no metric remain after filter, skip it
-		if len(filteredMetrics) > 0 && len(filteredDimensionSets) > 0 {
-			filterredRule = append(filterredRule, MetricRule{Metrics: filteredMetrics, DimensionSets: filteredDimensionSets, Namespace: cloudwatchNamespace})
-		}
-	}
-
+func AttachMetricRule(metric telegraf.Metric, rules []MetricRule) {
+	filterredRule := cleanupRules(metric, rules)
 	if len(filterredRule) > 0 {
 		AppendAttributesInFields(MetricRuleKey, filterredRule, metric)
+	}
+}
+
+// Append dedupped EMF rules
+// Prerequsite: 1) Rules are with same namespace
+//              2) Dimensions are pre-sorted
+func AttachMetricRuleWithDedup(metric telegraf.Metric, rules []MetricRule) {
+	filteredRules := dedupRules(cleanupRules(metric, rules))
+
+	if len(filteredRules) > 0 {
+		AppendAttributesInFields(MetricRuleKey, filteredRules, metric)
 	}
 }
