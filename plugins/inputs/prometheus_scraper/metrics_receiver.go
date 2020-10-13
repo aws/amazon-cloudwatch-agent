@@ -55,11 +55,6 @@ type metricAppender struct {
 	batch    PrometheusMetricBatch
 }
 
-//TODO
-// func (mr *metricsReceiver) Appender() (storage.Appender, error) {
-// 	return &metricAppender{receiver: mr, batch: PrometheusMetricBatch{}}, nil
-// }
-
 func (mr *metricsReceiver) Appender() storage.Appender {
 	return &metricAppender{receiver: mr, batch: PrometheusMetricBatch{}}
 }
@@ -109,17 +104,12 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 	pm.tags = labelMap
 
 	ma.batch = append(ma.batch, pm)
-	return uint64(0), nil
+	return uint64(0), nil //return 0 to indicate caching is not supported
 }
 
-// func (ma *metricAppender) AddFast(ls labels.Labels, _ uint64, t int64, v float64) error {
-// 	_, err := ma.Add(ls, t, v)
-// 	return err
-// }
-
-//a dummy function to satisfy the interface for storage.Appender
-func (ma *metricAppender) AddFast(ref uint64, t int64, v float64) error {
-	return nil
+// always returns error since caching is not supported by Add() function
+func (ma *metricAppender) AddFast(_ uint64, _ int64, _ float64) error {
+	return storage.ErrNotFound
 }
 
 func (ma *metricAppender) Commit() error {
