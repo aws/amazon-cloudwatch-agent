@@ -6,6 +6,8 @@ package logscommon
 const (
 	LogGroupNameTag  = "log_group_name"
 	LogStreamNameTag = "log_stream_name"
+	VersionTag       = "Version"
+	TimestampTag     = "Timestamp"
 
 	//Field key in metrics indicting if the line is the start of the multiline.
 	//If this key is not present, it means the multiline mode is not enabled,

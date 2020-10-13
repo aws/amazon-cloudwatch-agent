@@ -43,3 +43,7 @@ func (m *MapWithExpiry) Set(key string, content interface{}) {
 func (m *MapWithExpiry) Size() int {
 	return len(m.entris)
 }
+
+func (m *MapWithExpiry) Delete(key string) {
+	delete(m.entris, key)
+}

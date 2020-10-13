@@ -19,6 +19,7 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/demo"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/k8sapiserver"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus_scraper"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/win_perf_counters"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/windows_event_log"
