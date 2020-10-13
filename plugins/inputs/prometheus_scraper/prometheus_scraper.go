@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ecsservicediscovery"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus_scraper/prometheusLib"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -58,12 +57,15 @@ func (p *PrometheusScraper) Gather(_ telegraf.Accumulator) error {
 }
 
 func (p *PrometheusScraper) Start(accIn telegraf.Accumulator) error {
+	mth := NewMetricsTypeHandler()
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
 	handler := &metricsHandler{mbCh: p.mbCh,
 		acc:         accIn,
 		calculator:  NewCalculator(),
 		filter:      NewMetricsFilter(),
-		clusterName: p.ClusterName}
+		clusterName: p.ClusterName,
+		mtHandler:   mth,
+	}
 
 	ecssd := &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
 
@@ -73,7 +75,7 @@ func (p *PrometheusScraper) Start(accIn telegraf.Accumulator) error {
 
 	// start metric collecting
 	p.wg.Add(1)
-	go prometheusLib.Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg)
+	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth)
 
 	// start metric handling
 	p.wg.Add(1)

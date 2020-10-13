@@ -4,11 +4,6 @@ import (
 	"strings"
 )
 
-const (
-	histogramSummaryCountSuffix = "_count"
-	histogramSummarySumSuffix   = "_sum"
-)
-
 type Calculator struct {
 	deltaCalculator *DeltaCalculator
 }

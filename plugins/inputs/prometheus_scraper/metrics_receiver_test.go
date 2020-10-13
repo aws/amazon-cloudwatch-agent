@@ -29,7 +29,6 @@ func Test_metricAppender_Add(t *testing.T) {
 	var v float64 = 10.0
 	ls := []labels.Label{
 		{Name: "__name__", Value: "metric_name"},
-		{Name: "__metric_type__", Value: "gauge"},
 		{Name: "tag_a", Value: "a"},
 	}
 
@@ -42,9 +41,9 @@ func Test_metricAppender_Add(t *testing.T) {
 	expected := PrometheusMetric{
 		metricName:  "metric_name",
 		metricValue: v,
-		metricType:  "gauge",
+		metricType:  "",
 		timeInMS:    ts,
-		tags:        map[string]string{"tag_a": "a", "prom_metric_type": "gauge"},
+		tags:        map[string]string{"tag_a": "a"},
 	}
 	assert.Equal(t, expected, *mac.batch[0])
 }
@@ -64,7 +63,6 @@ func Test_metricAppender_Rollback(t *testing.T) {
 	var v float64 = 10.0
 	ls := []labels.Label{
 		{Name: "__name__", Value: "metric_name"},
-		{Name: "__metric_type__", Value: "gauge"},
 		{Name: "tag_a", Value: "a"},
 	}
 
@@ -87,7 +85,6 @@ func Test_metricAppender_Commit(t *testing.T) {
 	var v float64 = 10.0
 	ls := []labels.Label{
 		{Name: "__name__", Value: "metric_name"},
-		{Name: "__metric_type__", Value: "gauge"},
 		{Name: "tag_a", Value: "a"},
 	}
 
@@ -105,9 +102,9 @@ func Test_metricAppender_Commit(t *testing.T) {
 	expected := PrometheusMetric{
 		metricName:  "metric_name",
 		metricValue: v,
-		metricType:  "gauge",
+		metricType:  "",
 		timeInMS:    ts,
-		tags:        map[string]string{"tag_a": "a", "prom_metric_type": "gauge"},
+		tags:        map[string]string{"tag_a": "a"},
 	}
 	assert.Equal(t, expected, *pmb[0])
 }

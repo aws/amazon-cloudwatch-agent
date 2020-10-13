@@ -2,17 +2,11 @@ package prometheus_scraper
 
 import (
 	"errors"
-	"log"
-
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/prometheus/prometheus/pkg/value"
 	"github.com/prometheus/prometheus/storage"
-)
-
-const (
-	prometheusLabelKeyMetricNameKey = "__name__"
-	prometheusLabelMeticTypeKey     = "__metric_type__"
-	prometheusMeticTypeKey          = "prom_metric_type"
+	"log"
 )
 
 type PrometheusMetricBatch []*PrometheusMetric
@@ -23,22 +17,6 @@ type PrometheusMetric struct {
 	metricValue float64
 	metricType  string
 	timeInMS    int64 // Unix time in milli-seconds
-}
-
-func (pm *PrometheusMetric) isCounter() bool {
-	return pm.metricType == "counter"
-}
-
-func (pm *PrometheusMetric) isGauge() bool {
-	return pm.metricType == "gauge"
-}
-
-func (pm *PrometheusMetric) isHistogram() bool {
-	return pm.metricType == "histogram"
-}
-
-func (pm *PrometheusMetric) isSummary() bool {
-	return pm.metricType == "summary"
 }
 
 func (pm *PrometheusMetric) isValueStale() bool {
@@ -74,12 +52,7 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 
 	labelMap := make(map[string]string, len(ls))
 	for _, l := range ls {
-		if l.Name == prometheusLabelMeticTypeKey {
-			metricType = l.Value
-			labelMap[prometheusMeticTypeKey] = metricType
-			continue
-		}
-		if l.Name == prometheusLabelKeyMetricNameKey {
+		if l.Name == model.MetricNameLabel {
 			metricName = l.Value
 			continue
 		}
@@ -99,8 +72,6 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 		timeInMS:    t,
 	}
 
-	delete(labelMap, prometheusLabelKeyMetricNameKey)
-	delete(labelMap, prometheusLabelMeticTypeKey)
 	pm.tags = labelMap
 
 	ma.batch = append(ma.batch, pm)

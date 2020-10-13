@@ -1,4 +1,4 @@
-package prometheusLib
+package prometheus_scraper
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func init() {
 	prometheus.MustRegister(version.NewCollector("prometheus"))
 }
 
-func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup) {
+func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
 	infoLevel := &promlog.AllowedLevel{}
 	_ = infoLevel.Set("info")
 
@@ -79,6 +79,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), discovery.Name("scrape"))
 		scrapeManager           = scrape.NewManager(log.With(logger, "component", "scrape manager"), receiver)
 	)
+	mth.SetScrapeManager(scrapeManager)
 
 	var reloaders = []func(cfg *config.Config) error{
 		// The Scrape and notifier managers need to reload before the Discovery manager as
