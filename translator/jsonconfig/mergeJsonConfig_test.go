@@ -38,6 +38,7 @@ var testDataList = []TestData{
 	{"FailureTest_CsmConflicts", 9, 2, true},
 	{"MixedSection_LogsMetricCollectedConfig", 10, 2, false},
 	{"SeparateSection_LogsMetricAndLog", 11, 2, false},
+	{"SeparateSection_PrometheusAndLog", 12, 2, false},
 }
 
 func TestMergeJsonConfigMaps(t *testing.T) {

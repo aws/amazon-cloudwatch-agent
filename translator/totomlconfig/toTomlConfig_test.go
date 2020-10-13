@@ -91,6 +91,15 @@ func TestCollectDConfig(t *testing.T) {
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/collectd_config_linux.json"), "./sampleConfig/collectd_config_linux.conf", "linux")
 }
 
+//prometheus
+func TestPrometheusConfig(t *testing.T) {
+	resetContext()
+	context.CurrentContext().SetRunInContainer(true)
+	os.Setenv(config.HOST_NAME, "host_name_from_env")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/prometheus_config.json"), "./sampleConfig/prometheus_config.conf", "linux")
+	os.Unsetenv(config.HOST_NAME)
+}
+
 func TestBasicConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/basic_config_linux.json"), "./sampleConfig/basic_config_linux.conf", "linux")
