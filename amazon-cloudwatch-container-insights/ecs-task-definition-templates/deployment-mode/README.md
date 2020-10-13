@@ -1,6 +1,6 @@
 ## Example Amazon ECS task definitions based on deployment modes
 
-You can deploy CloudWatch Agent into Amazon ECS clusters to enable various functionality: StatsD, AWS SDK Metrics, etc.
+You can deploy CloudWatch Agent into Amazon ECS clusters to enable various functionality: StatsD, AWS SDK Metrics, Prometheus Monitoring, etc.
 
 For each of these features, you can deploy the CloudWatch Agent in one or more of the following deployment modes:
 * Sidecar - CloudWatch Agent works at the Task level. Reasons for choosing this mode include but are not restricted to:
@@ -23,3 +23,4 @@ Regarding to creating a service with a centralized endpoint in your cluster. Ple
 
 * [sidecar](sidecar)
 * [daemon-service](daemon-service)
+* [replica-service](replica-service)
