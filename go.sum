@@ -138,6 +138,10 @@ github.com/aws/telegraf v0.10.2-0.20200830235304-c4cd2e3d15ec h1:NkiVPd2Po+YIWik
 github.com/aws/telegraf v0.10.2-0.20200830235304-c4cd2e3d15ec/go.mod h1:klLKIYh/pKoNn68ZgTyp2aGO+jigfkuUef4g7giWW/8=
 github.com/aws/telegraf v0.10.2-0.20200902215110-5ec6811a19d9 h1:wnp7t2AmMpaFxkv9CHt/rSx5iVzcmVEJlrGN50dwKxc=
 github.com/aws/telegraf v0.10.2-0.20200902215110-5ec6811a19d9/go.mod h1:ky9gF00vk7YHvO7PNu9Eeg7NdX9N1QxnTM0bDy4EDTY=
+github.com/aws/telegraf v0.10.2-0.20201015165757-4470de2d306b h1:39XAqFvDJuEXFZTQi1WTC+9GvfATC4zQ9jJlG1gHY9w=
+github.com/aws/telegraf v0.10.2-0.20201015165757-4470de2d306b/go.mod h1:3v3o4PIQDxTN4b25Uh3GBYf7a+qQjBC2hQ/LziGnxkU=
+github.com/aws/telegraf/patches/gopsutil v0.0.0-20201015165757-4470de2d306b h1:GYHVeoL0yE+Nz4mTAF9/QtHx8ZbjHOoFVwe62kMjrfA=
+github.com/aws/telegraf/patches/gopsutil v0.0.0-20201015165757-4470de2d306b/go.mod h1:NkKkFDm13DuNJIhuqlD52FRMO55q8YDVn85m8K5IinM=
 github.com/benbjohnson/clock v1.0.0 h1:78Jk/r6m4wCi6sndMpty7A//t4dw/RW5fV4ZgDVfX1w=
 github.com/benbjohnson/clock v1.0.0/go.mod h1:bGMdMPoPVvcYyt1gHDf4J2KE153Yf9BuiUKYMaxlTDM=
 github.com/beorn7/perks v0.0.0-20150223135152-b965b613227f/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
@@ -897,6 +901,7 @@ golang.org/x/sys v0.0.0-20191112214154-59a1497f0cea/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20191115151921-52ab43148777/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20191204072324-ce4227a45e2e/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20191210023423-ac6580df4449/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20191220220014-0732a990476f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200107162124-548cf772de50/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200113162924-86b910548bc1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
