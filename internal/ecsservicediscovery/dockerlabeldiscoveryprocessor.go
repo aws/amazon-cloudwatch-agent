@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package ecsservicediscovery
 
 // Tag the Tasks that matched the Docker Label based SD Discovery
