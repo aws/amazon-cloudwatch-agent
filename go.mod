@@ -2,7 +2,8 @@ module github.com/aws/amazon-cloudwatch-agent
 
 go 1.13
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20200902215110-5ec6811a19d9
+replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20201015165757-4470de2d306b
+replace github.com/shirou/gopsutil => github.com/aws/telegraf/patches/gopsutil v0.0.0-20201015165757-4470de2d306b // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
 
 require (
 	github.com/BurntSushi/toml v0.3.1
