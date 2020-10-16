@@ -4,11 +4,13 @@
 package emfProcessor
 
 import (
+	"testing"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func buildTestMetricDeclarations() (mds []*metricDeclaration) {
@@ -65,49 +67,47 @@ func buildExpectedDeduppedMetrics(ts time.Time) (ms []telegraf.Metric) {
 	return
 }
 
-//TODO
-//Disable the test as it fails randomly
-// func TestEmfProcessor_Apply(t *testing.T) {
-// 	type fields struct {
-// 		inited                  bool
-// 		MetricDeclarationsDedup bool
-// 		MetricDeclarations      []*metricDeclaration
-// 	}
-// 	type args struct {
-// 		in []telegraf.Metric
-// 	}
+func TestEmfProcessor_Apply(t *testing.T) {
+	type fields struct {
+		inited                  bool
+		MetricDeclarationsDedup bool
+		MetricDeclarations      []*metricDeclaration
+	}
+	type args struct {
+		in []telegraf.Metric
+	}
 
-// 	ts := time.Now()
-// 	tests := []struct {
-// 		name       string
-// 		fields     fields
-// 		args       args
-// 		wantResult []telegraf.Metric
-// 	}{
-// 		{name: "dedupped",
-// 			fields: fields{MetricDeclarationsDedup: true,
-// 				MetricDeclarations: buildTestMetricDeclarations()},
-// 			args:       args{in: buildTestMetrics(ts)},
-// 			wantResult: buildExpectedDeduppedMetrics(ts),
-// 		},
-// 		{name: "not_dedupped",
-// 			fields: fields{MetricDeclarationsDedup: false,
-// 				MetricDeclarations: buildTestMetricDeclarations()},
-// 			args:       args{in: buildTestMetrics(ts)},
-// 			wantResult: buildExpectedMetrics(ts),
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			e := &EmfProcessor{
-// 				inited:                  tt.fields.inited,
-// 				MetricDeclarationsDedup: tt.fields.MetricDeclarationsDedup,
-// 				MetricDeclarations:      tt.fields.MetricDeclarations,
-// 				MetricNamespace:         "ContainerInsights/Prometheus",
-// 			}
-// 			if gotResult := e.Apply(tt.args.in...); !reflect.DeepEqual(gotResult, tt.wantResult) {
-// 				t.Errorf("Apply() = %v, want %v", gotResult, tt.wantResult)
-// 			}
-// 		})
-// 	}
-// }
+	ts := time.Now()
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		wantResult []telegraf.Metric
+	}{
+		{name: "dedupped",
+			fields: fields{MetricDeclarationsDedup: true,
+				MetricDeclarations: buildTestMetricDeclarations()},
+			args:       args{in: buildTestMetrics(ts)},
+			wantResult: buildExpectedDeduppedMetrics(ts),
+		},
+		{name: "not_dedupped",
+			fields: fields{MetricDeclarationsDedup: false,
+				MetricDeclarations: buildTestMetricDeclarations()},
+			args:       args{in: buildTestMetrics(ts)},
+			wantResult: buildExpectedMetrics(ts),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &EmfProcessor{
+				inited:                  tt.fields.inited,
+				MetricDeclarationsDedup: tt.fields.MetricDeclarationsDedup,
+				MetricDeclarations:      tt.fields.MetricDeclarations,
+				MetricNamespace:         "ContainerInsights/Prometheus",
+			}
+
+			gotResult := e.Apply(tt.args.in...)
+			testutil.RequireMetricsEqual(t, tt.wantResult, gotResult)
+		})
+	}
+}
