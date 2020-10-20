@@ -58,7 +58,6 @@ func Test_metricAppender_isValueStale(t *testing.T) {
 	assert.False(t, nonStaleValue.isValueStale())
 }
 
-//TODO enable the test
 func Test_metricAppender_Rollback(t *testing.T) {
 	mr := metricsReceiver{}
 	ma := mr.Appender()
@@ -79,7 +78,6 @@ func Test_metricAppender_Rollback(t *testing.T) {
 	assert.Equal(t, 0, len(mac.batch))
 }
 
-//TODO: enable the test
 func Test_metricAppender_Commit(t *testing.T) {
 	mbCh := make(chan PrometheusMetricBatch, 3)
 	mr := metricsReceiver{pmbCh: mbCh}

@@ -86,10 +86,7 @@ func (t *metadataServiceImpl) Get(job, instance string) (metadataCache, error) {
 		targetGroup = nil
 	checkJobLoop:
 		for _, potentialTargetGroup := range targetGroupMap {
-			// log.Printf("E! DEBUG job: %v ============================== \n", job)
 			for _, target := range potentialTargetGroup {
-				// log.Printf("E! DEBUG target discovered labels: %v\n", target.DiscoveredLabels())
-				// log.Printf("E! DEBUG target labels: %v\n", target.Labels())
 				if target.Labels().Get(model.JobLabel) == job {
 					targetGroup = potentialTargetGroup
 					break checkJobLoop
@@ -146,7 +143,6 @@ func GetScrapeTargetInfo(pmb PrometheusMetricBatch) (string, string, error) {
 	return "", "", errors.New("No Job and Instance Label found.")
 }
 
-//TODO: delete later before GA
 func isInternalMetric(metricName string) bool {
 	if metricName == "up" || strings.HasPrefix(metricName, "scrape_") {
 		return true
@@ -188,7 +184,6 @@ func (mf *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Promethe
 		}
 
 		if pm.metricType == "" && !isInternalMetric(pm.metricName) {
-			// TODO: remove the following debugging log line
 			log.Printf("E! metric_type ERROR: %v|%v|%v|%v  \n", pm.metricName, jobName, instanceId, pm.metricType)
 
 			// skip the non-internal metrics with empty metric type due to cache not ready
