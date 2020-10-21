@@ -120,7 +120,7 @@ func NewMetricsTypeHandler() *metricsTypeHandler {
 	return &metricsTypeHandler{}
 }
 
-func (mth *metricsTypeHandler) SetScrapeManager(scrapeManager *scrape.Manager) {
+func (mth *metricsTypeHandler) SetScrapeManager(scrapeManager ScrapeManager) {
 	if scrapeManager != nil {
 		mth.mc = &metadataServiceImpl{sm: scrapeManager}
 	}
@@ -144,6 +144,7 @@ func GetScrapeTargetInfo(pmb PrometheusMetricBatch) (string, string, error) {
 }
 
 func isInternalMetric(metricName string) bool {
+	//For each endpoint, Prometheus produces a set of internal metrics. See https://prometheus.io/docs/concepts/jobs_instances/
 	if metricName == "up" || strings.HasPrefix(metricName, "scrape_") {
 		return true
 	}
