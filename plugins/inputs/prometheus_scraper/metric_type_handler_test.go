@@ -106,15 +106,15 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 func TestMetadataServiceImpl_GetWithUnknownJobnameInstance(t *testing.T) {
 	metricsTypeHandler := NewMetricsTypeHandler()
 	metricsTypeHandler.SetScrapeManager(&mockScrapeManager{})
-	mCache, err := metricsTypeHandler.mc.Get("job_unknown", "instance_unknown")
+	mCache, err := metricsTypeHandler.ms.Get("job_unknown", "instance_unknown")
 	assert.Equal(t, mCache, nil);
 	assert.EqualError(t, err, "unable to find a target group with job=job_unknown")
 
-	mCache, err = metricsTypeHandler.mc.Get("job1", "instance_unknown")
+	mCache, err = metricsTypeHandler.ms.Get("job1", "instance_unknown")
 	assert.Equal(t, mCache, nil);
 	assert.EqualError(t, err, "unable to find a target with job=job1, and instance=instance_unknown")
 
-	mCache, err = metricsTypeHandler.mc.Get("job2_replaced", "instance_unknown")
+	mCache, err = metricsTypeHandler.ms.Get("job2_replaced", "instance_unknown")
 	assert.Equal(t, mCache, nil);
 	assert.EqualError(t, err, "unable to find a target with job=job2_replaced, and instance=instance_unknown")
 }
@@ -122,11 +122,11 @@ func TestMetadataServiceImpl_GetWithUnknownJobnameInstance(t *testing.T) {
 func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 	metricsTypeHandler := NewMetricsTypeHandler()
 	metricsTypeHandler.SetScrapeManager(&mockScrapeManager{})
-	mCache, err := metricsTypeHandler.mc.Get("job_unknown", "instance_unknown")
+	mCache, err := metricsTypeHandler.ms.Get("job_unknown", "instance_unknown")
 	assert.Equal(t, mCache, nil);
 	assert.EqualError(t, err, "unable to find a target group with job=job_unknown")
 
-	mCache, err = metricsTypeHandler.mc.Get("job1", "instance1")
+	mCache, err = metricsTypeHandler.ms.Get("job1", "instance1")
 	expectedMetricMetadata := scrape.MetricMetadata{
 		Metric: "m1",
 		Type:   textparse.MetricTypeCounter,
@@ -154,7 +154,7 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 func TestMetadataServiceImpl_GetWithReplacedJobname(t *testing.T) {
 	metricsTypeHandler := NewMetricsTypeHandler()
 	metricsTypeHandler.SetScrapeManager(&mockScrapeManager{})
-	mCache, err := metricsTypeHandler.mc.Get("job2_replaced", "instance2")
+	mCache, err := metricsTypeHandler.ms.Get("job2_replaced", "instance2")
 	assert.Equal(t, err, nil)
 	expectedMetricMetadata := scrape.MetricMetadata{
 		Metric: "m1",

@@ -113,7 +113,7 @@ type ScrapeManager interface {
 }
 
 type metricsTypeHandler struct {
-	mc *metadataServiceImpl
+	ms metadataService
 }
 
 func NewMetricsTypeHandler() *metricsTypeHandler {
@@ -122,7 +122,7 @@ func NewMetricsTypeHandler() *metricsTypeHandler {
 
 func (mth *metricsTypeHandler) SetScrapeManager(scrapeManager ScrapeManager) {
 	if scrapeManager != nil {
-		mth.mc = &metadataServiceImpl{sm: scrapeManager}
+		mth.ms = &metadataServiceImpl{sm: scrapeManager}
 	}
 }
 
@@ -152,7 +152,7 @@ func isInternalMetric(metricName string) bool {
 }
 
 // Decorate the Metrics with Metric Types
-func (mf *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result PrometheusMetricBatch) {
+func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result PrometheusMetricBatch) {
 	// Filter out Summary, Histogram and untyped Metrics and adding logging
 	jobName, instanceId, err := GetScrapeTargetInfo(pmb)
 	if err != nil {
@@ -160,7 +160,7 @@ func (mf *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Promethe
 		return result
 	}
 
-	mc, err := mf.mc.Get(jobName, instanceId)
+	mc, err := mth.ms.Get(jobName, instanceId)
 	if err != nil {
 		log.Printf("E! metricsTypeHandler.mc.Get(jobName, instanceId) error. jobName: %v;  instanceId: %v \n", jobName, instanceId)
 		// The Pod has been terminated when we are going to handle its Prometheus metrics in the channel
