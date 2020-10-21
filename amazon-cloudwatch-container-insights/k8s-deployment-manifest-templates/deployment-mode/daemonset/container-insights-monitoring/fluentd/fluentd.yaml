@@ -391,7 +391,7 @@ spec:
                   name: cluster-info
                   key: cluster.name
             - name: CI_VERSION
-              value: "k8s/1.1.1"
+              value: "k8s/1.2.2"
           resources:
             limits:
               memory: 400Mi

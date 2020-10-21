@@ -539,6 +539,27 @@
                 }
               },
               "additionalProperties": true
+            },
+            "prometheus":{
+              "type": "object",
+              "properties": {
+                "cluster_name": {
+                  "type": "string"
+                },
+                "log_group_name": {
+                  "type": "string"
+                },
+                "prometheus_config_path": {
+                  "type": "string"
+                },
+                "emf_processor": {
+                  "$ref": "#/definitions/emfProcessorDefinition"
+                },
+                "ecs_service_discovery": {
+                  "$ref": "#/definitions/ecsServiceDiscoveryDefinition"
+                }
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": true
@@ -760,6 +781,141 @@
       "type": "string",
       "minLength": 4,
       "maxLength": 2048
+    },
+    "ecsServiceDiscoveryDefinition": {
+      "type": "object",
+      "descriptions": "Define ECS service discovery for Prometheus",
+      "properties": {
+        "docker_label": {
+          "$ref": "#/definitions/ecsServiceDiscoveryDefinition/definitions/dockerLabel"
+        },
+        "task_definition_list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ecsServiceDiscoveryDefinition/definitions/taskDefinitionList"
+          }
+        },
+        "sd_cluster_region": {
+          "description": "ECS cluster region",
+          "type": "string"
+        },
+        "sd_frequency": {
+          "description": "ECS service discovery frequency",
+          "type": "string"
+        },
+        "sd_result_file": {
+          "description": "ECS service discovery result file full path",
+          "type": "string"
+        },
+        "sd_target_cluster": {
+          "description": "The target ECS cluster to be scanned for Prometheus exporters",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "dockerLabel": {
+          "type": "object",
+          "descriptions": "Define ECS service discovery based on docker labels",
+          "properties": {
+            "sd_job_name_label": {
+              "description": "Docker label name for specifying ECS service discovery job name",
+              "type": "string"
+            },
+            "sd_metrics_path_label": {
+              "description": "Docker label name for specifying the Prometheus resource path",
+              "type": "string"
+            },
+            "sd_port_label": {
+              "description": "Docker label name for specifying the Prometheus port",
+              "type": "string"
+            }
+          }
+        },
+        "taskDefinitionList": {
+          "type": "object",
+          "descriptions": "Define ECS service discovery based on task definitions",
+          "properties": {
+            "sd_container_name_pattern": {
+              "description": "ECS container name pattern which expose the Prometheus metrics",
+              "type": "string"
+            },
+            "sd_job_name": {
+              "description": "Service discovery result job name",
+              "type": "string"
+            },
+            "sd_metrics_path": {
+              "description": "Prometheus metrics path of the exporters",
+              "type": "string"
+            },
+            "sd_metrics_ports": {
+              "description": "Prometheus metrics port list of the exporters",
+              "type": "string"
+            },
+            "sd_task_definition_arn_pattern": {
+              "description": "ECS task definition pattern which expose the Prometheus metrics",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "emfProcessorDefinition": {
+      "type": "object",
+      "descriptions": "Define EMF Processor to set metric filter",
+      "properties": {
+        "metric_declaration_dedup": {
+          "description": "Enable the de-duplication function for the EMF metric",
+          "type": "boolean"
+        },
+        "metric_namespace": {
+          "description": "The namespace to use for the Prometheus metrics collected by the agent",
+          "type": "string"
+        },
+        "metric_declaration": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/emfProcessorDefinition/definitions/metricDeclarationDefinition"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "metricDeclarationDefinition": {
+          "type": "object",
+          "descriptions": "Define metric declaration to set EMF",
+          "properties": {
+            "source_labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "label_matcher": {
+              "type": "string"
+            },
+            "label_separator": {
+              "type": "string"
+            },
+            "metric_selectors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dimensions": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
     }
   }
 }

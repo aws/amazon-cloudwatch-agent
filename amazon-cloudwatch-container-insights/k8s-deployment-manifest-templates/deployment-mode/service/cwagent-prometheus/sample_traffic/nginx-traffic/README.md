@@ -1,0 +1,2 @@
+## Sample Nginx-Igress Application Yaml File for Demo
+Please refer to [Set Up NGINX with Sample Traffic](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights-Prometheus-Sample-Workloads-nginx.html) for installation guide.

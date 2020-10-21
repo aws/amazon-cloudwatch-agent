@@ -4,9 +4,10 @@
 package mapWithExpiry
 
 import (
-	"github.com/docker/docker/pkg/testutil/assert"
 	"testing"
 	"time"
+
+	"github.com/docker/docker/pkg/testutil/assert"
 )
 
 func TestMapWithExpiry_add(t *testing.T) {
@@ -17,6 +18,19 @@ func TestMapWithExpiry_add(t *testing.T) {
 	assert.Equal(t, "value1", val.(string))
 
 	val, ok = store.Get("key2")
+	assert.Equal(t, false, ok)
+	assert.Equal(t, nil, val)
+}
+
+func TestMapWithExpiry_delete(t *testing.T) {
+	store := NewMapWithExpiry(time.Second)
+	store.Set("key1", "value1")
+	val, ok := store.Get("key1")
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "value1", val.(string))
+
+	store.Delete("key1")
+	val, ok = store.Get("key1")
 	assert.Equal(t, false, ok)
 	assert.Equal(t, nil, val)
 }
