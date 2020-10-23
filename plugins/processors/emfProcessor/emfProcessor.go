@@ -83,7 +83,7 @@ func (e *EmfProcessor) Apply(in ...telegraf.Metric) (result []telegraf.Metric) {
 			if _, ok := supportedUnits[v]; ok {
 				e.validMetricUnit[k] = v
 			} else {
-				log.Println("E! detect unsupported unit: ", v)
+				log.Println("W! detect unsupported unit: ", v)
 			}
 		}
 
