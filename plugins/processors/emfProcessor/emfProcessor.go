@@ -7,6 +7,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"log"
 )
 
 type EmfProcessor struct {
@@ -14,6 +15,39 @@ type EmfProcessor struct {
 	MetricDeclarationsDedup bool                 `toml:"metric_declaration_dedup"`
 	MetricDeclarations      []*metricDeclaration `toml:"metric_declaration"`
 	MetricNamespace         string               `toml:"metric_namespace"`
+	MetricUnit              map[string]string    `toml:"metric_unit"`
+
+	validMetricUnit         map[string]string
+}
+
+var supportedUnits = map[string]struct{}{
+	"Seconds":          {},
+	"Microseconds":     {},
+	"Milliseconds":     {},
+	"Bytes":            {},
+	"Kilobytes":        {},
+	"Megabytes":        {},
+	"Gigabytes":        {},
+	"Terabytes":        {},
+	"Bits":             {},
+	"Kilobits":         {},
+	"Megabits":         {},
+	"Gigabits":         {},
+	"Terabits":         {},
+	"Percent":          {},
+	"Count":            {},
+	"Bytes/Second":     {},
+	"Kilobytes/Second": {},
+	"Megabytes/Second": {},
+	"Gigabytes/Second": {},
+	"Terabytes/Second": {},
+	"Bits/Second":      {},
+	"Kilobits/Second":  {},
+	"Megabits/Second":  {},
+	"Gigabits/Second":  {},
+	"Terabits/Second":  {},
+	"Count/Second":     {},
+	"None":             {},
 }
 
 func (e *EmfProcessor) SampleConfig() string {
@@ -28,6 +62,8 @@ func (e *EmfProcessor) SampleConfig() string {
       labels_separator = ";"
       metric_selectors = ["^nginx_ingress_controller_requests$"]
       source_labels = ["Service"]
+    [processors.emfProcessor.metric_unit]
+      nginx_ingress_controller_requests = "Count"
 `
 }
 
@@ -40,6 +76,17 @@ func (e *EmfProcessor) Apply(in ...telegraf.Metric) (result []telegraf.Metric) {
 		for _, declaration := range e.MetricDeclarations {
 			declaration.init()
 		}
+
+		// Metric units validation
+		e.validMetricUnit = make(map[string]string)
+		for k, v := range e.MetricUnit {
+			if _, ok := supportedUnits[v]; ok {
+				e.validMetricUnit[k] = v
+			} else {
+				log.Println("E! detect unsupported unit: ", v)
+			}
+		}
+
 		e.inited = true
 	}
 
@@ -51,7 +98,7 @@ func (e *EmfProcessor) Apply(in ...telegraf.Metric) (result []telegraf.Metric) {
 		var rules []structuredlogscommon.MetricRule
 		// metric go through each MetricDeclaration filter to build MetricRules
 		for _, declaration := range e.MetricDeclarations {
-			retRule := declaration.process(tags, fields, e.MetricNamespace)
+			retRule := declaration.process(tags, fields, e.MetricNamespace, e.validMetricUnit)
 			if retRule != nil {
 				rules = append(rules, *retRule)
 			}
@@ -71,6 +118,6 @@ func (e *EmfProcessor) Apply(in ...telegraf.Metric) (result []telegraf.Metric) {
 
 func init() {
 	processors.Add("emfProcessor", func() telegraf.Processor {
-		return &EmfProcessor{}
+		return &EmfProcessor{MetricUnit: make(map[string]string)}
 	})
 }

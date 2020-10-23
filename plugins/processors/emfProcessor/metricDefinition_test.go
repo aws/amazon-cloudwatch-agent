@@ -51,10 +51,13 @@ func Test_process_match(t *testing.T) {
 
 	metricTags := map[string]string{"tagA": "v1", "tagB": "v2"}
 	metricFields := map[string]interface{}{"metric_a": "valueA", "metric_c": 10.0}
-	result := md.process(metricTags, metricFields, "ContainerInsights/Prometheus")
-	assert.Equal(t, "ContainerInsights/Prometheus", result.Namespace)
+	namespace := "ContainerInsights/Prometheus"
+	metricUnit := map[string]string{"metric_a": "Count"}
+
+	result := md.process(metricTags, metricFields, namespace, metricUnit)
+	assert.Equal(t, namespace, result.Namespace)
 	assert.True(t, reflect.DeepEqual([][]string{{"tagA", "tagB"}, {"tagA"}, {"tag1", "tag2"}}, result.DimensionSets))
-	assert.True(t, reflect.DeepEqual([]structuredlogscommon.MetricAttr{structuredlogscommon.MetricAttr{Name: "metric_a"}},
+	assert.True(t, reflect.DeepEqual([]structuredlogscommon.MetricAttr{structuredlogscommon.MetricAttr{Name: "metric_a", Unit: "Count"}},
 		result.Metrics))
 }
 
@@ -63,7 +66,26 @@ func Test_process_mismatch(t *testing.T) {
 
 	metricTags := map[string]string{"tagA": "v1", "tagC": "v3"}
 	metricFields := map[string]interface{}{"metric_a": "valueA", "metric_b": 10.0, "metric_c": 10.0}
-	result := md.process(metricTags, metricFields, "ContainerInsights/Prometheus")
+	namespace := "ContainerInsights/Prometheus"
+	metricUnit := map[string]string{"metric_a": "Count", "metric_b": "Percent", "metric_c": "Megabytes"}
+	result := md.process(metricTags, metricFields, namespace, metricUnit)
 
 	assert.True(t, reflect.ValueOf(result).IsNil())
+}
+
+func Test_process_metricunit(t *testing.T) {
+	md := buildTestMetricDeclaration()
+
+	metricTags := map[string]string{"tagA": "v1", "tagB": "v2"}
+	metricFields := map[string]interface{}{"metric_a": "valueA", "metric_b": 10.0, "metric_c": 10.0}
+	namespace := "ContainerInsights/Prometheus"
+	metricUnit := map[string]string{"metric_a": "Count", "metric_c": "Megabytes", "metric_d": "Seconds"}
+
+	result := md.process(metricTags, metricFields, namespace, metricUnit)
+	assert.Equal(t, namespace, result.Namespace)
+	assert.True(t, reflect.DeepEqual([][]string{{"tagA", "tagB"}, {"tagA"}, {"tag1", "tag2"}}, result.DimensionSets))
+	assert.True(t, reflect.DeepEqual([]structuredlogscommon.MetricAttr{
+		structuredlogscommon.MetricAttr{Name: "metric_a", Unit: "Count"},
+		structuredlogscommon.MetricAttr{Name: "metric_b"}},
+		result.Metrics))
 }

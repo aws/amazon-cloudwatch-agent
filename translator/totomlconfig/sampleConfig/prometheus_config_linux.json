@@ -35,6 +35,10 @@
         "emf_processor": {
           "metric_declaration_dedup": true,
           "metric_namespace": "CustomizedNamespace",
+          "metric_unit": {
+            "nginx_request_count": "Count",
+            "jvm_memory_bytes_used": "Bytes"
+          },
           "metric_declaration": [
             {
               "dimensions": [["Service"]],
