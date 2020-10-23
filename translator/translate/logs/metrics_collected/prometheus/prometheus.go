@@ -78,4 +78,5 @@ func init() {
 	k := new(Prometheus)
 	parent.MergeRuleMap[SectionKey] = k
 	parent.RegisterLinuxRule(SectionKey, k)
+	parent.RegisterWindowsRule(SectionKey, k)
 }

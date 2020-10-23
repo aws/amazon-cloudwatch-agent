@@ -32,6 +32,14 @@ func buildTestMetricDeclarations() (mds []*metricDeclaration) {
 	return
 }
 
+func buildMetricUnit() (mu map[string]string) {
+	return map[string]string{
+		"metric_a": "Count",
+		"metric_b": "Percent",
+		"metric_d": "Megabytes",
+	}
+}
+
 func buildTestMetrics(ts time.Time) (ms []telegraf.Metric) {
 	m1, _ := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "v1"},
@@ -45,7 +53,7 @@ func buildEMFMetricRule() *structuredlogscommon.MetricRule {
 	return &structuredlogscommon.MetricRule{
 		Namespace:     "ContainerInsights/Prometheus",
 		DimensionSets: [][]string{{"tagA"}},
-		Metrics:       []structuredlogscommon.MetricAttr{{Name: "metric_a"}},
+		Metrics:       []structuredlogscommon.MetricAttr{{Name: "metric_a", Unit: "Count"}},
 	}
 }
 
@@ -72,6 +80,7 @@ func TestEmfProcessor_Apply(t *testing.T) {
 		inited                  bool
 		MetricDeclarationsDedup bool
 		MetricDeclarations      []*metricDeclaration
+		MetricUnit              map[string]string
 	}
 	type args struct {
 		in []telegraf.Metric
@@ -86,13 +95,15 @@ func TestEmfProcessor_Apply(t *testing.T) {
 	}{
 		{name: "dedupped",
 			fields: fields{MetricDeclarationsDedup: true,
-				MetricDeclarations: buildTestMetricDeclarations()},
+				MetricDeclarations: buildTestMetricDeclarations(),
+				MetricUnit:         buildMetricUnit()},
 			args:       args{in: buildTestMetrics(ts)},
 			wantResult: buildExpectedDeduppedMetrics(ts),
 		},
 		{name: "not_dedupped",
 			fields: fields{MetricDeclarationsDedup: false,
-				MetricDeclarations: buildTestMetricDeclarations()},
+				MetricDeclarations: buildTestMetricDeclarations(),
+				MetricUnit:         buildMetricUnit()},
 			args:       args{in: buildTestMetrics(ts)},
 			wantResult: buildExpectedMetrics(ts),
 		},
@@ -104,6 +115,7 @@ func TestEmfProcessor_Apply(t *testing.T) {
 				MetricDeclarationsDedup: tt.fields.MetricDeclarationsDedup,
 				MetricDeclarations:      tt.fields.MetricDeclarations,
 				MetricNamespace:         "ContainerInsights/Prometheus",
+				MetricUnit:              tt.fields.MetricUnit,
 			}
 
 			gotResult := e.Apply(tt.args.in...)

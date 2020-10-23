@@ -96,7 +96,8 @@ func TestPrometheusConfig(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)
 	os.Setenv(config.HOST_NAME, "host_name_from_env")
-	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/prometheus_config.json"), "./sampleConfig/prometheus_config.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/prometheus_config_linux.json"), "./sampleConfig/prometheus_config_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/prometheus_config_windows.json"), "./sampleConfig/prometheus_config_windows.conf", "windows")
 	os.Unsetenv(config.HOST_NAME)
 }
 

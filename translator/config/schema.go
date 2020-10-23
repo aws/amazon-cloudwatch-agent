@@ -884,6 +884,15 @@ var schema = `{
           "description": "The namespace to use for the Prometheus metrics collected by the agent",
           "type": "string"
         },
+        "metric_unit": {
+          "description": "The metric name, metric unit map",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
         "metric_declaration": {
           "type": "array",
           "items": {

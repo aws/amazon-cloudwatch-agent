@@ -26,7 +26,7 @@ type metricDeclaration struct {
 }
 
 // calculate EMF MetricRule for each metric's tags and fields
-func (m *metricDeclaration) process(tags map[string]string, fields map[string]interface{}, namespace string) (resRule *structuredlogscommon.MetricRule) {
+func (m *metricDeclaration) process(tags map[string]string, fields map[string]interface{}, namespace string, metricUnit map[string]string) (resRule *structuredlogscommon.MetricRule) {
 	// If there is no source_labels or metric_selectors defined, the metricDeclaration is not valid
 	if len(m.SourceLabels) == 0 || len(m.MetricSelectors) == 0 {
 		return
@@ -47,6 +47,11 @@ Loop:
 	for fieldKey := range fields {
 		for _, regexP := range m.metricRegexPs {
 			if regexP.MatchString(fieldKey) {
+				if unit, ok := metricUnit[fieldKey]; ok {
+					rule.Metrics = append(rule.Metrics, structuredlogscommon.MetricAttr{Name: fieldKey, Unit: unit})
+					continue Loop
+				}
+
 				rule.Metrics = append(rule.Metrics, structuredlogscommon.MetricAttr{Name: fieldKey})
 				continue Loop
 			}
