@@ -4,12 +4,9 @@
 package cloudwatch
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"log"
-	"os"
+	"math/rand"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
@@ -50,17 +47,10 @@ const (
 )
 
 func publishJitter(publishInterval time.Duration) (publishJitter time.Duration) {
-	hostName, _ := os.Hostname()
-	jitter := computeMD5Hash(hostName, int64(publishInterval.Seconds()))
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	jitter := r.Int63n(int64(publishInterval.Seconds()))
 	publishJitter = time.Duration(jitter) * time.Second
 	return
-}
-
-func computeMD5Hash(value string, max int64) int64 {
-	md5Value := md5.New().Sum([]byte(value))
-	hexString := hex.EncodeToString(md5Value)
-	i, _ := strconv.ParseInt(hexString[:6], 16, 64)
-	return i % max
 }
 
 func setNewDistributionFunc(maxValuesPerDatumLimit int) {
