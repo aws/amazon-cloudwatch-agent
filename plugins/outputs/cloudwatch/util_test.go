@@ -24,14 +24,6 @@ func TestPublishJitter(t *testing.T) {
 	assert.True(t, publishJitter < time.Minute)
 }
 
-func TestComputeMD5Hash(t *testing.T) {
-	jitter := computeMD5Hash("some-string-value", 60)
-	assert.Equal(t, int64(5), jitter)
-
-	jitter = computeMD5Hash("different-string-value", 60)
-	assert.Equal(t, int64(22), jitter)
-}
-
 func TestSetNewDistributionFunc(t *testing.T) {
 	setNewDistributionFunc(maxValuesPerDatum)
 	_, ok := distribution.NewDistribution().(*seh1.SEH1Distribution)
