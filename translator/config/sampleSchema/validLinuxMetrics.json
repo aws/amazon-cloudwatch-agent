@@ -96,7 +96,11 @@
             "measurement": ["cpu_usage", "memory_rss"],
             "pid_file": "/var/run/logd"
         }
-      ]
+      ],
+      "statsd": {
+        "metrics_aggregation_interval": 0,
+        "allowed_pending_messages": 10000
+      }
     },
     "append_dimensions": {
       "ImageId": "${aws:ImageId}",
