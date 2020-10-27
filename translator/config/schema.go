@@ -338,6 +338,11 @@ var schema = `{
         "statsdDefinitions": {
           "type": "object",
           "properties": {
+            "allowed_pending_messages": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
             "service_address": {
               "type": "string",
               "minLength": 1,

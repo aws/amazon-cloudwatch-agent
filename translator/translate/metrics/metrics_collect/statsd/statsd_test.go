@@ -16,7 +16,8 @@ func TestStatsD_HappyCase(t *testing.T) {
 	err := json.Unmarshal([]byte(`{"statsd": {
 					"service_address": ":12345",
 					"metrics_collection_interval": 5,
-					"metrics_aggregation_interval": 30
+					"metrics_aggregation_interval": 30,
+					"allowed_pending_messages": 10000
 					}}`), &input)
 	assert.NoError(t, err)
 
@@ -24,10 +25,11 @@ func TestStatsD_HappyCase(t *testing.T) {
 
 	expect := []interface{}{
 		map[string]interface{}{
-			"service_address":     ":12345",
-			"interval":            "5s",
-			"parse_data_dog_tags": true,
-			"tags":                map[string]interface{}{"aws:AggregationInterval": "30s"},
+			"allowed_pending_messages": 10000,
+			"service_address":          ":12345",
+			"interval":                 "5s",
+			"parse_data_dog_tags":      true,
+			"tags":                     map[string]interface{}{"aws:AggregationInterval": "30s"},
 		},
 	}
 
