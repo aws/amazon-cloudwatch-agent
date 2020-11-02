@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
@@ -19,6 +20,7 @@ const (
 	localHostnamePlaceholder = "{local_hostname}" //regardless of ec2 metadata
 	ipAddressPlaceholder     = "{ip_address}"
 	awsRegionPlaceholder     = "{aws_region}"
+	datePlaceholder          = "{date}"
 
 	unknownInstanceId = "i-UNKNOWN"
 	unknownHostname   = "UNKNOWN-HOST"
@@ -35,6 +37,7 @@ func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	for k, v := range metadata {
 		tmpString = strings.Replace(tmpString, k, v, -1)
 	}
+	tmpString = strings.Replace(tmpString, datePlaceholder, time.Now().Format("2006-01-02"), -1)
 	return tmpString
 }
 
