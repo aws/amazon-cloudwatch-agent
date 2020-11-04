@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247346.1 (2020-11-04)
+========================================================================
+
+New Features and Enhancements:
+
+* Remove md5 from jitter caculation
+* Make allowed_pending_messages to be configurable for statsd
+* Add Prometheus EMF metrics unit support
+
+========================================================================
 Amazon CloudWatch Agent 1.247346.0 (2020-10-21)
 ========================================================================
 
