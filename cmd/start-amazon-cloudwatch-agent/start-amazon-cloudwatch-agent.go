@@ -37,13 +37,21 @@ var (
 
 	translatorBinaryPath string
 	agentBinaryPath      string
+	agentMode            string
 )
 
 // We use an environment variable here because we need this condition before the translator reads agent config json file.
+var forceModeEc2 = os.Getenv(config.FORCE_MODE_EC2)
 var runInContainer = os.Getenv(config.RUN_IN_CONTAINER)
 
 func translateConfig() error {
-	args := []string{"--output", tomlConfigPath, "--mode", "auto"}
+	if forceModeEc2 == config.FORCE_MODE_EC2_TRUE {
+		agentMode = "ec2"
+	} else {
+		agentMode = "auto"
+	}
+
+	args := []string{"--output", tomlConfigPath, "--mode", agentMode}
 	if runInContainer == config.RUN_IN_CONTAINER_TRUE {
 		args = append(args, "--input-dir", CONFIG_DIR_IN_CONTAINE)
 	} else {
