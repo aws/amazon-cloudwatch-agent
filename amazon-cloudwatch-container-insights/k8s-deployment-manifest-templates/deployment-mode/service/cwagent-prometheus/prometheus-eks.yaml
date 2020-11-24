@@ -40,7 +40,7 @@ data:
                 },
                 {
                   "source_labels": ["Service", "frontend"],
-                  "label_matcher": ".*haproxy-ingress-controller.*;(httpfront-shared-frontend|httpfront-default-backend|httpsfront)",
+                  "label_matcher": ".*haproxy-ingress-.*metrics;(httpfront-shared-frontend|httpfront-default-backend|httpsfront|_front_http)",
                   "dimensions": [["Service","Namespace","ClusterName","frontend","code"]],
                   "metric_selectors": [
                     "^haproxy_frontend_http_responses_total$"
@@ -48,7 +48,7 @@ data:
                 },
                 {
                   "source_labels": ["Service", "backend"],
-                  "label_matcher": ".*haproxy-ingress-controller.*;(httpback-shared-backend|httpback-default-backend|httpsback-shared-backend)",
+                  "label_matcher": ".*haproxy-ingress-.*metrics;(httpback-shared-backend|httpback-default-backend|httpsback-shared-backend|_default_backend)",
                   "dimensions": [["Service","Namespace","ClusterName","backend","code"]],
                   "metric_selectors": [
                     "^haproxy_backend_http_responses_total$"
@@ -56,10 +56,11 @@ data:
                 },
                 {
                   "source_labels": ["Service"],
-                  "label_matcher": ".*haproxy-ingress-controller.*",
+                  "label_matcher": ".*haproxy-ingress-.*metrics",
                   "dimensions": [["Service","Namespace","ClusterName"]],
                   "metric_selectors": [
                     "^haproxy_backend_up$",
+                    "^haproxy_backend_status$",
                     "^haproxy_backend_bytes_(in|out)_total$",
                     "^haproxy_backend_connections_total$",
                     "^haproxy_backend_connection_errors_total$",
@@ -269,6 +270,20 @@ data:
       - source_labels: [__name__]
         regex: 'go_gc_duration_seconds.*'
         action: drop
+      - source_labels: [__name__, proxy]
+        regex: "haproxy_frontend.+;(.+)"
+        target_label: frontend
+        replacement: "$1"
+      - source_labels: [__name__, proxy]
+        regex: "haproxy_server.+;(.+)"
+        target_label: backend
+        replacement: "$1"
+      - source_labels: [__name__, proxy]
+        regex: "haproxy_backend.+;(.+)"
+        target_label: backend
+        replacement: "$1"
+      - regex: proxy
+        action: labeldrop
 
     - job_name: 'kubernetes-pod-jmx'
       sample_limit: 10000
@@ -377,7 +392,7 @@ spec:
     spec:
       containers:
         - name: cloudwatch-agent
-          image: amazon/cloudwatch-agent:1.248913.0-prometheus
+          image: amazon/cloudwatch-agent:1.247346.0b249609
           imagePullPolicy: Always
           resources:
             limits:
@@ -389,7 +404,7 @@ spec:
           # Please don't change below envs
           env:
             - name: CI_VERSION
-              value: "k8s/1.2.1-prometheus"
+              value: "k8s/1.2.4"
           # Please don't change the mountPath
           volumeMounts:
             - name: prometheus-cwagentconfig

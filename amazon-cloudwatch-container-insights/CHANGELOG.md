@@ -1,3 +1,9 @@
+## k8s/1.2.4
+- Update config to support the haproxy-ingress from version 0.0.27 to latest (https://artifacthub.io/packages/helm/haproxy-ingress/haproxy-ingress)
+- Update container insights k8s envname "REGION"
+## k8s/1.2.3
+- Merge cloudwatch-agent-prometheus image into cloudwatch-agent image 
+- Upgrade cloudwatch-agent image version to 1.247346.0b249609
 ## k8s/1.2.2
 - Upgrade cloudwatch-agent image version to 1.247345.36b249270
 
