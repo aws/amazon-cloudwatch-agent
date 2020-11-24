@@ -25,10 +25,16 @@ const (
 
 var DetectRegion func(mode string, credsConfig map[string]string) string = detectRegion
 var DetectCredentialsPath func() string = detectCredentialsPath
+var runInAws = os.Getenv(config.RUN_IN_AWS)
 
 func DetectAgentMode(configuredMode string) string {
 	if configuredMode != "auto" {
 		return configuredMode
+	}
+
+	if runInAws == config.RUN_IN_AWS_TRUE {
+		fmt.Println("I! Detected from ENV instance is EC2")
+		return config.ModeEC2
 	}
 
 	if defaultEC2Region() != "" {
