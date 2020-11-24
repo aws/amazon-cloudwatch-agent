@@ -217,7 +217,7 @@ Resources:
       NetworkMode: !Ref ECSNetworkMode
       ContainerDefinitions:
         - Name: cloudwatch-agent-prometheus
-          Image: amazon/cloudwatch-agent:1.248913.0-prometheus
+          Image: amazon/cloudwatch-agent:1.247346.0b249609
           Essential: true
           MountPoints: []
           PortMappings: []

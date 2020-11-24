@@ -6,7 +6,7 @@
   "containerDefinitions": [
     {
       "name": "cloudwatch-agent",
-      "image": "amazon/cloudwatch-agent:1.247345.36b249270",
+      "image": "amazon/cloudwatch-agent:1.247346.0b249609",
       "mountPoints": [
         {
           "readOnly": true,
