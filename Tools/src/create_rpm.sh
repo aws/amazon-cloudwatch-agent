@@ -50,7 +50,7 @@ rm -rf ${BUILD_ROOT}/SOURCES/opt ${BUILD_ROOT}/SOURCES/etc
 
 echo "Creating the rpm package"
 
-rpmbuild -bb -v --clean --define "AGENT_VERSION $AGENT_VERSION" --define "_topdir ${BUILD_ROOT}" ${SPEC_FILE} --target ${TARGET_SUPPORTED_ARCH}
+rpmbuild -bb -v --clean --define "AGENT_VERSION $AGENT_VERSION" --define "_topdir ${BUILD_ROOT}" --define "_source_filedigest_algorithm 8" --define "_binary_filedigest_algorithm 8" ${SPEC_FILE} --target ${TARGET_SUPPORTED_ARCH}
 
 echo "Copying rpm files to bin"
 
