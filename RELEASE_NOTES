@@ -1,4 +1,16 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247346.2 (2020-11-26)
+========================================================================
+
+New Features and Enhancements:
+
+* Enable flag to force ec2 mode 
+* Sync manifest files for container insights
+* Disable cgo for test target
+* Add formatted date as a variable 
+* Add check secrets
+
+========================================================================
 Amazon CloudWatch Agent 1.247346.1 (2020-11-04)
 ========================================================================
 
