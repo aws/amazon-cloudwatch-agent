@@ -5,6 +5,7 @@ package emfProcessor
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
@@ -84,8 +85,16 @@ func Test_process_metricunit(t *testing.T) {
 	result := md.process(metricTags, metricFields, namespace, metricUnit)
 	assert.Equal(t, namespace, result.Namespace)
 	assert.True(t, reflect.DeepEqual([][]string{{"tagA", "tagB"}, {"tagA"}, {"tag1", "tag2"}}, result.DimensionSets))
-	assert.True(t, reflect.DeepEqual([]structuredlogscommon.MetricAttr{
-		structuredlogscommon.MetricAttr{Name: "metric_a", Unit: "Count"},
-		structuredlogscommon.MetricAttr{Name: "metric_b"}},
-		result.Metrics))
+	metrics := result.Metrics
+	assert.True(t, reflect.DeepEqual(sortMetrics([]structuredlogscommon.MetricAttr{
+		{Name: "metric_a", Unit: "Count"},
+		{Name: "metric_b"}}),
+		sortMetrics(metrics)))
+}
+
+func sortMetrics(metrics []structuredlogscommon.MetricAttr) []structuredlogscommon.MetricAttr {
+	sort.SliceStable(metrics, func(i, j int) bool {
+		return metrics[i].Name < metrics[j].Name
+	})
+	return metrics
 }
