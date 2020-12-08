@@ -6,7 +6,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -30,12 +29,17 @@ const (
 
 func startAgent(writer io.WriteCloser) error {
 	if os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE {
-		cmd := exec.Command(agentBinaryPath, "-config", tomlConfigPath, "-envconfig", envConfigPath,
-			"-pidfile", AGENT_DIR_LINUX+"/var/amazon-cloudwatch-agent.pid")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Run()
-		return errors.New("agent unexpectedly exited")
+		// Use exec so PID 1 changes to agent from start-agent.
+		execArgs := []string{
+			agentBinaryPath, // when using syscall.Exec, must pass binary name as args[0]
+			"-config", tomlConfigPath, "-envconfig", envConfigPath,
+			"-pidfile", AGENT_DIR_LINUX + "/var/amazon-cloudwatch-agent.pid",
+		}
+		if err := syscall.Exec(agentBinaryPath, execArgs, os.Environ()); err != nil {
+			return fmt.Errorf("error exec as agent binary: %w", err)
+		}
+		// We should never reach this line but the compiler doesn't know...
+		return nil
 	}
 
 	mergedJsonConfigMap, err := generateMergedJsonConfigMap()
