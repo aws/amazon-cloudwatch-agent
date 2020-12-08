@@ -64,6 +64,7 @@ The following targets are available. Each may be run with `make <target>`.
 | `build`                  | `build` builds the agent for Linux, Debian and Windows amd64 environment |
 | `release`                | *(Default)* `release` builds the agent and also packages it into a RPM, DEB and ZIP package |
 | `clean`                  | `clean` removes build artifacts |
+| `dockerized-build`       | build using docker container without local go environment |
 
 ## Versioning
 It is using [Semantic versioning](https://semver.org/)
