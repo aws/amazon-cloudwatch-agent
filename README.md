@@ -20,6 +20,7 @@ Amazon Cloudwatch Agent uses the open-source project [telegraf](https://github.c
 * [Troubleshooting Cloudwatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html)
 
 ## Building and Running from source
+
 * Install go. For more information, see [Getting started](https://golang.org/doc/install)
 * The agent uses go modules for dependency management. For more information, see [Go Modules](https://github.com/golang/go/wiki/Modules)
 
@@ -55,6 +56,9 @@ build/bin/windows/amd64/amazon-cloudwatch-agent.zip
         * unzip `amazon-cloudwatch-agent.zip`
         * `./install.ps1`
 
+### Building and running container
+
+See [Dockerfiles](amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile).
 
 ### Make Targets
 The following targets are available. Each may be run with `make <target>`.
@@ -70,7 +74,7 @@ The following targets are available. Each may be run with `make <target>`.
 It is using [Semantic versioning](https://semver.org/)
 
 ## Distributions
-You can download the offical release from S3, refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/download-cloudwatch-agent-commandline.html)
+You can download the official release from S3, refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/download-cloudwatch-agent-commandline.html)
 
 ## Security disclosures
 If you think you’ve found a potential security issue, please do not post it in the Issues.  Instead, please follow the instructions [here](https://aws.amazon.com/security/vulnerability-reporting/) or [email AWS security directly](mailto:aws-security@amazon.com).
