@@ -2,6 +2,7 @@
 echo "****************************************"
 echo "Creating deb file for Debian Linux ${ARCH}"
 echo "****************************************"
+set -e
 
 AGENT_VERSION=`cat ${PREPKGPATH}/CWAGENT_VERSION`
 BUILD_ROOT="${BUILD_SPACE}/private/linux_${ARCH}/debian"

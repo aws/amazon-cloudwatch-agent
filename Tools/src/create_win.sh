@@ -2,7 +2,7 @@
 echo "****************************************"
 echo "Creating zip file for Windows amd64"
 echo "****************************************"
-
+set -e
 
 BUILD_ROOT="${BUILD_SPACE}/private/windows_${ARCH}/"
 AGENT_VERSION=`cat ${PREPKGPATH}/CWAGENT_VERSION`
