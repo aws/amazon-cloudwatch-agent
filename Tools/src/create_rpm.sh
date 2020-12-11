@@ -2,6 +2,7 @@
 echo "*************************************************"
 echo "Creating rpm file for Amazon Linux and RHEL ${ARCH}"
 echo "*************************************************"
+set -e
 
 SPEC_FILE="${PREPKGPATH}/amazon-cloudwatch-agent.spec"
 BUILD_ROOT="${BUILD_SPACE}/private/linux_${ARCH}/rpm-build"
