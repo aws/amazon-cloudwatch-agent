@@ -5,6 +5,8 @@ package procstat
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
 )
@@ -57,8 +59,15 @@ func (p *Procstat) ApplyRule(input interface{}) (returnKey string, returnVal int
 	return
 }
 
+var MergeRuleMap = map[string]mergeJsonRule.MergeRule{}
+
+func (c *Procstat) Merge(source map[string]interface{}, result map[string]interface{}) {
+	mergeJsonUtil.MergeList(source, result, SectionKey)
+}
+
 func init() {
 	m := new(Procstat)
 	parent.RegisterLinuxRule(SectionKey, m)
 	parent.RegisterWindowsRule(SectionKey, m)
+	parent.MergeRuleMap[SectionKey] = m
 }
