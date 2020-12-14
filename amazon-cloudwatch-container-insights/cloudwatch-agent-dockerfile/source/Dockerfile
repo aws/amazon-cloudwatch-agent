@@ -1,5 +1,7 @@
 # Build the binary
-FROM golang:latest as builder
+ARG GO_IMAGE=golang:latest
+ARG CERT_IMAGE=ubuntu:latest
+FROM $GO_IMAGE as builder
 
 RUN mkdir -p /go/src/github.com/aws/amazon-cloudwatch-agent/
 WORKDIR /go/src/github.com/aws/amazon-cloudwatch-agent/
@@ -11,7 +13,7 @@ COPY . /go/src/github.com/aws/amazon-cloudwatch-agent/
 RUN make build && make package-deb
 
 # Install cert and binaries
-FROM ubuntu:latest as cert
+FROM $CERT_IMAGE as cert
 
 # NOTE: This arg will be populated by docker buildx
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope

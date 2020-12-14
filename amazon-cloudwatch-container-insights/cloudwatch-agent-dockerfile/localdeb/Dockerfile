@@ -1,4 +1,5 @@
-FROM ubuntu:latest as build
+ARG BUILD_IMAGE=ubuntu:latest
+FROM $BUILD_IMAGE as build
 
 RUN apt-get update &&  \
     apt-get install -y ca-certificates && \
