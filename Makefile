@@ -11,6 +11,8 @@ BUILD = $(shell date --iso-8601=seconds)
 LDFLAGS = -s -w
 LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.VersionStr=${VERSION}
 LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.BuildStr=${BUILD}
+IMAGE = amazon/cloudwatch-agent:$(VERSION)
+DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
 
 release: clean test build package-rpm package-deb package-win
 
@@ -160,3 +162,13 @@ package-win: package-prepare-win-zip
 	ARCH=amd64 TARGET_SUPPORTED_ARCH=x86_64 PREPKGPATH="$(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_win.sh
 
 .PHONY: build test clean
+
+.PHONY: dockerized-build dockerized-build-vendor
+dockerized-build:
+	$(DOCKER_BUILD_FROM_SOURCE) .
+	@echo Built image:
+	@echo $(IMAGE)
+
+# Use vendor instead of proxy when building w/ vendor folder
+dockerized-build-vendor:
+	$(DOCKER_BUILD_FROM_SOURCE) --build-arg GO111MODULE=off .
