@@ -1,7 +1,7 @@
 # CloudWatch Agent Dockerfiles
 
 - [Dockerfile](Dockerfile) builds from the [latest release published on s3](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/install-CloudWatch-Agent-commandline-fleet.html)
-- [locadeb](localdeb/Dockerfile) builds from a local deb file
+- [localdeb](localdeb/Dockerfile) builds from a local deb file
 - [source](source/Dockerfile) builds from source code, you can execute `make dockerized-build` at project root.
 
 ## Multi arch image
@@ -30,7 +30,8 @@ You need to be aware of the following:
 Example using `docker manifest`
 
 ```bash
-# NOTE: manifest is a experimental command, enable experimental in your ~/.docker/config.json with:
+# NOTE: manifest is a experimental command, docker versions released after mid 2018 should have it 
+# enable experimental in your ~/.docker/config.json with:
 # {
 #   "experimental": "enabled"
 # }
@@ -38,7 +39,7 @@ docker manifest create cloudwatch-agent:foo --amend cloudwatch-agent:foo-arm64 -
 docker manifest push cloudwatch-agent:foo
 ```
 
-Example using `manifest-tool`
+Example using `manifest-tool` and ECR, make sure to replace `{{account_id}}` and `{{aws_region}}` with your AWS account id and region.
 
 ```bash
 # NOTE: the released version of manifest-tool is a bit outdated, you need to build it from source
@@ -47,13 +48,13 @@ manifest-tool push from-spec multi-arch-agent.yaml
 
 ```yaml
 # multi-arch-agent.yaml
-image: 123.dkr.ecr.us-west-2.amazonaws.com/cloudwatch-agent:foo
+image: {{account_id}}.dkr.ecr.{{aws_region}}.amazonaws.com/cloudwatch-agent:foo
 manifests:
-  - image: 123.dkr.ecr.us-west-2.amazonaws.com/cloudwatch-agent:foo-amd64
+  - image: {{account_id}}.dkr.ecr.{{aws_region}}.amazonaws.com/cloudwatch-agent:foo-amd64
     platform:
       architecture: amd64
       os: linux
-  - image: 123.dkr.ecr.us-west-2.amazonaws.com/cloudwatch-agent:foo-arm64
+  - image: {{account_id}}.dkr.ecr.{{aws_region}}.amazonaws.com/cloudwatch-agent:foo-arm64
     platform:
       architecture: arm64
       os: linux
