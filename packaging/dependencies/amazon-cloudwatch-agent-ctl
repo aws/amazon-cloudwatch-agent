@@ -9,23 +9,33 @@ set -u
 readonly AGENTDIR="/opt/aws/amazon-cloudwatch-agent"
 readonly CMDDIR="${AGENTDIR}/bin"
 readonly CONFDIR="${AGENTDIR}/etc"
-readonly LOGDIR="${AGENTDIR}/logs"
-readonly RESTART_FILE="${CONFDIR}/restart"
+readonly CWOC_CONFDIR="${AGENTDIR}/cwagent-otel-collector/etc"
+readonly CWA_RESTART_FILE="${CONFDIR}/restart"
+readonly CWOC_RESTART_FILE="${CWOC_CONFDIR}/cwoc-restart"
 readonly VERSION_FILE="${CMDDIR}/CWAGENT_VERSION"
 
 # The systemd and upstart scripts assume exactly this .toml file name
 readonly TOML="${CONFDIR}/amazon-cloudwatch-agent.toml"
+readonly YAML="${CWOC_CONFDIR}/cwagent-otel-collector.yaml"
 readonly JSON="${CONFDIR}/amazon-cloudwatch-agent.json"
 readonly JSON_DIR="${CONFDIR}/amazon-cloudwatch-agent.d"
+readonly YAML_DIR="${CWOC_CONFDIR}/cwagent-otel-collector.d"
+readonly PREDEFINED_CONFIG_DATA="${AGENTDIR}/cwagent-otel-collector/var/.predefined-config-data"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"
 readonly COMMON_CONIG="${CONFDIR}/common-config.toml"
+
+readonly CWA_NAME='amazon-cloudwatch-agent'
+readonly CWOC_NAME='cwagent-otel-collector'
+readonly ALL_CONFIG='all'
 
 SYSTEMD='false'
 
 UsageString="
 
 
-        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s]
+        usage: amazon-cloudwatch-agent-ctl -a
+        stop|start|status|fetch-config|append-config|remove-config [-m
+        ec2|onPremise|auto] [-c default|all|ssm:<parameter-store-name>|file:<file-path>] [-o default|all|ssm:<parameter-store-name>|file:<file-path>] [-s]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -39,210 +49,401 @@ UsageString="
             stop:                                   stop the agent process.
             start:                                  start the agent process.
             status:                                 get the status of the agent process.
-            fetch-config:                           use this json config as the agent's only configuration.
-            append-config:                          append json config with the existing json configs if any.
-            remove-config:                          remove json config based on the location (ssm parameter store name, file name)
+            fetch-config:                           apply config for agent, followed by -c or -o or both. Target config can be based on location (ssm parameter store name, file name), or 'default'.
+            append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
+            remove-config:                          remove config for agent, followed by -c or -o or both. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
 
         -m: mode
             ec2:                                    indicate this is on ec2 host.
             onPremise:                              indicate this is on onPremise host.
             auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
 
-        -c: configuration
+        -c: amazon-cloudwatch-agent configuration
             default:                                default configuration for quick trial.
-            ssm:<parameter-store-name>:             ssm parameter store name
-            file:<file-path>:                       file path on the host
+            ssm:<parameter-store-name>:             ssm parameter store name.
+            file:<file-path>:                       file path on the host.
+            all:                                    all existing configs. Only apply to remove-config action.
+
+        -o: cwagent-otel-collector configuration
+            default:                                default configuration for quick trial.
+            ssm:<parameter-store-name>:             ssm parameter store name.
+            file:<file-path>:                       file path on the host.
+            all:                                    all existing configs. Only apply to remove-config action.
 
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
 "
 
-cwa_start() {
+start_all() {
     mode="${1:-}"
 
-    if [ "$(cwa_runstatus)" = 'running' ]; then
+    echo "****** processing cwagent-otel-collector ******"
+    set +e
+    agent_start "${CWOC_NAME}" "${mode}"
+    set -e
+
+    echo ""
+    echo "****** processing amazon-cloudwatch-agent ******"
+    agent_start "${CWA_NAME}" "${mode}"
+}
+
+agent_start() {
+    agent_name="${1:-}"
+    mode="${2:-}"
+
+    if [ "$(runstatus ${agent_name})" = 'running' ]; then
+        echo "${agent_name} has already been started"
         return 0
     fi
 
+    if [ "${agent_name}" = "${CWOC_NAME}" ] && [ ! -f "${YAML}" ]; then
+        echo "${CWOC_NAME} will not be started as it has not been configured yet."
+        return 0
+    fi
+
+    if [ "${agent_name}" = "${CWA_NAME}" ] && [ ! -f "${TOML}" ]; then
+        if [ -f "${YAML}" ]; then
+            # If cwagent-otel-collector config exists, amazon-cloudwatch-agent default config will be suppressed
+            echo "${CWA_NAME} will not be started as it has not been configured yet."
+            return 0
+        fi
+        echo "Both ${CWA_NAME} and ${CWOC_NAME} are not configured. Applying amazon-cloudwatch-agent default configuration."
+        cwa_config 'default' 'false' "${mode}" 'default'
+    fi
+
+
+    if [ "${SYSTEMD}" = 'true' ]; then
+        systemctl daemon-reload || return
+        systemctl enable "${agent_name}.service" || return
+        service "${agent_name}" restart || return
+    else
+        start "${agent_name}" || return
+        sleep 1
+    fi
+}
+
+stop_all() {
+    echo "****** processing cwagent-otel-collector ******"
+    set +e
+    agent_stop "${CWOC_NAME}"
+    set -e
+
+    echo ""
+    echo "****** processing amazon-cloudwatch-agent ******"
+    agent_stop "${CWA_NAME}"
+}
+
+agent_stop() {
+    agent_name="${1:-}"
+
+    if [ "$(runstatus ${agent_name})" = 'stopped' ]; then
+        echo "${agent_name} has already been stopped"
+        return 0
+    fi
+
+    if [ "${SYSTEMD}" = 'true' ]; then
+        service "${agent_name}" stop || return
+    else
+        stop "${agent_name}" || return
+    fi
+}
+
+# support for restart during upgrade via SSM packages
+prep_restart_all() {
+    set +e
+    agent_prep_restart "${CWOC_NAME}" "${CWOC_RESTART_FILE}"
+    set -e
+
+    agent_prep_restart "${CWA_NAME}" "${CWA_RESTART_FILE}"
+}
+
+agent_prep_restart() {
+    agent_name="${1:-}"
+    restart_file="${2:-}"
+    if [ "$(runstatus ${agent_name})" = 'running' ]; then
+        touch "${restart_file}"
+    fi
+}
+
+# support for restart during upgrade via SSM packages
+cond_restart_all() {
+    set +e
+    agent_cond_restart "${CWOC_NAME}" "${CWOC_RESTART_FILE}"
+    set -e
+
+    agent_cond_restart "${CWA_NAME}" "${CWA_RESTART_FILE}"
+}
+
+agent_cond_restart() {
+    agent_name="${1:-}"
+    restart_file="${2:-}"
+    if [ -f "${restart_file}" ]; then
+        agent_start "${agent_name}"
+        rm -f "${restart_file}"
+    fi
+}
+
+preun_all() {
+    set +e
+    agent_preun "${CWOC_NAME}"
+    set -e
+
+    agent_preun "${CWA_NAME}"
+}
+
+agent_preun() {
+    agent_name="${1:-}"
+    agent_stop "${agent_name}"
+    if [ "${SYSTEMD}" = 'true' ]; then
+        systemctl disable "${agent_name}.service" || return
+        systemctl daemon-reload || return
+        systemctl reset-failed || return
+    fi
+}
+
+status_all() {
+    cwa_config_status='configured'
     if [ ! -f "${TOML}" ]; then
-	echo "amazon-cloudwatch-agent is not configured. Applying default configuration before starting it."
-	cwa_config 'default' 'false' "${mode}"
+        cwa_config_status='not configured'
     fi
 
-    if [ "${SYSTEMD}" = 'true' ]; then
-	systemctl daemon-reload
-	systemctl enable amazon-cloudwatch-agent.service
-	service amazon-cloudwatch-agent restart
-    else
-	start amazon-cloudwatch-agent
-	sleep 1
-    fi
-}
-
-cwa_stop() {
-    if [ "$(cwa_runstatus)" = 'stopped' ]; then
-        return 0
-    fi
-
-    if [ "${SYSTEMD}" = 'true' ]; then
-	service amazon-cloudwatch-agent stop
-    else
-	stop amazon-cloudwatch-agent || true
-    fi
-}
-
-# support for restart during upgrade via SSM packages
-cwa_prep_restart() {
-    if [ "$(cwa_runstatus)" = 'running' ]; then
-        touch "$RESTART_FILE"
-    fi
-}
-
-# support for restart during upgrade via SSM packages
-cwa_cond_restart() {
-    if [ -f "${RESTART_FILE}" ]; then
-	cwa_start
-	rm -f "${RESTART_FILE}"
-    fi
-}
-
-cwa_preun() {
-    cwa_stop
-    if [ "${SYSTEMD}" = 'true' ]; then
-        systemctl disable amazon-cloudwatch-agent.service
-        systemctl daemon-reload
-        systemctl reset-failed
-    fi
-}
-
-cwa_status() {
-
-    pid=''
-    if [ "${SYSTEMD}" = 'true' ]; then
-	pid="$(systemctl show -p MainPID amazon-cloudwatch-agent.service | sed s/MainPID=//)"
-    else
-	pid="$(initctl status amazon-cloudwatch-agent | sed -n s/^.*process\ //p)"
-    fi
-
-    starttime_fmt=''
-    if [ ${pid} ] && [ ${pid} -ne 0 ]; then
-        starttime="$(TZ=UTC ps -o lstart= "${pid}")"
-        starttime_fmt="$(TZ=UTC date -Isec -d "${starttime}")"
+    cwoc_config_status='configured'
+    if [ ! -f "${YAML}" ]; then
+        cwoc_config_status='not configured'
     fi
 
     version="$(cat ${VERSION_FILE})"
 
     echo "{"
-    echo "  \"status\": \"$(cwa_runstatus)\","
-    echo "  \"starttime\": \"${starttime_fmt}\","
+    echo "  \"status\": \"$(runstatus ${CWA_NAME})\","
+    echo "  \"starttime\": \"$(get_starttime_fmt ${CWA_NAME})\","
+    echo "  \"configstatus\": \"${cwa_config_status}\","
+    echo "  \"cwoc_status\": \"$(runstatus ${CWOC_NAME})\","
+    echo "  \"cwoc_starttime\": \"$(get_starttime_fmt ${CWOC_NAME})\","
+    echo "  \"cwoc_configstatus\": \"${cwoc_config_status}\","
     echo "  \"version\": \"${version}\""
     echo "}"
 }
 
-cwa_runstatus() {
+get_starttime_fmt() {
+    agent_name="${1:-}"
+
+    agentPid=''
+    if [ "${SYSTEMD}" = 'true' ]; then
+        agentPid="$(systemctl show -p MainPID "${agent_name}.service" | sed s/MainPID=//)"
+    else
+        agentPid="$(initctl status "${agent_name}" | sed -n s/^.*process\ //p)"
+    fi
+
+    starttime_fmt=''
+    if [ "${agentPid}" ] && [ "${agentPid}" -ne "0" ]; then
+        starttime="$(TZ=UTC ps -o lstart= "${agentPid}")"
+        starttime_fmt="$(TZ=UTC date -Isec -d "${starttime}")"
+    fi
+
+    echo "${starttime_fmt}"
+}
+
+runstatus() {
+    agent_name="${1:-}"
+
     running=false
     if [ "${SYSTEMD}" = 'true' ]; then
-	set +e
-	if systemctl is-active amazon-cloudwatch-agent.service 1>/dev/null; then
-	    running='true'
-	fi
-	set -e
+        set +e
+        if systemctl is-active "${agent_name}.service" 1>/dev/null; then
+            running='true'
+        fi
+        set -e
     else
-	if [ "$(initctl status amazon-cloudwatch-agent | grep -c running)" = 1 ]; then
-	    running='true'
-	fi
+        if [ "$(initctl status "${agent_name}" | grep -c running)" = 1 ]; then
+            running='true'
+        fi
     fi
 
     if [ "${running}" = 'true' ]; then
-	echo "running"
+        echo "running"
     else
-	echo "stopped"
+        echo "stopped"
     fi
 }
 
-cwa_config() {
-    config_location="${1:-}"
-    restart="${2:-}"
-    mode="${3:-}"
-    multi_config="${4:-default}"
+config_all() {
+    cwa_config_location="${1:-}"
+    cwoc_config_location="${2:-}"
+    restart="${3:-}"
+    mode="${4:-}"
+    multi_config="${5:-}"
+
+    if [ -z "${cwa_config_location}" ] && [ -z "${cwoc_config_location}" ]; then
+        cwa_config_location='default'
+    fi
 
     mkdir -p "${CONFDIR}"
 
     param_mode="ec2"
     case "${mode}" in
-	ec2)
-	    param_mode="ec2"
-	    ;;
-	onPremise)
-	    param_mode="onPrem"
-	    ;;
-	auto)
-	    param_mode="auto"
-	    ;;
-	*)  echo "Invalid mode: ${mode}" >&2
-	    exit 1
-	    ;;
+    ec2)
+        param_mode="ec2"
+        ;;
+    onPremise)
+        param_mode="onPrem"
+        ;;
+    auto)
+        param_mode="auto"
+        ;;
+    *)  echo "Invalid mode: ${mode}" >&2
+        exit 1
+        ;;
     esac
 
-    runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
-    runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
-    runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
-
-    echo ${runDownloaderCommand}
-    ${runDownloaderCommand}
-
-    echo "Start configuration validation..."
-    echo ${runTranslatorCommand}
-    ${runTranslatorCommand}
-
-    echo ${runAgentSchemaTestCommand}
-    # We will redirect the verbose error message out
-    if ! ${runAgentSchemaTestCommand} > ${CV_LOG_FILE} 2>&1; then
-        echo "Configuration validation second phase failed"
-        echo "======== Error Log ========"
-        cat ${CV_LOG_FILE}
-        exit 1
+    if [ -n "${cwoc_config_location}" ]; then
+        echo "****** processing cwagent-otel-collector ******"
+        set +e
+        cwoc_config "${cwoc_config_location}" "${restart}" "${param_mode}" "${multi_config}"
+        set -e
+        echo ""
     fi
-    echo "Configuration validation second phase succeeded"
-    echo "Configuration validation succeeded"
 
-    chmod ug+rw "${TOML}"
+    # cwa_config is called after cwoc_config becuase that whether applying
+    # default cwa config depends on the existence of cwoc config
+    if [ -n "${cwa_config_location}" ]; then
+        echo "****** processing amazon-cloudwatch-agent ******"
+        cwa_config "${cwa_config_location}" "${restart}" "${param_mode}" "${multi_config}"
+    fi
+}
 
-    # for translator:
-    #       default:    only process .tmp files
-    #       append:     process both existing files and .tmp files
-    #       remove:     only process existing files
-    # At this point, all json configs have been validated
-    # multi_config:
-    #       default:    delete non .tmp file, rename .tmp file
-    #       append:     rename .tmp file
-    #       remove:     no-op
-    if [ "${multi_config}" = 'default' ]; then
-        rm -f "${JSON}"
-        for file in "${JSON_DIR}"/*; do
-            base="${JSON_DIR}/$(basename "${file}" .tmp)"
+cwa_config() {
+    cwa_config_location="${1:-}"
+    restart="${2:-}"
+    param_mode="${3:-}"
+    multi_config="${4:-}"
+
+    if [ "${cwa_config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
+        echo "ignore cwa configuration \"${ALL_CONFIG}\" as it is only supported by action \"remove-config\""
+        return
+    fi
+
+    if [ "${cwa_config_location}" = "${ALL_CONFIG}" ]; then
+        rm -rf "${JSON_DIR}"/*
+    else
+        runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${cwa_config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+        echo "${runDownloaderCommand}"
+        ${runDownloaderCommand} || return
+    fi
+
+    if [ ! "$(ls ${JSON_DIR})" ]; then
+        echo "all amazon-cloudwatch-agent configurations have been removed"
+        rm -f "${TOML}"
+    else
+        echo "Start configuration validation..."
+        runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+        echo "${runTranslatorCommand}"
+        ${runTranslatorCommand} || return
+
+        runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
+        echo "${runAgentSchemaTestCommand}"
+        # We will redirect the verbose error message out
+        if ! ${runAgentSchemaTestCommand} > ${CV_LOG_FILE} 2>&1; then
+            echo "Configuration validation second phase failed"
+            echo "======== Error Log ========"
+            cat ${CV_LOG_FILE}
+            exit 1
+        fi
+        echo "Configuration validation second phase succeeded"
+        echo "Configuration validation succeeded"
+
+        chmod ug+rw "${TOML}"
+
+        # for translator:
+        #       default:    only process .tmp files
+        #       append:     process both existing files and .tmp files
+        #       remove:     only process existing files
+        # At this point, all json configs have been validated
+        # multi_config:
+        #       default:    delete non .tmp file, rename .tmp file
+        #       append:     rename .tmp file
+        #       remove:     no-op
+        if [ "${multi_config}" = 'default' ]; then
+            rm -f "${JSON}"
+            for file in "${JSON_DIR}"/*; do
+                base="${JSON_DIR}/$(basename "${file}" .tmp)"
+                if [ "${file}" = "${base}" ]; then
+                    rm -f "${file}"
+                else
+                    mv -f "${file}" "${base}"
+                fi
+            done
+        elif [ "${multi_config}" = 'append' ]; then
+            for file in "${JSON_DIR}"/*.tmp; do
+                mv -f "${file}" "${JSON_DIR}/$(basename "${file}" .tmp)"
+            done
+        fi
+    fi
+
+    if [ "${restart}" = 'true' ]; then
+        agent_stop "${CWA_NAME}"
+        agent_start "${CWA_NAME}" "${param_mode}"
+    fi
+}
+
+cwoc_config() {
+    cwoc_config_location="${1:-}"
+    restart="${2:-}"
+    param_mode="${3:-}"
+    multi_config="${4:-}"
+
+    if [ -f /opt/aws/aws-otel-collector/bin/aws-otel-collector-ctl ]; then
+        echo "REMINDER: you are configuring \"cwagent-otel-collector\" instead of \"aws-otel-collector\"."
+    fi
+
+    if [ "${multi_config}" = 'append' ]; then
+        echo "ignore \"-o\" as cwagent-otel-collector doesn't support append-config"
+        return 0
+    fi
+
+    if [ "${cwoc_config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
+        echo "ignore cwoc configuration \"${ALL_CONFIG}\" as it is only supported by action \"remove-config\""
+        return
+    fi
+
+    if [ "${cwoc_config_location}" = "${ALL_CONFIG}" ]; then
+        rm -rf "${YAML_DIR}"/*
+    elif [ "${multi_config}" = 'default' ] && [ "${cwoc_config_location}" = 'default' ]; then
+        cp "${PREDEFINED_CONFIG_DATA}" "${YAML_DIR}/default.tmp"
+        echo "Successfully fetched the config and saved in ${YAML_DIR}/default.tmp"
+    else
+        runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${YAML_DIR} --download-source ${cwoc_config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+        echo "${runDownloaderCommand}"
+        ${runDownloaderCommand} || return
+    fi
+
+    if [ ! "$(ls ${YAML_DIR})" ]; then
+        echo "all cwagent-otel-collector configurations have been removed"
+        rm -f "${YAML}"
+    else
+        for file in "${YAML_DIR}"/*; do
+            base="${YAML_DIR}/$(basename "${file}" .tmp)"
             if [ "${file}" = "${base}" ]; then
                 rm -f "${file}"
             else
                 mv -f "${file}" "${base}"
+                cp -f "${base}" "${YAML}"
+                echo "cwagent-otel-collector config has been successfully fetched."
             fi
-        done
-    elif [ "${multi_config}" = 'append' ]; then
-        for file in "${JSON_DIR}"/*.tmp; do
-            mv -f "${file}" "${JSON_DIR}/$(basename "${file}" .tmp)"
         done
     fi
 
     if [ "${restart}" = 'true' ]; then
-	    cwa_stop
-	    cwa_start
+        agent_stop "${CWOC_NAME}"
+        agent_start "${CWOC_NAME}" "${param_mode}"
     fi
 }
 
 main() {
     action=''
-    config_location='default'
+    cwa_config_location=''
+    cwoc_config_location=''
     restart='false'
     mode='ec2'
 
@@ -252,60 +453,61 @@ main() {
     elif [ "$(systemctl | grep -c -E '\-\.mount\s')" = 1 ]; then
 	SYSTEMD='true'
     elif [ -f /etc/init.d/cron ] && [ ! -h /etc/init.d/cron ]; then
-	echo "sysv-init is not supported" >&2
-	exit 1
+        echo "sysv-init is not supported" >&2
+        exit 1
     else
-	echo "unknown init system" >&2
-	exit 1
+        echo "unknown init system" >&2
+        exit 1
     fi
 
     OPTIND=1
-    while getopts ":hsa:r:c:m:" opt; do
-	case "${opt}" in
-	    h) echo "${UsageString}"
-		exit 0
-		;;
-	    s) restart='true' ;;
-	    a) action="${OPTARG}" ;;
-	    c) config_location="${OPTARG}" ;;
-	    m) mode="${OPTARG}" ;;
-	    \?) echo "Invalid option: -${OPTARG} ${UsageString}" >&2
-		;;
-	    :)  echo "Option -${OPTARG} requires an argument ${UsageString}" >&2
-		exit 1
-		;;
-	esac
+    while getopts ":hsa:c:o:m:" opt; do
+    case "${opt}" in
+        h) echo "${UsageString}"
+        exit 0
+        ;;
+        s) restart='true' ;;
+        a) action="${OPTARG}" ;;
+        c) cwa_config_location="${OPTARG}" ;;
+        o) cwoc_config_location="${OPTARG}" ;;
+        m) mode="${OPTARG}" ;;
+        \?) echo "Invalid option: -${OPTARG} ${UsageString}" >&2
+        ;;
+        :)  echo "Option -${OPTARG} requires an argument ${UsageString}" >&2
+        exit 1
+        ;;
+    esac
     done
-    shift "$(( ${OPTIND} - 1 ))"
+    shift "$(( OPTIND - 1 ))"
 
     case "${mode}" in
-	ec2)
-	    ;;
-	onPremise)
-	    ;;
-	auto)
-	    ;;
-	*)  echo "Invalid mode: ${mode} ${UsageString}" >&2
-	    exit 1
-	    ;;
+    ec2)
+        ;;
+    onPremise)
+        ;;
+    auto)
+        ;;
+    *)  echo "Invalid mode: ${mode} ${UsageString}" >&2
+        exit 1
+        ;;
     esac
 
     case "${action}" in
-	stop) cwa_stop ;;
-	start) cwa_start "${mode}" ;;
-	fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default';;
-	append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append';;
-	remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove';;
-	status) cwa_status ;;
+    stop) stop_all ;;
+    start) start_all "${mode}" ;;
+    fetch-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'default';;
+    append-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'append';;
+    remove-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'remove';;
+    status) status_all ;;
         # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
         # upgrade or install
-	prep-restart) cwa_prep_restart ;;
-	cond-restart) cwa_cond_restart ;;
+    prep-restart) prep_restart_all ;;
+    cond-restart) cond_restart_all ;;
         # helper for rpm+deb uninstallation hooks, not expected to be called manually
-	preun) cwa_preun ;;
-	*) echo "Invalid action: ${action} ${UsageString}" >&2
-	   exit 1
-	   ;;
+    preun) preun_all ;;
+    *) echo "Invalid action: ${action} ${UsageString}" >&2
+       exit 1
+       ;;
     esac
 }
 

@@ -2,7 +2,7 @@ Summary:    Amazon CloudWatch Agent
 Name:       amazon-cloudwatch-agent
 Version:    %{AGENT_VERSION}
 Release:    1
-License:    MIT License. Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. 
+License:    MIT License. Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 Group:      Applications/CloudWatch-Agent
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
@@ -30,12 +30,15 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ${RPM_
 # etc
 mkdir -p ${RPM_BUILD_ROOT}/etc/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/etc ${RPM_BUILD_ROOT}/etc/amazon/amazon-cloudwatch-agent
+ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc ${RPM_BUILD_ROOT}/etc/amazon/cwagent-otel-collector
 # log
 mkdir -p ${RPM_BUILD_ROOT}/var/log/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/logs ${RPM_BUILD_ROOT}/var/log/amazon/amazon-cloudwatch-agent
+ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs ${RPM_BUILD_ROOT}/var/log/amazon/cwagent-otel-collector
 # pid
 mkdir -p ${RPM_BUILD_ROOT}/var/run/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/amazon-cloudwatch-agent
+ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${RPM_BUILD_ROOT}/var/run/amazon/cwagent-otel-collector
 
 %files
 %dir /opt/aws
@@ -46,6 +49,10 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/a
 %dir /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d
 %dir /opt/aws/amazon-cloudwatch-agent/logs
 %dir /opt/aws/amazon-cloudwatch-agent/var
+%dir /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc
+%dir /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc/cwagent-otel-collector.d
+%dir %attr(-, cwagent, cwagent) /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs
+%dir %attr(-, cwagent, cwagent) /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
 /opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION
@@ -53,8 +60,10 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/a
 /opt/aws/amazon-cloudwatch-agent/bin/config-downloader
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-config-wizard
 /opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
+/opt/aws/amazon-cloudwatch-agent/bin/cwagent-otel-collector
 /opt/aws/amazon-cloudwatch-agent/doc/amazon-cloudwatch-agent-schema.json
 %config(noreplace) /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml
+/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var/.predefined-config-data
 /opt/aws/amazon-cloudwatch-agent/LICENSE
 /opt/aws/amazon-cloudwatch-agent/NOTICE
 
@@ -62,11 +71,16 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/a
 /opt/aws/amazon-cloudwatch-agent/RELEASE_NOTES
 /etc/init/amazon-cloudwatch-agent.conf
 /etc/systemd/system/amazon-cloudwatch-agent.service
+/etc/init/cwagent-otel-collector.conf
+/etc/systemd/system/cwagent-otel-collector.service
 
 /usr/bin/amazon-cloudwatch-agent-ctl
 /etc/amazon/amazon-cloudwatch-agent
 /var/log/amazon/amazon-cloudwatch-agent
 /var/run/amazon/amazon-cloudwatch-agent
+/etc/amazon/cwagent-otel-collector
+/var/log/amazon/cwagent-otel-collector
+/var/run/amazon/cwagent-otel-collector
 
 %pre
 # Stop the agent before upgrades.
