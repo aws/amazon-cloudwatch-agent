@@ -30,6 +30,7 @@ jobs:
       with:
         path: amazon-cloudwatch-agent
         fetch-depth: 0
+        submodules: 'true'
 
     - name: Debug go.mod
       run: cat go.mod

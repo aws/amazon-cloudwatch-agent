@@ -51,7 +51,10 @@ amazon-cloudwatch-agent: copy-version-file
 	GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 	GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 
-cwagent-otel-collector:
+update-submodule:
+	git submodule update --init
+	
+cwagent-otel-collector: update-submodule
 	@echo Building aws-otel-collector
 	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
 	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
