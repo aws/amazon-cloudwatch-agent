@@ -1,9 +1,12 @@
 ========================================================================
-Amazon CloudWatch Agent 1.247346.2 (2020-11-26)
+Amazon CloudWatch Agent 1.247347.0 (2020-12-21)
 ========================================================================
 
 New Features and Enhancements:
 
+* Composite Agent (CloudWatch Agent + OTel Collector) for EC2
+* Support append-config for procstat
+* Fix incorrect systemd detection
 * Enable flag to force ec2 mode 
 * Sync manifest files for container insights
 * Disable cgo for test target
