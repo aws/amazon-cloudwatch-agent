@@ -224,7 +224,7 @@ func main() {
 		if err := os.Remove(outputFilePath); err != nil {
 			panic(fmt.Sprintf("Failed to remove the json file %v: %v", outputFilePath, err))
 		} else {
-			fmt.Printf("Successfully removed the config file %s", outputFilePath)
+			fmt.Printf("Successfully removed the config file %s\n", outputFilePath)
 		}
 	}
 }
