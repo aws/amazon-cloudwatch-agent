@@ -128,6 +128,19 @@ data:
                   ]
                 },
                 {
+                  "source_labels": ["container_name"],
+                  "label_matcher": "^fluent-bit.*$",
+                  "dimensions": [["ClusterName","Namespace","NodeName"]],
+                  "metric_selectors": [
+                    "^fluentbit_output_errors_total$",
+                    "^fluentbit_input_bytes_total$",
+                    "^fluentbit_output_proc_bytes_total$",
+                    "^fluentbit_input_records_total$",
+                    "^fluentbit_output_proc_records_total$",
+                    "^fluentbit_output_retries_(total|failed_total)$"
+                  ]
+                },
+                {
                   "source_labels": ["job"],
                   "label_matcher": "^kubernetes-pod-jmx$",
                   "dimensions": [["ClusterName","Namespace"]],
@@ -217,6 +230,50 @@ data:
         source_labels:
         - __meta_kubernetes_pod_phase
         target_label: pod_phase
+
+    - job_name: 'kubernetes-pod-fluentbit-plugin'
+      sample_limit: 10000
+      metrics_path: /api/v1/metrics/prometheus
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        action: keep
+        regex: '^fluent-bit.*$'
+      - source_labels: [__address__]
+        action: replace
+        regex: ([^:]+)(?::\d+)?
+        replacement: ${1}:2020
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: Namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod_name
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_container_name
+        target_label: container_name
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_controller_name
+        target_label: pod_controller_name
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_controller_kind
+        target_label: pod_controller_kind
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_phase
+        target_label: pod_phase
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_node_name
+        target_label: NodeName
 
     - job_name: kubernetes-service-endpoints
       sample_limit: 10000
