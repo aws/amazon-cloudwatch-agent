@@ -12,6 +12,10 @@ import (
 	cinfo "github.com/google/cadvisor/info/v1"
 )
 
+const (
+	oneTerabytes = 1 * 1024 * 1024 * 1024 * 1024
+)
+
 type NetMetricExtractor struct {
 	preInfos *mapWithExpiry.MapWithExpiry
 }
@@ -66,6 +70,13 @@ func (n *NetMetricExtractor) GetValue(info *cinfo.ContainerInfo, containerType s
 						netIfceMetric[NetTxDropped] = float64(cur.TxDropped-pre.TxDropped) / float64(deltaCTimeInNano) * float64(time.Second)
 						netIfceMetric[NetTxErrors] = float64(cur.TxErrors-pre.TxErrors) / float64(deltaCTimeInNano) * float64(time.Second)
 						netIfceMetric[NetTotalBytes] = netIfceMetric[NetRxBytes] + netIfceMetric[NetTxBytes]
+						if netIfceMetric[NetRxBytes] > oneTerabytes || netIfceMetric[NetTxBytes] > oneTerabytes {
+							log.Printf("I! Too Big value for network RX/TX bytes, final Rx:%v, final Tx:%v, curRx:%v, preRx:%v, curTx:%v, preTx:%v, deltaCTimeInNano:%v",
+								netIfceMetric[NetRxBytes], netIfceMetric[NetTxBytes],
+								cur.RxBytes, pre.RxBytes,
+								cur.TxBytes, pre.TxBytes,
+								deltaCTimeInNano)
+						}
 
 						netIfceMetrics = append(netIfceMetrics, netIfceMetric)
 
