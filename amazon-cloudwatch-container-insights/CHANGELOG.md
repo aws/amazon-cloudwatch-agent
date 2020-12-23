@@ -1,3 +1,5 @@
+## k8s/1.3.0
+- Release Fluent-Bit for ContainerInsights log collection
 ## k8s/1.2.4
 - Update config to support the haproxy-ingress from version 0.0.27 to latest (https://artifacthub.io/packages/helm/haproxy-ingress/haproxy-ingress)
 - Update container insights k8s envname "REGION"
