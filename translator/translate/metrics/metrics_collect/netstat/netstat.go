@@ -59,4 +59,5 @@ func (n *NetStat) ApplyRule(input interface{}) (returnKey string, returnVal inte
 func init() {
 	n := new(NetStat)
 	parent.RegisterLinuxRule(SectionKey_Netstat, n)
+	parent.RegisterDarwinRule(SectionKey_Netstat, n)
 }

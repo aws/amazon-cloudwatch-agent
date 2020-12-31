@@ -23,8 +23,13 @@ var httpsProxy string
 var noProxy string
 
 func TestAgentDefaultConfig(t *testing.T) {
+	agentDefaultConfig(t, config.OS_TYPE_LINUX)
+	agentDefaultConfig(t, config.OS_TYPE_DARWIN)
+}
+
+func agentDefaultConfig(t *testing.T, osType string) {
 	a := new(Agent)
-	translator.SetTargetPlatform(config.OS_TYPE_LINUX)
+	translator.SetTargetPlatform(osType)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{"agent":{"metrics_collection_interval":59, "region": "us-west-2"}}`), &input)
 	if e != nil {
@@ -37,7 +42,7 @@ func TestAgentDefaultConfig(t *testing.T) {
 		"flush_jitter":        "0s",
 		"hostname":            "",
 		"interval":            "59s",
-		"logfile":             Linux_Default_Log_Dir,
+		"logfile":             Linux_Darwin_Default_Log_Dir,
 		"metric_batch_size":   1000,
 		"metric_buffer_limit": 10000,
 		"omit_hostname":       false,
@@ -48,12 +53,16 @@ func TestAgentDefaultConfig(t *testing.T) {
 		"logtarget":           "lumberjack",
 	}
 	assert.Equal(t, agent, val, "Expect to be equal")
-
 }
 
 func TestAgentSpecificConfig(t *testing.T) {
+	agentSpecificConfig(t, config.OS_TYPE_LINUX)
+	agentSpecificConfig(t, config.OS_TYPE_DARWIN)
+}
+
+func agentSpecificConfig(t *testing.T, osType string) {
+	translator.SetTargetPlatform(osType)
 	a := new(Agent)
-	translator.SetTargetPlatform(config.OS_TYPE_LINUX)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{"agent":{"debug":true, "region": "us-west-2"}}`), &input)
 	if e != nil {
@@ -66,7 +75,7 @@ func TestAgentSpecificConfig(t *testing.T) {
 		"flush_jitter":        "0s",
 		"hostname":            "",
 		"interval":            "60s",
-		"logfile":             Linux_Default_Log_Dir,
+		"logfile":             Linux_Darwin_Default_Log_Dir,
 		"logtarget":           logger.LogTargetLumberjack,
 		"metric_batch_size":   1000,
 		"metric_buffer_limit": 10000,
@@ -80,8 +89,13 @@ func TestAgentSpecificConfig(t *testing.T) {
 }
 
 func TestNoAgentConfig(t *testing.T) {
+	noAgentConfig(t, config.OS_TYPE_LINUX)
+	noAgentConfig(t, config.OS_TYPE_DARWIN)
+}
+
+func noAgentConfig(t *testing.T, osType string) {
+	translator.SetTargetPlatform(osType)
 	a := new(Agent)
-	translator.SetTargetPlatform(config.OS_TYPE_LINUX)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{"agent":{"region": "us-west-2"}}`), &input)
 	if e != nil {
@@ -95,7 +109,7 @@ func TestNoAgentConfig(t *testing.T) {
 		"flush_jitter":        "0s",
 		"hostname":            "",
 		"interval":            "60s",
-		"logfile":             Linux_Default_Log_Dir,
+		"logfile":             Linux_Darwin_Default_Log_Dir,
 		"logtarget":           logger.LogTargetLumberjack,
 		"metric_batch_size":   1000,
 		"metric_buffer_limit": 10000,
@@ -109,8 +123,13 @@ func TestNoAgentConfig(t *testing.T) {
 }
 
 func TestInternal(t *testing.T) {
+	internal(t, config.OS_TYPE_LINUX)
+	internal(t, config.OS_TYPE_DARWIN)
+}
+
+func internal(t *testing.T, osType string) {
 	a := new(Agent)
-	translator.SetTargetPlatform(config.OS_TYPE_LINUX)
+	translator.SetTargetPlatform(osType)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{"agent":{"internal": true}}`), &input)
 	if e != nil {
@@ -123,7 +142,7 @@ func TestInternal(t *testing.T) {
 		"flush_jitter":        "0s",
 		"hostname":            "",
 		"interval":            "60s",
-		"logfile":             Linux_Default_Log_Dir,
+		"logfile":             Linux_Darwin_Default_Log_Dir,
 		"logtarget":           logger.LogTargetLumberjack,
 		"metric_batch_size":   1000,
 		"metric_buffer_limit": 10000,

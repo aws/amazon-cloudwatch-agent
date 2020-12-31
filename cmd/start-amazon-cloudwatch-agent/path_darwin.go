@@ -1,13 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+// +build darwin
+
 package main
 
 import (
-	"io"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
-//add a dummy function so that the package can compile on mac os
-func startAgent(writer io.WriteCloser) error {
-	return nil
+func setCTXOS(ctx *context.Context) {
+	ctx.SetOs(config.OS_TYPE_DARWIN)
 }

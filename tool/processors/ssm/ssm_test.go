@@ -60,6 +60,11 @@ func TestDetermineParameterStoreName(t *testing.T) {
 	parameterStoreName := determineParameterStoreName(ctx)
 	assert.Equal(t, "AmazonCloudWatch-linux", parameterStoreName)
 
+	ctx.OsParameter = util.OsTypeDarwin
+	testutil.Type(inputChan, "")
+	parameterStoreName = determineParameterStoreName(ctx)
+	assert.Equal(t, "AmazonCloudWatch-darwin", parameterStoreName)
+
 	ctx.OsParameter = util.OsTypeWindows
 	testutil.Type(inputChan, "")
 	parameterStoreName = determineParameterStoreName(ctx)

@@ -12,7 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-const Linux_Default_Log_Dir = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+const Linux_Darwin_Default_Log_Dir = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 
 type Logfile struct {
 }
@@ -28,8 +28,8 @@ func getDefaultValue() string {
 	}
 	targetPlatform := translator.GetTargetPlatform()
 	switch targetPlatform {
-	case config.OS_TYPE_LINUX:
-		return Linux_Default_Log_Dir
+	case config.OS_TYPE_LINUX, config.OS_TYPE_DARWIN:
+		return Linux_Darwin_Default_Log_Dir
 	case config.OS_TYPE_WINDOWS:
 		return util.GetWindowsProgramDataPath() + "\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
 	default:

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var supportedOs = [...]string{OS_TYPE_LINUX, OS_TYPE_WINDOWS}
+var supportedOs = [...]string{OS_TYPE_LINUX, OS_TYPE_WINDOWS, OS_TYPE_DARWIN}
 
 const (
 	OS_TYPE_LINUX   = "linux"
@@ -23,11 +23,6 @@ func ToValidOs(os string) string {
 		os = runtime.GOOS
 	}
 	formattedOs := strings.ToLower(os)
-	// Allow development on mac platform, although the intended running platform is linux and windows
-	if formattedOs == OS_TYPE_DARWIN {
-		fmt.Printf("Using linux instead of darwin as OS type! \n")
-		formattedOs = OS_TYPE_LINUX
-	}
 	for _, val := range supportedOs {
 		if formattedOs == val {
 			return formattedOs

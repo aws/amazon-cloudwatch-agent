@@ -118,7 +118,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	eventsCh := make(chan LogEvent)
 	defer src.Stop()
-	
+
 	src.SetOutput(func(e LogEvent) {
 		if e == nil {
 			close(eventsCh)

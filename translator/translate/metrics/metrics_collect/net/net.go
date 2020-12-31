@@ -63,4 +63,5 @@ func (n *Net) ApplyRule(input interface{}) (returnKey string, returnVal interfac
 func init() {
 	n := new(Net)
 	parent.RegisterLinuxRule(SectionKey_Net_Linux, n)
+	parent.RegisterDarwinRule(SectionKey_Net_Linux, n)
 }

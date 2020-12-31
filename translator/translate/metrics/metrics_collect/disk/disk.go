@@ -58,4 +58,5 @@ func (d *Disk) ApplyRule(input interface{}) (returnKey string, returnVal interfa
 func init() {
 	d := new(Disk)
 	parent.RegisterLinuxRule(SectionKey_Disk_Linux, d)
+	parent.RegisterDarwinRule(SectionKey_Disk_Linux, d)
 }

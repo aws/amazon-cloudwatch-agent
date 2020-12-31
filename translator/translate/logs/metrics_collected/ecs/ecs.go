@@ -79,4 +79,5 @@ func init() {
 	e := new(ECS)
 	parent.MergeRuleMap[SectionKey] = e
 	parent.RegisterLinuxRule(SectionKey, e)
+	parent.RegisterDarwinRule(SectionKey, e)
 }

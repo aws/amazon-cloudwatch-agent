@@ -6,7 +6,7 @@ package totomlconfig
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -37,15 +37,12 @@ func checkIfTranslateSucceed(t *testing.T, jsonStr string, desiredTomlPath strin
 	agent.Global_Config = *new(agent.Agent)
 	var input interface{}
 	translator.SetTargetPlatform(targetOs)
-	e := json.Unmarshal([]byte(jsonStr), &input)
-	if e == nil {
-		actualOutput := ToTomlConfig(input)
-		desiredOutput := ReadFromFile(desiredTomlPath)
-		assert.Equal(t, desiredOutput, actualOutput, "Expect to be equal")
-	} else {
-		fmt.Printf("Got error %v", e)
-		t.Fail()
-	}
+	err := json.Unmarshal([]byte(jsonStr), &input)
+	require.Nil(t, err)
+	actualOutput := ToTomlConfig(input)
+	//fmt.Println("result: ", actualOutput)
+	desiredOutput := ReadFromFile(desiredTomlPath)
+	assert.Equal(t, desiredOutput, actualOutput, "Expect to be equal os %s dst %s", targetOs, desiredTomlPath)
 }
 
 func TestLogMetricOnly(t *testing.T) {
@@ -54,6 +51,7 @@ func TestLogMetricOnly(t *testing.T) {
 	os.Setenv(config.HOST_NAME, "host_name_from_env")
 	os.Setenv(config.HOST_IP, "127.0.0.1")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_metric_only.json"), "./sampleConfig/log_metric_only.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_metric_only.json"), "./sampleConfig/log_metric_only.conf", "darwin")
 	os.Unsetenv(config.HOST_NAME)
 	os.Unsetenv(config.HOST_IP)
 }
@@ -64,6 +62,7 @@ func TestLogMetricAndLog(t *testing.T) {
 	os.Setenv(config.HOST_NAME, "host_name_from_env")
 	os.Setenv(config.HOST_IP, "127.0.0.1")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_metric_and_log.json"), "./sampleConfig/log_metric_and_log.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_metric_and_log.json"), "./sampleConfig/log_metric_and_log.conf", "darwin")
 	os.Unsetenv(config.HOST_NAME)
 	os.Unsetenv(config.HOST_IP)
 }
@@ -71,6 +70,7 @@ func TestLogMetricAndLog(t *testing.T) {
 func TestCompleteConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/complete_linux_config.json"), "./sampleConfig/complete_linux_config.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/complete_darwin_config.json"), "./sampleConfig/complete_darwin_config.conf", "darwin")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/complete_windows_config.json"), "./sampleConfig/complete_windows_config.conf", "windows")
 }
 
@@ -82,6 +82,7 @@ func TestWindowsEventOnlyConfig(t *testing.T) {
 func TestStatsDConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/statsd_config.json"), "./sampleConfig/statsd_config_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/statsd_config.json"), "./sampleConfig/statsd_config_linux.conf", "darwin")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/statsd_config.json"), "./sampleConfig/statsd_config_windows.conf", "windows")
 }
 
@@ -89,6 +90,7 @@ func TestStatsDConfig(t *testing.T) {
 func TestCollectDConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/collectd_config_linux.json"), "./sampleConfig/collectd_config_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/collectd_config_linux.json"), "./sampleConfig/collectd_config_linux.conf", "darwin")
 }
 
 //prometheus
@@ -104,18 +106,22 @@ func TestPrometheusConfig(t *testing.T) {
 func TestBasicConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/basic_config_linux.json"), "./sampleConfig/basic_config_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/basic_config_linux.json"), "./sampleConfig/basic_config_linux.conf", "darwin")
+
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/basic_config_windows.json"), "./sampleConfig/basic_config_windows.conf", "windows")
 }
 
 func TestStandardConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/standard_config_linux.json"), "./sampleConfig/standard_config_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/standard_config_linux.json"), "./sampleConfig/standard_config_linux.conf", "darwin")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/standard_config_windows.json"), "./sampleConfig/standard_config_windows.conf", "windows")
 }
 
 func TestAdvancedConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/advanced_config_linux.json"), "./sampleConfig/advanced_config_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/advanced_config_linux.json"), "./sampleConfig/advanced_config_linux.conf", "darwin")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/advanced_config_windows.json"), "./sampleConfig/advanced_config_windows.conf", "windows")
 }
 
@@ -128,6 +134,7 @@ func TestStandardConfigWithCommonConfig(t *testing.T) {
 	resetContext()
 	readCommonConifg()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/standard_config_linux.json"), "./sampleConfig/standard_config_linux_with_common_config.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/standard_config_linux.json"), "./sampleConfig/standard_config_linux_with_common_config.conf", "darwin")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/standard_config_windows.json"), "./sampleConfig/standard_config_windows_with_common_config.conf", "windows")
 }
 
@@ -135,17 +142,20 @@ func TestCsmOnlyConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/csm_only_config.json"), "./sampleConfig/csm_only_config_windows.conf", "windows")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/csm_only_config.json"), "./sampleConfig/csm_only_config_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/csm_only_config.json"), "./sampleConfig/csm_only_config_linux.conf", "darwin")
 }
 
 func TestDeltaConfigLinux(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/delta_config_linux.json"), "./sampleConfig/delta_config_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/delta_config_linux.json"), "./sampleConfig/delta_config_linux.conf", "darwin")
 }
 
 func TestCsmServiceAdressesConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/csm_service_addresses.json"), "./sampleConfig/csm_service_addresses_windows.conf", "windows")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/csm_service_addresses.json"), "./sampleConfig/csm_service_addresses_linux.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/csm_service_addresses.json"), "./sampleConfig/csm_service_addresses_linux.conf", "darwin")
 }
 
 func TestECSNodeMetricConfig(t *testing.T) {
@@ -154,6 +164,7 @@ func TestECSNodeMetricConfig(t *testing.T) {
 	os.Setenv("HOST_NAME", "fake-host-name")
 	os.Setenv("HOST_IP", "127.0.0.1")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_ecs_metric_only.json"), "./sampleConfig/log_ecs_metric_only.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_ecs_metric_only.json"), "./sampleConfig/log_ecs_metric_only.conf", "darwin")
 }
 
 func readCommonConifg() {

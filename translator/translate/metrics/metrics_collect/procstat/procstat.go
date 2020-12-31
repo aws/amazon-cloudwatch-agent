@@ -68,6 +68,7 @@ func (c *Procstat) Merge(source map[string]interface{}, result map[string]interf
 func init() {
 	m := new(Procstat)
 	parent.RegisterLinuxRule(SectionKey, m)
+	parent.RegisterDarwinRule(SectionKey, m)
 	parent.RegisterWindowsRule(SectionKey, m)
 	parent.MergeRuleMap[SectionKey] = m
 }

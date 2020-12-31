@@ -31,6 +31,7 @@ const (
 
 	OsTypeLinux   = "linux"
 	OsTypeWindows = "windows"
+	OsTypeDarwin  = "darwin"
 
 	MapKeyMetricsCollectionInterval = "metrics_collection_interval"
 	MapKeyInstances                 = "resources"

@@ -41,13 +41,13 @@ func ProcessReportDeltasForDiskIO(input interface{}, result map[string]interface
 		for _, field := range fieldsPass {
 			switch t := field.(type) {
 			case string:
-				if t == Ignored_fields_for_delta || t == "diskio_" + Ignored_fields_for_delta {
+				if t == Ignored_fields_for_delta || t == "diskio_"+Ignored_fields_for_delta {
 					tagsMap := result[Tags_Key].(map[string]interface{})
 					tagsMap[Ignored_fields_for_delta_Key] = Ignored_fields_for_delta
 					return
 				}
 			case map[string]interface{}:
-				if name, ok := t["name"].(string); ok && (name == Ignored_fields_for_delta  || name == "diskio_" + Ignored_fields_for_delta){
+				if name, ok := t["name"].(string); ok && (name == Ignored_fields_for_delta || name == "diskio_"+Ignored_fields_for_delta) {
 					tagsMap := result[Tags_Key].(map[string]interface{})
 					tagsMap[Ignored_fields_for_delta_Key] = Ignored_fields_for_delta
 					return

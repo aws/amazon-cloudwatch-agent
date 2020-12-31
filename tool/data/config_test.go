@@ -32,4 +32,17 @@ func TestConfig_ToMap(t *testing.T) {
 	key, value := conf.ToMap(ctx)
 	assert.Equal(t, expectedKey, key)
 	assert.Equal(t, expectedValue, value)
+
+	conf = new(Config)
+	ctx = &runtime.Context{
+		OsParameter:          util.OsTypeDarwin,
+		WantEC2TagDimensions: true,
+		IsOnPrem:             true,
+	}
+	conf.AgentConf()
+	conf.MetricsConf()
+	conf.LogsConf()
+	key, value = conf.ToMap(ctx)
+	assert.Equal(t, expectedKey, key)
+	assert.Equal(t, expectedValue, value)
 }

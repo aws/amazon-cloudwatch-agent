@@ -7,38 +7,17 @@ package cmdutil
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/runc/libcontainer/user"
-	"golang.org/x/sys/unix"
 	"log"
 	"os"
-	"os/exec"
 	gouser "os/user"
 	"strconv"
 	"syscall"
+
+	"golang.org/x/sys/unix"
+
+	"github.com/opencontainers/runc/libcontainer/system"
+	"github.com/opencontainers/runc/libcontainer/user"
 )
-
-func DetectRunAsUser(mergedJsonConfigMap map[string]interface{}) (runAsUser string, err error) {
-	fmt.Printf("I! Detecting runasuser...\n")
-	if agentSection, ok := mergedJsonConfigMap["agent"]; ok {
-		agent := agentSection.(map[string]interface{})
-		if user, ok := agent["run_as_user"]; ok {
-			if runasuser, ok := user.(string); ok {
-				return runasuser, nil
-			}
-			fmt.Printf("E! runasuser is not string %v \n", user)
-			panic("E! runasuser is not string \n")
-		}
-
-		// agent section exists, but "runasuser" does not exist, then use "root"
-		return "root", nil
-	}
-
-	// no agent section, it means no runasuser, use "root"
-	return "root", nil
-}
 
 func switchUser(execUser *user.ExecUser) error {
 	if err := unix.Setgroups(execUser.Sgids); err != nil {
@@ -92,7 +71,13 @@ func ChangeUser(mergedJsonConfigMap map[string]interface{}) (user string, err er
 		return runAsUser, err
 	}
 
-	changeFileOwner(runAsUser, execUser.Gid)
+	g, err := gouser.LookupGroupId(strconv.Itoa(execUser.Gid))
+	if err != nil {
+		return runAsUser, fmt.Errorf("error lookup group by id: %w", err)
+	}
+	if err := changeFileOwner(runAsUser, g.Name); err != nil {
+		return runAsUser, fmt.Errorf("error change ownership of dirs: %w", err)
+	}
 
 	if runAsUser == "root" {
 		return "root", nil
@@ -104,44 +89,4 @@ func ChangeUser(mergedJsonConfigMap map[string]interface{}) (user string, err er
 	}
 
 	return runAsUser, nil
-}
-
-func changeFileOwner(runAsUser string, groupId int) {
-	group, err := gouser.LookupGroupId(strconv.Itoa(groupId))
-	owner := runAsUser
-	if err == nil {
-		owner = owner + ":" + group.Name
-	} else {
-		log.Printf("I! Failed to get the group name: %v, it will just change the user, but not group.", err)
-	}
-	log.Printf("I! Change ownership to %v", owner)
-
-	chowncmd := exec.Command("chown", "-R", "-L", owner, "/opt/aws/amazon-cloudwatch-agent/logs")
-	stdoutStderr, err := chowncmd.CombinedOutput()
-	if err != nil {
-		log.Printf("E! Change ownership of /opt/aws/amazon-cloudwatch-agent/logs: %s %v", stdoutStderr, err)
-	}
-
-	chowncmd = exec.Command("chown", "-R", "-L", owner, "/opt/aws/amazon-cloudwatch-agent/etc")
-	stdoutStderr, err = chowncmd.CombinedOutput()
-	if err != nil {
-		log.Printf("E! Change ownership of /opt/aws/amazon-cloudwatch-agent/etc: %s %v", stdoutStderr, err)
-	}
-
-	chowncmd = exec.Command("chown", "-R", "-L", owner, "/opt/aws/amazon-cloudwatch-agent/var")
-	stdoutStderr, err = chowncmd.CombinedOutput()
-	if err != nil {
-		log.Printf("E! Change ownership of /opt/aws/amazon-cloudwatch-agent/var: %s %v", stdoutStderr, err)
-	}
-}
-
-func VerifyCredentials(ctx *context.Context, runAsUser string) {
-	credentials := ctx.Credentials()
-	if config.ModeOnPrem == ctx.Mode() {
-		if runAsUser != "root" {
-			if _, ok := credentials["shared_credential_file"]; !ok {
-				panic("E! Credentials path is not set while runasuser is not root \n")
-			}
-		}
-	}
 }

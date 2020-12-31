@@ -66,5 +66,6 @@ func (obj *StructuredLog) ApplyRule(input interface{}) (returnKey string, return
 func init() {
 	obj := new(StructuredLog)
 	parent.RegisterLinuxRule(SectionKeyStructuredLog, obj)
+	parent.RegisterDarwinRule(SectionKeyStructuredLog, obj)
 	parent.RegisterWindowsRule(SectionKeyStructuredLog, obj)
 }

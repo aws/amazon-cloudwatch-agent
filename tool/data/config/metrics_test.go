@@ -41,6 +41,18 @@ func TestMetrics_ToMap(t *testing.T) {
 	assert.Equal(t, expectedKey, key)
 	assert.Equal(t, expectedValue, value)
 
+	conf = new(Metrics)
+	ctx = &runtime.Context{
+		OsParameter:            util.OsTypeDarwin,
+		WantEC2TagDimensions:   true,
+		IsOnPrem:               true,
+		WantPerInstanceMetrics: true,
+	}
+	conf.CollectAllMetrics(ctx)
+	key, value = conf.ToMap(ctx)
+	assert.Equal(t, expectedKey, key)
+	assert.Equal(t, expectedValue, value)
+
 	expectedValue = map[string]interface{}{
 		"append_dimensions": map[string]interface{}{"InstanceId": "${aws:InstanceId}", "InstanceType": "${aws:InstanceType}", "AutoScalingGroupName": "${aws:AutoScalingGroupName}", "ImageId": "${aws:ImageId}"},
 		"metrics_collected": map[string]interface{}{

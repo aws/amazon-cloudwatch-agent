@@ -61,4 +61,5 @@ func (p *Processes) ApplyRule(input interface{}) (returnKey string, returnVal in
 func init() {
 	p := new(Processes)
 	parent.RegisterLinuxRule(SectionKey_Processes_Linux, p)
+	parent.RegisterDarwinRule(SectionKey_Processes_Linux, p)
 }

@@ -59,4 +59,5 @@ func (m *Mem) ApplyRule(input interface{}) (returnKey string, returnVal interfac
 func init() {
 	m := new(Mem)
 	parent.RegisterLinuxRule(SectionKey_Mem_Linux, m)
+	parent.RegisterDarwinRule(SectionKey_Mem_Linux, m)
 }

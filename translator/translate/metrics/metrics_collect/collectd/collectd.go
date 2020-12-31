@@ -64,4 +64,5 @@ func (obj *CollectD) ApplyRule(input interface{}) (returnKey string, returnVal i
 func init() {
 	obj := new(CollectD)
 	parent.RegisterLinuxRule(SectionKey, obj)
+	parent.RegisterDarwinRule(SectionKey, obj)
 }

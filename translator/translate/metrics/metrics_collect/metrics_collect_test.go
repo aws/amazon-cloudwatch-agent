@@ -8,15 +8,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCollectMetrics(t *testing.T) {
 	c := new(CollectMetrics)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"metrics_collected":{}}`), &input)
-	if e == nil {
-		_, actual := c.ApplyRule(input)
-		expected := map[string]interface{}(map[string]interface{}{})
-		assert.Equal(t, expected, actual, "Expected to be equal")
-	}
+	err := json.Unmarshal([]byte(`{"metrics_collected":{}}`), &input)
+	require.Nil(t, err)
+	_, actual := c.ApplyRule(input)
+	expected := map[string]interface{}{}
+	assert.Equal(t, expected, actual)
 }

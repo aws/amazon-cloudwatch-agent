@@ -59,4 +59,5 @@ func (s *Swap) ApplyRule(input interface{}) (returnKey string, returnVal interfa
 func init() {
 	s := new(Swap)
 	parent.RegisterLinuxRule(SectionKey_Swap, s)
+	parent.RegisterDarwinRule(SectionKey_Swap, s)
 }

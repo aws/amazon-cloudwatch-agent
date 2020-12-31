@@ -132,7 +132,11 @@ func detectHomeDirectory() string {
 			homeDir = usr.HomeDir
 		}
 		if homeDir == "" {
-			homeDir = "/root"
+			if runtime.GOOS == config.OS_TYPE_DARWIN {
+				homeDir = "/var/root"
+			} else {
+				homeDir = "/root"
+			}
 		}
 	}
 	fmt.Println("Got Home directory: " + homeDir)

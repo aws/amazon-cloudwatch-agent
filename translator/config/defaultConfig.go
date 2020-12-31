@@ -28,6 +28,31 @@ var defaultLinuxOnPremConfig string = `
 }
 `
 
+var defaultDarwinOnPremConfig = `
+{
+	"agent": {
+		"run_as_user": "cwagent"
+	},
+	"metrics": {
+		"metrics_collected": {
+			"mem": {
+				"measurement": [
+					"mem_used_percent"
+				]
+			},
+			"disk": {
+				"measurement": [
+					"used_percent"
+				],
+				"resources": [
+					"*"
+				]
+			}
+		}
+	}
+}
+`
+
 var defaultWindowsOnPremConfig string = `
 {
 	"metrics": {
@@ -51,6 +76,37 @@ var defaultWindowsOnPremConfig string = `
 `
 
 var defaultLinuxEC2Config string = `
+{
+	"agent": {
+		"run_as_user": "cwagent"
+	},
+	"metrics": {
+		"metrics_collected": {
+			"mem": {
+				"measurement": [
+					"mem_used_percent"
+				]
+			},
+			"disk": {
+				"measurement": [
+					"used_percent"
+				],
+				"resources": [
+					"*"
+				]
+			}
+		},
+		"append_dimensions": {
+			"ImageId": "${aws:ImageId}",
+			"InstanceId": "${aws:InstanceId}",
+			"InstanceType": "${aws:InstanceType}",
+			"AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+		}
+	}
+}
+`
+
+var defaultDarwinEC2Config = `
 {
 	"agent": {
 		"run_as_user": "cwagent"
@@ -123,13 +179,20 @@ func DefaultECSJsonConfig() string {
 	return defaultLinuxECSNodeMetricConfig
 }
 func DefaultJsonConfig(os string, mode string) string {
-	if os == OS_TYPE_WINDOWS {
+	switch os {
+	case OS_TYPE_WINDOWS:
 		if mode == ModeEC2 {
 			return defaultWindowsEC2Config
 		} else {
 			return defaultWindowsOnPremConfig
 		}
-	} else {
+	case OS_TYPE_DARWIN:
+		if mode == ModeEC2 {
+			return defaultDarwinEC2Config
+		} else {
+			return defaultDarwinOnPremConfig
+		}
+	default:
 		if mode == ModeEC2 {
 			return defaultLinuxEC2Config
 		} else {

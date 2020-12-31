@@ -40,12 +40,13 @@ func welcome() {
 
 func whichOS(ctx *runtime.Context) {
 	defaultOption := 1
-	if util.CurOS() == util.OsTypeWindows {
-		defaultOption = 2
+	opts := []string{util.OsTypeLinux, util.OsTypeWindows, util.OsTypeDarwin}
+	for i, opt := range opts {
+		if util.CurOS() == opt {
+			defaultOption = i + 1
+		}
 	}
-	answer := util.Choice("On which OS are you planning to use the agent?",
-		defaultOption,
-		[]string{util.OsTypeLinux, util.OsTypeWindows})
+	answer := util.Choice("On which OS are you planning to use the agent?", defaultOption, opts)
 	ctx.OsParameter = answer
 }
 

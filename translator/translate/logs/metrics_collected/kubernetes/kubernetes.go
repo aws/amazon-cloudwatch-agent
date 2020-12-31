@@ -78,4 +78,5 @@ func init() {
 	k := new(Kubernetes)
 	parent.MergeRuleMap[SectionKey] = k
 	parent.RegisterLinuxRule(SectionKey, k)
+	parent.RegisterDarwinRule(SectionKey, k)
 }
