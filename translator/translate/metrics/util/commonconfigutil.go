@@ -24,12 +24,18 @@ const (
 	Windows_Disable_Replacer_Key = "DisableReplacer"
 )
 
+// ProcessLinuxCommonConfig is used by both Linux and Darwin.
 func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string, result map[string]interface{}) bool {
 	isHighRsolution := IsHighResolution(agent.Global_Config.Interval)
 	inputMap := input.(map[string]interface{})
 	// Generate whitelisted metric list, process only if Measurement_Key exist
 	if translator.IsValid(inputMap, Measurement_Key, path) {
-		returnKey, returnVal := ApplyMeasurementRule(inputMap[Measurement_Key], pluginName, config.OS_TYPE_LINUX, path)
+		// NOTE: the logic here is a bit tricky, even windows uses linux config for metric like procstat.
+		os := config.OS_TYPE_LINUX
+		if translator.GetTargetPlatform() == config.OS_TYPE_DARWIN {
+			os = config.OS_TYPE_DARWIN
+		}
+		returnKey, returnVal := ApplyMeasurementRule(inputMap[Measurement_Key], pluginName, os, path)
 		if returnKey != "" {
 			result[returnKey] = returnVal
 		} else {

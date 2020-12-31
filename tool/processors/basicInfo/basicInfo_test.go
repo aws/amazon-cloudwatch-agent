@@ -55,6 +55,10 @@ func TestWhichOS(t *testing.T) {
 	testutil.Type(inputChan, "2")
 	whichOS(ctx)
 	assert.Equal(t, util.OsTypeWindows, ctx.OsParameter)
+
+	testutil.Type(inputChan, "3")
+	whichOS(ctx)
+	assert.Equal(t, util.OsTypeDarwin, ctx.OsParameter)
 }
 
 func TestIsEC2(t *testing.T) {

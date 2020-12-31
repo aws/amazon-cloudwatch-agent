@@ -18,11 +18,18 @@ func GetCurPath() string {
 	return curPath
 }
 
-var linuxTranslateRule = map[string]Rule{}
-var windowsTranslateRule = map[string]Rule{}
+var (
+	linuxTranslateRule   = map[string]Rule{}
+	darwinTranslateRule  = map[string]Rule{}
+	windowsTranslateRule = map[string]Rule{}
+)
 
 func RegisterLinuxRule(fieldname string, r Rule) {
 	linuxTranslateRule[fieldname] = r
+}
+
+func RegisterDarwinRule(fieldname string, r Rule) {
+	darwinTranslateRule[fieldname] = r
 }
 
 func RegisterWindowsRule(fieldname string, r Rule) {
@@ -41,10 +48,15 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 	var allAggregatorPlugin map[string]interface{}
 
 	var targetRuleMap map[string]Rule
-	if translator.GetTargetPlatform() == config.OS_TYPE_LINUX {
+	switch translator.GetTargetPlatform() {
+	case config.OS_TYPE_LINUX:
 		targetRuleMap = linuxTranslateRule
-	} else {
+	case config.OS_TYPE_DARWIN:
+		targetRuleMap = darwinTranslateRule
+	case config.OS_TYPE_WINDOWS:
 		targetRuleMap = windowsTranslateRule
+	default:
+		panic("unknown target platform " + translator.GetTargetPlatform())
 	}
 
 	//We need to apply agent rule first, since global setting lies there, which will impact the override logic

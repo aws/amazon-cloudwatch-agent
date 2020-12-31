@@ -60,4 +60,5 @@ func (c *Cpu) ApplyRule(input interface{}) (returnKey string, returnVal interfac
 func init() {
 	c := new(Cpu)
 	parent.RegisterLinuxRule(SectionKey_CPU, c)
+	parent.RegisterDarwinRule(SectionKey_CPU, c)
 }

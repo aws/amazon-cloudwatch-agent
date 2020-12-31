@@ -17,7 +17,7 @@ type EmfProcessor struct {
 	MetricNamespace         string               `toml:"metric_namespace"`
 	MetricUnit              map[string]string    `toml:"metric_unit"`
 
-	validMetricUnit         map[string]string
+	validMetricUnit map[string]string
 }
 
 var supportedUnits = map[string]struct{}{

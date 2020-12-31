@@ -4,11 +4,13 @@
 package metric_decoration
 
 import (
+	"sort"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
-	"sort"
 )
 
 const SectionKey = "metric_decoration"
@@ -21,6 +23,9 @@ func (m *MetricDecoration) ApplyRule(input interface{}) (returnKey string, retur
 	result := []interface{}{}
 
 	targetOs := translator.GetTargetPlatform()
+	if targetOs == "" {
+		targetOs = config.OS_TYPE_LINUX
+	}
 
 	//Check if metrics_collect.SectionKey exist in the input instance
 	//If not, not process

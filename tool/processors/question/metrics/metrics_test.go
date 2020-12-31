@@ -51,4 +51,8 @@ func TestProcessor_NextProcessor(t *testing.T) {
 	ctx.OsParameter = util.OsTypeLinux
 	nextProcessor = Processor.NextProcessor(ctx, nil)
 	assert.Equal(t, linux.Processor, nextProcessor)
+
+	ctx.OsParameter = util.OsTypeDarwin
+	nextProcessor = Processor.NextProcessor(ctx, nil)
+	assert.Equal(t, linux.Processor, nextProcessor)
 }

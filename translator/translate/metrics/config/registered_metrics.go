@@ -23,6 +23,24 @@ var Registered_Metrics_Linux = map[string][]string{
 		"rlimit_realtime_priority_hard", "rlimit_realtime_priority_soft", "rlimit_signals_pending_hard", "rlimit_signals_pending_soft", "signals_pending", "voluntary_context_switches", "write_bytes", "write_count", "pid_count"},
 }
 
+// This served as the whitelisted metric name, which is registered under the plugin name
+// Note: the registered metric name don't have plugin name as prefix
+var Registered_Metrics_Darwin = map[string][]string{
+	"cpu": {"time_active", "time_guest", "time_guest_nice", "time_idle", "time_iowait", "time_irq", "time_nice", "time_softirq", "time_steal", "time_system", "time_user",
+		"usage_active", "usage_guest", "usage_guest_nice", "usage_idle", "usage_iowait", "usage_irq", "usage_nice", "usage_softirq", "usage_steal", "usage_system", "usage_user"},
+	"disk":      {"free", "inodes_free", "inodes_total", "inodes_used", "total", "used", "used_percent"},
+	"diskio":    {"iops_in_progress", "io_time", "reads", "read_bytes", "read_time", "writes", "write_bytes", "write_time"},
+	"swap":      {"free", "used", "used_percent"},
+	"mem":       {"active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total", "used", "used_percent"},
+	"net":       {"bytes_sent", "bytes_recv", "drop_in", "drop_out", "err_in", "err_out", "packets_sent", "packets_recv"},
+	"netstat":   {"tcp_close", "tcp_close_wait", "tcp_closing", "tcp_established", "tcp_fin_wait1", "tcp_fin_wait2", "tcp_last_ack", "tcp_listen", "tcp_none", "tcp_syn_sent", "tcp_syn_recv", "tcp_time_wait", "udp_socket"},
+	"processes": {"blocked", "idle", "running", "sleeping", "stopped", "total", "zombies"},
+	"internal":  {"memstats_alloc_bytes", "memstats_heap_in_use_bytes", "agent_metrics_dropped", "agent_metrics_gathered"},
+	"procstat": {"cpu_time_system", "cpu_time_user", "cpu_usage",
+		"memory_data", "memory_locked", "memory_rss", "memory_stack", "memory_swap", "memory_vms", "pid",
+		"pid_count"},
+}
+
 var Registered_Metrics_Windows = map[string][]string{
 	"Processor":         {"% Idle Time", "% Interrupt Time", "% User Time", "% Processor Time"},
 	"LogicalDisk":       {"% Idle Time", "% Disk Read Time", "% Disk Write Time", "% User Time"},

@@ -105,7 +105,6 @@ func TestDiskIOWithIOInProgressWithDiskIOPrefix(t *testing.T) {
 	}
 }
 
-
 func TestDiskIOWithIOInProgressWithRename(t *testing.T) {
 	d := new(DiskIO)
 	var input interface{}

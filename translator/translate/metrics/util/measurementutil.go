@@ -24,7 +24,7 @@ func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string
 	inputList := inputs.([]interface{})
 	returnKey = ""
 	switch targetOs {
-	case translatorConfig.OS_TYPE_LINUX:
+	case translatorConfig.OS_TYPE_LINUX, translatorConfig.OS_TYPE_DARWIN:
 		returnKey = field_pass_key
 	case translatorConfig.OS_TYPE_WINDOWS:
 		returnKey = windows_measurement_key
@@ -102,17 +102,18 @@ func ApplyMeasurementRuleForMetricDecoration(inputs interface{}, pluginName stri
 }
 
 func getValidMetric(targetOs string, pluginName string, metricName string) string {
-	registered_metrics_map := map[string][]string{}
+	registeredMetrics := map[string][]string{}
 	switch targetOs {
 	case translatorConfig.OS_TYPE_LINUX:
-		registered_metrics_map = config.Registered_Metrics_Linux
+		registeredMetrics = config.Registered_Metrics_Linux
+	case translatorConfig.OS_TYPE_DARWIN:
+		registeredMetrics = config.Registered_Metrics_Darwin
 	case translatorConfig.OS_TYPE_WINDOWS:
 		return metricName
 	default:
-		// should never happen, only above two osType are supported now
-		return metricName
+		panic("unknown os platform in getValidMetric: " + targetOs)
 	}
-	if val, ok := registered_metrics_map[pluginName]; ok {
+	if val, ok := registeredMetrics[pluginName]; ok {
 		formatted_metricName := getFormattedMetricName(metricName, pluginName)
 		if ListContains(val, formatted_metricName) {
 			return formatted_metricName

@@ -59,4 +59,5 @@ func (i *Internal) ApplyRule(input interface{}) (returnKey string, returnVal int
 func init() {
 	i := new(Internal)
 	parent.RegisterLinuxRule(SectionKey_Internal, i)
+	parent.RegisterDarwinRule(SectionKey_Internal, i)
 }

@@ -39,6 +39,7 @@ build/bin/linux/amd64/amazon-cloudwatch-agent.rpm
 build/bin/linux/arm64/amazon-cloudwatch-agent.deb
 build/bin/linux/amd64/amazon-cloudwatch-agent.deb
 build/bin/windows/amd64/amazon-cloudwatch-agent.zip
+build/bin/darwin/amd64/amazon-cloudwatch-agent.tar.gz
 ```
 
 * Install your own build of the agent
@@ -55,6 +56,11 @@ build/bin/windows/amd64/amazon-cloudwatch-agent.zip
 
         * unzip `amazon-cloudwatch-agent.zip`
         * `./install.ps1`
+
+    1. darwin package
+        * `tar -xvf amazon-cloudwatch-agent.tar.gz`
+        * `cp -rf ./opt/aws /opt`
+        * `cp -rf ./Library/LaunchDaemons/com.amazon.cloudwatch.agent.plist /Library/LaunchDaemons/`
 
 ### Building and running container
 

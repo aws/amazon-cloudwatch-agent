@@ -118,6 +118,7 @@ func (l *Logs) Merge(source map[string]interface{}, result map[string]interface{
 func init() {
 	l := new(Logs)
 	parent.RegisterLinuxRule(SectionKey, l)
+	parent.RegisterDarwinRule(SectionKey, l)
 	parent.RegisterWindowsRule(SectionKey, l)
 	mergeJsonUtil.MergeRuleMap[SectionKey] = l
 }

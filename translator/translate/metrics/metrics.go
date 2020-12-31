@@ -84,6 +84,7 @@ func (m *Metrics) Merge(source map[string]interface{}, result map[string]interfa
 func init() {
 	m := new(Metrics)
 	parent.RegisterLinuxRule(SectionKey, m)
+	parent.RegisterDarwinRule(SectionKey, m)
 	parent.RegisterWindowsRule(SectionKey, m)
 	ChildRule["globalcredentials"] = util.GetCredsRule(OutputsKey)
 	ChildRule["region"] = util.GetRegionRule(OutputsKey)

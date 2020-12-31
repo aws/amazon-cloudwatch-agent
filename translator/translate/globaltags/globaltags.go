@@ -37,5 +37,6 @@ func (g *GlobalTags) ApplyRule(input interface{}) (returnKey string, returnVal i
 func init() {
 	g := new(GlobalTags)
 	parent.RegisterLinuxRule(SectionKey, g)
+	parent.RegisterDarwinRule(SectionKey, g)
 	parent.RegisterWindowsRule(SectionKey, g)
 }

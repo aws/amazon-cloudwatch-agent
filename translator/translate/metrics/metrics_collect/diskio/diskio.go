@@ -63,4 +63,5 @@ func (d *DiskIO) ApplyRule(input interface{}) (returnKey string, returnVal inter
 func init() {
 	d := new(DiskIO)
 	parent.RegisterLinuxRule(SectionKey_DiskIO_Linux, d)
+	parent.RegisterDarwinRule(SectionKey_DiskIO_Linux, d)
 }

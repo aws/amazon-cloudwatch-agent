@@ -58,5 +58,6 @@ func (obj *StatsD) ApplyRule(input interface{}) (returnKey string, returnVal int
 func init() {
 	obj := new(StatsD)
 	parent.RegisterLinuxRule(SectionKey, obj)
+	parent.RegisterDarwinRule(SectionKey, obj)
 	parent.RegisterWindowsRule(SectionKey, obj)
 }

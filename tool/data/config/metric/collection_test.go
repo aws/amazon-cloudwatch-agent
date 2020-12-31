@@ -38,6 +38,19 @@ func TestCollection_ToMap(t *testing.T) {
 	assert.Equal(t, expectedKey, key)
 	assert.Equal(t, expectedValue, value)
 
+	// NOTE: mac is same as linux
+	ctx = &runtime.Context{
+		WantPerInstanceMetrics: true,
+		IsOnPrem:               true,
+		OsParameter:            util.OsTypeDarwin,
+		WantEC2TagDimensions:   true,
+	}
+	conf = new(Collection)
+	conf.EnableAll(ctx)
+	key, value = conf.ToMap(ctx)
+	assert.Equal(t, expectedKey, key)
+	assert.Equal(t, expectedValue, value)
+
 	expectedValue = map[string]interface{}{
 		"Network Interface": map[string]interface{}{"resources": []string{"*"}, "measurement": []string{"Bytes Sent/sec", "Bytes Received/sec", "Packets Sent/sec", "Packets Received/sec"}},
 		"Processor":         map[string]interface{}{"resources": []string{"*"}, "measurement": []string{"% Processor Time", "% User Time", "% Idle Time", "% Interrupt Time"}},

@@ -62,6 +62,7 @@ func (f *Files) Merge(source map[string]interface{}, result map[string]interface
 func init() {
 	f := new(Files)
 	parent.RegisterLinuxRule(SectionKey, f)
+	parent.RegisterDarwinRule(SectionKey, f)
 	parent.RegisterWindowsRule(SectionKey, f)
 	parent.MergeRuleMap[SectionKey] = f
 }

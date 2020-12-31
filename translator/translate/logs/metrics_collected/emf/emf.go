@@ -77,5 +77,6 @@ func (obj *EMF) ApplyRule(input interface{}) (returnKey string, returnVal interf
 func init() {
 	obj := new(EMF)
 	parent.RegisterLinuxRule(SectionKey, obj)
+	parent.RegisterDarwinRule(SectionKey, obj)
 	parent.RegisterWindowsRule(SectionKey, obj)
 }

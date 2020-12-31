@@ -567,7 +567,7 @@ func TestCreateLogGroupWithError(t *testing.T) {
 		t.Errorf("createLogGroupAndStream should return err.")
 	}
 
-	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() != cloudwatchlogs.ErrCodeOperationAbortedException{
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() != cloudwatchlogs.ErrCodeOperationAbortedException {
 		t.Errorf("createLogGroupAndStream should return ErrCodeOperationAbortedException.")
 	}
 

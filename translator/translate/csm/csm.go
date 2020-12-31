@@ -90,6 +90,7 @@ func (c *Csm) Merge(source map[string]interface{}, result map[string]interface{}
 func init() {
 	c := new(Csm)
 	parent.RegisterLinuxRule(csm.JSONSectionKey, c)
+	parent.RegisterDarwinRule(csm.JSONSectionKey, c)
 	parent.RegisterWindowsRule(csm.JSONSectionKey, c)
 	ChildRule["csmCreds"] = util.GetCredsRule(ConfOutputPluginKey)
 	mergeJsonUtil.MergeRuleMap[csm.JSONSectionKey] = c

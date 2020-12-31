@@ -16,8 +16,11 @@ type Rule translator.Rule
 
 var ChildRule = map[string]Rule{}
 
-var windowsMetricCollectRule = map[string]Rule{}
-var linuxMetricCollectRule = map[string]Rule{}
+var (
+	windowsMetricCollectRule = map[string]Rule{}
+	linuxMetricCollectRule   = map[string]Rule{}
+	darwinMetricCollectRule  = map[string]Rule{}
+)
 
 const SectionKey = "metrics_collected"
 const ObjectKey = "object"
@@ -31,6 +34,10 @@ func RegisterLinuxRule(ruleName string, r Rule) {
 	linuxMetricCollectRule[ruleName] = r
 }
 
+func RegisterDarwinRule(ruleName string, r Rule) {
+	darwinMetricCollectRule[ruleName] = r
+}
+
 func RegisterWindowsRule(ruleName string, r Rule) {
 	windowsMetricCollectRule[ruleName] = r
 }
@@ -41,13 +48,21 @@ type CollectMetrics struct {
 func (c *CollectMetrics) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	im := input.(map[string]interface{})
 	result := map[string]interface{}{}
-	//Select win or linux rule map based on targetOS
+
 	var targetRuleMap map[string]Rule
-	if translator.GetTargetPlatform() == config.OS_TYPE_LINUX {
+	switch translator.GetTargetPlatform() {
+	case config.OS_TYPE_LINUX:
 		targetRuleMap = linuxMetricCollectRule
-	} else {
+	case config.OS_TYPE_DARWIN:
+		targetRuleMap = darwinMetricCollectRule
+	case config.OS_TYPE_WINDOWS:
 		targetRuleMap = windowsMetricCollectRule
+	default:
+		// NOTE: we should panic but now there are many unit tests not setting the global var
+		targetRuleMap = linuxMetricCollectRule
+		//panic("unknown target platform " + translator.GetTargetPlatform())
 	}
+
 	//Check if this plugin exist in the input instance
 	//If not, not process
 	if _, ok := im[SectionKey]; !ok {
