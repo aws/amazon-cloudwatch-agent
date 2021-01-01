@@ -31,6 +31,8 @@ readonly JSON_DIR="${CONFDIR}/amazon-cloudwatch-agent.d"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"
 readonly COMMON_CONIG="${CONFDIR}/common-config.toml"
 
+readonly ALL_CONFIG='all'
+
 UsageString="
 
 
@@ -61,6 +63,7 @@ UsageString="
             default:                                default configuration for quick trial.
             ssm:<parameter-store-name>:             ssm parameter store name
             file:<file-path>:                       file path on the host
+            all:                                    all existing configs. Only apply to remove-config action.
 
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
@@ -76,7 +79,7 @@ cwa_start() {
 
   if [ ! -f "${TOML}" ]; then
     echo "amazon-cloudwatch-agent is not configured. Applying default configuration before starting it."
-    cwa_config 'default' 'false' "${mode}"
+    cwa_config 'default' 'false' "${mode}" 'default'
   fi
 
   launchctl load $AGENT_LAUNCHD_CONFIG
@@ -110,6 +113,11 @@ cwa_preun() {
 }
 
 cwa_status() {
+  cwa_config_status='configured'
+  if [ ! -f "${TOML}" ]; then
+    cwa_config_status='not configured'
+  fi
+
   starttime_fmt=''
   local pid=$(cwa_pid)
   if [[ $pid =~ ^[\-0-9]+$ ]] && ((pid > 0)); then
@@ -124,6 +132,7 @@ cwa_status() {
   echo "{"
   echo "  \"status\": \"$(cwa_runstatus)\","
   echo "  \"starttime\": \"${starttime_fmt}\","
+  echo "  \"configstatus\": \"${cwa_config_status}\","
   echo "  \"version\": \"${version}\""
   echo "}"
 }
@@ -154,7 +163,7 @@ cwa_config() {
   config_location="${1:-}"
   restart="${2:-}"
   mode="${3:-}"
-  multi_config="${4:-default}"
+  multi_config="${4:-}"
 
   mkdir -p "${CONFDIR}"
 
@@ -175,58 +184,71 @@ cwa_config() {
     ;;
   esac
 
-  runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
-  runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
-  runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
-
-  echo ${runDownloaderCommand}
-  ${runDownloaderCommand}
-
-  echo "Start configuration validation..."
-  echo ${runTranslatorCommand}
-  ${runTranslatorCommand}
-
-  echo ${runAgentSchemaTestCommand}
-  # We will redirect the verbose error message out
-  if ! ${runAgentSchemaTestCommand} >${CV_LOG_FILE} 2>&1; then
-    echo "Configuration validation second phase failed"
-    echo "======== Error Log ========"
-    cat ${CV_LOG_FILE}
-    exit 1
+  if [ "${config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
+    echo "ignore cwa configuration \"${ALL_CONFIG}\" as it is only supported by action \"remove-config\""
+    return
   fi
-  echo "Configuration validation second phase succeeded"
-  echo "Configuration validation succeeded"
 
-  chmod ug+rw "${TOML}"
+  if [ "${config_location}" = "${ALL_CONFIG}" ]; then
+    rm -rf "${JSON_DIR}"/*
+  else
+    runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+    echo ${runDownloaderCommand}
+    ${runDownloaderCommand}
+  fi
 
-  # for translator:
-  #       default:    only process .tmp files
-  #       append:     process both existing files and .tmp files
-  #       remove:     only process existing files
-  # At this point, all json configs have been validated
-  # multi_config:
-  #       default:    delete non .tmp file, rename .tmp file
-  #       append:     rename .tmp file
-  #       remove:     no-op
-  if [ "${multi_config}" = 'default' ]; then
-    rm -f "${JSON}"
-    for file in "${JSON_DIR}"/*; do
-      base="${JSON_DIR}/$(basename "${file}" .tmp)"
-      if [ "${file}" = "${base}" ]; then
-        rm -f "${file}"
-      else
-        mv -f "${file}" "${base}"
+    if [ ! "$(ls ${JSON_DIR})" ]; then
+        echo "all amazon-cloudwatch-agent configurations have been removed"
+        rm -f "${TOML}"
+    else
+      runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+      echo ${runTranslatorCommand}
+      ${runTranslatorCommand}
+
+      runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
+      echo ${runAgentSchemaTestCommand}
+      # We will redirect the verbose error message out
+      if ! ${runAgentSchemaTestCommand} >${CV_LOG_FILE} 2>&1; then
+        echo "Configuration validation second phase failed"
+        echo "======== Error Log ========"
+        cat ${CV_LOG_FILE}
+        exit 1
       fi
-    done
-  elif [ "${multi_config}" = 'append' ]; then
-    for file in "${JSON_DIR}"/*.tmp; do
-      mv -f "${file}" "${JSON_DIR}/$(basename "${file}" .tmp)"
-    done
-  fi
+      echo "Configuration validation second phase succeeded"
+      echo "Configuration validation succeeded"
+
+      chmod ug+rw "${TOML}"
+
+      # for translator:
+      #       default:    only process .tmp files
+      #       append:     process both existing files and .tmp files
+      #       remove:     only process existing files
+      # At this point, all json configs have been validated
+      # multi_config:
+      #       default:    delete non .tmp file, rename .tmp file
+      #       append:     rename .tmp file
+      #       remove:     no-op
+      if [ "${multi_config}" = 'default' ]; then
+        rm -f "${JSON}"
+        for file in "${JSON_DIR}"/*; do
+          base="${JSON_DIR}/$(basename "${file}" .tmp)"
+          if [ "${file}" = "${base}" ]; then
+            rm -f "${file}"
+          else
+            mv -f "${file}" "${base}"
+          fi
+        done
+      elif [ "${multi_config}" = 'append' ]; then
+        for file in "${JSON_DIR}"/*.tmp; do
+          mv -f "${file}" "${JSON_DIR}/$(basename "${file}" .tmp)"
+        done
+      fi
+
+    fi
 
   if [ "${restart}" = 'true' ]; then
     cwa_stop
-    cwa_start
+    cwa_start "${param_mode}"
   fi
 }
 
