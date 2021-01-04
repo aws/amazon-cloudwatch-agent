@@ -35,6 +35,15 @@ Two modes can be enabled together and CWAgent will de-dup the discovered targets
 |docker_label         | Optional    | docker label based service discovery configurations. If this structure is nil, docker label based service discovery is disabled                |
 |task_definition_list | Optional    | ECS task definition based service discovery configurations slice. If this slice is empty, task definition based service discovery is disabled  |
 
+#### Service Endpoint Based Auto Discovery
+
+|Configuration Field  |             | Description                                                   |
+|---------------------|-------------|---------------------------------------------------------------|
+|sd_service_name_pattern         | Mandatory   | ECS service name regex pattern             |
+|sd_metrics_ports                | Mandatory   | semicolon separated containerPort for Prometheus metrics.    |
+|sd_container_name_pattern       | Optional    | ECS task container name regex pattern                        |
+|sd_metrics_path                 | Optional    | Prometheus metric path. If not specified, the default path /metrics is assumed        |
+|sd_job_name                     | Optional    | Prometheus scrape job name. If not specified, the job name in prometheus.yaml is used   |
 
 #### Docker Label Based Auto Discovery Configuration
 

@@ -812,6 +812,12 @@ var schema = `{
             "$ref": "#/definitions/ecsServiceDiscoveryDefinition/definitions/taskDefinitionList"
           }
         },
+        "service_name_list_for_tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ecsServiceDiscoveryDefinition/definitions/serviceNameListForTasks"
+          }
+        },
         "sd_cluster_region": {
           "description": "ECS cluster region",
           "type": "string"
@@ -871,6 +877,32 @@ var schema = `{
             },
             "sd_task_definition_arn_pattern": {
               "description": "ECS task definition pattern which expose the Prometheus metrics",
+              "type": "string"
+            }
+          }
+        },
+        "serviceNameListForTasks": {
+          "type": "object",
+          "descriptions": "Define ECS service discovery based on service names",
+          "properties": {
+            "sd_container_name_pattern": {
+              "description": "ECS container name pattern which expose the Prometheus metrics",
+              "type": "string"
+            },
+            "sd_job_name": {
+              "description": "Service discovery result job name",
+              "type": "string"
+            },
+            "sd_metrics_path": {
+              "description": "Prometheus metrics path of the exporters",
+              "type": "string"
+            },
+            "sd_metrics_ports": {
+              "description": "Prometheus metrics port list of the exporters",
+              "type": "string"
+            },
+            "sd_service_name_pattern":{
+              "description": "ECS service name pattern responsible for tasks which expose the Prometheus metrics",
               "type": "string"
             }
           }

@@ -4,8 +4,9 @@
 package ecsservicediscovery
 
 import (
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"log"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Get all running tasks for the target cluster

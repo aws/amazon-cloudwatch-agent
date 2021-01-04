@@ -38,6 +38,7 @@ func (sd *ServiceDiscovery) init() {
 func (sd *ServiceDiscovery) initClusterProcessorPipeline() {
 	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskProcessor(sd.svcEcs, &sd.stats))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskDefinitionProcessor(sd.svcEcs, &sd.stats))
+	sd.clusterProcessors = append(sd.clusterProcessors, NewServiceEndpointDiscoveryProcessor(sd.svcEcs, sd.Config.ServiceNamesForTasks, &sd.stats))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewDockerLabelDiscoveryProcessor(sd.Config.DockerLabel))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskDefinitionDiscoveryProcessor(sd.Config.TaskDefinitions))
 	sd.clusterProcessors = append(sd.clusterProcessors, NewTaskFilterProcessor())
@@ -86,8 +87,8 @@ func (sd *ServiceDiscovery) validateConfig() bool {
 		return false
 	}
 
-	if sd.Config.DockerLabel == nil && len(sd.Config.TaskDefinitions) == 0 {
-		log.Printf("E! Neither docker label based discovery nor task definition based discovery is enabled.\n")
+	if sd.Config.DockerLabel == nil && len(sd.Config.TaskDefinitions) == 0 && len(sd.Config.ServiceNamesForTasks) == 0 {
+		log.Printf("E! Neither docker label based discovery, nor task definition based discovery, nor service name based discovery is enabled.\n")
 		return false
 	}
 

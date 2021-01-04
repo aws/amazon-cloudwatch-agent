@@ -15,7 +15,7 @@ func NewTaskFilterProcessor() *TaskFilterProcessor {
 func (p *TaskFilterProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	var filteredClusterTasks []*DecoratedTask
 	for _, v := range taskList {
-		if v.DockerLabelBased || v.TaskDefinitionBased {
+		if v.ServiceName != "" || v.DockerLabelBased || v.TaskDefinitionBased {
 			filteredClusterTasks = append(filteredClusterTasks, v)
 		}
 	}
