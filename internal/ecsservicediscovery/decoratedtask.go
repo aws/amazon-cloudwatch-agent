@@ -5,14 +5,16 @@ package ecsservicediscovery
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
 	"regexp"
 	"strconv"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 const (
 	containerNameLabel   = "container_name"
+	serviceNameLabel     = "ServiceName"
 	taskFamilyLabel      = "TaskDefinitionFamily"
 	taskRevisionLabel    = "TaskRevision"
 	taskGroupLabel       = "TaskGroup"
@@ -41,6 +43,7 @@ type DecoratedTask struct {
 	Task           *ecs.Task
 	TaskDefinition *ecs.TaskDefinition
 	EC2Info        *EC2MetaData
+	ServiceName    string
 
 	DockerLabelBased    bool
 	TaskDefinitionBased bool
@@ -246,12 +249,57 @@ func (t *DecoratedTask) exportTaskDefinitionBasedTarget(config *ServiceDiscovery
 	}
 }
 
+func (t *DecoratedTask) exportServiceEndpointBasedTarget(config *ServiceDiscoveryConfig,
+	dockerLabelReg *regexp.Regexp,
+	ip string,
+	c *ecs.ContainerDefinition,
+	targets map[string]*PrometheusTarget) {
+
+	if t.ServiceName == "" {
+		return
+	}
+
+	for _, v := range config.ServiceNamesForTasks {
+		// skip if service name regex mismatch
+		if !v.serviceNameRegex.MatchString(t.ServiceName) {
+			continue
+		}
+
+		if v.ContainerNamePattern != "" && !v.containerNameRegex.MatchString(*c.Name) {
+			continue
+		}
+
+		for _, port := range v.metricsPortList {
+			mappedPort := t.getPrometheusExporterPort(int64(port), c)
+			if mappedPort == 0 {
+				continue
+			}
+
+			metricsPath := defaultPrometheusMetricsPath
+			if v.MetricsPath != "" {
+				metricsPath = v.MetricsPath
+			}
+			targetKey := fmt.Sprintf("%s:%d%s", ip, mappedPort, metricsPath)
+
+			if _, ok := targets[targetKey]; ok {
+				continue
+			}
+
+			prometheusTarget := t.generatePrometheusTarget(dockerLabelReg, c, ip, mappedPort, v.MetricsPath, v.JobName)
+			addExporterLabels(prometheusTarget.Labels, serviceNameLabel, &t.ServiceName)
+			targets[targetKey] = prometheusTarget
+		}
+	}
+
+}
+
 func (t *DecoratedTask) ExporterInformation(config *ServiceDiscoveryConfig, dockerLabelRegex *regexp.Regexp, targets map[string]*PrometheusTarget) {
 	ip := t.getPrivateIp()
 	if ip == "" {
 		return
 	}
 	for _, c := range t.TaskDefinition.ContainerDefinitions {
+		t.exportServiceEndpointBasedTarget(config, dockerLabelRegex, ip, c, targets)
 		t.exportDockerLabelBasedTarget(config, dockerLabelRegex, ip, c, targets)
 		t.exportTaskDefinitionBasedTarget(config, dockerLabelRegex, ip, c, targets)
 	}

@@ -16,6 +16,19 @@ const (
 	portSeparator = ";"
 )
 
+type ServiceNameForTasksConfig struct {
+	ContainerNamePattern string `toml:"sd_container_name_pattern"`
+	JobName              string `toml:"sd_job_name"`
+	MetricsPath          string `toml:"sd_metrics_path"`
+	MetricsPorts         string `toml:"sd_metrics_ports"`
+	ServiceNamePattern   string `toml:"sd_service_name_pattern"`
+
+	containerNameRegex *regexp.Regexp
+	serviceNameRegex   *regexp.Regexp
+	metricsPortList    []int
+	taskArnList        []string
+}
+
 type DockerLabelConfig struct {
 	JobNameLabel     string `toml:"sd_job_name_label"`
 	PortLabel        string `toml:"sd_port_label"`
@@ -61,11 +74,39 @@ func (t *TaskDefinitionConfig) init() {
 	}
 }
 
+func (s *ServiceNameForTasksConfig) String() string {
+	return fmt.Sprintf("ContainerNamePattern: %v\nJobName: %v\nMetricsPath: %v\nMetricsPorts: %v\nServiceNamePattern: %v\n",
+		s.ContainerNamePattern,
+		s.JobName,
+		s.MetricsPath,
+		s.MetricsPorts,
+		s.ServiceNamePattern,
+	)
+}
+
+func (s *ServiceNameForTasksConfig) init() {
+	s.serviceNameRegex = regexp.MustCompile(s.ServiceNamePattern)
+
+	if s.ContainerNamePattern != "" {
+		s.containerNameRegex = regexp.MustCompile(s.ContainerNamePattern)
+	}
+
+	ports := strings.Split(s.MetricsPorts, portSeparator)
+	for _, v := range ports {
+		if port, err := strconv.Atoi(strings.TrimSpace(v)); err != nil || port < 0 {
+			continue
+		} else {
+			s.metricsPortList = append(s.metricsPortList, port)
+		}
+	}
+}
+
 type ServiceDiscoveryConfig struct {
-	Frequency           string                  `toml:"sd_frequency"`
-	ResultFile          string                  `toml:"sd_result_file"`
-	TargetCluster       string                  `toml:"sd_target_cluster"`
-	TargetClusterRegion string                  `toml:"sd_cluster_region"`
-	DockerLabel         *DockerLabelConfig      `toml:"docker_label"`
-	TaskDefinitions     []*TaskDefinitionConfig `toml:"task_definition_list"`
+	Frequency            string                       `toml:"sd_frequency"`
+	ResultFile           string                       `toml:"sd_result_file"`
+	TargetCluster        string                       `toml:"sd_target_cluster"`
+	TargetClusterRegion  string                       `toml:"sd_cluster_region"`
+	ServiceNamesForTasks []*ServiceNameForTasksConfig `toml:"service_name_list_for_tasks"`
+	DockerLabel          *DockerLabelConfig           `toml:"docker_label"`
+	TaskDefinitions      []*TaskDefinitionConfig      `toml:"task_definition_list"`
 }

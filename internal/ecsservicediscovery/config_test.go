@@ -20,3 +20,14 @@ func Test_TaskDefinitionConfig_init(t *testing.T) {
 	config.init()
 	assert.True(t, reflect.DeepEqual(config.metricsPortList, []int{11, 12, 13, 14}))
 }
+
+func Test_ServiceNameForTasksConfig_init(t *testing.T) {
+	config := ServiceNameForTasksConfig{
+		JobName: "test_job_1",
+		MetricsPorts: "11;12;	 13 ;a;14  ",
+		ServiceNamePattern: "^task.*$",
+	}
+
+	config.init()
+	assert.True(t, reflect.DeepEqual(config.metricsPortList, []int{11, 12, 13, 14}))
+}

@@ -13,6 +13,7 @@ const (
 	AWSAPIDescribeContainerInstances = "AWSCLI_DescribeContainerInstances"
 	AWSCLIDescribeInstancesRequest   = "AWSCLI_DescribeInstancesRequest"
 	AWSCLIDescribeTaskDefinition     = "AWSCLI_DescribeTaskDefinition"
+	AWSCLIListServices               = "AWSCLI_ListServices"
 	AWSCLIListTasks                  = "AWSCLI_ListTasks"
 	AWSCLIDescribeTasks              = "AWSCLI_DescribeTasks"
 	LRUCacheGetEC2MetaData           = "LRUCache_Get_EC2MetaData"

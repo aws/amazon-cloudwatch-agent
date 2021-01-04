@@ -4,12 +4,13 @@
 package ecsservicediscovery
 
 import (
-	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"reflect"
 	"regexp"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAddExporterLabels(t *testing.T) {
@@ -23,7 +24,7 @@ func TestAddExporterLabels(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(labels, expected))
 }
 
-func buildWorkloadFargateAwsvpc(dockerLabel bool, taskDef bool) *DecoratedTask {
+func buildWorkloadFargateAwsvpc(dockerLabel bool, taskDef bool, serviceName string) *DecoratedTask {
 	networkMode := ecs.NetworkModeAwsvpc
 	taskAttachmentId := "775c6c63-b5f7-4a5b-8a60-8f8295a04cda"
 	taskAttachmentType := "ElasticNetworkInterface"
@@ -33,6 +34,7 @@ func buildWorkloadFargateAwsvpc(dockerLabel bool, taskDef bool) *DecoratedTask {
 	taskAttachmentDetailsValue1 := "eni-03de9d47faaa2e5ec"
 	taskAttachmentDetailsValue2 := "10.0.0.129"
 
+	taskArn := "arn:aws:ecs:us-east-2:211220956907:task/ExampleCluster/1234567890123456789"
 	taskDefinitionArn := "arn:aws:ecs:us-east-2:211220956907:task-definition/prometheus-java-tomcat-fargate-awsvpc:1"
 	var taskRevision int64 = 4
 	port9404String := "9404"
@@ -48,7 +50,9 @@ func buildWorkloadFargateAwsvpc(dockerLabel bool, taskDef bool) *DecoratedTask {
 	return &DecoratedTask{
 		DockerLabelBased:    dockerLabel,
 		TaskDefinitionBased: taskDef,
+		ServiceName:         serviceName,
 		Task: &ecs.Task{
+			TaskArn:           &taskArn,
 			TaskDefinitionArn: &taskDefinitionArn,
 			Attachments: []*ecs.Attachment{
 				{
@@ -105,7 +109,7 @@ func buildWorkloadFargateAwsvpc(dockerLabel bool, taskDef bool) *DecoratedTask {
 }
 
 func Test_ExportDockerLabelBasedTarget_Fargate_AWSVPC(t *testing.T) {
-	fullTask := buildWorkloadFargateAwsvpc(true, false)
+	fullTask := buildWorkloadFargateAwsvpc(true, false, "")
 	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
 
 	config := &ServiceDiscoveryConfig{
@@ -142,7 +146,7 @@ func Test_ExportDockerLabelBasedTarget_Fargate_AWSVPC(t *testing.T) {
 }
 
 func Test_ExportTaskDefBasedTarget_Fargate_AWSVPC(t *testing.T) {
-	fullTask := buildWorkloadFargateAwsvpc(false, true)
+	fullTask := buildWorkloadFargateAwsvpc(false, true, "")
 	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
 	config := &ServiceDiscoveryConfig{
 		TaskDefinitions: []*TaskDefinitionConfig{
@@ -182,8 +186,52 @@ func Test_ExportTaskDefBasedTarget_Fargate_AWSVPC(t *testing.T) {
 	assert.Equal(t, "/metrics", target.Labels["ECS_PROMETHEUS_METRICS_PATH"])
 }
 
+func Test_exportServiceEndpointBasedTarget_Fargate_AWSVPC(t *testing.T) {
+	fullTask := buildWorkloadFargateAwsvpc(false, false, "true")
+	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
+	config := &ServiceDiscoveryConfig{
+		ServiceNamesForTasks: []*ServiceNameForTasksConfig{
+			{
+				ServiceNamePattern: "true",
+				JobName:            "",
+				MetricsPorts:       "9404;9406",
+				MetricsPath:        "/stats/metrics",
+				taskArnList: []string{
+					"arn:aws:ecs:us-east-2:211220956907:task/ExampleCluster/1234567890123456789",
+				},
+			},
+		},
+	}
+	config.ServiceNamesForTasks[0].init()
+	assert.Equal(t, []int{9404, 9406}, config.ServiceNamesForTasks[0].metricsPortList)
+
+	targets := make(map[string]*PrometheusTarget)
+	dockerLabelRegex := regexp.MustCompile(prometheusLabelNamePattern)
+	fullTask.ExporterInformation(config, dockerLabelRegex, targets)
+
+	assert.Equal(t, 2, len(targets))
+	target, ok := targets["10.0.0.129:9404/stats/metrics"]
+	assert.True(t, ok, "Missing target: 10.0.0.129:9404/stats/metrics")
+
+	assert.Equal(t, 6, len(target.Labels))
+	assert.Equal(t, "java-tomcat-fargate-awsvpc", target.Labels["FARGATE_PROMETHEUS_JOB_NAME"])
+	assert.Equal(t, "bugbash-tomcat-fargate-awsvpc-with-docker-label", target.Labels["container_name"])
+	assert.Equal(t, "4", target.Labels["TaskRevision"])
+	assert.Equal(t, "9404", target.Labels["FARGATE_PROMETHEUS_EXPORTER_PORT"])
+	assert.Equal(t, "/stats/metrics", target.Labels["__metrics_path__"])
+
+	target, ok = targets["10.0.0.129:9406/stats/metrics"]
+	assert.True(t, ok, "Missing target: 10.0.0.129:9406/stats/metrics")
+	assert.Equal(t, 6, len(target.Labels))
+	assert.Equal(t, "4", target.Labels["TaskRevision"])
+	assert.Equal(t, "bugbash-jar-fargate-awsvpc-with-dockerlabel", target.Labels["container_name"])
+	assert.Equal(t, "9406", target.Labels["FARGATE_PROMETHEUS_EXPORTER_PORT"])
+	assert.Equal(t, "/stats/metrics", target.Labels["__metrics_path__"])
+	assert.Equal(t, "/metrics", target.Labels["ECS_PROMETHEUS_METRICS_PATH"])
+}
+
 func Test_ExportMixedSDTarget_Fargate_AWSVPC(t *testing.T) {
-	fullTask := buildWorkloadFargateAwsvpc(true, true)
+	fullTask := buildWorkloadFargateAwsvpc(true, true, "")
 	log.Print(fullTask)
 	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
 	config := &ServiceDiscoveryConfig{
@@ -218,12 +266,13 @@ func Test_ExportMixedSDTarget_Fargate_AWSVPC(t *testing.T) {
 	assert.True(t, ok, "Missing target: 10.0.0.129:9406/metrics")
 }
 
-func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool) *DecoratedTask {
+func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceName string) *DecoratedTask {
 	networkMode := ecs.NetworkModeBridge
 	taskContainersArn := "arn:aws:ecs:us-east-2:211220956907:container/3b288961-eb2c-4de5-a4c5-682c0a7cc625"
 	var taskContainersDynamicHostPort int64 = 32774
 	var taskContainersMappedHostPort int64 = 9494
 
+	taskArn := "arn:aws:ecs:us-east-2:211220956907:task/ExampleCluster/1234567890123456789"
 	taskDefinitionArn := "arn:aws:ecs:us-east-2:211220956907:task-definition/prometheus-java-tomcat-ec2-awsvpc:1"
 	var taskRevision int64 = 5
 	port9404String := "9404"
@@ -241,6 +290,7 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool) *Decorate
 	return &DecoratedTask{
 		DockerLabelBased:    dockerLabel,
 		TaskDefinitionBased: taskDef,
+		ServiceName:         serviceName,
 		EC2Info: &EC2MetaData{
 			ContainerInstanceId: "arn:aws:ecs:us-east-2:211220956907:container-instance/7b0a9662-ee0b-4cf6-9391-03f50ca501a5",
 			ECInstanceId:        "i-02aa8e82e91b2c30e",
@@ -250,6 +300,7 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool) *Decorate
 			SubnetId:            "subnet-0d0b0212d14b70250",
 		},
 		Task: &ecs.Task{
+			TaskArn:           &taskArn,
 			TaskDefinitionArn: &taskDefinitionArn,
 			Attachments:       []*ecs.Attachment{},
 			Containers: []*ecs.Container{
@@ -312,7 +363,7 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool) *Decorate
 }
 
 func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
-	fullTask := buildWorkloadEC2BridgeDynamicPort(true, true)
+	fullTask := buildWorkloadEC2BridgeDynamicPort(true, true, "")
 	assert.Equal(t, "10.4.0.205", fullTask.getPrivateIp())
 	config := &ServiceDiscoveryConfig{
 		DockerLabel: &DockerLabelConfig{
@@ -364,7 +415,7 @@ func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
 }
 
 func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
-	fullTask := buildWorkloadEC2BridgeDynamicPort(false, true)
+	fullTask := buildWorkloadEC2BridgeDynamicPort(false, true, "")
 	log.Print(fullTask)
 	assert.Equal(t, "10.4.0.205", fullTask.getPrivateIp())
 	config := &ServiceDiscoveryConfig{

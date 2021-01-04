@@ -4,9 +4,10 @@
 package ecsservicediscovery
 
 import (
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_ServiceDiscovery_InitPipelines(t *testing.T) {
@@ -17,7 +18,7 @@ func Test_ServiceDiscovery_InitPipelines(t *testing.T) {
 	p := &ServiceDiscovery{Config: &config}
 	p.initClusterProcessorPipeline()
 
-	assert.Equal(t, 7, len(p.clusterProcessors))
+	assert.Equal(t, 8, len(p.clusterProcessors))
 }
 
 func Test_StartECSServiceDiscovery_NilConfig(t *testing.T) {
