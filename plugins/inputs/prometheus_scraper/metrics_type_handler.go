@@ -19,17 +19,19 @@ const (
 	histogramSummaryCountSuffix = "_count"
 	histogramSummarySumSuffix   = "_sum"
 	histogramBucketSuffix       = "_bucket"
+	counterSuffix               = "_total"
 )
 
 var (
 	histogramSummarySuffixes = []string{histogramSummaryCountSuffix, histogramSummarySumSuffix, histogramBucketSuffix}
+	counterSuffixes          = []string{counterSuffix}
 )
 
 // Get the metric name in the TYPE comments for Summary and Histogram
 // e.g # TYPE nginx_ingress_controller_request_duration_seconds histogram
 //     # TYPE nginx_ingress_controller_ingress_upstream_latency_seconds summary
-func normalizeMetricName(name string) string {
-	for _, s := range histogramSummarySuffixes {
+func normalizeMetricName(name string, suffixes []string) string {
+	for _, s := range suffixes {
 		if strings.HasSuffix(name, s) && name != s {
 			return strings.TrimSuffix(name, s)
 		}
@@ -168,12 +170,20 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 		return result
 	}
 	for _, pm := range pmb {
-		standardMetricName := normalizeMetricName(pm.metricName)
+		// normalize the summary metric first, then if metric name == standardMetricName, it means it is not been normalized by summary
+		// , then normalize the counter suffix if it failed to find metadata.
+		standardMetricName := normalizeMetricName(pm.metricName, histogramSummarySuffixes)
 		mm, ok := mc.Metadata(standardMetricName)
-		if !ok && pm.metricName != standardMetricName {
-			// perform a 2nd lookup with the original metric name
-			// It could happen if non histogram/summary ends with one of those _count/_sum suffixes
-			mm, ok = mc.Metadata(pm.metricName)
+		if !ok {
+			if pm.metricName != standardMetricName {
+				// perform a 2nd lookup with the original metric name
+				// It could happen if non histogram/summary ends with one of those _count/_sum suffixes
+				mm, ok = mc.Metadata(pm.metricName)
+			} else {
+				// normalize the counter type suffixes, like "_total" suffix
+				standardMetricName = normalizeMetricName(pm.metricName, counterSuffixes)
+				mm, ok = mc.Metadata(standardMetricName)
+			}
 		}
 		if ok {
 			pm.metricType = string(mm.Type)
