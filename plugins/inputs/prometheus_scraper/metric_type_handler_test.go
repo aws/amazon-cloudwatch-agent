@@ -73,7 +73,7 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 	})
 	target1 := scrape.NewTarget(labels1, labels1, params)
 	mStore1 := &mockMetricMetadataStore{
-		MetricList: []string{"m1", "m2"},
+		MetricList: []string{"m1", "m2", "m4"},
 		Type:       textparse.MetricTypeCounter,
 		Help:       "",
 		Unit:       "",
@@ -282,10 +282,14 @@ func TestNewMetricsTypeHandler_HandleWithMetricSuffix(t *testing.T) {
 		&PrometheusMetric{
 			metricName: "m2_count",
 			tags:       map[string]string{"job": "job1", "instance": "instance1"},
+		},
+		&PrometheusMetric{
+			metricName: "m4_total",
+			tags:       map[string]string{"job": "job1", "instance": "instance1"},
 		})
 
 	result := metricsTypeHandler.Handle(pmb)
-	assert.Equal(t, 2, len(result))
+	assert.Equal(t, 3, len(result))
 	expectedMetric1 := PrometheusMetric{
 		metricName: "m1_sum",
 		metricType: textparse.MetricTypeCounter,
@@ -296,6 +300,12 @@ func TestNewMetricsTypeHandler_HandleWithMetricSuffix(t *testing.T) {
 		metricType: textparse.MetricTypeCounter,
 		tags:       map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
 	}
+	expectedMetric4 := PrometheusMetric{
+		metricName: "m4_total",
+		metricType: textparse.MetricTypeCounter,
+		tags:       map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
+	}
 	assert.Equal(t, *result[0], expectedMetric1)
 	assert.Equal(t, *result[1], expectedMetric2)
+	assert.Equal(t, *result[2], expectedMetric4)
 }
