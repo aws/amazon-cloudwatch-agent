@@ -29,6 +29,7 @@ AOC_LDFLAGS += -X github.com/open-telemetry/opentelemetry-collector-contrib/expo
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/tools/version.Version=$(VERSION)
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/tools/version.Date=$(BUILD)
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/userutils.defaultUser=cwagent
+AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/userutils.defaultInstallPath=/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/logger.UnixLogPath=/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs/cwagent-otel-collector.log
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/logger.WindowsLogPath=C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\CWAgentOtelCollector\\Logs\\cwagent-otel-collector.log
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.unixExtraConfigPath=/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc/extracfg.txt

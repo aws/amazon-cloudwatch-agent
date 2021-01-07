@@ -126,12 +126,19 @@ agent_start() {
 stop_all() {
     echo "****** processing cwagent-otel-collector ******"
     set +e
-    agent_stop "${CWOC_NAME}"
+    agent_stop_and_disable "${CWOC_NAME}"
     set -e
 
     echo ""
     echo "****** processing amazon-cloudwatch-agent ******"
-    agent_stop "${CWA_NAME}"
+    agent_stop_and_disable "${CWA_NAME}"
+}
+
+agent_stop_and_disable() {
+    agent_name="${1:-}"
+
+    agent_stop "${agent_name}"
+    agent_disable "${agent_name}"
 }
 
 agent_stop() {
@@ -147,6 +154,15 @@ agent_stop() {
     else
         stop "${agent_name}" || return
     fi
+}
+
+# disable cwagent-otel-collector in Systemd, amazon-cloudwatch-agent will not be disabled for now (TBD)
+# cwagent-otel-collector in Upstart are not disabled for now as old version of upstart doesn't support stanza 'Manual'
+agent_disable() {
+  agent_name="${1:-}"
+  if [ "${SYSTEMD}" = 'true' ] && [ "${agent_name}" = "${CWOC_NAME}" ]; then
+      systemctl disable "${agent_name}.service"
+  fi
 }
 
 # support for restart during upgrade via SSM packages
@@ -382,7 +398,7 @@ cwa_config() {
     fi
 
     if [ "${restart}" = 'true' ]; then
-        agent_stop "${CWA_NAME}"
+        agent_stop_and_disable "${CWA_NAME}"
         agent_start "${CWA_NAME}" "${param_mode}"
     fi
 }
@@ -435,7 +451,7 @@ cwoc_config() {
     fi
 
     if [ "${restart}" = 'true' ]; then
-        agent_stop "${CWOC_NAME}"
+        agent_stop_and_disable "${CWOC_NAME}"
         agent_start "${CWOC_NAME}" "${param_mode}"
     fi
 }
