@@ -137,7 +137,7 @@ Function AgentStart() {
         $startCommand = "`"${CWAProgramFiles}\start-amazon-cloudwatch-agent.exe`""
         if (${service_name} -eq $CWOCServiceName) {
             $startCommand = "`"${CWAProgramFiles}\cwagent-otel-collector.exe`" --config=${YAML}"
-        } 
+        }
         New-Service -Name "${service_name}" -DisplayName "${service_display_name}" -Description "${service_display_name}" -DependsOn LanmanServer -BinaryPathName "${startCommand}" | Out-Null
         # object returned by New-Service gives errors so retrieve it again
         $svc = Get-Service -Name "${service_name}"
@@ -148,7 +148,11 @@ Function AgentStart() {
             & sc.exe failureflag "${service_name}" 1 | Out-Null
         }
     }
-    $svc | Start-Service
+    if (${service_name} -eq $CWOCServiceName) {
+        $svc | Set-Service -StartupType Automatic -PassThru | Start-Service
+    } else {
+        $svc | Start-Service
+    }
     Write-Output "$service_name has been started"
 }
 
@@ -166,8 +170,13 @@ Function AgentStop() {
         [string]$service_name
     )
     $svc = Get-Service -Name "${service_name}" -ErrorAction SilentlyContinue
+
     if ($svc) {
-        $svc | Stop-Service
+        if (${service_name} -eq $CWOCServiceName) {
+            $svc | Set-Service -StartupType Manual -PassThru | Stop-Service
+        } else {
+            $svc | Stop-Service
+        }
     }
     Write-Output "$service_name has been stopped"
 }
