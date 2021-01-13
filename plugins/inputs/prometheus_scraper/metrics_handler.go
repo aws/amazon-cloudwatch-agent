@@ -13,6 +13,11 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+
+const (
+	emfMetricsLimit		= 100
+)
+
 // Use metricMaterial instead of mbMetric to avoid unnecessary tags&fields copy
 type metricMaterial struct {
 	tags     map[string]string
@@ -59,8 +64,27 @@ func (mh *metricsHandler) handle(pmb PrometheusMetricBatch) {
 	mh.setEmfMetadata(metricMaterials)
 
 	for _, metricMaterial := range metricMaterials {
-		mh.acc.AddFields("prometheus_scraper", metricMaterial.fields, metricMaterial.tags)
+		fieldChunks := getChunks(metricMaterial.fields)
+		for _, chunk := range fieldChunks {
+			mh.acc.AddFields("prometheus_scraper", chunk, metricMaterial.tags)
+		}
 	}
+}
+
+func getChunks(fields map[string]interface{}) (result []map[string]interface{}) {
+	chunk := make(map[string]interface{})
+	for key := range(fields) {
+		chunk[key] = fields[key]
+		if len(chunk) == emfMetricsLimit {
+			result = append(result, chunk)
+			chunk = make(map[string]interface{})
+		}
+	}
+
+	if len(chunk) > 0 {
+		result = append(result, chunk)
+	}
+	return result
 }
 
 // set timestamp, version, logstream
