@@ -28,6 +28,7 @@ const (
 	cpuKey             = "cpu"
 	splitRegexStr      = "\\.|-"
 	kubeProxy          = "kube-proxy"
+	ignoreAnnotation   = "aws.amazon.com/cloudwatch-agent"
 )
 
 var (
@@ -137,6 +138,11 @@ func (p *PodStore) Decorate(metric telegraf.Metric, kubernetesBlob map[string]in
 		if entry == nil {
 			log.Printf("W! no pod is found after reading through kubelet, add a placeholder for %s", podKey)
 			p.setCachedEntry(podKey, &cachedEntry{creation: time.Now()})
+			return false
+		}
+
+		// Ignore if we're told to ignore
+		if "ignore" == entry.pod.ObjectMeta.Annotations[ignoreAnnotation] {
 			return false
 		}
 
