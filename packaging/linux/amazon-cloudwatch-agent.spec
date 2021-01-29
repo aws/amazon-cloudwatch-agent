@@ -41,7 +41,6 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/a
 ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${RPM_BUILD_ROOT}/var/run/amazon/cwagent-otel-collector
 
 %files
-%dir /opt/aws
 %dir /opt/aws/amazon-cloudwatch-agent
 %dir /opt/aws/amazon-cloudwatch-agent/bin
 %dir /opt/aws/amazon-cloudwatch-agent/doc
