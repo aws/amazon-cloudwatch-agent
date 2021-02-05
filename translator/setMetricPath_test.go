@@ -92,6 +92,48 @@ func getExpectedSectionWithTags() map[string]interface{} {
 	}
 }
 
+func getSectionWithTagsMetricPath() map[string]interface{} {
+	input := map[string]interface{}{}
+	input["tags"] = map[string]interface{}{routingTagKey: "metrics"}
+	input["fieldpass"] = "fp1"
+
+	output := map[string]interface{}{}
+	output["namespace"] = "ns1"
+	output["tagpass"] = map[string][]string{routingTagKey: {"anyValue"}}
+	output["tagexclude"] = []string{"someTag"}
+
+	processor := map[string]interface{}{}
+	processor["refresh_interval_seconds"] = "0"
+	processor["tagpass"] = map[string][]string{routingTagKey: {"anyValue"}}
+
+	return map[string]interface{}{
+		"inputs":     map[string]interface{}{"mem": []interface{}{input}},
+		"outputs":    map[string]interface{}{"cloudwatch": []interface{}{output}},
+		"processors": map[string]interface{}{"ec2tagger": []interface{}{processor}},
+	}
+}
+
+func getExpectedSectionWithTagsMetricPath() map[string]interface{} {
+	input := map[string]interface{}{}
+	input["tags"] = map[string]interface{}{routingTagKey: "metrics"}
+	input["fieldpass"] = "fp1"
+
+	output := map[string]interface{}{}
+	output["namespace"] = "ns1"
+	output["tagpass"] = map[string][]string{routingTagKey: {"anyValue", testSection}}
+	output["tagexclude"] = []string{"someTag", routingTagKey}
+
+	processor := map[string]interface{}{}
+	processor["refresh_interval_seconds"] = "0"
+	processor["tagpass"] = map[string][]string{routingTagKey: {"anyValue", testSection}}
+
+	return map[string]interface{}{
+		"inputs":     map[string]interface{}{"mem": []interface{}{input}},
+		"outputs":    map[string]interface{}{"cloudwatch": []interface{}{output}},
+		"processors": map[string]interface{}{"ec2tagger": []interface{}{processor}},
+	}
+}
+
 func getExpectedSectionOneInputWithoutTags() map[string]interface{} {
 	routingTagVal := testSection + linkedCharacter + "mem"
 	input := map[string]interface{}{}
@@ -201,6 +243,14 @@ func TestSetMetricPath_NoTags(t *testing.T) {
 func TestSetMetricPath_Tags(t *testing.T) {
 	actual := getSectionWithTags()
 	expected := getExpectedSectionWithTags()
+
+	SetMetricPath(actual, testSection)
+	assert.Equal(t, expected, actual, "Expected to be equal")
+}
+
+func TestSetMetricPath_TagsWithMetricPath(t *testing.T) {
+	actual := getSectionWithTagsMetricPath()
+	expected := getExpectedSectionWithTagsMetricPath()
 
 	SetMetricPath(actual, testSection)
 	assert.Equal(t, expected, actual, "Expected to be equal")
