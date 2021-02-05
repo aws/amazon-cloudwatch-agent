@@ -28,7 +28,10 @@ func SetMetricPath(result map[string]interface{}, sectionKey string) {
 				input := inputIntf.(map[string]interface{})
 				if val, ok := input[tagKey]; ok {
 					tags := val.(map[string]interface{})
-					tags[routingTagKey] = sectionKey
+					// If a plugin already has its own metricPath value, we do not want to override its value.
+					if _, ok := tags[routingTagKey]; !ok {
+						tags[routingTagKey] = sectionKey
+					}
 				} else {
 					input[tagKey] = map[string]interface{}{routingTagKey: sectionKey}
 				}
