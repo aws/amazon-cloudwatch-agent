@@ -4,14 +4,16 @@
 package k8sdecorator
 
 import (
+	"log"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"log"
-	"strings"
-	"time"
 )
 
 const (
@@ -71,6 +73,7 @@ func getClusterNameFromEc2Tagger() string {
 	config := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
+		HTTPClient:                    &http.Client{Timeout: 1 * time.Minute},
 	}
 
 	input := &ec2.DescribeTagsInput{

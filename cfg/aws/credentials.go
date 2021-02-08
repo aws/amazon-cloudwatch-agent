@@ -5,6 +5,7 @@ package aws
 
 import (
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -94,6 +95,7 @@ func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 	config := &aws.Config{
 		Region:                        aws.String(c.Region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
+		HTTPClient:                    &http.Client{Timeout: 1 * time.Minute},
 	}
 	config.Credentials = getRootCredentialsFromChain(c)
 	return getSession(config)
@@ -102,7 +104,8 @@ func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 	rootCredentials := c.rootCredentials()
 	config := &aws.Config{
-		Region: aws.String(c.Region),
+		Region:     aws.String(c.Region),
+		HTTPClient: &http.Client{Timeout: 1 * time.Minute},
 	}
 	config.Credentials = newStsCredentials(rootCredentials, c.RoleARN, c.Region)
 	return getSession(config)
@@ -139,6 +142,7 @@ func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *
 		Client: sts.New(c, &aws.Config{
 			Region:              aws.String(region),
 			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
+			HTTPClient:          &http.Client{Timeout: 1 * time.Minute},
 		}),
 		RoleARN:  roleARN,
 		Duration: stscreds.DefaultDuration,
@@ -151,6 +155,7 @@ func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *
 			Region:              aws.String(fallbackRegion),
 			Endpoint:            aws.String(getFallbackEndpoint(fallbackRegion)),
 			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
+			HTTPClient:          &http.Client{Timeout: 1 * time.Minute},
 		}),
 		RoleARN:  roleARN,
 		Duration: stscreds.DefaultDuration,

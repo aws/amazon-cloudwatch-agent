@@ -6,6 +6,7 @@ package cloudwatch
 import (
 	"log"
 	"math"
+	"net/http"
 	"reflect"
 	"runtime"
 	"sort"
@@ -134,7 +135,8 @@ func (c *CloudWatch) Connect() error {
 	svc := cloudwatch.New(
 		configProvider,
 		&aws.Config{
-			Endpoint: aws.String(c.EndpointOverride),
+			Endpoint:   aws.String(c.EndpointOverride),
+			HTTPClient: &http.Client{Timeout: 1 * time.Minute},
 		})
 
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
