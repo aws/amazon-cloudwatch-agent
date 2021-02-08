@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -111,7 +112,8 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{
-			Endpoint: aws.String(c.EndpointOverride),
+			Endpoint:   aws.String(c.EndpointOverride),
+			HTTPClient: &http.Client{Timeout: 1 * time.Minute},
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
