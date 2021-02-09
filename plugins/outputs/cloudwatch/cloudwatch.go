@@ -135,6 +135,7 @@ func (c *CloudWatch) Connect() error {
 		configProvider,
 		&aws.Config{
 			Endpoint: aws.String(c.EndpointOverride),
+			LogLevel: aws.LogLevel(aws.LogDebugWithRequestErrors),
 		})
 
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
