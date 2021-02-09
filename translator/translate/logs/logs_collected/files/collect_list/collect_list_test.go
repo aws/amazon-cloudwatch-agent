@@ -84,6 +84,98 @@ func TestTimestampFormat(t *testing.T) {
 	assert.Equal(t, expectVal, val)
 }
 
+func TestTimestampFormatAll(t *testing.T) {
+	tests := []struct {
+		input string
+		expected interface{}
+	}{
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path1",
+							"timestamp_format":"%H:%M:%S %y %b %-d"
+						}
+					]
+				}`,
+			expected:  []interface{}{map[string]interface{}{
+				"file_path":"path1",
+				"from_beginning":   true,
+				"pipe":             false,
+				"timestamp_layout": "15:04:05 06 Jan 2",
+				"timestamp_regex":  "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
+				}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path1",
+							"timestamp_format":"%-m %-d %H:%M:%S"
+						}
+					]
+				}`,
+			expected:  []interface{}{map[string]interface{}{
+				"file_path":"path1",
+				"from_beginning":   true,
+				"pipe":             false,
+				"timestamp_layout": "1 2 15:04:05",
+				"timestamp_regex":  "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path1",
+							"timestamp_format":"%-d %-m %H:%M:%S"
+						}
+					]
+				}`,
+			expected:  []interface{}{map[string]interface{}{
+				"file_path":"path1",
+				"from_beginning":   true,
+				"pipe":             false,
+				"timestamp_layout": "2 1 15:04:05",
+				"timestamp_regex":  "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path1",
+							"timestamp_format":"%-S %-d %-m %H:%M:%S"
+						}
+					]
+				}`,
+			expected:  []interface{}{map[string]interface{}{
+				"file_path":"path1",
+				"from_beginning":   true,
+				"pipe":             false,
+				"timestamp_layout": "5 2 1 15:04:05",
+				"timestamp_regex":  "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			}},
+		},
+	}
+
+	for _, tt := range tests {
+		result := applyRule1(t, tt.input)
+		assert.Equal(t, tt.expected, result)
+	}
+}
+
+func applyRule1(t *testing.T, buf string) interface{} {
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(buf), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	return val
+}
+
 //stdNumMonth     // "1"         //%-m
 //stdDay          // "2"         //%-d
 //-hour:-minute:-seconds does not work for golang parser.
