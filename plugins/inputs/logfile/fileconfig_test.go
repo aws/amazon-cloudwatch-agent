@@ -106,6 +106,31 @@ func TestTimestampParser(t *testing.T) {
 		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
 }
 
+func TestTimestampParserWithPadding(t *testing.T) {
+	timestampRegex := "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
+	timestampLayout := "1 2 15:04:05"
+	timezone := "UTC"
+	timezoneLoc := time.UTC
+	timestampRegexP, err := regexp.Compile(timestampRegex)
+	require.NoError(t, err, fmt.Sprintf("Failed to compile regex %s", timestampRegex))
+	fileConfig := &FileConfig{
+		TimestampRegex:  timestampRegex,
+		TimestampRegexP: timestampRegexP,
+		TimestampLayout: timestampLayout,
+		Timezone:        timezone,
+		TimezoneLoc:     timezoneLoc}
+
+	logEntry := fmt.Sprintf(" 2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
+	timestamp := fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour() ))
+	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute() ))
+
+	logEntry = fmt.Sprintf("2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
+	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour() ))
+	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute() ))
+}
+
 func TestTimestampParserWithFracSeconds(t *testing.T) {
 	timestampRegex := "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2},(\\d{1,9}) \\w{3})"
 	timestampLayout := "02 Jan 2006 15:04:05,.000 MST"

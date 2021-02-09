@@ -146,6 +146,13 @@ func (t *TimestampRegax) ApplyRule(input interface{}) (returnKey string, returnV
 		//If user provide with the specific timestamp_format, use the one that user provide
 		res := checkAndReplace(val.(string), TimeFormatRegexEscapeMap)
 		res = checkAndReplace(res, TimeFormatRexMap)
+		// remove the prefix, if the format startswith "%-m" or "%-d", there is an "\\s{0,1}" at the beginning.
+		// like "timestamp_format": "%-m %-d %H:%M:%S" will be converted into following layout and regex
+		//      timestamp_layout = "1 2 15:04:05"
+		//      timestamp_regex = "(\\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
+		// following timestamp string " 2 1 07:10:06" matches the regex, but it can not match the layout.
+		// After the prefix "\\s{0,1}", it can match both the regex and layout.
+		res = strings.TrimPrefix(res, "\\s{0,1}")
 		res = "(" + res + ")"
 		returnKey = "timestamp_regex"
 		returnVal = res
