@@ -4,6 +4,7 @@
 package extractors
 
 import (
+	"log"
 	"time"
 
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
@@ -26,6 +27,7 @@ func (m *MemMetricExtractor) HasValue(info *cinfo.ContainerInfo) bool {
 func (m *MemMetricExtractor) GetValue(info *cinfo.ContainerInfo, containerType string) []*CAdvisorMetric {
 	var metrics []*CAdvisorMetric
 	if info.Spec.Labels[containerNameLable] == infraContainerName {
+		log.Printf("D! skip memory because %s is %s", containerNameLable, infraContainerName)
 		return metrics
 	}
 
@@ -55,6 +57,7 @@ func (m *MemMetricExtractor) GetValue(info *cinfo.ContainerInfo, containerType s
 
 	m.recordPreviousInfo(info)
 	metrics = append(metrics, metric)
+	log.Printf("D! add Memory metric for %s", info.Name)
 	return metrics
 }
 

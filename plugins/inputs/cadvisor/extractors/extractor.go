@@ -13,6 +13,7 @@ import (
 
 const (
 	containerNameLable = "io.kubernetes.container.name"
+	// TODO: https://github.com/containerd/cri/issues/922#issuecomment-423729537 the container name can be empty on containerd
 	infraContainerName = "POD"
 	Metrics            = "Metrics"
 	Dimensions         = "Dimensions"
