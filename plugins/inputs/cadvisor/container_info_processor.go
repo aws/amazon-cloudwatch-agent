@@ -4,6 +4,7 @@
 package cadvisor
 
 import (
+	"log"
 	"path"
 	"strconv"
 	"strings"
@@ -76,12 +77,8 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 	var result []*extractors.CAdvisorMetric
 	var pKey *podKey
 
-	// For "container in container" case, cadvisor will provide multiple stats for same container, for example:
-	// /kubepods/burstable/<pod-id>/<container-id>
-	// /kubepods/burstable/<pod-id>/<container-id>/kubepods/burstable/<pod-id>/<container-id>
-	// In above example, the second path is actually for the container in container, which should be ignored
-	keywordCount := strings.Count(info.Name, cadvisorPathPrefix)
-	if keywordCount > 1 {
+	if isContainerInContainer(info.Name) {
+		log.Printf("D! drop metric because it's nested container, name %s", info.Name)
 		return result, pKey
 	}
 
@@ -135,13 +132,8 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 
 func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extractors.CAdvisorMetric {
 	var result []*extractors.CAdvisorMetric
-
-	// For "container in container" case, cadvisor will provide multiple stats for same pod, for example:
-	// /kubepods/burstable/<pod-id>
-	// /kubepods/burstable/<pod-id>/<container-id>/kubepods/burstable/<pod-id>
-	// In above example, the second path is actually for the container in container, which should be ignored
-	keywordCount := strings.Count(info.Name, cadvisorPathPrefix)
-	if keywordCount > 1 {
+	if isContainerInContainer(info.Name) {
+		log.Printf("D! drop metric because it's nested container, name %s", info.Name)
 		return result
 	}
 
@@ -177,4 +169,24 @@ func getPodKey(info *cinfo.ContainerInfo, podKeys map[string]podKey) *podKey {
 	}
 
 	return nil
+}
+
+// Check if it's a container running inside container, caller will drop the metric when return value is true.
+// The validation is based on ContainerReference.Name, which is essentially cgroup path.
+// The first version is from https://github.com/aws/amazon-cloudwatch-agent/commit/e8daa5f5926c5a5f38e0ceb746c141be463e11e4#diff-599185154c116b295172b56311729990d20672f6659500870997c018ce072100
+// But the logic no longer works when docker is using systemd as cgroup driver, because a prefix like `kubepods` is attached to each segment.
+// The new name pattern with systemd is
+// - Guaranteed /kubepods.slice/kubepods-podc8f7bb69_65f2_4b61_ae5a_9b19ac47a239.slice/docker-523b624a86a2a74c2bedf586d8448c86887ef7858a8dec037d6559e5ad3fccb5.scope
+// - Burstable /kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-podab0e310c_0bdb_48e8_ac87_81a701514645.slice/docker-caa8a5e51cd6610f8f0110b491e8187d23488b9635acccf0355a7975fd3ff158.scope
+// - Docker in Docker /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-podc9adcee4_c874_4dad_8bc8_accdbd67ac3a.slice/docker-e58cfbc8b67f6e1af458efdd31cb2a8abdbf9f95db64f4c852b701285a09d40e.scope/docker/fb651068cfbd4bf3d45fb092ec9451f8d1a36b3753687bbaa0a9920617eae5b9
+// So we check the number of segements within the cgroup path to determine if it's a container running in container.
+func isContainerInContainer(p string) bool {
+	segs := strings.Split(strings.TrimLeft(p, "/"), "/")
+	// Without nested container, the number of segments (regardless of cgroupfs/systemd) are either 3 or 4 (depends on QoS)
+	// /kubepods/pod_id/docker_id
+	// /kubepods/qos/pod_id/docker_id
+	// With nested container, the number of segments are either 5 or 6
+	// /kubepods/pod_id/docker_id/docker/docker_id
+	// /kubepods/qos/pod_id/docker_id/docker/docker_id
+	return len(segs) > 4
 }
