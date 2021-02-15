@@ -4,7 +4,6 @@
 package extractors
 
 import (
-	"log"
 	"time"
 
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
@@ -31,7 +30,6 @@ func (c *CpuMetricExtractor) recordPreviousInfo(info *cInfo.ContainerInfo) {
 func (c *CpuMetricExtractor) GetValue(info *cInfo.ContainerInfo, containerType string) []*CAdvisorMetric {
 	var metrics []*CAdvisorMetric
 	if info.Spec.Labels[containerNameLable] == infraContainerName {
-		log.Printf("D! skip CPU because %s is %s", containerNameLable, infraContainerName)
 		return metrics
 	}
 
@@ -49,12 +47,7 @@ func (c *CpuMetricExtractor) GetValue(info *cInfo.ContainerInfo, containerType s
 			metric.fields[MetricName(containerType, CpuSystem)] = float64(curStats.Cpu.Usage.System-preStats.Cpu.Usage.System) / float64(deltaCTimeInNano) * decimalToMillicores
 
 			metrics = append(metrics, metric)
-			log.Printf("D! add CPU metric for %s", info.Name)
-		} else {
-			log.Printf("D! skip CPU metric because delat time is too small %d", deltaCTimeInNano)
 		}
-	} else {
-		log.Printf("D! can't find previous info for %s", info.Name)
 	}
 	c.recordPreviousInfo(info)
 	return metrics
