@@ -22,13 +22,15 @@ const (
 	namespaceLable     = "io.kubernetes.pod.namespace"
 	podIdLable         = "io.kubernetes.pod.uid"
 	containerNameLable = "io.kubernetes.container.name"
-	cadvisorPathPrefix = "kubepods"
 )
 
+// podKey contains information of a pod extracted from containers owned by it.
+// containers has label information for a pod and their cgroup path is one level deeper.
 type podKey struct {
-	podId     string
-	podName   string
-	namespace string
+	cgroupPath string
+	podId      string
+	podName    string
+	namespace  string
 }
 
 var MetricsExtractors = []extractors.MetricExtractor{
@@ -43,19 +45,28 @@ func processContainers(cInfos []*cinfo.ContainerInfo, detailMode bool, container
 	var metrics []*extractors.CAdvisorMetric
 	podKeys := make(map[string]podKey)
 
-	for _, cInfo := range cInfos {
+	for i, cInfo := range cInfos {
 		if len(cInfo.Stats) == 0 {
+			log.Printf("D! no stats for %s", cInfo.Name)
 			continue
 		}
+		log.Printf("D! %d Start %s", i, cInfo.Name)
 		outMetrics, outPodKey := processContainer(cInfo, detailMode, containerOrchestrator)
 		metrics = append(metrics, outMetrics...)
+		for _, m := range outMetrics {
+			log.Printf("D! metric fields %v tags %v", m.GetFields(), m.GetAllTags())
+		}
+		log.Printf("D! %d End %d metrics with pod key %v", i, len(outMetrics), outPodKey)
 
+		// Save pod key 
 		if outPodKey != nil {
-			podKeys["pod"+outPodKey.podId] = *outPodKey
+			podKeys[outPodKey.cgroupPath] = *outPodKey
 		}
 	}
+	log.Printf("D! metrics after process container %d", len(metrics))
 
 	if detailMode {
+		log.Printf("D! detail mode")
 		for _, cInfo := range cInfos {
 			if len(cInfo.Stats) == 0 {
 				continue
@@ -63,8 +74,11 @@ func processContainers(cInfos []*cinfo.ContainerInfo, detailMode bool, container
 			metrics = append(metrics, processPod(cInfo, podKeys)...)
 		}
 	}
+	log.Printf("D! metrics after process pod %d", len(metrics))
 
+	log.Printf("D! metrics before merge is %d", len(metrics))
 	metrics = mergeMetrics(metrics)
+	log.Printf("D! metrics after merge is %d", len(metrics))
 
 	now := time.Now()
 	for _, extractor := range MetricsExtractors {
@@ -73,6 +87,7 @@ func processContainers(cInfos []*cinfo.ContainerInfo, detailMode bool, container
 	return metrics
 }
 
+// processContainers get metrics for individual container and gather information for pod.
 func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrchestrator string) ([]*extractors.CAdvisorMetric, *podKey) {
 	var result []*extractors.CAdvisorMetric
 	var pKey *podKey
@@ -94,10 +109,15 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 		podName := info.Spec.Labels[podNameLable]
 		podId := info.Spec.Labels[podIdLable]
 		if containerName == "" || namespace == "" || podName == "" {
+			log.Printf("D! skip metric because empty label containerName %q namespace %q podname %q %v",
+				containerName, namespace, podName, info.Spec.Labels)
 			return result, pKey
 		}
 
-		pKey = &podKey{podName: podName, podId: podId, namespace: namespace}
+		// contianer name: /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod04d39715_075e_4c7c_b128_67f7897c05b7.slice/docker-57b3dabd69b94beb462244a0c15c244b509adad0940cdcc67ca079b8208ec1f2.scope
+		// pod name:       /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod04d39715_075e_4c7c_b128_67f7897c05b7.slice/
+		podPath := path.Dir(info.Name)
+		pKey = &podKey{cgroupPath: podPath, podName: podName, podId: podId, namespace: namespace}
 
 		tags[PodIdKey] = podId
 		tags[K8sPodNameKey] = podName
@@ -117,6 +137,7 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 	}
 
 	tags[Timestamp] = strconv.FormatInt(extractors.GetStats(info).Timestamp.UnixNano()/1000000, 10)
+	log.Printf("D! container type %s tags %v", containerType, tags)
 
 	for _, extractor := range MetricsExtractors {
 		if extractor.HasValue(info) {
@@ -139,6 +160,7 @@ func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extract
 
 	podKey := getPodKey(info, podKeys)
 	if podKey == nil {
+		log.Printf("D! skip process Pod because podKey is nil")
 		return result
 	}
 
@@ -162,7 +184,8 @@ func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extract
 }
 
 func getPodKey(info *cinfo.ContainerInfo, podKeys map[string]podKey) *podKey {
-	key := path.Base(info.Name)
+	//key := path.Base(info.Name)
+	key := info.Name
 
 	if v, ok := podKeys[key]; ok {
 		return &v
