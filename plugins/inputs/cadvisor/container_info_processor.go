@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	// TODO: https://github.com/containerd/cri/issues/922#issuecomment-423729537 the container name can be empty on containerd
 	infraContainerName = "POD"
 	podNameLable       = "io.kubernetes.pod.name"
 	namespaceLable     = "io.kubernetes.pod.namespace"
@@ -45,28 +46,20 @@ func processContainers(cInfos []*cinfo.ContainerInfo, detailMode bool, container
 	var metrics []*extractors.CAdvisorMetric
 	podKeys := make(map[string]podKey)
 
-	for i, cInfo := range cInfos {
+	for _, cInfo := range cInfos {
 		if len(cInfo.Stats) == 0 {
-			log.Printf("D! no stats for %s", cInfo.Name)
 			continue
 		}
-		log.Printf("D! %d Start %s", i, cInfo.Name)
 		outMetrics, outPodKey := processContainer(cInfo, detailMode, containerOrchestrator)
 		metrics = append(metrics, outMetrics...)
-		for _, m := range outMetrics {
-			log.Printf("D! metric fields %v tags %v", m.GetFields(), m.GetAllTags())
-		}
-		log.Printf("D! %d End %d metrics with pod key %v", i, len(outMetrics), outPodKey)
-
-		// Save pod key 
+		// Save pod cgroup path we collected from containers under it.
 		if outPodKey != nil {
 			podKeys[outPodKey.cgroupPath] = *outPodKey
 		}
 	}
-	log.Printf("D! metrics after process container %d", len(metrics))
 
+	beforePod := len(metrics)
 	if detailMode {
-		log.Printf("D! detail mode")
 		for _, cInfo := range cInfos {
 			if len(cInfo.Stats) == 0 {
 				continue
@@ -74,11 +67,12 @@ func processContainers(cInfos []*cinfo.ContainerInfo, detailMode bool, container
 			metrics = append(metrics, processPod(cInfo, podKeys)...)
 		}
 	}
-	log.Printf("D! metrics after process pod %d", len(metrics))
+	// This happens when our cgroup path based pod detection logic is not working.
+	if len(metrics) == beforePod {
+		log.Printf("W! No pod metric collected, metrics count is still %d", beforePod)
+	}
 
-	log.Printf("D! metrics before merge is %d", len(metrics))
 	metrics = mergeMetrics(metrics)
-	log.Printf("D! metrics after merge is %d", len(metrics))
 
 	now := time.Now()
 	for _, extractor := range MetricsExtractors {
@@ -87,7 +81,7 @@ func processContainers(cInfos []*cinfo.ContainerInfo, detailMode bool, container
 	return metrics
 }
 
-// processContainers get metrics for individual container and gather information for pod.
+// processContainers get metrics for individual container and gather information for pod so we can look it up later.
 func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrchestrator string) ([]*extractors.CAdvisorMetric, *podKey) {
 	var result []*extractors.CAdvisorMetric
 	var pKey *podKey
@@ -104,16 +98,16 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 		if !detailMode {
 			return result, pKey
 		}
+		// Only a container has all these three labels set.
 		containerName := info.Spec.Labels[containerNameLable]
 		namespace := info.Spec.Labels[namespaceLable]
 		podName := info.Spec.Labels[podNameLable]
 		podId := info.Spec.Labels[podIdLable]
 		if containerName == "" || namespace == "" || podName == "" {
-			log.Printf("D! skip metric because empty label containerName %q namespace %q podname %q %v",
-				containerName, namespace, podName, info.Spec.Labels)
 			return result, pKey
 		}
 
+		// Pod's cgroup path is parent for a container.
 		// contianer name: /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod04d39715_075e_4c7c_b128_67f7897c05b7.slice/docker-57b3dabd69b94beb462244a0c15c244b509adad0940cdcc67ca079b8208ec1f2.scope
 		// pod name:       /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod04d39715_075e_4c7c_b128_67f7897c05b7.slice/
 		podPath := path.Dir(info.Name)
@@ -127,6 +121,8 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 			tags[ContainerIdkey] = path.Base(info.Name)
 			containerType = TypeContainer
 		} else {
+			// NOTE: the pod here is only used by NetMetricExtractor,
+			// other pod info like CPU, Mem are dealt within in processPod.
 			containerType = TypePod
 		}
 	} else {
@@ -137,7 +133,6 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 	}
 
 	tags[Timestamp] = strconv.FormatInt(extractors.GetStats(info).Timestamp.UnixNano()/1000000, 10)
-	log.Printf("D! container type %s tags %v", containerType, tags)
 
 	for _, extractor := range MetricsExtractors {
 		if extractor.HasValue(info) {
@@ -160,7 +155,6 @@ func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extract
 
 	podKey := getPodKey(info, podKeys)
 	if podKey == nil {
-		log.Printf("D! skip process Pod because podKey is nil")
 		return result
 	}
 
@@ -184,7 +178,6 @@ func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extract
 }
 
 func getPodKey(info *cinfo.ContainerInfo, podKeys map[string]podKey) *podKey {
-	//key := path.Base(info.Name)
 	key := info.Name
 
 	if v, ok := podKeys[key]; ok {
