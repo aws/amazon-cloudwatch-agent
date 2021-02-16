@@ -55,7 +55,7 @@ func Test_metricAppender_isValueStale(t *testing.T) {
 	nonStaleValue := PrometheusMetric{
 		metricValue: 10.0,
 	}
-	assert.False(t, nonStaleValue.isValueStale())
+	assert.True(t, nonStaleValue.isValueValid())
 }
 
 func Test_metricAppender_Rollback(t *testing.T) {

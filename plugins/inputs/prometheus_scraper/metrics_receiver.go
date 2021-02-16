@@ -5,12 +5,13 @@ package prometheus_scraper
 
 import (
 	"errors"
+	"log"
+	"math"
+
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/prometheus/prometheus/pkg/value"
 	"github.com/prometheus/prometheus/storage"
-	"log"
-	"math"
 )
 
 type PrometheusMetricBatch []*PrometheusMetric
@@ -23,8 +24,9 @@ type PrometheusMetric struct {
 	timeInMS    int64 // Unix time in milli-seconds
 }
 
-func (pm *PrometheusMetric) isValueStale() bool {
-	return value.IsStaleNaN(pm.metricValue) || math.IsNaN(pm.metricValue)
+func (pm *PrometheusMetric) isValueValid() bool {
+	//treat NaN and +/-Inf values as invalid as emf log doesn't support them
+	return !value.IsStaleNaN(pm.metricValue) && !math.IsNaN(pm.metricValue) && !math.IsInf(pm.metricValue, 0)
 }
 
 // metricsReceiver implement interface Appender for prometheus scarper to append metrics
