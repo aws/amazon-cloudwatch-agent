@@ -16,7 +16,7 @@ LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.BuildStr=${B
 LINUX_AMD64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=pie -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64
 LINUX_ARM64_BUILD = GOOS=linux GOARCH=arm64 go build -buildmode=pie -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64
 WIN_BUILD = GOOS=windows GOARCH=amd64 go build -buildmode=pie -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64
-DARWIN_BUILD = GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -buildmode=pie -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_amd64
+DARWIN_BUILD = GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_amd64
 
 IMAGE = amazon/cloudwatch-agent:$(VERSION)
 DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
