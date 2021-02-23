@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247347.5 (2021-02-22)
+========================================================================
+
+New Features and Enhancements:
+
+* Expand the translator by exposing an API to override schema
+* Allow translator plugins to specify and override metricPath
+* Ignore +/-Inf values in prometheus metrics
+
+========================================================================
 Amazon CloudWatch Agent 1.247347.4 (2021-02-15)
 ========================================================================
 
