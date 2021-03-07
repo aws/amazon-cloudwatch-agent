@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // +build windows
+
 package util
 
 import (
