@@ -32,11 +32,13 @@ import (
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	sdConfig "github.com/prometheus/prometheus/discovery/config"
+	"github.com/prometheus/prometheus/pkg/relabel"
 	promRuntime "github.com/prometheus/prometheus/pkg/runtime"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
@@ -260,6 +262,10 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	wg.Done()
 }
 
+const (
+	savedScrapeNameLabel = "cwagent_saved_scrape_name" // just arbitrary name that end user won't override in relabel config
+)
+
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
 
@@ -275,6 +281,23 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 	conf, err := config.LoadFile(filename)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
+	}
+
+	// For saving name before relabel https://github.com/aws/amazon-cloudwatch-agent/issues/190
+	for _, scrapeConfig := range conf.ScrapeConfigs {
+		// We only got __name__ after scrape, so it's in metric_relabel_configs instead of relabel_configs.
+		metricRelabelConfigs := []*relabel.Config{
+			{
+				Action:       relabel.Replace,
+				Regex:        relabel.MustNewRegexp("(.*)"),
+				Replacement:  "$1",
+				TargetLabel:  savedScrapeNameLabel,
+				SourceLabels: model.LabelNames{"__name__"},
+			},
+		}
+		level.Info(logger).Log("msg", "Add extra metric_relabel_configs", "configs", metricRelabelConfigs)
+		// prepend so our relabel rule comes first
+		scrapeConfig.MetricRelabelConfigs = append(metricRelabelConfigs, scrapeConfig.MetricRelabelConfigs...)
 	}
 
 	failed := false

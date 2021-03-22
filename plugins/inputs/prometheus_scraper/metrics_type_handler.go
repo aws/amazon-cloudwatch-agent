@@ -162,6 +162,7 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 		return result
 	}
 
+	// TODO(pingleig): we can save job as we did with __name__.
 	mc, err := mth.ms.Get(jobName, instanceId)
 	if err != nil {
 		log.Printf("E! metricsTypeHandler.mc.Get(jobName, instanceId) error. jobName: %v;  instanceId: %v \n", jobName, instanceId)
@@ -170,18 +171,22 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 		return result
 	}
 	for _, pm := range pmb {
+		// log for https://github.com/aws/amazon-cloudwatch-agent/issues/190
+		if pm.metricNameBeforeRelabel != pm.metricName {
+			log.Printf("D! metric name changed from %q to %q during relabel", pm.metricNameBeforeRelabel, pm.metricName)
+		}
 		// normalize the summary metric first, then if metric name == standardMetricName, it means it is not been normalized by summary
 		// , then normalize the counter suffix if it failed to find metadata.
-		standardMetricName := normalizeMetricName(pm.metricName, histogramSummarySuffixes)
+		standardMetricName := normalizeMetricName(pm.metricNameBeforeRelabel, histogramSummarySuffixes)
 		mm, ok := mc.Metadata(standardMetricName)
 		if !ok {
 			if pm.metricName != standardMetricName {
 				// perform a 2nd lookup with the original metric name
 				// It could happen if non histogram/summary ends with one of those _count/_sum suffixes
-				mm, ok = mc.Metadata(pm.metricName)
+				mm, ok = mc.Metadata(pm.metricNameBeforeRelabel)
 			} else {
 				// normalize the counter type suffixes, like "_total" suffix
-				standardMetricName = normalizeMetricName(pm.metricName, counterSuffixes)
+				standardMetricName = normalizeMetricName(pm.metricNameBeforeRelabel, counterSuffixes)
 				mm, ok = mc.Metadata(standardMetricName)
 			}
 		}
@@ -200,6 +205,8 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 			// skip the non-internal metrics with empty metric type due to cache not ready
 			continue
 		}
+		// Remove magic labels
+		delete(pm.tags, savedScrapeNameLabel)
 		result = append(result, pm)
 	}
 

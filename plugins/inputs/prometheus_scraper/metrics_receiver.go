@@ -17,11 +17,14 @@ import (
 type PrometheusMetricBatch []*PrometheusMetric
 
 type PrometheusMetric struct {
-	tags        map[string]string
-	metricName  string
-	metricValue float64
-	metricType  string
-	timeInMS    int64 // Unix time in milli-seconds
+	tags       map[string]string
+	metricName string
+	// We use this name to look up metric type because user can relabel __name___.
+	// See https://github.com/aws/amazon-cloudwatch-agent/issues/190
+	metricNameBeforeRelabel string
+	metricValue             float64
+	metricType              string
+	timeInMS                int64 // Unix time in milli-seconds
 }
 
 func (pm *PrometheusMetric) isValueValid() bool {
@@ -71,9 +74,10 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 	}
 
 	pm := &PrometheusMetric{
-		metricName:  metricName,
-		metricValue: v,
-		timeInMS:    t,
+		metricName:              metricName,
+		metricNameBeforeRelabel: ls.Get(savedScrapeNameLabel),
+		metricValue:             v,
+		timeInMS:                t,
 	}
 
 	pm.tags = labelMap
