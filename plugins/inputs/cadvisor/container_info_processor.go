@@ -67,9 +67,11 @@ func processContainers(cInfos []*cinfo.ContainerInfo, detailMode bool, container
 			metrics = append(metrics, processPod(cInfo, podKeys)...)
 		}
 	}
-	// This happens when our cgroup path based pod detection logic is not working.
+	// This happens when our cgroup path and label based pod detection logic is not working.
+	// contained https://github.com/aws/amazon-cloudwatch-agent/issues/188
+	// docker systemd https://github.com/aws/amazon-cloudwatch-agent/pull/171
 	if len(metrics) == beforePod {
-		log.Printf("W! No pod metric collected, metrics count is still %d", beforePod)
+		log.Printf("W! No pod metric collected, metrics count is still %d is containerd socket mounted? https://github.com/aws/amazon-cloudwatch-agent/issues/188", beforePod)
 	}
 
 	metrics = mergeMetrics(metrics)
@@ -99,9 +101,6 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 			return result, pKey
 		}
 
-		if len(info.Spec.Labels) == 0 {
-			log.Printf("W! no label found from container spec, is containerd socket mounted? https://github.com/aws/amazon-cloudwatch-agent/issues/188")
-		}
 		// Only a container has all these three labels set.
 		containerName := info.Spec.Labels[containerNameLable]
 		namespace := info.Spec.Labels[namespaceLable]
