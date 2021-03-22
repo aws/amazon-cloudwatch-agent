@@ -29,7 +29,8 @@ func (c *CpuMetricExtractor) recordPreviousInfo(info *cInfo.ContainerInfo) {
 
 func (c *CpuMetricExtractor) GetValue(info *cInfo.ContainerInfo, containerType string) []*CAdvisorMetric {
 	var metrics []*CAdvisorMetric
-	if info.Spec.Labels[containerNameLable] == infraContainerName {
+	// Skip infra container and handle node, pod, other containers in pod
+	if containerType == TypeInfraContainer {
 		return metrics
 	}
 
@@ -41,6 +42,7 @@ func (c *CpuMetricExtractor) GetValue(info *cInfo.ContainerInfo, containerType s
 
 		if deltaCTimeInNano > MinTimeDiff {
 			metric := newCadvisorMetric(containerType)
+			metric.cgroupPath = info.Name
 
 			metric.fields[MetricName(containerType, CpuTotal)] = float64(curStats.Cpu.Usage.Total-preStats.Cpu.Usage.Total) / float64(deltaCTimeInNano) * decimalToMillicores
 			metric.fields[MetricName(containerType, CpuUser)] = float64(curStats.Cpu.Usage.User-preStats.Cpu.Usage.User) / float64(deltaCTimeInNano) * decimalToMillicores
@@ -59,6 +61,6 @@ func (c *CpuMetricExtractor) CleanUp(now time.Time) {
 
 func NewCpuMetricExtractor() *CpuMetricExtractor {
 	return &CpuMetricExtractor{
-		preInfos: mapWithExpiry.NewMapWithExpiry(CleanInteval),
+		preInfos: mapWithExpiry.NewMapWithExpiry(CleanInterval),
 	}
 }

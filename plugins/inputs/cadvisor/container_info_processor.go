@@ -98,17 +98,23 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 		if !detailMode {
 			return result, pKey
 		}
+
+		if len(info.Spec.Labels) == 0 {
+			log.Printf("W! no label found from container spec, is containerd socket mounted? https://github.com/aws/amazon-cloudwatch-agent/issues/188")
+		}
 		// Only a container has all these three labels set.
 		containerName := info.Spec.Labels[containerNameLable]
 		namespace := info.Spec.Labels[namespaceLable]
 		podName := info.Spec.Labels[podNameLable]
 		podId := info.Spec.Labels[podIdLable]
-		if containerName == "" || namespace == "" || podName == "" {
+		// NOTE: containerName can be empty for pause container on containerd
+		// https://github.com/containerd/cri/issues/922#issuecomment-423729537
+		if namespace == "" || podName == "" {
 			return result, pKey
 		}
 
 		// Pod's cgroup path is parent for a container.
-		// contianer name: /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod04d39715_075e_4c7c_b128_67f7897c05b7.slice/docker-57b3dabd69b94beb462244a0c15c244b509adad0940cdcc67ca079b8208ec1f2.scope
+		// container name: /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod04d39715_075e_4c7c_b128_67f7897c05b7.slice/docker-57b3dabd69b94beb462244a0c15c244b509adad0940cdcc67ca079b8208ec1f2.scope
 		// pod name:       /kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod04d39715_075e_4c7c_b128_67f7897c05b7.slice/
 		podPath := path.Dir(info.Name)
 		pKey = &podKey{cgroupPath: podPath, podName: podName, podId: podId, namespace: namespace}
@@ -116,14 +122,18 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 		tags[PodIdKey] = podId
 		tags[K8sPodNameKey] = podName
 		tags[K8sNamespace] = namespace
-		if containerName != infraContainerName {
+
+		switch containerName {
+		// For docker, pause container name is set to POD while containerd does not set it.
+		// See https://github.com/aws/amazon-cloudwatch-agent/issues/188
+		case "", infraContainerName:
+			// NOTE: the pod here is only used by NetMetricExtractor,
+			// other pod info like CPU, Mem are dealt within in processPod.
+			containerType = TypeInfraContainer
+		default:
 			tags[ContainerNamekey] = containerName
 			tags[ContainerIdkey] = path.Base(info.Name)
 			containerType = TypeContainer
-		} else {
-			// NOTE: the pod here is only used by NetMetricExtractor,
-			// other pod info like CPU, Mem are dealt within in processPod.
-			containerType = TypePod
 		}
 	} else {
 		containerType = TypeNode
@@ -146,15 +156,18 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 	return result, pKey
 }
 
+// processPod is almost identical as processContainer. We got this second loop because pod detection relies
+// on inspecting labels from containers in processContainer. cgroup path for detected pods are saved in podKeys.
+// We may not get container before pod when looping all returned cgroup paths so we use a two pass solution
+// in processContainers.
 func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extractors.CAdvisorMetric {
 	var result []*extractors.CAdvisorMetric
 	if isContainerInContainer(info.Name) {
-		log.Printf("D! drop metric because it's nested container, name %s", info.Name)
 		return result
 	}
 
-	podKey := getPodKey(info, podKeys)
-	if podKey == nil {
+	podKey, ok := podKeys[info.Name]
+	if !ok {
 		return result
 	}
 
@@ -175,16 +188,6 @@ func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extract
 		ele.AddTags(tags)
 	}
 	return result
-}
-
-func getPodKey(info *cinfo.ContainerInfo, podKeys map[string]podKey) *podKey {
-	key := info.Name
-
-	if v, ok := podKeys[key]; ok {
-		return &v
-	}
-
-	return nil
 }
 
 // Check if it's a container running inside container, caller will drop the metric when return value is true.
