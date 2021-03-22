@@ -186,12 +186,14 @@ func TestNewMetricsTypeHandler_HandleWithUnknownTarget(t *testing.T) {
 	pmb := make(PrometheusMetricBatch, 0)
 	pmb = append(pmb,
 		&PrometheusMetric{
-			metricName: "m1",
-			tags:       map[string]string{"job": "job_unknown", "instance": "instance_unknown"},
+			metricName:              "m1",
+			metricNameBeforeRelabel: "m1",
+			tags:                    map[string]string{"job": "job_unknown", "instance": "instance_unknown"},
 		},
 		&PrometheusMetric{
-			metricName: "m2",
-			tags:       map[string]string{"job": "job_unknown", "instance": "instance_unknown"},
+			metricName:              "m2",
+			metricNameBeforeRelabel: "m2",
+			tags:                    map[string]string{"job": "job_unknown", "instance": "instance_unknown"},
 		})
 
 	result := metricsTypeHandler.Handle(pmb)
@@ -204,29 +206,34 @@ func TestNewMetricsTypeHandler_HandleWithNormalTarget(t *testing.T) {
 	pmb := make(PrometheusMetricBatch, 0)
 	pmb = append(pmb,
 		&PrometheusMetric{
-			metricName: "m3",
-			tags:       map[string]string{"job": "job1", "instance": "instance1"},
+			metricName:              "m3",
+			metricNameBeforeRelabel: "m3",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1"},
 		},
 		&PrometheusMetric{
-			metricName: "m1",
-			tags:       map[string]string{"job": "job1", "instance": "instance1"},
+			metricName:              "m1",
+			metricNameBeforeRelabel: "m1",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1"},
 		},
 		&PrometheusMetric{
-			metricName: "m2",
-			tags:       map[string]string{"job": "job1", "instance": "instance1"},
+			metricName:              "m2",
+			metricNameBeforeRelabel: "m2",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1"},
 		})
 
 	result := metricsTypeHandler.Handle(pmb)
 	assert.Equal(t, 2, len(result))
 	expectedMetric1 := PrometheusMetric{
-		metricName: "m1",
-		metricType: textparse.MetricTypeCounter,
-		tags:       map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
+		metricName:              "m1",
+		metricNameBeforeRelabel: "m1",
+		metricType:              textparse.MetricTypeCounter,
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
 	}
 	expectedMetric2 := PrometheusMetric{
-		metricName: "m2",
-		metricType: textparse.MetricTypeCounter,
-		tags:       map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
+		metricName:              "m2",
+		metricNameBeforeRelabel: "m2",
+		metricType:              textparse.MetricTypeCounter,
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
 	}
 	assert.Equal(t, *result[0], expectedMetric1)
 	assert.Equal(t, *result[1], expectedMetric2)
@@ -238,29 +245,34 @@ func TestNewMetricsTypeHandler_HandleWithReplacedJobname(t *testing.T) {
 	pmb := make(PrometheusMetricBatch, 0)
 	pmb = append(pmb,
 		&PrometheusMetric{
-			metricName: "m1",
-			tags:       map[string]string{"job": "job2_replaced", "instance": "instance2"},
+			metricName:              "m1",
+			metricNameBeforeRelabel: "m1",
+			tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2"},
 		},
 		&PrometheusMetric{
-			metricName: "m3",
-			tags:       map[string]string{"job": "job2_replaced", "instance": "instance2"},
+			metricName:              "m3",
+			metricNameBeforeRelabel: "m3",
+			tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2"},
 		},
 		&PrometheusMetric{
-			metricName: "m2",
-			tags:       map[string]string{"job": "job2_replaced", "instance": "instance2"},
+			metricName:              "m2",
+			metricNameBeforeRelabel: "m2",
+			tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2"},
 		})
 
 	result := metricsTypeHandler.Handle(pmb)
 	assert.Equal(t, 2, len(result))
 	expectedMetric1 := PrometheusMetric{
-		metricName: "m1",
-		metricType: textparse.MetricTypeGauge,
-		tags:       map[string]string{"job": "job2_replaced", "instance": "instance2", "prom_metric_type": textparse.MetricTypeGauge},
+		metricName:              "m1",
+		metricNameBeforeRelabel: "m1",
+		metricType:              textparse.MetricTypeGauge,
+		tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2", "prom_metric_type": textparse.MetricTypeGauge},
 	}
 	expectedMetric2 := PrometheusMetric{
-		metricName: "m2",
-		metricType: textparse.MetricTypeGauge,
-		tags:       map[string]string{"job": "job2_replaced", "instance": "instance2", "prom_metric_type": textparse.MetricTypeGauge},
+		metricName:              "m2",
+		metricNameBeforeRelabel: "m2",
+		metricType:              textparse.MetricTypeGauge,
+		tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2", "prom_metric_type": textparse.MetricTypeGauge},
 	}
 	assert.Equal(t, *result[0], expectedMetric1)
 	assert.Equal(t, *result[1], expectedMetric2)
@@ -272,38 +284,45 @@ func TestNewMetricsTypeHandler_HandleWithMetricSuffix(t *testing.T) {
 	pmb := make(PrometheusMetricBatch, 0)
 	pmb = append(pmb,
 		&PrometheusMetric{
-			metricName: "m3_sum",
-			tags:       map[string]string{"job": "job1", "instance": "instance1"},
+			metricName:              "m3_sum",
+			metricNameBeforeRelabel: "m3_sum",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1"},
 		},
 		&PrometheusMetric{
-			metricName: "m1_sum",
-			tags:       map[string]string{"job": "job1", "instance": "instance1"},
+			metricName:              "m1_sum",
+			metricNameBeforeRelabel: "m1_sum",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1"},
 		},
 		&PrometheusMetric{
-			metricName: "m2_count",
-			tags:       map[string]string{"job": "job1", "instance": "instance1"},
+			metricName:              "m2_count",
+			metricNameBeforeRelabel: "m2_count",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1"},
 		},
 		&PrometheusMetric{
-			metricName: "m4_total",
-			tags:       map[string]string{"job": "job1", "instance": "instance1"},
+			metricName:              "m4_total",
+			metricNameBeforeRelabel: "m4_total",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1"},
 		})
 
 	result := metricsTypeHandler.Handle(pmb)
 	assert.Equal(t, 3, len(result))
 	expectedMetric1 := PrometheusMetric{
-		metricName: "m1_sum",
-		metricType: textparse.MetricTypeCounter,
-		tags:       map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
+		metricName:              "m1_sum",
+		metricNameBeforeRelabel: "m1_sum",
+		metricType:              textparse.MetricTypeCounter,
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
 	}
 	expectedMetric2 := PrometheusMetric{
-		metricName: "m2_count",
-		metricType: textparse.MetricTypeCounter,
-		tags:       map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
+		metricName:              "m2_count",
+		metricNameBeforeRelabel: "m2_count",
+		metricType:              textparse.MetricTypeCounter,
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
 	}
 	expectedMetric4 := PrometheusMetric{
-		metricName: "m4_total",
-		metricType: textparse.MetricTypeCounter,
-		tags:       map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
+		metricName:              "m4_total",
+		metricNameBeforeRelabel: "m4_total",
+		metricType:              textparse.MetricTypeCounter,
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
 	}
 	assert.Equal(t, *result[0], expectedMetric1)
 	assert.Equal(t, *result[1], expectedMetric2)
