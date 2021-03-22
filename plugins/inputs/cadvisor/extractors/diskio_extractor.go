@@ -90,7 +90,7 @@ func (d *DiskIOMetricExtractor) CleanUp(now time.Time) {
 
 func NewDiskIOMetricExtractor() *DiskIOMetricExtractor {
 	return &DiskIOMetricExtractor{
-		preInfos: mapWithExpiry.NewMapWithExpiry(CleanInteval),
+		preInfos: mapWithExpiry.NewMapWithExpiry(CleanInterval),
 	}
 }
 

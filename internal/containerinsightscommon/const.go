@@ -92,4 +92,7 @@ const (
 	TypeContainer       = "Container"
 	TypeContainerFS     = "ContainerFS"
 	TypeContainerDiskIO = "ContainerDiskIO"
+	// Special type for pause container, introduced in https://github.com/aws/amazon-cloudwatch-agent/issues/188
+	// because containerd does not set container name pause container name to POD like docker does.
+	TypeInfraContainer = "InfraContainer"
 )

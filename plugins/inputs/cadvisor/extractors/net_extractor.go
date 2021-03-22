@@ -39,9 +39,13 @@ func (n *NetMetricExtractor) HasValue(info *cinfo.ContainerInfo) bool {
 func (n *NetMetricExtractor) GetValue(info *cinfo.ContainerInfo, containerType string) []*CAdvisorMetric {
 	var metrics []*CAdvisorMetric
 
-	// Just a protection here, there is no Container level Net metrics
-	if (containerType == TypePod && info.Spec.Labels[containerNameLable] != infraContainerName) || containerType == TypeContainer {
+	// Ignore both pod and container because the network metrics comes from InfraContainer.
+	if containerType == TypePod || containerType == TypeContainer {
 		return metrics
+	}
+	// Rename type to pod so the metric name prefix is pod_
+	if containerType == TypeInfraContainer {
+		containerType = TypePod
 	}
 
 	if preInfo, ok := n.preInfos.Get(info.Name); ok {
@@ -112,7 +116,7 @@ func (n *NetMetricExtractor) CleanUp(now time.Time) {
 
 func NewNetMetricExtractor() *NetMetricExtractor {
 	return &NetMetricExtractor{
-		preInfos: mapWithExpiry.NewMapWithExpiry(CleanInteval),
+		preInfos: mapWithExpiry.NewMapWithExpiry(CleanInterval),
 	}
 }
 

@@ -5,6 +5,7 @@ package cadvisor
 
 import (
 	"fmt"
+
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor/extractors"
 )

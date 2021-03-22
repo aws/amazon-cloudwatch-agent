@@ -25,11 +25,12 @@ func (m *MemMetricExtractor) HasValue(info *cinfo.ContainerInfo) bool {
 
 func (m *MemMetricExtractor) GetValue(info *cinfo.ContainerInfo, containerType string) []*CAdvisorMetric {
 	var metrics []*CAdvisorMetric
-	if info.Spec.Labels[containerNameLable] == infraContainerName {
+	if containerType == TypeInfraContainer {
 		return metrics
 	}
 
 	metric := newCadvisorMetric(containerType)
+	metric.cgroupPath = info.Name
 	curStats := GetStats(info)
 
 	metric.fields[MetricName(containerType, MemUsage)] = curStats.Memory.Usage
@@ -64,6 +65,6 @@ func (m *MemMetricExtractor) CleanUp(now time.Time) {
 
 func NewMemMetricExtractor() *MemMetricExtractor {
 	return &MemMetricExtractor{
-		preInfos: mapWithExpiry.NewMapWithExpiry(CleanInteval),
+		preInfos: mapWithExpiry.NewMapWithExpiry(CleanInterval),
 	}
 }
