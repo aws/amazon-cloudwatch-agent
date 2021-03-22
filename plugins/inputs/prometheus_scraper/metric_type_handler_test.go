@@ -328,3 +328,44 @@ func TestNewMetricsTypeHandler_HandleWithMetricSuffix(t *testing.T) {
 	assert.Equal(t, *result[1], expectedMetric2)
 	assert.Equal(t, *result[2], expectedMetric4)
 }
+
+// https://github.com/aws/amazon-cloudwatch-agent/issues/190
+func TestNewMetricsTypeHandler_HandleRelabelName(t *testing.T) {
+	metricsTypeHandler := NewMetricsTypeHandler()
+	metricsTypeHandler.SetScrapeManager(&mockScrapeManager{})
+	pmb := make(PrometheusMetricBatch, 0)
+	pmb = append(pmb,
+		&PrometheusMetric{
+			metricName:              "m3_changed",
+			metricNameBeforeRelabel: "m3",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1", savedScrapeNameLabel: "m3"},
+		},
+		&PrometheusMetric{
+			metricName:              "m1",
+			metricNameBeforeRelabel: "m1",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1", savedScrapeNameLabel: "m1"},
+		},
+		&PrometheusMetric{
+			metricName:              "m2_changed",
+			metricNameBeforeRelabel: "m2",
+			tags:                    map[string]string{"job": "job1", "instance": "instance1", savedScrapeNameLabel: "m2"},
+		})
+
+	result := metricsTypeHandler.Handle(pmb)
+	assert.Equal(t, 2, len(result))
+	expectedMetric1 := PrometheusMetric{
+		metricName:              "m1",
+		metricNameBeforeRelabel: "m1",
+		metricType:              textparse.MetricTypeCounter,
+		// The saved label should be gone
+		tags: map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
+	}
+	expectedMetric2 := PrometheusMetric{
+		metricName:              "m2_changed",
+		metricNameBeforeRelabel: "m2",
+		metricType:              textparse.MetricTypeCounter,
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": textparse.MetricTypeCounter},
+	}
+	assert.Equal(t, *result[0], expectedMetric1)
+	assert.Equal(t, *result[1], expectedMetric2)
+}
