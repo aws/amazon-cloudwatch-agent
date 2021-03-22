@@ -133,6 +133,11 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 			tags[ContainerNamekey] = containerName
 			tags[ContainerIdkey] = path.Base(info.Name)
 			containerType = TypeContainer
+
+			// TODO(pingleig): wait for upstream fix https://github.com/aws/amazon-cloudwatch-agent/issues/192
+			if !info.Spec.HasFilesystem {
+				log.Printf("D! containerd does not have container filesystem metrics from cadvisor, See https://github.com/aws/amazon-cloudwatch-agent/issues/192")
+			}
 		}
 	} else {
 		containerType = TypeNode
