@@ -5,10 +5,10 @@ package prometheus_scraper
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/pkg/textparse"
 	"github.com/prometheus/prometheus/scrape"
 )
@@ -114,21 +114,23 @@ func (mth *metricsTypeHandler) SetScrapeManager(scrapeManager ScrapeManager) {
 	}
 }
 
-// Return JobName and Instance
-func GetScrapeTargetInfo(pmb PrometheusMetricBatch) (string, string, error) {
-
+// Return JobName and Instance based o metric label.
+// job and instance are later used for getting metadata cache from scrape targets to determine metric type.
+// All metrics in a batch are from same scrape target, we should only need first one.
+// But loop all of them and returns error in cse our relabel hack is not working.
+func getScrapeTargetInfo(pmb PrometheusMetricBatch) (job string, instance string, err error) {
 	for _, pm := range pmb {
-		job, ok := pm.tags[model.JobLabel]
-		if !ok {
+		job = pm.jobBeforeRelabel
+		if job == "" {
 			continue
 		}
-		instance, ok := pm.tags[model.InstanceLabel]
-		if !ok {
+		instance = pm.instanceBeforeRelabel
+		if instance == "" {
 			continue
 		}
 		return job, instance, nil
 	}
-	return "", "", errors.New("No Job and Instance Label found.")
+	return "", "", fmt.Errorf("job and/or instance not found from %d metrics job=%q instance=%q", len(pmb), job, instance)
 }
 
 func isInternalMetric(metricName string) bool {
@@ -147,10 +149,9 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 		return nil
 	}
 
-	// All metrics in a batch are from same scrape target, we just need first one
-	jobName, instanceId := pmb[0].jobBeforeRelabel, pmb[0].instanceBeforeRelabel
-	if jobName == "" || instanceId == "" && len(pmb) != 0 {
-		log.Printf("E! Failed to get Job Name and Instance ID from Prometheus metrics.")
+	jobName, instanceId, err := getScrapeTargetInfo(pmb)
+	if err != nil {
+		log.Printf("E! Failed to get Job Name and Instance ID from scrape targetss %s", err)
 		return nil
 	}
 
