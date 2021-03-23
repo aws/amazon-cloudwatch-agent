@@ -78,32 +78,18 @@ type metadataServiceImpl struct {
 	sm ScrapeManager
 }
 
+// job and instance MUST be using value before relabel
 func (t *metadataServiceImpl) Get(job, instance string) (metadataCache, error) {
 	targetGroupMap := t.sm.TargetsAll()
 	targetGroup, ok := targetGroupMap[job]
 
 	if !ok {
-		//when the job is replaced in relabel_config, TargetsAll() still return the map with old job name as key
-		//so we need to go over all the targets to find the matching job name
-		targetGroup = nil
-	checkJobLoop:
-		for _, potentialTargetGroup := range targetGroupMap {
-			for _, target := range potentialTargetGroup {
-				if target.Labels().Get(model.JobLabel) == job {
-					targetGroup = potentialTargetGroup
-					break checkJobLoop
-				}
-			}
-		}
-
-		if targetGroup == nil {
-			return nil, errors.New("unable to find a target group with job=" + job)
-		}
+		return nil, errors.New("unable to find a target group with job=" + job)
 	}
 
 	// from the same targetGroup, instance is not going to be duplicated
 	for _, target := range targetGroup {
-		if target.Labels().Get(model.InstanceLabel) == instance {
+		if target.Labels().Get(savedScrapeInstanceLabel) == instance {
 			return &mCache{target}, nil
 		}
 	}
@@ -153,19 +139,24 @@ func isInternalMetric(metricName string) bool {
 	return false
 }
 
-// Decorate the Metrics with Metric Types
+// Decorate the Metrics with Metric Types.
+// Filter out Summary, Histogram and untyped Metrics and adding logging.
 func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result PrometheusMetricBatch) {
-	// Filter out Summary, Histogram and untyped Metrics and adding logging
-	jobName, instanceId, err := GetScrapeTargetInfo(pmb)
-	if err != nil {
-		log.Printf("E! Failed to get Job Name and Instance ID from Prometheus metrics. \n")
-		return result
+	if len(pmb) == 0 {
+		log.Printf("D! Skip empty batch")
+		return nil
 	}
 
-	// TODO(pingleig): we can save job as we did with __name__.
+	// All metrics in a batch are from same scrape target, we just need first one
+	jobName, instanceId := pmb[0].jobBeforeRelabel, pmb[0].instanceBeforeRelabel
+	if jobName == "" || instanceId == "" && len(pmb) != 0 {
+		log.Printf("E! Failed to get Job Name and Instance ID from Prometheus metrics.")
+		return nil
+	}
+
 	mc, err := mth.ms.Get(jobName, instanceId)
 	if err != nil {
-		log.Printf("E! metricsTypeHandler.mc.Get(jobName, instanceId) error. jobName: %v;  instanceId: %v \n", jobName, instanceId)
+		log.Printf("E! metricsTypeHandler.mc.Get(jobName, instanceId) error. jobName: %s  instanceId: %s: %v", jobName, instanceId, err)
 		// The Pod has been terminated when we are going to handle its Prometheus metrics in the channel
 		// Drop the metrics directly
 		return result
@@ -205,8 +196,7 @@ func (mth *metricsTypeHandler) Handle(pmb PrometheusMetricBatch) (result Prometh
 			// skip the non-internal metrics with empty metric type due to cache not ready
 			continue
 		}
-		// Remove magic labels
-		delete(pm.tags, savedScrapeNameLabel)
+
 		result = append(result, pm)
 	}
 

@@ -22,6 +22,8 @@ type PrometheusMetric struct {
 	// We use this name to look up metric type because user can relabel __name___.
 	// See https://github.com/aws/amazon-cloudwatch-agent/issues/190
 	metricNameBeforeRelabel string
+	jobBeforeRelabel        string
+	instanceBeforeRelabel   string
 	metricValue             float64
 	metricType              string
 	timeInMS                int64 // Unix time in milli-seconds
@@ -76,12 +78,19 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 	pm := &PrometheusMetric{
 		metricName:              metricName,
 		metricNameBeforeRelabel: ls.Get(savedScrapeNameLabel),
+		jobBeforeRelabel:        ls.Get(savedScrapeJobLabel),
+		instanceBeforeRelabel:   ls.Get(savedScrapeInstanceLabel),
 		metricValue:             v,
 		timeInMS:                t,
 	}
+	log.Printf("%s %v", pm.metricName, labelMap)
+
+	// Remove magic labels
+	delete(labelMap, savedScrapeNameLabel)
+	delete(labelMap, savedScrapeJobLabel)
+	delete(labelMap, savedScrapeInstanceLabel)
 
 	pm.tags = labelMap
-
 	ma.batch = append(ma.batch, pm)
 	return uint64(0), nil //return 0 to indicate caching is not supported
 }
