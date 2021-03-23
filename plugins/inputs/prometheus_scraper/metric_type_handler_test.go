@@ -4,14 +4,15 @@
 package prometheus_scraper
 
 import (
+	"net/url"
+	"testing"
+
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/prometheus/prometheus/pkg/textparse"
-	"net/url"
-
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/stretchr/testify/assert"
-	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 type mockMetricMetadataStore struct {
@@ -68,8 +69,9 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 		"xyz": []string{"www"},
 	}
 	labels1 := labels.FromMap(map[string]string{
-		model.JobLabel:      "job1",
-		model.InstanceLabel: "instance1",
+		model.JobLabel:           "job1",
+		model.InstanceLabel:      "instance1",
+		savedScrapeInstanceLabel: "instance1",
 	})
 	target1 := scrape.NewTarget(labels1, labels1, params)
 	mStore1 := &mockMetricMetadataStore{
@@ -87,8 +89,9 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 		"xyz": []string{"ooo"},
 	}
 	labels2 := labels.FromMap(map[string]string{
-		model.JobLabel:      "job2_replaced",
-		model.InstanceLabel: "instance2",
+		model.JobLabel:           "job2_replaced",
+		model.InstanceLabel:      "instance2",
+		savedScrapeInstanceLabel: "instance2",
 	})
 	target2 := scrape.NewTarget(labels2, labels2, params2)
 	mStore2 := &mockMetricMetadataStore{
@@ -129,6 +132,7 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 	assert.EqualError(t, err, "unable to find a target group with job=job_unknown")
 
 	mCache, err = metricsTypeHandler.ms.Get("job1", "instance1")
+	require.NoError(t, err)
 	expectedMetricMetadata := scrape.MetricMetadata{
 		Metric: "m1",
 		Type:   textparse.MetricTypeCounter,
