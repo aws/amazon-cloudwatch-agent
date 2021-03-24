@@ -28,7 +28,6 @@ func (f *FileSystemMetricExtractor) HasValue(info *cinfo.ContainerInfo) bool {
 func (f *FileSystemMetricExtractor) GetValue(info *cinfo.ContainerInfo, containerType string) []*CAdvisorMetric {
 	var metrics []*CAdvisorMetric
 	if containerType == TypePod || containerType == TypeInfraContainer {
-		log.Printf("D! fs ignore type %q path %s", containerType, info.Name)
 		return metrics
 	}
 
