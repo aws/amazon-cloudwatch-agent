@@ -90,6 +90,7 @@ func (n *NetMetricExtractor) GetValue(info *cinfo.ContainerInfo, containerType s
 							metric.fields[MetricName(mType, k)] = v
 						}
 
+						metric.cgroupPath = info.Name
 						metrics = append(metrics, metric)
 						break
 					}
@@ -101,6 +102,7 @@ func (n *NetMetricExtractor) GetValue(info *cinfo.ContainerInfo, containerType s
 				for k, v := range aggregatedFields {
 					metric.fields[MetricName(containerType, k)] = v
 				}
+				metric.cgroupPath = info.Name
 				metrics = append(metrics, metric)
 			}
 		}

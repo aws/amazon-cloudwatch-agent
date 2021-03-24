@@ -60,6 +60,7 @@ func (f *FileSystemMetricExtractor) GetValue(info *cinfo.ContainerInfo, containe
 			metric.fields[MetricName(containerType, FSInodesfree)] = v.InodesFree
 		}
 
+		metric.cgroupPath = info.Name
 		metrics = append(metrics, metric)
 	}
 	return metrics
