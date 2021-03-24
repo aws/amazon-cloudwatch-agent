@@ -167,6 +167,7 @@ func processContainer(info *cinfo.ContainerInfo, detailMode bool, containerOrche
 func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extractors.CAdvisorMetric {
 	var result []*extractors.CAdvisorMetric
 	if isContainerInContainer(info.Name) {
+		log.Printf("D! drop metric because it's nested container, name %s", info.Name)
 		return result
 	}
 
