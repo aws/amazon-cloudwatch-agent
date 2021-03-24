@@ -95,6 +95,12 @@ config-downloader: copy-version-file
 	$(WIN_BUILD)/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(DARWIN_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 
+# A fast build that only builds amd64, we don't need wizard and config downloader
+build-for-docker:
+	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(LINUX_AMD64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+
 fmt:
 	go fmt ./...
 
