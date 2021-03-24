@@ -1,4 +1,13 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247347.6 (2021-03-24)
+========================================================================
+
+Bug fixes:
+
+* Fix prometheus metric type error when relabel job, instance and __name__
+* Fix pod detection for k8s containerd runtime, though container filesystem metric is not supported by cadvisor for containerd.
+
+========================================================================
 Amazon CloudWatch Agent 1.247347.5 (2021-02-22)
 ========================================================================
 
