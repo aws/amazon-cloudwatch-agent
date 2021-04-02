@@ -24,6 +24,14 @@ replace github.com/hashicorp/go-discover => github.com/hashicorp/go-discover v0.
 //to be consistent with prometheus: https://github.com/prometheus/prometheus/blob/18254838fbe25dcc732c950ae05f78ed4db1292c/go.mod#L62
 replace k8s.io/klog => github.com/simonpasquier/klog-gokit v0.1.0
 
+//proxy.golang.org has versions of golang.zx2c4.com/wireguard with leading v's, whereas the git repo has tags without
+//leading v's: https://git.zx2c4.com/wireguard-go/refs/tags
+//So, fetching this module with version v0.0.20200121 (as done by the transitive dependency
+//https://github.com/WireGuard/wgctrl-go/blob/e35592f146e40ce8057113d14aafcc3da231fbac/go.mod#L12 ) was not working when
+//using GOPROXY=direct.
+//Replacing with the pseudo-version works around this.
+replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v0.0.0-20200121152719-05b03c675090
+
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Jeffail/gabs v1.4.0
