@@ -142,7 +142,7 @@ func (p *PodStore) Decorate(metric telegraf.Metric, kubernetesBlob map[string]in
 		}
 
 		// Ignore if we're told to ignore
-		if "ignore" == entry.pod.ObjectMeta.Annotations[ignoreAnnotation] {
+		if entry.pod.ObjectMeta.Annotations[ignoreAnnotation] == "ignore" {
 			return false
 		}
 

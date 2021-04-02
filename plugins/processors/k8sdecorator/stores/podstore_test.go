@@ -226,6 +226,24 @@ func TestPodStore_decorateMem(t *testing.T) {
 	assert.Equal(t, float64(2.5), resultFields["pod_memory_utilization"])
 }
 
+func TestPodStore_Decorate(t *testing.T) {
+	podStore := &PodStore{nodeInfo: &nodeInfo{NodeCapacity: &NodeCapacity{MemCapacity: 400 * 1024 * 1024, CPUCapacity: 4}}, cache: mapWithExpiry.NewMapWithExpiry(PodsExpiry)}
+	pod := getBaseTestPodInfo()
+	pod.ObjectMeta.Annotations[ignoreAnnotation] = "ignore"
+	podStore.setCachedEntry("namespace:test,podName:test", &cachedEntry{
+		pod:      *pod,
+		creation: time.Now(),
+	})
+
+	tags := map[string]string{MetricType: TypePod, K8sPodNameKey: "test", K8sNamespace: "test"}
+	fields := map[string]interface{}{MetricName(TypePod, MemWorkingset): int64(10 * 1024 * 1024)}
+
+	m, _ := metric.New("test", tags, fields, time.Now())
+	kubernetesBlob := map[string]interface{}{}
+
+	assert.False(t, podStore.Decorate(m, kubernetesBlob))
+}
+
 func TestPodStore_addContainerCount(t *testing.T) {
 	pod := getBaseTestPodInfo()
 	tags := map[string]string{MetricType: TypePod}
