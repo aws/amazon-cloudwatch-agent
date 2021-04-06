@@ -229,7 +229,7 @@ func TestPodStore_decorateMem(t *testing.T) {
 func TestPodStore_Decorate(t *testing.T) {
 	podStore := &PodStore{nodeInfo: &nodeInfo{NodeCapacity: &NodeCapacity{MemCapacity: 400 * 1024 * 1024, CPUCapacity: 4}}, cache: mapWithExpiry.NewMapWithExpiry(PodsExpiry)}
 	pod := getBaseTestPodInfo()
-	pod.ObjectMeta.Annotations[ignoreAnnotation] = "ignore"
+	pod.ObjectMeta.Annotations[ignoreAnnotation] = "true"
 	podStore.setCachedEntry("namespace:test,podName:test", &cachedEntry{
 		pod:      *pod,
 		creation: time.Now(),
