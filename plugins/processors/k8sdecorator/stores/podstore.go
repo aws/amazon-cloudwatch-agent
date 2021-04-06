@@ -28,7 +28,7 @@ const (
 	cpuKey             = "cpu"
 	splitRegexStr      = "\\.|-"
 	kubeProxy          = "kube-proxy"
-	ignoreAnnotation   = "aws.amazon.com/cloudwatch-agent"
+	ignoreAnnotation   = "aws.amazon.com/cloudwatch-agent-ignore"
 )
 
 var (
@@ -142,7 +142,7 @@ func (p *PodStore) Decorate(metric telegraf.Metric, kubernetesBlob map[string]in
 		}
 
 		// Ignore if we're told to ignore
-		if entry.pod.ObjectMeta.Annotations[ignoreAnnotation] == "ignore" {
+		if strings.EqualFold(entry.pod.ObjectMeta.Annotations[ignoreAnnotation], "true") {
 			return false
 		}
 
