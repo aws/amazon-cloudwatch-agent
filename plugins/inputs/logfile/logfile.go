@@ -167,7 +167,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 			if _, ok := dests[filename]; ok {
 				continue
-			} else if fileconfig.AutoRemoval { // This logic means auto_removal does not work with public_multi_logs
+			} else if fileconfig.AutoRemoval { // This logic means auto_removal does not work with publish_multi_logs
 				for _, dst := range dests {
 					dst.tailer.StopAtEOF() // Stop all other tailers in favor of the newly found file
 				}
