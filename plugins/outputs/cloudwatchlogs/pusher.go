@@ -257,7 +257,7 @@ func (p *pusher) send() {
 
 		awsErr, ok := err.(awserr.Error)
 		if !ok {
-			p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, err)
+			p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", p.Group, p.Stream, err)
 			// Messages will be discarded but done callbacks not called
 			p.reset()
 			return
