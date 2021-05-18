@@ -12,7 +12,7 @@ endif
 
 # Determine agent build mode, default to PIE mode
 ifndef CWAGENT_BUILD_MODE
-CWAGENT_BUILD_MODE=pie
+CWAGENT_BUILD_MODE=default
 endif
 
 BUILD := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
