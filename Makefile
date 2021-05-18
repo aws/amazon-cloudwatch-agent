@@ -9,13 +9,19 @@ VERSION := $(shell echo ${VERSION} | sed -e "s/^v//")
 ifeq ($(VERSION),)
 VERSION := `cat CWAGENT_VERSION`
 endif
+
+# Determine agent build mode, default to PIE mode
+ifndef CWAGENT_BUILD_MODE
+CWAGENT_BUILD_MODE=pie
+endif
+
 BUILD := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS = -s -w
 LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.VersionStr=${VERSION}
 LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.BuildStr=${BUILD}
-LINUX_AMD64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=pie -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64
-LINUX_ARM64_BUILD = GOOS=linux GOARCH=arm64 go build -buildmode=pie -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64
-WIN_BUILD = GOOS=windows GOARCH=amd64 go build -buildmode=pie -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64
+LINUX_AMD64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64
+LINUX_ARM64_BUILD = GOOS=linux GOARCH=arm64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64
+WIN_BUILD = GOOS=windows GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64
 DARWIN_BUILD = GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_amd64
 
 IMAGE = amazon/cloudwatch-agent:$(VERSION)
@@ -63,9 +69,9 @@ update-submodule:
 	
 cwagent-otel-collector: update-submodule
 	@echo Building aws-otel-collector
-	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=pie -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
-	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildmode=pie -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
-	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -buildmode=pie -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/cwagent-otel-collector.exe $(AOC_IMPORT_PATH)/cmd/awscollector
+	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
+	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
+	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/cwagent-otel-collector.exe $(AOC_IMPORT_PATH)/cmd/awscollector
 
 config-translator: copy-version-file
 	@echo Building config-translator
