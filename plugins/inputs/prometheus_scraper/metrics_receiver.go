@@ -83,7 +83,6 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 		metricValue:             v,
 		timeInMS:                t,
 	}
-	log.Printf("%s %v", pm.metricName, labelMap)
 
 	// Remove magic labels
 	delete(labelMap, savedScrapeNameLabel)
