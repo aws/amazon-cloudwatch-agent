@@ -127,12 +127,12 @@ func ChangeUser(mergedJsonConfigMap map[string]interface{}) (string, error) {
 
 	uid, err := strconv.Atoi(execUser.Uid)
 	if err != nil {
-		return runAsUser, fmt.Errorf("UID %s cannot be converted to intger uid: %w", execUser.Uid, err)
+		return runAsUser, fmt.Errorf("UID %s cannot be converted to integer uid: %w", execUser.Uid, err)
 	}
 
 	gid, err := strconv.Atoi(execUser.Gid)
 	if err != nil {
-		log.Printf("W! GID %s cannot be converted to intger gid, not changing gid of files: %v", execUser.Gid, err)
+		log.Printf("W! GID %s cannot be converted to integer gid, not changing gid of files: %v", execUser.Gid, err)
 		gid = -1 // -1 means not changing the GUID, see: https://golang.org/pkg/os/#Chown
 	}
 
