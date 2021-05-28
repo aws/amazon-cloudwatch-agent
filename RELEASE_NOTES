@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247348.0 (2021-05-28)
+========================================================================
+
+Enhancements and bug fixes:
+
+* Allow ignoring pods metrics with a specific annotation to remove the metrics not needed.(#163)
+* Fix the unnecessary logging entries (#210)
+* Update aws-otel-collector version to v0.10.0 (#216)
+
+========================================================================
 Amazon CloudWatch Agent 1.247347.6 (2021-03-24)
 ========================================================================
 
