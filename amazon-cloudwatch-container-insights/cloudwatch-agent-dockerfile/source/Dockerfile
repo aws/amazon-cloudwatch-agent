@@ -3,6 +3,9 @@ ARG GO_IMAGE=golang:latest
 ARG CERT_IMAGE=ubuntu:latest
 FROM $GO_IMAGE as builder
 
+# NOTE: This arg will be populated by docker buildx
+# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+ARG TARGETARCH
 RUN mkdir -p /go/src/github.com/aws/amazon-cloudwatch-agent/
 WORKDIR /go/src/github.com/aws/amazon-cloudwatch-agent/
 
@@ -10,19 +13,19 @@ ARG GO111MODULE="on"
 ENV GO111MODULE=${GO111MODULE}
 
 COPY . /go/src/github.com/aws/amazon-cloudwatch-agent/
-RUN make build && make package-deb
+RUN make build-for-docker-${TARGETARCH}
 
 # Install cert and binaries
 FROM $CERT_IMAGE as cert
 
-# NOTE: This arg will be populated by docker buildx
-# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+# Need to repeat the ARG after each FROM
 ARG TARGETARCH
+RUN mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
+RUN mkdir -p /opt/aws/amazon-cloudwatch-agent/var
 RUN apt-get update &&  \
     apt-get install -y ca-certificates && \
     rm -rf /var/lib/apt/lists/*
-COPY --from=builder /go/src/github.com/aws/amazon-cloudwatch-agent/build/bin/linux/ /tmp/deb
-RUN dpkg -i -E /tmp/deb/${TARGETARCH:-$(dpkg --print-architecture)}/amazon-cloudwatch-agent.deb
+COPY --from=builder /go/src/github.com/aws/amazon-cloudwatch-agent/build/bin/linux_${TARGETARCH}/ /opt/aws/amazon-cloudwatch-agent/bin
 
 FROM scratch
 
