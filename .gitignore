@@ -1,6 +1,8 @@
 .idea
 vendor
 release
+build
+CWAGENT_VERSION
 .DS_Store
 .vscode
 *.iml
