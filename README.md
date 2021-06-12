@@ -1,5 +1,5 @@
-# Amazon Cloudwatch Agent
-The Amazon Cloudwatch Agent is software developed for the [Cloudwatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)
+# Amazon CloudWatch Agent
+The Amazon CloudWatch Agent is software developed for the [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)
 
 ## Overview
 The Amazon CloudWatch Agent enables you to do the following:
@@ -14,10 +14,10 @@ Amazon Cloudwatch Agent uses the open-source project [telegraf](https://github.c
 ### Setup
 * [Configuring IAM Roles](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html)
 * [Installation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/install-CloudWatch-Agent-on-EC2-Instance.html)
-* [Configuring the Cloudwatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-cloudwatch-agent-configuration-file.html)
+* [Configuring the CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-cloudwatch-agent-configuration-file.html)
 
 ### Troubleshooting
-* [Troubleshooting Cloudwatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html)
+* [Troubleshooting CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html)
 
 ## Building and Running from source
 
@@ -28,7 +28,7 @@ Amazon Cloudwatch Agent uses the open-source project [telegraf](https://github.c
 ```
 sudo yum install -y rpmdevtools rpm-build
 ```
-* Run `make build` to build the Cloudwatch Agent for Linux, Debian, Windows environment.
+* Run `make build` to build the CloudWatch Agent for Linux, Debian, Windows environment.
 
 * Run `make release` to build the agent. This also packages it into a RPM, DEB and ZIP package.
 
