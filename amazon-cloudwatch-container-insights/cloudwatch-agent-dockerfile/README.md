@@ -16,6 +16,8 @@ docker buildx create --name multi-builder
 docker buildx use multi-builder
 # Add proper tag and --push if you want to publish it
 docker buildx build --platform linux/amd64,linux/arm64 .
+# To build multi arch image from soruce code, run the following at project root
+docker buildx build --platform linux/amd64,linux/arm64 -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/Dockerfile .
 ```
 
 ### Build multi arch image manifest from single arch images
