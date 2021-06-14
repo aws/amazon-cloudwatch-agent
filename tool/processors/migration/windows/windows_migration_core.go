@@ -47,7 +47,7 @@ func MapOldWindowsConfigToNewConfig(oldConfig OldSsmCwConfig) (newConfig NewCwCo
 		}
 
 		// This will panic if different regions/credentials exist because the new agent does not support multiple values
-		// TODO: Capture different regions when the new agent is capable of doing so https://sim.amazon.com/issues/CWAgent-2196
+		// TODO: Capture different regions when the new agent is capable of https://github.com/aws/amazon-cloudwatch-agent/issues/230
 		if component.Parameters.Region != "" {
 			if val, ok := newConfig.Agent["region"]; ok && val != component.Parameters.Region {
 				fmt.Fprint(os.Stderr, "Detected multiple different regions in the input config file. This feature is unsupported by the new agent. Thus, will not be able to migrate the old config. Terminating.")
