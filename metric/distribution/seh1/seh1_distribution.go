@@ -9,11 +9,6 @@ import (
 	"math"
 )
 
-//
-// https://code.amazon.com/packages/MetricAgent/trees/mainline/--/src/amazon/monitoring/metric/agent/distribution/impl
-// w?MonitoringTeam/MetricAgent/SEHAggregation#Implementation
-//
-
 var bucketForZero int16 = math.MinInt16
 var bucketFactor = math.Log(1 + 0.1)
 

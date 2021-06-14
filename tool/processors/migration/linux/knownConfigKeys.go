@@ -14,12 +14,11 @@ import (
 	"github.com/bigkevmcd/go-configparser"
 )
 
-// Get the keys from https://code.amazon.com/packages/AwsCWLogsPlugin/blobs/9efe1aa104aced70f82bb92ee3657f4598266d77/--/cwlogs/push.py#L382-L415
 var knownConfigKeys = []string{
 	"file",                     // "file_path"
 	"log_group_name",           // "log_group_name"
 	"log_stream_name",          // "log_stream_name", currently only single value in the output
-	"datetime_format",          // "timestamp_format", refer to https://code.amazon.com/packages/GoAmzn-CWAgentConfigTranslator/blobs/mainline/--/src/translator/translate/logs/logs_collected/files/collect_list/ruleTimestampFormat.go
+	"datetime_format",          // "timestamp_format", Based on https://golang.org/src/time/format.go and http://strftime.org/seh1_distribution.go
 	"time_zone",                // "timezone", UTC or LOCAL
 	"multi_line_start_pattern", // "multi_line_start_pattern"
 	"encoding",                 // "encoding"
