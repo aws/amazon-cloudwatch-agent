@@ -122,13 +122,13 @@ func TestTimestampParserWithPadding(t *testing.T) {
 
 	logEntry := fmt.Sprintf(" 2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
 	timestamp := fileConfig.timestampFromLogLine(logEntry)
-	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour() ))
-	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute() ))
+	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
+	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
 
 	logEntry = fmt.Sprintf("2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
 	timestamp = fileConfig.timestampFromLogLine(logEntry)
-	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour() ))
-	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute() ))
+	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
+	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
 }
 
 func TestTimestampParserWithFracSeconds(t *testing.T) {

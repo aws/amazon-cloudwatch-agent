@@ -86,7 +86,7 @@ func TestTimestampFormat(t *testing.T) {
 
 func TestTimestampFormatAll(t *testing.T) {
 	tests := []struct {
-		input string
+		input    string
 		expected interface{}
 	}{
 		{
@@ -98,13 +98,13 @@ func TestTimestampFormatAll(t *testing.T) {
 						}
 					]
 				}`,
-			expected:  []interface{}{map[string]interface{}{
-				"file_path":"path1",
+			expected: []interface{}{map[string]interface{}{
+				"file_path":        "path1",
 				"from_beginning":   true,
 				"pipe":             false,
 				"timestamp_layout": "15:04:05 06 Jan 2",
 				"timestamp_regex":  "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
-				}},
+			}},
 		},
 		{
 			input: `{
@@ -115,8 +115,8 @@ func TestTimestampFormatAll(t *testing.T) {
 						}
 					]
 				}`,
-			expected:  []interface{}{map[string]interface{}{
-				"file_path":"path1",
+			expected: []interface{}{map[string]interface{}{
+				"file_path":        "path1",
 				"from_beginning":   true,
 				"pipe":             false,
 				"timestamp_layout": "1 2 15:04:05",
@@ -132,8 +132,8 @@ func TestTimestampFormatAll(t *testing.T) {
 						}
 					]
 				}`,
-			expected:  []interface{}{map[string]interface{}{
-				"file_path":"path1",
+			expected: []interface{}{map[string]interface{}{
+				"file_path":        "path1",
 				"from_beginning":   true,
 				"pipe":             false,
 				"timestamp_layout": "2 1 15:04:05",
@@ -149,8 +149,8 @@ func TestTimestampFormatAll(t *testing.T) {
 						}
 					]
 				}`,
-			expected:  []interface{}{map[string]interface{}{
-				"file_path":"path1",
+			expected: []interface{}{map[string]interface{}{
+				"file_path":        "path1",
 				"from_beginning":   true,
 				"pipe":             false,
 				"timestamp_layout": "5 2 1 15:04:05",
