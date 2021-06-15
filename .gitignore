@@ -1,4 +1,5 @@
 .idea
+build
 vendor
 release
 .DS_Store
