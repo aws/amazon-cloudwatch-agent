@@ -33,9 +33,13 @@ func ensurePermission() {
 }
 
 func welcome() {
-	fmt.Println("=============================================================")
-	fmt.Println("= Welcome to the AWS CloudWatch Agent Configuration Manager =")
-	fmt.Println("=============================================================")
+	fmt.Println("================================================================")
+	fmt.Println("= Welcome to the Amazon CloudWatch Agent Configuration Manager =")
+	fmt.Println("=                                                              =")
+	fmt.Println("= CloudWatch Agent allows you to collect metrics and logs from =")
+	fmt.Println("= your host and send them to CloudWatch. Additional CloudWatch =")
+	fmt.Println("= charges may apply.                                           =")
+	fmt.Println("================================================================")
 }
 
 func whichOS(ctx *runtime.Context) {

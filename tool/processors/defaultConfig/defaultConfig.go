@@ -97,7 +97,7 @@ func wantMonitorAnyHostMetrics() bool {
 }
 
 func wantPerInstanceMetrics(ctx *runtime.Context) {
-	ctx.WantPerInstanceMetrics = util.Yes("Do you want to monitor cpu metrics per core? Additional CloudWatch charges may apply.")
+	ctx.WantPerInstanceMetrics = util.Yes("Do you want to monitor cpu metrics per core?")
 }
 
 func wantEC2TagDimensions(ctx *runtime.Context) {
