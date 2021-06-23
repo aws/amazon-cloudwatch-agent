@@ -426,19 +426,6 @@ func (client *MockClient2) Shutdown() {
 // Mock client 2 end
 //
 
-func TestGetJobNamePrefix(t *testing.T) {
-	assert.Equal(t, "abcd", getJobNamePrefix("abcd-efg"))
-	assert.Equal(t, "abcd", getJobNamePrefix("abcd.efg"))
-	assert.Equal(t, "abcd", getJobNamePrefix("abcd-e.fg"))
-	assert.Equal(t, "abc", getJobNamePrefix("abc.d-efg"))
-	assert.Equal(t, "abcd", getJobNamePrefix("abcd-.efg"))
-	assert.Equal(t, "abcd", getJobNamePrefix("abcd.-efg"))
-	assert.Equal(t, "abcdefg", getJobNamePrefix("abcdefg"))
-	assert.Equal(t, "abcdefg", getJobNamePrefix("abcdefg-"))
-	assert.Equal(t, "", getJobNamePrefix(".abcd-efg"))
-	assert.Equal(t, "", getJobNamePrefix(""))
-}
-
 func TestPodStore_addPodOwnersAndPodNameFallback(t *testing.T) {
 	k8sclient.Get = mockGet2
 	mockClient2.On("JobToCronJob").Return(map[string]string{})
@@ -537,13 +524,14 @@ func TestPodStore_addPodOwnersAndPodName(t *testing.T) {
 	podStore.prefFullPodName = true
 	m, _ = metric.New("test", tags, map[string]interface{}{}, time.Now())
 	jobName := "JobTest"
+	jobSuffix := "-xt4ns"
+	pod.Name = jobName + jobSuffix
 	pod.OwnerReferences[0].Kind = Job
-	surfixHash := ".088123x12"
-	pod.OwnerReferences[0].Name = jobName + surfixHash
+	pod.OwnerReferences[0].Name = jobName
 	kubernetesBlob = map[string]interface{}{}
 	podStore.addPodOwnersAndPodName(m, pod, kubernetesBlob)
-	expectedOwner["pod_owners"] = []Owner{{OwnerKind: Job, OwnerName: jobName + surfixHash}}
-	expectedOwnerName = jobName + surfixHash
+	expectedOwner["pod_owners"] = []Owner{{OwnerKind: Job, OwnerName: jobName + jobSuffix}}
+	expectedOwnerName = jobName + jobSuffix
 	assert.Equal(t, expectedOwnerName, m.Tags()[PodNameKey])
 	assert.Equal(t, expectedOwner, kubernetesBlob)
 
@@ -570,8 +558,10 @@ func TestPodStore_addPodOwnersAndPodName(t *testing.T) {
 	// Test CronJob
 	m, _ = metric.New("test", tags, map[string]interface{}{}, time.Now())
 	cjName := "CronJobTest"
+	cjSuffix := "-1556582405"
+	pod.Name = cjName + cjSuffix + "-d3n7r"
 	pod.OwnerReferences[0].Kind = Job
-	pod.OwnerReferences[0].Name = cjName + "-1556582405"
+	pod.OwnerReferences[0].Name = cjName + cjSuffix
 	kubernetesBlob = map[string]interface{}{}
 	podStore.addPodOwnersAndPodName(m, pod, kubernetesBlob)
 	expectedOwner["pod_owners"] = []Owner{{OwnerKind: CronJob, OwnerName: cjName}}

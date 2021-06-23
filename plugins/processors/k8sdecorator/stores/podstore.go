@@ -6,7 +6,6 @@ package stores
 import (
 	"fmt"
 	"log"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -26,13 +25,8 @@ const (
 	PodsExpiry         = 2 * time.Minute
 	memoryKey          = "memory"
 	cpuKey             = "cpu"
-	splitRegexStr      = "\\.|-"
 	kubeProxy          = "kube-proxy"
 	ignoreAnnotation   = "aws.amazon.com/cloudwatch-agent-ignore"
-)
-
-var (
-	re = regexp.MustCompile(splitRegexStr)
 )
 
 type cachedEntry struct {
@@ -531,10 +525,6 @@ func addLabels(pod *corev1.Pod, kubernetesBlob map[string]interface{}) {
 	}
 }
 
-func getJobNamePrefix(podName string) string {
-	return re.Split(podName, 2)[0]
-}
-
 func (p *PodStore) addPodOwnersAndPodName(metric telegraf.Metric, pod *corev1.Pod, kubernetesBlob map[string]interface{}) {
 	var owners []Owner
 	podName := ""
@@ -556,8 +546,8 @@ func (p *PodStore) addPodOwnersAndPodName(metric telegraf.Metric, pod *corev1.Po
 				if parent := parseCronJobFromJob(owner.Name); parent != "" {
 					kind = CronJob
 					name = parent
-				} else if !p.prefFullPodName {
-					name = getJobNamePrefix(name)
+				} else if p.prefFullPodName {
+					name = pod.Name
 				}
 			}
 			owners = append(owners, Owner{OwnerKind: kind, OwnerName: name})
