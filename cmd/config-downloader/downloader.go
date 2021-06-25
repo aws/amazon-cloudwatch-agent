@@ -65,7 +65,9 @@ func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[st
 	}
 
 	ssmClient := ssm.New(ses)
-	input := ssm.GetParameterInput{}
+	input := ssm.GetParameterInput{
+		WithDecryption: aws.Bool(true),
+	}
 	input.SetName(parameterStoreName)
 	output, err := ssmClient.GetParameter(&input)
 	if err != nil {
