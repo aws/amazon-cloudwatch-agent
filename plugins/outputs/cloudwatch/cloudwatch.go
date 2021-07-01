@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -63,6 +64,8 @@ type CloudWatch struct {
 	RollupDimensions   [][]string               `toml:"rollup_dimensions"`
 	Namespace          string                   `toml:"namespace"` // CloudWatch Metrics Namespace
 
+	Log telegraf.Logger `toml:"-"`
+
 	svc                    cloudwatchiface.CloudWatchAPI
 	aggregator             Aggregator
 	aggregatorShutdownChan chan struct{}
@@ -76,6 +79,7 @@ type CloudWatch struct {
 	metricDecorations      *MetricDecorations
 	retries                int
 	publisher              *publisher.Publisher
+	retryer                *retryer.LogThrottleRetryer
 }
 
 var sampleConfig = `
@@ -132,11 +136,13 @@ func (c *CloudWatch) Connect() error {
 	}
 	configProvider := credentialConfig.Credentials()
 
+	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	svc := cloudwatch.New(
 		configProvider,
 		&aws.Config{
 			Endpoint:   aws.String(c.EndpointOverride),
 			HTTPClient: &http.Client{Timeout: 1 * time.Minute},
+			Retryer:    logThrottleRetryer,
 		})
 
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
@@ -146,6 +152,7 @@ func (c *CloudWatch) Connect() error {
 	c.RollupDimensions = GetUniqueRollupList(c.RollupDimensions)
 
 	c.svc = svc
+	c.retryer = logThrottleRetryer
 	c.startRoutines()
 	return nil
 }
@@ -190,6 +197,7 @@ func (c *CloudWatch) Close() error {
 	}
 	close(c.shutdownChan)
 	c.publisher.Close()
+	c.retryer.Stop()
 	log.Println("D! Stopped the CloudWatch output plugin")
 	return nil
 }
