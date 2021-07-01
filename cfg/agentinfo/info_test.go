@@ -79,8 +79,16 @@ func TestPlugins(t *testing.T) {
 	InputPlugins = []string{"a", "b", "c"}
 	OutputPlugins = []string{"x", "y", "z"}
 
+	isRunningAsRoot = func() bool { return true }
 	plugins := Plugins()
-	expected := "inputs:(a b c) outputs:(x y z)"
+	expected := fmt.Sprintf("inputs:(a b c) outputs:(x y z)")
+	if plugins != expected {
+		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
+	}
+
+	isRunningAsRoot = func() bool { return false }
+	plugins = Plugins()
+	expected = fmt.Sprintf("inputs:(a b c run_as_user) outputs:(x y z)")
 	if plugins != expected {
 		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
 	}
@@ -92,6 +100,8 @@ func TestUserAgent(t *testing.T) {
 	BuildStr = "BSTR"
 	InputPlugins = []string{"a", "b", "c"}
 	OutputPlugins = []string{"x", "y", "z"}
+
+	isRunningAsRoot = func() bool { return true }
 
 	ua := UserAgent()
 	expected := fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z)", runtime.Version(), runtime.GOOS, runtime.GOARCH)
