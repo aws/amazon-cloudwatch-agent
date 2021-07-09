@@ -33,7 +33,6 @@ func startAgent(writer io.WriteCloser) error {
 		execArgs := []string{
 			agentBinaryPath, // when using syscall.Exec, must pass binary name as args[0]
 			"-config", tomlConfigPath, "-envconfig", envConfigPath,
-			"-pidfile", AGENT_DIR_LINUX + "/var/amazon-cloudwatch-agent.pid",
 		}
 		if err := syscall.Exec(agentBinaryPath, execArgs, os.Environ()); err != nil {
 			return fmt.Errorf("error exec as agent binary: %w", err)
