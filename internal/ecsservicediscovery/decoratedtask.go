@@ -18,6 +18,8 @@ const (
 	taskFamilyLabel      = "TaskDefinitionFamily"
 	taskRevisionLabel    = "TaskRevision"
 	taskGroupLabel       = "TaskGroup"
+	taskARNLabel         = "TaskARN"
+	taskClusterARNLabel  = "TaskClusterARN"
 	taskStartedbyLabel   = "StartedBy"
 	taskLaunchTypeLabel  = "LaunchType"
 	taskJobNameLabel     = "job"
@@ -136,6 +138,8 @@ func (t *DecoratedTask) generatePrometheusTarget(
 	revisionStr := fmt.Sprintf("%d", *t.TaskDefinition.Revision)
 	addExporterLabels(labels, taskRevisionLabel, &revisionStr)
 	addExporterLabels(labels, taskGroupLabel, t.Task.Group)
+	addExporterLabels(labels, taskARNLabel, t.Task.TaskArn)
+	addExporterLabels(labels, taskClusterARNLabel, t.Task.ClusterArn)
 	addExporterLabels(labels, taskStartedbyLabel, t.Task.StartedBy)
 	addExporterLabels(labels, taskLaunchTypeLabel, t.Task.LaunchType)
 	if t.EC2Info != nil {
