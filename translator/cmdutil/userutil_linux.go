@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	gouser "os/user"
-	"strconv"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -71,11 +69,7 @@ func ChangeUser(mergedJsonConfigMap map[string]interface{}) (user string, err er
 		return runAsUser, err
 	}
 
-	g, err := gouser.LookupGroupId(strconv.Itoa(execUser.Gid))
-	if err != nil {
-		return runAsUser, fmt.Errorf("error lookup group by id: %w", err)
-	}
-	if err := changeFileOwner(runAsUser, g.Name); err != nil {
+	if err := changeFileOwner(execUser.Uid, execUser.Gid); err != nil {
 		return runAsUser, fmt.Errorf("error change ownership of dirs: %w", err)
 	}
 
