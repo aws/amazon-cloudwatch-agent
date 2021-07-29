@@ -186,6 +186,7 @@ data:
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_fluentd
+        watch false
       </filter>
 
       <filter **>
@@ -206,6 +207,7 @@ data:
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata
+        watch false
       </filter>
 
       <filter **>
@@ -235,6 +237,7 @@ data:
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_cwagent
+        watch false
       </filter>
 
       <filter **>
@@ -339,6 +342,7 @@ data:
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_systemd
+        watch false
       </filter>
 
       <filter **>
@@ -409,6 +413,7 @@ data:
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_host
+        watch false
       </filter>
 
       <filter **>

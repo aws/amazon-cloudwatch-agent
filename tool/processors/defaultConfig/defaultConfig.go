@@ -32,6 +32,7 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 	if wantMonitorAnyHostMetrics() {
 		wantPerInstanceMetrics(ctx)
 		wantEC2TagDimensions(ctx)
+		wantEC2AggregateDimensions(ctx)
 		metricsCollectInterval(ctx)
 	} else {
 		if ctx.OsParameter == util.OsTypeWindows {
@@ -96,7 +97,7 @@ func wantMonitorAnyHostMetrics() bool {
 }
 
 func wantPerInstanceMetrics(ctx *runtime.Context) {
-	ctx.WantPerInstanceMetrics = util.Yes("Do you want to monitor cpu metrics per core? Additional CloudWatch charges may apply.")
+	ctx.WantPerInstanceMetrics = util.Yes("Do you want to monitor cpu metrics per core?")
 }
 
 func wantEC2TagDimensions(ctx *runtime.Context) {
@@ -104,6 +105,13 @@ func wantEC2TagDimensions(ctx *runtime.Context) {
 		return
 	}
 	ctx.WantEC2TagDimensions = util.Yes("Do you want to add ec2 dimensions (ImageId, InstanceId, InstanceType, AutoScalingGroupName) into all of your metrics if the info is available?")
+}
+
+func wantEC2AggregateDimensions(ctx *runtime.Context) {
+	if ctx.IsOnPrem {
+		return
+	}
+	ctx.WantAggregateDimensions = util.Yes("Do you want to aggregate ec2 dimensions (InstanceId)?")
 }
 
 func metricsCollectInterval(ctx *runtime.Context) {

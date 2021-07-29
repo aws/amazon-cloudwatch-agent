@@ -169,7 +169,8 @@ func (c *CSM) Connect() error {
 
 	controlplane := csm.New(commonSession, &controlPlaneConfigOverride)
 	//TODO: work on this when we have a proper versioning mechanism
-	//TODO: we need to find a way to expose enabled plugins like this commit: https://code.amazon.com/reviews/CR-2685612/revisions/1#/details
+	//TODO: we need to find a way to expose enabled plugins
+	//TODO: custom metrics adoption rate detection and be able to monitor any plugin enable rate
 	userAgent := fmt.Sprintf("%s/%s (%s; %s; %s) %s", "CWAgent/CSM", "1.0", runtime.Version(), runtime.GOOS, runtime.GOARCH, "list of enabled input/output plugins")
 	controlplane.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", userAgent))
 

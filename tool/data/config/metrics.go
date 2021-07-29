@@ -11,6 +11,8 @@ import (
 type Metrics struct {
 	AppendDimensions *metric.AppendDimensions
 
+	AggregationDimensions *metric.AggregationDimensions
+
 	MetricsCollect *metric.Collection
 }
 
@@ -24,6 +26,17 @@ func (config *Metrics) ToMap(ctx *runtime.Context) (string, map[string]interface
 
 	if config.AppendDimensions != nil {
 		mapKey, mapValue := config.AppendDimensions.ToMap(ctx)
+		if mapValue != nil {
+			resultMap[mapKey] = mapValue
+		}
+	}
+
+	if config.AggregationDimensions == nil && ctx.WantAggregateDimensions {
+		config.AggregationDimensions = new(metric.AggregationDimensions)
+	}
+
+	if config.AggregationDimensions != nil {
+		mapKey, mapValue := config.AggregationDimensions.ToMap(ctx)
 		if mapValue != nil {
 			resultMap[mapKey] = mapValue
 		}

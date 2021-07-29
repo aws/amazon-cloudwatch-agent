@@ -18,6 +18,6 @@ To configure your application to talk to SDK Metrics, you need to set some envir
 |AWS_CSM_HOST    |The host to send metrics to. This is required only when running your application in a container |cloudwatch-agent.amazon-cloudwatch.svc |
 
 ### Using VPC Security Groups to Enhance Security
-Because SDK Metrics sends plain-text UDP datagrams to the CloudWatch agent, we recommend that you use security groups to control access to the CloudWatch agent. For more information, see [Security Groups for Your VPC](https://alpha-docs-aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html).
+Because SDK Metrics sends plain-text UDP datagrams to the CloudWatch agent, we recommend that you use security groups to control access to the CloudWatch agent. For more information, see [Security Groups for Your VPC](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html).
 
 Since you deploy the CloudWatch agent as a service, your application talks to the agent over the network. You should configure the security groups to allow your application to send traffic to the CloudWatch agent. 

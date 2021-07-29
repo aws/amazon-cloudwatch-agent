@@ -12,6 +12,12 @@ replace github.com/shirou/gopsutil => github.com/aws/telegraf/patches/gopsutil v
 //so the replacement should not affect amazon-cloudwatch-agent
 replace github.com/hashicorp/consul => github.com/hashicorp/consul v1.8.4
 
+//hashicorp/go-discover depends on tencentcloud-sdk-go. Tencent has downgraded their versioning from
+//v3.x.xx to v1.x.xx (see https://github.com/TencentCloud/tencentcloud-sdk-go/issues/103). There's an open
+//PR at hashicorp/go-discover (see https://github.com/hashicorp/go-discover/pull/173), but it's yet to be
+//merged. In the meantime, this is a workaround.
+replace github.com/tencentcloud/tencentcloud-sdk-go => github.com/tencentcloud/tencentcloud-sdk-go v1.0.83
+
 //consul@v1.8.4 points to a commit in go-discover that depends on an older version of kubernetes: kubernetes-1.16.9
 //https://github.com/hashicorp/consul/blob/12b16df320052414244659e4dadda078f67849ed/go.mod#L38
 //This commit contains a dependency in launchpad.net which requires the version control system Bazaar to be set up
