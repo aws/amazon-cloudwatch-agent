@@ -61,6 +61,7 @@ func TestTailerSrc(t *testing.T) {
 		nil, // encoding
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
+		1,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -177,6 +178,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		nil, // encoding
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
+		1,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 

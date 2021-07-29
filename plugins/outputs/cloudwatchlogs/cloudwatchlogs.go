@@ -54,6 +54,9 @@ type CloudWatchLogs struct {
 	LogStreamName string `toml:"log_stream_name"`
 	LogGroupName  string `toml:"log_group_name"`
 
+	// Retention for log group
+	RetentionInDays int `toml:"retention_in_days"`
+
 	ForceFlushInterval internal.Duration `toml:"force_flush_interval"` // unit is second
 
 	Log telegraf.Logger `toml:"-"`
@@ -79,22 +82,25 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (c *CloudWatchLogs) CreateDest(group, stream string) logs.LogDest {
+func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.LogDest {
 	if group == "" {
 		group = c.LogGroupName
 	}
 	if stream == "" {
 		stream = c.LogStreamName
 	}
+	if retention <= 0 {
+		retention = -1
+	}
 
 	t := Target{
 		Group:  group,
 		Stream: stream,
 	}
-	return c.getDest(t)
+	return c.getDest(t, retention)
 }
 
-func (c *CloudWatchLogs) getDest(t Target) *cwDest {
+func (c *CloudWatchLogs) getDest(t Target, retention int) *cwDest {
 	if cwd, ok := c.cwDests[t]; ok {
 		return cwd
 	}
@@ -119,7 +125,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
 
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log)
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, retention)
 	cwd := &cwDest{pusher: pusher}
 	c.cwDests[t] = cwd
 	return cwd
@@ -130,7 +136,7 @@ func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
 	if err != nil {
 		c.Log.Errorf("Failed to find target: %v", err)
 	}
-	cwd := c.getDest(t)
+	cwd := c.getDest(t, -1)
 	if cwd == nil {
 		c.Log.Warnf("unable to find log destination, group: %v, stream: %v", t.Group, t.Stream)
 		return

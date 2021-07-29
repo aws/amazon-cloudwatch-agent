@@ -33,13 +33,14 @@ type LogSrc interface {
 	Stream() string
 	Destination() string
 	Description() string
+	Retention() int
 	Stop()
 }
 
 // A LogBackend is able to return a LogDest of a given name.
 // The same name should always return the same LogDest.
 type LogBackend interface {
-	CreateDest(string, string) LogDest
+	CreateDest(string, string, int) LogDest
 }
 
 // A LogDest represents a final endpoint where log events are published to.
@@ -74,6 +75,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 		if !ok {
 			continue
 		}
+		log.Printf("output is %v", output.Config)
 		log.Printf("I! [logagent] found plugin %v is a log backend", output.Config.Name)
 		name := output.Config.Alias
 		if name == "" {
@@ -85,6 +87,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 	for _, input := range l.Config.Inputs {
 		if collection, ok := input.Input.(LogCollection); ok {
 			log.Printf("I! [logagent] found plugin %v is a log collection", input.Config.Name)
+			log.Printf("input.config is %v", input.Config)
 			l.collections = append(l.collections, collection)
 		}
 	}
@@ -103,9 +106,9 @@ func (l *LogAgent) Run(ctx context.Context) {
 						log.Printf("E! [logagent] Failed to find destination %v for log source %v/%v(%v) ", dname, src.Group(), src.Stream(), src.Description())
 						continue
 					}
-					dest := backend.CreateDest(src.Group(), src.Stream())
+					dest := backend.CreateDest(src.Group(), src.Stream(), src.Retention())
 					l.destNames[dest] = dname
-					log.Printf("I! [logagent] piping log from %v/%v(%v) to %v", src.Group(), src.Stream(), src.Description(), dname)
+					log.Printf("I! [logagent] piping log from %v/%v(%v) to %v with retention %v", src.Group(), src.Stream(), src.Description(), dname, src.Retention())
 					go l.runSrcToDest(src, dest)
 				}
 			}
@@ -114,6 +117,19 @@ func (l *LogAgent) Run(ctx context.Context) {
 		}
 	}
 }
+
+// func adjustRetentions(srcs []LogSrc) []LogSrc{
+// 	srcSet := make(map[string]int)
+// 	for _, src := range srcs {
+// 		srcSet[src.Group()] += 1
+// 	}
+// 	for _, src := range srcs {
+//         if srcSet[src.Group()] > 1 {
+// 			src.
+// 		}
+//     }
+// 	return srcs
+// }
 
 func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	eventsCh := make(chan LogEvent)

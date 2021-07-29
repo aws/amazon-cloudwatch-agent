@@ -63,3 +63,12 @@ func ResetMessages() {
 	ErrorMessages = make([]string, 0)
 	InfoMessages = make([]string, 0)
 }
+
+// ValidDays represents the valid possible values for retentionInDays
+var ValidDays = map[int]bool{1: true, 3: true, 5: true, 7: true, 14: true,
+	30: true, 60: true, 90: true, 120: true, 150: true, 180: true,
+	365: true, 400: true, 545: true, 731: true, 1827: true, 3653: true}
+
+func IsValidRetentionDays(days int) bool {
+	return ValidDays[days]
+}

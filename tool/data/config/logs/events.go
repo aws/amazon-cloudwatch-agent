@@ -21,7 +21,7 @@ func (config *Events) ToMap(ctx *runtime.Context) (string, map[string]interface{
 	return "windows_events", resultMap
 }
 
-func (config *Events) AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat string, eventLevls []string) {
+func (config *Events) AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat string, eventLevls []string, retention int) {
 	if config.EventConfigs == nil {
 		config.EventConfigs = []*EventConfig{}
 	}
@@ -31,6 +31,7 @@ func (config *Events) AddWindowsEvent(eventName, logGroupName, logStreamName, ev
 		LogStream:   logStreamName,
 		EventFormat: eventFormat,
 		EventLevels: eventLevls,
+		Retention:   retention,
 	}
 	config.EventConfigs = append(config.EventConfigs, singleEvent)
 

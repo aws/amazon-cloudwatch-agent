@@ -663,6 +663,9 @@ var schema = `{
                   },
                   "publish_multi_logs": {
                     "type": "boolean"
+                  },
+                  "retention_in_days": {
+                    "type": "integer"
                   }
                 },
                 "required": [

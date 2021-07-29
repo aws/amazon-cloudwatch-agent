@@ -15,15 +15,15 @@ import (
 )
 
 var knownConfigKeys = []string{
-	"file",                     // "file_path"
-	"log_group_name",           // "log_group_name"
-	"log_stream_name",          // "log_stream_name", currently only single value in the output
-	"datetime_format",          // "timestamp_format", Based on https://golang.org/src/time/format.go and http://strftime.org/seh1_distribution.go
-	"time_zone",                // "timezone", UTC or LOCAL
-	"multi_line_start_pattern", // "multi_line_start_pattern"
-	"encoding",                 // "encoding"
-	"buffer_duration",          // "force_flush_interval", from ms to sec
-
+	"file",                           // "file_path"
+	"log_group_name",                 // "log_group_name"
+	"log_stream_name",                // "log_stream_name", currently only single value in the output
+	"datetime_format",                // "timestamp_format", Based on https://golang.org/src/time/format.go and http://strftime.org/seh1_distribution.go
+	"time_zone",                      // "timezone", UTC or LOCAL
+	"multi_line_start_pattern",       // "multi_line_start_pattern"
+	"encoding",                       // "encoding"
+	"buffer_duration",                // "force_flush_interval", from ms to sec
+	"retention_in_days",              // "retention_in_days"
 	"use_gzip_http_content_encoding", // Not used in new agent. Auto choose when the payload is optimized by this
 	"queue_size",                     // Not used in new agent
 	"initial_position",               // Not really used in new agent. Always set to start from beginning.
@@ -81,5 +81,16 @@ func addLogConfig(logsConfig *config.Logs, filePath, section string, p *configpa
 			}
 		}
 	}
-	logsConfig.AddLogFile(logFilePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding)
+	retentionInDays, _ := p.Get(section, "retention_in_days")
+	retention := -1
+	if retentionInDays != "" {
+		if i, err := strconv.Atoi(retentionInDays); err == nil {
+			fmt.Printf("Retention is valid from config and value of %v", i)
+			retention = i
+		} else if err != nil {
+			fmt.Printf("Config Retention value of %v is invalid", i)
+		}
+
+	}
+	logsConfig.AddLogFile(logFilePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding, retention)
 }

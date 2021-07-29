@@ -29,6 +29,7 @@ type CloudWatchLogsService interface {
 	PutLogEvents(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)
 	CreateLogStream(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error)
 	CreateLogGroup(input *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error)
+	PutRetentionPolicy(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error)
 }
 
 type pusher struct {
@@ -37,6 +38,7 @@ type pusher struct {
 	FlushTimeout  time.Duration
 	RetryDuration time.Duration
 	Log           telegraf.Logger
+	Retention     int
 
 	events              []*cloudwatchlogs.InputLogEvent
 	minT, maxT          *time.Time
@@ -53,21 +55,23 @@ type pusher struct {
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
+	retentionSet          map[string]int
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, retention int) *pusher {
 	p := &pusher{
-		Target:        target,
-		Service:       service,
-		FlushTimeout:  flushTimeout,
-		RetryDuration: retryDuration,
-		Log:           logger,
-
+		Target:          target,
+		Service:         service,
+		FlushTimeout:    flushTimeout,
+		RetryDuration:   retryDuration,
+		Log:             logger,
+		Retention:       retention,
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushTimer:      time.NewTimer(flushTimeout),
 		stop:            make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
+		retentionSet:    map[string]int{},
 	}
 	go p.start()
 	return p
@@ -224,6 +228,7 @@ func (p *pusher) send() {
 	for {
 		input.SequenceToken = p.sequenceToken
 		output, err := p.Service.PutLogEvents(input)
+		p.Log.Infof("calling put log events %v", p.Group)
 		if err == nil {
 			if output.NextSequenceToken != nil {
 				p.sequenceToken = output.NextSequenceToken
@@ -239,6 +244,16 @@ func (p *pusher) send() {
 				if info.ExpiredLogEventEndIndex != nil {
 					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
 				}
+			}
+			if p.Retention > 0 && p.Retention != p.retentionSet[p.Group] {
+				p.Log.Infof("calling retention policy %v with retention of %v and retentionSet %v", p.Group, p.Retention, p.retentionSet[p.Group])
+				err := p.PutRetentionPolicy()
+				if err != nil {
+					p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
+				}
+				p.retentionSet[p.Group] = p.Retention
+				p.Log.Infof("retention policy set for key %v with value %v", p.Group, p.retentionSet[p.Group])
+
 			}
 
 			for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
@@ -268,6 +283,13 @@ func (p *pusher) send() {
 			err := p.createLogGroupAndStream()
 			if err != nil {
 				p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
+				break
+			}
+			if p.Retention > 0 {
+				err := p.PutRetentionPolicy()
+				if err != nil {
+					p.Log.Errorf("Unable to put retention policy for log group &v: ", p.Group, err)
+				}
 			}
 		case *cloudwatchlogs.InvalidSequenceTokenException:
 			p.Log.Warnf("Invalid SequenceToken used, will use new token and retry: %v", e.Message())
@@ -331,6 +353,16 @@ func (p *pusher) createLogGroupAndStream() error {
 		}
 	}
 
+	return err
+}
+
+func (p *pusher) PutRetentionPolicy() error {
+	i := int64(p.Retention)
+	putRetentionInput := &cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    &p.Group,
+		RetentionInDays: &i,
+	}
+	_, err := p.Service.PutRetentionPolicy(putRetentionInput)
 	return err
 }
 

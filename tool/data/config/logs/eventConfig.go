@@ -11,6 +11,7 @@ type EventConfig struct {
 	EventFormat string   `event_format`
 	LogGroup    string   `log_group_name`
 	LogStream   string   `log_stream_name`
+	Retention   int      `retention_in_days`
 }
 
 func (config *EventConfig) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
@@ -24,5 +25,8 @@ func (config *EventConfig) ToMap(ctx *runtime.Context) (string, map[string]inter
 	}
 	resultMap["log_group_name"] = config.LogGroup
 	resultMap["log_stream_name"] = config.LogStream
+	if config.Retention != 0 {
+		resultMap["retention_in_days"] = config.Retention
+	}
 	return "", resultMap
 }

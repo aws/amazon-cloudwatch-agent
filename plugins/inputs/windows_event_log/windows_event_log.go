@@ -30,6 +30,7 @@ type EventConfig struct {
 	LogGroupName  string   `toml:"log_group_name"`
 	LogStreamName string   `toml:"log_stream_name"`
 	Destination   string   `toml:"destination"`
+	Retention     int      `toml:"retention_in_days"`
 }
 
 type Plugin struct {
@@ -87,6 +88,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 			destination,
 			stateFilePath,
 			eventConfig.BatchReadSize,
+			eventConfig.Retention,
 		)
 		err := eventLog.Init()
 		if err != nil {

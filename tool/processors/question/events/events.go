@@ -5,6 +5,7 @@ package events
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
@@ -82,8 +83,14 @@ func monitorEvents(ctx *runtime.Context, config *data.Config) {
 			eventFormat = EventFormatPlainText
 			eventFormatDefaultOption = 2
 		}
+		retentionInDays := util.Choice("Log Group Retention in days", 1, []string{"-1", "1", "3", "5", "7", "14", "30", "60", "90", "120", "150", "180", "365", "400", "545", "731", "1827", "3653"})
+		retention := -1
 
-		logsConf.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels)
+		i, err := strconv.Atoi(retentionInDays)
+		if err == nil {
+			retention = i
+		}
+		logsConf.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels, retention)
 
 		yes = util.Yes(fmt.Sprintf("Do you want to specify any additional %s to monitor?", WindowsEventLog))
 		if !yes {

@@ -148,7 +148,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	var srcs []logs.LogSrc
 
 	t.cleanUpStoppedTailerSrc()
-
+	t.editRetentions()
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
@@ -237,6 +237,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
+				fileconfig.RetentionInDays,
 			)
 
 			src.AddCleanUpFn(func(ts *tailerSrc) func() {
@@ -390,6 +391,25 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 			}
 		default:
 			return
+		}
+	}
+}
+
+func (t *LogFile) editRetentions() {
+	configSet := make(map[string]int)
+	for i := range t.FileConfig {
+		fileconfig := &t.FileConfig[i]
+
+		if fileconfig.LogGroupName != "" {
+			configSet[fileconfig.LogGroupName] += 1
+		}
+
+	}
+	for i := range t.FileConfig {
+		fileconfig := &t.FileConfig[i]
+
+		if fileconfig.LogGroupName != "" && configSet[fileconfig.LogGroupName] > 1 {
+			fileconfig.RetentionInDays = -1
 		}
 	}
 }
