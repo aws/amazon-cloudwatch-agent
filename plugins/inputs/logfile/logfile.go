@@ -148,7 +148,10 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	var srcs []logs.LogSrc
 
 	t.cleanUpStoppedTailerSrc()
-	t.editRetentions()
+
+	// If a log group has retention settings defined in more than one place, unset them to avoid
+	// nondeterministic behavior
+	t.unsetRetentionsForDuplicateLogGroups()
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
@@ -395,7 +398,7 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 	}
 }
 
-func (t *LogFile) editRetentions() {
+func (t *LogFile) unsetRetentionsForDuplicateLogGroups() {
 	configSet := make(map[string]int)
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
@@ -407,7 +410,7 @@ func (t *LogFile) editRetentions() {
 	}
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
-
+		// log group has Retention settings in multiple places: unset its retention config
 		if fileconfig.LogGroupName != "" && configSet[fileconfig.LogGroupName] > 1 {
 			fileconfig.RetentionInDays = -1
 		}

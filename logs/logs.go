@@ -75,7 +75,6 @@ func (l *LogAgent) Run(ctx context.Context) {
 		if !ok {
 			continue
 		}
-		log.Printf("output is %v", output.Config)
 		log.Printf("I! [logagent] found plugin %v is a log backend", output.Config.Name)
 		name := output.Config.Alias
 		if name == "" {

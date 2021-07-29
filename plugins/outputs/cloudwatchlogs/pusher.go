@@ -55,23 +55,24 @@ type pusher struct {
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
-	retentionSet          map[string]int
+	// Keep track of log groups whos retention has already been set
+	LogGroupRetentionMap map[string]int
 }
 
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, retention int) *pusher {
 	p := &pusher{
-		Target:          target,
-		Service:         service,
-		FlushTimeout:    flushTimeout,
-		RetryDuration:   retryDuration,
-		Log:             logger,
-		Retention:       retention,
-		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
-		eventsCh:        make(chan logs.LogEvent, 100),
-		flushTimer:      time.NewTimer(flushTimeout),
-		stop:            make(chan struct{}),
-		startNonBlockCh: make(chan struct{}),
-		retentionSet:    map[string]int{},
+		Target:               target,
+		Service:              service,
+		FlushTimeout:         flushTimeout,
+		RetryDuration:        retryDuration,
+		Log:                  logger,
+		Retention:            retention,
+		events:               make([]*cloudwatchlogs.InputLogEvent, 0, 10),
+		eventsCh:             make(chan logs.LogEvent, 100),
+		flushTimer:           time.NewTimer(flushTimeout),
+		stop:                 make(chan struct{}),
+		startNonBlockCh:      make(chan struct{}),
+		LogGroupRetentionMap: map[string]int{},
 	}
 	go p.start()
 	return p
@@ -244,12 +245,12 @@ func (p *pusher) send() {
 					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
 				}
 			}
-			if p.Retention > 0 && p.Retention != p.retentionSet[p.Group] {
+			if p.Retention > 0 && p.Retention != p.LogGroupRetentionMap[p.Group] {
 				err := p.PutRetentionPolicy()
 				if err != nil {
 					p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
 				}
-				p.retentionSet[p.Group] = p.Retention
+				p.LogGroupRetentionMap[p.Group] = p.Retention
 
 			}
 
@@ -287,6 +288,7 @@ func (p *pusher) send() {
 				if err != nil {
 					p.Log.Errorf("Unable to put retention policy for log group &v: ", p.Group, err)
 				}
+				p.LogGroupRetentionMap[p.Group] = p.Retention
 			}
 		case *cloudwatchlogs.InvalidSequenceTokenException:
 			p.Log.Warnf("Invalid SequenceToken used, will use new token and retry: %v", e.Message())
