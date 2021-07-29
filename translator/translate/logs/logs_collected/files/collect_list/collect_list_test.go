@@ -30,11 +30,12 @@ func TestFileConfig(t *testing.T) {
 	_, val := f.ApplyRule(input)
 
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":       "path1",
-		"from_beginning":  true,
-		"log_group_name":  "group1",
-		"log_stream_name": "LOG_STREAM_NAME",
-		"pipe":            false,
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"log_group_name":    "group1",
+		"log_stream_name":   "LOG_STREAM_NAME",
+		"pipe":              false,
+		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -49,10 +50,11 @@ func TestFileConfigOverride(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":      "path1",
-		"from_beginning": false,
-		"log_group_name": "group1",
-		"pipe":           false,
+		"file_path":         "path1",
+		"from_beginning":    false,
+		"log_group_name":    "group1",
+		"pipe":              false,
+		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -74,19 +76,20 @@ func TestTimestampFormat(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":        "path1",
-		"from_beginning":   true,
-		"pipe":             false,
-		"timestamp_layout": "15:04:05 06 Jan 2",
-		"timestamp_regex":  "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
-		"timezone":         "UTC",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"timestamp_layout":  "15:04:05 06 Jan 2",
+		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
+		"timezone":          "UTC",
+		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
 }
 
 func TestTimestampFormatAll(t *testing.T) {
 	tests := []struct {
-		input string
+		input    string
 		expected interface{}
 	}{
 		{
@@ -98,13 +101,14 @@ func TestTimestampFormatAll(t *testing.T) {
 						}
 					]
 				}`,
-			expected:  []interface{}{map[string]interface{}{
-				"file_path":"path1",
-				"from_beginning":   true,
-				"pipe":             false,
-				"timestamp_layout": "15:04:05 06 Jan 2",
-				"timestamp_regex":  "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
-				}},
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path1",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  "15:04:05 06 Jan 2",
+				"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
+			}},
 		},
 		{
 			input: `{
@@ -115,12 +119,13 @@ func TestTimestampFormatAll(t *testing.T) {
 						}
 					]
 				}`,
-			expected:  []interface{}{map[string]interface{}{
-				"file_path":"path1",
-				"from_beginning":   true,
-				"pipe":             false,
-				"timestamp_layout": "1 2 15:04:05",
-				"timestamp_regex":  "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path1",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  "1 2 15:04:05",
+				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
 			}},
 		},
 		{
@@ -132,12 +137,13 @@ func TestTimestampFormatAll(t *testing.T) {
 						}
 					]
 				}`,
-			expected:  []interface{}{map[string]interface{}{
-				"file_path":"path1",
-				"from_beginning":   true,
-				"pipe":             false,
-				"timestamp_layout": "2 1 15:04:05",
-				"timestamp_regex":  "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path1",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  "2 1 15:04:05",
+				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
 			}},
 		},
 		{
@@ -149,12 +155,13 @@ func TestTimestampFormatAll(t *testing.T) {
 						}
 					]
 				}`,
-			expected:  []interface{}{map[string]interface{}{
-				"file_path":"path1",
-				"from_beginning":   true,
-				"pipe":             false,
-				"timestamp_layout": "5 2 1 15:04:05",
-				"timestamp_regex":  "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path1",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  "5 2 1 15:04:05",
+				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
 			}},
 		},
 	}
@@ -198,12 +205,13 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 	expectedLayout := "3:4:5 06 1 2"
 	expectedRegex := "(\\d{1,2}:\\d{1,2}:\\d{1,2} \\d{2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2})"
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":        "path1",
-		"from_beginning":   true,
-		"pipe":             false,
-		"timestamp_layout": expectedLayout,
-		"timestamp_regex":  expectedRegex,
-		"timezone":         "UTC",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"timestamp_layout":  expectedLayout,
+		"timestamp_regex":   expectedRegex,
+		"timezone":          "UTC",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -243,12 +251,13 @@ func TestTimestampFormat_SpecialCharacters(t *testing.T) {
 	expectedLayout := "^.*?|[({15:04:05 06 Jan 2})]$"
 	expectedRegex := "(\\^\\.\\*\\?\\|\\[\\(\\{\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2}\\}\\)\\]\\$)"
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":        "path1",
-		"from_beginning":   true,
-		"pipe":             false,
-		"timestamp_layout": expectedLayout,
-		"timestamp_regex":  expectedRegex,
-		"timezone":         "UTC",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"timestamp_layout":  expectedLayout,
+		"timestamp_regex":   expectedRegex,
+		"timezone":          "UTC",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -281,11 +290,12 @@ func TestTimestampFormat_Template(t *testing.T) {
 	expectedLayout := "Jan 2 15:04:05"
 	expectedRegex := "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":        "path1",
-		"from_beginning":   true,
-		"pipe":             false,
-		"timestamp_layout": expectedLayout,
-		"timestamp_regex":  expectedRegex,
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"timestamp_layout":  expectedLayout,
+		"timestamp_regex":   expectedRegex,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -321,6 +331,7 @@ func TestMultiLineStartPattern(t *testing.T) {
 		"file_path":                "path1",
 		"from_beginning":           true,
 		"pipe":                     false,
+		"retention_in_days":        -1,
 		"timestamp_layout":         "15:04:05 06 Jan 02",
 		"timestamp_regex":          "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
 		"timezone":                 "UTC",
@@ -347,13 +358,14 @@ func TestEncoding(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":        "path1",
-		"from_beginning":   true,
-		"pipe":             false,
-		"timestamp_layout": "15:04:05 06 Jan 02",
-		"timestamp_regex":  "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
-		"timezone":         "UTC",
-		"encoding":         "gbk",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"timestamp_layout":  "15:04:05 06 Jan 02",
+		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
+		"timezone":          "UTC",
+		"encoding":          "gbk",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -374,9 +386,10 @@ func TestEncoding_Invalid(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":      "path1",
-		"from_beginning": true,
-		"pipe":           false,
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
 	assert.False(t, translator.IsTranslateSuccess())
@@ -400,10 +413,11 @@ func TestAutoRemoval(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":      "path1",
-		"from_beginning": true,
-		"pipe":           false,
-		"auto_removal":   true,
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"auto_removal":      true,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -420,10 +434,11 @@ func TestAutoRemoval(t *testing.T) {
 	}
 	_, val = f.ApplyRule(input)
 	expectVal = []interface{}{map[string]interface{}{
-		"file_path":      "path1",
-		"from_beginning": true,
-		"pipe":           false,
-		"auto_removal":   false,
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"auto_removal":      false,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -439,9 +454,10 @@ func TestAutoRemoval(t *testing.T) {
 	}
 	_, val = f.ApplyRule(input)
 	expectVal = []interface{}{map[string]interface{}{
-		"file_path":      "path1",
-		"from_beginning": true,
-		"pipe":           false,
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -513,6 +529,7 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 		"file_path":          "path1",
 		"from_beginning":     true,
 		"pipe":               false,
+		"retention_in_days":  -1,
 		"blacklist":          "^agent.log",
 		"publish_multi_logs": true,
 		"timezone":           "UTC",
@@ -536,6 +553,7 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 		"file_path":          "path1",
 		"from_beginning":     true,
 		"pipe":               false,
+		"retention_in_days":  -1,
 		"publish_multi_logs": false,
 		"timezone":           "UTC",
 	}}
@@ -553,9 +571,10 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 	}
 	_, val = f.ApplyRule(input)
 	expectVal = []interface{}{map[string]interface{}{
-		"file_path":      "path1",
-		"from_beginning": true,
-		"pipe":           false,
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
 }
