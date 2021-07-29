@@ -118,19 +118,6 @@ func (l *LogAgent) Run(ctx context.Context) {
 	}
 }
 
-// func adjustRetentions(srcs []LogSrc) []LogSrc{
-// 	srcSet := make(map[string]int)
-// 	for _, src := range srcs {
-// 		srcSet[src.Group()] += 1
-// 	}
-// 	for _, src := range srcs {
-//         if srcSet[src.Group()] > 1 {
-// 			src.
-// 		}
-//     }
-// 	return srcs
-// }
-
 func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	eventsCh := make(chan LogEvent)
 	defer src.Stop()
