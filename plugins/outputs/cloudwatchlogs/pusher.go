@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
@@ -245,13 +246,9 @@ func (p *pusher) send() {
 					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
 				}
 			}
-			if p.Retention > 0 && p.Retention != p.LogGroupRetentionMap[p.Group] {
-				err := p.PutRetentionPolicy()
-				if err != nil {
-					p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
-				}
-				p.LogGroupRetentionMap[p.Group] = p.Retention
-
+			err := p.PutRetentionPolicy()
+			if err != nil {
+				p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
 			}
 
 			for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
@@ -283,13 +280,11 @@ func (p *pusher) send() {
 				p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
 				break
 			}
-			if p.Retention > 0 {
-				err := p.PutRetentionPolicy()
-				if err != nil {
-					p.Log.Errorf("Unable to put retention policy for log group &v: ", p.Group, err)
-				}
-				p.LogGroupRetentionMap[p.Group] = p.Retention
+			retentionErr := p.PutRetentionPolicy()
+			if retentionErr != nil {
+				p.Log.Errorf("Unable to put retention policy for log group &v: ", p.Group, err)
 			}
+
 		case *cloudwatchlogs.InvalidSequenceTokenException:
 			p.Log.Warnf("Invalid SequenceToken used, will use new token and retry: %v", e.Message())
 			if e.ExpectedSequenceToken == nil {
@@ -356,13 +351,17 @@ func (p *pusher) createLogGroupAndStream() error {
 }
 
 func (p *pusher) PutRetentionPolicy() error {
-	i := int64(p.Retention)
-	putRetentionInput := &cloudwatchlogs.PutRetentionPolicyInput{
-		LogGroupName:    &p.Group,
-		RetentionInDays: &i,
+	if p.Retention > 0 && p.Retention != p.LogGroupRetentionMap[p.Group] {
+		i := aws.Int64(int64(p.Retention))
+		putRetentionInput := &cloudwatchlogs.PutRetentionPolicyInput{
+			LogGroupName:    &p.Group,
+			RetentionInDays: i,
+		}
+		_, err := p.Service.PutRetentionPolicy(putRetentionInput)
+		return err
 	}
-	_, err := p.Service.PutRetentionPolicy(putRetentionInput)
-	return err
+	p.LogGroupRetentionMap[p.Group] = p.Retention
+	return nil
 }
 
 func (p *pusher) resetFlushTimer() {

@@ -87,7 +87,7 @@ func addLogConfig(logsConfig *config.Logs, filePath, section string, p *configpa
 		if i, err := strconv.Atoi(retentionInDays); err == nil {
 			fmt.Printf("Retention is valid from config and value of %v", i)
 			retention = i
-		} else if err != nil {
+		} else {
 			fmt.Printf("Config Retention value of %v is invalid", i)
 		}
 

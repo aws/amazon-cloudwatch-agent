@@ -22,9 +22,10 @@ func TestEventConfig_ToMap(t *testing.T) {
 	key, value := conf.ToMap(ctx)
 	assert.Equal(t, "", key)
 	assert.Equal(t, map[string]interface{}{
-		"event_name":      "System",
-		"event_levels":    []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
-		"log_group_name":  "SystemGroup",
-		"log_stream_name": "SystemStream", "retention_in_days": 1},
+		"event_name":        "System",
+		"event_levels":      []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
+		"log_group_name":    "SystemGroup",
+		"log_stream_name":   "SystemStream",
+		"retention_in_days": 1},
 		value)
 }

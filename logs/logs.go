@@ -86,7 +86,6 @@ func (l *LogAgent) Run(ctx context.Context) {
 	for _, input := range l.Config.Inputs {
 		if collection, ok := input.Input.(LogCollection); ok {
 			log.Printf("I! [logagent] found plugin %v is a log collection", input.Config.Name)
-			log.Printf("input.config is %v", input.Config)
 			l.collections = append(l.collections, collection)
 		}
 	}

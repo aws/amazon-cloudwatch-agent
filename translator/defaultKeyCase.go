@@ -62,3 +62,19 @@ func DefaultStringArrayCase(key string, defaultVal, input interface{}) (returnKe
 	}
 	return
 }
+
+func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
+	returnKey, returnVal = DefaultIntegralCase(key, defaultVal, input)
+	if intVal, ok := returnVal.(int); ok {
+		if IsValidRetentionDays(intVal) {
+			returnVal = intVal
+		} else {
+			returnVal = -1
+		}
+	} else {
+		AddErrorMessages(
+			fmt.Sprintf("Retention in Days key: %s", key),
+			fmt.Sprintf("%s value (%v) in is not valid retention in days.", key, returnVal))
+	}
+	return
+}
