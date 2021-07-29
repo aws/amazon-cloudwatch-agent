@@ -228,7 +228,6 @@ func (p *pusher) send() {
 	for {
 		input.SequenceToken = p.sequenceToken
 		output, err := p.Service.PutLogEvents(input)
-		p.Log.Infof("calling put log events %v", p.Group)
 		if err == nil {
 			if output.NextSequenceToken != nil {
 				p.sequenceToken = output.NextSequenceToken
@@ -246,13 +245,11 @@ func (p *pusher) send() {
 				}
 			}
 			if p.Retention > 0 && p.Retention != p.retentionSet[p.Group] {
-				p.Log.Infof("calling retention policy %v with retention of %v and retentionSet %v", p.Group, p.Retention, p.retentionSet[p.Group])
 				err := p.PutRetentionPolicy()
 				if err != nil {
 					p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
 				}
 				p.retentionSet[p.Group] = p.Retention
-				p.Log.Infof("retention policy set for key %v with value %v", p.Group, p.retentionSet[p.Group])
 
 			}
 
