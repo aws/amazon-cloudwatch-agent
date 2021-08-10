@@ -118,6 +118,7 @@ func transformFuncPod(obj interface{}) (interface{}, error) {
 func createPodListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+			opts.ResourceVersion = ""
 			return client.CoreV1().Pods(ns).List(opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {

@@ -149,6 +149,7 @@ func transformFuncReplicaSet(obj interface{}) (interface{}, error) {
 func createReplicaSetListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+			opts.ResourceVersion = ""
 			return client.AppsV1().ReplicaSets(ns).List(opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {

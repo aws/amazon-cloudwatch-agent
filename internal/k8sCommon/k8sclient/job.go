@@ -150,6 +150,7 @@ func transformFuncJob(obj interface{}) (interface{}, error) {
 func createJobListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+			opts.ResourceVersion = ""
 			return client.BatchV1().Jobs(ns).List(opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
