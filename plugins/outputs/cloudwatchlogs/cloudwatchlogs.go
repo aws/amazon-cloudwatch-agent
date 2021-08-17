@@ -15,6 +15,7 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -109,18 +110,20 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		Token:     c.Token,
 	}
 
+	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{
 			Endpoint:   aws.String(c.EndpointOverride),
 			HTTPClient: &http.Client{Timeout: 1 * time.Minute},
+			Retryer:    logThrottleRetryer,
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
 
 	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log)
-	cwd := &cwDest{pusher: pusher}
+	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
 }
@@ -260,6 +263,7 @@ type cwDest struct {
 	sync.Mutex
 	isEMF   bool
 	stopped bool
+	retryer *retryer.LogThrottleRetryer
 }
 
 func (cd *cwDest) Publish(events []logs.LogEvent) error {
@@ -280,6 +284,7 @@ func (cd *cwDest) Publish(events []logs.LogEvent) error {
 
 func (cd *cwDest) Stop() {
 	cd.pusher.Stop()
+	cd.retryer.Stop()
 	cd.stopped = true
 }
 
