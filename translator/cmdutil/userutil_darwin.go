@@ -26,7 +26,7 @@ import (
 
 const (
 	// dsbin is a cli for querying macOS directory service.
-	dsbin = "dscacheutil"
+	dsbin = "/usr/bin/dscacheutil"
 )
 
 // dsLookup shells out to dscacheutil to get uid, gid from username.
@@ -55,28 +55,6 @@ func dsLookup(username string) (*user.User, error) {
 		return nil, user.UnknownUserError(username)
 	}
 	return u, nil
-}
-
-// dsLookupGroup shells out to dscacheutil to get group name from id.
-// To get a gid for user, use dsLookup.
-func dsLookupGroupId(gid string) (*user.Group, error) {
-	// dscacheutil -q group -a gid 2896053708
-	// name: CloudWatch
-	// password: ***
-	// gid: 2896053708
-	//
-	m, err := runDS("-q", "group", "-a", "gid", gid)
-	if err != nil {
-		return nil, err
-	}
-	g := &user.Group{
-		Gid:  m["gid"],
-		Name: m["name"],
-	}
-	if g.Gid == "" || g.Gid != gid {
-		return nil, user.UnknownGroupIdError(gid)
-	}
-	return g, nil
 }
 
 // runDS shells out query to dscacheutil and parse it to key value pair.
@@ -147,11 +125,18 @@ func ChangeUser(mergedJsonConfigMap map[string]interface{}) (string, error) {
 		return runAsUser, err
 	}
 
-	g, err := dsLookupGroupId(execUser.Gid)
+	uid, err := strconv.Atoi(execUser.Uid)
 	if err != nil {
-		return runAsUser, fmt.Errorf("error lookup group by id: %w", err)
+		return runAsUser, fmt.Errorf("UID %s cannot be converted to intger uid: %w", execUser.Uid, err)
 	}
-	if err := changeFileOwner(runAsUser, g.Name); err != nil {
+
+	gid, err := strconv.Atoi(execUser.Gid)
+	if err != nil {
+		log.Printf("W! GID %s cannot be converted to intger gid, not changing gid of files: %v", execUser.Gid, err)
+		gid = -1 // -1 means not changing the GUID, see: https://golang.org/pkg/os/#Chown
+	}
+
+	if err := changeFileOwner(uid, gid); err != nil {
 		return runAsUser, fmt.Errorf("error change ownership of dirs: %w", err)
 	}
 
