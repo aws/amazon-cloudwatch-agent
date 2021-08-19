@@ -365,6 +365,12 @@ var schema = `{
               "type": "string",
               "minLength": 1,
               "maxLength": 255
+            },
+            "templates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false

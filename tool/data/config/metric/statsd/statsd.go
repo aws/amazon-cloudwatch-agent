@@ -8,9 +8,10 @@ import (
 )
 
 type StatsD struct {
-	ServiceAddress             string `service_address`
-	MetricsCollectionInterval  int    `metrics_collection_interval`
-	MetricsAggregationInterval int    `metrics_aggregation_interval`
+	ServiceAddress             string   `service_address`
+	MetricsCollectionInterval  int      `metrics_collection_interval`
+	MetricsAggregationInterval int      `metrics_aggregation_interval`
+	Templates                  []string `templates`
 }
 
 func (config *StatsD) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
@@ -18,6 +19,9 @@ func (config *StatsD) ToMap(ctx *runtime.Context) (string, map[string]interface{
 
 	if config.ServiceAddress != "" {
 		resultMap["service_address"] = config.ServiceAddress
+	}
+	if config.Templates != nil {
+		resultMap["templates"] = config.Templates
 	}
 	if config.MetricsCollectionInterval != 0 {
 		resultMap["metrics_collection_interval"] = config.MetricsCollectionInterval

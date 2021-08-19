@@ -75,7 +75,10 @@
         "service_address": ":8125",
         "metrics_collection_interval": 10,
         "metrics_aggregation_interval": 60,
-        "metric_separator": "_"
+        "metric_separator": "_",
+        "templates": [
+          "measurement.*"
+        ]
       },
       "swap": {
         "measurement": [
