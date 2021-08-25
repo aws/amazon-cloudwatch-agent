@@ -56,24 +56,24 @@ type pusher struct {
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
-	// Keep track of log groups whos retention has already been set
-	LogGroupRetentionMap map[string]int
+	// Keep track if setting log group retention has already been attempted
+	logGroupRetentionUpdateAttempted bool
 }
 
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, retention int) *pusher {
 	p := &pusher{
-		Target:               target,
-		Service:              service,
-		FlushTimeout:         flushTimeout,
-		RetryDuration:        retryDuration,
-		Log:                  logger,
-		Retention:            retention,
-		events:               make([]*cloudwatchlogs.InputLogEvent, 0, 10),
-		eventsCh:             make(chan logs.LogEvent, 100),
-		flushTimer:           time.NewTimer(flushTimeout),
-		stop:                 make(chan struct{}),
-		startNonBlockCh:      make(chan struct{}),
-		LogGroupRetentionMap: map[string]int{},
+		Target:                           target,
+		Service:                          service,
+		FlushTimeout:                     flushTimeout,
+		RetryDuration:                    retryDuration,
+		Log:                              logger,
+		Retention:                        retention,
+		events:                           make([]*cloudwatchlogs.InputLogEvent, 0, 10),
+		eventsCh:                         make(chan logs.LogEvent, 100),
+		flushTimer:                       time.NewTimer(flushTimeout),
+		stop:                             make(chan struct{}),
+		startNonBlockCh:                  make(chan struct{}),
+		logGroupRetentionUpdateAttempted: false,
 	}
 	go p.start()
 	return p
@@ -351,7 +351,7 @@ func (p *pusher) createLogGroupAndStream() error {
 }
 
 func (p *pusher) PutRetentionPolicy() error {
-	if p.Retention > 0 && p.Retention != p.LogGroupRetentionMap[p.Group] {
+	if p.Retention > 0 && !p.logGroupRetentionUpdateAttempted {
 		i := aws.Int64(int64(p.Retention))
 		putRetentionInput := &cloudwatchlogs.PutRetentionPolicyInput{
 			LogGroupName:    &p.Group,
@@ -360,7 +360,7 @@ func (p *pusher) PutRetentionPolicy() error {
 		_, err := p.Service.PutRetentionPolicy(putRetentionInput)
 		return err
 	}
-	p.LogGroupRetentionMap[p.Group] = p.Retention
+	p.logGroupRetentionUpdateAttempted = true
 	return nil
 }
 
