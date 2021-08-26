@@ -19,6 +19,10 @@ const versionFilename = "CWAGENT_VERSION"
 // We will fall back to a major version if no valid version file is found
 const fallbackVersion = "1"
 
+var isRunningAsRoot = func() bool {
+	return os.Getuid() == 0
+}
+
 var (
 	VersionStr    string
 	BuildStr      string = "No Build Date"
@@ -49,6 +53,11 @@ func Build() string {
 func Plugins() string {
 	outputs := strings.Join(OutputPlugins, " ")
 	inputs := strings.Join(InputPlugins, " ")
+
+	if !isRunningAsRoot() {
+		inputs += " run_as_user" // `inputs` is never empty, or agent will not start
+	}
+
 	return fmt.Sprintf("inputs:(%s) outputs:(%s)", inputs, outputs)
 }
 
