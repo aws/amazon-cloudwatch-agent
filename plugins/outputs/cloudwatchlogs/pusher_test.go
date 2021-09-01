@@ -679,3 +679,54 @@ func TestAddEventNonBlocking(t *testing.T) {
 	}
 	p.Stop()
 }
+
+func TestPutRetentionNegativeInput(t *testing.T) {
+	var s svcMock
+	var prpc int
+	s.prp = func(in *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+		prpc++
+		return nil, nil
+	}
+	p := NewPusher(Target{"G", "S"}, &s, 1*time.Hour, maxRetryTimeout, models.NewLogger("cloudwatchlogs", "test", ""), -1)
+	p.putRetentionPolicy()
+	if prpc == 1 {
+		t.Errorf("Put Retention Policy api shouldn't have been called")
+	}
+}
+
+func TestPutRetentionValidMaxInput(t *testing.T) {
+	var s svcMock
+	var prpc = 0
+	s.prp = func(in *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+		prpc++
+		return nil, nil
+	}
+	p := NewPusher(Target{"G", "S"}, &s, 1*time.Hour, maxRetryTimeout, models.NewLogger("cloudwatchlogs", "test", ""), 1000000000000000000)
+	p.putRetentionPolicy()
+
+	if prpc != 2 {
+		t.Errorf("Put Retention Policy api should have been called twice. Number of times called: %v", prpc)
+	}
+
+}
+
+func TestPutRetentionWhenError(t *testing.T) {
+	var s svcMock
+	var prpc int
+	s.prp = func(in *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+		prpc++
+		return nil, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "", nil)
+	}
+	var logbuf bytes.Buffer
+	log.SetOutput(io.MultiWriter(&logbuf, os.Stdout))
+	p := NewPusher(Target{"G", "S"}, &s, 1*time.Hour, maxRetryTimeout, models.NewLogger("cloudwatchlogs", "test", ""), 1)
+	time.Sleep(10 * time.Millisecond)
+	loglines := strings.Split(strings.TrimSpace(logbuf.String()), "\n")
+	logline := loglines[0]
+	if prpc == 0 {
+		t.Errorf("Put Retention Policy should have been called on creation with retention of %v", p.Retention)
+	}
+	if !strings.Contains(logline, "ResourceNotFound") {
+		t.Errorf("Expecting ResourceNotFoundException but got '%s' in the log", logbuf.String())
+	}
+}

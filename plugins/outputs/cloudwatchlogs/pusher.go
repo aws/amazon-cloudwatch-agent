@@ -56,25 +56,23 @@ type pusher struct {
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
-	// Keep track if setting log group retention has already been attempted
-	logGroupRetentionUpdateAttempted bool
 }
 
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, retention int) *pusher {
 	p := &pusher{
-		Target:                           target,
-		Service:                          service,
-		FlushTimeout:                     flushTimeout,
-		RetryDuration:                    retryDuration,
-		Log:                              logger,
-		Retention:                        retention,
-		events:                           make([]*cloudwatchlogs.InputLogEvent, 0, 10),
-		eventsCh:                         make(chan logs.LogEvent, 100),
-		flushTimer:                       time.NewTimer(flushTimeout),
-		stop:                             make(chan struct{}),
-		startNonBlockCh:                  make(chan struct{}),
-		logGroupRetentionUpdateAttempted: false,
+		Target:          target,
+		Service:         service,
+		FlushTimeout:    flushTimeout,
+		RetryDuration:   retryDuration,
+		Log:             logger,
+		Retention:       retention,
+		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
+		eventsCh:        make(chan logs.LogEvent, 100),
+		flushTimer:      time.NewTimer(flushTimeout),
+		stop:            make(chan struct{}),
+		startNonBlockCh: make(chan struct{}),
 	}
+	p.putRetentionPolicy()
 	go p.start()
 	return p
 }
@@ -246,11 +244,6 @@ func (p *pusher) send() {
 					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
 				}
 			}
-			err := p.PutRetentionPolicy()
-			if err != nil {
-				p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
-			}
-
 			for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
 				done := p.doneCallbacks[i]
 				done()
@@ -280,11 +273,7 @@ func (p *pusher) send() {
 				p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
 				break
 			}
-			retentionErr := p.PutRetentionPolicy()
-			if retentionErr != nil {
-				p.Log.Errorf("Unable to put retention policy for log group &v: ", p.Group, err)
-			}
-
+			p.putRetentionPolicy()
 		case *cloudwatchlogs.InvalidSequenceTokenException:
 			p.Log.Warnf("Invalid SequenceToken used, will use new token and retry: %v", e.Message())
 			if e.ExpectedSequenceToken == nil {
@@ -350,18 +339,18 @@ func (p *pusher) createLogGroupAndStream() error {
 	return err
 }
 
-func (p *pusher) PutRetentionPolicy() error {
-	if p.Retention > 0 && !p.logGroupRetentionUpdateAttempted {
+func (p *pusher) putRetentionPolicy() {
+	if p.Retention > 0 {
 		i := aws.Int64(int64(p.Retention))
 		putRetentionInput := &cloudwatchlogs.PutRetentionPolicyInput{
 			LogGroupName:    &p.Group,
 			RetentionInDays: i,
 		}
 		_, err := p.Service.PutRetentionPolicy(putRetentionInput)
-		return err
+		if err != nil {
+			p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
+		}
 	}
-	p.logGroupRetentionUpdateAttempted = true
-	return nil
 }
 
 func (p *pusher) resetFlushTimer() {

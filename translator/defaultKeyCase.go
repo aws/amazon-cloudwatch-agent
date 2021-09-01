@@ -72,6 +72,7 @@ func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (retu
 			returnVal = -1
 		}
 	} else {
+		returnVal = -1
 		AddErrorMessages(
 			fmt.Sprintf("Retention in Days key: %s", key),
 			fmt.Sprintf("%s value (%v) in is not valid retention in days.", key, returnVal))

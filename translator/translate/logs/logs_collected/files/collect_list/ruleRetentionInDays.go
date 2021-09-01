@@ -14,9 +14,6 @@ type RetentionInDays struct {
 
 func (f *RetentionInDays) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	_, returnVal = translator.DefaultRetentionInDaysCase(RetentionInDaysSectionKey, float64(-1), input)
-	if returnVal == "" {
-		return
-	}
 	returnKey = RetentionInDaysSectionKey
 	return
 }
