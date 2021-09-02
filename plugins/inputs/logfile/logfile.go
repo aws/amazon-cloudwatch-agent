@@ -399,19 +399,19 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 }
 
 func (t *LogFile) unsetRetentionsForDuplicateLogGroups() {
-	configSet := make(map[string]int)
+	configMap := make(map[string]int)
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
 
 		if fileconfig.LogGroupName != "" {
-			configSet[fileconfig.LogGroupName] += 1
+			configMap[fileconfig.LogGroupName] += 1
 		}
 
 	}
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
 		// log group has Retention settings in multiple places: unset its retention config
-		if fileconfig.LogGroupName != "" && configSet[fileconfig.LogGroupName] > 1 {
+		if fileconfig.LogGroupName != "" && configMap[fileconfig.LogGroupName] > 1 {
 			fileconfig.RetentionInDays = -1
 		}
 	}
