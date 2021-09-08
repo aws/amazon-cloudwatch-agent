@@ -120,6 +120,9 @@ fmt:
 test:
 	CGO_ENABLED=0 go test -v -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
 
+integration-test:
+	go test ./integration/test/... -p 1 -v --tags=integration
+
 clean::
 	rm -rf release/ build/
 	rm -f CWAGENT_VERSION
