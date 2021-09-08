@@ -1,0 +1,3 @@
+
+ [ssl]
+    ca_bundle_path = "/home/ubuntu/amazon-cloudwatch-agent/integration/localstack/ls_tmp/original.pem"

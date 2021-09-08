@@ -1,0 +1,156 @@
+name: Run Integration Tests
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+
+  Terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    outputs:
+      hostname: ${{ steps.terraformHostnameOutput.outputs.hostname }}
+      terraformState: ${{ steps.terraformStateOutput.outputs.terraformState }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform init
+        env:
+          TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          TERRAFORM_AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform init -var="aws_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}" -var="aws_secret_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}"
+
+      - name: Terraform apply
+        env:
+          PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+          TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          TERRAFORM_AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: >
+          terraform apply --auto-approve
+          -var="ssh_key=${PRIVATE_KEY}"
+          -var="aws_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}"
+          -var="aws_secret_access_key=${TERRAFORM_AWS_SECRET_ACCESS_KEY}"
+          -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          -var="github_sha=${GITHUB_SHA}"
+          -var="package=package-deb"
+          -var="install_agent=sudo dpkg -i -E ./amazon-cloudwatch-agent.deb"
+          -var="user=ubuntu"
+          -var="ami=ami-0b284e8646fbf58a8"
+
+      - name: Echo Hostname
+        run: echo $(terraform output -raw instance_dns)
+
+      - name: Echo State
+        run: echo $(cat terraform.tfstate)
+
+      - id: terraformHostnameOutput
+        run: echo "::set-output name=hostname::$(terraform output -raw instance_dns)"
+
+      - id: terraformStateOutput
+        run: echo "::set-output name=terraformState::$(echo $(cat terraform.tfstate))"
+
+  AddLocalStackKeys:
+    needs: [Terraform]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Add Local Stack Keys on EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+          HOSTNAME: ${{ needs.Terraform.outputs.hostname }}
+          USER_NAME: ${{ secrets.USER_NAME  }}
+
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
+            cd amazon-cloudwatch-agent/integration/localstack &&
+            cd ls_tmp &&
+            openssl req -new -x509 -newkey rsa:2048 -sha256 -nodes -out snakeoil.pem -keyout snakeoil.key -config snakeoil.conf &&
+            cat snakeoil.key snakeoil.pem > server.test.pem &&
+            cat snakeoil.key > server.test.pem.key &&
+            cat snakeoil.pem > server.test.pem.crt &&
+            cat /etc/ssl/certs/ca-certificates.crt > original.pem &&
+            cat original.pem snakeoil.pem > combine.pem
+          '
+
+  StartLocalStack:
+    needs: [AddLocalStackKeys, Terraform]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Start Local Stack on EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+          HOSTNAME: ${{ needs.Terraform.outputs.hostname }}
+          USER_NAME: ${{ secrets.USER_NAME  }}
+
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
+            cd amazon-cloudwatch-agent/integration/localstack &&
+            docker-compose up -d --force-recreate
+          '
+
+  RunIntegrationTest:
+    needs: [Terraform, StartLocalStack]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Integration Test
+        env:
+          PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+          HOSTNAME: ${{ needs.Terraform.outputs.hostname }}
+          USER_NAME: ${{ secrets.USER_NAME  }}
+
+        run: |
+          echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+          ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
+            cd amazon-cloudwatch-agent/integration/test &&
+            # Must run the test as sudo since it changes the /opt/aws/amazon-cloud-watch-agent files
+            sudo go test ./... -p 1 -v --tags=integration
+          '
+  TerraformDestroy:
+    if: always()
+    needs: [RunIntegrationTest, Terraform]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Copy Terraform
+        env:
+          STATE: ${{ needs.Terraform.outputs.terraformState }}
+
+        run: |
+          echo "${STATE}" &&
+          echo "${STATE}" > terraform.tfstate
+
+      - name: Terraform init
+        env:
+          TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          TERRAFORM_AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform init -var="aws_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}" -var="aws_secret_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}"
+
+      - name: Terraform destroy
+        env:
+          TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          TERRAFORM_AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+        run: terraform destroy --auto-approve -var="aws_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}" -var="aws_secret_access_key=${TERRAFORM_AWS_SECRET_ACCESS_KEY}"
