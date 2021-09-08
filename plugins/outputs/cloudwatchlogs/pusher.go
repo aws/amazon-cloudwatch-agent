@@ -286,7 +286,7 @@ func (p *pusher) send() {
 
 		wait := retryWait(retryCount)
 		if time.Since(startTime)+wait > p.RetryDuration {
-			p.Log.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", p.Group, p.Stream, retryCount)
+			p.Log.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
 		}
 
 		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCount, wait)
