@@ -6,7 +6,6 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -115,7 +114,6 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		credentialConfig.Credentials(),
 		&aws.Config{
 			Endpoint:   aws.String(c.EndpointOverride),
-			HTTPClient: &http.Client{Timeout: 1 * time.Minute},
 			Retryer:    logThrottleRetryer,
 		},
 	)
