@@ -6,7 +6,6 @@ package cloudwatch
 import (
 	"log"
 	"math"
-	"net/http"
 	"reflect"
 	"runtime"
 	"sort"
@@ -141,7 +140,6 @@ func (c *CloudWatch) Connect() error {
 		configProvider,
 		&aws.Config{
 			Endpoint:   aws.String(c.EndpointOverride),
-			HTTPClient: &http.Client{Timeout: 1 * time.Minute},
 			Retryer:    logThrottleRetryer,
 		})
 
