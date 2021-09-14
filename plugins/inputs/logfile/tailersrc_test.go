@@ -61,6 +61,7 @@ func TestTailerSrc(t *testing.T) {
 		nil, // encoding
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
+		nil,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -135,6 +136,105 @@ func TestTailerSrc(t *testing.T) {
 	<-done
 }
 
+func TestIncludePattern(t *testing.T) {
+
+	file, err := createTempFile("", "tailsrctest-*.log")
+	defer os.Remove(file.Name())
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	statefile, err := ioutil.TempFile("", "tailsrctest-state-*.log")
+	defer os.Remove(statefile.Name())
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	tailer, err := tail.TailFile(file.Name(),
+		tail.Config{
+			ReOpen:      false,
+			Follow:      true,
+			Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
+			MustExist:   true,
+			Pipe:        false,
+			Poll:        true,
+			MaxLineSize: defaultMaxEventSize,
+			IsUTF16:     false,
+		})
+
+	if err != nil {
+		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
+		return
+	}
+
+	ts := NewTailerSrc(
+		"groupName", "streamName",
+		"destination",
+		statefile.Name(),
+		tailer,
+		false, // AutoRemoval
+		regexp.MustCompile(`^\d\d\d\d-`).MatchString,
+		parseRFC3339Timestamp,
+		nil, // encoding
+		defaultMaxEventSize,
+		defaultTruncateSuffix,
+		regexp.MustCompile(`(?s)^.*\s(logMe)$`),
+	)
+
+	multilineWaitPeriod = 100 * time.Millisecond
+
+	expectedLines := []string{
+		time.Now().Format(time.RFC3339) + " logMe",
+		time.Now().Format(time.RFC3339) + " some text logMe",
+		time.Now().Format(time.RFC3339) + " multiline log line\nwith the match on the second line logMe",
+		time.Now().Format(time.RFC3339) + " some other text logMe",
+	}
+
+	lines := []string{
+		time.Now().Format(time.RFC3339) + "no match for capture group",
+		expectedLines[0],
+		time.Now().Format(time.RFC3339) + " logMe not at at the end",
+		expectedLines[1],
+		expectedLines[2],
+		time.Now().Format(time.RFC3339) + "no leading whitespacelogMe",
+		expectedLines[3],
+	}
+
+	done := make(chan struct{})
+	i := 0
+	ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(done)
+			return
+		}
+
+		actualLine := evt.Message()
+
+		if i >= len(expectedLines) {
+			t.Errorf("Unexpected log line. Expected no more lines, Received: '%s'", actualLine)
+		}
+
+		expectedLine := expectedLines[i]
+		if expectedLine != actualLine {
+			t.Errorf("Unexpected log line. Expected: '%s'; Received: '%s'", expectedLine, actualLine)
+		}
+		i++
+	})
+
+	for _, l := range lines {
+		fmt.Fprintln(file, l)
+	}
+
+	// Removal of log file should stop tailersrc
+	if err := os.Remove(file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
+	}
+	<-done
+	if i != len(expectedLines) {
+		t.Errorf("Not enough log lines processed. Received %d ; Expected %d", i, len(expectedLines))
+	}
+}
+
 func TestOffsetDoneCallBack(t *testing.T) {
 
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -177,6 +277,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		nil, // encoding
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
+		nil,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 

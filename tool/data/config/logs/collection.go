@@ -37,9 +37,9 @@ func (config *Collection) AddWindowsEvent(eventName, logGroupName, logStreamName
 	config.WinEvents.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels)
 }
 
-func (config *Collection) AddLogFile(filePath, logGroupName, logStreamName string, timestampFormat, timezone, multiLineStartPattern, encoding string) {
+func (config *Collection) AddLogFile(filePath, logGroupName, logStreamName string, timestampFormat, timezone, multiLineStartPattern, encoding string, includePattern string) {
 	if config.Files == nil {
 		config.Files = &Files{}
 	}
-	config.Files.AddLogFile(filePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding)
+	config.Files.AddLogFile(filePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding, includePattern)
 }

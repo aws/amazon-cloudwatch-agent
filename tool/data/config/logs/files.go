@@ -24,7 +24,7 @@ func (config *Files) ToMap(ctx *runtime.Context) (string, map[string]interface{}
 	return "files", resultMap
 }
 
-func (config *Files) AddLogFile(filePath, logGroupName, logStreamName string, timestampFormat, timezone, multiLineStartPattern, encoding string) {
+func (config *Files) AddLogFile(filePath, logGroupName, logStreamName string, timestampFormat, timezone, multiLineStartPattern, encoding string, includePattern string) {
 	if config.FileConfigs == nil {
 		config.FileConfigs = []*Config{}
 	}
@@ -46,6 +46,9 @@ func (config *Files) AddLogFile(filePath, logGroupName, logStreamName string, ti
 	}
 	if encoding != "" {
 		singleFile.Encoding = encoding
+	}
+	if includePattern != "" {
+		singleFile.IncludePattern = includePattern
 	}
 	config.FileConfigs = append(config.FileConfigs, singleFile)
 }

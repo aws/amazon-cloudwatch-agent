@@ -28,6 +28,8 @@ type FileConfig struct {
 	FilePath string `toml:"file_path"`
 	//The blacklist used to filter out some files
 	Blacklist string `toml:"blacklist"`
+	//The include pattern to be used to filter log file lines
+	IncludePattern string `toml:"include_pattern"`
 
 	PublishMultiLogs bool `toml:"publish_multi_logs"`
 
@@ -72,6 +74,9 @@ type FileConfig struct {
 
 	//Suffix to be added to truncated logline to indicate its truncation
 	TruncateSuffix string `toml:"truncate_suffix"`
+
+	//Regexp go type includePattern regex
+	IncludePatternP *regexp.Regexp `toml:"include_pattern"`
 
 	//Time *time.Location Go type timezone info.
 	TimezoneLoc *time.Location
@@ -122,6 +127,12 @@ func (config *FileConfig) init() error {
 	} else {
 		if config.MultiLineStartPatternP, err = regexp.Compile(config.MultiLineStartPattern); err != nil {
 			return fmt.Errorf("multi_line_start_pattern has issue, regexp: Compile( %v ): %v", config.MultiLineStartPattern, err.Error())
+		}
+	}
+
+	if config.IncludePattern != "" {
+		if config.IncludePatternP, err = regexp.Compile(config.IncludePattern); err != nil {
+			return fmt.Errorf("include pattern regex has issue, regexp: Compile( %v ): %v", config.IncludePattern, err.Error())
 		}
 	}
 

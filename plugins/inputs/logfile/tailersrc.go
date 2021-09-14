@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -67,6 +68,7 @@ type tailerSrc struct {
 	maxEventSize   int
 	truncateSuffix string
 
+	includePattern  *regexp.Regexp
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
 	offsetCh        chan fileOffset
@@ -84,6 +86,7 @@ func NewTailerSrc(
 	enc encoding.Encoding,
 	maxEventSize int,
 	truncateSuffix string,
+	includePattern *regexp.Regexp,
 ) *tailerSrc {
 	ts := &tailerSrc{
 		group:          group,
@@ -97,6 +100,7 @@ func NewTailerSrc(
 		enc:            enc,
 		maxEventSize:   maxEventSize,
 		truncateSuffix: truncateSuffix,
+		includePattern: includePattern,
 
 		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
@@ -109,7 +113,11 @@ func (ts *tailerSrc) SetOutput(fn func(logs.LogEvent)) {
 	if fn == nil {
 		return
 	}
-	ts.outputFn = fn
+	ts.outputFn = func(e logs.LogEvent) {
+		if e == nil || ts.includePattern == nil || ts.includePattern.MatchString(e.Message()) {
+			fn(e)
+		}
+	}
 	ts.startTailerOnce.Do(func() { go ts.runTail() })
 }
 

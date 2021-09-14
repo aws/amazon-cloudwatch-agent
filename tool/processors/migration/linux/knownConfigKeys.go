@@ -81,5 +81,6 @@ func addLogConfig(logsConfig *config.Logs, filePath, section string, p *configpa
 			}
 		}
 	}
-	logsConfig.AddLogFile(logFilePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding)
+	includePattern, _ := p.Get(section, "include_pattern")
+	logsConfig.AddLogFile(logFilePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding, includePattern)
 }

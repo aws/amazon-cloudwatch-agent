@@ -4,14 +4,15 @@
 package logs
 
 import (
+	"path/filepath"
+	"strings"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/events"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/serialization"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-	"path/filepath"
-	"strings"
 )
 
 var Processor processors.Processor = &processor{}
@@ -51,7 +52,7 @@ func monitorLogs(ctx *runtime.Context, config *data.Config) {
 			logStreamNameHint = "{hostname}"
 		}
 		logStreamName := util.AskWithDefault("Log stream name:", logStreamNameHint)
-		logsConf.AddLogFile(logFilePath, logGroupName, logStreamName, "", "", "", "")
+		logsConf.AddLogFile(logFilePath, logGroupName, logStreamName, "", "", "", "", "")
 		yes = util.Yes("Do you want to specify any additional log files to monitor?")
 		if !yes {
 			return
