@@ -398,7 +398,7 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 	}
 }
 
-func (t *LogFile) unsetRetentionsForDuplicateLogGroups() {
+func (t *LogFile) unsetRetentionsForDuplicateLogGroups() error {
 	configMap := make(map[string]int)
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
@@ -410,11 +410,12 @@ func (t *LogFile) unsetRetentionsForDuplicateLogGroups() {
 	}
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
-		// log group has Retention settings in multiple places: unset its retention config
+		// log group has Retention settings in multiple places: throw an error
 		if fileconfig.LogGroupName != "" && configMap[fileconfig.LogGroupName] > 1 {
-			fileconfig.RetentionInDays = -1
+			return fmt.Errorf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileconfig.LogGroupName)
 		}
 	}
+	return nil
 }
 
 // Compressed file should be skipped.
