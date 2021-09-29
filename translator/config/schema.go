@@ -665,26 +665,7 @@ var schema = `{
                     "type": "boolean"
                   },
                   "retention_in_days": {
-                    "type": "integer",
-                    "enum": [
-                      1,
-                      3,
-                      5,
-                      7,
-                      14,
-                      30,
-                      60,
-                      90,
-                      120,
-                      150,
-                      180,
-                      365,
-                      400,
-                      545,
-                      731,
-                      1827,
-                      3653
-                    ]
+                    "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
                   }
                 },
                 "required": [
@@ -743,6 +724,9 @@ var schema = `{
                   "log_group_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
                   },
+                  "retention_in_days": {
+                    "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                  },
                   "event_format": {
                     "type": "string",
                     "enum": [
@@ -776,6 +760,28 @@ var schema = `{
           "type": "string",
           "minLength": 1,
           "maxLength": 512
+        },
+        "retentionInDaysDefinition": {
+          "type": "integer",
+          "enum": [
+            1,
+            3,
+            5,
+            7,
+            14,
+            30,
+            60,
+            90,
+            120,
+            150,
+            180,
+            365,
+            400,
+            545,
+            731,
+            1827,
+            3653
+          ]
         }
       }
     },
