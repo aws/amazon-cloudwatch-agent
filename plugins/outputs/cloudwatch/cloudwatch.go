@@ -139,8 +139,8 @@ func (c *CloudWatch) Connect() error {
 	svc := cloudwatch.New(
 		configProvider,
 		&aws.Config{
-			Endpoint:   aws.String(c.EndpointOverride),
-			Retryer:    logThrottleRetryer,
+			Endpoint: aws.String(c.EndpointOverride),
+			Retryer:  logThrottleRetryer,
 		})
 
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))

@@ -113,8 +113,8 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{
-			Endpoint:   aws.String(c.EndpointOverride),
-			Retryer:    logThrottleRetryer,
+			Endpoint: aws.String(c.EndpointOverride),
+			Retryer:  logThrottleRetryer,
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
