@@ -67,8 +67,8 @@ type LogsEntry struct {
 }
 
 type LogsCollectedEntry struct {
-	Files         FilesEntry         `json:"files,omitempty"`
-	WindowsEvents WindowsEventsEntry `json:"windows_events,omitempty"`
+	Files         *FilesEntry         `json:"files,omitempty"`
+	WindowsEvents *WindowsEventsEntry `json:"windows_events,omitempty"`
 }
 
 type FilesEntry struct {

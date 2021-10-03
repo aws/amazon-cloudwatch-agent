@@ -101,6 +101,9 @@ func MapOldWindowsConfigToNewConfig(oldConfig OldSsmCwConfig) (newConfig NewCwCo
 				} else {
 					mLog.FilePath = mLog.FilePath + component.Parameters.Filter
 				}
+				if newConfig.Logs.LogsCollected.Files == nil {
+					newConfig.Logs.LogsCollected.Files = &FilesEntry{}
+				}
 				newConfig.Logs.LogsCollected.Files.CollectList = append(newConfig.Logs.LogsCollected.Files.CollectList, mLog)
 			}
 		case "AWS.EC2.Windows.CloudWatch.EventLog.EventLogInputComponent,AWS.EC2.Windows.CloudWatch":
@@ -116,6 +119,9 @@ func MapOldWindowsConfigToNewConfig(oldConfig OldSsmCwConfig) (newConfig NewCwCo
 					EventFormat:             "text",
 				}
 				if len(mLog.EventLevels) > 0 {
+					if newConfig.Logs.LogsCollected.WindowsEvents == nil {
+						newConfig.Logs.LogsCollected.WindowsEvents = &WindowsEventsEntry{}
+					}
 					newConfig.Logs.LogsCollected.WindowsEvents.CollectList = append(newConfig.Logs.LogsCollected.WindowsEvents.CollectList, mLog)
 				}
 			}
