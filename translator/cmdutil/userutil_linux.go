@@ -6,12 +6,16 @@
 package cmdutil
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"golang.org/x/sys/unix"
+	"io"
 	"log"
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
 )
 
 type ExecUser struct {
@@ -21,21 +25,56 @@ type ExecUser struct {
 	Gids []int
 }
 
-func getAllGids(u *user.User) ([]int, error) {
-	groups, err := u.GroupIds()
+func getGroupIds(u *user.User) ([]int, error) {
+	file, err := os.Open("/etc/group")
 	if err != nil {
+		log.Printf("E! Failed to open group file: %v", err)
 		return nil, err
 	}
-	gids := make([]int, len(groups))
-	for _, group := range groups {
-		gid, err := strconv.Atoi(group)
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	groupIds := []int{}
+	for {
+		var wholeLine []byte
+		for {
+			line, isPrefix, err := reader.ReadLine()
+
+			if err != nil {
+				// EOF reached
+				if err == io.EOF {
+					return groupIds, nil
+				}
+				return nil, err
+			}
+
+			// Whole line was able to fit in single buffer
+			if !isPrefix && len(wholeLine) == 0 {
+				wholeLine = line
+				break
+			}
+			wholeLine = append(wholeLine, line...)
+			// Last fragment of line read
+			if !isPrefix {
+				break
+			}
+		}
+
+		wholeLine = bytes.TrimSpace(wholeLine)
+		// Not empty, not a comment, and has enough parts
+		if len(wholeLine) == 0 || wholeLine[0] == '#' || bytes.Count(wholeLine, []byte{':'}) < 3 {
+			continue
+		}
+		parts := strings.SplitN(string(wholeLine), ":", 4)
+		users := strings.TrimSpace(parts[3])
+		if len(users) == 0 || !strings.Contains(users, u.Username) {
+			continue
+		}
+		groupId, err := strconv.Atoi(parts[2])
 		if err != nil {
-			log.Printf("E! Failed to convert group to int: %v", err)
 			return nil, err
 		}
-		gids = append(gids, gid)
+		groupIds = append(groupIds, groupId)
 	}
-	return gids, nil
 }
 
 func toExecUser(u *user.User) (*ExecUser, error) {
@@ -49,7 +88,7 @@ func toExecUser(u *user.User) (*ExecUser, error) {
 		log.Printf("E! Failed to convert gid to int: %v", err)
 		return nil, err
 	}
-	gids, err := getAllGids(u)
+	gids, err := getGroupIds(u)
 	if err != nil {
 		log.Printf("E! Failed to get group IDs: %v", err)
 		return nil, err
