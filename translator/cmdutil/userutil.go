@@ -88,8 +88,7 @@ func chownRecursive(uid, gid int, dir string) error {
 				return nil
 			}
 
-			// Do not change ownership of files that allow anyone to write to
-			// Prevents adding SUID and Executable bits after ownership change
+			// No need to change ownership of files that allow anyone to write to
 			if fmode.Perm()&0002 != 0 {
 				return nil
 			}

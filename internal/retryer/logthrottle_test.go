@@ -55,21 +55,22 @@ func (l *testLogger) Info(args ...interface{}) {
 }
 
 func TestLogThrottleRetryerLogging(t *testing.T) {
-	const throttleDetectedLine = "aws api call throttling detected: RequestLimitExceeded: Test AWS Error"
-	const watchGoroutineExitLine = "LogThrottleRetryer watch throttle events goroutine exiting"
-	const throttleSummaryLinePrefix = "aws api call has been throttled for"
-	const throttleBatchSize = 100
-	const totalThrottleCnt = throttleBatchSize * 2 // Test total 2 batches
-	const expectedDebugCnt = totalThrottleCnt - 2  // 2 of them are being log at info level
-
 	setup()
 	defer tearDown()
+
+	const throttleDebugLine = "AWS API call throttled: Operation: Test, Error: RequestLimitExceeded: Test AWS Error"
+	const watchGoroutineExitLine = "LogThrottleRetryer watch throttle events goroutine exiting"
+	const throttleSummaryLinePrefix = "AWS API call has been throttled"
+	const throttleBatchSize = 100
+	const totalThrottleCnt = throttleBatchSize * 2 // Test total 2 batches
+	var throttleDetectedLine = fmt.Sprintf("AWS API call throttling detected, further throttling messages may be suppressed for up to %v depending on the log level, error message: Operation: Test, Error: RequestLimitExceeded: Test AWS Error", throttleReportTimeout)
 
 	l := &testLogger{}
 	r := NewLogThrottleRetryer(l)
 
 	req := &request.Request{
-		Error: awserr.New("RequestLimitExceeded", "Test AWS Error", nil),
+		Error:     awserr.New("RequestLimitExceeded", "Test AWS Error", nil),
+		Operation: &request.Operation{Name: "Test"},
 	}
 
 	// Generate 200 throttles with a time gap between
@@ -91,28 +92,19 @@ func TestLogThrottleRetryerLogging(t *testing.T) {
 	// Check the debug level log messages
 	debugCnt := 0
 	for _, d := range l.debugs {
-		if d == throttleDetectedLine {
+		if d == throttleDebugLine {
 			debugCnt++
 		} else if d != watchGoroutineExitLine {
 			t.Errorf("unexpected debug log found: %v", d)
 		}
 	}
-	if debugCnt != expectedDebugCnt {
-		t.Errorf("wrong number of debug logs found, expected")
-	}
 
 	// Check the info level log messages
 	detectCnt := 0
 	throttleCnt := 0
-	for i, info := range l.infos {
+	for _, info := range l.infos {
 		if info == throttleDetectedLine {
-			if i > 0 {
-				if throttleCnt != throttleBatchSize {
-					t.Errorf("wrong number of throttle count reported, expecting %v, got %v", throttleBatchSize, throttleCnt)
-				}
-			}
 			detectCnt++
-			throttleCnt = 0
 		} else if strings.HasPrefix(info, throttleSummaryLinePrefix) {
 			n := 0
 			fmt.Sscanf(info, throttleSummaryLinePrefix+" %d", &n)
@@ -120,11 +112,11 @@ func TestLogThrottleRetryerLogging(t *testing.T) {
 		}
 	}
 
-	if detectCnt != 2 {
-		t.Errorf("wrong number of throttle detected info log found, expecting 2, got %v", detectCnt)
+	if detectCnt+debugCnt != totalThrottleCnt {
+		t.Errorf("wrong number of throttle detected log found, expecting %v, got %v", totalThrottleCnt, detectCnt+debugCnt)
 	}
-	if throttleCnt != throttleBatchSize {
-		t.Errorf("wrong number of throttle count reported, expecting %v, got %v", throttleBatchSize, throttleCnt)
+	if throttleCnt != totalThrottleCnt {
+		t.Errorf("wrong number of throttle count sum reported from info logs, expecting %v, got %v", totalThrottleCnt, throttleCnt)
 	}
 }
 

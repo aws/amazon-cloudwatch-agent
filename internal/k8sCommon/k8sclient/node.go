@@ -163,6 +163,7 @@ func transformFuncNode(obj interface{}) (interface{}, error) {
 func createNodeListWatch(client kubernetes.Interface) cache.ListerWatcher {
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+			opts.ResourceVersion = ""
 			return client.CoreV1().Nodes().List(opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {

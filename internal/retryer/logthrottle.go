@@ -1,6 +1,7 @@
 package retryer
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -16,16 +17,25 @@ var (
 type LogThrottleRetryer struct {
 	Log telegraf.Logger
 
-	throttleChan chan error
+	throttleChan chan throttleEvent
 	done         chan struct{}
 
 	client.DefaultRetryer
 }
 
+type throttleEvent struct {
+	Operation string
+	Err       error
+}
+
+func (te throttleEvent) String() string {
+	return fmt.Sprintf("Operation: %v, Error: %v", te.Operation, te.Err)
+}
+
 func NewLogThrottleRetryer(logger telegraf.Logger) *LogThrottleRetryer {
 	r := &LogThrottleRetryer{
 		Log:            logger,
-		throttleChan:   make(chan error, 1),
+		throttleChan:   make(chan throttleEvent, 1),
 		done:           make(chan struct{}),
 		DefaultRetryer: client.DefaultRetryer{NumMaxRetries: client.DefaultRetryerMaxNumRetries},
 	}
@@ -36,7 +46,11 @@ func NewLogThrottleRetryer(logger telegraf.Logger) *LogThrottleRetryer {
 
 func (r *LogThrottleRetryer) ShouldRetry(req *request.Request) bool {
 	if req.IsErrorThrottle() {
-		r.throttleChan <- req.Error
+		te := throttleEvent{Err: req.Error}
+		if req.Operation != nil {
+			te.Operation = req.Operation.Name
+		}
+		r.throttleChan <- te
 	}
 
 	// Fallback to SDK's built in retry rules
@@ -53,38 +67,31 @@ func (r *LogThrottleRetryer) watchThrottleEvents() {
 	ticker := time.NewTicker(throttleReportCheckPeriod)
 	defer ticker.Stop()
 
-	var start time.Time
-	var err error
-	cnt := 0
+	var lastReportTime time.Time
+	var te throttleEvent
+	aggregatedCnt := 0
 	for {
 		select {
-		case err = <-r.throttleChan:
-			// Log first throttle if there has not been any recent throttling events
-			if cnt == 0 {
-				if time.Since(start) > 2*throttleReportTimeout {
-					r.Log.Infof("aws api call throttling detected: %v", err)
-				} else {
-					r.Log.Debugf("aws api call throttling detected: %v", err)
-				}
-				start = time.Now()
+		case te = <-r.throttleChan:
+			if time.Since(lastReportTime) >= throttleReportTimeout {
+				r.Log.Infof("AWS API call throttling detected, further throttling messages may be suppressed for up to %v depending on the log level, error message: %v", throttleReportTimeout, te)
+				lastReportTime = time.Now()
 			} else {
-				r.Log.Debugf("aws api call throttling detected: %v", err)
+				r.Log.Debugf("AWS API call throttled: %v", te)
 			}
-			cnt++
+			aggregatedCnt++
 		case <-ticker.C:
-			if cnt == 0 {
-				continue
-			}
-			d := time.Since(start)
+			d := time.Since(lastReportTime)
 			if d > throttleReportTimeout {
-				if cnt > 1 {
-					r.Log.Infof("aws api call has been throttled for %v times in the past %v, last throttle error message: %v", cnt, d, err)
+				if aggregatedCnt > 0 {
+					r.Log.Infof("AWS API call has been throttled %v times in the past %v, last throttle error message: %v", aggregatedCnt, d, te)
+					aggregatedCnt = 0
 				}
-				cnt = 0
+				lastReportTime = time.Now()
 			}
 		case <-r.done:
-			if cnt > 0 {
-				r.Log.Infof("aws api call has been throttled for %v times in the past %v, last throttle error message: %v", cnt, time.Since(start), err)
+			if aggregatedCnt > 0 {
+				r.Log.Infof("AWS API call has been throttled %v times in the past %v, last throttle error message: %v", aggregatedCnt, time.Since(lastReportTime), te)
 			}
 			r.Log.Debugf("LogThrottleRetryer watch throttle events goroutine exiting")
 			return

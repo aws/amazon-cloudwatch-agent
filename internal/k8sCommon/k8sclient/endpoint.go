@@ -185,6 +185,7 @@ func transformFuncEndpoint(obj interface{}) (interface{}, error) {
 func createEndpointListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
+			opts.ResourceVersion = ""
 			return client.CoreV1().Endpoints(ns).List(opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {

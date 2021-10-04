@@ -6,9 +6,10 @@
 package windows_event_log
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
 	"strings"
-
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
@@ -34,9 +35,10 @@ type EventConfig struct {
 }
 
 type Plugin struct {
-	FileStateFolder string        `toml:"file_state_folder"`
-	Events          []EventConfig `toml:"event_config"`
-	Destination     string        `toml:"destination"`
+	FileStateFolder string          `toml:"file_state_folder"`
+	Events          []EventConfig   `toml:"event_config"`
+	Destination     string          `toml:"destination"`
+	Log             telegraf.Logger `toml:"-"`
 
 	newEvents []logs.LogSrc
 }
@@ -74,7 +76,12 @@ func (s *Plugin) FindLogSrc() []logs.LogSrc {
  */
 func (s *Plugin) Start(acc telegraf.Accumulator) error {
 	for _, eventConfig := range s.Events {
-		stateFilePath := logscommon.WindowsEventLogPrefix + escapeFilePath(eventConfig.LogGroupName)
+		// Assume no 2 EventConfigs have the same combination of:
+		// LogGroupName, LogStreamName, Name.
+		stateFilePath, err := getStateFilePath(s, &eventConfig)
+		if err != nil {
+			return err
+		}
 		destination := eventConfig.Destination
 		if destination == "" {
 			destination = s.Destination
@@ -90,7 +97,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 			eventConfig.BatchReadSize,
 			eventConfig.Retention,
 		)
-		err := eventLog.Init()
+		err = eventLog.Init()
 		if err != nil {
 			return err
 		}
@@ -99,7 +106,22 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func escapeFilePath(filePath string) string {
+// getStateFilePath returns a unique file pathname for a given EventConfig.
+func getStateFilePath(plugin *Plugin, ec *EventConfig) (string, error) {
+	if plugin.FileStateFolder == "" {
+		return "", errors.New("empty FileStateFolder")
+	}
+	err := os.MkdirAll(plugin.FileStateFolder, 0755)
+	if err != nil {
+		return "", err
+	}
+	stateFileName := logscommon.WindowsEventLogPrefix +
+		escapeFileName(ec.LogGroupName+"_"+ec.LogStreamName+"_"+ec.Name)
+	return filepath.Join(plugin.FileStateFolder, stateFileName), nil
+}
+
+// escapeFileName returns a valid filename string.
+func escapeFileName(filePath string) string {
 	escapedFilePath := filepath.ToSlash(filePath)
 	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
 	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)

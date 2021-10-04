@@ -109,8 +109,8 @@ func createFile(t *testing.T, path string, mode os.FileMode) {
 	}
 }
 
-func createSymlink(t *testing.T, from, to string) {
-	if err := os.Symlink(from, to); err != nil {
-		t.Fatalf("failed to create symbolic link from %v to %v: %v", from, to, err)
+func createSymlink(t *testing.T, oldname, newname string) {
+	if err := os.Symlink(oldname, newname); err != nil {
+		t.Fatalf("failed to create symbolic link %v pointing to %v: %v", newname, oldname, err)
 	}
 }

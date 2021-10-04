@@ -730,3 +730,30 @@ func TestPutRetentionWhenError(t *testing.T) {
 		t.Errorf("Expecting ResourceNotFoundException but got '%s' in the log", logbuf.String())
 	}
 }
+func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
+	var s svcMock
+
+	cnt := 0
+	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		cnt++
+		return nil, &cloudwatchlogs.ServiceUnavailableException{}
+	}
+
+	var logbuf bytes.Buffer
+	log.SetOutput(io.MultiWriter(&logbuf, os.Stdout))
+
+	p := NewPusher(Target{"G", "S"}, &s, 10*time.Millisecond, time.Second, models.NewLogger("cloudwatchlogs", "test", ""), 1)
+	p.AddEvent(evtMock{"msg", time.Now(), nil})
+	time.Sleep(2 * time.Second)
+
+	loglines := strings.Split(strings.TrimSpace(logbuf.String()), "\n")
+	lastline := loglines[len(loglines)-1]
+	expected := fmt.Sprintf("All %v retries to G/S failed for PutLogEvents, request dropped.", cnt-1)
+	if !strings.HasSuffix(lastline, expected) {
+		t.Errorf("Expecting error log to end with request dropped, but received '%s' in the log", logbuf.String())
+	}
+	log.SetOutput(os.Stderr)
+
+	p.Stop()
+	time.Sleep(10 * time.Millisecond)
+}
