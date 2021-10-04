@@ -149,9 +149,9 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 	t.cleanUpStoppedTailerSrc()
 
-	// If a log group has retention settings defined in more than one place, unset them to avoid
+	// If a log group has retention settings defined in more than one place, reteuren
 	// nondeterministic behavior
-	t.unsetRetentionsForDuplicateLogGroups()
+	t.checkForDuplicateRetentionSettings()
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
@@ -398,7 +398,7 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 	}
 }
 
-func (t *LogFile) unsetRetentionsForDuplicateLogGroups() error {
+func (t *LogFile) checkForDuplicateRetentionSettings() error {
 	configMap := make(map[string]int)
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
@@ -412,7 +412,7 @@ func (t *LogFile) unsetRetentionsForDuplicateLogGroups() error {
 		fileconfig := &t.FileConfig[i]
 		// log group has Retention settings in multiple places: throw an error
 		if fileconfig.LogGroupName != "" && configMap[fileconfig.LogGroupName] > 1 {
-			return fmt.Errorf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileconfig.LogGroupName)
+			panic(fmt.Sprintf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileconfig.LogGroupName))
 		}
 	}
 	return nil
