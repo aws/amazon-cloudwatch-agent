@@ -764,6 +764,7 @@ var schema = `{
         "retentionInDaysDefinition": {
           "type": "integer",
           "enum": [
+           -1,
             1,
             3,
             5,
