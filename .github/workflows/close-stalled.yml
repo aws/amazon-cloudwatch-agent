@@ -27,7 +27,6 @@ jobs:
 
           # Do not close PRs
           days-before-pr-close: -1
-          # close-pr-message: Closing this because it has stalled. Feel free to reopen if this PR is still relevant, or to ping the collaborator who labelled it stalled if you have any questions.
 
           # Do not close things assigned to milestones
           exempt-all-milestones: true
