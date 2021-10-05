@@ -25,8 +25,17 @@ type ExecUser struct {
 	Gids []int
 }
 
-func getGroupIds(u *user.User) ([]int, error) {
-	file, err := os.Open("/etc/group")
+func containsUser(users []string, match string) bool {
+	for _, user := range users {
+		if user == match {
+			return true
+		}
+	}
+	return false
+}
+
+func getGroupIds(user, filePath string) ([]int, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
 		log.Printf("E! Failed to open group file: %v", err)
 		return nil, err
@@ -65,8 +74,8 @@ func getGroupIds(u *user.User) ([]int, error) {
 			continue
 		}
 		parts := strings.SplitN(string(wholeLine), ":", 4)
-		users := strings.TrimSpace(parts[3])
-		if len(users) == 0 || !strings.Contains(users, u.Username) {
+		users := strings.Split(parts[3], ",")
+		if len(users) == 0 || !containsUser(users, user) {
 			continue
 		}
 		groupId, err := strconv.Atoi(parts[2])
@@ -88,7 +97,7 @@ func toExecUser(u *user.User) (*ExecUser, error) {
 		log.Printf("E! Failed to convert gid to int: %v", err)
 		return nil, err
 	}
-	gids, err := getGroupIds(u)
+	gids, err := getGroupIds(u.Username, "/etc/group")
 	if err != nil {
 		log.Printf("E! Failed to get group IDs: %v", err)
 		return nil, err
