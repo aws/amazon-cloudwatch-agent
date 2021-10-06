@@ -270,7 +270,7 @@ func (p *pusher) send() {
 				p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
 			}
 		case *cloudwatchlogs.InvalidSequenceTokenException:
-			p.Log.Warnf("Invalid SequenceToken used, will use new token and retry: %v", e.Message())
+			p.Log.Warnf("Invalid SequenceToken used while sending logs to %v/%v, will use new token and retry: %v", p.Group, p.Stream, e.Message())
 			if e.ExpectedSequenceToken == nil {
 				p.Log.Errorf("Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, e.Message())
 			}
