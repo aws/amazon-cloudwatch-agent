@@ -31,4 +31,4 @@ jobs:
           # Do not close things assigned to milestones
           exempt-all-milestones: true
           
-          exempt-issue-labels: 'status/backlog,bug'
+          exempt-issue-labels: 'status/backlog,bug,enhancement'
