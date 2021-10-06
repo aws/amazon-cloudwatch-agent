@@ -6,29 +6,117 @@
 package cmdutil
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"golang.org/x/sys/unix"
+	"io"
 	"log"
 	"os"
-	"syscall"
-
-	"golang.org/x/sys/unix"
-
-	"github.com/opencontainers/runc/libcontainer/system"
-	"github.com/opencontainers/runc/libcontainer/user"
+	"os/user"
+	"strconv"
+	"strings"
 )
 
-func switchUser(execUser *user.ExecUser) error {
-	if err := unix.Setgroups(execUser.Sgids); err != nil {
+type ExecUser struct {
+	Uid  int
+	Gid  int
+	Home string
+	Gids []int
+}
+
+func containsUser(users []string, match string) bool {
+	for _, user := range users {
+		if user == match {
+			return true
+		}
+	}
+	return false
+}
+
+func getGroupIds(user, filePath string) ([]int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Printf("E! Failed to open group file: %v", err)
+		return nil, err
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	groupIds := []int{}
+	for {
+		var wholeLine []byte
+		for {
+			line, isPrefix, err := reader.ReadLine()
+
+			if err != nil {
+				// EOF reached
+				if err == io.EOF {
+					return groupIds, nil
+				}
+				return nil, err
+			}
+
+			// Whole line was able to fit in single buffer
+			if !isPrefix && len(wholeLine) == 0 {
+				wholeLine = line
+				break
+			}
+			wholeLine = append(wholeLine, line...)
+			// Last fragment of line read
+			if !isPrefix {
+				break
+			}
+		}
+
+		wholeLine = bytes.TrimSpace(wholeLine)
+		// Not empty, not a comment, and has enough parts
+		if len(wholeLine) == 0 || wholeLine[0] == '#' || bytes.Count(wholeLine, []byte{':'}) < 3 {
+			continue
+		}
+		parts := strings.SplitN(string(wholeLine), ":", 4)
+		users := strings.Split(parts[3], ",")
+		if len(users) == 0 || !containsUser(users, user) {
+			continue
+		}
+		groupId, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return nil, err
+		}
+		groupIds = append(groupIds, groupId)
+	}
+}
+
+func toExecUser(u *user.User) (*ExecUser, error) {
+	uid, err := strconv.Atoi(u.Uid)
+	if err != nil {
+		log.Printf("E! Failed to convert uid to int: %v", err)
+		return nil, err
+	}
+	gid, err := strconv.Atoi(u.Gid)
+	if err != nil {
+		log.Printf("E! Failed to convert gid to int: %v", err)
+		return nil, err
+	}
+	gids, err := getGroupIds(u.Username, "/etc/group")
+	if err != nil {
+		log.Printf("E! Failed to get group IDs: %v", err)
+		return nil, err
+	}
+	return &ExecUser{Uid: uid, Gid: gid, Home: u.HomeDir, Gids: gids}, nil
+}
+
+func switchUser(execUser *ExecUser) error {
+	if err := unix.Setgroups(execUser.Gids); err != nil {
 		log.Printf("E! Failed to set groups: %v", err)
 		return err
 	}
 
-	if err := system.Setgid(execUser.Gid); err != nil {
+	if err := setGid(execUser.Gid); err != nil {
 		log.Printf("E! Failed to set gid: %v", err)
 		return err
 	}
 
-	if err := system.Setuid(execUser.Uid); err != nil {
+	if err := setUid(execUser.Uid); err != nil {
 		log.Printf("E! Failed to set uid: %v", err)
 		return err
 	}
@@ -42,21 +130,16 @@ func switchUser(execUser *user.ExecUser) error {
 	return nil
 }
 
-func getRunAsExecUser(runasuser string) (*user.ExecUser, error) {
-	currExecUser := user.ExecUser{
-		Uid:  syscall.Getuid(),
-		Gid:  syscall.Getgid(),
-		Home: "/root",
-	}
-	newUser, err := user.GetExecUserPath(runasuser, &currExecUser, "/etc/passwd", "/etc/group")
+func getRunAsExecUser(runasuser string) (*ExecUser, error) {
+	newUser, err := user.Lookup(runasuser)
 	if err != nil {
 		log.Printf("E! Failed to get newUser: %v", err)
 		return nil, err
 	}
-	return newUser, nil
+	return toExecUser(newUser)
 }
 
-func ChangeUser(mergedJsonConfigMap map[string]interface{}) (user string, err error) {
+func ChangeUser(mergedJsonConfigMap map[string]interface{}) (string, error) {
 	runAsUser, _ := DetectRunAsUser(mergedJsonConfigMap)
 	log.Printf("I! Detected runAsUser: %v", runAsUser)
 	if runAsUser == "" {
