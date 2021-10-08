@@ -85,6 +85,7 @@ const sampleConfig = `
       max_event_size = 262144
       ## Suffix to be added to truncated logline to indicate its truncation, defaults to "[Truncated...]"
       truncate_suffix = "[Truncated...]"
+      ignore_symlinks = false
 
 `
 
@@ -190,14 +191,15 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 			tailer, err := tail.TailFile(filename,
 				tail.Config{
-					ReOpen:      false,
-					Follow:      true,
-					Location:    seekFile,
-					MustExist:   true,
-					Pipe:        fileconfig.Pipe,
-					Poll:        true,
-					MaxLineSize: fileconfig.MaxEventSize,
-					IsUTF16:     isutf16,
+					ReOpen:          false,
+					Follow:          true,
+					Location:        seekFile,
+					MustExist:       true,
+					Pipe:            fileconfig.Pipe,
+					IgnoreSymLinks:    fileconfig.IgnoreSymLinks,
+					Poll:            true,
+					MaxLineSize:     fileconfig.MaxEventSize,
+					IsUTF16:         isutf16,
 				})
 
 			if err != nil {

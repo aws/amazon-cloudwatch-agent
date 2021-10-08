@@ -50,12 +50,13 @@ type limiter interface {
 // Config is used to specify how a file must be tailed.
 type Config struct {
 	// File-specifc
-	Location    *SeekInfo // Seek to this location before tailing
-	ReOpen      bool      // Reopen recreated files (tail -F)
-	MustExist   bool      // Fail early if the file does not exist
-	Poll        bool      // Poll for file changes instead of using inotify
-	Pipe        bool      // Is a named pipe (mkfifo)
-	RateLimiter limiter
+	Location        *SeekInfo // Seek to this location before tailing
+	ReOpen          bool      // Reopen recreated files (tail -F)
+	MustExist       bool      // Fail early if the file does not exist
+	Poll            bool      // Poll for file changes instead of using inotify
+	Pipe            bool      // Is a named pipe (mkfifo)
+	IgnoreSymLinks  bool      // Ignore symbolic links
+	RateLimiter     limiter
 
 	// Generic IO
 	Follow      bool // Continue looking for new lines (tail -f)
@@ -90,6 +91,18 @@ type Tail struct {
 // invoke the `Wait` or `Err` method after finishing reading from the
 // `Lines` channel.
 func TailFile(filename string, config Config) (*Tail, error) {
+
+	if config.IgnoreSymLinks {
+		fileInfo, err := os.Lstat(filename)
+		if err != nil {
+			return nil, errors.New("cannot get file info.")
+		}
+
+		if fileInfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+			return nil, errors.New("symbolic links not allowed.")
+		}
+	}
+
 	if config.ReOpen && !config.Follow {
 		return nil, errors.New("cannot set ReOpen without Follow.")
 	}

@@ -90,7 +90,66 @@ func TestDroppedLinesWhenStopAtEOFLogging(t *testing.T) {
 	verifyTailerExited(t, tail)
 }
 
-func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
+func TestIgnoreSymLinksOfInvalidPath(t *testing.T) {
+	var tl testLogger
+	tail, err := TailFile("._noexitent_file", Config{
+		Logger: &tl,
+		ReOpen: false,
+		Follow: true,
+		IgnoreSymLinks: true,
+	})
+	if tail !=nil || err == nil {
+    t.Fatal("If symbolic link are not allowed, tailing an invalid file should fail")
+	}
+  if err.Error() != "cannot get file info." {
+    t.Fatal("Mismatch in error message while getting file info")
+  }
+}
+
+func TestIgnoreSymLinksOfRegularFile(t *testing.T) {
+  tmpfile := setupTmpFile(t)
+	defer tearDown(tmpfile)
+
+	var tl testLogger
+	tail, err := TailFile(tmpfile.Name(), Config{
+		Logger: &tl,
+		ReOpen: false,
+		Follow: true,
+		IgnoreSymLinks: true,
+	})
+	if tail == nil || err != nil {
+		t.Fatalf("failed to tail file %v: %v", tmpfile.Name(), err)
+	}
+}
+
+func TestIgnoreSymLinksOfSymbolicLink(t *testing.T) {
+  tmpfile := setupTmpFile(t)
+	defer tearDown(tmpfile)
+
+  var symlink = tmpfile.Name() + ".symlink"
+  err := os.Symlink(tmpfile.Name(), symlink)
+	if err != nil {
+		t.Fatalf("failed to create symbolic link %v: %v", symlink, err)
+	}
+	defer deleteSymLink(symlink)
+
+	var tl testLogger
+	tail, err := TailFile(symlink, Config{
+		Logger: &tl,
+		ReOpen: false,
+		Follow: true,
+		IgnoreSymLinks: true,
+	})
+
+	if tail != nil || err == nil {
+    t.Fatal("If symbolic link are not allowed, tailing a symbolic link should fail")
+	}
+  if err.Error() != "symbolic links not allowed." {
+    t.Fatal("Mismatch in error message while trying to tail a symbolic link")
+  }
+}
+
+func setupTmpFile(t *testing.T) (*os.File) {
 	tmpfile, err := ioutil.TempFile("", "example")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
@@ -105,7 +164,11 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 	if err := tmpfile.Close(); err != nil {
 		log.Fatal(err)
 	}
+  return tmpfile;
+}
 
+func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
+	tmpfile := setupTmpFile(t)
 	// Modify the exit on deletion wait to reduce test length
 	exitOnDeletionCheckDuration = 100 * time.Millisecond
 	exitOnDeletionWaitDuration = 500 * time.Millisecond
@@ -161,4 +224,8 @@ func tearDown(tmpfile *os.File) {
 	os.Remove(tmpfile.Name())
 	exitOnDeletionCheckDuration = time.Minute
 	exitOnDeletionWaitDuration = 5 * time.Minute
+}
+
+func deleteSymLink(symlik string) {
+	os.Remove(symlik)
 }

@@ -685,6 +685,9 @@ var schema = `{
                   },
                   "retention_in_days": {
                     "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                  },
+                  "ignore_symlinks": {
+                    "type": "boolean"
                   }
                 },
                 "required": [

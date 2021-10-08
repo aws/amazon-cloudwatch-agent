@@ -75,6 +75,10 @@ type FileConfig struct {
 
 	//Indicate retention in days for log group
 	RetentionInDays int `toml:"retention_in_days"`
+
+	//Indicate if symbolic links are ignored
+	IgnoreSymLinks bool `toml:"ignore_symlinks"`
+
 	//Time *time.Location Go type timezone info.
 	TimezoneLoc *time.Location
 	//Regexp go type timestampFromLogLine regex

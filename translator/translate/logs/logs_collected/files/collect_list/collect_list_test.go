@@ -36,6 +36,7 @@ func TestFileConfig(t *testing.T) {
 		"log_stream_name":   "LOG_STREAM_NAME",
 		"pipe":              false,
 		"retention_in_days": -1,
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -55,6 +56,7 @@ func TestFileConfigOverride(t *testing.T) {
 		"log_group_name":    "group1",
 		"pipe":              false,
 		"retention_in_days": -1,
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -83,6 +85,7 @@ func TestTimestampFormat(t *testing.T) {
 		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		"timezone":          "UTC",
 		"retention_in_days": -1,
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -108,6 +111,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  "15:04:05 06 Jan 2",
 				"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
+				"ignore_symlinks":   false,
 			}},
 		},
 		{
@@ -126,6 +130,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  "1 2 15:04:05",
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"ignore_symlinks":   false,
 			}},
 		},
 		{
@@ -144,6 +149,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  "2 1 15:04:05",
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"ignore_symlinks":   false,
 			}},
 		},
 		{
@@ -162,6 +168,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  "5 2 1 15:04:05",
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"ignore_symlinks":   false,
 			}},
 		},
 	}
@@ -212,6 +219,7 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 		"timestamp_layout":  expectedLayout,
 		"timestamp_regex":   expectedRegex,
 		"timezone":          "UTC",
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -258,6 +266,7 @@ func TestTimestampFormat_SpecialCharacters(t *testing.T) {
 		"timestamp_layout":  expectedLayout,
 		"timestamp_regex":   expectedRegex,
 		"timezone":          "UTC",
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -296,6 +305,7 @@ func TestTimestampFormat_Template(t *testing.T) {
 		"retention_in_days": -1,
 		"timestamp_layout":  expectedLayout,
 		"timestamp_regex":   expectedRegex,
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -336,6 +346,7 @@ func TestMultiLineStartPattern(t *testing.T) {
 		"timestamp_regex":          "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
 		"timezone":                 "UTC",
 		"multi_line_start_pattern": "{timestamp_regex}",
+		"ignore_symlinks":          false,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -366,6 +377,7 @@ func TestEncoding(t *testing.T) {
 		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
 		"timezone":          "UTC",
 		"encoding":          "gbk",
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -390,6 +402,7 @@ func TestEncoding_Invalid(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 	assert.False(t, translator.IsTranslateSuccess())
@@ -418,6 +431,7 @@ func TestAutoRemoval(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": -1,
 		"auto_removal":      true,
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -439,6 +453,7 @@ func TestAutoRemoval(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": -1,
 		"auto_removal":      false,
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -458,6 +473,7 @@ func TestAutoRemoval(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
+		"ignore_symlinks":   false,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -533,6 +549,7 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 		"blacklist":          "^agent.log",
 		"publish_multi_logs": true,
 		"timezone":           "UTC",
+		"ignore_symlinks":    false,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -556,6 +573,7 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 		"retention_in_days":  -1,
 		"publish_multi_logs": false,
 		"timezone":           "UTC",
+		"ignore_symlinks":    false,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -575,6 +593,73 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
+		"ignore_symlinks":   false,
+	}}
+	assert.Equal(t, expectVal, val)
+}
+
+func TestIgnoreSymLinks(t *testing.T) {
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1"
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"file_path":      "path1",
+		"from_beginning": true,
+		"pipe":           false,
+    "retention_in_days": -1,
+		"ignore_symlinks": false,
+	}}
+	assert.Equal(t, expectVal, val)
+
+	e = json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1",
+				"ignore_symlinks": true
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val = f.ApplyRule(input)
+	expectVal = []interface{}{map[string]interface{}{
+		"file_path":      "path1",
+		"from_beginning": true,
+		"pipe":           false,
+    "retention_in_days": -1,
+		"ignore_symlinks": true,
+	}}
+	assert.Equal(t, expectVal, val)
+
+	e = json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1",
+				"ignore_symlinks": false
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val = f.ApplyRule(input)
+	expectVal = []interface{}{map[string]interface{}{
+		"file_path":      "path1",
+		"from_beginning": true,
+		"pipe":           false,
+    "retention_in_days": -1,
+		"ignore_symlinks": false,
 	}}
 	assert.Equal(t, expectVal, val)
 }
