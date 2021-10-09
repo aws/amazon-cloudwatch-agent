@@ -21,7 +21,7 @@ func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
 	if ctx.OsParameter == util.OsTypeWindows {
 		return
 	}
-	yes := util.Yes("Do you want to monitor metrics from CollectD? Note that depending on the system, some require the CollectD software to be installed on your server (e.g. Amazon Linux 2) or the /usr/share/collectd/types.db file to be created.")
+	yes := util.Yes("Do you want to monitor metrics from CollectD? WARNING: CollectD must be installed or the Agent will fail to start")
 	if yes {
 		collection := config.MetricsConf().Collection()
 		collection.CollectD = new(collectd.CollectD)
