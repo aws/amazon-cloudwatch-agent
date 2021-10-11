@@ -1,0 +1,3 @@
+
+# [ssl]
+#    ca_bundle_path = "/opt/aws/amazon-cloudwatch-agent/combine.pem"
