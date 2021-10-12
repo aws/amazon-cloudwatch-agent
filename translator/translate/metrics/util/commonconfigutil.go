@@ -28,7 +28,7 @@ const (
 func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string, result map[string]interface{}) bool {
 	isHighRsolution := IsHighResolution(agent.Global_Config.Interval)
 	inputMap := input.(map[string]interface{})
-	// Generate whitelisted metric list, process only if Measurement_Key exist
+	// Generate allowlisted metric list, process only if Measurement_Key exist
 	if translator.IsValid(inputMap, Measurement_Key, path) {
 		// NOTE: the logic here is a bit tricky, even windows uses linux config for metric like procstat.
 		os := config.OS_TYPE_LINUX
@@ -88,7 +88,7 @@ func ProcessWindowsCommonConfig(input interface{}, pluginName string, path strin
 
 	// 3. object config
 
-	// Generate whitelisted metric list, process only if Measurement_Key exist
+	// Generate allowlisted metric list, process only if Measurement_Key exist
 	if translator.IsValid(inputMap, Measurement_Key, path) {
 		returnKey, returnVal := ApplyMeasurementRule(inputMap[Measurement_Key], pluginName, config.OS_TYPE_WINDOWS, path)
 		if returnKey != "" && len(returnVal) > 0 {
