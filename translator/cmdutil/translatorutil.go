@@ -35,8 +35,8 @@ const (
 func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConfigFilePath string) {
 	res := totomlconfig.ToTomlConfig(jsonConfigValue)
 	if translator.IsTranslateSuccess() {
-		if error := ioutil.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); error != nil {
-			panic(fmt.Sprintf("Failed to create the configuration validation file. Reason: %s \n", error.Error()))
+		if err := ioutil.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); err != nil {
+			panic(fmt.Sprintf("Failed to create the configuration validation file. Reason: %s \n", err.Error()))
 		} else {
 			for _, infoMessage := range translator.InfoMessages {
 				fmt.Println(infoMessage)
@@ -54,8 +54,8 @@ func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, env
 		return
 	}
 	bytes := toenvconfig.ToEnvConfig(jsonConfigValue)
-	if error := ioutil.WriteFile(envConfigPath, bytes, 0644); error != nil {
-		panic(fmt.Sprintf("Failed to create env config. Reason: %s \n", error.Error()))
+	if err := ioutil.WriteFile(envConfigPath, bytes, 0644); err != nil {
+		panic(fmt.Sprintf("Failed to create env config. Reason: %s \n", err.Error()))
 	}
 }
 
@@ -67,22 +67,22 @@ func getCurBinaryPath() string {
 	return path.Dir(ex)
 }
 
-func getJsonConfigMap(jsonConfgFilePath, osType string) (map[string]interface{}, error) {
-	if jsonConfgFilePath == "" {
+func getJsonConfigMap(jsonConfigFilePath, osType string) (map[string]interface{}, error) {
+	if jsonConfigFilePath == "" {
 		curPath := getCurBinaryPath()
 		if osType == config.OS_TYPE_WINDOWS {
-			jsonConfgFilePath = filepath.Join(curPath, jsonTemplateName_Windows)
+			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Windows)
 		} else {
-			jsonConfgFilePath = filepath.Join(curPath, jsonTemplateName_Linux)
+			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Linux)
 		}
 	}
-	log.Printf("Reading json config file path: %v ...", jsonConfgFilePath)
-	if _, err := os.Stat(jsonConfgFilePath); err != nil {
-		fmt.Printf("%v does not exist or cannot read. Skipping it.\n", jsonConfgFilePath)
+	log.Printf("Reading json config file path: %v ...", jsonConfigFilePath)
+	if _, err := os.Stat(jsonConfigFilePath); err != nil {
+		fmt.Printf("%v does not exist or cannot read. Skipping it.\n", jsonConfigFilePath)
 		return nil, nil
 	}
 
-	return translatorUtil.GetJsonMapFromFile(jsonConfgFilePath)
+	return translatorUtil.GetJsonMapFromFile(jsonConfigFilePath)
 }
 
 func GetTomlConfigPath(tomlFilePath string) string {

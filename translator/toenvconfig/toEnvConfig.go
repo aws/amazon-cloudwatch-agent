@@ -15,7 +15,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-const userAgentKey = "user_agent"
+const (
+	userAgentKey = "user_agent"
+	debugKey     = "debug"
+)
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 	envVars := make(map[string]string)
@@ -24,10 +27,14 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		envVars[envconfig.AWS_CSM_ENABLED] = "TRUE"
 	}
 
-	// Set CWAGENT_USER_AGENT to env config if specified by the json config in agent section
 	if agentMap, ok := jsonConfigValue[agent.SectionKey].(map[string]interface{}); ok {
+		// Set CWAGENT_USER_AGENT to env config if specified by the json config in agent section
 		if userAgent, ok := agentMap[userAgentKey].(string); ok {
 			envVars[envconfig.CWAGENT_USER_AGENT] = userAgent
+		}
+		// Set CWAGENT_LOG_LEVEL to DEBUG in env config if present and true in agent section
+		if isDebug, ok := agentMap[debugKey].(bool); ok && isDebug {
+			envVars[envconfig.CWAGENT_LOG_LEVEL] = "DEBUG"
 		}
 	}
 

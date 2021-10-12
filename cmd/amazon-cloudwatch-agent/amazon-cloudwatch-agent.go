@@ -9,6 +9,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/influxdata/wlog"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -28,17 +30,15 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 
 	lumberjack "github.com/aws/amazon-cloudwatch-agent/logger"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
-
 	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	//_ "github.com/influxdata/telegraf/plugins/outputs/all"
-	//_ "github.com/influxdata/telegraf/plugins/processors/all"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+
 	"github.com/kardianos/service"
 )
 
@@ -84,6 +84,7 @@ var fService = flag.String("service", "",
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
+var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
 
 var (
 	version string
@@ -139,6 +140,36 @@ func reloadLoop(
 			}
 		}(ctx)
 
+		if envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig); err == nil {
+			// Reloads environment variables when file is changed
+			go func(ctx context.Context, envConfigPath string) {
+				var previousModTime time.Time
+				ticker := time.NewTicker(30 * time.Second)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-ticker.C:
+						if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
+							if err := loadEnvironmentVariables(envConfigPath); err != nil {
+								log.Printf("E! Unable to load env variables: %v", err)
+							}
+							// Sets the log level based on environment variable
+							logLevel := os.Getenv(envconfig.CWAGENT_LOG_LEVEL)
+							if logLevel == "" {
+								logLevel = "INFO"
+							}
+							if err := wlog.SetLevelFromName(logLevel); err != nil {
+								log.Printf("E! Unable to set log level: %v", err)
+							}
+							previousModTime = info.ModTime()
+						}
+					case <-ctx.Done():
+						return
+					}
+				}
+			}(ctx, envConfigPath)
+		}
+
 		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
@@ -168,19 +199,27 @@ func loadEnvironmentVariables(path string) error {
 	return nil
 }
 
+func getEnvConfigPath(configPath, envConfigPath string) (string, error) {
+	if configPath == "" {
+		return "", fmt.Errorf("No config file specified")
+	}
+	//load the environment variables that's saved in json env config file
+	if envConfigPath == "" {
+		dir, _ := filepath.Split(configPath)
+		envConfigPath = filepath.Join(dir, defaultEnvCfgFileName)
+	}
+	return envConfigPath, nil
+}
+
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	if *fConfig == "" {
-		return fmt.Errorf("No config file specified")
+	envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig)
+	if err != nil {
+		return err
 	}
-	//load the environment variables that's saved in json env config file
-	if *fEnvConfig == "" {
-		dir, _ := filepath.Split(*fConfig)
-		*fEnvConfig = filepath.Join(dir, defaultEnvCfgFileName)
-	}
-	err := loadEnvironmentVariables(*fEnvConfig)
+	err = loadEnvironmentVariables(envConfigPath)
 	if err != nil && !*fSchemaTest {
 		log.Printf("W! Failed to load environment variables due to %s", err.Error())
 	}
@@ -310,7 +349,7 @@ type program struct {
 	processorFilters  []string
 }
 
-func (p *program) Start(s service.Service) error {
+func (p *program) Start(_ service.Service) error {
 	go p.run()
 	return nil
 }
@@ -324,7 +363,7 @@ func (p *program) run() {
 		p.processorFilters,
 	)
 }
-func (p *program) Stop(s service.Service) error {
+func (p *program) Stop(_ service.Service) error {
 	close(stop)
 	return nil
 }
@@ -432,6 +471,27 @@ func main() {
 			log.Fatalf("E! %s and %s", err, err2)
 		}
 		return
+	case *fSetEnv != "":
+		if *fEnvConfig != "" {
+			parts := strings.SplitN(*fSetEnv, "=", 2)
+			if len(parts) == 2 {
+				bytes, err := ioutil.ReadFile(*fEnvConfig)
+				if err != nil {
+					log.Fatalf("E! Failed to read env config: %v", err)
+				}
+				envVars := map[string]string{}
+				err = json.Unmarshal(bytes, &envVars)
+				if err != nil {
+					log.Fatalf("E! Failed to unmarshal env config: %v", err)
+				}
+				envVars[parts[0]] = parts[1]
+				bytes, err = json.MarshalIndent(envVars, "", "\t")
+				if err = ioutil.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
+					log.Fatalf("E! Failed to update env config: %v", err)
+				}
+			}
+		}
+		return
 	}
 
 	if runtime.GOOS == "windows" && windowsRunAsService() {
@@ -477,7 +537,7 @@ func main() {
 		} else {
 			winlogger, err := s.Logger(nil)
 			if err == nil {
-				//When in service mode, register eventlog target andd setup default logging to eventlog
+				//When in service mode, register eventlog target and setup default logging to eventlog
 				logger.RegisterEventLogger(winlogger)
 				logger.SetupLogging(logger.LogConfig{LogTarget: lumberjack.LogTargetLumberjack})
 			}
