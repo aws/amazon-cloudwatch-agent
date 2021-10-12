@@ -3,7 +3,7 @@
 
 package config
 
-// This served as the whitelisted metric name, which is registered under the plugin name
+// This served as the allowlisted metric name, which is registered under the plugin name
 // Note: the registered metric name don't have plugin name as prefix
 var Registered_Metrics_Linux = map[string][]string{
 	"cpu": {"time_active", "time_guest", "time_guest_nice", "time_idle", "time_iowait", "time_irq", "time_nice", "time_softirq", "time_steal", "time_system", "time_user",
@@ -23,7 +23,7 @@ var Registered_Metrics_Linux = map[string][]string{
 		"rlimit_realtime_priority_hard", "rlimit_realtime_priority_soft", "rlimit_signals_pending_hard", "rlimit_signals_pending_soft", "signals_pending", "voluntary_context_switches", "write_bytes", "write_count", "pid_count"},
 }
 
-// This served as the whitelisted metric name, which is registered under the plugin name
+// This served as the allowlisted metric name, which is registered under the plugin name
 // Note: the registered metric name don't have plugin name as prefix
 var Registered_Metrics_Darwin = map[string][]string{
 	"cpu": {"time_active", "time_guest", "time_guest_nice", "time_idle", "time_iowait", "time_irq", "time_nice", "time_softirq", "time_steal", "time_system", "time_user",
