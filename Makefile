@@ -43,6 +43,11 @@ AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.windowsExtraConfigPath=C:\\
 
 release: clean test build package-rpm package-deb package-win package-darwin
 
+nightly-release: nightly-version-tag release
+
+nightly-version-tag:
+VERSION := ${VERSION}-nightly-build
+
 build: check_secrets cwagent-otel-collector amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
 
 check_secrets::
