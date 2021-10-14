@@ -23,6 +23,7 @@ readonly YAML_DIR="${CWOC_CONFDIR}/cwagent-otel-collector.d"
 readonly PREDEFINED_CONFIG_DATA="${AGENTDIR}/cwagent-otel-collector/var/.predefined-config-data"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"
 readonly COMMON_CONIG="${CONFDIR}/common-config.toml"
+readonly ENV_CONFIG="${CONFDIR}/env-config.json"
 
 readonly CWA_NAME='amazon-cloudwatch-agent'
 readonly CWOC_NAME='cwagent-otel-collector'
@@ -33,9 +34,13 @@ SYSTEMD='false'
 UsageString="
 
 
-        usage: amazon-cloudwatch-agent-ctl -a
-        stop|start|status|fetch-config|append-config|remove-config [-m
-        ec2|onPremise|auto] [-c default|all|ssm:<parameter-store-name>|file:<file-path>] [-o default|all|ssm:<parameter-store-name>|file:<file-path>] [-s]
+        usage:  amazon-cloudwatch-agent-ctl -a
+                stop|start|status|fetch-config|append-config|remove-config|set-log-level
+                [-m ec2|onPremise|auto]
+                [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
+                [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
+                [-s]
+                [-l INFO|DEBUG|WARN|ERROR|OFF]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -52,6 +57,7 @@ UsageString="
             fetch-config:                           apply config for agent, followed by -c or -o or both. Target config can be based on location (ssm parameter store name, file name), or 'default'.
             append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
             remove-config:                          remove config for agent, followed by -c or -o or both. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
+            set-log-level:                          sets the log level, followed by -l to provide the level in all caps.
 
         -m: mode
             ec2:                                    indicate this is on ec2 host.
@@ -72,6 +78,9 @@ UsageString="
 
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
+
+        -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
+            this parameter is used for 'set-log-level' only.
 
 "
 
@@ -456,6 +465,30 @@ cwoc_config() {
     fi
 }
 
+set_log_level_all() {
+  log_level="${1:-}"
+  case "${log_level}" in
+  INFO)
+      ;;
+  DEBUG)
+      ;;
+  ERROR)
+      ;;
+  WARN)
+      ;;
+  OFF)
+      ;;
+  *)  echo "Invalid log level: ${log_level} ${UsageString}" >&2
+      exit 1
+      ;;
+  esac
+
+  runEnvConfigCommand="${CMDDIR}/amazon-cloudwatch-agent -setenv CWAGENT_LOG_LEVEL=${log_level} -envconfig ${ENV_CONFIG}"
+  echo "${runEnvConfigCommand}"
+  ${runEnvConfigCommand} || return
+  echo "Set CWAGENT_LOG_LEVEL to ${log_level}"
+}
+
 main() {
     action=''
     cwa_config_location=''
@@ -465,9 +498,9 @@ main() {
 
     # detect which init system is in use
     if [ "$(/sbin/init --version 2>/dev/null | grep -c upstart)" = 1 ]; then
-	SYSTEMD='false'
+	      SYSTEMD='false'
     elif [ "$(systemctl | grep -c -E '\-\.mount\s')" = 1 ]; then
-	SYSTEMD='true'
+	      SYSTEMD='true'
     elif [ -f /etc/init.d/cron ] && [ ! -h /etc/init.d/cron ]; then
         echo "sysv-init is not supported" >&2
         exit 1
@@ -477,7 +510,7 @@ main() {
     fi
 
     OPTIND=1
-    while getopts ":hsa:c:o:m:" opt; do
+    while getopts ":hsa:c:o:m:l:" opt; do
     case "${opt}" in
         h) echo "${UsageString}"
         exit 0
@@ -487,6 +520,7 @@ main() {
         c) cwa_config_location="${OPTARG}" ;;
         o) cwoc_config_location="${OPTARG}" ;;
         m) mode="${OPTARG}" ;;
+        l) log_level="${OPTARG}" ;;
         \?) echo "Invalid option: -${OPTARG} ${UsageString}" >&2
         ;;
         :)  echo "Option -${OPTARG} requires an argument ${UsageString}" >&2
@@ -521,6 +555,7 @@ main() {
     cond-restart) cond_restart_all ;;
         # helper for rpm+deb uninstallation hooks, not expected to be called manually
     preun) preun_all ;;
+    set-log-level) set_log_level_all "${log_level}" ;;
     *) echo "Invalid action: ${action} ${UsageString}" >&2
        exit 1
        ;;

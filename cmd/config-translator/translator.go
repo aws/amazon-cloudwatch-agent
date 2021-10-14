@@ -11,7 +11,7 @@ import (
 	"os/user"
 	"path/filepath"
 
-	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -47,23 +47,21 @@ func initFlags() {
 		if err != nil {
 			log.Fatalf("E! Failed to open common-config file %s with error: %v", *inputConfig, err)
 		}
-		config, err := commonconfig.Parse(f)
+		conf, err := commonconfig.Parse(f)
 		if err != nil {
 			log.Fatalf("E! Failed to parse common-config file %s with error: %v", *inputConfig, err)
 		}
-		ctx.SetCredentials(config.CredentialsMap())
-		ctx.SetProxy(config.ProxyMap())
-		ctx.SetSSL(config.SSLMap())
-
+		ctx.SetCredentials(conf.CredentialsMap())
+		ctx.SetProxy(conf.ProxyMap())
+		ctx.SetSSL(conf.SSLMap())
 	}
 	translatorUtil.SetProxyEnv(ctx.Proxy())
 	translatorUtil.SetSSLEnv(ctx.SSL())
 	ctx.SetMode(translatorUtil.DetectAgentMode(*inputMode))
-
 }
 
 /**
- *	config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG}
+ *	config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONFIG}
  *  --multi-config [default|append|remove]
  *
  *		multi-config:
@@ -75,7 +73,7 @@ func main() {
 	initFlags()
 	defer func() {
 		if r := recover(); r != nil {
-			// Only emit error message if panic content is string(pre checked)
+			// Only emit error message if panic content is string(pre-checked)
 			// Not emitting the non-handled error message for now, we don't want to show non-user-friendly error message to customer
 			if val, ok := r.(string); ok {
 				log.Println(val)

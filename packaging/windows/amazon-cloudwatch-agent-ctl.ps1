@@ -14,6 +14,8 @@ Param (
     [switch]$Start = $false,
     [Parameter(Mandatory = $false)]
     [string]$Mode = 'ec2',
+    [Parameter(Mandatory = $false)]
+    [string]$LogLevel = '',
     [parameter(ValueFromRemainingArguments=$true)]
     $unsupportedVars
 )
@@ -24,7 +26,13 @@ $ErrorActionPreference = "Stop"
 $UsageString = @"
 
 
-        usage: amazon-cloudwatch-agent-ctl.ps1 -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|auto] [-c default|all|ssm:<parameter-store-name>|file:<file-path>] [-o default|all|ssm:           <parameter-store-name>|file:<file-path>] [-s]
+        usage:  amazon-cloudwatch-agent-ctl.ps1 -a
+                stop|start|status|fetch-config|append-config|remove-config|set-log-level
+                [-m ec2|onPremise|auto]
+                [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
+                [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
+                [-s]
+                [-l INFO|DEBUG|WARN|ERROR|OFF]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -41,6 +49,7 @@ $UsageString = @"
             fetch-config:                           apply config for agent, followed by -c or -o or both. Target config can be based on location (ssm parameter store name, file name), or 'default'.
             append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
             remove-config:                          remove config for agent, followed by -c or -o or both. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
+            set-log-level:                          sets the log level, followed by -l to provide the level in all caps.
 
         -m: mode
             ec2:                                    indicate this is on ec2 host.
@@ -62,6 +71,8 @@ $UsageString = @"
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
+        -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
+            this parameter is used for 'set-log-level' only.
 
 "@
 
@@ -95,6 +106,7 @@ $YAML="${CWAProgramData}\${CWOCServiceName}\cwagent-otel-collector.yaml"
 $YAML_DIR="${CWAProgramData}\${CWOCServiceName}\Configs"
 $PREDEFINED_CONFIG_DATA="${CWAProgramData}\${CWOCServiceName}\predefined-config-data"
 $COMMON_CONIG="${CWAProgramData}\common-config.toml"
+$ENV_CONFIG="${CWAProgramData}\env-config.json"
 
 $EC2 = $false
 # WMI is unavailable on Nano, CIM is unavailable on 2003
@@ -240,7 +252,6 @@ Function AgentPreun() {
 }
 
 Function StatusAll() {
-
     $cwa_status = Runstatus -service_name ${CWAServiceName}
     $cwa_starttime = GetStarttime -service_name ${CWAServiceName}
     $cwa_config_status = 'configured'
@@ -470,15 +481,15 @@ Function CWOCConfig() {
 
 # For exes(non cmlet) the $ErrorActionPreference won't help if run cmd result failed,
 # We have to check the $LASTEXITCODE everytime.
-Function CheckCMDResult($ErrorMessag, $SucessMessage) {
+Function CheckCMDResult($ErrorMessage, $SuccessMessage) {
     if ($LASTEXITCODE -ne 0) {
-        if (![string]::IsNullOrEmpty($ErrorMessag)) {
-            Write-Output $ErrorMessag
+        if (![string]::IsNullOrEmpty($ErrorMessage)) {
+            Write-Output $ErrorMessage
         }
         exit 1
     } else {
-        if (![string]::IsNullOrEmpty($SucessMessage)) {
-            Write-Output $SucessMessage
+        if (![string]::IsNullOrEmpty($SuccessMessage)) {
+            Write-Output $SuccessMessage
         }
     }
 }
@@ -500,8 +511,24 @@ Function CWATestEC2() {
     return !$error
 }
 
-Function main() {
+Function SetLogLevelAll() {
+    switch -exact ($LogLevel) {
+        INFO { }
+        DEBUG { }
+        ERROR { }
+        WARN { }
+        OFF { }
+        default {
+            Write-Output "Invalid log level: ${LogLevel}`n${UsageString}"
+            Exit 1
+        }
+    }
 
+    & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --setenv CWAGENT_LOG_LEVEL=${LogLevel} --envconfig ${ENV_CONFIG} 2>&1"
+    CheckCMDResult "" "Set CWAGENT_LOG_LEVEL to ${LogLevel}"
+}
+
+Function main() {
     if (Get-Command 'Get-CimInstance' -CommandType Cmdlet -ErrorAction SilentlyContinue) {
         $CIM = $true
     }
@@ -535,6 +562,7 @@ Function main() {
         prep-restart { PrepRestartAll }
         cond-restart { CondRestartAll }
         preun { PreunAll }
+        set-log-level { SetLogLevelAll }
         default {
            Write-Output "Invalid action: ${Action}`n${UsageString}"
            Exit 1
