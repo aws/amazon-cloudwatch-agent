@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/serialization"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 const (
@@ -83,7 +84,8 @@ func monitorEvents(ctx *runtime.Context, config *data.Config) {
 			eventFormat = EventFormatPlainText
 			eventFormatDefaultOption = 2
 		}
-		retentionInDays := util.Choice("Log Group Retention in days", 1, []string{"-1", "1", "3", "5", "7", "14", "30", "60", "90", "120", "150", "180", "365", "400", "545", "731", "1827", "3653"})
+		keys := translator.ValidRetentionInDays
+		retentionInDays := util.Choice("Log Group Retention in days", 1, keys)
 		retention := -1
 
 		i, err := strconv.Atoi(retentionInDays)

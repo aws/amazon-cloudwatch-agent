@@ -149,8 +149,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 	t.cleanUpStoppedTailerSrc()
 
-	// If a log group has retention settings defined in more than one place, reteuren
-	// nondeterministic behavior
+	// If a log group has retention settings defined in more than one place, stop the agent
 	t.checkForDuplicateRetentionSettings()
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
@@ -398,8 +397,9 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 	}
 }
 
-func (t *LogFile) checkForDuplicateRetentionSettings() error {
+func (t *LogFile) checkForDuplicateRetentionSettings() {
 	configMap := make(map[string]int)
+
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
 
@@ -415,7 +415,6 @@ func (t *LogFile) checkForDuplicateRetentionSettings() error {
 			panic(fmt.Sprintf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileconfig.LogGroupName))
 		}
 	}
-	return nil
 }
 
 // Compressed file should be skipped.

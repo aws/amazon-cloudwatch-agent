@@ -94,13 +94,14 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.Lo
 	}
 
 	t := Target{
-		Group:  group,
-		Stream: stream,
+		Group:     group,
+		Stream:    stream,
+		Retention: retention,
 	}
-	return c.getDest(t, retention)
+	return c.getDest(t)
 }
 
-func (c *CloudWatchLogs) getDest(t Target, retention int) *cwDest {
+func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	if cwd, ok := c.cwDests[t]; ok {
 		return cwd
 	}
@@ -119,14 +120,14 @@ func (c *CloudWatchLogs) getDest(t Target, retention int) *cwDest {
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{
-			Endpoint:   aws.String(c.EndpointOverride),
-			Retryer:    logThrottleRetryer,
+			Endpoint: aws.String(c.EndpointOverride),
+			Retryer:  logThrottleRetryer,
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
 
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, retention)
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
@@ -137,7 +138,7 @@ func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
 	if err != nil {
 		c.Log.Errorf("Failed to find target: %v", err)
 	}
-	cwd := c.getDest(t, -1)
+	cwd := c.getDest(t)
 	if cwd == nil {
 		c.Log.Warnf("unable to find log destination, group: %v, stream: %v", t.Group, t.Stream)
 		return
@@ -169,7 +170,7 @@ func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (Target, error) 
 		logStream = c.LogStreamName
 	}
 
-	return Target{logGroup, logStream}, nil
+	return Target{logGroup, logStream, -1}, nil
 }
 
 func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structuredLogEvent {
@@ -322,6 +323,7 @@ func (cd *cwDest) setRetryer(r request.Retryer) {
 
 type Target struct {
 	Group, Stream string
+	Retention     int
 }
 
 // Description returns a one-sentence description on the Output

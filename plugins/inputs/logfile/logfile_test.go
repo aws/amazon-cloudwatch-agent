@@ -1063,3 +1063,22 @@ func TestGenerateLogGroupName(t *testing.T) {
 		logGroupName,
 		expectLogGroup))
 }
+
+func TestCheckForDuplicateRetentionSettingsPanics(t *testing.T) {
+	tt := NewLogFile()
+	logGroupName := "DuplicateLogGroupName"
+	tt.FileConfig = []FileConfig{{
+		FilePath:        "SampleFilePath",
+		FromBeginning:   true,
+		LogGroupName:    logGroupName,
+		RetentionInDays: 1,
+	},
+		{
+			FilePath:        "SampleFilePath",
+			FromBeginning:   true,
+			LogGroupName:    logGroupName,
+			RetentionInDays: 3,
+		},
+	}
+	assert.Panics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
+}

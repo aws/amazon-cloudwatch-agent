@@ -39,7 +39,6 @@ type pusher struct {
 	FlushTimeout  time.Duration
 	RetryDuration time.Duration
 	Log           telegraf.Logger
-	Retention     int
 
 	events              []*cloudwatchlogs.InputLogEvent
 	minT, maxT          *time.Time
@@ -58,14 +57,13 @@ type pusher struct {
 	startNonBlockCh       chan struct{}
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, retention int) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
 		FlushTimeout:    flushTimeout,
 		RetryDuration:   retryDuration,
 		Log:             logger,
-		Retention:       retention,
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushTimer:      time.NewTimer(flushTimeout),

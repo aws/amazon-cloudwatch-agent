@@ -65,12 +65,8 @@ func DefaultStringArrayCase(key string, defaultVal, input interface{}) (returnKe
 
 func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
 	returnKey, returnVal = DefaultIntegralCase(key, defaultVal, input)
-	if intVal, ok := returnVal.(int); ok {
-		if IsValidRetentionDays(intVal) {
-			returnVal = intVal
-		} else {
-			returnVal = -1
-		}
+	if intVal, ok := returnVal.(int); ok && IsValidRetentionDays(intVal) {
+		returnVal = intVal
 	} else {
 		returnVal = -1
 		AddErrorMessages(
