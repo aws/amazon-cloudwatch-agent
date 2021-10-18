@@ -5,6 +5,7 @@ export AOC_BUILD_SPACE=$(AOC_BASE_SPACE)/build
 
 VERSION = $(shell echo `git describe --tag --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
 VERSION := $(shell echo ${VERSION} | sed -e "s/^v//")
+nightly-release: VERSION := $(shell echo ${VERSION}-nightly-build)
 # In case building outside of a git repo, use the version presented in the CWAGENT_VERSION file as a fallback
 ifeq ($(VERSION),)
 VERSION := `cat CWAGENT_VERSION`
@@ -43,10 +44,7 @@ AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.windowsExtraConfigPath=C:\\
 
 release: clean test build package-rpm package-deb package-win package-darwin
 
-nightly-release: nightly-version-tag release
-
-nightly-version-tag:
-VERSION := ${VERSION}-nightly-build
+nightly-release: release
 
 build: check_secrets cwagent-otel-collector amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
 
