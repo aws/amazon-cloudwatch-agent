@@ -402,16 +402,16 @@ func (t *LogFile) checkForDuplicateRetentionSettings() {
 
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
-
 		if fileconfig.LogGroupName != "" {
-			configMap[fileconfig.LogGroupName] += 1
+			logGroup := strings.ToLower(fileconfig.LogGroupName)
+			configMap[logGroup] += 1
 		}
 
 	}
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
 		// log group has Retention settings in multiple places: throw an error
-		if fileconfig.LogGroupName != "" && configMap[fileconfig.LogGroupName] > 1 {
+		if fileconfig.LogGroupName != "" && configMap[strings.ToLower(fileconfig.LogGroupName)] > 1 {
 			panic(fmt.Sprintf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileconfig.LogGroupName))
 		}
 	}
