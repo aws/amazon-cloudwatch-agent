@@ -36,7 +36,6 @@
   },
   "logs": {
     "logs_collected": {
-      "files": {},
       "windows_events": {
         "collect_list": [
           {
