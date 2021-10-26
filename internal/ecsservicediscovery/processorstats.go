@@ -43,11 +43,7 @@ func (sd *ProcessorStats) AddStatsCount(name string, count int) {
 	if sd.stats == nil {
 		sd.ResetStats()
 	}
-	if _, ok := sd.stats[name]; ok {
-		sd.stats[name] += count
-	} else {
-		sd.stats[name] = count
-	}
+	sd.stats[name] += count
 }
 
 func (sd *ProcessorStats) ResetStats() {
@@ -64,5 +60,5 @@ func (sd *ProcessorStats) ShowStats() {
 	for _, k := range keys {
 		log.Printf("D! ECS_SD_Stats: %v: %v\n", k, sd.stats[k])
 	}
-	log.Printf("D! ECS_SD_Stats: Latency: %v\n", time.Now().Sub(sd.startTime))
+	log.Printf("D! ECS_SD_Stats: Latency: %v\n", time.Since(sd.startTime))
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
@@ -47,6 +46,7 @@ func initFlags() {
 		if err != nil {
 			log.Fatalf("E! Failed to open common-config file %s with error: %v", *inputConfig, err)
 		}
+		defer f.Close()
 		conf, err := commonconfig.Parse(f)
 		if err != nil {
 			log.Fatalf("E! Failed to parse common-config file %s with error: %v", *inputConfig, err)
@@ -93,7 +93,7 @@ func main() {
 		panic(fmt.Sprintf("E! Failed to generate merged json config: %v", err))
 	}
 
-	if os.Getenv(config.RUN_IN_CONTAINER) != config.RUN_IN_CONTAINER_TRUE {
+	if !ctx.RunInContainer() {
 		// run as user only applies to non container situation.
 		current, e := user.Current()
 		if e == nil && current.Name == "root" {

@@ -9,8 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/influxdata/wlog"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,6 +22,10 @@ import (
 	"syscall"
 	"time"
 
+	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/influxdata/wlog"
+
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -34,6 +36,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
+
 	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
@@ -149,7 +152,9 @@ func reloadLoop(
 				for {
 					select {
 					case <-ticker.C:
+						log.Printf("E! [adam] wut %v", envConfigPath)
 						if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
+							log.Printf("E! file changed")
 							if err := loadEnvironmentVariables(envConfigPath); err != nil {
 								log.Printf("E! Unable to load env variables: %v", err)
 							}
@@ -161,6 +166,9 @@ func reloadLoop(
 							if err := wlog.SetLevelFromName(logLevel); err != nil {
 								log.Printf("E! Unable to set log level: %v", err)
 							}
+							// Set AWS SDK logging
+							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
+							internalaws.SetSDKLogLevel(wlog.LogLevel(), sdkLogLevel)
 							previousModTime = info.ModTime()
 						}
 					case <-ctx.Done():
@@ -177,6 +185,7 @@ func reloadLoop(
 	}
 }
 
+// loadEnvironmentVariables updates OS ENV vars with key/val from the JSON file at `path`.
 func loadEnvironmentVariables(path string) error {
 	if path == "" {
 		return fmt.Errorf("No env config file specified")

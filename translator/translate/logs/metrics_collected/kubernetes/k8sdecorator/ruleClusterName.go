@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/aws-sdk-go/aws"
@@ -74,6 +75,8 @@ func getClusterNameFromEc2Tagger() string {
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
 		HTTPClient:                    &http.Client{Timeout: 1 * time.Minute},
+		LogLevel:                      internalaws.SDKLogLevel(),
+		Logger:                        internalaws.SDKLogger{},
 	}
 
 	input := &ec2.DescribeTagsInput{

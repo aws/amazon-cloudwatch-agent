@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -99,7 +99,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		return cwd
 	}
 
-	credentialConfig := &configaws.CredentialConfig{
+	credentialConfig := &internalaws.CredentialConfig{
 		Region:    c.Region,
 		AccessKey: c.AccessKey,
 		SecretKey: c.SecretKey,
@@ -115,6 +115,8 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		&aws.Config{
 			Endpoint: aws.String(c.EndpointOverride),
 			Retryer:  logThrottleRetryer,
+			LogLevel: internalaws.SDKLogLevel(),
+			Logger:   internalaws.SDKLogger{},
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
