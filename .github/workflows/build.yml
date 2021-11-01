@@ -16,6 +16,19 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            cachepath: |
+              ~/.cache/go-build
+              ~/go/pkg/mod
+          - os: macos-latest
+            cachepath: |
+              ~/Library/Caches/go-build
+              ~/go/pkg/mod
+          - os: windows-latest
+            cachepath: |
+              %LocalAppData%\go-build
+              ~/go/pkg/mod
     steps:
 
     - name: Set up Go 1.x
@@ -37,6 +50,14 @@ jobs:
     - name: Debug go.mod
       run: cat go.mod
       working-directory: amazon-cloudwatch-agent
+
+    - name: Cache build output
+      uses: actions/cache@v2
+      with:
+        path: ${{ matrix.cachepath }}
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
 
     - name: Build
       run: make test build
