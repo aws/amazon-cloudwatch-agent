@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         include:
           - os: ubuntu-latest
             cachepath: |
@@ -24,10 +24,6 @@ jobs:
           - os: macos-latest
             cachepath: |
               ~/Library/Caches/go-build
-              ~/go/pkg/mod
-          - os: windows-latest
-            cachepath: |
-              %LocalAppData%\go-build
               ~/go/pkg/mod
     steps:
 

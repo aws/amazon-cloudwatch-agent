@@ -1,0 +1,33 @@
+
+name: build-and-test-windows
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  pull_request:
+
+jobs:
+  windows-unittest:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+
+      - name: Cache Go
+        uses: actions/cache@v2
+        with:
+          path: |
+            %LocalAppData%\go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run Unit tests
+        run: go test ./...
