@@ -38,6 +38,7 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/disk"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/diskio"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/ethtool"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/gpu"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/mem"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/net"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/netstat"

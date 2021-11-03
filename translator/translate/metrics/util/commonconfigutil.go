@@ -26,7 +26,7 @@ const (
 
 // ProcessLinuxCommonConfig is used by both Linux and Darwin.
 func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string, result map[string]interface{}) bool {
-	isHighRsolution := IsHighResolution(agent.Global_Config.Interval)
+	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
 	inputMap := input.(map[string]interface{})
 	// Generate allowlisted metric list, process only if Measurement_Key exist
 	if translator.IsValid(inputMap, Measurement_Key, path) {
@@ -47,7 +47,7 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 	}
 
 	// Set input plugin specific interval
-	isHighRsolution = setTimeInterval(inputMap, result, isHighRsolution, pluginName)
+	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
 
 	//Set append_dimensions as tags
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
@@ -55,8 +55,15 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 		util.Cleanup(val)
 	}
 
+	// apply any specific rules for the plugin
+	if m, ok := ApplyPluginSpecificRules(pluginName); ok {
+		for key, val := range m {
+			result[key] = val
+		}
+	}
+
 	// Add HighResolution tags
-	if isHighRsolution {
+	if isHighResolution {
 		if result[Append_Dimensions_Mapped_Key] != nil {
 			util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
 		} else {

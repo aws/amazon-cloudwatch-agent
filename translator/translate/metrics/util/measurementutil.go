@@ -5,6 +5,7 @@ package util
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
@@ -19,6 +20,8 @@ const measurement_name = "name"
 const measurement_category = "category"
 const measurement_rename = "rename"
 const measurement_unit = "unit"
+const nvidia_smi_plugin_name = "nvidia_smi"
+const tag_exclude_key = "tagexclude"
 
 func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string, path string) (returnKey string, returnVal []string) {
 	inputList := inputs.([]interface{})
@@ -63,6 +66,7 @@ func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string
 func ApplyMeasurementRuleForMetricDecoration(inputs interface{}, pluginName string, targetOs string) (returnVal []interface{}) {
 	inputList := inputs.([]interface{})
 	returnVal = []interface{}{}
+	pluginName = config.GetRealPluginName(pluginName)
 	for _, input := range inputList {
 		if reflect.TypeOf(input).String() == "string" {
 			continue
@@ -78,14 +82,14 @@ func ApplyMeasurementRuleForMetricDecoration(inputs interface{}, pluginName stri
 			continue
 		}
 
-		formatted_metricName := getValidMetric(targetOs, pluginName, inputMetricName.(string))
+		formattedMetricName := getValidMetric(targetOs, pluginName, inputMetricName.(string))
 
-		if formatted_metricName != "" {
+		if formattedMetricName != "" {
 			decorationMap := make(map[string]string)
 			for k, v := range mItemMap {
 				switch k {
 				case measurement_name:
-					decorationMap[k] = formatted_metricName
+					decorationMap[k] = formattedMetricName
 				case measurement_rename:
 					fallthrough
 				case measurement_unit:
@@ -96,6 +100,8 @@ func ApplyMeasurementRuleForMetricDecoration(inputs interface{}, pluginName stri
 			}
 			decorationMap[measurement_category] = pluginName
 			returnVal = append(returnVal, decorationMap)
+		} else {
+			log.Printf("W! Failed to rename metric name: %s, in plugin: %s", inputMetricName, pluginName)
 		}
 	}
 	return
@@ -163,4 +169,19 @@ func GetMeasurementName(input interface{}) (measurementNames []string) {
 		}
 	}
 	return
+}
+
+// ApplyPluginSpecificRules returns a map contains all the rules for tagpass, tagdrop, namepass, namedrop,
+//fieldpass, fielddrop, taginclude, tagexclude specifically for certain plugin.
+func ApplyPluginSpecificRules(pluginName string) (map[string][]string, bool) {
+	switch pluginName {
+	case nvidia_smi_plugin_name:
+		return map[string][]string{tag_exclude_key: GetExcludingTags(pluginName)}, true
+	default:
+		return nil, false
+	}
+}
+
+func GetExcludingTags(pluginName string) (results []string) {
+	return config.TagDenyList[pluginName]
 }

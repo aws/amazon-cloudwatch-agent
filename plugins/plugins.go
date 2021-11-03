@@ -40,6 +40,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/ethtool"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net"
+	_ "github.com/influxdata/telegraf/plugins/inputs/nvidia_smi"
 	_ "github.com/influxdata/telegraf/plugins/inputs/processes"
 	_ "github.com/influxdata/telegraf/plugins/inputs/procstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/socket_listener"
