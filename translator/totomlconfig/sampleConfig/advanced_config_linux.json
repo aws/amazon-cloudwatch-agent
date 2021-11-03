@@ -65,6 +65,15 @@
           "conntrack_allowance_exceeded",
           "linklocal_allowance_exceeded"
         ]
+      },
+      "nvidia_gpu": {
+        "measurement": [
+          "utilization_gpu",
+          "utilization_memory",
+          "power_draw",
+          "temperature_gpu"
+        ],
+        "metrics_collection_interval": 60
       }
     }
   }

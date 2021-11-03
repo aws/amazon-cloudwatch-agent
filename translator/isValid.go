@@ -11,7 +11,7 @@ import (
 var ErrorMessages = []string{}
 var InfoMessages = []string{}
 
-//IsValid checks wether the mandatory config parameter is valid
+//IsValid checks whether the mandatory config parameter is valid
 func IsValid(input interface{}, key string, path string) bool {
 	m := input.(map[string]interface{})
 	val, ok := m[key]

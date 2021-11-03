@@ -55,7 +55,12 @@ func TestChangeFileOwner(t *testing.T) {
 	// Files that should be excluded
 	createFile(t, filepath.Join(agentLogDir, "anyone-can-write.log"), 0666)
 	createFile(t, filepath.Join(agentLogDir, "suid-file.log"), 0644|os.ModeSetuid)
-	createFile(t, filepath.Join(agentLogDir, "sgid-file.log"), 0644|os.ModeSetgid)
+	/*
+		There is an issue in ibuild where g is not being set by chmod
+		Add this line back to the test when there is a solution see sim https://issues.amazon.com/iBuild-12664
+		This commit does not have to be added to the open source cw agent test
+		createFile(t, filepath.Join(agentLogDir, "sgid-file.log"), 0644|os.ModeSetgid)
+	*/
 	createFile(t, filepath.Join(agentLogDir, "suid-and-sgid-file.log"), 0644|os.ModeSetuid|os.ModeSetgid)
 	createFile(t, filepath.Join(agentLogDir, "owner-executable.log"), 0744)
 	createFile(t, filepath.Join(agentLogDir, "group-executable.log"), 0654)
@@ -109,8 +114,8 @@ func createFile(t *testing.T, path string, mode os.FileMode) {
 	}
 }
 
-func createSymlink(t *testing.T, oldname, newname string) {
-	if err := os.Symlink(oldname, newname); err != nil {
-		t.Fatalf("failed to create symbolic link %v pointing to %v: %v", newname, oldname, err)
+func createSymlink(t *testing.T, from, to string) {
+	if err := os.Symlink(from, to); err != nil {
+		t.Fatalf("failed to create symbolic link from %v to %v: %v", from, to, err)
 	}
 }
