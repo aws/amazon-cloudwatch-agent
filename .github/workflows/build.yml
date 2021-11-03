@@ -76,7 +76,7 @@ jobs:
     - name: Archive production artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: build-artifacts
+        name: ${{ matrix.os }}-build-artifacts
         path: |
           ${{ github.workspace }}/amazon-cloudwatch-agent/build/
           ${{ github.workspace }}/amazon-cloudwatch-agent/CWAGENT_VERSION
