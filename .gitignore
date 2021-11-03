@@ -9,3 +9,4 @@ CWAGENT_VERSION
 .terraform.*
 terraform.*
 .terraform/*
+coverage.txt
