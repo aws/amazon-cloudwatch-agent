@@ -1,4 +1,4 @@
-name: Build and Test
+name: build-and-test
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
             cachepath: |
               ~/Library/Caches/go-build
               ~/go/pkg/mod
-    steps:
+    steps:  
 
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
@@ -70,6 +70,7 @@ jobs:
       working-directory: amazon-cloudwatch-agent
 
     - name: Archive production artifacts
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.os }}-build-artifacts
@@ -77,3 +78,4 @@ jobs:
           ${{ github.workspace }}/amazon-cloudwatch-agent/build/
           ${{ github.workspace }}/amazon-cloudwatch-agent/CWAGENT_VERSION
           ${{ github.workspace }}/amazon-cloudwatch-agent/coverage.txt
+        retention-days: 5
