@@ -67,6 +67,7 @@ jobs:
       uses: codecov/codecov-action@v2
       with:
         verbose: true
+        directory: ./amazon-cloudwatch-agent/
 
     - name: Build
       run: make build
@@ -77,6 +78,6 @@ jobs:
       with:
         name: build-artifacts
         path: |
-          ${{ github.workspace }}/build/
-          ${{ github.workspace }}/CWAGENT_VERSION
-          ${{ github.workspace }}/coverage.txt
+          ${{ github.workspace }}/amazon-cloudwatch-agent/build/
+          ${{ github.workspace }}/amazon-cloudwatch-agent/CWAGENT_VERSION
+          ${{ github.workspace }}/amazon-cloudwatch-agent/coverage.txt
