@@ -68,14 +68,3 @@ jobs:
     - name: Build
       run: make build
       working-directory: amazon-cloudwatch-agent
-
-    - name: Archive production artifacts
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ matrix.os }}-build-artifacts
-        path: |
-          ${{ github.workspace }}/amazon-cloudwatch-agent/build/
-          ${{ github.workspace }}/amazon-cloudwatch-agent/CWAGENT_VERSION
-          ${{ github.workspace }}/amazon-cloudwatch-agent/coverage.txt
-        retention-days: 5
