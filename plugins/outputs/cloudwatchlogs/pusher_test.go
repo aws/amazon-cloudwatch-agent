@@ -473,7 +473,7 @@ func TestCreateLogGroupAndLogSteamWhenNotFound(t *testing.T) {
 	foundInvalidSeqToken, foundUnknownErr := false, false
 	loglines := strings.Split(strings.TrimSpace(logbuf.String()), "\n")
 	for _, logline := range loglines {
-		if strings.Contains(logline, "W!") && strings.Contains(logline, "Invalid SequenceToken") {
+		if (strings.Contains(logline, "W!") || strings.Contains(logline, "I!")) && strings.Contains(logline, "Invalid SequenceToken") {
 			foundInvalidSeqToken = true
 		}
 		if strings.Contains(logline, "E!") && strings.Contains(logline, "Unknown Error") {
