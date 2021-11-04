@@ -2,10 +2,10 @@
 name: build-and-test-windows
 on:
   push:
-    branches: [ main ]
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
+    branches: [ main, master ]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 
 jobs:
   windows-unittest:
