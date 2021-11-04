@@ -17,6 +17,16 @@ Enhancements and bug fixes:
 * Add messages in amazon-cloudwatch.agent.log when retrying requests with AWS SDK due to throttling.
 
 ========================================================================
+Amazon CloudWatch Agent 1.247349.0 (2021-07-15)
+========================================================================
+
+Enhancements and bug fixes:
+
+* Log throttling events handled by SDK
+* CA bundle fix
+* Update aws-otel-collector version to v0.11.0 (#571)
+
+========================================================================
 Amazon CloudWatch Agent 1.247348.0 (2021-05-28)
 ========================================================================
 
