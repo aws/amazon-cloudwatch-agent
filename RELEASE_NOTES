@@ -1,12 +1,20 @@
 ========================================================================
-Amazon CloudWatch Agent 1.247349.0 (2021-07-15)
+Amazon CloudWatch Agent 1.247350.0 (2021-11-04)
 ========================================================================
 
 Enhancements and bug fixes:
 
-* Log throttling events handled by SDK
-* CA bundle fix
-* Update aws-otel-collector version to v0.11.0 (#571)
+* Improve message in amazon-cloudwatch-agent.log for Invalid Sequence Token case.
+* Update To Otel Version 0.11.0.
+* Improve windows config migration wizard not to include empty files/windows_events field.
+* Improve runtime debugging with added environment variable CWAGENT_LOG_LEVEL.
+* Improve config wizard message regarding collectd.
+* Removed runc dependency
+* Fix potential infinite retry when uploading logs.
+* Fix windows event log plugin to use proper StateFile path.
+* Fix performance for container insights with Kubernetes API server.
+* Improve messages in amazon-cloudwatch-agent.log for dropped log lines in a monitored file.
+* Add messages in amazon-cloudwatch.agent.log when retrying requests with AWS SDK due to throttling.
 
 ========================================================================
 Amazon CloudWatch Agent 1.247348.0 (2021-05-28)
@@ -71,10 +79,10 @@ New Features and Enhancements:
 * Composite Agent (CloudWatch Agent + OTel Collector) for EC2
 * Support append-config for procstat
 * Fix incorrect systemd detection
-* Enable flag to force ec2 mode 
+* Enable flag to force ec2 mode
 * Sync manifest files for container insights
 * Disable cgo for test target
-* Add formatted date as a variable 
+* Add formatted date as a variable
 * Add check secrets
 
 ========================================================================
@@ -175,7 +183,7 @@ New Features and Enhancements:
 * Fix issue with meta character is used in the middle of the file_path for logs collected on Windows
 * Fix error log when directory matches the file_path for logs collected
 * Fix Agent may not send k8sapiserver metrics due to k8sapiserver OnStoppedLeading
-* Add support to use STS regional endpoints as default behavior to avoid availability risks   
+* Add support to use STS regional endpoints as default behavior to avoid availability risks
 
 ========================================================================
 Amazon CloudWatch Agent 1.237768.0 (2020-02-12)
