@@ -3,7 +3,6 @@
     "metrics_collection_interval": 60,
     "run_as_user": "root",
     "debug": true,
-    "aws_sdk_log_level": "LogDebug",
     "logfile": ""
   },
   "metrics": {
