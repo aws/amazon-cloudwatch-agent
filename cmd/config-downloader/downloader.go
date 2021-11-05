@@ -50,7 +50,7 @@ func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[st
 	profile, profileOk := credsMap[commonconfig.CredentialProfile]
 	sharedConfigFile, sharedConfigFileOk := credsMap[commonconfig.CredentialFile]
 	rootconfig := &aws.Config{
-		Region: aws.String(region),
+		Region:   aws.String(region),
 		LogLevel: configaws.SDKLogLevel(),
 		Logger:   configaws.SDKLogger{},
 	}
