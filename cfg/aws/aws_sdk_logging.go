@@ -16,7 +16,6 @@ var sdkLogLevel aws.LogLevelType = aws.LogOff
 // SetSDKLogLevel sets the global log level which will be used in all AWS SDK calls.
 // Example usage: set `debug = true` and `aws_sdk_log_level = LogDebug` in config.json.
 func SetSDKLogLevel(wLogLevel wlog.Level, sdkLogLevelString string) {
-	log.Printf("E! [Adam] SetSDKLogLevel %v, %s", wLogLevel, sdkLogLevelString)
 	if wLogLevel != wlog.DEBUG {
 		sdkLogLevel = aws.LogOff
 		return
@@ -48,7 +47,6 @@ func SetSDKLogLevel(wLogLevel wlog.Level, sdkLogLevelString string) {
 // SDKLogLevel returns the single global value so it can be used in all
 // AWS SDK calls scattered throughout the Agent.
 func SDKLogLevel() *aws.LogLevelType {
-	log.Printf("E! [Adam]: SDKLogLevel %v", sdkLogLevel)
 	return &sdkLogLevel
 }
 

@@ -107,7 +107,7 @@ func main() {
 
 	tomlConfigPath := cmdutil.GetTomlConfigPath(ctx.OutputTomlFilePath())
 	cmdutil.TranslateJsonMapToTomlFile(mergedJsonConfigMap, tomlConfigPath)
-	//put env config into the same folder as the toml config
+	// Put env config into the same folder as the toml config.
 	envConfigPath := filepath.Join(filepath.Dir(tomlConfigPath), envConfigFileName)
 	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJsonConfigMap, envConfigPath)
 }

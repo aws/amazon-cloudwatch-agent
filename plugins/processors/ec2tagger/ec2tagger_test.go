@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/influxdata/telegraf"
 
@@ -253,7 +253,7 @@ func TestInitSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 		volumesPartialLimit: 0,
 		UseUpdatedVolumes:   false,
 	}
-	ec2Provider := func(*internalaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
@@ -305,7 +305,7 @@ func TestInitSuccessWithTagsVolumesUpdate(t *testing.T) {
 		volumesPartialLimit: 0,
 		UseUpdatedVolumes:   false,
 	}
-	ec2Provider := func(*internalaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
@@ -376,7 +376,7 @@ func TestInitSuccessWithWildcardTagVolumeKey(t *testing.T) {
 		volumesPartialLimit: 0,
 		UseUpdatedVolumes:   false,
 	}
-	ec2Provider := func(*internalaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
@@ -426,7 +426,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 		volumesPartialLimit: 0,
 		UseUpdatedVolumes:   false,
 	}
-	ec2Provider := func(*internalaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
@@ -608,7 +608,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 		volumesPartialLimit: 0,
 		UseUpdatedVolumes:   false,
 	}
-	ec2Provider := func(*internalaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
@@ -702,7 +702,7 @@ func TestTaggerInitDoesNotBlock(t *testing.T) {
 		volumesPartialLimit: 0,
 		UseUpdatedVolumes:   false,
 	}
-	ec2Provider := func(*internalaws.CredentialConfig) ec2iface.EC2API {
+	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
 	backoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}

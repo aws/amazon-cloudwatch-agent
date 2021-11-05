@@ -4,6 +4,7 @@
     "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
     "internal": true,
     "debug": true,
+    "aws_sdk_log_level": "LogDebug",
     "user_agent": "CUSTOM USER AGENT VALUE",
     "credentials": {
       "role_arn": "global_role_arn_value"

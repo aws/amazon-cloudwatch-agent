@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -94,7 +94,7 @@ type metadataLookup struct {
 	instanceType bool
 }
 
-type ec2ProviderType func(*internalaws.CredentialConfig) ec2iface.EC2API
+type ec2ProviderType func(*configaws.CredentialConfig) ec2iface.EC2API
 
 type ec2Metadata interface {
 	Available() bool
@@ -363,7 +363,7 @@ func (t *Tagger) Init() error {
 	}
 
 	if len(t.EC2InstanceTagKeys) > 0 || len(t.EBSDeviceKeys) > 0 {
-		ec2CredentialConfig := &internalaws.CredentialConfig{
+		ec2CredentialConfig := &configaws.CredentialConfig{
 			Region:    t.region,
 			AccessKey: t.AccessKey,
 			SecretKey: t.SecretKey,
@@ -529,9 +529,9 @@ func hostJitter(max time.Duration) time.Duration {
 // init adds this plugin to the framework's "processors" registry
 func init() {
 	processors.Add("ec2tagger", func() telegraf.Processor {
-		mdCredentialConfig := &internalaws.CredentialConfig{}
+		mdCredentialConfig := &configaws.CredentialConfig{}
 		mdConfigProvider := mdCredentialConfig.Credentials()
-		ec2Provider := func(ec2CredentialConfig *internalaws.CredentialConfig) ec2iface.EC2API {
+		ec2Provider := func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			ec2ConfigProvider := ec2CredentialConfig.Credentials()
 			return ec2.New(ec2ConfigProvider)
 		}

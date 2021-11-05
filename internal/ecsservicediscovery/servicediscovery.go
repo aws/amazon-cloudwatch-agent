@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -25,7 +25,7 @@ type ServiceDiscovery struct {
 }
 
 func (sd *ServiceDiscovery) init() {
-	credentialConfig := &internalaws.CredentialConfig{
+	credentialConfig := &configaws.CredentialConfig{
 		Region: sd.Config.TargetClusterRegion,
 	}
 	configProvider := credentialConfig.Credentials()

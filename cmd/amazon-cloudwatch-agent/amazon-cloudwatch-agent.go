@@ -22,7 +22,7 @@ import (
 	"syscall"
 	"time"
 
-	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/influxdata/wlog"
 
@@ -152,9 +152,7 @@ func reloadLoop(
 				for {
 					select {
 					case <-ticker.C:
-						log.Printf("E! [adam] wut %v", envConfigPath)
 						if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
-							log.Printf("E! file changed")
 							if err := loadEnvironmentVariables(envConfigPath); err != nil {
 								log.Printf("E! Unable to load env variables: %v", err)
 							}
@@ -168,7 +166,7 @@ func reloadLoop(
 							}
 							// Set AWS SDK logging
 							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
-							internalaws.SetSDKLogLevel(wlog.LogLevel(), sdkLogLevel)
+							configaws.SetSDKLogLevel(wlog.LogLevel(), sdkLogLevel)
 							previousModTime = info.ModTime()
 						}
 					case <-ctx.Done():
@@ -185,7 +183,8 @@ func reloadLoop(
 	}
 }
 
-// loadEnvironmentVariables updates OS ENV vars with key/val from the JSON file at `path`.
+// loadEnvironmentVariables updates OS ENV vars with key/val from the given JSON file.
+// The "config-translator" program populates that file.
 func loadEnvironmentVariables(path string) error {
 	if path == "" {
 		return fmt.Errorf("No env config file specified")
@@ -309,7 +308,13 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
-
+	// Need to set SDK log level before plugins get loaded.
+	// Some aws.Config objects get created early and live forever which means
+	// we cannot change the sdk og level without restarting the Agent.
+	// For example CloudWatch.Connect().
+	sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
+	configaws.SetSDKLogLevel(wlog.LogLevel(), sdkLogLevel)
+	log.Printf("I! AWS SDK log level, %s", sdkLogLevel)
 	if *fTest || *fTestWait != 0 {
 		testWaitDuration := time.Duration(*fTestWait) * time.Second
 		return ag.Test(ctx, testWaitDuration)

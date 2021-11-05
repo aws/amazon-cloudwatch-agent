@@ -17,7 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
-	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	handlers "github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
@@ -117,14 +117,13 @@ func (c *CloudWatch) Description() string {
 
 func (c *CloudWatch) Connect() error {
 	var err error
-
 	c.publisher, _ = publisher.NewPublisher(publisher.NewNonBlockingFifoQueue(metricChanBufferSize), maxConcurrentPublisher, 2*time.Second, c.WriteToCloudWatch)
 
 	if c.metricDecorations, err = NewMetricDecorations(c.MetricConfigs); err != nil {
 		return err
 	}
 
-	credentialConfig := &internalaws.CredentialConfig{
+	credentialConfig := &configaws.CredentialConfig{
 		Region:    c.Region,
 		AccessKey: c.AccessKey,
 		SecretKey: c.SecretKey,
@@ -141,8 +140,8 @@ func (c *CloudWatch) Connect() error {
 		&aws.Config{
 			Endpoint: aws.String(c.EndpointOverride),
 			Retryer:  logThrottleRetryer,
-			LogLevel: internalaws.SDKLogLevel(),
-			Logger:   internalaws.SDKLogger{},
+			LogLevel: configaws.SDKLogLevel(),
+			Logger:   configaws.SDKLogger{},
 		})
 
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))

@@ -48,7 +48,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 	}
 }
 
-// Generate env config based on the input json config
+// TranslateJsonMapToEnvConfigFile populates env-config.json based on the input json config.
 func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, envConfigPath string) {
 	if envConfigPath == "" {
 		return

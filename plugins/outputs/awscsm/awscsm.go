@@ -14,7 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
 	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane"
 	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane/sdkmetricsdataplaneiface"
-	internalaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -114,7 +114,7 @@ func (c *CSM) Description() string {
 func (c *CSM) Connect() error {
 	c.logger = newLogger(c.LogLevel)
 
-	credentialConfig := &internalaws.CredentialConfig{
+	credentialConfig := &configaws.CredentialConfig{
 		Region:    c.Region,
 		AccessKey: c.AccessKey,
 		SecretKey: c.SecretKey,
@@ -147,8 +147,8 @@ func (c *CSM) Connect() error {
 
 	commonCreds := credentialConfig.Credentials()
 	commonCfg := commonCreds.ClientConfig(csm.ServiceName, &aws.Config{
-		LogLevel: internalaws.SDKLogLevel(),
-		Logger:   internalaws.SDKLogger{},
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
 	})
 
 	if c.LogLevel > 0 {
@@ -168,8 +168,8 @@ func (c *CSM) Connect() error {
 
 	controlPlaneConfigOverride := aws.Config{
 		Endpoint: aws.String(endpoint),
-		LogLevel: internalaws.SDKLogLevel(),
-		Logger:   internalaws.SDKLogger{},
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
 	}
 
 	controlplane := csm.New(commonSession, &controlPlaneConfigOverride)
@@ -198,8 +198,8 @@ func (c *CSM) Connect() error {
 
 	dataPlaneConfigOverride := aws.Config{
 		MaxRetries: aws.Int(0),
-		LogLevel:   internalaws.SDKLogLevel(),
-		Logger:     internalaws.SDKLogger{},
+		LogLevel:   configaws.SDKLogLevel(),
+		Logger:     configaws.SDKLogger{},
 	}
 
 	dataplaneClient := sdkmetricsdataplane.New(commonSession, &dataPlaneConfigOverride)
