@@ -70,7 +70,7 @@ amazon-cloudwatch-agent: copy-version-file
 # Save AWS OTEL Collector GIT SHA to a file so it can be easily referenced from outside this repository.
 update-submodule:
 	git submodule update --init
-	echo "$(AOC_GIT_SHA)" > aws-otel-collector-commit-id
+	echo "$(AOC_GIT_SHA)" > AOC_GIT_SHA
 
 cwagent-otel-collector: update-submodule
 	@echo Building aws-otel-collector
