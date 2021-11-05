@@ -31,7 +31,7 @@ const (
 	exitSuccessMessage       = "Configuration validation first phase succeeded"
 )
 
-// Translate from Json map to toml file
+// TranslateJsonMapToTomlFile translates from JSON map to TOML file.
 func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConfigFilePath string) {
 	res := totomlconfig.ToTomlConfig(jsonConfigValue)
 	if translator.IsTranslateSuccess() {
