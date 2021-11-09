@@ -760,9 +760,8 @@ func TestLogsFileRecreate(t *testing.T) {
 
 	t.Logf("Deleting the monitored temp file, and then creating it again with the same content...")
 	// recreate file
-	err = os.Remove(tmpfile.Name())
-	require.NoError(t, err)
 	require.NoError(t, tmpfile.Close())
+	require.NoError(t, os.Remove(tmpfile.Name()))
 	time.Sleep(time.Millisecond * 100)
 	tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
