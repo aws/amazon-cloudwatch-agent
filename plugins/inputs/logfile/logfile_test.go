@@ -763,7 +763,9 @@ func TestLogsFileRecreate(t *testing.T) {
 	require.NoError(t, tmpfile.Close())
 	require.NoError(t, os.Remove(tmpfile.Name()))
 	_, err = os.Stat(tmpfile.Name())
-	require.NoError(t, err)
+	if err == nil {
+		t.Errorf("%s, should have been deleted", tmpfile.Name())
+	}
 	// Remove does not seem to be removing the file on Windows, because os.OpenFile() fails with ACCESS_DENIED
 	time.Sleep(time.Millisecond * 100)
 	tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_WRONLY|os.O_CREATE, 0600)
