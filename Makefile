@@ -67,9 +67,11 @@ amazon-cloudwatch-agent: copy-version-file
 	$(WIN_BUILD)/amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 	$(DARWIN_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 
+# Save AWS OTEL Collector GIT SHA to a file so it can be easily referenced from outside this repository.
 update-submodule:
 	git submodule update --init
-	
+	echo "$(AOC_GIT_SHA)" > AOC_GIT_SHA
+
 cwagent-otel-collector: update-submodule
 	@echo Building aws-otel-collector
 	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
@@ -121,7 +123,7 @@ fmt:
 	go fmt ./...
 
 test:
-	CGO_ENABLED=0 go test -v -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
+	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
 
 integration-test:
 	go test ./integration/test/... -p 1 -v --tags=integration
