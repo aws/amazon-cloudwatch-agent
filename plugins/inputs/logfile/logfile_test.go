@@ -753,7 +753,8 @@ func TestLogsFileRecreate(t *testing.T) {
 		err = os.Remove(tmpfile.Name())
 		require.NoError(t, err)
 		require.NoError(t, tmpfile.Close())
-		time.Sleep(time.Millisecond * 100)
+		// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
+		time.Sleep(time.Second * 1)
 		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 		require.NoError(t, err)
 
@@ -768,7 +769,8 @@ func TestLogsFileRecreate(t *testing.T) {
 	}
 	defer lsrc.Stop()
 
-	for {
+	// Waiting 10 seconds for the recreated temp file to be detected is plenty sufficient on any OS.
+	for start := time.Now(); time.Since(start) < 10 * time.Second; {
 		lsrcs = tt.FindLogSrc()
 		if len(lsrcs) > 0 {
 			break
