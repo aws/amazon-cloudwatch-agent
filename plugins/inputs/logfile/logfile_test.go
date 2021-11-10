@@ -781,7 +781,9 @@ func TestLogsFileRecreate(t *testing.T) {
 		}
 		time.Sleep(1 * time.Second)
 	}
-
+	if len(lsrcs) != 1 {
+		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
+	}
 	lsrc = lsrcs[0]
 	lsrc.SetOutput(func(e logs.LogEvent) {
 		if e != nil {
