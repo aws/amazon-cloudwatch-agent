@@ -744,10 +744,10 @@ func TestLogsFileRecreate(t *testing.T) {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
 
-	lsrc := lsrcs[0]
-	defer lsrc.Stop()
+	lsrc1 := lsrcs[0]
+	defer lsrc1.Stop()
 	evts := make(chan logs.LogEvent)
-	lsrc.SetOutput(func(e logs.LogEvent) {
+	lsrc1.SetOutput(func(e logs.LogEvent) {
 		if e != nil {
 			evts <- e
 		}
@@ -775,16 +775,17 @@ func TestLogsFileRecreate(t *testing.T) {
 
 	tlog.Infof("I! Wait until LogFile object can find the LogSrc again...")
 	for start := time.Now(); time.Since(start) < 10 * time.Second; {
-		time.Sleep(1 * time.Second)
+		// Sleep before checking so there is a change for delete and recreate to be detected.
+		time.Sleep(time.Second * 1)
 		lsrcs = tt.FindLogSrc()
 		if len(lsrcs) > 0 {
 			break
 		}
 	}
 
-	lsrc = lsrcs[0]
-	defer lsrc.Stop()
-	lsrc.SetOutput(func(e logs.LogEvent) {
+	lsrc2 := lsrcs[0]
+	defer lsrc2.Stop()
+	lsrc2.SetOutput(func(e logs.LogEvent) {
 		if e != nil {
 			evts <- e
 		}
