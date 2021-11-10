@@ -701,6 +701,10 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.Stop()
 }
 
+// TestLogsFileRecreate verifies that if a LogSrc matching a LogConfig is detected,
+// We only receive log lines beginning at the offset specified in the corresponding state-file.
+// And if the file happens to get deleted and recreated we expect to receive log lines beginning
+// at that same offset in the state file.
 func TestLogsFileRecreate(t *testing.T) {
 	tlog := TestLogger{t}
 	multilineWaitPeriod = 10 * time.Millisecond
@@ -715,11 +719,10 @@ func TestLogsFileRecreate(t *testing.T) {
 	require.NoError(t, err)
 	tlog.Infof("I! Created temp file %s, with some initial content.", tmpfile.Name())
 
+	tlog.Infof("I! Creating state file with a position in the middle of the temp file...")
 	stateDir, err := ioutil.TempDir("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
-
-	tlog.Infof("I! Creating state file with a position in the middle of the temp file...")
 	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
@@ -729,6 +732,7 @@ func TestLogsFileRecreate(t *testing.T) {
 
 	tlog.Infof("I! Creating LogFile object and verifying we find the 1 matching LogSrc...")
 	tt := NewLogFile()
+	defer tt.Stop()
 	tt.FileStateFolder = stateDir
 	tt.Log = tlog
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
@@ -739,7 +743,6 @@ func TestLogsFileRecreate(t *testing.T) {
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
-
 
 	lsrc := lsrcs[0]
 	defer lsrc.Stop()
@@ -772,8 +775,7 @@ func TestLogsFileRecreate(t *testing.T) {
 
 	tlog.Infof("I! Wait until LogFile object can find the LogSrc again...")
 	for start := time.Now(); time.Since(start) < 10 * time.Second; {
-		// Sleep before checking so there is a change for delete and recreate to be detected.
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		lsrcs = tt.FindLogSrc()
 		if len(lsrcs) > 0 {
 			break
@@ -781,6 +783,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	}
 
 	lsrc = lsrcs[0]
+	defer lsrc.Stop()
 	lsrc.SetOutput(func(e logs.LogEvent) {
 		if e != nil {
 			evts <- e
@@ -792,9 +795,6 @@ func TestLogsFileRecreate(t *testing.T) {
 	if e.Message() != expectedContent {
 		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), expectedContent)
 	}
-
-	lsrc.Stop()
-	tt.Stop()
 }
 
 func TestLogsPartialLineReading(t *testing.T) {
