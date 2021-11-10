@@ -30,12 +30,8 @@ type TestLogger struct {
 	t *testing.T
 }
 
-func (tl TestLogger) Errorf(format string, args ...interface{}) {
-	tl.t.Errorf(format, args...)
-}
-func (tl TestLogger) Error(args ...interface{}) {
-	tl.t.Error(args...)
-}
+func (tl TestLogger) Errorf(format string, args ...interface{}) { tl.t.Errorf(format, args...) }
+func (tl TestLogger) Error(args ...interface{}) 				{ tl.t.Error(args...) }
 func (tl TestLogger) Debugf(format string, args ...interface{}) { log.Printf(format, args...) }
 func (tl TestLogger) Debug(args ...interface{})                 { log.Println(args...) }
 func (tl TestLogger) Warnf(format string, args ...interface{})  { log.Printf(format, args...) }
@@ -706,33 +702,35 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 }
 
 func TestLogsFileRecreate(t *testing.T) {
+	tlog := TestLogger{t}
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 	expectedContent := "ContentAfterOffset"
 
-	t.Logf("Creating temp log file for test...")
+	tlog.Infof("I! Creating temp log file for test...")
 	tmpfile, err := createTempFile("", "")
-	defer os.Remove(tmpfile.Name())
+	//defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 	_, err = tmpfile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
-	t.Logf("Created temp file %s, with some initial content.", tmpfile.Name())
+	tlog.Infof("I! Created temp file %s, with some initial content.", tmpfile.Name())
 
 	stateDir, err := ioutil.TempDir("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
-	t.Logf("Creating state file with a position in the middle of the temp file...")
+	tlog.Infof("I! Creating state file with a position in the middle of the temp file...")
 	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
 	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
+	require.NoError(t, err)
 	defer os.Remove(stateFileName)
 
-	t.Logf("Creating LogFile object and verifying we find the 1 matching LogSrc...")
+	tlog.Infof("I! Creating LogFile object and verifying we find the 1 matching LogSrc...")
 	tt := NewLogFile()
 	tt.FileStateFolder = stateDir
-	tt.Log = TestLogger{t}
+	tt.Log = tlog
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
@@ -752,29 +750,27 @@ func TestLogsFileRecreate(t *testing.T) {
 		}
 	})
 
-	t.Logf("Receive an event (aka new content in file), expect only content from the position in the statefile and onward.")
+	tlog.Infof("I! Receive an event (aka new content in file), expect only content from the position in the statefile and onward.")
 	e := <-evts
 	if e.Message() != expectedContent {
 		t.Errorf("Wrong log found before file replacement: \n%v\nExpecting:\n%v\n", e.Message(), expectedContent)
 	}
 
-	t.Logf("Deleting the monitored temp file, and then creating it again with the same content...")
+	tlog.Infof("I! Deleting the monitored temp file, and then creating it again with the same content...")
 	// recreate file
 	require.NoError(t, tmpfile.Close())
 	require.NoError(t, os.Remove(tmpfile.Name()))
-	_, err = os.Stat(tmpfile.Name())
-	if err == nil {
-		t.Errorf("%s, should have been deleted", tmpfile.Name())
-	}
-	// Remove does not seem to be removing the file on Windows, because os.OpenFile() fails with ACCESS_DENIED
-	time.Sleep(time.Millisecond * 100)
-	tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_WRONLY|os.O_CREATE, 0600)
+
+	// Important: Wait long enough for Tail object to detect the file has been deleted and act accordingly.
+	// 100 ms seems to be enough on Linux and MacOS, but not for Windows.
+	time.Sleep(time.Second * 1)
+	tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 
 	_, err = tmpfile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
-	t.Logf("Wait until LogFile object can find the LogSrc again...")
+	tlog.Infof("I! Wait until LogFile object can find the LogSrc again...")
 	for start := time.Now(); time.Since(start) < 10 * time.Second; {
 		// Sleep before checking so there is a change for delete and recreate to be detected.
 		time.Sleep(2 * time.Second)
@@ -791,7 +787,7 @@ func TestLogsFileRecreate(t *testing.T) {
 		}
 	})
 
-	t.Logf("Receive an event (aka new content in file), expect only content from the position in the statefile and onward.")
+	tlog.Infof("I! Receive an event (aka new content in file), expect only content from the position in the statefile and onward.")
 	e = <-evts
 	if e.Message() != expectedContent {
 		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), expectedContent)
