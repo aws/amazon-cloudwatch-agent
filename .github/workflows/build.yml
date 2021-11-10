@@ -1,10 +1,11 @@
-name: Build and Test
+name: build-and-test
 
 on:
   push:
-    branches: [ "*" ]
+    branches:
+      - master
   pull_request:
-    branches: [ "*"]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 jobs:
@@ -14,13 +15,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    steps:
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            cachepath: |
+              ~/.cache/go-build
+              ~/go/pkg/mod
+          - os: macos-latest
+            cachepath: |
+              ~/Library/Caches/go-build
+              ~/go/pkg/mod
+    steps:  
 
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.13
+        go-version: ~1.15.15
       id: go
 
     - name: Configure git with longpath enabled (for windows)
@@ -37,6 +47,24 @@ jobs:
       run: cat go.mod
       working-directory: amazon-cloudwatch-agent
 
+    - name: Cache build output
+      uses: actions/cache@v2
+      with:
+        path: ${{ matrix.cachepath }}
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Test
+      run: make test
+      working-directory: amazon-cloudwatch-agent
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        verbose: true
+        directory: ./amazon-cloudwatch-agent/
+
     - name: Build
-      run: make test build
+      run: make build
       working-directory: amazon-cloudwatch-agent

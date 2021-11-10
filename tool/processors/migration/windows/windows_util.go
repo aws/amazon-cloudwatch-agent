@@ -42,3 +42,12 @@ func ReadOldConfigFromPath(path string) (config OldSsmCwConfig, err error) {
 	fmt.Println(err)
 	return config, errors.New("failed to parse the expected config")
 }
+
+func ReadConfigFromPathAsString(path string) (str string, err error) {
+	var file []byte
+	if file, err = ioutil.ReadFile(path); err == nil {
+		return string(file), nil
+	}
+	fmt.Println(err)
+	return str, errors.New("failed to parse the expected config")
+}

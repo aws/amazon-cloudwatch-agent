@@ -173,6 +173,9 @@ var schema = `{
             },
             "ethtool": {
               "$ref": "#/definitions/metricsDefinition/definitions/ethtoolDefinitions"
+            },
+            "nvidia_smi": {
+              "$ref": "#/definitions/metricsDefinition/definitions/nvidiaGpuDefinitions"
             }
           },
           "minProperties": 1,
@@ -469,6 +472,22 @@ var schema = `{
             }
           },
           "additionalProperties": false
+        },
+        "nvidiaGpuDefinitions": {
+          "type": "object",
+          "properties": {
+            "measurement": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            }
+          },
+          "metrics_collection_interval": {
+            "$ref": "#/definitions/timeIntervalDefinition"
+          }
         },
         "metricsMeasurementWithoutDecorationDefinition": {
           "type": "array",

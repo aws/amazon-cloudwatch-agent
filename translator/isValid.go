@@ -13,7 +13,7 @@ var ErrorMessages = []string{}
 var InfoMessages = []string{}
 var ValidRetentionInDays = []string{"-1", "1", "3", "5", "7", "14", "30", "60", "90", "120", "150", "180", "365", "400", "545", "731", "1827", "3653"}
 
-//IsValid checks wether the mandatory config parameter is valid
+//IsValid checks whether the mandatory config parameter is valid
 func IsValid(input interface{}, key string, path string) bool {
 	m := input.(map[string]interface{})
 	val, ok := m[key]

@@ -74,6 +74,7 @@ func TestCompleteConfig(t *testing.T) {
 	resetContext()
 	expectedEnvVars := map[string]string{
 		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
+		"CWAGENT_LOG_LEVEL":  "DEBUG",
 	}
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/complete_linux_config.json"), "linux", expectedEnvVars)
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/complete_windows_config.json"), "windows", expectedEnvVars)
@@ -169,12 +170,12 @@ func TestECSNodeMetricConfig(t *testing.T) {
 
 func readCommonConifg() {
 	ctx := context.CurrentContext()
-	config := commonconfig.New()
+	conf := commonconfig.New()
 	data, _ := ioutil.ReadFile("../totomlconfig/sampleConfig/commonConfigTest.toml")
-	config.Parse(bytes.NewReader(data))
-	ctx.SetCredentials(config.CredentialsMap())
-	ctx.SetProxy(config.ProxyMap())
-	ctx.SetSSL(config.SSLMap())
+	conf.Parse(bytes.NewReader(data))
+	ctx.SetCredentials(conf.CredentialsMap())
+	ctx.SetProxy(conf.ProxyMap())
+	ctx.SetSSL(conf.SSLMap())
 }
 
 func resetContext() {
