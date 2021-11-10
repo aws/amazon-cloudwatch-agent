@@ -39,13 +39,11 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
       with:
-        path: amazon-cloudwatch-agent
         fetch-depth: 0
         submodules: 'true'
 
     - name: Debug go.mod
       run: cat go.mod
-      working-directory: amazon-cloudwatch-agent
 
     - name: Cache build output
       uses: actions/cache@v2
@@ -57,14 +55,11 @@ jobs:
 
     - name: Test
       run: make test
-      working-directory: amazon-cloudwatch-agent
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
         verbose: true
-        directory: ./amazon-cloudwatch-agent/
 
     - name: Build
       run: make build
-      working-directory: amazon-cloudwatch-agent
