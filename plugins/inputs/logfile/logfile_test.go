@@ -709,7 +709,7 @@ func TestLogsFileRecreate(t *testing.T) {
 
 	tlog.Infof("I! Creating temp log file for test...")
 	tmpfile, err := createTempFile("", "")
-	//defer os.Remove(tmpfile.Name())
+	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 	_, err = tmpfile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
