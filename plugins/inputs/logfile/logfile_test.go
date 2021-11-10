@@ -705,6 +705,10 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.Stop()
 }
 
+// TestLogsFileRecreate verifies that if a LogSrc matching a LogConfig is detected,
+// We only receive log lines beginning at the offset specified in the corresponding state-file.
+// And if the file happens to get deleted and recreated we expect to receive log lines beginning
+// at that same offset in the state file.
 func TestLogsFileRecreate(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
