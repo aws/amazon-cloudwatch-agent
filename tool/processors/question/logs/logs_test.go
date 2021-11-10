@@ -27,7 +27,7 @@ func TestProcessor_Process(t *testing.T) {
 
 	conf := new(data.Config)
 
-	testutil.Type(inputChan, "", "/var/log/messages", "", "", "2")
+	testutil.Type(inputChan, "", "/var/log/messages", "", "", "", "2")
 	Processor.Process(ctx, conf)
 	_, confMap := conf.ToMap(ctx)
 	assert.Equal(t,
@@ -37,9 +37,10 @@ func TestProcessor_Process(t *testing.T) {
 					"files": map[string]interface{}{
 						"collect_list": []map[string]interface{}{
 							{
-								"file_path":       "/var/log/messages",
-								"log_group_name":  "messages",
-								"log_stream_name": "{instance_id}",
+								"file_path":         "/var/log/messages",
+								"log_group_name":    "messages",
+								"log_stream_name":   "{instance_id}",
+								"retention_in_days": -1,
 							},
 						},
 					},

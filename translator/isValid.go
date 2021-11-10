@@ -5,11 +5,13 @@ package translator
 
 import (
 	"fmt"
+	"strconv"
 )
 
 //ErrorMessages will provide detail error messages to user
 var ErrorMessages = []string{}
 var InfoMessages = []string{}
+var ValidRetentionInDays = []string{"-1", "1", "3", "5", "7", "14", "30", "60", "90", "120", "150", "180", "365", "400", "545", "731", "1827", "3653"}
 
 //IsValid checks whether the mandatory config parameter is valid
 func IsValid(input interface{}, key string, path string) bool {
@@ -62,4 +64,23 @@ func IsTranslateSuccess() bool {
 func ResetMessages() {
 	ErrorMessages = make([]string, 0)
 	InfoMessages = make([]string, 0)
+}
+
+// ValidDays represents the valid possible values for retentionInDays.
+// -1 represents no change in retention
+
+var ValidDays = map[int]bool{}
+
+func initializeValidMap() {
+	for i := 0; i < len(ValidRetentionInDays); i++ {
+		val, err := strconv.Atoi(ValidRetentionInDays[i])
+		if err == nil {
+			ValidDays[val] = true
+		}
+	}
+}
+
+func IsValidRetentionDays(days int) bool {
+	initializeValidMap()
+	return ValidDays[days]
 }

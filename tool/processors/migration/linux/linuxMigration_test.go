@@ -52,10 +52,11 @@ func TestProcessor_Process(t *testing.T) {
 				"files": map[string]interface{}{
 					"collect_list": []map[string]interface{}{
 						{
-							"timestamp_format": "%b %d %H:%M:%S",
-							"file_path":        "/var/log/messages",
-							"log_group_name":   "/var/log/messages",
-							"log_stream_name":  "{hostname}",
+							"timestamp_format":  "%b %d %H:%M:%S",
+							"file_path":         "/var/log/messages",
+							"log_group_name":    "/var/log/messages",
+							"log_stream_name":   "{hostname}",
+							"retention_in_days": -1,
 						},
 					},
 				},
@@ -118,11 +119,12 @@ func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
 			"files": map[string]interface{}{
 				"collect_list": []map[string]interface{}{
 					{
-						"file_path":        "/apollo/env/BaldrBifrost/var/output/log/audit_pusher.log",
-						"log_group_name":   "Bifrost/audit_pusher",
-						"timestamp_format": "%b %d %H:%M:%S,%f",
-						"log_stream_name":  "hsm-bqvuwqn72vk",
-						"encoding":         "euc-jp",
+						"file_path":         "/apollo/env/BaldrBifrost/var/output/log/audit_pusher.log",
+						"log_group_name":    "Bifrost/audit_pusher",
+						"timestamp_format":  "%b %d %H:%M:%S,%f",
+						"log_stream_name":   "hsm-bqvuwqn72vk",
+						"encoding":          "euc-jp",
+						"retention_in_days": -1,
 					},
 					{
 						"file_path":                "/var/log/messages",
@@ -130,6 +132,7 @@ func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
 						"timestamp_format":         "%b %d %H:%M:%S",
 						"multi_line_start_pattern": "{timestamp_format}",
 						"log_stream_name":          "{hostname}",
+						"retention_in_days":        -1,
 					},
 				},
 			},

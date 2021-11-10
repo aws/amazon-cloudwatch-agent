@@ -149,6 +149,8 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 	t.cleanUpStoppedTailerSrc()
 
+	// If a log group has retention settings defined in more than one place, stop the agent
+	t.checkForDuplicateRetentionSettings()
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
@@ -237,6 +239,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,
 				fileconfig.TruncateSuffix,
+				fileconfig.RetentionInDays,
 			)
 
 			src.AddCleanUpFn(func(ts *tailerSrc) func() {
@@ -390,6 +393,26 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 			}
 		default:
 			return
+		}
+	}
+}
+
+func (t *LogFile) checkForDuplicateRetentionSettings() {
+	configMap := make(map[string]int)
+
+	for i := range t.FileConfig {
+		fileconfig := &t.FileConfig[i]
+		if fileconfig.LogGroupName != "" {
+			logGroup := strings.ToLower(fileconfig.LogGroupName)
+			configMap[logGroup] += 1
+		}
+
+	}
+	for i := range t.FileConfig {
+		fileconfig := &t.FileConfig[i]
+		// log group has Retention settings in multiple places: throw an error
+		if fileconfig.LogGroupName != "" && configMap[strings.ToLower(fileconfig.LogGroupName)] > 1 {
+			panic(fmt.Sprintf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileconfig.LogGroupName))
 		}
 	}
 }

@@ -54,6 +54,9 @@ type CloudWatchLogs struct {
 	LogStreamName string `toml:"log_stream_name"`
 	LogGroupName  string `toml:"log_group_name"`
 
+	// Retention for log group
+	RetentionInDays int `toml:"retention_in_days"`
+
 	ForceFlushInterval internal.Duration `toml:"force_flush_interval"` // unit is second
 
 	Log telegraf.Logger `toml:"-"`
@@ -79,17 +82,21 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (c *CloudWatchLogs) CreateDest(group, stream string) logs.LogDest {
+func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.LogDest {
 	if group == "" {
 		group = c.LogGroupName
 	}
 	if stream == "" {
 		stream = c.LogStreamName
 	}
+	if retention <= 0 {
+		retention = -1
+	}
 
 	t := Target{
-		Group:  group,
-		Stream: stream,
+		Group:     group,
+		Stream:    stream,
+		Retention: retention,
 	}
 	return c.getDest(t)
 }
@@ -163,7 +170,7 @@ func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (Target, error) 
 		logStream = c.LogStreamName
 	}
 
-	return Target{logGroup, logStream}, nil
+	return Target{logGroup, logStream, -1}, nil
 }
 
 func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structuredLogEvent {
@@ -316,6 +323,7 @@ func (cd *cwDest) setRetryer(r request.Retryer) {
 
 type Target struct {
 	Group, Stream string
+	Retention     int
 }
 
 // Description returns a one-sentence description on the Output

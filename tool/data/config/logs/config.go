@@ -13,6 +13,7 @@ type Config struct {
 	Timezone              string `timezone`
 	MultiLineStartPattern string `multi_line_start_pattern`
 	Encoding              string `encoding`
+	Retention             int    `retention_in_days`
 }
 
 func (config *Config) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
@@ -33,6 +34,9 @@ func (config *Config) ToMap(ctx *runtime.Context) (string, map[string]interface{
 	}
 	if config.Encoding != "" {
 		resultMap["encoding"] = config.Encoding
+	}
+	if config.Retention != 0 {
+		resultMap["retention_in_days"] = config.Retention
 	}
 	return "", resultMap
 }

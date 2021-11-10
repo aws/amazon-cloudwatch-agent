@@ -4,9 +4,10 @@
 package logs
 
 import (
+	"testing"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestEventConfig_ToMap(t *testing.T) {
@@ -15,14 +16,16 @@ func TestEventConfig_ToMap(t *testing.T) {
 		LogGroup:    "SystemGroup",
 		LogStream:   "SystemStream",
 		EventLevels: []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
+		Retention:   1,
 	}
 	ctx := &runtime.Context{}
 	key, value := conf.ToMap(ctx)
 	assert.Equal(t, "", key)
 	assert.Equal(t, map[string]interface{}{
-		"event_name":      "System",
-		"event_levels":    []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
-		"log_group_name":  "SystemGroup",
-		"log_stream_name": "SystemStream"},
+		"event_name":        "System",
+		"event_levels":      []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
+		"log_group_name":    "SystemGroup",
+		"log_stream_name":   "SystemStream",
+		"retention_in_days": 1},
 		value)
 }

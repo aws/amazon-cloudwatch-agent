@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
@@ -29,6 +30,7 @@ type CloudWatchLogsService interface {
 	PutLogEvents(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)
 	CreateLogStream(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error)
 	CreateLogGroup(input *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error)
+	PutRetentionPolicy(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error)
 }
 
 type pusher struct {
@@ -57,18 +59,18 @@ type pusher struct {
 
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
 	p := &pusher{
-		Target:        target,
-		Service:       service,
-		FlushTimeout:  flushTimeout,
-		RetryDuration: retryDuration,
-		Log:           logger,
-
+		Target:          target,
+		Service:         service,
+		FlushTimeout:    flushTimeout,
+		RetryDuration:   retryDuration,
+		Log:             logger,
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushTimer:      time.NewTimer(flushTimeout),
 		stop:            make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
 	}
+	p.putRetentionPolicy()
 	go p.start()
 	return p
 }
@@ -240,7 +242,6 @@ func (p *pusher) send() {
 					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
 				}
 			}
-
 			for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
 				done := p.doneCallbacks[i]
 				done()
@@ -268,7 +269,9 @@ func (p *pusher) send() {
 			err := p.createLogGroupAndStream()
 			if err != nil {
 				p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
+				break
 			}
+			p.putRetentionPolicy()
 		case *cloudwatchlogs.InvalidSequenceTokenException:
 			if p.sequenceToken == nil {
 				p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v",  p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
@@ -338,6 +341,20 @@ func (p *pusher) createLogGroupAndStream() error {
 	}
 
 	return err
+}
+
+func (p *pusher) putRetentionPolicy() {
+	if p.Retention > 0 {
+		i := aws.Int64(int64(p.Retention))
+		putRetentionInput := &cloudwatchlogs.PutRetentionPolicyInput{
+			LogGroupName:    &p.Group,
+			RetentionInDays: i,
+		}
+		_, err := p.Service.PutRetentionPolicy(putRetentionInput)
+		if err != nil {
+			p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
+		}
+	}
 }
 
 func (p *pusher) resetFlushTimer() {

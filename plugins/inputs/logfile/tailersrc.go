@@ -57,15 +57,16 @@ func (le LogEvent) Done() {
 }
 
 type tailerSrc struct {
-	group, stream  string
-	destination    string
-	stateFilePath  string
-	tailer         *tail.Tail
-	autoRemoval    bool
-	timestampFn    func(string) time.Time
-	enc            encoding.Encoding
-	maxEventSize   int
-	truncateSuffix string
+	group, stream   string
+	destination     string
+	stateFilePath   string
+	tailer          *tail.Tail
+	autoRemoval     bool
+	timestampFn     func(string) time.Time
+	enc             encoding.Encoding
+	maxEventSize    int
+	truncateSuffix  string
+	retentionInDays int
 
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
@@ -84,19 +85,21 @@ func NewTailerSrc(
 	enc encoding.Encoding,
 	maxEventSize int,
 	truncateSuffix string,
+	retentionInDays int,
 ) *tailerSrc {
 	ts := &tailerSrc{
-		group:          group,
-		stream:         stream,
-		destination:    destination,
-		stateFilePath:  stateFilePath,
-		tailer:         tailer,
-		autoRemoval:    autoRemoval,
-		isMLStart:      isMultilineStartFn,
-		timestampFn:    timestampFn,
-		enc:            enc,
-		maxEventSize:   maxEventSize,
-		truncateSuffix: truncateSuffix,
+		group:           group,
+		stream:          stream,
+		destination:     destination,
+		stateFilePath:   stateFilePath,
+		tailer:          tailer,
+		autoRemoval:     autoRemoval,
+		isMLStart:       isMultilineStartFn,
+		timestampFn:     timestampFn,
+		enc:             enc,
+		maxEventSize:    maxEventSize,
+		truncateSuffix:  truncateSuffix,
+		retentionInDays: retentionInDays,
 
 		offsetCh: make(chan fileOffset, 2000),
 		done:     make(chan struct{}),
@@ -129,6 +132,9 @@ func (ts tailerSrc) Destination() string {
 	return ts.destination
 }
 
+func (ts tailerSrc) Retention() int {
+	return ts.retentionInDays
+}
 func (ts tailerSrc) Done(offset fileOffset) {
 	// ts.offsetCh will only be blocked when the runSaveState func has exited,
 	// which only happens when the original file has been removed, thus making

@@ -33,13 +33,14 @@ type LogSrc interface {
 	Stream() string
 	Destination() string
 	Description() string
+	Retention() int
 	Stop()
 }
 
 // A LogBackend is able to return a LogDest of a given name.
 // The same name should always return the same LogDest.
 type LogBackend interface {
-	CreateDest(string, string) LogDest
+	CreateDest(string, string, int) LogDest
 }
 
 // A LogDest represents a final endpoint where log events are published to.
@@ -103,9 +104,9 @@ func (l *LogAgent) Run(ctx context.Context) {
 						log.Printf("E! [logagent] Failed to find destination %v for log source %v/%v(%v) ", dname, src.Group(), src.Stream(), src.Description())
 						continue
 					}
-					dest := backend.CreateDest(src.Group(), src.Stream())
+					dest := backend.CreateDest(src.Group(), src.Stream(), src.Retention())
 					l.destNames[dest] = dname
-					log.Printf("I! [logagent] piping log from %v/%v(%v) to %v", src.Group(), src.Stream(), src.Description(), dname)
+					log.Printf("I! [logagent] piping log from %v/%v(%v) to %v with retention %v", src.Group(), src.Stream(), src.Description(), dname, src.Retention())
 					go l.runSrcToDest(src, dest)
 				}
 			}
