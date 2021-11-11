@@ -705,6 +705,10 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.Stop()
 }
 
+// TestLogsFileRecreate verifies that if a LogSrc matching a LogConfig is detected,
+// We only receive log lines beginning at the offset specified in the corresponding state-file.
+// And if the file happens to get deleted and recreated we expect to receive log lines beginning
+// at that same offset in the state file.
 func TestLogsFileRecreate(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
@@ -753,7 +757,8 @@ func TestLogsFileRecreate(t *testing.T) {
 		err = os.Remove(tmpfile.Name())
 		require.NoError(t, err)
 		require.NoError(t, tmpfile.Close())
-		time.Sleep(time.Millisecond * 100)
+		// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
+		time.Sleep(time.Second * 1)
 		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 		require.NoError(t, err)
 
@@ -768,14 +773,17 @@ func TestLogsFileRecreate(t *testing.T) {
 	}
 	defer lsrc.Stop()
 
-	for {
+	// Waiting 10 seconds for the recreated temp file to be detected is plenty sufficient on any OS.
+	for start := time.Now(); time.Since(start) < 10 * time.Second; {
 		lsrcs = tt.FindLogSrc()
 		if len(lsrcs) > 0 {
 			break
 		}
 		time.Sleep(1 * time.Second)
 	}
-
+	if len(lsrcs) != 1 {
+		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
+	}
 	lsrc = lsrcs[0]
 	lsrc.SetOutput(func(e logs.LogEvent) {
 		if e != nil {
