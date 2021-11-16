@@ -1,20 +1,4 @@
 ========================================================================
-Amazon CloudWatch Agent 1.247350.0 (2021-11-04)
-========================================================================
-
-* Improve message in amazon-cloudwatch-agent.log for Invalid Sequence Token case.
-* Update To Otel Version 0.11.0.
-* Improve windows config migration wizard not to include empty files/windows_events field.
-* Improve runtime debugging with added environment variable CWAGENT_LOG_LEVEL.
-* Improve config wizard message regarding collectd.
-* Removed runc dependency
-* Fix potential infinite retry when uploading logs.
-* Fix windows event log plugin to use proper StateFile path.
-* Fix performance for container insights with Kubernetes API server.
-* Improve messages in amazon-cloudwatch-agent.log for dropped log lines in a monitored file.
-* Add messages in amazon-cloudwatch.agent.log when retrying requests with AWS SDK due to throttling.
-
-========================================================================
 Amazon CloudWatch Agent 1.247349.0 (2021-07-15)
 ========================================================================
 
