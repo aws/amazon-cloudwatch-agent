@@ -129,7 +129,8 @@
           {
             "file_path": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
             "log_group_name": "amazon-cloudwatch-agent.log",
-            "timezone": "UTC"
+            "timezone": "UTC",
+            "retention_in_days": 5
           },
           {
             "file_path": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\test.log",

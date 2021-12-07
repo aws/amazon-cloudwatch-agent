@@ -52,6 +52,7 @@ The plugin expects messages in one of the
       from_beginning = false
       ## Whether file is a named pipe
       pipe = false
+      retention_in_days = -1
       destination = "cloudwatchlogs"
   [[inputs.logs.file_config]]
       file_path = "/var/log/*.log"
@@ -69,6 +70,7 @@ The plugin expects messages in one of the
       from_beginning = false
       ## Whether file is a named pipe
       pipe = false
+      retention_in_days = -1
       destination = "cloudwatchlogs"
       ## Max size of each log event, defaults to 262144 (256KB)
       max_event_size = 262144

@@ -31,7 +31,8 @@ func TestApplyRule(t *testing.T) {
           "ERROR"
         ],
         "event_format": "xml",
-        "log_group_name": "Application"
+        "log_group_name": "Application",
+		"retention_in_days": 1
       }
     ]
 }
@@ -40,17 +41,19 @@ func TestApplyRule(t *testing.T) {
 
 	var expected = []interface{}{
 		map[string]interface{}{
-			"event_name":      "System",
-			"event_levels":    []interface{}{"4", "0", "1"},
-			"log_group_name":  "System",
-			"batch_read_size": BatchReadSizeValue,
+			"event_name":        "System",
+			"event_levels":      []interface{}{"4", "0", "1"},
+			"log_group_name":    "System",
+			"batch_read_size":   BatchReadSizeValue,
+			"retention_in_days": -1,
 		},
 		map[string]interface{}{
-			"event_name":      "Application",
-			"event_levels":    []interface{}{"4", "0", "5", "2"},
-			"event_format":    "xml",
-			"log_group_name":  "Application",
-			"batch_read_size": BatchReadSizeValue,
+			"event_name":        "Application",
+			"event_levels":      []interface{}{"4", "0", "5", "2"},
+			"event_format":      "xml",
+			"log_group_name":    "Application",
+			"batch_read_size":   BatchReadSizeValue,
+			"retention_in_days": 1,
 		},
 	}
 

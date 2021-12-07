@@ -4,16 +4,17 @@
 package logs
 
 import (
+	"testing"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestFiles_ToMap(t *testing.T) {
 	conf := new(Files)
 
-	conf.AddLogFile("/var/log", "lg1", "ls1", "timeStamp1", "utc", "p1", "utf-8")
-	conf.AddLogFile("/var/message", "lg2", "ls2", "timeStamp2", "pst", "p2", "")
+	conf.AddLogFile("/var/log", "lg1", "ls1", "timeStamp1", "utc", "p1", "utf-8", 1)
+	conf.AddLogFile("/var/message", "lg2", "ls2", "timeStamp2", "pst", "p2", "", 1)
 
 	expectedKey := "files"
 	expectedVal := map[string]interface{}{
@@ -26,6 +27,7 @@ func TestFiles_ToMap(t *testing.T) {
 				"timestamp_format":         "timeStamp1",
 				"timezone":                 "utc",
 				"encoding":                 "utf-8",
+				"retention_in_days":        1,
 			},
 			{
 				"multi_line_start_pattern": "p2",
@@ -34,6 +36,7 @@ func TestFiles_ToMap(t *testing.T) {
 				"log_group_name":           "lg2",
 				"timestamp_format":         "timeStamp2",
 				"timezone":                 "pst",
+				"retention_in_days":        1,
 			},
 		},
 	}

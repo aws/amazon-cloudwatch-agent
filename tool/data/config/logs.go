@@ -33,17 +33,17 @@ func (config *Logs) ToMap(ctx *runtime.Context) (string, map[string]interface{})
 	return "logs", resultMap
 }
 
-func (config *Logs) AddLogFile(filePath, logGroupName string, logStream, timestampFormat, timezone, multiLineStartPattern, encoding string) {
+func (config *Logs) AddLogFile(filePath, logGroupName string, logStream, timestampFormat, timezone, multiLineStartPattern, encoding string, retention int) {
 	if config.LogsCollect == nil {
 		config.LogsCollect = &logs.Collection{}
 	}
 
-	config.LogsCollect.AddLogFile(filePath, logGroupName, logStream, timestampFormat, timezone, multiLineStartPattern, encoding)
+	config.LogsCollect.AddLogFile(filePath, logGroupName, logStream, timestampFormat, timezone, multiLineStartPattern, encoding, retention)
 }
 
-func (config *Logs) AddWindowsEvent(eventName, logGroupName, logStream, eventFormat string, eventLevels []string) {
+func (config *Logs) AddWindowsEvent(eventName, logGroupName, logStream, eventFormat string, eventLevels []string, retention int) {
 	if config.LogsCollect == nil {
 		config.LogsCollect = &logs.Collection{}
 	}
-	config.LogsCollect.AddWindowsEvent(eventName, logGroupName, logStream, eventFormat, eventLevels)
+	config.LogsCollect.AddWindowsEvent(eventName, logGroupName, logStream, eventFormat, eventLevels, retention)
 }

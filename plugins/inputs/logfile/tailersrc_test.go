@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -61,6 +62,7 @@ func TestTailerSrc(t *testing.T) {
 		nil, // encoding
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
+		1,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -177,6 +179,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		nil, // encoding
 		defaultMaxEventSize,
 		defaultTruncateSuffix,
+		1,
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
 
@@ -189,7 +192,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		}
 		evt.Done()
 		i++
-
+		log.Println(i)
 		if i == 10 { // Test before first truncate
 			time.Sleep(1 * time.Second)
 			b, err := ioutil.ReadFile(statefile.Name())
@@ -208,11 +211,19 @@ func TestOffsetDoneCallBack(t *testing.T) {
 
 		if i == 15 { // Test after first truncate, saved offset should decrease
 			time.Sleep(1 * time.Second)
+			log.Println(statefile.Name())
 			b, err := ioutil.ReadFile(statefile.Name())
+			log.Println(b)
 			if err != nil {
 				t.Errorf("Failed to read state file: %v", err)
 			}
-			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
+			file_parts := bytes.Split(b, []byte("\n"))
+			log.Println("file_parts: ", file_parts)
+			file_string := string(file_parts[0])
+			log.Println("file_string: ", file_string)
+			offset, err := strconv.Atoi(file_string)
+			log.Println(offset)
+			log.Println(err)
 			if err != nil {
 				t.Errorf("Failed to parse offset: %v, from '%s'", err, b)
 			}
@@ -243,18 +254,26 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		fmt.Fprintln(file, logLine("A", 100, time.Now()))
 	}
+	log.Println("Wait 1 seconds before truncate")
 	time.Sleep(1 * time.Second)
 
 	// First truncate then write 50 lines (save state should record 505 bytes)
+
+	log.Println("Truncate file")
 	if err := file.Truncate(0); err != nil {
 		t.Errorf("Failed to truncate log file '%v': %v", file.Name(), err)
 	}
+	log.Println("Sleep before write")
 	time.Sleep(1 * time.Second)
 	file.Seek(io.SeekStart, 0)
+	log.Println("Write for 505")
 	for i := 0; i < 5; i++ {
 		fmt.Fprintln(file, logLine("B", 100, time.Now()))
 	}
-	time.Sleep(1 * time.Second)
+
+	log.Println("Wait 5 seconds before truncate")
+	time.Sleep(5 * time.Second)
+	log.Println("Truncate then write 20 lines")
 
 	// Second truncate then write 20 lines (save state should record 2020 bytes)
 	if err := file.Truncate(0); err != nil {
@@ -265,7 +284,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		fmt.Fprintln(file, logLine("C", 100, time.Now()))
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {

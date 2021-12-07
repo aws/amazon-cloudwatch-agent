@@ -41,14 +41,14 @@ type windowsEventLog struct {
 
 	eventHandle EvtHandle
 	eventOffset uint64
-
-	outputFn  func(logs.LogEvent)
-	offsetCh  chan uint64
-	done      chan struct{}
-	startOnce sync.Once
+	retention   int
+	outputFn    func(logs.LogEvent)
+	offsetCh    chan uint64
+	done        chan struct{}
+	startOnce   sync.Once
 }
 
-func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int) *windowsEventLog {
+func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int, retention int) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
@@ -58,6 +58,7 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 		maxToRead:     maximumToRead,
 		destination:   destination,
 		stateFilePath: stateFilePath,
+		retention:     retention,
 
 		offsetCh: make(chan uint64, 100),
 		done:     make(chan struct{}),
@@ -95,6 +96,9 @@ func (l *windowsEventLog) Destination() string {
 	return l.destination
 }
 
+func (l *windowsEventLog) Retention() int {
+	return l.retention
+}
 func (l *windowsEventLog) Stop() {
 	close(l.done)
 }
