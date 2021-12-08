@@ -29,6 +29,7 @@ type LogEvent interface {
 // e.g. a single log file
 type LogSrc interface {
 	SetOutput(func(LogEvent))
+	SetFilter(func(LogEvent) bool)
 	Group() string
 	Stream() string
 	Destination() string

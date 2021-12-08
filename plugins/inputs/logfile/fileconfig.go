@@ -6,6 +6,7 @@ package logfile
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -20,6 +21,8 @@ import (
 const (
 	defaultMaxEventSize   = 1024 * 256 //256KB
 	defaultTruncateSuffix = "[Truncated...]"
+	includeType = "include"
+	excludeType = "exclude"
 )
 
 //The file config presents the structure of configuration for a file to be tailed.
@@ -75,6 +78,11 @@ type FileConfig struct {
 
 	//Indicate retention in days for log group
 	RetentionInDays int `toml:"retention_in_days"`
+
+	Filters []LogFilter `toml:"filters"`
+	// Indicates if the log filters should drop logs by default (true if there is an include filter)
+	DropByDefault bool
+
 	//Time *time.Location Go type timezone info.
 	TimezoneLoc *time.Location
 	//Regexp go type timestampFromLogLine regex
@@ -85,6 +93,24 @@ type FileConfig struct {
 	BlacklistRegexP *regexp.Regexp
 	//Decoder object
 	Enc encoding.Encoding
+}
+
+type LogFilter struct {
+	Type string `toml:"type"`
+	Expression string `toml:"expression"`
+	ExpressionP *regexp.Regexp
+}
+
+func (filter *LogFilter) init() error {
+	var err error
+	if filter.Type != includeType && filter.Type != excludeType {
+		return fmt.Errorf("filter type is incorrect, regexp: Compile( %v )", filter.Expression)
+	}
+
+	if filter.ExpressionP, err = regexp.Compile(filter.Expression); err != nil {
+		return fmt.Errorf("filter regex has issue, regexp: Compile( %v ): %v", filter.Expression, err.Error())
+	}
+	return nil
 }
 
 //Initialize some variables in the FileConfig object based on the rest info fetched from the configuration file.
@@ -142,6 +168,24 @@ func (config *FileConfig) init() error {
 	}
 	if config.RetentionInDays == 0 {
 		config.RetentionInDays = -1
+	}
+
+	if config.Filters != nil {
+		filters := make([]LogFilter, len(config.Filters))
+		for i, f := range config.Filters {
+			err = f.init()
+			if err != nil {
+				return err
+			}
+			filters[i] = f
+
+			// if there is an inclusion filter, then the intent is to drop logs
+			// that don't match the filter(s)
+			if f.Type == includeType {
+				config.DropByDefault = true
+			}
+		}
+		config.Filters = filters
 	}
 
 	return nil
@@ -202,4 +246,29 @@ func (config *FileConfig) isMultilineStart(logValue string) bool {
 		return false
 	}
 	return config.MultiLineStartPatternP.MatchString(logValue)
+}
+
+func (config *FileConfig) shouldFilterLog(event logs.LogEvent) bool {
+	if config.Filters == nil || len(config.Filters) < 1 {
+		return false
+	}
+	for _, filter := range config.Filters {
+		if filter.ExpressionP == nil {
+			filter.ExpressionP = regexp.MustCompile(filter.Expression)
+		}
+		matched := filter.ExpressionP.MatchString(event.Message())
+		switch filter.Type {
+		case includeType:
+			if matched {
+				return false
+			}
+		case excludeType:
+			if matched {
+				return true
+			}
+		}
+	}
+	// if the configured filters are only exclusions, then the
+	// log will be submitted
+	return config.DropByDefault
 }

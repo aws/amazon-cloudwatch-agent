@@ -58,6 +58,7 @@ func TestTailerSrc(t *testing.T) {
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
+		nil,
 		parseRFC3339Timestamp,
 		nil, // encoding
 		defaultMaxEventSize,
@@ -175,6 +176,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
+		nil,
 		parseRFC3339Timestamp,
 		nil, // encoding
 		defaultMaxEventSize,

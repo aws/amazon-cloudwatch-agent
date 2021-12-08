@@ -70,6 +70,7 @@ type tailerSrc struct {
 
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
+	filterFn func(logs.LogEvent) bool
 	offsetCh        chan fileOffset
 	done            chan struct{}
 	startTailerOnce sync.Once
@@ -81,6 +82,7 @@ func NewTailerSrc(
 	tailer *tail.Tail,
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
+	filterFn func(logs.LogEvent) bool,
 	timestampFn func(string) time.Time,
 	enc encoding.Encoding,
 	maxEventSize int,
@@ -95,6 +97,7 @@ func NewTailerSrc(
 		tailer:          tailer,
 		autoRemoval:     autoRemoval,
 		isMLStart:       isMultilineStartFn,
+		filterFn: filterFn,
 		timestampFn:     timestampFn,
 		enc:             enc,
 		maxEventSize:    maxEventSize,
@@ -114,6 +117,13 @@ func (ts *tailerSrc) SetOutput(fn func(logs.LogEvent)) {
 	}
 	ts.outputFn = fn
 	ts.startTailerOnce.Do(func() { go ts.runTail() })
+}
+
+func (ts *tailerSrc) SetFilter(fn func(logs.LogEvent) bool) {
+	if fn == nil {
+		return
+	}
+	ts.filterFn = fn
 }
 
 func (ts tailerSrc) Group() string {
@@ -227,7 +237,13 @@ func (ts *tailerSrc) runTail() {
 					offset: *fo,
 					src:    ts,
 				}
-				ts.outputFn(e)
+				if ts.filterFn != nil {
+					if !ts.filterFn(e) {
+						ts.outputFn(e)
+					}
+				} else {
+					ts.outputFn(e)
+				}
 			}
 
 			msgBuf.Reset()
@@ -250,7 +266,13 @@ func (ts *tailerSrc) runTail() {
 				offset: *fo,
 				src:    ts,
 			}
-			ts.outputFn(e)
+			if ts.filterFn != nil {
+				if !ts.filterFn(e) {
+					ts.outputFn(e)
+				}
+			} else {
+				ts.outputFn(e)
+			}
 			msgBuf.Reset()
 			cnt = 0
 		case <-ts.done:

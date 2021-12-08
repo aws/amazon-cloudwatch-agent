@@ -38,6 +38,8 @@ func TestFileConfigInit(t *testing.T) {
 	assert.True(t, fileConfig.MultiLineStartPatternP == fileConfig.TimestampRegexP, "The multiline start pattern should be the same as the timestampFromLogLine pattern.")
 
 	assert.Equal(t, time.UTC, fileConfig.TimezoneLoc, "The timezone location should be UTC.")
+
+	assert.Nil(t, fileConfig.Filters)
 }
 
 func TestFileConfigInitFailureCase(t *testing.T) {
@@ -172,4 +174,453 @@ func TestMultiLineStartPattern(t *testing.T) {
 	logEntryLine = "XXXXXXX"
 	multiLineStart = fileConfig.isMultilineStart(logEntryLine)
 	assert.False(t, multiLineStart, "This should not be a multi-line start line.")
+}
+
+func TestFileConfigInitWithFilters(t *testing.T) {
+	filter1 := LogFilter{
+		Type:       includeType,
+		Expression: "StatusCode: [4-5]\\d\\d",
+	}
+	filter2 := LogFilter{
+		Type:       excludeType,
+		Expression: "Some expression that (will|won't) compile",
+	}
+
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters:               []LogFilter{filter1, filter2},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+
+	assert.Len(t, fileConfig.Filters, 2)
+	f := fileConfig.Filters[0]
+	assert.NotNil(t, f.ExpressionP)
+	assert.Equal(t, filter1.Type, f.Type)
+	assert.Equal(t, filter1.Expression, f.Expression)
+	f = fileConfig.Filters[1]
+	assert.NotNil(t, f.ExpressionP)
+	assert.Equal(t, filter2.Type, f.Type)
+	assert.Equal(t, filter2.Expression, f.Expression)
+}
+
+func TestFileConfigInitWithFiltersFails(t *testing.T) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       excludeType,
+				Expression: "Some expression that (will|won't) compile",
+			},
+			{
+				Type:       includeType,
+				Expression: "StatusCode: ([4-5]\\d\\d", // invalid regexp
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.Error(t, err)
+	assert.Equal(t, "filter regex has issue, regexp: Compile( StatusCode: ([4-5]\\d\\d ): error parsing regexp: missing closing ): `StatusCode: ([4-5]\\d\\d`", err.Error())
+}
+
+func TestLogIncludeFilter(t *testing.T) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{{
+			Type:       includeType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		}},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+	res := fileConfig.shouldFilterLog(LogEvent{
+		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
+	})
+	assert.False(t, res)
+
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "This is another log message that doesn't match",
+	})
+	assert.True(t, res)
+}
+
+func TestLogExcludeFilter(t *testing.T) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{{
+			Type:       excludeType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		}},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+	res := fileConfig.shouldFilterLog(LogEvent{
+		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
+	})
+	assert.True(t, res)
+
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "This is another log message that doesn't match",
+	})
+	assert.False(t, res)
+}
+
+func TestLogIncludeThenExcludeFilter(t *testing.T) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+	res := fileConfig.shouldFilterLog(LogEvent{
+		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
+	})
+	assert.True(t, res)
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "Submitted request to application search_FooBarBaz1",
+	})
+	assert.False(t, res)
+	// If the log message matches both, it should short-circuit and evaluate only the first one
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.",
+	})
+	assert.False(t, res)
+	// If the log message matches neither, because this config has an include expression,
+	// drop the log
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "Some other log that doesn't match either expression",
+	})
+	assert.True(t, res)
+}
+
+func TestLogFilterExclusionsDoNotDropUnmatchedLog(t *testing.T) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       excludeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+
+	res := fileConfig.shouldFilterLog(LogEvent{
+		msg: "Some other log that doesn't match either expression",
+	})
+	assert.False(t, res)
+}
+
+func BenchmarkLogFilterSimpleInclude(b *testing.B) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	log := LogEvent{
+		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(log)
+	}
+	assert.False(b, res)
+}
+
+func BenchmarkLogFilterSimpleIncludeNotMatch(b *testing.B) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	log := LogEvent{
+		msg: "API responded with [StatusCode: 209] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(log)
+	}
+	assert.True(b, res)
+}
+
+func BenchmarkLogFilterSimpleExclude(b *testing.B) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	log := LogEvent{
+		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(log)
+	}
+	assert.True(b, res)
+}
+
+func BenchmarkLogFilterSimpleExcludeNotMatch(b *testing.B) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	log := LogEvent{
+		msg: "API responded with [StatusCode: 209] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(log)
+	}
+	assert.False(b, res)
+}
+
+func BenchmarkLogFilterIncludeThenMatchExclude(b *testing.B) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(event)
+	}
+	assert.True(b, res)
+}
+
+func BenchmarkLogFilterExclusionsDoNotDropUnmatchedLog(b *testing.B) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       excludeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	event := LogEvent{
+		msg: "Some other log that doesn't match either expression",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(event)
+	}
+	assert.False(b, res)
+}
+
+func BenchmarkLogFilterMatchLastFilter(b *testing.B) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "(ERROR|WARN)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+			},
+			{
+				Type:       includeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+			{
+				Type:       includeType,
+				Expression: "/(\\w+)/(\\w+)/amazon-cloudwatch-agent",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	event := LogEvent{
+		msg: "2000/01/01 02:55:39 I! Config has been translated into TOML /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(event)
+	}
+	assert.False(b, res)
+}
+
+func BenchmarkLogFilterMatchFirstFilter(b *testing.B) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "(ERROR|WARN)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+			},
+			{
+				Type:       includeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+			{
+				Type:       includeType,
+				Expression: "/(\\w+)/(\\w+)/amazon-cloudwatch-agent",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	event := LogEvent{
+		msg: "2000/01/01 02:55:39 ERROR: Config has been translated into TOML /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(event)
+	}
+	assert.False(b, res)
 }

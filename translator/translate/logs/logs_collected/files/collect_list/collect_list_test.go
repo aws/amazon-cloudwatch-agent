@@ -578,3 +578,36 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 	}}
 	assert.Equal(t, expectVal, val)
 }
+
+func TestLogFilters(t *testing.T) {
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"filters": [
+					{"type": "include", "expression": "foo"},
+					{"type": "exclude", "expression": "bar"}
+				]
+			}
+		]
+	}`), &input)
+	assert.Nil(t, e)
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"filters": []interface{}{
+			map[string]interface{}{
+				"type": "include",
+				"expression": "foo",
+			},
+			map[string]interface{}{
+				"type": "exclude",
+				"expression": "bar",
+			},
+		},
+	}}
+	assert.Equal(t, expectVal, val)
+}
