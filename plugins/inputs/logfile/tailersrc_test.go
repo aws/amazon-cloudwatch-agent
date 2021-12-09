@@ -6,6 +6,7 @@ package logfile
 import (
 	"bytes"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"log"
@@ -298,6 +299,118 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	}
 }
 
+func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
+	file, err := createTempFile("", "tailsrctest-*.log")
+	config := &FileConfig{
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "(ERROR|WARN)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       includeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+		DropByDefault: true, // because we aren't calling init() to populate this value
+	}
+	defer os.Remove(file.Name())
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	statefile, err := createTempFile("", "tailsrctest-state-*.log")
+	defer os.Remove(statefile.Name())
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	tailer, err := tail.TailFile(file.Name(),
+		tail.Config{
+			ReOpen:      false,
+			Follow:      true,
+			Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
+			MustExist:   true,
+			Pipe:        false,
+			Poll:        true,
+			MaxLineSize: defaultMaxEventSize,
+			IsUTF16:     false,
+		})
+
+	if err != nil {
+		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
+		return
+	}
+
+	ts := NewTailerSrc(
+		"groupName", "streamName",
+		"destination",
+		statefile.Name(),
+		tailer,
+		false, // AutoRemoval
+		nil,
+		config.shouldFilterLog,
+		parseRFC3339Timestamp,
+		nil, // encoding
+		defaultMaxEventSize,
+		defaultTruncateSuffix,
+		1,
+	)
+
+	done := make(chan struct{})
+	consumed := 0
+	ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(done)
+			return
+		}
+		consumed += 1
+		evt.Done()
+		// extra sanity check
+		assert.False(t, config.shouldFilterLog(evt))
+	})
+
+	// Write 100 lines (save state should record 1010 bytes)
+	for i := 0; i < 100; i++ {
+		mod := i % 10 // use the mod value to control the log messages emitted for consistency
+		/**
+		1 => "ERROR" in log
+		2 => "search_*" in log
+		3 => "WARN" AND "search_*" in log
+		4 => "StatusCode: 4xx" in log
+		8 => "search_*" AND "StatusCode: 5xx" in log
+		9 => "StatusCode: 2xx" in log (shouldn't be matched)
+		default => "foo bar baz" in log
+		 */
+		switch mod {
+		case 1:
+			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("ERROR: This is an error on line %d", i), time.Now()))
+		case 2:
+			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("INFO: This is a log that has search_foo_barBaz%d in it on line %d", i, i), time.Now()))
+		case 3:
+			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("WARN: This log contains search_Abc123 in it on line %d", i), time.Now()))
+		case 4:
+			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("INFO: API for /foo/bar/baz responded with StatusCode: 400, Message: Bad Request on line %d", i), time.Now()))
+		case 8:
+			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("DEBUG: search request for search_XyZ responded with StatusCode: 503, Service Unavailable on line %d", i), time.Now()))
+		case 9:
+			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("DEBUG: Received normal API response of StatusCode: 200 for /foo/bar/baz on line %d", i), time.Now()))
+		default:
+			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
+		}
+	}
+	// Removal of log file should stop tailersrc
+	if err := os.Remove(file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
+	}
+	<-done
+	assert.Equal(t, 30, consumed)
+}
+
 func parseRFC3339Timestamp(line string) time.Time {
 	// Use RFC3339 for testing `2006-01-02T15:04:05Z07:00`
 	re := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`)
@@ -321,5 +434,15 @@ func logLine(s string, l int, t time.Time) string {
 
 	line += strings.Repeat(s, l/len(s)+1)
 	line = line[:l]
+	return line
+}
+
+func logSpecificLine(s string, t time.Time) string {
+	line := ""
+	if !t.IsZero() {
+		line += t.Format(time.RFC3339) + " "
+	}
+	line += s
+
 	return line
 }
