@@ -97,7 +97,7 @@ func NewTailerSrc(
 		tailer:          tailer,
 		autoRemoval:     autoRemoval,
 		isMLStart:       isMultilineStartFn,
-		filterFn: filterFn,
+		filterFn: 		 filterFn,
 		timestampFn:     timestampFn,
 		enc:             enc,
 		maxEventSize:    maxEventSize,
@@ -186,7 +186,13 @@ func (ts *tailerSrc) runTail() {
 						offset: *fo,
 						src:    ts,
 					}
-					ts.outputFn(e)
+					if ts.filterFn != nil {
+						if !ts.filterFn(e) {
+							ts.outputFn(e)
+						}
+					} else {
+						ts.outputFn(e)
+					}
 				}
 				return
 			}

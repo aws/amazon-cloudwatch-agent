@@ -374,7 +374,7 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 		assert.False(t, config.shouldFilterLog(evt))
 	})
 
-	// Write 100 lines (save state should record 1010 bytes)
+	// Write 100 lines
 	for i := 0; i < 100; i++ {
 		mod := i % 10 // use the mod value to control the log messages emitted for consistency
 		/**
@@ -409,6 +409,127 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	}
 	<-done
 	assert.Equal(t, 30, consumed)
+}
+
+func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
+	file, err := createTempFile("", "tailsrctest-*.log")
+	config := &FileConfig{
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "(ERROR|WARN)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       includeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+		DropByDefault: true, // because we aren't calling init() to populate this value
+	}
+	defer os.Remove(file.Name())
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	statefile, err := createTempFile("", "tailsrctest-state-*.log")
+	defer os.Remove(statefile.Name())
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	tailer, err := tail.TailFile(file.Name(),
+		tail.Config{
+			ReOpen:      false,
+			Follow:      true,
+			Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
+			MustExist:   true,
+			Pipe:        false,
+			Poll:        true,
+			MaxLineSize: defaultMaxEventSize,
+			IsUTF16:     false,
+		})
+
+	if err != nil {
+		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
+		return
+	}
+
+	ts := NewTailerSrc(
+		"groupName", "streamName",
+		"destination",
+		statefile.Name(),
+		tailer,
+		false, // AutoRemoval
+		regexp.MustCompile("^[\\S]").MatchString,
+		config.shouldFilterLog,
+		parseRFC3339Timestamp,
+		nil, // encoding
+		defaultMaxEventSize,
+		defaultTruncateSuffix,
+		1,
+	)
+	multilineWaitPeriod = 100 * time.Millisecond
+
+	done := make(chan struct{})
+	consumed := 0
+	ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(done)
+			return
+		}
+		consumed += 1
+		evt.Done()
+		// extra sanity check
+		assert.False(t, config.shouldFilterLog(evt))
+	})
+
+	// Write 100 lines
+	var buf bytes.Buffer
+	for i := 0; i < 100; i++ {
+		mod := i % 10 // use the mod value to control the log messages emitted for consistency
+		/**
+		1 => multi line: has "ERROR" on first line
+		3 => multi line: has "StatusCode 5xx" on later line
+		5 => multi line: has "search_*" on later line
+		default => "foo bar baz"
+		*/
+		switch mod {
+		case 1:
+			fmt.Fprintln(file, logSpecificLine("ERROR: This log has an error on it. Exception:", time.Now()) + strings.Repeat("\nfoo", 10))
+		case 3:
+			buf.WriteString(logSpecificLine("This log message contains a status code", time.Now()))
+			for j := 0; j < 10; j++ {
+				if j == 3 {
+					buf.WriteString("\nFailed API /foo/bar/baz with StatusCode: 500")
+				} else {
+					buf.WriteString("\nbar")
+				}
+			}
+			fmt.Fprintln(file, buf.String())
+			buf.Reset()
+		case 5:
+			buf.WriteString("This log message should get filtered out.\n")
+			for j := 0; j < 10; j++ {
+				if j == 6 {
+					buf.WriteString("\nCalled search_foo_barBaz and succeeded")
+				} else {
+					buf.WriteString("\nbaz")
+				}
+			}
+		default:
+			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
+		}
+	}
+	// Removal of log file should stop tailersrc
+	if err := os.Remove(file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
+	}
+	<-done
+	assert.Equal(t, 20, consumed)
 }
 
 func parseRFC3339Timestamp(line string) time.Time {
