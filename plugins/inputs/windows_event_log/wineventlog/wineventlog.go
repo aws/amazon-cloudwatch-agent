@@ -80,6 +80,9 @@ func (l *windowsEventLog) SetOutput(fn func(logs.LogEvent)) {
 	l.startOnce.Do(func() { go l.run() })
 }
 
+// TODO: not currently supported
+func (l *windowsEventLog) SetFilter(fn func(logs.LogEvent) bool) {}
+
 func (l *windowsEventLog) Group() string {
 	return l.logGroupName
 }

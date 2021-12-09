@@ -8,6 +8,7 @@ import (
 )
 
 func TestApplyLogFiltersRule(t *testing.T) {
+	translator.ResetMessages()
 	r := new(LogFilter)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
@@ -21,6 +22,8 @@ func TestApplyLogFiltersRule(t *testing.T) {
 	retKey, retVal := r.ApplyRule(input)
 	assert.Equal(t, "filters", retKey)
 	assert.NotNil(t, retVal)
+	assert.Len(t, translator.ErrorMessages, 0)
+
 	filters := retVal.([]interface{})
 	assert.Len(t, filters, 2)
 	filter1 := filters[0].(map[string]interface{})
@@ -40,6 +43,7 @@ func TestApplyLogFiltersRule(t *testing.T) {
 }
 
 func TestApplyLogFiltersRuleMissingConfigInsideFilters(t *testing.T) {
+	translator.ResetMessages()
 	r := new(LogFilter)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
