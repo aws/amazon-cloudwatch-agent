@@ -372,6 +372,8 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 		evt.Done()
 		// extra sanity check
 		assert.False(t, config.shouldFilterLog(evt))
+		// make sure there aren't multiple lines in the log
+		assert.False(t, strings.Contains(evt.Message(), "\n"))
 	})
 
 	// Write 100 lines
@@ -464,7 +466,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		statefile.Name(),
 		tailer,
 		false, // AutoRemoval
-		regexp.MustCompile("^[\\S]").MatchString,
+		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
 		config.shouldFilterLog,
 		parseRFC3339Timestamp,
 		nil, // encoding
@@ -485,6 +487,8 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		evt.Done()
 		// extra sanity check
 		assert.False(t, config.shouldFilterLog(evt))
+		// making sure that the messages include new line characters
+		assert.True(t, strings.Contains(evt.Message(), "\n"))
 	})
 
 	// Write 100 lines
