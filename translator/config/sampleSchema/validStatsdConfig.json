@@ -1,0 +1,20 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "statsd": {
+        "metrics_aggregation_interval": 60,
+        "metrics_collection_interval": 10,
+        "service_address": ":8125",
+        "parse_data_dog_tags": true,
+        "delete_gauges": true,
+        "delete_counters": true,
+        "delete_sets": true,
+        "metric_separator": "_",
+        "allowed_pending_messages": 10000,
+        "templates": [
+          "cpu.* measurement*"
+        ]
+      }
+    }
+  }
+}

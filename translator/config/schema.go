@@ -365,6 +365,24 @@ var schema = `{
               "type": "string",
               "minLength": 1,
               "maxLength": 255
+            },
+            "parse_data_dog_tags": {
+              "type": "boolean"
+            },
+            "delete_gauges": {
+              "type": "boolean"
+            },
+            "delete_counters": {
+              "type": "boolean"
+            },
+            "delete_sets": {
+              "type": "boolean"
+            },
+            "templates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false

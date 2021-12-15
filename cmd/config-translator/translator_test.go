@@ -163,6 +163,10 @@ func TestEthtoolConfig(t *testing.T) {
 	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/validEthtoolConfig.json", true, map[string]int{})
 }
 
+func TestStatsdConfig(t *testing.T) {
+	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/validstatsdConfig.json", true, map[string]int{})
+}
+
 func TestNvidiaGpuConfig(t *testing.T) {
 	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/validNvidiaGpuConfig.json", true, map[string]int{})
 }
