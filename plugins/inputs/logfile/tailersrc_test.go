@@ -554,13 +554,6 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	}
 	<-done
 	assert.Equal(t, 20, consumed)
-	stats := profiler.Profiler.GetStats()
-	assert.Len(t, stats, 1)
-	if val, ok := stats["logfile_groupName1_streamName1_messages_dropped"]; !ok {
-		t.Error("Missing profiled stat")
-	} else {
-		assert.Equal(t, 80, int(val))
-	}
 }
 
 func parseRFC3339Timestamp(line string) time.Time {
