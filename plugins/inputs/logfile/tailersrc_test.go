@@ -304,7 +304,7 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	profiler.Profiler.ReportAndClear()
 	file, err := createTempFile("", "tailsrctest-*.log")
 	config := &FileConfig{
-		LogGroupName: "groupName",
+		LogGroupName:  "groupName",
 		LogStreamName: "streamName",
 		Filters: []LogFilter{
 			{
@@ -391,7 +391,7 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 		8 => "search_*" AND "StatusCode: 5xx" in log
 		9 => "StatusCode: 2xx" in log (shouldn't be matched)
 		default => "foo bar baz" in log
-		 */
+		*/
 		switch mod {
 		case 1:
 			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("ERROR: This is an error on line %d", i), time.Now()))
@@ -409,8 +409,6 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
 		}
 	}
-
-	time.Sleep(2 * time.Second)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
@@ -431,7 +429,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	profiler.Profiler.ReportAndClear()
 	file, err := createTempFile("", "tailsrctest-*.log")
 	config := &FileConfig{
-		LogGroupName: "groupName1",
+		LogGroupName:  "groupName1",
 		LogStreamName: "streamName1",
 		Filters: []LogFilter{
 			{
@@ -491,7 +489,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		defaultTruncateSuffix,
 		1,
 	)
-	multilineWaitPeriod = 100 * time.Millisecond
+	multilineWaitPeriod = 50 * time.Millisecond
 
 	done := make(chan struct{})
 	consumed := 0
@@ -502,6 +500,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		}
 		consumed += 1
 		evt.Done()
+		log.Printf("Consumed %d messages, this is %s\n", consumed, evt.Message())
 		// extra sanity check
 		assert.False(t, config.shouldFilterLog(evt))
 		// making sure that the messages include new line characters
@@ -520,7 +519,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		*/
 		switch mod {
 		case 1:
-			fmt.Fprintln(file, logSpecificLine("ERROR: This log has an error on it. Exception:", time.Now()) + strings.Repeat("\nfoo", 10))
+			fmt.Fprintln(file, logSpecificLine("ERROR: This log has an error on it. Exception:", time.Now())+strings.Repeat("\nfoo", 10))
 		case 3:
 			buf.WriteString(logSpecificLine("This log message contains a status code", time.Now()))
 			for j := 0; j < 10; j++ {
@@ -547,8 +546,6 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
 		}
 	}
-
-	time.Sleep(2 * time.Second)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
