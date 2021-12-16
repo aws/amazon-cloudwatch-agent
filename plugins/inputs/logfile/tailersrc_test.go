@@ -409,6 +409,9 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
 		}
 	}
+
+	time.Sleep(2 * time.Second)
+
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
@@ -544,6 +547,9 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
 		}
 	}
+
+	time.Sleep(2 * time.Second)
+
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
