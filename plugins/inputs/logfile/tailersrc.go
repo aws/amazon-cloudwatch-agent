@@ -70,7 +70,7 @@ type tailerSrc struct {
 
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
-	filterFn func(logs.LogEvent) bool
+	filterFn        func(logs.LogEvent) bool
 	offsetCh        chan fileOffset
 	done            chan struct{}
 	startTailerOnce sync.Once
@@ -97,7 +97,7 @@ func NewTailerSrc(
 		tailer:          tailer,
 		autoRemoval:     autoRemoval,
 		isMLStart:       isMultilineStartFn,
-		filterFn: 		 filterFn,
+		filterFn:        filterFn,
 		timestampFn:     timestampFn,
 		enc:             enc,
 		maxEventSize:    maxEventSize,

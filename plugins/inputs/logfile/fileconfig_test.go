@@ -5,6 +5,7 @@ package logfile
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"regexp"
 	"testing"
 	"time"
@@ -361,7 +362,104 @@ func TestLogFilterExclusionsDoNotDropUnmatchedLog(t *testing.T) {
 	assert.False(t, res)
 }
 
+func TestLogFilterSampleCountResets(t *testing.T) {
+	profiler.Profiler.ReportAndClear()
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = 3 // on the third invocation, it should reset
+
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{{
+			Type:       excludeType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		}},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+
+	res := fileConfig.shouldFilterLog(LogEvent{
+		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
+	})
+	assert.True(t, res)
+	assert.Equal(t, 1, fileConfig.sampleCount)
+
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "This is another log message that doesn't match",
+	})
+	assert.False(t, res)
+	assert.Equal(t, 2, fileConfig.sampleCount)
+
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
+	})
+	assert.True(t, res)
+	assert.Equal(t, 0, fileConfig.sampleCount)
+}
+
+func TestLogFilterSampleCountResetsIfNotMatched(t *testing.T) {
+	profiler.Profiler.ReportAndClear()
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = 3 // on the third invocation, it should reset
+
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       excludeType,
+				Expression: "search_(\\w+)",
+			},
+			{
+				Type:       excludeType,
+				Expression: "StatusCode: [4-5]\\d\\d",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+
+	res := fileConfig.shouldFilterLog(LogEvent{
+		msg: "Some other log that doesn't match either expression",
+	})
+	assert.False(t, res)
+	assert.Equal(t, 1, fileConfig.sampleCount)
+
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "Some other log that doesn't match either expression",
+	})
+	assert.False(t, res)
+	assert.Equal(t, 2, fileConfig.sampleCount)
+
+	res = fileConfig.shouldFilterLog(LogEvent{
+		msg: "Some other log that doesn't match either expression",
+	})
+	assert.False(t, res)
+	assert.Equal(t, 0, fileConfig.sampleCount)
+}
+
 func BenchmarkLogFilterSimpleInclude(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
@@ -390,6 +488,11 @@ func BenchmarkLogFilterSimpleInclude(b *testing.B) {
 }
 
 func BenchmarkLogFilterSimpleIncludeNotMatch(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
@@ -418,6 +521,11 @@ func BenchmarkLogFilterSimpleIncludeNotMatch(b *testing.B) {
 }
 
 func BenchmarkLogFilterSimpleExclude(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
@@ -446,6 +554,11 @@ func BenchmarkLogFilterSimpleExclude(b *testing.B) {
 }
 
 func BenchmarkLogFilterSimpleExcludeNotMatch(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
@@ -474,6 +587,11 @@ func BenchmarkLogFilterSimpleExcludeNotMatch(b *testing.B) {
 }
 
 func BenchmarkLogFilterIncludeThenMatchExclude(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
@@ -506,6 +624,11 @@ func BenchmarkLogFilterIncludeThenMatchExclude(b *testing.B) {
 }
 
 func BenchmarkLogFilterExclusionsDoNotDropUnmatchedLog(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
@@ -538,6 +661,11 @@ func BenchmarkLogFilterExclusionsDoNotDropUnmatchedLog(b *testing.B) {
 }
 
 func BenchmarkLogFilterMatchLastFilter(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
@@ -582,6 +710,11 @@ func BenchmarkLogFilterMatchLastFilter(b *testing.B) {
 }
 
 func BenchmarkLogFilterMatchFirstFilter(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",

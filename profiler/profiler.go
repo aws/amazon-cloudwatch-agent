@@ -34,6 +34,13 @@ func (p *profiler) AddStats(key []string, value float64) {
 	p.stats[k] += value
 }
 
+// GetStats for testing purposes
+func (p *profiler) GetStats() map[string]float64 {
+	p.Lock()
+	defer p.Unlock()
+	return p.stats
+}
+
 func (p *profiler) ReportAndClear() {
 	p.Lock()
 	defer p.Unlock()

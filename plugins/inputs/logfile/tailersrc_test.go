@@ -6,6 +6,7 @@ package logfile
 import (
 	"bytes"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
@@ -300,8 +301,11 @@ func TestOffsetDoneCallBack(t *testing.T) {
 }
 
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
+	profiler.Profiler.ReportAndClear()
 	file, err := createTempFile("", "tailsrctest-*.log")
 	config := &FileConfig{
+		LogGroupName: "groupName",
+		LogStreamName: "streamName",
 		Filters: []LogFilter{
 			{
 				Type:       includeType,
@@ -411,11 +415,21 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	}
 	<-done
 	assert.Equal(t, 30, consumed)
+	stats := profiler.Profiler.GetStats()
+	assert.Len(t, stats, 1)
+	if val, ok := stats["logfile_groupName_streamName_messages_dropped"]; !ok {
+		t.Error("Missing profiled stat")
+	} else {
+		assert.Equal(t, 70, int(val))
+	}
 }
 
 func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
+	profiler.Profiler.ReportAndClear()
 	file, err := createTempFile("", "tailsrctest-*.log")
 	config := &FileConfig{
+		LogGroupName: "groupName1",
+		LogStreamName: "streamName1",
 		Filters: []LogFilter{
 			{
 				Type:       includeType,
@@ -461,7 +475,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	}
 
 	ts := NewTailerSrc(
-		"groupName", "streamName",
+		"groupName1", "streamName1",
 		"destination",
 		statefile.Name(),
 		tailer,
@@ -516,7 +530,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 			fmt.Fprintln(file, buf.String())
 			buf.Reset()
 		case 5:
-			buf.WriteString("This log message should get filtered out.\n")
+			buf.WriteString(logSpecificLine("This log message should get filtered out.", time.Now()))
 			for j := 0; j < 10; j++ {
 				if j == 6 {
 					buf.WriteString("\nCalled search_foo_barBaz and succeeded")
@@ -524,6 +538,8 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 					buf.WriteString("\nbaz")
 				}
 			}
+			fmt.Fprintln(file, buf.String())
+			buf.Reset()
 		default:
 			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
 		}
@@ -534,6 +550,13 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	}
 	<-done
 	assert.Equal(t, 20, consumed)
+	stats := profiler.Profiler.GetStats()
+	assert.Len(t, stats, 1)
+	if val, ok := stats["logfile_groupName1_streamName1_messages_dropped"]; !ok {
+		t.Error("Missing profiled stat")
+	} else {
+		assert.Equal(t, 80, int(val))
+	}
 }
 
 func parseRFC3339Timestamp(line string) time.Time {

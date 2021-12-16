@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -24,6 +25,8 @@ const (
 	includeType = "include"
 	excludeType = "exclude"
 )
+
+var sampleThreshold = 100 // Threshold to denote when to emit a diagnostic log
 
 //The file config presents the structure of configuration for a file to be tailed.
 type FileConfig struct {
@@ -93,6 +96,7 @@ type FileConfig struct {
 	BlacklistRegexP *regexp.Regexp
 	//Decoder object
 	Enc encoding.Encoding
+	sampleCount int
 }
 
 type LogFilter struct {
@@ -252,6 +256,8 @@ func (config *FileConfig) shouldFilterLog(event logs.LogEvent) bool {
 	if config.Filters == nil || len(config.Filters) < 1 {
 		return false
 	}
+	config.sampleCount += 1
+	start := time.Now()
 	for _, filter := range config.Filters {
 		if filter.ExpressionP == nil {
 			filter.ExpressionP = regexp.MustCompile(filter.Expression)
@@ -260,15 +266,40 @@ func (config *FileConfig) shouldFilterLog(event logs.LogEvent) bool {
 		switch filter.Type {
 		case includeType:
 			if matched {
+				elapsed := time.Since(start)
+				if config.sampleCount >= sampleThreshold {
+					log.Printf("D! [inputs.logfile.%s.%s] Matched log message with expression {%s} in %dns", config.LogGroupName, config.LogStreamName, filter.Expression, elapsed.Nanoseconds())
+					config.sampleCount = 0
+				}
 				return false
 			}
 		case excludeType:
 			if matched {
+				elapsed := time.Since(start)
+				if config.sampleCount >= sampleThreshold {
+					log.Printf("D! [inputs.logfile.%s.%s] Matched log message with expression {%s} in %dns", config.LogGroupName, config.LogStreamName, filter.Expression, elapsed.Nanoseconds())
+					config.sampleCount = 0
+				}
+				profiler.Profiler.AddStats(
+					[]string{"logfile", config.LogGroupName, config.LogStreamName, "messages", "dropped"},
+					1,
+				)
 				return true
 			}
 		}
 	}
 	// if the configured filters are only exclusions, then the
 	// log will be submitted
+	elapsed := time.Since(start)
+	if config.sampleCount >= sampleThreshold {
+		log.Printf("D! [inputs.logfile.%s.%s] Took %dns to check against %d filters", config.LogGroupName, config.LogStreamName, elapsed.Nanoseconds(), len(config.Filters))
+		config.sampleCount = 0
+	}
+	if config.DropByDefault {
+		profiler.Profiler.AddStats(
+			[]string{"logfile", config.LogGroupName, config.LogStreamName, "messages", "dropped"},
+			1,
+		)
+	}
 	return config.DropByDefault
 }
