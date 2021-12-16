@@ -510,7 +510,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	// Write 100 lines
 	var buf bytes.Buffer
 	for i := 0; i < 100; i++ {
-		time.Sleep(time.Second)
+		time.Sleep(250 * time.Millisecond)
 		mod := i % 10 // use the mod value to control the log messages emitted for consistency
 		/**
 		1 => multi line: has "ERROR" on first line
