@@ -489,7 +489,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		defaultTruncateSuffix,
 		1,
 	)
-	multilineWaitPeriod = 50 * time.Millisecond
+	multilineWaitPeriod = 100 * time.Millisecond
 
 	done := make(chan struct{})
 	consumed := 0
@@ -510,7 +510,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	// Write 100 lines
 	var buf bytes.Buffer
 	for i := 0; i < 100; i++ {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(time.Second)
 		mod := i % 10 // use the mod value to control the log messages emitted for consistency
 		/**
 		1 => multi line: has "ERROR" on first line
