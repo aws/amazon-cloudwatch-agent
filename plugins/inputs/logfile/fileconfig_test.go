@@ -757,3 +757,69 @@ func BenchmarkLogFilterMatchFirstFilter(b *testing.B) {
 	}
 	assert.False(b, res)
 }
+
+func BenchmarkLogFilterMatchesComplexExpression(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "((WARN|ERROR)|(StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+))",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	log := LogEvent{
+		msg: "2021-12-16 21:45:13 - DBUG: API responded with [StatusCode: 502] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(log)
+	}
+	assert.True(b, res)
+}
+
+func BenchmarkLogFilterDoesNotMatchComplexExpression(b *testing.B) {
+	original := sampleThreshold
+	defer func() {
+		sampleThreshold = original
+	}()
+	sampleThreshold = b.N * 5
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		Filters: []LogFilter{
+			{
+				Type:       includeType,
+				Expression: "((WARN|ERROR)|(StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+))",
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(b, err)
+	var res bool
+	log := LogEvent{
+		msg: "2021-12-16 21:45:13 - DEBUG: API responded with [StatusCode: 209] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		res = fileConfig.shouldFilterLog(log)
+	}
+	assert.True(b, res)
+}
