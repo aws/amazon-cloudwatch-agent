@@ -500,7 +500,6 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 		}
 		consumed += 1
 		evt.Done()
-		log.Printf("Consumed %d messages, this is %s\n", consumed, evt.Message())
 		// extra sanity check
 		assert.False(t, config.shouldFilterLog(evt))
 		// making sure that the messages include new line characters
