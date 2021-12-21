@@ -39,7 +39,6 @@ type K8sClient struct {
 	Pod  PodClient
 	Node NodeClient
 
-	Job        JobClient
 	ReplicaSet ReplicaSetClient
 }
 
@@ -68,7 +67,6 @@ func (c *K8sClient) init() {
 	c.Ep = new(epClient)
 	c.Pod = new(podClient)
 	c.Node = new(nodeClient)
-	c.Job = new(jobClient)
 	c.ReplicaSet = new(replicaSetClient)
 	c.inited = true
 }
@@ -87,9 +85,6 @@ func (c *K8sClient) shutdown() {
 	}
 	if c.Node != nil {
 		c.Node.Shutdown()
-	}
-	if c.Job != nil {
-		c.Job.Shutdown()
 	}
 	if c.ReplicaSet != nil {
 		c.ReplicaSet.Shutdown()

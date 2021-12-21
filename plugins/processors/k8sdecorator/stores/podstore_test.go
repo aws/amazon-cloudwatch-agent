@@ -346,7 +346,6 @@ func TestPodStore_addLabel(t *testing.T) {
 var mockClient = new(MockClient)
 
 var mockK8sClient = &k8sclient.K8sClient{
-	Job:        mockClient,
 	ReplicaSet: mockClient,
 }
 
@@ -355,16 +354,9 @@ func mockGet() *k8sclient.K8sClient {
 }
 
 type MockClient struct {
-	k8sclient.JobClient
 	k8sclient.ReplicaSetClient
 
 	mock.Mock
-}
-
-// k8sclient.JobClient
-func (client *MockClient) JobToCronJob() map[string]string {
-	args := client.Called()
-	return args.Get(0).(map[string]string)
 }
 
 // k8sclient.ReplicaSetClient
@@ -389,7 +381,6 @@ func (client *MockClient) Shutdown() {
 var mockClient2 = new(MockClient2)
 
 var mockK8sClient2 = &k8sclient.K8sClient{
-	Job:        mockClient2,
 	ReplicaSet: mockClient2,
 }
 
@@ -398,16 +389,9 @@ func mockGet2() *k8sclient.K8sClient {
 }
 
 type MockClient2 struct {
-	k8sclient.JobClient
 	k8sclient.ReplicaSetClient
 
 	mock.Mock
-}
-
-// k8sclient.JobClient
-func (client *MockClient2) JobToCronJob() map[string]string {
-	args := client.Called()
-	return args.Get(0).(map[string]string)
 }
 
 // k8sclient.ReplicaSetClient
@@ -441,7 +425,6 @@ func TestGetJobNamePrefix(t *testing.T) {
 
 func TestPodStore_addPodOwnersAndPodNameFallback(t *testing.T) {
 	k8sclient.Get = mockGet2
-	mockClient2.On("JobToCronJob").Return(map[string]string{})
 	mockClient2.On("ReplicaSetToDeployment").Return(map[string]string{})
 
 	podStore := &PodStore{}
@@ -479,7 +462,6 @@ func TestPodStore_addPodOwnersAndPodNameFallback(t *testing.T) {
 
 func TestPodStore_addPodOwnersAndPodName(t *testing.T) {
 	k8sclient.Get = mockGet
-	mockClient.On("JobToCronJob").Return(map[string]string{"CronJobTest-1556582405": "CronJobTest"})
 	mockClient.On("ReplicaSetToDeployment").Return(map[string]string{"DeploymentTest-sftrz2785": "DeploymentTest"})
 
 	podStore := &PodStore{}
