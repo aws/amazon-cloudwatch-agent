@@ -57,5 +57,6 @@ type SDKLogger struct {
 // Log is the only method in the aws.Logger interface.
 func (SDKLogger) Log(args ...interface{}) {
 	// Always use debug logging level.
-	log.Println("D! ", args)
+	tempSlice := append([]interface{}{"D!"}, args...)
+	log.Println(tempSlice...)
 }

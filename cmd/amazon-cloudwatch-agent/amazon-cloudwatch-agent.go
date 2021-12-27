@@ -310,7 +310,7 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
 	// Need to set SDK log level before plugins get loaded.
 	// Some aws.Config objects get created early and live forever which means
-	// we cannot change the sdk og level without restarting the Agent.
+	// we cannot change the sdk log level without restarting the Agent.
 	// For example CloudWatch.Connect().
 	sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
 	configaws.SetSDKLogLevel(wlog.LogLevel(), sdkLogLevel)

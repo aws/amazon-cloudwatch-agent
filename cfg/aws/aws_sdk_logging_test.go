@@ -23,7 +23,6 @@ func TestSetSDKLogLevel(t *testing.T) {
 		{wlog.ERROR, "FOO", aws.LogOff},
 		// ENV VAR matches, but wLogLevel is not DEBUG.
 		{wlog.INFO, "DEBUG", aws.LogOff},
-		{wlog.INFO, "DEBUG", aws.LogOff},
 		{wlog.WARN, "DEBUG", aws.LogOff},
 		{wlog.ERROR, "DEBUG", aws.LogOff},
 		// ENV VAR matches, wLogLevel is DEBUG.
