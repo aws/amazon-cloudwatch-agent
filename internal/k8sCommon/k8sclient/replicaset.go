@@ -99,10 +99,6 @@ func (c *replicaSetClient) Init() {
 		return
 	}
 
-	if _, err := Get().ClientSet.AppsV1().ReplicaSets(metav1.NamespaceAll).List(metav1.ListOptions{}); err != nil {
-		panic(fmt.Sprintf("Cannot list ReplicaSet. err: %v", err))
-	}
-
 	c.stopChan = make(chan struct{})
 
 	c.store = NewObjStore(transformFuncReplicaSet)
