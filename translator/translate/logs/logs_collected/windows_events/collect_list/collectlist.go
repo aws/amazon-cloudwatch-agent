@@ -21,7 +21,7 @@ const (
 	BatchReadSizeKey   = "batch_read_size"
 	EventLevelsKey     = "event_levels"
 	//TODO: Performance test to confirm the proper value here - https://github.com/aws/amazon-cloudwatch-agent/issues/231
-	BatchReadSizeValue = 170
+	BatchReadSizeValue = 100
 )
 
 var ChildRule = map[string]Rule{}

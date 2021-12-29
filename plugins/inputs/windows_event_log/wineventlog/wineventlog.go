@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build windows
 // +build windows
 
 package wineventlog
@@ -104,32 +105,19 @@ func (l *windowsEventLog) Stop() {
 }
 
 func (l *windowsEventLog) run() {
-	recordNumber := l.eventOffset
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			records, err := l.read()
-			if err == RPC_S_INVALID_BOUND {
-				log.Printf("E! [windows_event_log] Due to corrupted/large event, skipping event log with record number %d, and log group name %s", recordNumber, l.logGroupName)
-				recordNumber = recordNumber + 1 // Advance to the next event to avoid being stuck
-				continue
-			}
-			if err != nil {
-				log.Printf("E! [windows_event_log] Failed to read Windows event logs for log group name %s. Details: %v\n", l.logGroupName, err)
-				recordNumber = recordNumber + 1
-				continue
-			}
-
+			records := l.read()
 			for _, record := range records {
 				value, err := record.Value()
 				if err != nil {
 					log.Printf("E! [windows_event_log] Error happened when collecting windows events : %v", err)
 					continue
 				}
-				recordNumber, _ = strconv.ParseUint(record.System.EventRecordID, 10, 64)
-				// TODO: Create and send log event to output fn
+				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
 				evt := &LogEvent{
 					msg:    value,
 					t:      record.System.TimeCreated.SystemTime,
@@ -171,7 +159,8 @@ func (l *windowsEventLog) Open() error {
 	// Subscribe for events
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
-		fmt.Errorf("error when subscribing for events. Details: %v", err)
+		fmt.Errorf("EvtSubscribe(), name %v, err %v", l.name, err)
+		return err
 	}
 
 	l.eventHandle = eventHandle
@@ -244,7 +233,7 @@ func (l *windowsEventLog) saveState(offset uint64) error {
 	return ioutil.WriteFile(l.stateFilePath, content, 0644)
 }
 
-func (l *windowsEventLog) read() ([]*windowsEventLogRecord, error) {
+func (l *windowsEventLog) read() []*windowsEventLogRecord {
 	maxToRead := l.maxToRead
 	var eventHandles []EvtHandle
 	defer func() {
@@ -258,12 +247,11 @@ func (l *windowsEventLog) read() ([]*windowsEventLogRecord, error) {
 		eventHandles = make([]EvtHandle, maxToRead)
 		err := EvtNext(l.eventHandle, uint32(len(eventHandles)),
 			&eventHandles[0], 0, 0, &numRead)
-
 		// Handle special case when events size is too large - retry with smaller size
 		if err == RPC_S_INVALID_BOUND {
 			if maxToRead == 1 {
 				log.Printf("E! [windows_event_log] Out of bounds error due to large events size. Will skip the event as we cannot process it. Details: %v\n", err)
-				return nil, err
+				return nil
 			}
 			log.Printf("W! [windows_event_log] Out of bounds error due to large events size. Retrying with half of the read batch size (%d). Details: %v\n", maxToRead/2, err)
 			maxToRead /= 2
@@ -277,10 +265,14 @@ func (l *windowsEventLog) read() ([]*windowsEventLogRecord, error) {
 	}
 	// Decode the events into objects
 	if numRead == 0 {
-		return nil, nil
+		return nil
 	}
 
-	return l.getRecords(eventHandles[:numRead])
+	records := l.getRecords(eventHandles[:numRead])
+	if len(records) != int(numRead) {
+		log.Printf("E! [windows_event_log] requested events (%d) != returned events (%d)\n", numRead, len(records))
+	}
+	return records
 }
 
 type LogEvent struct {
@@ -302,9 +294,12 @@ func (le LogEvent) Done() {
 	le.src.Done(le.offset)
 }
 
-func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEventLogRecord, err error) {
+// getRecords attempts to render and format each of the given handles.
+// if one handle has an error, continue on because something is better than nothing.
+func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEventLogRecord) {
 	//Windows event message supports 31839 characters. https://msdn.microsoft.com/EN-US/library/windows/desktop/aa363679.aspx
 	bufferSize := 1 << 17
+	var err error
 	for _, evtHandle := range handles {
 		renderBuf := make([]byte, bufferSize)
 		var outputBuf []byte
@@ -314,7 +309,8 @@ func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 		// for rendering the event and getting a readable XML format that contains the log message.
 		// - We can later do more research on comparing other methods to get the publisher details such as EvtCreateRenderContext
 		if outputBuf, err = RenderEventXML(evtHandle, renderBuf); err != nil {
-			return nil, err
+			log.Printf("I! [windows_event_log] RenderEventXML() err %v", err)
+			continue
 		}
 
 		newRecord := newEventLogRecord(l)
@@ -324,19 +320,22 @@ func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 
 		var publisherMetadataEvtHandle EvtHandle
 		if publisherMetadataEvtHandle, err = EvtOpenPublisherMetadata(0, publisher, nil, 0, 0); err != nil {
-			return nil, err
+			log.Printf("I! [windows_event_log] EvtOpenPublisherMetadata() err %v, publisher %v", err, newRecord.System.Provider.Name)
+			continue
 		}
 
 		var bufferUsed uint32
 		if err = EvtFormatMessage(publisherMetadataEvtHandle, evtHandle, 0, 0, 0, EvtFormatMessageXml, uint32(bufferSize), &renderBuf[0], &bufferUsed); err != nil {
 			EvtClose(publisherMetadataEvtHandle)
-			return nil, err
+			log.Printf("I! [windows_event_log] EvtFormatMessage() err %v, publisher %v", err, newRecord.System.Provider.Name)
+			continue
 		}
 		EvtClose(publisherMetadataEvtHandle)
 
 		var descriptionBytes []byte
 		if descriptionBytes, err = UTF16ToUTF8Bytes(renderBuf, bufferUsed); err != nil {
-			return nil, err
+			log.Printf("I! [windows_event_log] UTF16ToUTF8Bytes() err %v", err)
+			continue
 		}
 
 		switch l.renderFormat {
@@ -347,18 +346,20 @@ func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 			//old SSM agent Windows format
 			var recordMessage eventMessage
 			if err = xml.Unmarshal(descriptionBytes, &recordMessage); err != nil {
-				return nil, err
+				log.Printf("I! [windows_event_log] UTF16ToUTF8Bytes() err %v", err)
+				continue
 			}
 
 			newRecord.System.Description = recordMessage.Message
 		default:
-			return nil, fmt.Errorf("format %s is not recognized", l.renderFormat)
+			log.Printf("I! [windows_event_log] l.renderFormat is not recognized, %s", l.renderFormat)
+			continue
 		}
 
 		//add record to array
 		records = append(records, newRecord)
 	}
-	return records, err
+	return records
 }
 
 func (l *windowsEventLog) loadState() {
