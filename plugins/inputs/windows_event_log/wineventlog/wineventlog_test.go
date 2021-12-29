@@ -18,7 +18,7 @@ import (
 
 var (
 	// common inputs for creating an EventLog.
-	NAME            = "Application"
+	NAME = "Application"
 	// 2 is ERROR
 	LEVELS          = []string{"2"}
 	GROUP_NAME      = "fake"
@@ -121,7 +121,7 @@ func seekToEnd(t *testing.T, elog *windowsEventLog) {
 func writeEvents(t *testing.T, msgCount int, doRegister bool, logSrc string, eventId uint32) {
 	if doRegister {
 		// Expected to fail if unit test previously ran and installed the event src.
-		_ = eventlog.InstallAsEventCreate(logSrc, eventlog.Info | eventlog.Warning | eventlog.Error)
+		_ = eventlog.InstallAsEventCreate(logSrc, eventlog.Info|eventlog.Warning|eventlog.Error)
 	}
 	wlog, err := eventlog.Open(logSrc)
 	assert.NoError(t, err)

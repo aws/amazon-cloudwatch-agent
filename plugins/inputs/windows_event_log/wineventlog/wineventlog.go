@@ -159,7 +159,7 @@ func (l *windowsEventLog) Open() error {
 	// Subscribe for events
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
-		fmt.Errorf("EvtSubscribe(), name %v, err %v", l.name, err)
+		log.Printf("EvtSubscribe(), name %v, err %v", l.name, err)
 		return err
 	}
 
