@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
@@ -22,6 +23,7 @@ const (
 	taskLaunchTypeLabel  = "LaunchType"
 	taskJobNameLabel     = "job"
 	taskMetricsPathLabel = "__metrics_path__"
+	taskArnResourceLabel = "TaskArnResource"
 	ec2InstanceTypeLabel = "InstanceType"
 	ec2VpcIdLabel        = "VpcId"
 	ec2SubnetIdLabel     = "SubnetId"
@@ -138,6 +140,9 @@ func (t *DecoratedTask) generatePrometheusTarget(
 	addExporterLabels(labels, taskGroupLabel, t.Task.Group)
 	addExporterLabels(labels, taskStartedbyLabel, t.Task.StartedBy)
 	addExporterLabels(labels, taskLaunchTypeLabel, t.Task.LaunchType)
+	if arn, err := arn.Parse(*t.Task.TaskArn); err == nil {
+		addExporterLabels(labels, taskArnResourceLabel, &arn.Resource)
+	}
 	if t.EC2Info != nil {
 		addExporterLabels(labels, ec2InstanceTypeLabel, &t.EC2Info.InstanceType)
 		addExporterLabels(labels, ec2VpcIdLabel, &t.EC2Info.VpcId)
