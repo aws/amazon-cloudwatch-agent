@@ -66,6 +66,7 @@ func TestReadGoodSource(t *testing.T) {
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
 	// Without a sleep we do not read any events!!!
+	// To work around the bad behavior of writeEvents() we must sleep.
 	time.Sleep(1 * time.Second)
 	checkEvents(t, elog, 10, "[Application] [ERROR] [777] [CWA_UnitTest111] ")
 	assert.Equal(t, nil, elog.Close())
@@ -103,7 +104,8 @@ func TestReadWithBothSources(t *testing.T) {
 func seekToEnd(t *testing.T, elog *windowsEventLog) {
 	// loop until we stop getting records.
 	numRetrieved := 0
-	for {
+	// Max 100 loops as a safety check.
+	for i := 0; i < 100; i++ {
 		records := elog.read()
 		t.Logf("seekToEnd() current count %v", len(records))
 		numRetrieved += len(records)
@@ -125,8 +127,7 @@ func writeEvents(t *testing.T, msgCount int, doRegister bool, logSrc string, eve
 	wlog, err := eventlog.Open(logSrc)
 	assert.NoError(t, err)
 	for i := 0; i < msgCount; i++ {
-		msg := fmt.Sprintf("CWA_UnitTest event msg %v", i)
-		wlog.Error(eventId, msg)
+		wlog.Error(eventId, fmt.Sprintf("CWA_UnitTest event msg %v", i))
 	}
 	err = wlog.Close()
 	assert.NoError(t, err)
@@ -137,7 +138,8 @@ func writeEvents(t *testing.T, msgCount int, doRegister bool, logSrc string, eve
 func checkEvents(t *testing.T, elog *windowsEventLog, msgCount int, substr string) {
 	// Get all new records.
 	var records []*windowsEventLogRecord
-	for {
+	// MAX 100 loops as a safety check.
+	for i := 0; i < 100; i++ {
 		// In the old code read() would return an error if there were events
 		// from an unregistered provider.
 		currentRecords := elog.read()
