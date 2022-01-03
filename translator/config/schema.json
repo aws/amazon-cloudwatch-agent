@@ -41,6 +41,10 @@
           "description": "Specifies running the CloudWatch agent with debug log messages",
           "type": "boolean"
         },
+        "aws_sdk_log_level": {
+          "description": "Specifies 1 or more logging levels when using with the AWS SDK",
+          "type": "string"
+        },
         "credentials": {
           "description": "The credentials with which agent can access aws resources",
           "$ref": "#/definitions/credentialsDefinition"
