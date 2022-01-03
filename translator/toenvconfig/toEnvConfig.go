@@ -18,7 +18,7 @@ import (
 const (
 	userAgentKey      = "user_agent"
 	debugKey          = "debug"
-	awsSDKLogLevelKey = "aws_sdk_log_level"
+	awsSdkLogLevelKey = "aws_sdk_log_level"
 )
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
@@ -37,8 +37,8 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		if isDebug, ok := agentMap[debugKey].(bool); ok && isDebug {
 			envVars[envconfig.CWAGENT_LOG_LEVEL] = "DEBUG"
 		}
-		if awsSDKLogLevel, ok := agentMap[awsSDKLogLevelKey].(string); ok {
-			envVars[envconfig.AWS_SDK_LOG_LEVEL] = awsSDKLogLevel
+		if awsSdkLogLevel, ok := agentMap[awsSdkLogLevelKey].(string); ok {
+			envVars[envconfig.AWS_SDK_LOG_LEVEL] = awsSdkLogLevel
 		}
 	}
 
