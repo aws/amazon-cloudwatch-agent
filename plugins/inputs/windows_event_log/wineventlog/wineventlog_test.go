@@ -46,7 +46,7 @@ func TestOpen(t *testing.T) {
 	elog := NewEventLog(NAME, LEVELS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
 		STATE_FILE_PATH, BATCH_SIZE, RETENTION)
 	assert.NoError(t, elog.Open())
-	assert.NotNil(t, elog.eventHandle)
+	assert.NotZero(t, elog.eventHandle)
 	assert.NoError(t, elog.Close())
 	// bad name
 	elog = NewEventLog("FakeBadElogName", LEVELS, GROUP_NAME, STREAM_NAME,
