@@ -105,7 +105,6 @@ func seekToEnd(t *testing.T, elog *windowsEventLog) {
 	numRetrieved := 0
 	for {
 		records := elog.read()
-		//assert.Equal(t, nil, err)
 		t.Logf("seekToEnd() current count %v", len(records))
 		numRetrieved += len(records)
 		if len(records) == 0 {
@@ -142,7 +141,6 @@ func checkEvents(t *testing.T, elog *windowsEventLog, msgCount int, substr strin
 		// In the old code read() would return an error if there were events
 		// from an unregistered provider.
 		currentRecords := elog.read()
-		//assert.Equal(t, nil, err)
 		t.Logf("checkEvents() current count %v", len(currentRecords))
 		if len(currentRecords) == 0 {
 			break

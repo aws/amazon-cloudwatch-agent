@@ -114,7 +114,7 @@ func (l *windowsEventLog) run() {
 			for _, record := range records {
 				value, err := record.Value()
 				if err != nil {
-					log.Printf("E! [windows_event_log] Error happened when collecting windows events : %v", err)
+					log.Printf("E! [wineventlog] Error happened when collecting windows events : %v", err)
 					continue
 				}
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
@@ -159,7 +159,7 @@ func (l *windowsEventLog) Open() error {
 	// Subscribe for events
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
-		log.Printf("EvtSubscribe(), name %v, err %v", l.name, err)
+		log.Printf("E! [wineventlog] EvtSubscribe(), name %v, err %v", l.name, err)
 		return err
 	}
 
@@ -210,14 +210,14 @@ func (l *windowsEventLog) runSaveState() {
 			}
 			err := l.saveState(offset)
 			if err != nil {
-				log.Printf("E! [windows_event_log] Error happened when saving file state %s to file state folder %s: %v", l.logGroupName, l.stateFilePath, err)
+				log.Printf("E! [wineventlog] Error happened when saving file state %s to file state folder %s: %v", l.logGroupName, l.stateFilePath, err)
 				continue
 			}
 			lastSavedOffset = offset
 		case <-l.done:
 			err := l.saveState(offset)
 			if err != nil {
-				log.Printf("E! [windows_event_log] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", l.logGroupName, l.stateFilePath, err)
+				log.Printf("E! [wineventlog] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", l.logGroupName, l.stateFilePath, err)
 			}
 			break
 		}
@@ -250,10 +250,10 @@ func (l *windowsEventLog) read() []*windowsEventLogRecord {
 		// Handle special case when events size is too large - retry with smaller size
 		if err == RPC_S_INVALID_BOUND {
 			if maxToRead == 1 {
-				log.Printf("E! [windows_event_log] Out of bounds error due to large events size. Will skip the event as we cannot process it. Details: %v\n", err)
+				log.Printf("E! [wineventlog] Out of bounds error due to large events size. Will skip the event as we cannot process it. Details: %v\n", err)
 				return nil
 			}
-			log.Printf("W! [windows_event_log] Out of bounds error due to large events size. Retrying with half of the read batch size (%d). Details: %v\n", maxToRead/2, err)
+			log.Printf("W! [wineventlog] Out of bounds error due to large events size. Retrying with half of the read batch size (%d). Details: %v\n", maxToRead/2, err)
 			maxToRead /= 2
 			for _, h := range eventHandles {
 				EvtClose(h)
@@ -270,7 +270,7 @@ func (l *windowsEventLog) read() []*windowsEventLogRecord {
 
 	records := l.getRecords(eventHandles[:numRead])
 	if len(records) != int(numRead) {
-		log.Printf("E! [windows_event_log] requested events (%d) != returned events (%d)\n", numRead, len(records))
+		log.Printf("D! [wineventlog] requested events (%d) != returned events (%d)\n", numRead, len(records))
 	}
 	return records
 }
@@ -309,7 +309,7 @@ func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 		// for rendering the event and getting a readable XML format that contains the log message.
 		// - We can later do more research on comparing other methods to get the publisher details such as EvtCreateRenderContext
 		if outputBuf, err = RenderEventXML(evtHandle, renderBuf); err != nil {
-			log.Printf("I! [windows_event_log] RenderEventXML() err %v", err)
+			log.Printf("I! [wineventlog] RenderEventXML() err %v", err)
 			continue
 		}
 
@@ -320,21 +320,21 @@ func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 
 		var publisherMetadataEvtHandle EvtHandle
 		if publisherMetadataEvtHandle, err = EvtOpenPublisherMetadata(0, publisher, nil, 0, 0); err != nil {
-			log.Printf("I! [windows_event_log] EvtOpenPublisherMetadata() err %v, publisher %v", err, newRecord.System.Provider.Name)
+			log.Printf("I! [wineventlog] EvtOpenPublisherMetadata() err %v, publisher %v", err, newRecord.System.Provider.Name)
 			continue
 		}
 
 		var bufferUsed uint32
 		if err = EvtFormatMessage(publisherMetadataEvtHandle, evtHandle, 0, 0, 0, EvtFormatMessageXml, uint32(bufferSize), &renderBuf[0], &bufferUsed); err != nil {
 			EvtClose(publisherMetadataEvtHandle)
-			log.Printf("I! [windows_event_log] EvtFormatMessage() err %v, publisher %v", err, newRecord.System.Provider.Name)
+			log.Printf("I! [wineventlog] EvtFormatMessage() err %v, publisher %v", err, newRecord.System.Provider.Name)
 			continue
 		}
 		EvtClose(publisherMetadataEvtHandle)
 
 		var descriptionBytes []byte
 		if descriptionBytes, err = UTF16ToUTF8Bytes(renderBuf, bufferUsed); err != nil {
-			log.Printf("I! [windows_event_log] UTF16ToUTF8Bytes() err %v", err)
+			log.Printf("I! [wineventlog] UTF16ToUTF8Bytes() err %v", err)
 			continue
 		}
 
@@ -346,13 +346,13 @@ func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 			//old SSM agent Windows format
 			var recordMessage eventMessage
 			if err = xml.Unmarshal(descriptionBytes, &recordMessage); err != nil {
-				log.Printf("I! [windows_event_log] UTF16ToUTF8Bytes() err %v", err)
+				log.Printf("I! [wineventlog] UTF16ToUTF8Bytes() err %v", err)
 				continue
 			}
 
 			newRecord.System.Description = recordMessage.Message
 		default:
-			log.Printf("I! [windows_event_log] l.renderFormat is not recognized, %s", l.renderFormat)
+			log.Printf("I! [wineventlog] l.renderFormat is not recognized, %s", l.renderFormat)
 			continue
 		}
 
@@ -364,22 +364,22 @@ func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 
 func (l *windowsEventLog) loadState() {
 	if _, err := os.Stat(l.stateFilePath); err != nil {
-		log.Printf("I! [windows_event_log] The state file for %s does not exist: %v", l.stateFilePath, err)
+		log.Printf("I! [wineventlog] The state file for %s does not exist: %v", l.stateFilePath, err)
 		return
 	}
 
 	byteArray, err := ioutil.ReadFile(l.stateFilePath)
 	if err != nil {
-		log.Printf("W! [windows_event_log] Issue encountered when reading offset from file %s: %v", l.stateFilePath, err)
+		log.Printf("W! [wineventlog] Issue encountered when reading offset from file %s: %v", l.stateFilePath, err)
 		return
 	}
 
 	offset, err := strconv.ParseInt(strings.Split(string(byteArray), "\n")[0], 10, 64)
 	if err != nil {
-		log.Printf("W! [windows_event_log] Issue encountered when parsing offset value %v: %v", byteArray, err)
+		log.Printf("W! [wineventlog] Issue encountered when parsing offset value %v: %v", byteArray, err)
 		return
 	}
 
-	log.Printf("I! [windows_event_log] Reading from offset %v in %s", offset, l.stateFilePath)
+	log.Printf("I! [wineventlog] Reading from offset %v in %s", offset, l.stateFilePath)
 	l.eventOffset = uint64(offset)
 }
