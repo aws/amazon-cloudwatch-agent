@@ -7,38 +7,41 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/influxdata/wlog"
 )
 
 func TestSetSDKLogLevel(t *testing.T) {
 	cases := []struct {
-		wLogLevel         wlog.Level
 		sdkLogLevelString string
 		expectedVal       aws.LogLevelType
 	}{
-		// ENV VAR does not match
-		{wlog.DEBUG, "FOO", aws.LogOff},
-		{wlog.INFO, "FOO", aws.LogOff},
-		{wlog.WARN, "FOO", aws.LogOff},
-		{wlog.ERROR, "FOO", aws.LogOff},
-		// ENV VAR matches, but wLogLevel is not DEBUG.
-		{wlog.INFO, "DEBUG", aws.LogOff},
-		{wlog.WARN, "DEBUG", aws.LogOff},
-		{wlog.ERROR, "DEBUG", aws.LogOff},
-		// ENV VAR matches, wLogLevel is DEBUG.
-		{wlog.DEBUG, "LogDebug", aws.LogDebug},
-		{wlog.DEBUG, "LogDebugWithEventStreamBody", aws.LogDebugWithEventStreamBody},
-		{wlog.DEBUG, "LogDebugWithHTTPBody", aws.LogDebugWithHTTPBody},
-		{wlog.DEBUG, "LogDebugWithSigning", aws.LogDebugWithSigning},
-		// Multiple matches
-		{wlog.DEBUG, "LogDebugWithEventStreamBody|LogDebugWithSigning",
-			aws.LogDebugWithEventStreamBody | aws.LogDebugWithSigning},
-		{wlog.DEBUG, "LogDebugWithEventStreamBody | LogDebugWithSigning | LogDebugWithHTTPBody",
-			aws.LogDebugWithEventStreamBody | aws.LogDebugWithSigning | aws.LogDebugWithHTTPBody},
+		// sdkLogLevelString does not match
+		{"FOO", aws.LogOff},
+		// Wrong case.
+		{"logDEBUG", aws.LogOff},
+		// Extra space around | is not allowed.
+		{"LogDebug | LogDebugWithSigning", aws.LogOff},
+		// Single match.
+		{"LogDebug", aws.LogDebug},
+		{"LogDebugWithEventStreamBody", aws.LogDebugWithEventStreamBody},
+		{"LogDebugWithHTTPBody", aws.LogDebugWithHTTPBody},
+		{"LogDebugWithRequestRetries", aws.LogDebugWithRequestRetries},
+		{"LogDebugWithRequestErrors", aws.LogDebugWithRequestErrors},
+		{"LogDebugWithEventStreamBody", aws.LogDebugWithEventStreamBody},
+		// Multiple matches.
+		{"LogDebugWithEventStreamBody|LogDebugWithHTTPBody",
+			aws.LogDebugWithEventStreamBody | aws.LogDebugWithHTTPBody},
+		{"LogDebugWithHTTPBody|LogDebugWithEventStreamBody",
+			aws.LogDebugWithEventStreamBody | aws.LogDebugWithHTTPBody},
+		{"LogDebugWithRequestRetries|LogDebugWithEventStreamBody",
+			aws.LogDebugWithEventStreamBody | aws.LogDebugWithRequestRetries},
+		{"LogDebugWithRequestRetries|LogDebugWithRequestErrors",
+			aws.LogDebugWithRequestRetries | aws.LogDebugWithRequestErrors},
+		{"LogDebugWithRequestRetries|LogDebugWithRequestErrors|LogDebugWithEventStreamBody",
+			aws.LogDebugWithRequestRetries | aws.LogDebugWithRequestErrors | aws.LogDebugWithEventStreamBody},
 	}
 
 	for _, tc := range cases {
-		SetSDKLogLevel(tc.wLogLevel, tc.sdkLogLevelString)
+		SetSDKLogLevel(tc.sdkLogLevelString)
 		// check the internal var
 		if *SDKLogLevel() != tc.expectedVal {
 			t.Errorf("input: %v, actual: %v", tc, sdkLogLevel)

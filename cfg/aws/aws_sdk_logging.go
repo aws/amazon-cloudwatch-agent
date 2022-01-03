@@ -8,37 +8,33 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/influxdata/wlog"
 )
 
+// Hard coded strings that match actual variable names in the AWS SDK.
+// I don't expect these names to change, or their meaning to change.
+// Update this map if/when AWS SDK adds more levels (unlikely).
+var stringToLevelMap map[string]aws.LogLevelType = map[string]aws.LogLevelType{
+	"LogDebug":                    aws.LogDebug,
+	"LogDebugWithSigning":         aws.LogDebugWithSigning,
+	"LogDebugWithHTTPBody":        aws.LogDebugWithHTTPBody,
+	"LogDebugWithRequestRetries":  aws.LogDebugWithRequestRetries,
+	"LogDebugWithRequestErrors":   aws.LogDebugWithRequestErrors,
+	"LogDebugWithEventStreamBody": aws.LogDebugWithEventStreamBody,
+}
 var sdkLogLevel aws.LogLevelType = aws.LogOff
 
 // SetSDKLogLevel sets the global log level which will be used in all AWS SDK calls.
-// Example usage: set `debug = true` and `aws_sdk_log_level = LogDebug` in config.json.
-func SetSDKLogLevel(wLogLevel wlog.Level, sdkLogLevelString string) {
-	if wLogLevel != wlog.DEBUG {
-		sdkLogLevel = aws.LogOff
-		return
-	}
+// The levels are a bit field that is OR'd together.
+// So the user can specify multiple levels and we OR them together.
+// Example: "aws_sdk_log_level": "LogDebugWithSigning|LogDebugWithRequestErrors".
+// JSON must contain the exact string(s), optionally seperated by "|".
+func SetSDKLogLevel(sdkLogLevelString string) {
 	var temp aws.LogLevelType = aws.LogOff
-	// Hard coded strings that match actual variable names in the AWS SDK.
-	// I don't expect these names to change, or their meaning to change.
-	// This code may need updates if the SDK adds more levels (unlikely).
-	// Please note that the levels are a bit field that is OR'd together.
-	if strings.Contains(sdkLogLevelString, "LogDebug") {
-		temp |= aws.LogDebug
-	}
-	if strings.Contains(sdkLogLevelString, "LogDebugWithSigning") {
-		temp |= aws.LogDebugWithSigning
-	}
-	if strings.Contains(sdkLogLevelString, "LogDebugWithHTTPBody") {
-		temp |= aws.LogDebugWithHTTPBody
-	}
-	if strings.Contains(sdkLogLevelString, "LogDebugWithRequestErrors") {
-		temp |= aws.LogDebugWithRequestErrors
-	}
-	if strings.Contains(sdkLogLevelString, "LogDebugWithEventStreamBody") {
-		temp |= aws.LogDebugWithEventStreamBody
+
+	levels := strings.Split(sdkLogLevelString, "|")
+	for _, v := range levels {
+		// If v not in map, then OR with 0 is harmless.
+		temp |= stringToLevelMap[v]
 	}
 
 	sdkLogLevel = temp
@@ -56,7 +52,7 @@ type SDKLogger struct {
 
 // Log is the only method in the aws.Logger interface.
 func (SDKLogger) Log(args ...interface{}) {
-	// Always use debug logging level.
-	tempSlice := append([]interface{}{"D!"}, args...)
+	// Always use info logging level.
+	tempSlice := append([]interface{}{"I!"}, args...)
 	log.Println(tempSlice...)
 }
