@@ -65,9 +65,6 @@ func TestReadGoodSource(t *testing.T) {
 	assert.Equal(t, nil, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
-	// Without a sleep we do not read any events!!!
-	// To work around the bad behavior of writeEvents() we must sleep.
-	time.Sleep(1 * time.Second)
 	checkEvents(t, elog, 10, "[Application] [ERROR] [777] [CWA_UnitTest111] ")
 	assert.Equal(t, nil, elog.Close())
 }
@@ -80,7 +77,6 @@ func TestReadBadSource(t *testing.T) {
 	assert.Equal(t, nil, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, false, "CWA_UnitTest222", 888)
-	time.Sleep(1 * time.Second)
 	checkEvents(t, elog, 0, "[Application] [ERROR] [888] [CWA_UnitTest222] ")
 	assert.Equal(t, nil, elog.Close())
 }
@@ -95,7 +91,6 @@ func TestReadWithBothSources(t *testing.T) {
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
 	writeEvents(t, 10, false, "CWA_UnitTest222", 888)
-	time.Sleep(1 * time.Second)
 	checkEvents(t, elog, 10, "[Application] [ERROR] [777] [CWA_UnitTest111] ")
 	assert.Equal(t, nil, elog.Close())
 }
@@ -131,6 +126,8 @@ func writeEvents(t *testing.T, msgCount int, doRegister bool, logSrc string, eve
 	}
 	err = wlog.Close()
 	assert.NoError(t, err)
+	// Must sleep after wlog.Error() otherwise elog.read() will not see results.
+	time.Sleep(1 * time.Second)
 }
 
 // checkEvents reads all events (since last read) then checks each one for the
