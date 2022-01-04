@@ -346,7 +346,7 @@ func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEve
 			//old SSM agent Windows format
 			var recordMessage eventMessage
 			if err = xml.Unmarshal(descriptionBytes, &recordMessage); err != nil {
-				log.Printf("I! [wineventlog] UTF16ToUTF8Bytes() err %v", err)
+				log.Printf("I! [wineventlog] Unmarshal() err %v", err)
 				continue
 			}
 
