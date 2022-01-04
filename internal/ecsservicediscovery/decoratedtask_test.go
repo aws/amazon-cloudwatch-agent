@@ -266,8 +266,7 @@ func Test_ExportMixedSDTarget_Fargate_AWSVPC(t *testing.T) {
 	assert.True(t, ok, "Missing target: 10.0.0.129:9406/metrics")
 }
 
-func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceName string) *DecoratedTask {
-	networkMode := ecs.NetworkModeBridge
+func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceName string, networkMode string) *DecoratedTask {
 	taskContainersArn := "arn:aws:ecs:us-east-2:211220956907:container/3b288961-eb2c-4de5-a4c5-682c0a7cc625"
 	var taskContainersDynamicHostPort int64 = 32774
 	var taskContainersMappedHostPort int64 = 9494
@@ -363,8 +362,25 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceNa
 }
 
 func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
-	fullTask := buildWorkloadEC2BridgeDynamicPort(true, true, "")
-	assert.Equal(t, "10.4.0.205", fullTask.getPrivateIp())
+	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, ecs.NetworkModeBridge, 2)
+}
+
+func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort_With_Implicit_NetworkMode(t *testing.T) {
+	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, "", 2)
+}
+
+func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort_With_NetworkModeNone(t *testing.T) {
+	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, ecs.NetworkModeNone, 0)
+}
+
+func testExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode string, expectedTargets int) {
+	fullTask := buildWorkloadEC2BridgeDynamicPort(true, true, "", networkMode)
+	if expectedTargets == 0 {
+		assert.Equal(t, "", fullTask.getPrivateIp())
+	} else {
+		assert.Equal(t, "10.4.0.205", fullTask.getPrivateIp())
+	}
+
 	config := &ServiceDiscoveryConfig{
 		DockerLabel: &DockerLabelConfig{
 			JobNameLabel:     "EC2_PROMETHEUS_JOB_NAME",
@@ -387,7 +403,11 @@ func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
 	dockerLabelRegex := regexp.MustCompile(prometheusLabelNamePattern)
 	fullTask.ExporterInformation(config, dockerLabelRegex, targets)
 
-	assert.Equal(t, 2, len(targets))
+	assert.Equal(t, expectedTargets, len(targets))
+	if expectedTargets == 0 {
+		return
+	}
+
 	target, ok := targets["10.4.0.205:32774/metrics"]
 	assert.True(t, ok, "Missing target: 10.4.0.205:32774/metrics")
 
@@ -415,9 +435,25 @@ func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
 }
 
 func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
-	fullTask := buildWorkloadEC2BridgeDynamicPort(false, true, "")
+	testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t, ecs.NetworkModeBridge, 1)
+}
+
+func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort_With_Implicit_NetworkMode(t *testing.T) {
+	testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t, "", 1)
+}
+
+func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort_With_NetworkModeNone(t *testing.T) {
+	testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t, ecs.NetworkModeNone, 0)
+}
+
+func testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode string, expectedTargets int) {
+	fullTask := buildWorkloadEC2BridgeDynamicPort(false, true, "", networkMode)
 	log.Print(fullTask)
-	assert.Equal(t, "10.4.0.205", fullTask.getPrivateIp())
+	if expectedTargets == 0 {
+		assert.Equal(t, "", fullTask.getPrivateIp())
+	} else {
+		assert.Equal(t, "10.4.0.205", fullTask.getPrivateIp())
+	}
 	config := &ServiceDiscoveryConfig{
 		TaskDefinitions: []*TaskDefinitionConfig{
 			{
@@ -436,7 +472,11 @@ func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
 	dockerLabelRegex := regexp.MustCompile(prometheusLabelNamePattern)
 	fullTask.ExporterInformation(config, dockerLabelRegex, targets)
 
-	assert.Equal(t, 1, len(targets))
+	assert.Equal(t, expectedTargets, len(targets))
+	if expectedTargets == 0 {
+		return
+	}
+
 	target, ok := targets["10.4.0.205:9494/metrics"]
 	log.Print(target)
 	assert.True(t, ok, "Missing target: 10.4.0.205:9494/metrics")
