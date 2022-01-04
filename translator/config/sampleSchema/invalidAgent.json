@@ -4,6 +4,7 @@
     "logfile": ["c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"],
     "region": 1,
     "debug": "false",
+    "aws_sdk_log_level": 3.14,
     "typo": "typo"
   }
 }
