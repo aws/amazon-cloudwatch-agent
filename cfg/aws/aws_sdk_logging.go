@@ -26,15 +26,16 @@ var sdkLogLevel aws.LogLevelType = aws.LogOff
 // SetSDKLogLevel sets the global log level which will be used in all AWS SDK calls.
 // The levels are a bit field that is OR'd together.
 // So the user can specify multiple levels and we OR them together.
-// Example: "aws_sdk_log_level": "LogDebugWithSigning|LogDebugWithRequestErrors".
-// JSON must contain the exact string(s), optionally seperated by "|".
+// Example: "aws_sdk_log_level": "LogDebugWithSigning | LogDebugWithRequestErrors".
+// JSON string value must contain the levels seperated by "|" and optionally whitespace.
 func SetSDKLogLevel(sdkLogLevelString string) {
 	var temp aws.LogLevelType = aws.LogOff
 
 	levels := strings.Split(sdkLogLevelString, "|")
 	for _, v := range levels {
+		trimmed := strings.TrimSpace(v)
 		// If v not in map, then OR with 0 is harmless.
-		temp |= stringToLevelMap[v]
+		temp |= stringToLevelMap[trimmed]
 	}
 
 	sdkLogLevel = temp

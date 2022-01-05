@@ -18,8 +18,8 @@ func TestSetSDKLogLevel(t *testing.T) {
 		{"FOO", aws.LogOff},
 		// Wrong case.
 		{"logDEBUG", aws.LogOff},
-		// Extra space around | is not allowed.
-		{"LogDebug | LogDebugWithSigning", aws.LogOff},
+		// Extra char.
+		{"LogDebug1", aws.LogOff},
 		// Single match.
 		{"LogDebug", aws.LogDebug},
 		{"LogDebugWithEventStreamBody", aws.LogDebugWithEventStreamBody},
@@ -27,10 +27,12 @@ func TestSetSDKLogLevel(t *testing.T) {
 		{"LogDebugWithRequestRetries", aws.LogDebugWithRequestRetries},
 		{"LogDebugWithRequestErrors", aws.LogDebugWithRequestErrors},
 		{"LogDebugWithEventStreamBody", aws.LogDebugWithEventStreamBody},
+		// Extra space around is allowed.
+		{"   LogDebug  ", aws.LogDebug},
 		// Multiple matches.
 		{"LogDebugWithEventStreamBody|LogDebugWithHTTPBody",
 			aws.LogDebugWithEventStreamBody | aws.LogDebugWithHTTPBody},
-		{"LogDebugWithHTTPBody|LogDebugWithEventStreamBody",
+		{"  LogDebugWithHTTPBody  |  LogDebugWithEventStreamBody  ",
 			aws.LogDebugWithEventStreamBody | aws.LogDebugWithHTTPBody},
 		{"LogDebugWithRequestRetries|LogDebugWithEventStreamBody",
 			aws.LogDebugWithEventStreamBody | aws.LogDebugWithRequestRetries},
