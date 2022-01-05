@@ -10,6 +10,7 @@ import (
 
 	"strings"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -49,7 +50,9 @@ func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[st
 	profile, profileOk := credsMap[commonconfig.CredentialProfile]
 	sharedConfigFile, sharedConfigFileOk := credsMap[commonconfig.CredentialFile]
 	rootconfig := &aws.Config{
-		Region: aws.String(region),
+		Region:   aws.String(region),
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
 	}
 	if profileOk || sharedConfigFileOk {
 		rootconfig.Credentials = credentials.NewCredentials(&credentials.SharedCredentialsProvider{

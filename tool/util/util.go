@@ -13,6 +13,7 @@ import (
 	sysruntime "runtime"
 	"strconv"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
@@ -137,6 +138,8 @@ func DefaultEC2Region() (region string) {
 	ses, e := session.NewSession(&aws.Config{
 		HTTPClient: &http.Client{Timeout: 1 * time.Second},
 		MaxRetries: aws.Int(0),
+		LogLevel:   configaws.SDKLogLevel(),
+		Logger:     configaws.SDKLogger{},
 	})
 	if e != nil {
 		return

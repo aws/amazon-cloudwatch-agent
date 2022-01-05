@@ -75,6 +75,7 @@ func TestCompleteConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{
 		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
 		"CWAGENT_LOG_LEVEL":  "DEBUG",
+		"AWS_SDK_LOG_LEVEL":  "LogDebug",
 	}
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/complete_linux_config.json"), "linux", expectedEnvVars)
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/complete_windows_config.json"), "windows", expectedEnvVars)

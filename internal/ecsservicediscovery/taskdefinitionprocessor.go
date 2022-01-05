@@ -47,7 +47,7 @@ func (p *TaskDefinitionProcessor) Process(cluster string, taskList []*DecoratedT
 		arn2Definition[aws.StringValue(t.Task.TaskDefinitionArn)] = nil
 	}
 
-	for k, _ := range arn2Definition {
+	for k := range arn2Definition {
 		if k == "" {
 			continue
 		}

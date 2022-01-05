@@ -9,8 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/influxdata/wlog"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,6 +22,10 @@ import (
 	"syscall"
 	"time"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/influxdata/wlog"
+
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -34,6 +36,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
+
 	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
@@ -161,6 +164,9 @@ func reloadLoop(
 							if err := wlog.SetLevelFromName(logLevel); err != nil {
 								log.Printf("E! Unable to set log level: %v", err)
 							}
+							// Set AWS SDK logging
+							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
+							configaws.SetSDKLogLevel(sdkLogLevel)
 							previousModTime = info.ModTime()
 						}
 					case <-ctx.Done():
@@ -177,6 +183,8 @@ func reloadLoop(
 	}
 }
 
+// loadEnvironmentVariables updates OS ENV vars with key/val from the given JSON file.
+// The "config-translator" program populates that file.
 func loadEnvironmentVariables(path string) error {
 	if path == "" {
 		return fmt.Errorf("No env config file specified")
@@ -300,6 +308,17 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
+	// Need to set SDK log level before plugins get loaded.
+	// Some aws.Config objects get created early and live forever which means
+	// we cannot change the sdk log level without restarting the Agent.
+	// For example CloudWatch.Connect().
+	sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
+	configaws.SetSDKLogLevel(sdkLogLevel)
+	if sdkLogLevel == "" {
+		log.Printf("I! AWS SDK log level not set")
+	} else {
+		log.Printf("I! AWS SDK log level, %s", sdkLogLevel)
+	}
 
 	if *fTest || *fTestWait != 0 {
 		testWaitDuration := time.Duration(*fTestWait) * time.Second

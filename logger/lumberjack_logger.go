@@ -4,17 +4,19 @@
 package logger
 
 import (
-	telegraf_logger "github.com/influxdata/telegraf/logger"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"os"
 	"path/filepath"
+
+	telegraf_logger "github.com/influxdata/telegraf/logger"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 const (
 	LogTargetLumberjack = "lumberjack"
 )
 
+// Implement the LoggerCreator interface so it can be registered with telegraf_logger.
 type lumberjackLogCreator struct {
 }
 

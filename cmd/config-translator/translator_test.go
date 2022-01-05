@@ -56,7 +56,7 @@ func checkIfSchemaValidationAsExpected(t *testing.T, jsonInputPath string, shoul
 func TestAgentConfig(t *testing.T) {
 	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/validAgent.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}
-	expectedErrorMap["invalid_type"] = 4
+	expectedErrorMap["invalid_type"] = 5
 	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/invalidAgent.json", false, expectedErrorMap)
 }
 

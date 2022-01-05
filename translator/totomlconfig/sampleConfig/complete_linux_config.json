@@ -4,6 +4,7 @@
     "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
     "internal": true,
     "debug": true,
+    "aws_sdk_log_level": "LogDebug",
     "user_agent": "CUSTOM USER AGENT VALUE",
     "credentials": {
       "role_arn": "global_role_arn_value"
@@ -11,12 +12,14 @@
   },
   "metrics": {
     "metrics_collected": {
-      "collectd":{
+      "collectd": {
         "service_address": "udp://127.0.0.1:25826",
         "name_prefix": "collectd_",
         "collectd_auth_file": "/etc/collectd/auth_file",
         "collectd_security_level": "encrypt",
-        "collectd_typesdb": ["/usr/share/collectd/types.db"],
+        "collectd_typesdb": [
+          "/usr/share/collectd/types.db"
+        ],
         "metrics_aggregation_interval": 60
       },
       "cpu": {
@@ -24,8 +27,15 @@
           "*"
         ],
         "measurement": [
-          {"name": "cpu_usage_idle", "rename": "CPU_USAGE_IDLE", "unit": "unit"},
-          {"name": "cpu_usage_nice", "unit": "unit"},
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_USAGE_IDLE",
+            "unit": "unit"
+          },
+          {
+            "name": "cpu_usage_nice",
+            "unit": "unit"
+          },
           "cpu_usage_guest",
           "time_active",
           "usage_active"
@@ -44,7 +54,11 @@
           "/sys"
         ],
         "measurement": [
-          {"name": "free", "rename": "DISK_FREE", "unit": "unit"},
+          {
+            "name": "free",
+            "rename": "DISK_FREE",
+            "unit": "unit"
+          },
           "total",
           "used"
         ],
@@ -54,7 +68,8 @@
           "d4": "bar4"
         },
         "ignore_file_system_types": [
-          "sysfs", "devtmpfs"
+          "sysfs",
+          "devtmpfs"
         ]
       },
       "diskio": {
@@ -133,7 +148,19 @@
       "InstanceType": "${aws:InstanceType}",
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
     },
-    "aggregation_dimensions" : [["ImageId"], ["InstanceId", "InstanceType"], ["d1"],[]],
+    "aggregation_dimensions": [
+      [
+        "ImageId"
+      ],
+      [
+        "InstanceId",
+        "InstanceType"
+      ],
+      [
+        "d1"
+      ],
+      []
+    ],
     "force_flush_interval": 60,
     "credentials": {
       "role_arn": "metrics_role_arn_value_test"

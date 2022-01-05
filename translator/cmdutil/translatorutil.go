@@ -31,7 +31,6 @@ const (
 	exitSuccessMessage       = "Configuration validation first phase succeeded"
 )
 
-// Translate from Json map to toml file
 func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConfigFilePath string) {
 	res := totomlconfig.ToTomlConfig(jsonConfigValue)
 	if translator.IsTranslateSuccess() {
@@ -48,7 +47,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 	}
 }
 
-// Generate env config based on the input json config
+// TranslateJsonMapToEnvConfigFile populates env-config.json based on the input json config.
 func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, envConfigPath string) {
 	if envConfigPath == "" {
 		return

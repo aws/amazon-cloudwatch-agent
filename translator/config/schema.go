@@ -53,6 +53,10 @@ var schema = `{
           "description": "Specifies running the CloudWatch agent with debug log messages",
           "type": "boolean"
         },
+        "aws_sdk_log_level": {
+          "description": "Specifies running the CloudWatch agent with AWS SDK debug logging. Multiple options must be separated by vertical bars.",
+          "type": "string"
+        },
         "credentials": {
           "description": "The credentials with which agent can access aws resources",
           "$ref": "#/definitions/credentialsDefinition"

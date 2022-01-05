@@ -4,11 +4,12 @@
 package ecsservicediscovery
 
 import (
+	"log"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hashicorp/golang-lru/simplelru"
-	"log"
 )
 
 const (
@@ -49,7 +50,7 @@ func splitMapKeys(a map[string]*EC2MetaData, size int) [][]string {
 
 	result := make([][]string, 0)
 	v := make([]string, 0, size)
-	for k, _ := range a {
+	for k := range a {
 		if len(v) >= size {
 			result = append(result, v)
 			v = make([]string, 0, size)

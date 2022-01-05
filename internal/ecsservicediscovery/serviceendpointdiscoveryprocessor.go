@@ -108,7 +108,6 @@ func (p *ServiceEndpointDiscoveryProcessor) processDecoratedTasks(taskList []*De
 			}
 		}
 	}
-	return
 }
 
 func (p *ServiceEndpointDiscoveryProcessor) validateServiceNameDiscoveredTask(serviceName string, task *DecoratedTask, serviceNamesForTasksConfig []*ServiceNameForTasksConfig) bool {
