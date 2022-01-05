@@ -42,7 +42,7 @@
           "type": "boolean"
         },
         "aws_sdk_log_level": {
-          "description": "Specifies 1 or more logging levels when using with the AWS SDK",
+          "description": "Specifies running the CloudWatch agent with AWS SDK debug logging. Multiple options must be separated by vertical bars.",
           "type": "string"
         },
         "credentials": {
