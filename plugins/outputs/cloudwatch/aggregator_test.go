@@ -110,13 +110,13 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 	aggregator.AddMetric(m)
 
 	assertNoMetricsInChan(t, metricChan)
-	time.Sleep(2 * aggregationInterval)
+	time.Sleep(4 * aggregationInterval)
 	assertMetricContent(t, metricChan, m, expectedFieldContent{"value", 3, 1, 3, 6, "",
 		[]float64{1.0488088481701516, 2.0438317370604793, 2.992374046230249}, []float64{1, 1, 1}})
 
 	assertNoMetricsInChan(t, metricChan)
 
-	time.Sleep(2 * aggregationInterval)
+	time.Sleep(4 * aggregationInterval)
 	assertMetricContent(t, metricChan, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
 		[]float64{3.9828498555324616, 4.819248325194279}, []float64{1, 1}},
 		expectedFieldContent{"2nd value", 2, 1, 2, 3, "",
