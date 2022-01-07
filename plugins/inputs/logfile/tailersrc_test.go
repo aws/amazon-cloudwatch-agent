@@ -323,13 +323,9 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	defer os.Remove(statefile.Name())
 
 	n := 100
-	generateWithError := func() string {
-		return logWithTimestampPrefix("ERROR: this has an error in it.")
-	}
-	generateWithoutError := func() string {
-		return logWithTimestampPrefix("Some other log message")
-	}
-	publishLogsToFile(file, generateWithError, generateWithoutError, n, 0, 0)
+	matchedLog := logWithTimestampPrefix("ERROR: this has an error in it.")
+	unmatchedLog := logWithTimestampPrefix("Some other log message")
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 0, 0)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
@@ -365,19 +361,13 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	buf.WriteString(strings.Repeat("\nfoo", 2))
 	buf.WriteString("\nHere is the ERROR that should be matched")
 	buf.WriteString(strings.Repeat("\nfoo", 2))
-	matchedLog := buf.String()
+	matchedLog := logWithTimestampPrefix(buf.String())
 	buf.Reset()
 	buf.WriteString("This should not be matched")
 	buf.WriteString(strings.Repeat("\nbar", 5))
-	unmatchedLog := buf.String()
+	unmatchedLog := logWithTimestampPrefix(buf.String())
 
-	generateWithError := func() string {
-		return logWithTimestampPrefix(matchedLog)
-	}
-	generateWithoutError := func() string {
-		return logWithTimestampPrefix(unmatchedLog)
-	}
-	publishLogsToFile(file, generateWithError, generateWithoutError, n, 100, 500)
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 500)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
@@ -408,15 +398,10 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 
 	n := 100
 	// create log messages ahead of time to save compute time
-	matchedLog := "There's an ERROR in this - " + strings.Repeat("A", 258*1024)
-	unmatchedLog := strings.Repeat("B", 258*1024) + "At the end of the log, here is an ERROR that should not be matched"
-	generateWithError := func() string {
-		return logWithTimestampPrefix(matchedLog)
-	}
-	generateWithoutError := func() string {
-		return logWithTimestampPrefix(unmatchedLog)
-	}
-	publishLogsToFile(file, generateWithError, generateWithoutError, n, 100, 1000)
+	matchedLog := logWithTimestampPrefix("There's an ERROR in this - " + strings.Repeat("A", 258*1024))
+	unmatchedLog := logWithTimestampPrefix(strings.Repeat("B", 258*1024) + "At the end of the log, here is an ERROR that should not be matched")
+
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 500)
 
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
@@ -523,7 +508,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, done chan struct{}
 	return file, statefile
 }
 
-func publishLogsToFile(file *os.File, matchingLogGenerator, otherLogGenerator func() string, n, multiLineWaitMs, sleepMs int) {
+func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiLineWaitMs, sleepMs int) {
 	if multiLineWaitMs > 0 {
 		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
 	}
@@ -534,9 +519,9 @@ func publishLogsToFile(file *os.File, matchingLogGenerator, otherLogGenerator fu
 		}
 		mod := i % 2
 		if mod == 0 {
-			fmt.Fprintln(file, otherLogGenerator())
+			fmt.Fprintln(file, unmatchedLog)
 		} else {
-			fmt.Fprintln(file, matchingLogGenerator())
+			fmt.Fprintln(file, matchedLog)
 		}
 	}
 }
