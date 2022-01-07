@@ -359,19 +359,23 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	defer os.Remove(statefile.Name())
 
 	n := 100
+	// create log messages ahead of time to save compute time
+	buf := bytes.Buffer{}
+	buf.WriteString("This has a matching log in the middle of it")
+	buf.WriteString(strings.Repeat("\nfoo", 2))
+	buf.WriteString("\nHere is the ERROR that should be matched")
+	buf.WriteString(strings.Repeat("\nfoo", 2))
+	matchedLog := buf.String()
+	buf.Reset()
+	buf.WriteString("This should not be matched")
+	buf.WriteString(strings.Repeat("\nbar", 5))
+	unmatchedLog := buf.String()
+
 	generateWithError := func() string {
-		buf := bytes.Buffer{}
-		buf.WriteString("This has a matching log in the middle of it")
-		buf.WriteString(strings.Repeat("\nfoo", 2))
-		buf.WriteString("\nHere is the ERROR that should be matched")
-		buf.WriteString(strings.Repeat("\nfoo", 2))
-		return logWithTimestampPrefix(buf.String())
+		return logWithTimestampPrefix(matchedLog)
 	}
 	generateWithoutError := func() string {
-		buf := bytes.Buffer{}
-		buf.WriteString("This should not be matched")
-		buf.WriteString(strings.Repeat("\nbar", 5))
-		return logWithTimestampPrefix(buf.String())
+		return logWithTimestampPrefix(unmatchedLog)
 	}
 	publishLogsToFile(file, generateWithError, generateWithoutError, n, 100, 500)
 
@@ -403,11 +407,14 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	defer os.Remove(statefile.Name())
 
 	n := 100
+	// create log messages ahead of time to save compute time
+	matchedLog := "There's an ERROR in this - " + strings.Repeat("A", 258*1024)
+	unmatchedLog := strings.Repeat("B", 258*1024) + "At the end of the log, here is an ERROR that should not be matched"
 	generateWithError := func() string {
-		return logWithTimestampPrefix("There's an ERROR in this - " + strings.Repeat("A", 258*1024))
+		return logWithTimestampPrefix(matchedLog)
 	}
 	generateWithoutError := func() string {
-		return logWithTimestampPrefix(strings.Repeat("B", 258*1024) + "At the end of the log, here is an ERROR that should not be matched")
+		return logWithTimestampPrefix(unmatchedLog)
 	}
 	publishLogsToFile(file, generateWithError, generateWithoutError, n, 100, 1000)
 
