@@ -484,11 +484,11 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	done := make(chan struct{})
 	var consumed int32
 	setupTailer(t, filters, regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString, file, statefile, done, &consumed)
-	multilineWaitPeriod = 50 * time.Millisecond // lower the wait period to make the test faster
+	multilineWaitPeriod = 100 * time.Millisecond // lower the wait period to make the test faster
 
 	n := 100
 	for i := 0; i < n; i++ {
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 		mod := i % 10
 		/**
 		1 => "WARN" at the beginning of long message
