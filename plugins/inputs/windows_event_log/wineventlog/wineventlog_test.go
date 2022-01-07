@@ -42,19 +42,32 @@ func TestNewEventLog(t *testing.T) {
 // TestOpen verifies Open() succeeds with valid inputs.
 // And fails with invalid inputs.
 func TestOpen(t *testing.T) {
-	// happy
+	// Happy path.
 	elog := NewEventLog(NAME, LEVELS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
 		STATE_FILE_PATH, BATCH_SIZE, RETENTION)
 	assert.NoError(t, elog.Open())
 	assert.NotZero(t, elog.eventHandle)
 	assert.NoError(t, elog.Close())
-	// bad name
+	// Bad event log source name does not cause Open() to fail.
+	// But eventHandle will be 0 and Close() will fail because of it.
 	elog = NewEventLog("FakeBadElogName", LEVELS, GROUP_NAME, STREAM_NAME,
 		RENDER_FMT, DEST, STATE_FILE_PATH, BATCH_SIZE, RETENTION)
-	assert.Error(t, elog.Open())
+	assert.NoError(t, elog.Open())
 	assert.Zero(t, elog.eventHandle)
+	assert.Error(t, elog.Close())
 	// bad LEVELS does not cause Open() to fail.
+	elog = NewEventLog(NAME, []string{"498"}, GROUP_NAME, STREAM_NAME,
+		RENDER_FMT, DEST, STATE_FILE_PATH, BATCH_SIZE, RETENTION)
+	assert.NoError(t, elog.Open())
+	assert.NotZero(t, elog.eventHandle)
+	assert.NoError(t, elog.Close())
 	// bad wlog.eventOffset does not cause Open() to fail.
+	elog = NewEventLog(NAME, []string{"498"}, GROUP_NAME, STREAM_NAME,
+		RENDER_FMT, DEST, STATE_FILE_PATH, BATCH_SIZE, RETENTION)
+	elog.eventOffset = 9987
+	assert.NoError(t, elog.Open())
+	assert.NotZero(t, elog.eventHandle)
+	assert.NoError(t, elog.Close())
 }
 
 // TestReadGoodSource will verify we can read events written by a registered
@@ -62,11 +75,11 @@ func TestOpen(t *testing.T) {
 func TestReadGoodSource(t *testing.T) {
 	elog := NewEventLog(NAME, LEVELS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
 		STATE_FILE_PATH, BATCH_SIZE, RETENTION)
-	assert.Equal(t, nil, elog.Open())
+	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
 	checkEvents(t, elog, 10, "[Application] [ERROR] [777] [CWA_UnitTest111] ")
-	assert.Equal(t, nil, elog.Close())
+	assert.NoError(t, elog.Close())
 }
 
 // TestReadBadSource will verify that we cannot read events written by an
@@ -74,11 +87,11 @@ func TestReadGoodSource(t *testing.T) {
 func TestReadBadSource(t *testing.T) {
 	elog := NewEventLog(NAME, LEVELS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
 		STATE_FILE_PATH, BATCH_SIZE, RETENTION)
-	assert.Equal(t, nil, elog.Open())
+	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, false, "CWA_UnitTest222", 888)
 	checkEvents(t, elog, 0, "[Application] [ERROR] [888] [CWA_UnitTest222] ")
-	assert.Equal(t, nil, elog.Close())
+	assert.NoError(t, elog.Close())
 }
 
 // TestReadWithBothSources will verify we can read events written by a
@@ -87,12 +100,12 @@ func TestReadBadSource(t *testing.T) {
 func TestReadWithBothSources(t *testing.T) {
 	elog := NewEventLog(NAME, LEVELS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
 		STATE_FILE_PATH, BATCH_SIZE, RETENTION)
-	assert.Equal(t, nil, elog.Open())
+	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
 	writeEvents(t, 10, false, "CWA_UnitTest222", 888)
 	checkEvents(t, elog, 10, "[Application] [ERROR] [777] [CWA_UnitTest111] ")
-	assert.Equal(t, nil, elog.Close())
+	assert.NoError(t, elog.Close())
 }
 
 // seekToEnd skips past all current events in the event log.

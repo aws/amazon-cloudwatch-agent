@@ -355,7 +355,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 			}
 			switch awsErr.Code() {
 			case cloudwatch.ErrCodeLimitExceededFault, cloudwatch.ErrCodeInternalServiceFault:
-				log.Printf("W! cloudwatch putmetricdate met issue: %s, message: %s",
+				log.Printf("W! cloudwatch PutMetricData, error: %s, message: %s",
 					awsErr.Code(),
 					awsErr.Message())
 				c.backoffSleep()
