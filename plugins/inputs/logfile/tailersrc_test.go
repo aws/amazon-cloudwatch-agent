@@ -323,8 +323,8 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	defer os.Remove(statefile.Name())
 
 	n := 100
-	matchedLog := logWithTimestampPrefix("ERROR: this has an error in it.")
-	unmatchedLog := logWithTimestampPrefix("Some other log message")
+	matchedLog := "ERROR: this has an error in it."
+	unmatchedLog := "Some other log message"
 	publishLogsToFile(file, matchedLog, unmatchedLog, n, 0, 0)
 
 	// Removal of log file should stop tailersrc
@@ -361,11 +361,11 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	buf.WriteString(strings.Repeat("\nfoo", 2))
 	buf.WriteString("\nHere is the ERROR that should be matched")
 	buf.WriteString(strings.Repeat("\nfoo", 2))
-	matchedLog := logWithTimestampPrefix(buf.String())
+	matchedLog := buf.String()
 	buf.Reset()
 	buf.WriteString("This should not be matched")
 	buf.WriteString(strings.Repeat("\nbar", 5))
-	unmatchedLog := logWithTimestampPrefix(buf.String())
+	unmatchedLog := buf.String()
 
 	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 500)
 
@@ -398,8 +398,8 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 
 	n := 100
 	// create log messages ahead of time to save compute time
-	matchedLog := logWithTimestampPrefix("There's an ERROR in this - " + strings.Repeat("\n" + logLine("A", 20, time.Time{}), 10))
-	unmatchedLog := logWithTimestampPrefix(strings.Repeat("\n" + logLine("B", 20, time.Time{}), 10) + " - At the end of the log, here is an ERROR that should not be matched")
+	matchedLog := "There's an ERROR in this - " + strings.Repeat("\n" + logLine("A", 20, time.Time{}), 10)
+	unmatchedLog := strings.Repeat("\n" + logLine("B", 20, time.Time{}), 10) + " - At the end of the log, here is an ERROR that should not be matched"
 
 	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 500)
 
@@ -516,11 +516,11 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 	for i := 0; i < n; i++ {
 		mod := i % 2
 		if mod == 0 {
-			fmt.Fprintln(file, unmatchedLog)
-			log.Println(unmatchedLog)
+			fmt.Fprintln(file, logWithTimestampPrefix(unmatchedLog))
+			log.Println(logWithTimestampPrefix(unmatchedLog))
 		} else {
-			fmt.Fprintln(file, matchedLog)
-			log.Println(matchedLog)
+			fmt.Fprintln(file, logWithTimestampPrefix(matchedLog))
+			log.Println(logWithTimestampPrefix(matchedLog))
 		}
 		if sleepMs > 0 {
 			time.Sleep(time.Duration(sleepMs) * time.Millisecond)
