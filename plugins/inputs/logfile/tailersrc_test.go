@@ -24,6 +24,10 @@ import (
 )
 
 func TestTailerSrc(t *testing.T) {
+	original := multilineWaitPeriod
+	defer func() {
+		multilineWaitPeriod = original
+	}()
 
 	file, err := createTempFile("", "tailsrctest-*.log")
 	defer os.Remove(file.Name())
@@ -142,6 +146,10 @@ func TestTailerSrc(t *testing.T) {
 }
 
 func TestOffsetDoneCallBack(t *testing.T) {
+	original := multilineWaitPeriod
+	defer func() {
+		multilineWaitPeriod = original
+	}()
 
 	file, err := createTempFile("", "tailsrctest-*.log")
 	defer os.Remove(file.Name())
@@ -302,219 +310,112 @@ func TestOffsetDoneCallBack(t *testing.T) {
 }
 
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
+	original := multilineWaitPeriod
+	defer func() {
+		multilineWaitPeriod = original
+	}()
+
 	profiler.Profiler.ReportAndClear()
-	file, err := createTempFile("", "tailsrctest-*.log")
-	defer os.Remove(file.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
-
-	statefile, err := createTempFile("", "tailsrctest-state-*.log")
-	defer os.Remove(statefile.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
-
-	filters := []*LogFilter{
-		{
-			Type:       includeFilterType,
-			Expression: "(ERROR|WARN)",
-		},
-		{
-			Type:       excludeFilterType,
-			Expression: "search_(\\w+)",
-		},
-	}
 	done := make(chan struct{})
 	var consumed int32
-	setupTailer(t, filters, nil, file, statefile, done, &consumed)
+	file, statefile := setupTailer(t, nil, done, &consumed, defaultMaxEventSize)
+	defer os.Remove(file.Name())
+	defer os.Remove(statefile.Name())
 
-	// Write n lines
 	n := 100
-	for i := 0; i < n; i++ {
-		mod := i % 10 // use the mod value to control the log messages emitted for consistency
-		/**
-		1 => "ERROR" in log
-		2 => "WARN" and "search_*" in log
-		3 => "INFO" AND "search_*" in log
-		4 => "WARN" in the middle of the log
-		default => "foo bar baz" in log
-		*/
-		switch mod {
-		case 1:
-			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("ERROR: This is an error on line %d", i), time.Now()))
-		case 2:
-			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("WARN: This is a log that has search_foo_barBaz%d in it on line %d", i, i), time.Now()))
-		case 3:
-			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("INFO: This log contains search_Abc123 in it on line %d", i), time.Now()))
-		case 4:
-			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("This is another log message that should be included because it has 'WARN' in it."), time.Now()))
-		default:
-			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
-		}
+	generateWithError := func() string {
+		return logWithTimestampPrefix("ERROR: this has an error in it.")
 	}
+	generateWithoutError := func() string {
+		return logWithTimestampPrefix("Some other log message")
+	}
+	publishLogsToFile(file, generateWithError, generateWithoutError, n, 0, 0)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
 	}
 	<-done
-	assertExpectedLogsPublished(t, n, int(consumed), 80)
+	assertExpectedLogsPublished(t, n, int(consumed))
 }
 
 func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
+	original := multilineWaitPeriod
+	defer func() {
+		multilineWaitPeriod = original
+	}()
+
 	profiler.Profiler.ReportAndClear()
-	file, err := createTempFile("", "tailsrctest-*.log")
-	defer os.Remove(file.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
-
-	statefile, err := createTempFile("", "tailsrctest-state-*.log")
-	defer os.Remove(statefile.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
-
-	filters := []*LogFilter{
-		{
-			Type:       includeFilterType,
-			Expression: "(ERROR|WARN)",
-		},
-		{
-			Type:       excludeFilterType,
-			Expression: "search_(\\w+)",
-		},
-		{
-			Type:       includeFilterType,
-			Expression: "StatusCode: [4-5]\\d\\d",
-		},
-	}
 	done := make(chan struct{})
 	var consumed int32
-	setupTailer(t, filters, regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString, file, statefile, done, &consumed)
-	multilineWaitPeriod = 100 * time.Millisecond // lower the wait period to make the test faster
+	file, statefile := setupTailer(
+		t,
+		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
+		done,
+		&consumed,
+		defaultMaxEventSize,
+	)
+	defer os.Remove(file.Name())
+	defer os.Remove(statefile.Name())
 
-	// Write 100 lines
-	var buf bytes.Buffer
 	n := 100
-	for i := 0; i < n; i++ {
-		time.Sleep(500 * time.Millisecond)
-		mod := i % 10 // use the mod value to control the log messages emitted for consistency
-		/**
-		1 => multi line: has "ERROR" on first line, no status code
-		2 => multi line: has "StatusCode 5xx" on later line, no "ERROR" or "WARN"
-		3 => multi line: has "WARN" on first line, "search_*" on later line
-		4 => multi line: has "ERROR" on first line, "StatusCode 4xx" on later line
-		default => "foo bar baz"
-		*/
-		switch mod {
-		case 1:
-			fmt.Fprintln(file, logSpecificLine("ERROR: This log has an error on it. Exception:", time.Now())+strings.Repeat("\nfoo", 10))
-		case 2:
-			buf.WriteString(logSpecificLine("This log message contains a status code", time.Now()))
-			for j := 0; j < 10; j++ {
-				if j == 3 {
-					buf.WriteString("\nFailed API /foo/bar/baz with StatusCode: 500")
-				} else {
-					buf.WriteString("\nbar")
-				}
-			}
-			fmt.Fprintln(file, buf.String())
-			buf.Reset()
-		case 3:
-			buf.WriteString(logSpecificLine("WARN: This log message should get filtered out.", time.Now()))
-			for j := 0; j < 10; j++ {
-				if j == 6 {
-					buf.WriteString("\nCalled search_foo_barBaz and succeeded")
-				} else {
-					buf.WriteString("\nbaz")
-				}
-			}
-			fmt.Fprintln(file, buf.String())
-			buf.Reset()
-		case 4:
-			buf.WriteString("ERROR: This log line should be published")
-			for j := 0; j < 10; j++ {
-				if j == 1 {
-					buf.WriteString("\nError occurred - StatusCode: 503: Service Unavailable at localhost:8080")
-				} else {
-					buf.WriteString("\nfoo")
-				}
-			}
-			fmt.Fprintln(file, buf.String())
-			buf.Reset()
-		default:
-			fmt.Fprintln(file, logSpecificLine(fmt.Sprintf("foo bar baz on line %d", i), time.Now()))
-		}
+	generateWithError := func() string {
+		buf := bytes.Buffer{}
+		buf.WriteString("This has a matching log in the middle of it")
+		buf.WriteString(strings.Repeat("\nfoo", 2))
+		buf.WriteString("\nHere is the ERROR that should be matched")
+		buf.WriteString(strings.Repeat("\nfoo", 2))
+		return logWithTimestampPrefix(buf.String())
 	}
+	generateWithoutError := func() string {
+		buf := bytes.Buffer{}
+		buf.WriteString("This should not be matched")
+		buf.WriteString(strings.Repeat("\nbar", 5))
+		return logWithTimestampPrefix(buf.String())
+	}
+	publishLogsToFile(file, generateWithError, generateWithoutError, n, 100, 500)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
 	}
 	<-done
-	assertExpectedLogsPublished(t, n, int(consumed), 90)
+	assertExpectedLogsPublished(t, n, int(consumed))
 }
 
 func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
+	original := multilineWaitPeriod
+	defer func() {
+		multilineWaitPeriod = original
+	}()
+
 	profiler.Profiler.ReportAndClear()
-	file, err := createTempFile("", "tailsrctest-*.log")
-	defer os.Remove(file.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
-
-	statefile, err := createTempFile("", "tailsrctest-state-*.log")
-	defer os.Remove(statefile.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
-
-	filters := []*LogFilter{
-		{
-			Type:       includeFilterType,
-			Expression: "(ERROR|WARN)",
-		},
-		{
-			Type:       excludeFilterType,
-			Expression: "search_(\\w+)",
-		},
-	}
 	done := make(chan struct{})
 	var consumed int32
-	setupTailer(t, filters, regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString, file, statefile, done, &consumed)
-	multilineWaitPeriod = 1 * time.Second
+	file, statefile := setupTailer(
+		t,
+		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
+		done,
+		&consumed,
+		100,
+	)
+	defer os.Remove(file.Name())
+	defer os.Remove(statefile.Name())
 
-	n := 10
-	for i := 0; i < n; i++ {
-		time.Sleep(5 * time.Second)
-		mod := i % 10
-		/**
-		1 => "WARN" at the beginning of long message
-		2 => "WARN" at the end of long message
-		3 => "ERROR" and "search_*" at the beginning of long message
-		4 => "ERROR" at beginning and "search_*" at the end of long message
-		 */
-		switch mod {
-		case 1:
-			fmt.Fprintln(file, logSpecificLine("WARN: " + strings.Repeat("A", 260*1024), time.Now()))
-		case 2:
-			fmt.Fprintln(file, logSpecificLine(strings.Repeat("B", 260*1024) + " - WARN at the end", time.Now()))
-		case 3:
-			fmt.Fprintln(file, logSpecificLine("ERROR: Issue occurred in search_fooBar " + strings.Repeat("C", 260*1024), time.Now()))
-		case 4:
-			fmt.Fprintln(file, logSpecificLine("ERROR: " + strings.Repeat("D", 260*1024) + " search_bar", time.Now()))
-		default:
-			fmt.Fprintln(file, logSpecificLine("foo bar baz", time.Now()))
-		}
+	n := 100
+	generateWithError := func() string {
+		return logWithTimestampPrefix("There's an ERROR in this - " + strings.Repeat("A", 258*1024))
 	}
+	generateWithoutError := func() string {
+		return logWithTimestampPrefix(strings.Repeat("B", 258*1024) + "At the end of the log, here is an ERROR that should not be matched")
+	}
+	publishLogsToFile(file, generateWithError, generateWithoutError, n, 100, 500)
 
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
 	}
 	<-done
-	assertExpectedLogsPublished(t, n, int(consumed), 8)
+	assertExpectedLogsPublished(t, n, int(consumed))
 }
 
 func parseRFC3339Timestamp(line string) time.Time {
@@ -543,17 +444,20 @@ func logLine(s string, l int, t time.Time) string {
 	return line
 }
 
-func logSpecificLine(s string, t time.Time) string {
-	line := ""
-	if !t.IsZero() {
-		line += t.Format(time.RFC3339) + " "
-	}
-	line += s
-
-	return line
+func logWithTimestampPrefix(s string) string {
+	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, filters []*LogFilter, multiLineFn func(string) bool, file, statefile *os.File, done chan struct{}, consumed *int32) {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, done chan struct{}, consumed *int32, maxEventSize int) (*os.File, *os.File) {
+	file, err := createTempFile("", "tailsrctest-*.log")
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+	statefile, err := createTempFile("", "tailsrctest-state-*.log")
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
 	tailer, err := tail.TailFile(file.Name(),
 		tail.Config{
 			ReOpen:      false,
@@ -562,7 +466,7 @@ func setupTailer(t *testing.T, filters []*LogFilter, multiLineFn func(string) bo
 			MustExist:   true,
 			Pipe:        false,
 			Poll:        true,
-			MaxLineSize: defaultMaxEventSize,
+			MaxLineSize: maxEventSize,
 			IsUTF16:     false,
 		})
 
@@ -573,7 +477,12 @@ func setupTailer(t *testing.T, filters []*LogFilter, multiLineFn func(string) bo
 	config := &FileConfig{
 		LogGroupName:  t.Name(),
 		LogStreamName: t.Name(),
-		Filters: filters,
+		Filters: []*LogFilter{
+			{
+				Type:       includeFilterType,
+				Expression: "ERROR", // only match error logs
+			},
+		},
 	}
 	err = config.init()
 	assert.NoError(t, err)
@@ -588,7 +497,7 @@ func setupTailer(t *testing.T, filters []*LogFilter, multiLineFn func(string) bo
 		config.Filters,
 		parseRFC3339Timestamp,
 		nil, // encoding
-		defaultMaxEventSize,
+		maxEventSize,
 		defaultTruncateSuffix,
 		1,
 	)
@@ -603,15 +512,35 @@ func setupTailer(t *testing.T, filters []*LogFilter, multiLineFn func(string) bo
 		// extra sanity check
 		assert.True(t, ShouldPublish(t.Name(), t.Name(), config.Filters, evt))
 	})
+
+	return file, statefile
 }
 
-func assertExpectedLogsPublished(t *testing.T, total, numConsumed, expectedDropped int) {
-	assert.Equal(t, total - expectedDropped, numConsumed)
+func publishLogsToFile(file *os.File, matchingLogGenerator, otherLogGenerator func() string, n, multiLineWaitMs, sleepMs int) {
+	if multiLineWaitMs > 0 {
+		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
+	}
+
+	for i := 0; i < n; i++ {
+		if sleepMs > 0 {
+			time.Sleep(time.Duration(sleepMs) * time.Millisecond)
+		}
+		mod := i % 2
+		if mod == 0 {
+			fmt.Fprintln(file, otherLogGenerator())
+		} else {
+			fmt.Fprintln(file, matchingLogGenerator())
+		}
+	}
+}
+
+func assertExpectedLogsPublished(t *testing.T, total, numConsumed int) {
+	assert.Equal(t, total/2, numConsumed)
 	stats := profiler.Profiler.GetStats()
 	statKey := fmt.Sprintf("logfile_%s_%s_messages_dropped", t.Name(), t.Name())
 	if val, ok := stats[statKey]; !ok {
 		t.Error("Missing profiled stat")
 	} else {
-		assert.Equal(t, expectedDropped, int(val))
+		assert.Equal(t, total/2, int(val))
 	}
 }
