@@ -22,8 +22,6 @@ import (
 const (
 	defaultMaxEventSize   = 1024 * 256 //256KB
 	defaultTruncateSuffix = "[Truncated...]"
-	includeFilterType     = "include"
-	excludeFilterType     = "exclude"
 )
 
 //The file config presents the structure of configuration for a file to be tailed.
@@ -95,30 +93,6 @@ type FileConfig struct {
 	sampleCount int
 }
 
-type LogFilter struct {
-	Type        string `toml:"type"`
-	Expression  string `toml:"expression"`
-	expressionP *regexp.Regexp
-}
-
-func (filter *LogFilter) init() error {
-	validFilterTypes := []string{includeFilterType, excludeFilterType}
-	validFilterTypesSet := make(map[string]bool)
-	for _, f := range validFilterTypes {
-		validFilterTypesSet[f] = true
-	}
-
-	if _, present := validFilterTypesSet[filter.Type]; !present {
-		return fmt.Errorf("filter type %s is incorrect, valid types are: %v", filter.Type, validFilterTypes)
-	}
-
-	var err error
-	if filter.expressionP, err = regexp.Compile(filter.Expression); err != nil {
-		return fmt.Errorf("filter regex has issue, regexp: Compile( %v ): %v", filter.Expression, err.Error())
-	}
-	return nil
-}
-
 //Initialize some variables in the FileConfig object based on the rest info fetched from the configuration file.
 func (config *FileConfig) init() error {
 	var err error
@@ -188,16 +162,6 @@ func (config *FileConfig) init() error {
 	return nil
 }
 
-//The default log group name calculation logic if the log group name is not specified.
-//It will use the part before the last dot in the file path, e.g.
-// file path: "/tmp/TestLogFile.log.2017-07-11-14" -> log group name: "/tmp/TestLogFile.log"
-// file path: "/tmp/TestLogFile.log" -> log group name: "/tmp/TestLogFile"
-// Note: the above is default log group behavior, it is always recommended to specify the log group name for each input file pattern
-func logGroupName(filePath string) string {
-	suffix := filepath.Ext(filePath)
-	return strings.TrimSuffix(filePath, suffix)
-}
-
 //Try to parse the timestampFromLogLine value from the log entry line.
 //The parser logic will be based on the timestampFromLogLine regex, and time zone info.
 //If the parsing operation encounters any issue, int64(0) is returned.
@@ -260,11 +224,6 @@ func ShouldPublish(logGroupName, logStreamName string, filters []*LogFilter, eve
 	return ret
 }
 
-func (filter *LogFilter) ShouldPublish(event logs.LogEvent) bool {
-	match := filter.expressionP.MatchString(event.Message())
-	return (filter.Type == includeFilterType) == match
-}
-
 func shouldPublishHelper(filters []*LogFilter, event logs.LogEvent) bool {
 	for _, filter := range filters {
 		if !filter.ShouldPublish(event) {
@@ -272,4 +231,14 @@ func shouldPublishHelper(filters []*LogFilter, event logs.LogEvent) bool {
 		}
 	}
 	return true
+}
+
+//The default log group name calculation logic if the log group name is not specified.
+//It will use the part before the last dot in the file path, e.g.
+// file path: "/tmp/TestLogFile.log.2017-07-11-14" -> log group name: "/tmp/TestLogFile.log"
+// file path: "/tmp/TestLogFile.log" -> log group name: "/tmp/TestLogFile"
+// Note: the above is default log group behavior, it is always recommended to specify the log group name for each input file pattern
+func logGroupName(filePath string) string {
+	suffix := filepath.Ext(filePath)
+	return strings.TrimSuffix(filePath, suffix)
 }

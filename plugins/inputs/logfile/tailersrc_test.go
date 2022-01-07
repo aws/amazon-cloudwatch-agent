@@ -484,11 +484,11 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	done := make(chan struct{})
 	var consumed int32
 	setupTailer(t, filters, regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString, file, statefile, done, &consumed)
-	multilineWaitPeriod = 100 * time.Millisecond // lower the wait period to make the test faster
+	multilineWaitPeriod = 1 * time.Second
 
-	n := 100
+	n := 10
 	for i := 0; i < n; i++ {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(5 * time.Second)
 		mod := i % 10
 		/**
 		1 => "WARN" at the beginning of long message
@@ -514,7 +514,7 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
 	}
 	<-done
-	assertExpectedLogsPublished(t, n, int(consumed), 80)
+	assertExpectedLogsPublished(t, n, int(consumed), 8)
 }
 
 func parseRFC3339Timestamp(line string) time.Time {

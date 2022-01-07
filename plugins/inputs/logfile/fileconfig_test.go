@@ -226,13 +226,13 @@ func TestFileConfigInitWithFiltersFails(t *testing.T) {
 }
 
 func TestLogEmptyFilters(t *testing.T) {
-	assertPublished(t, []*LogFilter{}, "foo")
-	assertPublished(t, []*LogFilter{}, "Some other log message")
+	assertPublishedForFilters(t, []*LogFilter{}, "foo")
+	assertPublishedForFilters(t, []*LogFilter{}, "Some other log message")
 }
 
 func TestLogNilFilters(t *testing.T) {
-	assertPublished(t, nil, "foo")
-	assertPublished(t, nil, "Some other log message")
+	assertPublishedForFilters(t, nil, "foo")
+	assertPublishedForFilters(t, nil, "Some other log message")
 }
 
 func TestLogIncludeFilter(t *testing.T) {
@@ -241,8 +241,8 @@ func TestLogIncludeFilter(t *testing.T) {
 		Expression: "StatusCode: [4-5]\\d\\d",
 	}})
 
-	assertPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
-	assertNotPublished(t, filters, "This is another log message that doesn't match")
+	assertPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublishedForFilters(t, filters, "This is another log message that doesn't match")
 }
 
 func TestLogExcludeFilter(t *testing.T) {
@@ -250,8 +250,8 @@ func TestLogExcludeFilter(t *testing.T) {
 		Type:       excludeFilterType,
 		Expression: "StatusCode: [4-5]\\d\\d",
 	}})
-	assertNotPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
-	assertPublished(t, filters, "This is another log message that doesn't match")
+	assertNotPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertPublishedForFilters(t, filters, "This is another log message that doesn't match")
 }
 
 func TestLogIncludeThenExcludeFilter(t *testing.T) {
@@ -265,12 +265,12 @@ func TestLogIncludeThenExcludeFilter(t *testing.T) {
 			Expression: "StatusCode: [4-5]\\d\\d",
 		},
 	})
-	assertNotPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
-	assertPublished(t, filters, "Submitted request to application search_FooBarBaz1")
+	assertNotPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertPublishedForFilters(t, filters, "Submitted request to application search_FooBarBaz1")
 	// If the log message matches both, it should match the inclusion filter, then proceed to the exclusion filter
-	assertNotPublished(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+	assertNotPublishedForFilters(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
 	// If the log message matches neither, because this config has an inclusion filter, drop the log
-	assertNotPublished(t, filters, "Some other log that doesn't match either expression")
+	assertNotPublishedForFilters(t, filters, "Some other log that doesn't match either expression")
 }
 
 func TestLogExcludeThenIncludeFilter(t *testing.T) {
@@ -284,12 +284,12 @@ func TestLogExcludeThenIncludeFilter(t *testing.T) {
 			Expression: "StatusCode: [4-5]\\d\\d",
 		},
 	})
-	assertPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
-	assertNotPublished(t, filters, "Submitted request to application search_FooBarBaz1")
+	assertPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublishedForFilters(t, filters, "Submitted request to application search_FooBarBaz1")
 	// If the log message matches both, it should match the exclusion filter, which indicates that we should drop the log
-	assertNotPublished(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+	assertNotPublishedForFilters(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
 	// If the log message matches neither, because this config has an inclusion filter, drop the log
-	assertNotPublished(t, filters, "Some other log that doesn't match either expression")
+	assertNotPublishedForFilters(t, filters, "Some other log that doesn't match either expression")
 }
 
 func TestLogFilterMultipleExclusionExpressions(t *testing.T) {
@@ -303,10 +303,10 @@ func TestLogFilterMultipleExclusionExpressions(t *testing.T) {
 			Expression: "StatusCode: [4-5]\\d\\d",
 		},
 	})
-	assertPublished(t, filters, "Some other log that doesn't match either expression")
-	assertNotPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
-	assertNotPublished(t, filters, "Submitted request to application search_FooBarBaz1")
-	assertNotPublished(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+	assertPublishedForFilters(t, filters, "Some other log that doesn't match either expression")
+	assertNotPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublishedForFilters(t, filters, "Submitted request to application search_FooBarBaz1")
+	assertNotPublishedForFilters(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
 }
 
 func TestLogFilterMultipleInclusionExpressions(t *testing.T) {
@@ -320,10 +320,10 @@ func TestLogFilterMultipleInclusionExpressions(t *testing.T) {
 			Expression: "StatusCode: [4-5]\\d\\d",
 		},
 	})
-	assertNotPublished(t, filters, "Some other log that doesn't match either expression")
-	assertNotPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
-	assertNotPublished(t, filters, "Submitted request to application search_FooBarBaz1")
-	assertPublished(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+	assertNotPublishedForFilters(t, filters, "Some other log that doesn't match either expression")
+	assertNotPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublishedForFilters(t, filters, "Submitted request to application search_FooBarBaz1")
+	assertPublishedForFilters(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
 }
 
 func BenchmarkLogFilterSimpleInclude(b *testing.B) {
@@ -492,14 +492,14 @@ func BenchmarkLogFilterDoesNotMatchComplexExpression(b *testing.B) {
 	}
 }
 
-func assertPublished(t *testing.T, filters []*LogFilter, msg string) {
+func assertPublishedForFilters(t *testing.T, filters []*LogFilter, msg string) {
 	res := ShouldPublish("foo", "bar", filters, LogEvent{
 		msg: msg,
 	})
 	assert.True(t, res)
 }
 
-func assertNotPublished(t *testing.T, filters []*LogFilter, msg string) {
+func assertNotPublishedForFilters(t *testing.T, filters []*LogFilter, msg string) {
 	res := ShouldPublish("foo", "bar", filters, LogEvent{
 		msg: msg,
 	})
