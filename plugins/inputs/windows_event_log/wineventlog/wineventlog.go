@@ -152,7 +152,10 @@ func (w *windowsEventLog) Open() error {
 	if err != nil {
 		return err
 	}
-	// Subscribe for events
+	// Subscribe for events.
+	// This will fail if the eventlog name has not been registered.
+	// However returning an error would mean the the plugin won't monitor other
+	// eventlogs.
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
 		log.Printf("W! [wineventlog] EvtSubscribe(), name %v, err %v", w.name, err)
