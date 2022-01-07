@@ -409,7 +409,7 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	generateWithoutError := func() string {
 		return logWithTimestampPrefix(strings.Repeat("B", 258*1024) + "At the end of the log, here is an ERROR that should not be matched")
 	}
-	publishLogsToFile(file, generateWithError, generateWithoutError, n, 100, 500)
+	publishLogsToFile(file, generateWithError, generateWithoutError, n, 100, 1000)
 
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
