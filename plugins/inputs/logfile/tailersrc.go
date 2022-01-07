@@ -70,7 +70,7 @@ type tailerSrc struct {
 
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
-	filterFn        func(logs.LogEvent) bool
+	filters         []*LogFilter
 	offsetCh        chan fileOffset
 	done            chan struct{}
 	startTailerOnce sync.Once
@@ -82,7 +82,7 @@ func NewTailerSrc(
 	tailer *tail.Tail,
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
-	filterFn func(logs.LogEvent) bool,
+	filters []*LogFilter,
 	timestampFn func(string) time.Time,
 	enc encoding.Encoding,
 	maxEventSize int,
@@ -97,7 +97,7 @@ func NewTailerSrc(
 		tailer:          tailer,
 		autoRemoval:     autoRemoval,
 		isMLStart:       isMultilineStartFn,
-		filterFn:        filterFn,
+		filters:         filters,
 		timestampFn:     timestampFn,
 		enc:             enc,
 		maxEventSize:    maxEventSize,
@@ -117,13 +117,6 @@ func (ts *tailerSrc) SetOutput(fn func(logs.LogEvent)) {
 	}
 	ts.outputFn = fn
 	ts.startTailerOnce.Do(func() { go ts.runTail() })
-}
-
-func (ts *tailerSrc) SetFilter(fn func(logs.LogEvent) bool) {
-	if fn == nil {
-		return
-	}
-	ts.filterFn = fn
 }
 
 func (ts tailerSrc) Group() string {
@@ -186,11 +179,8 @@ func (ts *tailerSrc) runTail() {
 						offset: *fo,
 						src:    ts,
 					}
-					if ts.filterFn != nil {
-						if !ts.filterFn(e) {
-							ts.outputFn(e)
-						}
-					} else {
+
+					if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
 						ts.outputFn(e)
 					}
 				}
@@ -243,11 +233,9 @@ func (ts *tailerSrc) runTail() {
 					offset: *fo,
 					src:    ts,
 				}
-				if ts.filterFn != nil {
-					if !ts.filterFn(e) {
-						ts.outputFn(e)
-					}
-				} else {
+				// Note: This only checks against the truncated log message, so it is not necessary to load
+				//       the entire log message for filtering.
+				if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
 					ts.outputFn(e)
 				}
 			}
@@ -272,11 +260,7 @@ func (ts *tailerSrc) runTail() {
 				offset: *fo,
 				src:    ts,
 			}
-			if ts.filterFn != nil {
-				if !ts.filterFn(e) {
-					ts.outputFn(e)
-				}
-			} else {
+			if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
 				ts.outputFn(e)
 			}
 			msgBuf.Reset()

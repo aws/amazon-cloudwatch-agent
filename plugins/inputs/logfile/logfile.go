@@ -210,11 +210,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				mlCheck = fileconfig.isMultilineStart
 			}
 
-			var filterFn func(logs.LogEvent) bool
-			if fileconfig.Filters != nil {
-				filterFn = fileconfig.shouldFilterLog
-			}
-
 			groupName := fileconfig.LogGroupName
 			streamName := fileconfig.LogStreamName
 
@@ -240,7 +235,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				tailer,
 				fileconfig.AutoRemoval,
 				mlCheck,
-				filterFn,
+				fileconfig.Filters,
 				fileconfig.timestampFromLogLine,
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,

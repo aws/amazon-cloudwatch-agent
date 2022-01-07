@@ -22,11 +22,9 @@ import (
 const (
 	defaultMaxEventSize   = 1024 * 256 //256KB
 	defaultTruncateSuffix = "[Truncated...]"
-	includeType = "include"
-	excludeType = "exclude"
+	includeFilterType     = "include"
+	excludeFilterType     = "exclude"
 )
-
-var sampleThreshold = 100 // Threshold to denote when to emit a diagnostic log
 
 //The file config presents the structure of configuration for a file to be tailed.
 type FileConfig struct {
@@ -82,9 +80,7 @@ type FileConfig struct {
 	//Indicate retention in days for log group
 	RetentionInDays int `toml:"retention_in_days"`
 
-	Filters []LogFilter `toml:"filters"`
-	// Indicates if the log filters should drop logs by default (true if there is an include filter)
-	DropByDefault bool
+	Filters []*LogFilter `toml:"filters"`
 
 	//Time *time.Location Go type timezone info.
 	TimezoneLoc *time.Location
@@ -95,23 +91,29 @@ type FileConfig struct {
 	//Regexp go type blacklist regex
 	BlacklistRegexP *regexp.Regexp
 	//Decoder object
-	Enc encoding.Encoding
+	Enc         encoding.Encoding
 	sampleCount int
 }
 
 type LogFilter struct {
-	Type string `toml:"type"`
-	Expression string `toml:"expression"`
-	ExpressionP *regexp.Regexp
+	Type        string `toml:"type"`
+	Expression  string `toml:"expression"`
+	expressionP *regexp.Regexp
 }
 
 func (filter *LogFilter) init() error {
-	var err error
-	if filter.Type != includeType && filter.Type != excludeType {
-		return fmt.Errorf("filter type is incorrect, regexp: Compile( %v )", filter.Expression)
+	validFilterTypes := []string{includeFilterType, excludeFilterType}
+	validFilterTypesSet := make(map[string]bool)
+	for _, f := range validFilterTypes {
+		validFilterTypesSet[f] = true
 	}
 
-	if filter.ExpressionP, err = regexp.Compile(filter.Expression); err != nil {
+	if _, present := validFilterTypesSet[filter.Type]; !present {
+		return fmt.Errorf("filter type %s is incorrect, valid types are: %v", filter.Type, validFilterTypes)
+	}
+
+	var err error
+	if filter.expressionP, err = regexp.Compile(filter.Expression); err != nil {
 		return fmt.Errorf("filter regex has issue, regexp: Compile( %v ): %v", filter.Expression, err.Error())
 	}
 	return nil
@@ -174,22 +176,13 @@ func (config *FileConfig) init() error {
 		config.RetentionInDays = -1
 	}
 
-	if config.Filters != nil {
-		filters := make([]LogFilter, len(config.Filters))
-		for i, f := range config.Filters {
+	if config.Filters != nil && len(config.Filters) > 0 {
+		for _, f := range config.Filters {
 			err = f.init()
 			if err != nil {
 				return err
 			}
-			filters[i] = f
-
-			// if there is an inclusion filter, then the intent is to drop logs
-			// that don't match the filter(s)
-			if f.Type == includeType {
-				config.DropByDefault = true
-			}
 		}
-		config.Filters = filters
 	}
 
 	return nil
@@ -252,54 +245,31 @@ func (config *FileConfig) isMultilineStart(logValue string) bool {
 	return config.MultiLineStartPatternP.MatchString(logValue)
 }
 
-func (config *FileConfig) shouldFilterLog(event logs.LogEvent) bool {
-	if config.Filters == nil || len(config.Filters) < 1 {
-		return false
+func ShouldPublish(logGroupName, logStreamName string, filters []*LogFilter, event logs.LogEvent) bool {
+	if filters == nil || len(filters) == 0 {
+		return true
 	}
-	config.sampleCount += 1
-	start := time.Now()
-	for _, filter := range config.Filters {
-		if filter.ExpressionP == nil {
-			filter.ExpressionP = regexp.MustCompile(filter.Expression)
-		}
-		matched := filter.ExpressionP.MatchString(event.Message())
-		switch filter.Type {
-		case includeType:
-			if matched {
-				elapsed := time.Since(start)
-				if config.sampleCount >= sampleThreshold {
-					log.Printf("D! [inputs.logfile.%s.%s] Matched log message with expression {%s} in %dns", config.LogGroupName, config.LogStreamName, filter.Expression, elapsed.Nanoseconds())
-					config.sampleCount = 0
-				}
-				return false
-			}
-		case excludeType:
-			if matched {
-				elapsed := time.Since(start)
-				if config.sampleCount >= sampleThreshold {
-					log.Printf("D! [inputs.logfile.%s.%s] Matched log message with expression {%s} in %dns", config.LogGroupName, config.LogStreamName, filter.Expression, elapsed.Nanoseconds())
-					config.sampleCount = 0
-				}
-				profiler.Profiler.AddStats(
-					[]string{"logfile", config.LogGroupName, config.LogStreamName, "messages", "dropped"},
-					1,
-				)
-				return true
-			}
+
+	ret := shouldPublishHelper(filters, event)
+	droppedCount := 0
+	if !ret {
+		droppedCount = 1
+	}
+	profiler.Profiler.AddStats([]string{"logfile", logGroupName, logStreamName, "messages", "dropped"}, float64(droppedCount))
+
+	return ret
+}
+
+func (filter *LogFilter) ShouldPublish(event logs.LogEvent) bool {
+	match := filter.expressionP.MatchString(event.Message())
+	return (filter.Type == includeFilterType) == match
+}
+
+func shouldPublishHelper(filters []*LogFilter, event logs.LogEvent) bool {
+	for _, filter := range filters {
+		if !filter.ShouldPublish(event) {
+			return false // TODO: change so that this is an AND, not an OR
 		}
 	}
-	// if the configured filters are only exclusions, then the
-	// log will be submitted
-	elapsed := time.Since(start)
-	if config.sampleCount >= sampleThreshold {
-		log.Printf("D! [inputs.logfile.%s.%s] Took %dns to check against %d filters", config.LogGroupName, config.LogStreamName, elapsed.Nanoseconds(), len(config.Filters))
-		config.sampleCount = 0
-	}
-	if config.DropByDefault {
-		profiler.Profiler.AddStats(
-			[]string{"logfile", config.LogGroupName, config.LogStreamName, "messages", "dropped"},
-			1,
-		)
-	}
-	return config.DropByDefault
+	return true
 }

@@ -5,7 +5,6 @@ package logfile
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"regexp"
 	"testing"
 	"time"
@@ -179,22 +178,17 @@ func TestMultiLineStartPattern(t *testing.T) {
 
 func TestFileConfigInitWithFilters(t *testing.T) {
 	filter1 := LogFilter{
-		Type:       includeType,
+		Type:       includeFilterType,
 		Expression: "StatusCode: [4-5]\\d\\d",
 	}
 	filter2 := LogFilter{
-		Type:       excludeType,
+		Type:       excludeFilterType,
 		Expression: "Some expression that (will|won't) compile",
 	}
 
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters:               []LogFilter{filter1, filter2},
+		Filters:               []*LogFilter{&filter1, &filter2},
 	}
 
 	err := fileConfig.init()
@@ -202,11 +196,11 @@ func TestFileConfigInitWithFilters(t *testing.T) {
 
 	assert.Len(t, fileConfig.Filters, 2)
 	f := fileConfig.Filters[0]
-	assert.NotNil(t, f.ExpressionP)
+	assert.NotNil(t, f.expressionP)
 	assert.Equal(t, filter1.Type, f.Type)
 	assert.Equal(t, filter1.Expression, f.Expression)
 	f = fileConfig.Filters[1]
-	assert.NotNil(t, f.ExpressionP)
+	assert.NotNil(t, f.expressionP)
 	assert.Equal(t, filter2.Type, f.Type)
 	assert.Equal(t, filter2.Expression, f.Expression)
 }
@@ -214,18 +208,13 @@ func TestFileConfigInitWithFilters(t *testing.T) {
 func TestFileConfigInitWithFiltersFails(t *testing.T) {
 	fileConfig := &FileConfig{
 		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
+		Filters: []*LogFilter{
 			{
-				Type:       excludeType,
+				Type:       excludeFilterType,
 				Expression: "Some expression that (will|won't) compile",
 			},
 			{
-				Type:       includeType,
+				Type:       includeFilterType,
 				Expression: "StatusCode: ([4-5]\\d\\d", // invalid regexp
 			},
 		},
@@ -236,590 +225,300 @@ func TestFileConfigInitWithFiltersFails(t *testing.T) {
 	assert.Equal(t, "filter regex has issue, regexp: Compile( StatusCode: ([4-5]\\d\\d ): error parsing regexp: missing closing ): `StatusCode: ([4-5]\\d\\d`", err.Error())
 }
 
+func TestLogEmptyFilters(t *testing.T) {
+	assertPublished(t, []*LogFilter{}, "foo")
+	assertPublished(t, []*LogFilter{}, "Some other log message")
+}
+
+func TestLogNilFilters(t *testing.T) {
+	assertPublished(t, nil, "foo")
+	assertPublished(t, nil, "Some other log message")
+}
+
 func TestLogIncludeFilter(t *testing.T) {
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{{
-			Type:       includeType,
-			Expression: "StatusCode: [4-5]\\d\\d",
-		}},
-	}
+	filters := initializeLogFilters(t, []*LogFilter{{
+		Type:       includeFilterType,
+		Expression: "StatusCode: [4-5]\\d\\d",
+	}})
 
-	err := fileConfig.init()
-	assert.NoError(t, err)
-	res := fileConfig.shouldFilterLog(LogEvent{
-		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
-	})
-	assert.False(t, res)
-
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "This is another log message that doesn't match",
-	})
-	assert.True(t, res)
+	assertPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublished(t, filters, "This is another log message that doesn't match")
 }
 
 func TestLogExcludeFilter(t *testing.T) {
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{{
-			Type:       excludeType,
-			Expression: "StatusCode: [4-5]\\d\\d",
-		}},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(t, err)
-	res := fileConfig.shouldFilterLog(LogEvent{
-		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
-	})
-	assert.True(t, res)
-
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "This is another log message that doesn't match",
-	})
-	assert.False(t, res)
+	filters := initializeLogFilters(t, []*LogFilter{{
+		Type:       excludeFilterType,
+		Expression: "StatusCode: [4-5]\\d\\d",
+	}})
+	assertNotPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertPublished(t, filters, "This is another log message that doesn't match")
 }
 
 func TestLogIncludeThenExcludeFilter(t *testing.T) {
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       includeType,
-				Expression: "search_(\\w+)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
+	filters := initializeLogFilters(t, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "search_(\\w+)",
 		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(t, err)
-	res := fileConfig.shouldFilterLog(LogEvent{
-		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
-	})
-	assert.True(t, res)
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "Submitted request to application search_FooBarBaz1",
-	})
-	assert.False(t, res)
-	// If the log message matches both, it should short-circuit and evaluate only the first one
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.",
-	})
-	assert.False(t, res)
-	// If the log message matches neither, because this config has an include expression,
-	// drop the log
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "Some other log that doesn't match either expression",
-	})
-	assert.True(t, res)
-}
-
-func TestLogFilterExclusionsDoNotDropUnmatchedLog(t *testing.T) {
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       excludeType,
-				Expression: "search_(\\w+)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
-		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(t, err)
-
-	res := fileConfig.shouldFilterLog(LogEvent{
-		msg: "Some other log that doesn't match either expression",
-	})
-	assert.False(t, res)
-}
-
-func TestLogFilterSampleCountResets(t *testing.T) {
-	profiler.Profiler.ReportAndClear()
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = 3 // on the third invocation, it should reset
-
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{{
-			Type:       excludeType,
+		{
+			Type:       excludeFilterType,
 			Expression: "StatusCode: [4-5]\\d\\d",
-		}},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(t, err)
-
-	res := fileConfig.shouldFilterLog(LogEvent{
-		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
+		},
 	})
-	assert.True(t, res)
-	assert.Equal(t, 1, fileConfig.sampleCount)
-
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "This is another log message that doesn't match",
-	})
-	assert.False(t, res)
-	assert.Equal(t, 2, fileConfig.sampleCount)
-
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "API responded with [StatusCode: 500] for call to /foo/bar",
-	})
-	assert.True(t, res)
-	assert.Equal(t, 0, fileConfig.sampleCount)
+	assertNotPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertPublished(t, filters, "Submitted request to application search_FooBarBaz1")
+	// If the log message matches both, it should match the inclusion filter, then proceed to the exclusion filter
+	assertNotPublished(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+	// If the log message matches neither, because this config has an inclusion filter, drop the log
+	assertNotPublished(t, filters, "Some other log that doesn't match either expression")
 }
 
-func TestLogFilterSampleCountResetsIfNotMatched(t *testing.T) {
-	profiler.Profiler.ReportAndClear()
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = 3 // on the third invocation, it should reset
-
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       excludeType,
-				Expression: "search_(\\w+)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
+func TestLogExcludeThenIncludeFilter(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "search_(\\w+)",
 		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(t, err)
-
-	res := fileConfig.shouldFilterLog(LogEvent{
-		msg: "Some other log that doesn't match either expression",
+		{
+			Type:       includeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
 	})
-	assert.False(t, res)
-	assert.Equal(t, 1, fileConfig.sampleCount)
+	assertPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublished(t, filters, "Submitted request to application search_FooBarBaz1")
+	// If the log message matches both, it should match the exclusion filter, which indicates that we should drop the log
+	assertNotPublished(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+	// If the log message matches neither, because this config has an inclusion filter, drop the log
+	assertNotPublished(t, filters, "Some other log that doesn't match either expression")
+}
 
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "Some other log that doesn't match either expression",
+func TestLogFilterMultipleExclusionExpressions(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
 	})
-	assert.False(t, res)
-	assert.Equal(t, 2, fileConfig.sampleCount)
+	assertPublished(t, filters, "Some other log that doesn't match either expression")
+	assertNotPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublished(t, filters, "Submitted request to application search_FooBarBaz1")
+	assertNotPublished(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+}
 
-	res = fileConfig.shouldFilterLog(LogEvent{
-		msg: "Some other log that doesn't match either expression",
+func TestLogFilterMultipleInclusionExpressions(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       includeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
 	})
-	assert.False(t, res)
-	assert.Equal(t, 0, fileConfig.sampleCount)
+	assertNotPublished(t, filters, "Some other log that doesn't match either expression")
+	assertNotPublished(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublished(t, filters, "Submitted request to application search_FooBarBaz1")
+	assertPublished(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
 }
 
 func BenchmarkLogFilterSimpleInclude(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       includeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
 		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
-	log := LogEvent{
-		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
-	}
-	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(log)
-	}
-	assert.False(b, res)
-}
-
-func BenchmarkLogFilterSimpleIncludeNotMatch(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       includeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
-		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
-	log := LogEvent{
-		msg: "API responded with [StatusCode: 209] for call to /foo/bar",
-	}
-	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(log)
-	}
-	assert.True(b, res)
-}
-
-func BenchmarkLogFilterSimpleExclude(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
-		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
-	log := LogEvent{
-		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
-	}
-	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(log)
-	}
-	assert.True(b, res)
-}
-
-func BenchmarkLogFilterSimpleExcludeNotMatch(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
-		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
-	log := LogEvent{
-		msg: "API responded with [StatusCode: 209] for call to /foo/bar",
-	}
-	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(log)
-	}
-	assert.False(b, res)
-}
-
-func BenchmarkLogFilterIncludeThenMatchExclude(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       includeType,
-				Expression: "search_(\\w+)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
-		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
+	})
 	event := LogEvent{
 		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
 	}
 	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(event)
+		ShouldPublish("foo", "bar", filters, event)
 	}
-	assert.True(b, res)
+}
+
+func BenchmarkLogFilterSimpleIncludeNotMatch(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 209] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterSimpleExclude(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterSimpleExcludeNotMatch(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 209] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterIncludeThenMatchExclude(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
 }
 
 func BenchmarkLogFilterExclusionsDoNotDropUnmatchedLog(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       excludeType,
-				Expression: "search_(\\w+)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "search_(\\w+)",
 		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
 	event := LogEvent{
 		msg: "Some other log that doesn't match either expression",
 	}
 	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(event)
+		ShouldPublish("foo", "bar", filters, event)
 	}
-	assert.False(b, res)
 }
 
-func BenchmarkLogFilterMatchLastFilter(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       includeType,
-				Expression: "(ERROR|WARN)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-			},
-			{
-				Type:       includeType,
-				Expression: "search_(\\w+)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
-			{
-				Type:       includeType,
-				Expression: "/(\\w+)/(\\w+)/amazon-cloudwatch-agent",
-			},
+func BenchmarkLogFilterMatchesMultipleInclusionExpressions(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type: includeFilterType,
+			Expression: "(WARN|ERROR)",
 		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
+		{
+			Type: includeFilterType,
+			Expression: "StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+",
+		},
+	})
 	event := LogEvent{
-		msg: "2000/01/01 02:55:39 I! Config has been translated into TOML /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml",
+		msg: "2021-12-16 21:45:13 - WARN: API responded with StatusCode: 502 for call to /foo/bar",
 	}
 	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(event)
+		ShouldPublish("foo", "bar", filters, event)
 	}
-	assert.False(b, res)
 }
 
-func BenchmarkLogFilterMatchFirstFilter(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       includeType,
-				Expression: "(ERROR|WARN)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-			},
-			{
-				Type:       includeType,
-				Expression: "search_(\\w+)",
-			},
-			{
-				Type:       excludeType,
-				Expression: "StatusCode: [4-5]\\d\\d",
-			},
-			{
-				Type:       includeType,
-				Expression: "/(\\w+)/(\\w+)/amazon-cloudwatch-agent",
-			},
+func BenchmarkLogFilterDoesNotMatchMultipleInclusionExpressions(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type: includeFilterType,
+			Expression: "(WARN|ERROR)",
 		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
+		{
+			Type: includeFilterType,
+			Expression: "StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+",
+		},
+	})
 	event := LogEvent{
-		msg: "2000/01/01 02:55:39 ERROR: Config has been translated into TOML /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml",
+		msg: "2021-12-16 21:45:13 - DEBUG: API responded with StatusCode: 200 for call to /foo/bar",
 	}
 	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(event)
+		ShouldPublish("foo", "bar", filters, event)
 	}
-	assert.False(b, res)
 }
 
 func BenchmarkLogFilterMatchesComplexExpression(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       includeType,
-				Expression: "((WARN|ERROR)|(StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+))",
-			},
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "((WARN|ERROR)|(StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+))",
 		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
-	log := LogEvent{
-		msg: "2021-12-16 21:45:13 - DBUG: API responded with [StatusCode: 502] for call to /foo/bar",
+	})
+	event := LogEvent{
+		msg: "2021-12-16 21:45:13 - DEBUG: API responded with StatusCode: 502 for call to /foo/bar",
 	}
 	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(log)
+		ShouldPublish("foo", "bar", filters, event)
 	}
-	assert.True(b, res)
 }
 
 func BenchmarkLogFilterDoesNotMatchComplexExpression(b *testing.B) {
-	original := sampleThreshold
-	defer func() {
-		sampleThreshold = original
-	}()
-	sampleThreshold = b.N * 5
-	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		LogGroupName:          "logfile.log",
-		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
-		Timezone:              "UTC",
-		MultiLineStartPattern: "{timestamp_regex}",
-		Filters: []LogFilter{
-			{
-				Type:       includeType,
-				Expression: "((WARN|ERROR)|(StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+))",
-			},
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "((WARN|ERROR)|(StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+))",
 		},
-	}
-
-	err := fileConfig.init()
-	assert.NoError(b, err)
-	var res bool
-	log := LogEvent{
-		msg: "2021-12-16 21:45:13 - DEBUG: API responded with [StatusCode: 209] for call to /foo/bar",
+	})
+	event := LogEvent{
+		msg: "2021-12-16 21:45:13 - DEBUG: API responded with StatusCode: 209 for call to /foo/bar",
 	}
 	for i := 0; i < b.N; i++ {
-		res = fileConfig.shouldFilterLog(log)
+		ShouldPublish("foo", "bar", filters, event)
 	}
-	assert.True(b, res)
+}
+
+func assertPublished(t *testing.T, filters []*LogFilter, msg string) {
+	res := ShouldPublish("foo", "bar", filters, LogEvent{
+		msg: msg,
+	})
+	assert.True(t, res)
+}
+
+func assertNotPublished(t *testing.T, filters []*LogFilter, msg string) {
+	res := ShouldPublish("foo", "bar", filters, LogEvent{
+		msg: msg,
+	})
+	assert.False(t, res)
+}
+
+func initializeLogFilters(t *testing.T, filters []*LogFilter) []*LogFilter {
+	for _, f := range filters {
+		err := f.init()
+		assert.NoError(t, err)
+	}
+	return filters
+}
+
+func initializeLogFiltersForBenchmarks(b *testing.B, filters []*LogFilter) []*LogFilter {
+	defer b.ResetTimer()
+	for _, f := range filters {
+		err := f.init()
+		assert.NoError(b, err)
+	}
+	return filters
 }
