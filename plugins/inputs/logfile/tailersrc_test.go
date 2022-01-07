@@ -398,8 +398,8 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 
 	n := 100
 	// create log messages ahead of time to save compute time
-	matchedLog := logWithTimestampPrefix("There's an ERROR in this - " + strings.Repeat("A", 258*1024))
-	unmatchedLog := logWithTimestampPrefix(strings.Repeat("B", 258*1024) + "At the end of the log, here is an ERROR that should not be matched")
+	matchedLog := logWithTimestampPrefix("There's an ERROR in this - " + strings.Repeat("\n" + logLine("A", 20, time.Time{}), 10))
+	unmatchedLog := logWithTimestampPrefix(strings.Repeat("\n" + logLine("B", 20, time.Time{}), 10) + "At the end of the log, here is an ERROR that should not be matched")
 
 	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 500)
 
@@ -514,14 +514,14 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 	}
 
 	for i := 0; i < n; i++ {
-		if sleepMs > 0 {
-			time.Sleep(time.Duration(sleepMs) * time.Millisecond)
-		}
 		mod := i % 2
 		if mod == 0 {
 			fmt.Fprintln(file, unmatchedLog)
 		} else {
 			fmt.Fprintln(file, matchedLog)
+		}
+		if sleepMs > 0 {
+			time.Sleep(time.Duration(sleepMs) * time.Millisecond)
 		}
 	}
 }
