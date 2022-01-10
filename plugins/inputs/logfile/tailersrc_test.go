@@ -317,7 +317,7 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	n := 100
 	matchedLog := "ERROR: this has an error in it."
 	unmatchedLog := "Some other log message"
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 0, 0)
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 0)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
@@ -354,7 +354,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 
 	unmatchedLog := "This should not be matched." + strings.Repeat("\nbar", 5)
 
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 600)
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
@@ -384,7 +384,7 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	matchedLog := "There's an ERROR in this - " + strings.Repeat("\n" + logLine("A", 20, time.Time{}), 10)
 	unmatchedLog := strings.Repeat(logLine("B", 20, time.Time{}) + "\n", 10) + "At the end of the log, here is an ERROR that should not be matched"
 
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 2000)
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100)
 
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
@@ -491,11 +491,11 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, done chan struct{}
 	return file, statefile
 }
 
-func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiLineWaitMs, sleepMs int) {
+func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiLineWaitMs int) {
 	var sleepDuration time.Duration
 	if multiLineWaitMs > 0 {
 		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
-		sleepDuration = time.Duration(multiLineWaitMs * 6) * time.Millisecond
+		sleepDuration = time.Duration(multiLineWaitMs * 2) * time.Millisecond
 	}
 
 	for i := 0; i < n; i++ {
@@ -505,7 +505,7 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 		} else {
 			fmt.Fprintln(file, logWithTimestampPrefix(matchedLog))
 		}
-		if sleepMs > 0 {
+		if multiLineWaitMs > 0 {
 			time.Sleep(sleepDuration)
 		}
 	}
