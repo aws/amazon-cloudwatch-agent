@@ -25,9 +25,7 @@ import (
 
 func TestTailerSrc(t *testing.T) {
 	original := multilineWaitPeriod
-	defer func() {
-		multilineWaitPeriod = original
-	}()
+	defer resetState(original)
 
 	file, err := createTempFile("", "tailsrctest-*.log")
 	defer os.Remove(file.Name())
@@ -147,9 +145,7 @@ func TestTailerSrc(t *testing.T) {
 
 func TestOffsetDoneCallBack(t *testing.T) {
 	original := multilineWaitPeriod
-	defer func() {
-		multilineWaitPeriod = original
-	}()
+	defer resetState(original)
 
 	file, err := createTempFile("", "tailsrctest-*.log")
 	defer os.Remove(file.Name())
@@ -311,11 +307,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
-	defer func() {
-		multilineWaitPeriod = original
-	}()
-
-	profiler.Profiler.ReportAndClear()
+	defer resetState(original)
 	done := make(chan struct{})
 	var consumed int32
 	file, statefile := setupTailer(t, nil, done, &consumed, defaultMaxEventSize)
@@ -337,11 +329,7 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 
 func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
-	defer func() {
-		multilineWaitPeriod = original
-	}()
-
-	profiler.Profiler.ReportAndClear()
+	defer resetState(original)
 	done := make(chan struct{})
 	var consumed int32
 	file, statefile := setupTailer(
@@ -378,11 +366,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 
 func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	original := multilineWaitPeriod
-	defer func() {
-		multilineWaitPeriod = original
-	}()
-
-	profiler.Profiler.ReportAndClear()
+	defer resetState(original)
 	done := make(chan struct{})
 	var consumed int32
 	file, statefile := setupTailer(
@@ -400,7 +384,7 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	matchedLog := "There's an ERROR in this - " + strings.Repeat("\n" + logLine("A", 20, time.Time{}), 10)
 	unmatchedLog := strings.Repeat(logLine("B", 20, time.Time{}) + "\n", 10) + "At the end of the log, here is an ERROR that should not be matched"
 
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 250, 2000)
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 50, 1000)
 
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
@@ -534,4 +518,9 @@ func assertExpectedLogsPublished(t *testing.T, total, numConsumed int) {
 	} else {
 		assert.Equal(t, total/2, int(val))
 	}
+}
+
+func resetState(originalWaitMs time.Duration) {
+	multilineWaitPeriod = originalWaitMs
+	profiler.Profiler.ReportAndClear()
 }
