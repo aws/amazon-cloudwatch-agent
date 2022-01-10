@@ -363,9 +363,8 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	buf.WriteString(strings.Repeat("\nfoo", 2))
 	matchedLog := buf.String()
 	buf.Reset()
-	buf.WriteString("This should not be matched")
-	buf.WriteString(strings.Repeat("\nbar", 5))
-	unmatchedLog := buf.String()
+
+	unmatchedLog := "This should not be matched." + strings.Repeat("\nbar", 5)
 
 	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 500)
 
