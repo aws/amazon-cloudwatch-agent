@@ -355,6 +355,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	unmatchedLog := "This should not be matched." + strings.Repeat("\nbar", 5)
 
 	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 600)
+	time.Sleep(1 * time.Second) // just to see if this helps with flakiness
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(file.Name()); err != nil {
@@ -384,7 +385,8 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	matchedLog := "There's an ERROR in this - " + strings.Repeat("\n" + logLine("A", 20, time.Time{}), 10)
 	unmatchedLog := strings.Repeat(logLine("B", 20, time.Time{}) + "\n", 10) + "At the end of the log, here is an ERROR that should not be matched"
 
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 1000)
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 200, 2000)
+	time.Sleep(1 * time.Second) // just to see if this helps with flakiness
 
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
