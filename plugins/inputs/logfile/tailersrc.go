@@ -5,7 +5,6 @@ package logfile
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -234,7 +233,6 @@ func (ts *tailerSrc) runTail() {
 					offset: *fo,
 					src:    ts,
 				}
-				fmt.Printf("Log ingested:\n%s\n=============", msg)
 				// Note: This only checks against the truncated log message, so it is not necessary to load
 				//       the entire log message for filtering.
 				if ShouldPublish(ts.group, ts.stream, ts.filters, e) {

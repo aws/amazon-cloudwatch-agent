@@ -395,12 +395,12 @@ func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
 	defer os.Remove(file.Name())
 	defer os.Remove(statefile.Name())
 
-	n := 100
+	n := 10
 	// create log messages ahead of time to save compute time
 	matchedLog := "There's an ERROR in this - " + strings.Repeat("\n" + logLine("A", 20, time.Time{}), 10)
 	unmatchedLog := strings.Repeat(logLine("B", 20, time.Time{}) + "\n", 10) + "At the end of the log, here is an ERROR that should not be matched"
 
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100, 500)
+	publishLogsToFile(file, matchedLog, unmatchedLog, n, 250, 2000)
 
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
