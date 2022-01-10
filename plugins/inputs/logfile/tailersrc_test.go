@@ -495,7 +495,7 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 	var sleepDuration time.Duration
 	if multiLineWaitMs > 0 {
 		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
-		sleepDuration = time.Duration(multiLineWaitMs * 2) * time.Millisecond
+		sleepDuration = time.Duration(multiLineWaitMs * 4) * time.Millisecond
 	}
 
 	for i := 0; i < n; i++ {
