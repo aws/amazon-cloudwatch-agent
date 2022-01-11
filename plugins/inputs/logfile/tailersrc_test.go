@@ -365,7 +365,10 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 }
 
 func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
+	// TODO: get test working in GitHub
 	t.Skip("Skipping this test to see if there are other issues")
+
+	// skipped
 	original := multilineWaitPeriod
 	defer resetState(original)
 	done := make(chan struct{})
@@ -483,10 +486,8 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, done chan struct{}
 			close(done)
 			return
 		}
-		atomic.AddInt32(consumed, 1)
+		defer atomic.AddInt32(consumed, 1)
 		evt.Done()
-		// extra sanity check
-		assert.True(t, ShouldPublish(t.Name(), t.Name(), config.Filters, evt))
 	})
 
 	return file, statefile
@@ -496,7 +497,7 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 	var sleepDuration time.Duration
 	if multiLineWaitMs > 0 {
 		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
-		sleepDuration = time.Duration(multiLineWaitMs * 8) * time.Millisecond
+		sleepDuration = time.Duration(multiLineWaitMs * 5) * time.Millisecond
 	}
 
 	for i := 0; i < n; i++ {
