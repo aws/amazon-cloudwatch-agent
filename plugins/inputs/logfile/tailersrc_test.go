@@ -364,39 +364,6 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	assertExpectedLogsPublished(t, n, int(consumed))
 }
 
-func TestTailerSrcFiltersTruncatedLogs(t *testing.T) {
-	// TODO: get test working in GitHub
-	t.Skip("Skipping this test to see if there are other issues")
-
-	// skipped
-	original := multilineWaitPeriod
-	defer resetState(original)
-	done := make(chan struct{})
-	var consumed int32
-	file, statefile := setupTailer(
-		t,
-		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
-		done,
-		&consumed,
-		100,
-	)
-	defer os.Remove(file.Name())
-	defer os.Remove(statefile.Name())
-
-	n := 40
-	// create log messages ahead of time to save compute time
-	matchedLog := "There's an ERROR in this - " + strings.Repeat("\n" + logLine("A", 20, time.Time{}), 10)
-	unmatchedLog := strings.Repeat(logLine("B", 20, time.Time{}) + "\n", 10) + "At the end of the log, here is an ERROR that should not be matched"
-
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100)
-
-	if err := os.Remove(file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
-	}
-	<-done
-	assertExpectedLogsPublished(t, n, int(consumed))
-}
-
 func parseRFC3339Timestamp(line string) time.Time {
 	// Use RFC3339 for testing `2006-01-02T15:04:05Z07:00`
 	re := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`)
