@@ -486,7 +486,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, done chan struct{}
 			close(done)
 			return
 		}
-		defer atomic.AddInt32(consumed, 1)
+		atomic.AddInt32(consumed, 1)
 		evt.Done()
 	})
 
@@ -497,7 +497,7 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 	var sleepDuration time.Duration
 	if multiLineWaitMs > 0 {
 		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
-		sleepDuration = time.Duration(multiLineWaitMs * 5) * time.Millisecond
+		sleepDuration = time.Duration(multiLineWaitMs * 6) * time.Millisecond
 	}
 
 	for i := 0; i < n; i++ {
