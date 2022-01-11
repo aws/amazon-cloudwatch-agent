@@ -68,7 +68,7 @@ func addExporterLabels(labels map[string]string, labelKey string, labelValue *st
 // Get the private ip of the decorated task.
 // Return "" when fail to get the private ip
 func (t *DecoratedTask) getPrivateIp() string {
-	if *t.TaskDefinition.NetworkMode == ecs.NetworkModeNone {
+	if t.TaskDefinition.NetworkMode == nil || *t.TaskDefinition.NetworkMode == ecs.NetworkModeNone {
 		return ""
 	}
 
