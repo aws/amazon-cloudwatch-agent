@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build windows
 // +build windows
 
 package wineventlog
@@ -66,151 +67,135 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 	return eventLog
 }
 
-func (l *windowsEventLog) Init() error {
-	go l.runSaveState()
-	l.loadState()
-	return l.Open()
+func (w *windowsEventLog) Init() error {
+	go w.runSaveState()
+	w.loadState()
+	return w.Open()
 }
 
-func (l *windowsEventLog) SetOutput(fn func(logs.LogEvent)) {
+func (w *windowsEventLog) SetOutput(fn func(logs.LogEvent)) {
 	if fn == nil {
 		return
 	}
-	l.outputFn = fn
-	l.startOnce.Do(func() { go l.run() })
+	w.outputFn = fn
+	w.startOnce.Do(func() { go w.run() })
 }
 
-func (l *windowsEventLog) Group() string {
-	return l.logGroupName
+func (w *windowsEventLog) Group() string {
+	return w.logGroupName
 }
 
-func (l *windowsEventLog) Stream() string {
-	return l.logStreamName
+func (w *windowsEventLog) Stream() string {
+	return w.logStreamName
 }
 
-func (l *windowsEventLog) Description() string {
-	return fmt.Sprintf("%v%v", l.name, l.levels)
+func (w *windowsEventLog) Description() string {
+	return fmt.Sprintf("%v%v", w.name, w.levels)
 }
 
-func (l *windowsEventLog) Destination() string {
-	return l.destination
+func (w *windowsEventLog) Destination() string {
+	return w.destination
 }
 
-func (l *windowsEventLog) Retention() int {
-	return l.retention
+func (w *windowsEventLog) Retention() int {
+	return w.retention
 }
-func (l *windowsEventLog) Stop() {
-	close(l.done)
+func (w *windowsEventLog) Stop() {
+	close(w.done)
 }
 
-func (l *windowsEventLog) run() {
-	recordNumber := l.eventOffset
+func (w *windowsEventLog) run() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			records, err := l.read()
-			if err == RPC_S_INVALID_BOUND {
-				log.Printf("E! [windows_event_log] Due to corrupted/large event, skipping event log with record number %d, and log group name %s", recordNumber, l.logGroupName)
-				recordNumber = recordNumber + 1 // Advance to the next event to avoid being stuck
-				continue
-			}
-			if err != nil {
-				log.Printf("E! [windows_event_log] Failed to read Windows event logs for log group name %s. Details: %v\n", l.logGroupName, err)
-				recordNumber = recordNumber + 1
-				continue
-			}
-
+			records := w.read()
 			for _, record := range records {
 				value, err := record.Value()
 				if err != nil {
-					log.Printf("E! [windows_event_log] Error happened when collecting windows events : %v", err)
+					log.Printf("E! [wineventlog] Error happened when collecting windows events : %v", err)
 					continue
 				}
-				recordNumber, _ = strconv.ParseUint(record.System.EventRecordID, 10, 64)
-				// TODO: Create and send log event to output fn
+				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
 				evt := &LogEvent{
 					msg:    value,
 					t:      record.System.TimeCreated.SystemTime,
 					offset: recordNumber,
-					src:    l,
+					src:    w,
 				}
-				l.outputFn(evt)
+				w.outputFn(evt)
 			}
-		case <-l.done:
+		case <-w.done:
 			return
 		}
 	}
 }
 
-func (l *windowsEventLog) Open() error {
-	bookmark, err := CreateBookmark(l.name, l.eventOffset)
+func (w *windowsEventLog) Open() error {
+	bookmark, err := CreateBookmark(w.name, w.eventOffset)
 	if err != nil {
 		return err
 	}
 	defer EvtClose(bookmark)
-
 	// Using a pull subscription to receive events. See:
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/aa385771(v=vs.85).aspx#pull
 	signalEvent, err := windows.CreateEvent(nil, 0, 0, nil)
 	if err != nil {
 		return nil
 	}
-
-	channelPath, err := syscall.UTF16PtrFromString(l.name)
+	channelPath, err := syscall.UTF16PtrFromString(w.name)
 	if err != nil {
 		return err
 	}
-
-	query, err := CreateQuery(l.name, l.levels)
+	query, err := CreateQuery(w.name, w.levels)
 	if err != nil {
 		return err
 	}
-
-	// Subscribe for events
+	// Subscribe for events.
+	// This will fail if the eventlog name has not been registered.
+	// However returning an error would mean the the plugin won't monitor other
+	// eventlogs.
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
-		fmt.Errorf("error when subscribing for events. Details: %v", err)
+		log.Printf("W! [wineventlog] EvtSubscribe(), name %v, err %v", w.name, err)
 	}
-
-	l.eventHandle = eventHandle
-
+	w.eventHandle = eventHandle
 	return nil
 }
 
-func (l *windowsEventLog) Close() error {
-	return EvtClose(l.eventHandle)
+func (w *windowsEventLog) Close() error {
+	return EvtClose(w.eventHandle)
 }
 
-func (l *windowsEventLog) LogGroupName() string {
-	return l.logGroupName
+func (w *windowsEventLog) LogGroupName() string {
+	return w.logGroupName
 }
 
-func (l *windowsEventLog) LogStreamName() string {
-	return l.logStreamName
+func (w *windowsEventLog) LogStreamName() string {
+	return w.logStreamName
 }
 
-func (l *windowsEventLog) EventOffset() uint64 {
-	return l.eventOffset
+func (w *windowsEventLog) EventOffset() uint64 {
+	return w.eventOffset
 }
 
-func (l *windowsEventLog) SetEventOffset(eventOffset uint64) {
-	l.eventOffset = eventOffset
+func (w *windowsEventLog) SetEventOffset(eventOffset uint64) {
+	w.eventOffset = eventOffset
 }
 
-func (l *windowsEventLog) Done(offset uint64) {
-	l.offsetCh <- offset
+func (w *windowsEventLog) Done(offset uint64) {
+	w.offsetCh <- offset
 }
 
-func (l *windowsEventLog) runSaveState() {
+func (w *windowsEventLog) runSaveState() {
 	t := time.NewTicker(100 * time.Millisecond)
-	defer t.Stop()
+	defer w.Stop()
 
 	var offset, lastSavedOffset uint64
 	for {
 		select {
-		case o := <-l.offsetCh:
+		case o := <-w.offsetCh:
 
 			if o > offset {
 				offset = o
@@ -219,33 +204,33 @@ func (l *windowsEventLog) runSaveState() {
 			if offset == lastSavedOffset {
 				continue
 			}
-			err := l.saveState(offset)
+			err := w.saveState(offset)
 			if err != nil {
-				log.Printf("E! [windows_event_log] Error happened when saving file state %s to file state folder %s: %v", l.logGroupName, l.stateFilePath, err)
+				log.Printf("E! [wineventlog] Error happened when saving file state %s to file state folder %s: %v", w.logGroupName, w.stateFilePath, err)
 				continue
 			}
 			lastSavedOffset = offset
-		case <-l.done:
-			err := l.saveState(offset)
+		case <-w.done:
+			err := w.saveState(offset)
 			if err != nil {
-				log.Printf("E! [windows_event_log] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", l.logGroupName, l.stateFilePath, err)
+				log.Printf("E! [wineventlog] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", w.logGroupName, w.stateFilePath, err)
 			}
 			break
 		}
 	}
 }
 
-func (l *windowsEventLog) saveState(offset uint64) error {
-	if l.stateFilePath == "" || offset == 0 {
+func (w *windowsEventLog) saveState(offset uint64) error {
+	if w.stateFilePath == "" || offset == 0 {
 		return nil
 	}
 
-	content := []byte(strconv.FormatUint(offset, 10) + "\n" + l.logGroupName)
-	return ioutil.WriteFile(l.stateFilePath, content, 0644)
+	content := []byte(strconv.FormatUint(offset, 10) + "\n" + w.logGroupName)
+	return ioutil.WriteFile(w.stateFilePath, content, 0644)
 }
 
-func (l *windowsEventLog) read() ([]*windowsEventLogRecord, error) {
-	maxToRead := l.maxToRead
+func (w *windowsEventLog) read() []*windowsEventLogRecord {
+	maxToRead := w.maxToRead
 	var eventHandles []EvtHandle
 	defer func() {
 		for _, h := range eventHandles {
@@ -256,31 +241,25 @@ func (l *windowsEventLog) read() ([]*windowsEventLogRecord, error) {
 	var numRead uint32
 	for {
 		eventHandles = make([]EvtHandle, maxToRead)
-		err := EvtNext(l.eventHandle, uint32(len(eventHandles)),
+		err := EvtNext(w.eventHandle, uint32(len(eventHandles)),
 			&eventHandles[0], 0, 0, &numRead)
-
 		// Handle special case when events size is too large - retry with smaller size
 		if err == RPC_S_INVALID_BOUND {
 			if maxToRead == 1 {
-				log.Printf("E! [windows_event_log] Out of bounds error due to large events size. Will skip the event as we cannot process it. Details: %v\n", err)
-				return nil, err
+				log.Printf("E! [wineventlog] Out of bounds error due to large events size. Will skip the event as we cannot process it. Details: %v\n", err)
+				return nil
 			}
-			log.Printf("W! [windows_event_log] Out of bounds error due to large events size. Retrying with half of the read batch size (%d). Details: %v\n", maxToRead/2, err)
+			log.Printf("W! [wineventlog] Out of bounds error due to large events size. Retrying with half of the read batch size (%d). Details: %v\n", maxToRead/2, err)
 			maxToRead /= 2
 			for _, h := range eventHandles {
 				EvtClose(h)
 			}
 			continue
 		}
-
 		break
 	}
 	// Decode the events into objects
-	if numRead == 0 {
-		return nil, nil
-	}
-
-	return l.getRecords(eventHandles[:numRead])
+	return w.getRecords(eventHandles[:numRead])
 }
 
 type LogEvent struct {
@@ -302,83 +281,85 @@ func (le LogEvent) Done() {
 	le.src.Done(le.offset)
 }
 
-func (l *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEventLogRecord, err error) {
-	//Windows event message supports 31839 characters. https://msdn.microsoft.com/EN-US/library/windows/desktop/aa363679.aspx
-	bufferSize := 1 << 17
+// getRecords attempts to render and format each of the given EvtHandles.
+// If one handle has an error, continue on because something is better than nothing.
+func (w *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEventLogRecord) {
 	for _, evtHandle := range handles {
-		renderBuf := make([]byte, bufferSize)
-		var outputBuf []byte
-
-		// Notes on the process:
-		// - We first call RenderEventXML to get the publisher details. This piece of information is then used
-		// for rendering the event and getting a readable XML format that contains the log message.
-		// - We can later do more research on comparing other methods to get the publisher details such as EvtCreateRenderContext
-		if outputBuf, err = RenderEventXML(evtHandle, renderBuf); err != nil {
-			return nil, err
+		r, err := w.getRecord(evtHandle)
+		if err == nil {
+			records = append(records, r)
+		} else {
+			log.Printf("I! [wineventlog] %v", err)
 		}
-
-		newRecord := newEventLogRecord(l)
-		//we need the "System.TimeCreated.SystemTime"
-		xml.Unmarshal(outputBuf, newRecord)
-		publisher, _ := syscall.UTF16PtrFromString(newRecord.System.Provider.Name)
-
-		var publisherMetadataEvtHandle EvtHandle
-		if publisherMetadataEvtHandle, err = EvtOpenPublisherMetadata(0, publisher, nil, 0, 0); err != nil {
-			return nil, err
-		}
-
-		var bufferUsed uint32
-		if err = EvtFormatMessage(publisherMetadataEvtHandle, evtHandle, 0, 0, 0, EvtFormatMessageXml, uint32(bufferSize), &renderBuf[0], &bufferUsed); err != nil {
-			EvtClose(publisherMetadataEvtHandle)
-			return nil, err
-		}
-		EvtClose(publisherMetadataEvtHandle)
-
-		var descriptionBytes []byte
-		if descriptionBytes, err = UTF16ToUTF8Bytes(renderBuf, bufferUsed); err != nil {
-			return nil, err
-		}
-
-		switch l.renderFormat {
-		case FormatXml, FormatDefault:
-			//XML format
-			newRecord.XmlFormatContent = string(descriptionBytes)
-		case FormatPlainText:
-			//old SSM agent Windows format
-			var recordMessage eventMessage
-			if err = xml.Unmarshal(descriptionBytes, &recordMessage); err != nil {
-				return nil, err
-			}
-
-			newRecord.System.Description = recordMessage.Message
-		default:
-			return nil, fmt.Errorf("format %s is not recognized", l.renderFormat)
-		}
-
-		//add record to array
-		records = append(records, newRecord)
 	}
-	return records, err
+	return records
 }
 
-func (l *windowsEventLog) loadState() {
-	if _, err := os.Stat(l.stateFilePath); err != nil {
-		log.Printf("I! [windows_event_log] The state file for %s does not exist: %v", l.stateFilePath, err)
-		return
-	}
+// getRecord attemps to render and format the message for the given EvtHandle.
+func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord, error) {
+	// Notes on the process:
+	// - We first call RenderEventXML to get the publisher details. This piece of information is then used
+	// for rendering the event and getting a readable XML format that contains the log message.
+	// - We can later do more research on comparing other methods to get the publisher details such as EvtCreateRenderContext
 
-	byteArray, err := ioutil.ReadFile(l.stateFilePath)
+	// Windows event message supports 31839 characters. https://msdn.microsoft.com/EN-US/library/windows/desktop/aa363679.aspx
+	bufferSize := 1 << 17
+	renderBuf := make([]byte, bufferSize)
+	outputBuf, err := RenderEventXML(evtHandle, renderBuf)
 	if err != nil {
-		log.Printf("W! [windows_event_log] Issue encountered when reading offset from file %s: %v", l.stateFilePath, err)
+		return nil, fmt.Errorf("RenderEventXML() err %v", err)
+	}
+	newRecord := newEventLogRecord(w)
+	//we need the "System.TimeCreated.SystemTime"
+	xml.Unmarshal(outputBuf, newRecord)
+	publisher, _ := syscall.UTF16PtrFromString(newRecord.System.Provider.Name)
+	publisherMetadataEvtHandle, err := EvtOpenPublisherMetadata(0, publisher, nil, 0, 0)
+	if err != nil {
+		return nil, fmt.Errorf("EvtOpenPublisherMetadata() publisher %v, err %v", newRecord.System.Provider.Name, err)
+	}
+	var bufferUsed uint32
+	err = EvtFormatMessage(publisherMetadataEvtHandle, evtHandle, 0, 0, 0, EvtFormatMessageXml, uint32(bufferSize), &renderBuf[0], &bufferUsed)
+	EvtClose(publisherMetadataEvtHandle)
+	if err != nil {
+		return nil, fmt.Errorf("EvtFormatMessage() publisher %v, err %v", newRecord.System.Provider.Name, err)
+	}
+	descriptionBytes, err := UTF16ToUTF8Bytes(renderBuf, bufferUsed)
+	if err != nil {
+		return nil, fmt.Errorf("UTF16ToUTF8Bytes() err %v", err)
+	}
+	switch w.renderFormat {
+	case FormatXml, FormatDefault:
+		//XML format
+		newRecord.XmlFormatContent = string(descriptionBytes)
+	case FormatPlainText:
+		//old SSM agent Windows format
+		var recordMessage eventMessage
+		err = xml.Unmarshal(descriptionBytes, &recordMessage)
+		if err != nil {
+			return nil, fmt.Errorf("Unmarshal() err %v", err)
+		}
+		newRecord.System.Description = recordMessage.Message
+	default:
+		return nil, fmt.Errorf("renderFormat is not recognized, %s", w.renderFormat)
+	}
+	return newRecord, nil
+}
+
+func (w *windowsEventLog) loadState() {
+	if _, err := os.Stat(w.stateFilePath); err != nil {
+		log.Printf("I! [wineventlog] The state file for %s does not exist: %v", w.stateFilePath, err)
 		return
 	}
-
+	byteArray, err := ioutil.ReadFile(w.stateFilePath)
+	if err != nil {
+		log.Printf("W! [wineventlog] Issue encountered when reading offset from file %s: %v", w.stateFilePath, err)
+		return
+	}
 	offset, err := strconv.ParseInt(strings.Split(string(byteArray), "\n")[0], 10, 64)
 	if err != nil {
-		log.Printf("W! [windows_event_log] Issue encountered when parsing offset value %v: %v", byteArray, err)
+		log.Printf("W! [wineventlog] Issue encountered when parsing offset value %v: %v", byteArray, err)
 		return
 	}
-
-	log.Printf("I! [windows_event_log] Reading from offset %v in %s", offset, l.stateFilePath)
-	l.eventOffset = uint64(offset)
+	log.Printf("I! [wineventlog] Reading from offset %v in %s", offset, w.stateFilePath)
+	w.eventOffset = uint64(offset)
 }
