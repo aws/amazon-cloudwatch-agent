@@ -68,7 +68,7 @@ func addExporterLabels(labels map[string]string, labelKey string, labelValue *st
 // Get the private ip of the decorated task.
 // Return "" when fail to get the private ip
 func (t *DecoratedTask) getPrivateIp() string {
-	if t.TaskDefinition.NetworkMode == nil {
+	if t.TaskDefinition.NetworkMode == nil || *t.TaskDefinition.NetworkMode == ecs.NetworkModeNone {
 		return ""
 	}
 
@@ -94,7 +94,7 @@ func (t *DecoratedTask) getPrivateIp() string {
 func (t *DecoratedTask) getPrometheusExporterPort(configuredPort int64, c *ecs.ContainerDefinition) int64 {
 	var mappedPort int64 = 0
 	networkMode := aws.StringValue(t.TaskDefinition.NetworkMode)
-	if networkMode == "" || networkMode == ecs.NetworkModeNone {
+	if networkMode == ecs.NetworkModeNone {
 		// for network type: none, skipped directly
 		return 0
 	}
@@ -106,7 +106,7 @@ func (t *DecoratedTask) getPrometheusExporterPort(configuredPort int64, c *ecs.C
 				mappedPort = aws.Int64Value(v.HostPort)
 			}
 		}
-	} else if networkMode == ecs.NetworkModeBridge {
+	} else if networkMode == ecs.NetworkModeBridge || networkMode == "" {
 		// for network type: bridge, get the mapped port from: task->containers->networkBindings
 		containerName := aws.StringValue(c.Name)
 		for _, tc := range t.Task.Containers {
