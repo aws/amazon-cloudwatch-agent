@@ -23,6 +23,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
 
+type tailerTestResources struct {
+	done *chan struct{}
+	consumed *int32
+	file *os.File
+	statefile *os.File
+}
+
 func TestTailerSrc(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
@@ -308,39 +315,31 @@ func TestOffsetDoneCallBack(t *testing.T) {
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
-	done := make(chan struct{})
-	var consumed int32
-	file, statefile := setupTailer(t, nil, done, &consumed, defaultMaxEventSize)
-	defer os.Remove(file.Name())
-	defer os.Remove(statefile.Name())
+	resources := setupTailer(t, nil, defaultMaxEventSize)
+	defer teardown(resources)
 
 	n := 100
 	matchedLog := "ERROR: this has an error in it."
 	unmatchedLog := "Some other log message"
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 0)
+	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 0)
 
 	// Removal of log file should stop tailersrc
-	if err := os.Remove(file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
+	if err := os.Remove(resources.file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", resources.file.Name(), err)
 	}
-	<-done
-	assertExpectedLogsPublished(t, n, int(consumed))
+	<-*resources.done
+	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
 
 func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
-	done := make(chan struct{})
-	var consumed int32
-	file, statefile := setupTailer(
+	resources := setupTailer(
 		t,
 		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
-		done,
-		&consumed,
 		defaultMaxEventSize,
 	)
-	defer os.Remove(file.Name())
-	defer os.Remove(statefile.Name())
+	defer teardown(resources)
 
 	n := 20
 	// create log messages ahead of time to save compute time
@@ -354,14 +353,14 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 
 	unmatchedLog := "This should not be matched." + strings.Repeat("\nbar", 5)
 
-	publishLogsToFile(file, matchedLog, unmatchedLog, n, 100)
+	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 100)
 
 	// Removal of log file should stop tailersrc
-	if err := os.Remove(file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
+	if err := os.Remove(resources.file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", resources.file.Name(), err)
 	}
-	<-done
-	assertExpectedLogsPublished(t, n, int(consumed))
+	<-*resources.done
+	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
 
 func parseRFC3339Timestamp(line string) time.Time {
@@ -394,7 +393,9 @@ func logWithTimestampPrefix(s string) string {
 	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
 }
 
-func setupTailer(t *testing.T, multiLineFn func(string) bool, done chan struct{}, consumed *int32, maxEventSize int) (*os.File, *os.File) {
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) tailerTestResources {
+	done := make(chan struct{})
+	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
 	if err != nil {
 		t.Errorf("Failed to create temp file: %v", err)
@@ -453,11 +454,16 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, done chan struct{}
 			close(done)
 			return
 		}
-		atomic.AddInt32(consumed, 1)
+		atomic.AddInt32(&consumed, 1)
 		evt.Done()
 	})
 
-	return file, statefile
+	return tailerTestResources{
+		done: &done,
+		consumed: &consumed,
+		file: file,
+		statefile: statefile,
+	}
 }
 
 func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiLineWaitMs int) {
@@ -494,4 +500,9 @@ func assertExpectedLogsPublished(t *testing.T, total, numConsumed int) {
 func resetState(originalWaitMs time.Duration) {
 	multilineWaitPeriod = originalWaitMs
 	profiler.Profiler.ReportAndClear()
+}
+
+func teardown(resources tailerTestResources) {
+	os.Remove(resources.file.Name())
+	os.Remove(resources.statefile.Name())
 }

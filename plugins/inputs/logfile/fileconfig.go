@@ -150,12 +150,10 @@ func (config *FileConfig) init() error {
 		config.RetentionInDays = -1
 	}
 
-	if config.Filters != nil && len(config.Filters) > 0 {
-		for _, f := range config.Filters {
-			err = f.init()
-			if err != nil {
-				return err
-			}
+	for _, f := range config.Filters {
+		err = f.init()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -227,7 +225,7 @@ func ShouldPublish(logGroupName, logStreamName string, filters []*LogFilter, eve
 func shouldPublishHelper(filters []*LogFilter, event logs.LogEvent) bool {
 	for _, filter := range filters {
 		if !filter.ShouldPublish(event) {
-			return false // TODO: change so that this is an AND, not an OR
+			return false
 		}
 	}
 	return true

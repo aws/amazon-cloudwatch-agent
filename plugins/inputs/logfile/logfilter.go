@@ -14,8 +14,13 @@ const (
 	excludeFilterType = "exclude"
 )
 
-var validFilterTypesSet map[string]bool
-var validFilterTypes []string
+var (
+	validFilterTypes    = []string{includeFilterType, excludeFilterType}
+	validFilterTypesSet = map[string]bool{
+		includeFilterType: true,
+		excludeFilterType: true,
+	}
+)
 
 type LogFilter struct {
 	Type        string `toml:"type"`
@@ -24,14 +29,6 @@ type LogFilter struct {
 }
 
 func (filter *LogFilter) init() error {
-	if validFilterTypes == nil {
-		validFilterTypes = []string{includeFilterType, excludeFilterType}
-		validFilterTypesSet = make(map[string]bool)
-		for _, f := range validFilterTypes {
-			validFilterTypesSet[f] = true
-		}
-	}
-
 	if _, present := validFilterTypesSet[filter.Type]; !present {
 		return fmt.Errorf("filter type %s is incorrect, valid types are: %v", filter.Type, validFilterTypes)
 	}
