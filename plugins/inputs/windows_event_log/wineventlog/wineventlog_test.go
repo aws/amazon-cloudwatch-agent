@@ -30,6 +30,11 @@ var (
 	RETENTION       = 42
 )
 
+type expectedEvent struct {
+	substring string
+	count     int
+}
+
 // TestNewEventLog verifies constructor's default values.
 func TestNewEventLog(t *testing.T) {
 	elog := NewEventLog(NAME, LEVELS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
@@ -78,7 +83,7 @@ func TestReadGoodSource(t *testing.T) {
 	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
-	checkEvents(t, elog, 10, "[Application] [ERROR] [777] [CWA_UnitTest111] ")
+	checkEvents(t, elog, []expectedEvent{{"[Application] [ERROR] [777] [CWA_UnitTest111] ", 10}})
 	assert.NoError(t, elog.Close())
 }
 
@@ -90,7 +95,7 @@ func TestReadBadSource(t *testing.T) {
 	assert.NoError(t, elog.Open())
 	seekToEnd(t, elog)
 	writeEvents(t, 10, false, "CWA_UnitTest222", 888)
-	checkEvents(t, elog, 0, "[Application] [ERROR] [888] [CWA_UnitTest222] ")
+	checkEvents(t, elog, []expectedEvent{{"CWA_UnitTest222", 0}})
 	assert.NoError(t, elog.Close())
 }
 
@@ -104,7 +109,11 @@ func TestReadWithBothSources(t *testing.T) {
 	seekToEnd(t, elog)
 	writeEvents(t, 10, true, "CWA_UnitTest111", 777)
 	writeEvents(t, 10, false, "CWA_UnitTest222", 888)
-	checkEvents(t, elog, 10, "[Application] [ERROR] [777] [CWA_UnitTest111] ")
+	ee := []expectedEvent{
+		{"[Application] [ERROR] [777] [CWA_UnitTest111] ", 10},
+		{"CWA_UnitTest222", 0},
+	}
+	checkEvents(t, elog, ee)
 	assert.NoError(t, elog.Close())
 }
 
@@ -144,8 +153,8 @@ func writeEvents(t *testing.T, msgCount int, doRegister bool, logSrc string, eve
 }
 
 // checkEvents reads all events (since last read) then checks each one for the
-// given substr. Verify count == msgCount.
-func checkEvents(t *testing.T, elog *windowsEventLog, msgCount int, substr string) {
+// given substrings and verifies the total count of matches.
+func checkEvents(t *testing.T, elog *windowsEventLog, expected []expectedEvent) {
 	// Get all new records.
 	var records []*windowsEventLogRecord
 	// MAX 100 loops as a safety check.
@@ -160,14 +169,16 @@ func checkEvents(t *testing.T, elog *windowsEventLog, msgCount int, substr strin
 		records = append(records, currentRecords...)
 	}
 	t.Logf("checkEvents() total count %v", len(records))
-	// Check all new records.
-	found := 0
-	for _, r := range records {
-		eventMsg, err := r.Value()
-		assert.NoError(t, err)
-		if strings.Contains(eventMsg, substr) {
-			found += 1
+	// For each expected value, verify the count of matching events.
+	for _, ee := range expected {
+		found := 0
+		for _, r := range records {
+			eventMsg, err := r.Value()
+			assert.NoError(t, err)
+			if strings.Contains(eventMsg, ee.substring) {
+				found += 1
+			}
 		}
+		assert.Equal(t, ee.count, found, "expected %v, actual %v", ee, found)
 	}
-	assert.Equal(t, msgCount, found)
 }
