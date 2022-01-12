@@ -478,7 +478,6 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 			time.Sleep(sleepDuration)
 		}
 	}
-	time.Sleep(sleepDuration)
 }
 
 func assertExpectedLogsPublished(t *testing.T, total, numConsumed int) {
