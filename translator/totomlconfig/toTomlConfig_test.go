@@ -165,6 +165,15 @@ func TestECSNodeMetricConfig(t *testing.T) {
 	os.Setenv("HOST_IP", "127.0.0.1")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_ecs_metric_only.json"), "./sampleConfig/log_ecs_metric_only.conf", "linux")
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_ecs_metric_only.json"), "./sampleConfig/log_ecs_metric_only.conf", "darwin")
+	os.Unsetenv("RUN_IN_CONTAINER")
+	os.Unsetenv("HOST_NAME")
+	os.Unsetenv("HOST_IP")
+}
+
+func TestLogFilterConfig(t *testing.T) {
+	resetContext()
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_filter.json"), "./sampleConfig/log_filter.conf", "linux")
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_filter.json"), "./sampleConfig/log_filter.conf", "darwin")
 }
 
 func readCommonConifg() {

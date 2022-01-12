@@ -6,6 +6,8 @@ package logfile
 import (
 	"bytes"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -20,7 +23,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
 
+type tailerTestResources struct {
+	done *chan struct{}
+	consumed *int32
+	file *os.File
+	statefile *os.File
+}
+
 func TestTailerSrc(t *testing.T) {
+	original := multilineWaitPeriod
+	defer resetState(original)
 
 	file, err := createTempFile("", "tailsrctest-*.log")
 	defer os.Remove(file.Name())
@@ -58,6 +70,7 @@ func TestTailerSrc(t *testing.T) {
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
+		nil,
 		parseRFC3339Timestamp,
 		nil, // encoding
 		defaultMaxEventSize,
@@ -138,6 +151,8 @@ func TestTailerSrc(t *testing.T) {
 }
 
 func TestOffsetDoneCallBack(t *testing.T) {
+	original := multilineWaitPeriod
+	defer resetState(original)
 
 	file, err := createTempFile("", "tailsrctest-*.log")
 	defer os.Remove(file.Name())
@@ -175,6 +190,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
+		nil,
 		parseRFC3339Timestamp,
 		nil, // encoding
 		defaultMaxEventSize,
@@ -296,6 +312,57 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	}
 }
 
+func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
+	original := multilineWaitPeriod
+	defer resetState(original)
+	resources := setupTailer(t, nil, defaultMaxEventSize)
+	defer teardown(resources)
+
+	n := 100
+	matchedLog := "ERROR: this has an error in it."
+	unmatchedLog := "Some other log message"
+	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 0)
+
+	// Removal of log file should stop tailersrc
+	if err := os.Remove(resources.file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", resources.file.Name(), err)
+	}
+	<-*resources.done
+	assertExpectedLogsPublished(t, n, int(*resources.consumed))
+}
+
+func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
+	original := multilineWaitPeriod
+	defer resetState(original)
+	resources := setupTailer(
+		t,
+		regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`).MatchString,
+		defaultMaxEventSize,
+	)
+	defer teardown(resources)
+
+	n := 20
+	// create log messages ahead of time to save compute time
+	buf := bytes.Buffer{}
+	buf.WriteString("This has a matching log in the middle of it")
+	buf.WriteString(strings.Repeat("\nfoo", 2))
+	buf.WriteString("\nHere is the ERROR that should be matched")
+	buf.WriteString(strings.Repeat("\nfoo", 2))
+	matchedLog := buf.String()
+	buf.Reset()
+
+	unmatchedLog := "This should not be matched." + strings.Repeat("\nbar", 5)
+
+	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 100)
+
+	// Removal of log file should stop tailersrc
+	if err := os.Remove(resources.file.Name()); err != nil {
+		t.Errorf("failed to remove log file '%v': %v", resources.file.Name(), err)
+	}
+	<-*resources.done
+	assertExpectedLogsPublished(t, n, int(*resources.consumed))
+}
+
 func parseRFC3339Timestamp(line string) time.Time {
 	// Use RFC3339 for testing `2006-01-02T15:04:05Z07:00`
 	re := regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Z+\-]\d{2}:\d{2}`)
@@ -320,4 +387,122 @@ func logLine(s string, l int, t time.Time) string {
 	line += strings.Repeat(s, l/len(s)+1)
 	line = line[:l]
 	return line
+}
+
+func logWithTimestampPrefix(s string) string {
+	return fmt.Sprintf("%v - %s", time.Now().Format(time.RFC3339), s)
+}
+
+func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) tailerTestResources {
+	done := make(chan struct{})
+	var consumed int32
+	file, err := createTempFile("", "tailsrctest-*.log")
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+	statefile, err := createTempFile("", "tailsrctest-state-*.log")
+	if err != nil {
+		t.Errorf("Failed to create temp file: %v", err)
+	}
+
+	tailer, err := tail.TailFile(file.Name(),
+		tail.Config{
+			ReOpen:      false,
+			Follow:      true,
+			Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
+			MustExist:   true,
+			Pipe:        false,
+			Poll:        true,
+			MaxLineSize: maxEventSize,
+			IsUTF16:     false,
+		})
+
+	if err != nil {
+		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
+	}
+
+	config := &FileConfig{
+		LogGroupName:  t.Name(),
+		LogStreamName: t.Name(),
+		Filters: []*LogFilter{
+			{
+				Type:       includeFilterType,
+				Expression: "ERROR", // only match error logs
+			},
+		},
+	}
+	err = config.init()
+	assert.NoError(t, err)
+	ts := NewTailerSrc(
+		t.Name(),
+		t.Name(),
+		"destination",
+		statefile.Name(),
+		tailer,
+		false, // AutoRemoval
+		multiLineFn,
+		config.Filters,
+		parseRFC3339Timestamp,
+		nil, // encoding
+		maxEventSize,
+		defaultTruncateSuffix,
+		1,
+	)
+
+	ts.SetOutput(func(evt logs.LogEvent) {
+		if evt == nil {
+			close(done)
+			return
+		}
+		atomic.AddInt32(&consumed, 1)
+		evt.Done()
+	})
+
+	return tailerTestResources{
+		done: &done,
+		consumed: &consumed,
+		file: file,
+		statefile: statefile,
+	}
+}
+
+func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiLineWaitMs int) {
+	var sleepDuration time.Duration
+	if multiLineWaitMs > 0 {
+		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
+		sleepDuration = time.Duration(multiLineWaitMs * 6) * time.Millisecond
+	}
+
+	for i := 0; i < n; i++ {
+		mod := i % 2
+		if mod == 0 {
+			fmt.Fprintln(file, logWithTimestampPrefix(unmatchedLog))
+		} else {
+			fmt.Fprintln(file, logWithTimestampPrefix(matchedLog))
+		}
+		if multiLineWaitMs > 0 {
+			time.Sleep(sleepDuration)
+		}
+	}
+}
+
+func assertExpectedLogsPublished(t *testing.T, total, numConsumed int) {
+	assert.Equal(t, total/2, numConsumed)
+	stats := profiler.Profiler.GetStats()
+	statKey := fmt.Sprintf("logfile_%s_%s_messages_dropped", t.Name(), t.Name())
+	if val, ok := stats[statKey]; !ok {
+		t.Error("Missing profiled stat")
+	} else {
+		assert.Equal(t, total/2, int(val))
+	}
+}
+
+func resetState(originalWaitMs time.Duration) {
+	multilineWaitPeriod = originalWaitMs
+	profiler.Profiler.ReportAndClear()
+}
+
+func teardown(resources tailerTestResources) {
+	os.Remove(resources.file.Name())
+	os.Remove(resources.statefile.Name())
 }

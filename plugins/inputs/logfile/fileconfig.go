@@ -6,6 +6,8 @@ package logfile
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -75,6 +77,9 @@ type FileConfig struct {
 
 	//Indicate retention in days for log group
 	RetentionInDays int `toml:"retention_in_days"`
+
+	Filters []*LogFilter `toml:"filters"`
+
 	//Time *time.Location Go type timezone info.
 	TimezoneLoc *time.Location
 	//Regexp go type timestampFromLogLine regex
@@ -84,7 +89,8 @@ type FileConfig struct {
 	//Regexp go type blacklist regex
 	BlacklistRegexP *regexp.Regexp
 	//Decoder object
-	Enc encoding.Encoding
+	Enc         encoding.Encoding
+	sampleCount int
 }
 
 //Initialize some variables in the FileConfig object based on the rest info fetched from the configuration file.
@@ -144,17 +150,14 @@ func (config *FileConfig) init() error {
 		config.RetentionInDays = -1
 	}
 
-	return nil
-}
+	for _, f := range config.Filters {
+		err = f.init()
+		if err != nil {
+			return err
+		}
+	}
 
-//The default log group name calculation logic if the log group name is not specified.
-//It will use the part before the last dot in the file path, e.g.
-// file path: "/tmp/TestLogFile.log.2017-07-11-14" -> log group name: "/tmp/TestLogFile.log"
-// file path: "/tmp/TestLogFile.log" -> log group name: "/tmp/TestLogFile"
-// Note: the above is default log group behavior, it is always recommended to specify the log group name for each input file pattern
-func logGroupName(filePath string) string {
-	suffix := filepath.Ext(filePath)
-	return strings.TrimSuffix(filePath, suffix)
+	return nil
 }
 
 //Try to parse the timestampFromLogLine value from the log entry line.
@@ -202,4 +205,38 @@ func (config *FileConfig) isMultilineStart(logValue string) bool {
 		return false
 	}
 	return config.MultiLineStartPatternP.MatchString(logValue)
+}
+
+func ShouldPublish(logGroupName, logStreamName string, filters []*LogFilter, event logs.LogEvent) bool {
+	if filters == nil || len(filters) == 0 {
+		return true
+	}
+
+	ret := shouldPublishHelper(filters, event)
+	droppedCount := 0
+	if !ret {
+		droppedCount = 1
+	}
+	profiler.Profiler.AddStats([]string{"logfile", logGroupName, logStreamName, "messages", "dropped"}, float64(droppedCount))
+
+	return ret
+}
+
+func shouldPublishHelper(filters []*LogFilter, event logs.LogEvent) bool {
+	for _, filter := range filters {
+		if !filter.ShouldPublish(event) {
+			return false
+		}
+	}
+	return true
+}
+
+//The default log group name calculation logic if the log group name is not specified.
+//It will use the part before the last dot in the file path, e.g.
+// file path: "/tmp/TestLogFile.log.2017-07-11-14" -> log group name: "/tmp/TestLogFile.log"
+// file path: "/tmp/TestLogFile.log" -> log group name: "/tmp/TestLogFile"
+// Note: the above is default log group behavior, it is always recommended to specify the log group name for each input file pattern
+func logGroupName(filePath string) string {
+	suffix := filepath.Ext(filePath)
+	return strings.TrimSuffix(filePath, suffix)
 }

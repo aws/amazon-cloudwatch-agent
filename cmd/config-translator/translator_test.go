@@ -167,6 +167,18 @@ func TestNvidiaGpuConfig(t *testing.T) {
 	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/validNvidiaGpuConfig.json", true, map[string]int{})
 }
 
+func TestValidLogFilterConfig(t *testing.T) {
+	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/validLogFilesWithFilters.json", true, map[string]int{})
+}
+
+func TestInvalidLogFilterConfig(t *testing.T) {
+	expectedErrorMap := map[string]int{
+		"additional_property_not_allowed": 1,
+		"enum": 1,
+	}
+	checkIfSchemaValidationAsExpected(t, "../../translator/config/sampleSchema/invalidLogFilesWithFilters.json", false, expectedErrorMap)
+}
+
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
 	if files, err := ioutil.ReadDir("../../translator/totomlconfig/sampleConfig/"); err == nil {

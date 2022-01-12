@@ -35,3 +35,22 @@ func TestProfiler(t *testing.T) {
 	assert.True(t, len(Profiler.stats) == 0)
 	assert.Equal(t, noStats, output, "Stats do not match")
 }
+
+func TestProfilerGetStats(t *testing.T) {
+	Profiler.AddStats([]string{t.Name(), "StatsA"}, 0.0)
+
+	var val float64
+	var ok bool
+
+	stats := Profiler.GetStats()
+	name := t.Name() + "_StatsA"
+	if val, ok = stats[name]; !ok {
+		t.Errorf("%s was not found in the stats map", name)
+	}
+	assert.Equal(t, 0.0, val)
+
+	Profiler.ReportAndClear()
+	stats = Profiler.GetStats()
+	_, ok = stats[name]
+	assert.False(t, ok)
+}

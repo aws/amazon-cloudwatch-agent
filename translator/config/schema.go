@@ -689,6 +689,12 @@ var schema = `{
                   },
                   "retention_in_days": {
                     "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                    }
                   }
                 },
                 "required": [
@@ -806,6 +812,25 @@ var schema = `{
             1827,
             3653
           ]
+        },
+        "filterDefinition": {
+          "type": "object",
+          "descriptions": "Define filters to apply to the log messages in this log file to determine whether to publish the message or not",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "description": "Declares if the specified filter should be used to include or exclude log messages",
+              "type": "string",
+              "enum": [
+                "include",
+                "exclude"
+              ]
+            },
+            "expression": {
+              "description": "Regular expression to apply to the log message",
+              "type": "string"
+            }
+          }
         }
       }
     },

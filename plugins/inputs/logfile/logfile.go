@@ -235,6 +235,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				tailer,
 				fileconfig.AutoRemoval,
 				mlCheck,
+				fileconfig.Filters,
 				fileconfig.timestampFromLogLine,
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,

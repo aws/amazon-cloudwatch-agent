@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestApplyRule(t *testing.T) {
+func TestApplyRetentionInDaysRule(t *testing.T) {
 	r := new(RetentionInDays)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
@@ -26,7 +26,7 @@ func TestApplyRule(t *testing.T) {
 
 // Since retention can only be set to specific numbers (1,3,5,7...),
 // test to make sure other numbers are invalid (and set to -1)
-func TestRetention_InvalidNumberOfDays(t *testing.T) {
+func TestRetentionInvalidNumberOfDays(t *testing.T) {
 	r := new(RetentionInDays)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
@@ -41,7 +41,7 @@ func TestRetention_InvalidNumberOfDays(t *testing.T) {
 	}
 }
 
-func TestRetention_InvalidInput(t *testing.T) {
+func TestRetentionInvalidInputType(t *testing.T) {
 	r := new(RetentionInDays)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{

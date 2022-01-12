@@ -38,6 +38,8 @@ func TestFileConfigInit(t *testing.T) {
 	assert.True(t, fileConfig.MultiLineStartPatternP == fileConfig.TimestampRegexP, "The multiline start pattern should be the same as the timestampFromLogLine pattern.")
 
 	assert.Equal(t, time.UTC, fileConfig.TimezoneLoc, "The timezone location should be UTC.")
+
+	assert.Nil(t, fileConfig.Filters)
 }
 
 func TestFileConfigInitFailureCase(t *testing.T) {
@@ -172,4 +174,351 @@ func TestMultiLineStartPattern(t *testing.T) {
 	logEntryLine = "XXXXXXX"
 	multiLineStart = fileConfig.isMultilineStart(logEntryLine)
 	assert.False(t, multiLineStart, "This should not be a multi-line start line.")
+}
+
+func TestFileConfigInitWithFilters(t *testing.T) {
+	filter1 := LogFilter{
+		Type:       includeFilterType,
+		Expression: "StatusCode: [4-5]\\d\\d",
+	}
+	filter2 := LogFilter{
+		Type:       excludeFilterType,
+		Expression: "Some expression that (will|won't) compile",
+	}
+
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		Filters:               []*LogFilter{&filter1, &filter2},
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+
+	assert.Len(t, fileConfig.Filters, 2)
+	f := fileConfig.Filters[0]
+	assert.NotNil(t, f.expressionP)
+	assert.Equal(t, filter1.Type, f.Type)
+	assert.Equal(t, filter1.Expression, f.Expression)
+	f = fileConfig.Filters[1]
+	assert.NotNil(t, f.expressionP)
+	assert.Equal(t, filter2.Type, f.Type)
+	assert.Equal(t, filter2.Expression, f.Expression)
+}
+
+func TestFileConfigInitWithFiltersFails(t *testing.T) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		Filters: []*LogFilter{
+			{
+				Type:       excludeFilterType,
+				Expression: "Some expression that (will|won't) compile",
+			},
+			{
+				Type:       includeFilterType,
+				Expression: "StatusCode: ([4-5]\\d\\d", // invalid regexp
+			},
+		},
+	}
+
+	err := fileConfig.init()
+	assert.Error(t, err)
+	assert.Equal(t, "filter regex has issue, regexp: Compile( StatusCode: ([4-5]\\d\\d ): error parsing regexp: missing closing ): `StatusCode: ([4-5]\\d\\d`", err.Error())
+}
+
+func TestLogEmptyFilters(t *testing.T) {
+	assertPublishedForFilters(t, []*LogFilter{}, "foo")
+	assertPublishedForFilters(t, []*LogFilter{}, "Some other log message")
+}
+
+func TestLogNilFilters(t *testing.T) {
+	assertPublishedForFilters(t, nil, "foo")
+	assertPublishedForFilters(t, nil, "Some other log message")
+}
+
+func TestLogIncludeFilter(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{{
+		Type:       includeFilterType,
+		Expression: "StatusCode: [4-5]\\d\\d",
+	}})
+
+	assertPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublishedForFilters(t, filters, "This is another log message that doesn't match")
+}
+
+func TestLogExcludeFilter(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{{
+		Type:       excludeFilterType,
+		Expression: "StatusCode: [4-5]\\d\\d",
+	}})
+	assertNotPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertPublishedForFilters(t, filters, "This is another log message that doesn't match")
+}
+
+func TestLogIncludeThenExcludeFilter(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	assertNotPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertPublishedForFilters(t, filters, "Submitted request to application search_FooBarBaz1")
+	// If the log message matches both, it should match the inclusion filter, then proceed to the exclusion filter
+	assertNotPublishedForFilters(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+	// If the log message matches neither, because this config has an inclusion filter, drop the log
+	assertNotPublishedForFilters(t, filters, "Some other log that doesn't match either expression")
+}
+
+func TestLogExcludeThenIncludeFilter(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       includeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	assertPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublishedForFilters(t, filters, "Submitted request to application search_FooBarBaz1")
+	// If the log message matches both, it should match the exclusion filter, which indicates that we should drop the log
+	assertNotPublishedForFilters(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+	// If the log message matches neither, because this config has an inclusion filter, drop the log
+	assertNotPublishedForFilters(t, filters, "Some other log that doesn't match either expression")
+}
+
+func TestLogFilterMultipleExclusionExpressions(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	assertPublishedForFilters(t, filters, "Some other log that doesn't match either expression")
+	assertNotPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublishedForFilters(t, filters, "Submitted request to application search_FooBarBaz1")
+	assertNotPublishedForFilters(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+}
+
+func TestLogFilterMultipleInclusionExpressions(t *testing.T) {
+	filters := initializeLogFilters(t, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       includeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	assertNotPublishedForFilters(t, filters, "Some other log that doesn't match either expression")
+	assertNotPublishedForFilters(t, filters, "API responded with [StatusCode: 500] for call to /foo/bar")
+	assertNotPublishedForFilters(t, filters, "Submitted request to application search_FooBarBaz1")
+	assertPublishedForFilters(t, filters, "Here is a log for search_Abc123 that also has a status code of (StatusCode: 425) and that's it.")
+}
+
+func BenchmarkLogFilterSimpleInclude(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterSimpleIncludeNotMatch(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 209] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterSimpleExclude(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterSimpleExcludeNotMatch(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 209] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterIncludeThenMatchExclude(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "API responded with [StatusCode: 409] for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterExclusionsDoNotDropUnmatchedLog(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       excludeFilterType,
+			Expression: "search_(\\w+)",
+		},
+		{
+			Type:       excludeFilterType,
+			Expression: "StatusCode: [4-5]\\d\\d",
+		},
+	})
+	event := LogEvent{
+		msg: "Some other log that doesn't match either expression",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterMatchesMultipleInclusionExpressions(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type: includeFilterType,
+			Expression: "(WARN|ERROR)",
+		},
+		{
+			Type: includeFilterType,
+			Expression: "StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+",
+		},
+	})
+	event := LogEvent{
+		msg: "2021-12-16 21:45:13 - WARN: API responded with StatusCode: 502 for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterDoesNotMatchMultipleInclusionExpressions(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type: includeFilterType,
+			Expression: "(WARN|ERROR)",
+		},
+		{
+			Type: includeFilterType,
+			Expression: "StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+",
+		},
+	})
+	event := LogEvent{
+		msg: "2021-12-16 21:45:13 - DEBUG: API responded with StatusCode: 200 for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterMatchesComplexExpression(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "((WARN|ERROR)|(StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+))",
+		},
+	})
+	event := LogEvent{
+		msg: "2021-12-16 21:45:13 - DEBUG: API responded with StatusCode: 502 for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func BenchmarkLogFilterDoesNotMatchComplexExpression(b *testing.B) {
+	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
+		{
+			Type:       includeFilterType,
+			Expression: "((WARN|ERROR)|(StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+))",
+		},
+	})
+	event := LogEvent{
+		msg: "2021-12-16 21:45:13 - DEBUG: API responded with StatusCode: 209 for call to /foo/bar",
+	}
+	for i := 0; i < b.N; i++ {
+		ShouldPublish("foo", "bar", filters, event)
+	}
+}
+
+func assertPublishedForFilters(t *testing.T, filters []*LogFilter, msg string) {
+	res := ShouldPublish("foo", "bar", filters, LogEvent{
+		msg: msg,
+	})
+	assert.True(t, res)
+}
+
+func assertNotPublishedForFilters(t *testing.T, filters []*LogFilter, msg string) {
+	res := ShouldPublish("foo", "bar", filters, LogEvent{
+		msg: msg,
+	})
+	assert.False(t, res)
+}
+
+func initializeLogFilters(t *testing.T, filters []*LogFilter) []*LogFilter {
+	for _, f := range filters {
+		err := f.init()
+		assert.NoError(t, err)
+	}
+	return filters
+}
+
+func initializeLogFiltersForBenchmarks(b *testing.B, filters []*LogFilter) []*LogFilter {
+	defer b.ResetTimer()
+	for _, f := range filters {
+		err := f.init()
+		assert.NoError(b, err)
+	}
+	return filters
 }

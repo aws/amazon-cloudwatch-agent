@@ -70,6 +70,7 @@ type tailerSrc struct {
 
 	outputFn        func(logs.LogEvent)
 	isMLStart       func(string) bool
+	filters         []*LogFilter
 	offsetCh        chan fileOffset
 	done            chan struct{}
 	startTailerOnce sync.Once
@@ -81,6 +82,7 @@ func NewTailerSrc(
 	tailer *tail.Tail,
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
+	filters []*LogFilter,
 	timestampFn func(string) time.Time,
 	enc encoding.Encoding,
 	maxEventSize int,
@@ -95,6 +97,7 @@ func NewTailerSrc(
 		tailer:          tailer,
 		autoRemoval:     autoRemoval,
 		isMLStart:       isMultilineStartFn,
+		filters:         filters,
 		timestampFn:     timestampFn,
 		enc:             enc,
 		maxEventSize:    maxEventSize,
@@ -176,7 +179,10 @@ func (ts *tailerSrc) runTail() {
 						offset: *fo,
 						src:    ts,
 					}
-					ts.outputFn(e)
+
+					if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
+						ts.outputFn(e)
+					}
 				}
 				return
 			}
@@ -227,7 +233,11 @@ func (ts *tailerSrc) runTail() {
 					offset: *fo,
 					src:    ts,
 				}
-				ts.outputFn(e)
+				// Note: This only checks against the truncated log message, so it is not necessary to load
+				//       the entire log message for filtering.
+				if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
+					ts.outputFn(e)
+				}
 			}
 
 			msgBuf.Reset()
@@ -250,7 +260,9 @@ func (ts *tailerSrc) runTail() {
 				offset: *fo,
 				src:    ts,
 			}
-			ts.outputFn(e)
+			if ShouldPublish(ts.group, ts.stream, ts.filters, e) {
+				ts.outputFn(e)
+			}
 			msgBuf.Reset()
 			cnt = 0
 		case <-ts.done:
