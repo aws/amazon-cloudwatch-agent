@@ -30,6 +30,7 @@
           }
         ]
       }
-    }
+    },
+    "log_stream_name": "LOG_STREAM_NAME"
   }
 }
