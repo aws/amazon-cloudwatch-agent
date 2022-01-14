@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -127,7 +128,14 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
-	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
+
+	containerInsightRegexp := "^/aws/.*containerinsights/.*/(performance|prometheus)$"
+	r, _ := regexp.Compile(containerInsightRegexp)
+	if r.MatchString(t.Group) {
+		client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent("container_insights")))
+	} else {
+		client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
+	}
 
 	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}

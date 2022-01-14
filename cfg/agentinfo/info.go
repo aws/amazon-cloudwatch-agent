@@ -50,8 +50,8 @@ func Build() string {
 	return BuildStr
 }
 
-func Plugins() string {
-	outputs := strings.Join(OutputPlugins, " ")
+func Plugins(extraOutputs ...string) string {
+	outputs := strings.Join(append(OutputPlugins, extraOutputs...), " ")
 	inputs := strings.Join(InputPlugins, " ")
 
 	if !isRunningAsRoot() {
@@ -61,11 +61,11 @@ func Plugins() string {
 	return fmt.Sprintf("inputs:(%s) outputs:(%s)", inputs, outputs)
 }
 
-func UserAgent() string {
+func UserAgent(extraOutputs ...string) string {
 	if userAgent == "" {
 		ua := os.Getenv(envconfig.CWAGENT_USER_AGENT)
 		if ua == "" {
-			ua = fmt.Sprintf("%s %s", FullVersion(), Plugins())
+			ua = fmt.Sprintf("%s %s", FullVersion(), Plugins(extraOutputs))
 		}
 		userAgent = ua
 	}
