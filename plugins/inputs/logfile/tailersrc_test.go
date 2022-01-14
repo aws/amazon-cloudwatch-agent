@@ -321,7 +321,7 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	n := 100
 	matchedLog := "ERROR: this has an error in it."
 	unmatchedLog := "Some other log message"
-	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 0)
+	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 100)
 
 	// Removal of log file should stop tailersrc
 	if err := os.Remove(resources.file.Name()); err != nil {
