@@ -412,11 +412,6 @@ func (t *LogFile) checkForDuplicateRetentionSettings() {
 		}
 
 	}
-	//for i := range t.FileConfig {
-	//	fileconfig := &t.FileConfig[i]
-	//	// log group has Retention settings in multiple places: throw an error
-	//
-	//}
 }
 
 // Compressed file should be skipped.
