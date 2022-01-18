@@ -774,7 +774,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	defer lsrc.Stop()
 
 	// Waiting 10 seconds for the recreated temp file to be detected is plenty sufficient on any OS.
-	for start := time.Now(); time.Since(start) < 10 * time.Second; {
+	for start := time.Now(); time.Since(start) < 10*time.Second; {
 		lsrcs = tt.FindLogSrc()
 		if len(lsrcs) > 0 {
 			break
@@ -1086,6 +1086,68 @@ func TestCheckForDuplicateRetentionSettingsPanics(t *testing.T) {
 			FromBeginning:   true,
 			LogGroupName:    logGroupName,
 			RetentionInDays: 3,
+		},
+	}
+	assert.Panics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
+}
+
+func TestCheckForDuplicateRetentionSettingsWithDefaultRetention(t *testing.T) {
+	tt := NewLogFile()
+	logGroupName := "DuplicateLogGroupName"
+	tt.FileConfig = []FileConfig{{
+		FilePath:        "SampleFilePath",
+		FromBeginning:   true,
+		LogGroupName:    logGroupName,
+		RetentionInDays: -1,
+	},
+		{
+			FilePath:        "SampleFilePath",
+			FromBeginning:   true,
+			LogGroupName:    logGroupName,
+			RetentionInDays: -1,
+		},
+	}
+	assert.NotPanics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
+}
+
+func TestCheckForDuplicateRetentionSettings(t *testing.T) {
+	tt := NewLogFile()
+	tt.FileConfig = []FileConfig{{
+		FilePath:        "SampleFilePath",
+		FromBeginning:   true,
+		LogGroupName:    "logGroupName1",
+		RetentionInDays: 5,
+	},
+		{
+			FilePath:        "SampleFilePath",
+			FromBeginning:   true,
+			LogGroupName:    "logGroupName2",
+			RetentionInDays: 3,
+		},
+	}
+	assert.NotPanics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
+}
+
+func TestCheckDuplicateRetentionWithDefaultAndSetLogGroups(t *testing.T) {
+	tt := NewLogFile()
+	logGroupName := "DuplicateLogGroupName"
+	tt.FileConfig = []FileConfig{{
+		FilePath:        "SampleFilePath",
+		FromBeginning:   true,
+		LogGroupName:    logGroupName,
+		RetentionInDays: 3,
+	},
+		{
+			FilePath:        "SampleFilePath",
+			FromBeginning:   true,
+			LogGroupName:    logGroupName,
+			RetentionInDays: 5,
+		},
+		{
+			FilePath:        "SampleFilePath",
+			FromBeginning:   true,
+			LogGroupName:    logGroupName,
+			RetentionInDays: -1,
 		},
 	}
 	assert.Panics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")

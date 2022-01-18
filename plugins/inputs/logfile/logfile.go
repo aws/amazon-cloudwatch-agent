@@ -403,7 +403,7 @@ func (t *LogFile) checkForDuplicateRetentionSettings() {
 
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
-		if fileconfig.LogGroupName != "" {
+		if fileconfig.LogGroupName != "" && fileconfig.RetentionInDays !=-1 {
 			logGroup := strings.ToLower(fileconfig.LogGroupName)
 			configMap[logGroup] += 1
 		}
