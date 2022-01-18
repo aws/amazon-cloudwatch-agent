@@ -398,17 +398,26 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 	}
 }
 
-// checkForDuplicateRetentionSettings: Checks if a log group has retention set in multiple places and stops the agent if found
+// checkForDuplicateRetentionSettings: Checks if a log group has retention set differently in multiple places and stops the agent if found
 func (t *LogFile) checkForDuplicateRetentionSettings() {
 	configMap := make(map[string]int)
 	for i := range t.FileConfig {
 		fileConfig := &t.FileConfig[i]
-		if fileConfig.LogGroupName != "" && fileConfig.RetentionInDays !=-1 {
-			logGroup := strings.ToLower(fileConfig.LogGroupName)
-			configMap[logGroup] += 1
+		logGroup := strings.ToLower(fileConfig.LogGroupName)
+		// if retention is 0, -1 or less it's either invalid or default
+		if fileConfig.RetentionInDays < 1 {
+			continue
 		}
-		if fileConfig.LogGroupName != "" && configMap[strings.ToLower(fileConfig.LogGroupName)] > 1 {
-			panic(fmt.Sprintf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileConfig.LogGroupName))
+		// if the configMap[logGroup] exists, retention has been set for the same logGroup somewhere
+		if configMap[logGroup] != 0 {
+			// 2 different retentions has been set for the same log group, panic and stop the agent
+			if configMap[logGroup] != fileConfig.RetentionInDays {
+				panic(fmt.Sprintf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileConfig.LogGroupName))
+			}
+			// The same retention for a log group has been configured in multiple places, so unset it so that the retention api is only called once
+			fileConfig.RetentionInDays = -1
+		} else {
+			configMap[logGroup] = fileConfig.RetentionInDays
 		}
 	}
 }

@@ -1087,6 +1087,12 @@ func TestCheckForDuplicateRetentionSettingsPanics(t *testing.T) {
 			LogGroupName:    logGroupName,
 			RetentionInDays: 3,
 		},
+		{
+			FilePath:        "SampleFilePath",
+			FromBeginning:   true,
+			LogGroupName:    logGroupName,
+			RetentionInDays: 3,
+		},
 	}
 	assert.Panics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
 }
@@ -1152,3 +1158,34 @@ func TestCheckDuplicateRetentionWithDefaultAndSetLogGroups(t *testing.T) {
 	}
 	assert.Panics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
 }
+
+func TestCheckForDuplicateRetentionSettingsWithDefault(t *testing.T) {
+	tt := NewLogFile()
+	logGroupName := "DuplicateLogGroupName"
+	tt.FileConfig = []FileConfig{{
+		FilePath:        "SampleFilePath",
+		FromBeginning:   true,
+		LogGroupName:    logGroupName,
+		RetentionInDays: 5,
+	},
+		{
+			FilePath:        "SampleFilePath",
+			FromBeginning:   true,
+			LogGroupName:    logGroupName,
+			RetentionInDays: 5,
+		},
+		{
+			FilePath:        "SampleFilePath",
+			FromBeginning:   true,
+			LogGroupName:    logGroupName,
+			RetentionInDays: 5,
+		},
+	}
+	tt.checkForDuplicateRetentionSettings()
+	assert.Equal(t, tt.FileConfig[0].RetentionInDays, 5)
+	assert.Equal(t, tt.FileConfig[1].RetentionInDays, -1)
+	assert.Equal(t, tt.FileConfig[1].RetentionInDays, -1)
+	assert.NotPanics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Panicked when no duplicate retention settings exists")
+}
+
+
