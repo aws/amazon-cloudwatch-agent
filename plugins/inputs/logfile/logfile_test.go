@@ -1107,7 +1107,7 @@ func TestCheckForDuplicateRetentionSettingsWithDefaultRetention(t *testing.T) {
 			RetentionInDays: -1,
 		},
 	}
-	assert.NotPanics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
+	assert.NotPanics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Panicked when no duplicate retention settings exists")
 }
 
 func TestCheckForDuplicateRetentionSettings(t *testing.T) {
@@ -1125,7 +1125,7 @@ func TestCheckForDuplicateRetentionSettings(t *testing.T) {
 			RetentionInDays: 3,
 		},
 	}
-	assert.NotPanics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
+	assert.NotPanics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Panicked when no duplicate retention settings exists")
 }
 
 func TestCheckDuplicateRetentionWithDefaultAndSetLogGroups(t *testing.T) {
