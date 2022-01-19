@@ -149,7 +149,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 	t.cleanUpStoppedTailerSrc()
 
-	// If a log group has retention settings defined in more than one place, stop the agent
+	// If a log group has differing retentionInDays values defined in multiple places, stop the agent
 	t.checkForDuplicateRetentionSettings()
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
@@ -398,22 +398,26 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 	}
 }
 
+// checkForDuplicateRetentionSettings: Checks if a log group has retention set differently in multiple places and stops the agent if found
 func (t *LogFile) checkForDuplicateRetentionSettings() {
 	configMap := make(map[string]int)
-
 	for i := range t.FileConfig {
-		fileconfig := &t.FileConfig[i]
-		if fileconfig.LogGroupName != "" {
-			logGroup := strings.ToLower(fileconfig.LogGroupName)
-			configMap[logGroup] += 1
+		fileConfig := &t.FileConfig[i]
+		logGroup := strings.ToLower(fileConfig.LogGroupName)
+		// if retention is 0, -1 or less it's either invalid or default
+		if fileConfig.RetentionInDays < 1 {
+			continue
 		}
-
-	}
-	for i := range t.FileConfig {
-		fileconfig := &t.FileConfig[i]
-		// log group has Retention settings in multiple places: throw an error
-		if fileconfig.LogGroupName != "" && configMap[strings.ToLower(fileconfig.LogGroupName)] > 1 {
-			panic(fmt.Sprintf("error: retention for the same log group set in multiple places. Log Group Name: %v", fileconfig.LogGroupName))
+		// if the configMap[logGroup] exists, retention has been set for the same logGroup somewhere
+		if configMap[logGroup] != 0 {
+			// different retentions has been set for the same log group, panic and stop the agent
+			if configMap[logGroup] != fileConfig.RetentionInDays {
+				panic(fmt.Sprintf("error: The Log Group has differing retentionInDays values defined in two or more places. Log Group Name: %v", fileConfig.LogGroupName))
+			}
+			// The same retention for a log group has been configured in multiple places. Unset it so that the retention api is only called once
+			fileConfig.RetentionInDays = -1
+		} else {
+			configMap[logGroup] = fileConfig.RetentionInDays
 		}
 	}
 }
