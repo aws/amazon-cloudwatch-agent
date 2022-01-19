@@ -774,7 +774,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	defer lsrc.Stop()
 
 	// Waiting 10 seconds for the recreated temp file to be detected is plenty sufficient on any OS.
-	for start := time.Now(); time.Since(start) < 10 * time.Second; {
+	for start := time.Now(); time.Since(start) < 10*time.Second; {
 		lsrcs = tt.FindLogSrc()
 		if len(lsrcs) > 0 {
 			break
@@ -1205,5 +1205,3 @@ func TestCheckForDuplicateRetentionSettingsWithDefault(t *testing.T) {
 	assert.Equal(t, tt.FileConfig[1].RetentionInDays, -1)
 	assert.Equal(t, tt.FileConfig[2].RetentionInDays, -1)
 }
-
-
