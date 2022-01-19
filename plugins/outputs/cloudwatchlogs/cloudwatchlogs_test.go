@@ -4,9 +4,14 @@
 package cloudwatchlogs
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client/metadata"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 )
 
 func TestCreateDest(t *testing.T) {
@@ -42,5 +47,25 @@ func TestCreateDest(t *testing.T) {
 
 	if d.pusher.Group != "G1" || d.pusher.Stream != "S1" {
 		t.Errorf("Empty create dest should return dest to default group and stream, %v/%v found", d.pusher.Group, d.pusher.Stream)
+	}
+}
+
+func TestUserAgent(t *testing.T) {
+	c := outputs.Outputs["cloudwatchlogs"]().(*CloudWatchLogs)
+	target := Target{
+		Group:     "/aws/containerinsights/cluster-name/prometheus",
+		Stream:    "Stream",
+		Retention: -1,
+	}
+	d0 := c.getDest(target)
+	logClient := d0.pusher.Service.(*cloudwatchlogs.CloudWatchLogs)
+	req := request.New(
+		aws.Config{}, metadata.ClientInfo{}, logClient.Handlers, nil, &request.Operation{
+			HTTPMethod: "GET",
+			HTTPPath:   "/",
+		}, nil, nil)
+	logClient.Handlers.Build.Run(req)
+	if !strings.Contains(req.HTTPRequest.UserAgent(), "container_insights") {
+		t.Errorf("The \"container_insights\" flag should be in the outputs plugin list for log groups from container insights")
 	}
 }
