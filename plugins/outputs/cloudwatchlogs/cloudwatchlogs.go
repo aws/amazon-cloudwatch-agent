@@ -39,7 +39,10 @@ const (
 	metricRetryTimeout = 2 * time.Minute
 
 	attributesInFields = "attributesInFields"
+	containerInsightRegexp = "^/aws/.*containerinsights/.*/(performance|prometheus)$"
 )
+
+var ciCompiledRegexp, _ = regexp.Compile(containerInsightRegexp)
 
 type CloudWatchLogs struct {
 	Region           string `toml:"region"`
@@ -129,9 +132,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 
-	containerInsightRegexp := "^/aws/.*containerinsights/.*/(performance|prometheus)$"
-	r, _ := regexp.Compile(containerInsightRegexp)
-	if r.MatchString(t.Group) {
+	if ciCompiledRegexp.MatchString(t.Group) {
 		hasCIFlag := false
 		for _, plugin := range agentinfo.OutputPlugins {
 			if plugin == "container_insights" {
