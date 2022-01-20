@@ -120,3 +120,10 @@ func TestUserAgentEnvOverride(t *testing.T) {
 		t.Errorf("UserAgent should use value configured in environment variable CWAGENT_USER_AGENT, but '%v' found, expecting '%v'", ua, expected)
 	}
 }
+func TestResetUserAgent(t *testing.T) {
+	userAgent = "TEST_USER_AGENT"
+	ResetUserAgent()
+	if userAgent != "" {
+		t.Errorf("userAgent string did not reset.")
+	}
+}

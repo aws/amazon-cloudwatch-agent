@@ -72,6 +72,10 @@ func UserAgent() string {
 	return userAgent
 }
 
+func ResetUserAgent() {
+	userAgent = ""
+}
+
 func FullVersion() string {
 	return fmt.Sprintf("CWAgent/%s (%s; %s; %s) %s", Version(), runtime.Version(), runtime.GOOS, runtime.GOARCH, Build())
 }
