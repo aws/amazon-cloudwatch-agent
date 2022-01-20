@@ -7,11 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client/metadata"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateDest(t *testing.T) {
@@ -52,20 +50,48 @@ func TestCreateDest(t *testing.T) {
 
 func TestUserAgent(t *testing.T) {
 	c := outputs.Outputs["cloudwatchlogs"]().(*CloudWatchLogs)
-	target := Target{
-		Group:     "/aws/containerinsights/cluster-name/prometheus",
-		Stream:    "Stream",
-		Retention: -1,
+	tests := []struct {
+		name         string
+		logGroupName string
+		expectFlag   bool
+	}{
+		{
+			"emptyLogGroup",
+			"",
+			false,
+		},
+		{
+			"non container insights",
+			"test-group",
+			false,
+		},
+		{
+			"container insights EKS",
+			"/aws/containerinsights/eks-cluster-name/performance",
+			true,
+		},
+		{
+			"container insights ECS",
+			"/aws/ecs/containerinsights/ecs-cluster-name/performance",
+			true,
+		},
+		{
+			"container insights prometheus",
+			"/aws/containerinsights/cluster-name/prometheus",
+			true,
+		},
 	}
-	d0 := c.getDest(target)
-	logClient := d0.pusher.Service.(*cloudwatchlogs.CloudWatchLogs)
-	req := request.New(
-		aws.Config{}, metadata.ClientInfo{}, logClient.Handlers, nil, &request.Operation{
-			HTTPMethod: "GET",
-			HTTPPath:   "/",
-		}, nil, nil)
-	logClient.Handlers.Build.Run(req)
-	if !strings.Contains(req.HTTPRequest.UserAgent(), "container_insights") {
-		t.Errorf("The \"container_insights\" flag should be in the outputs plugin list for log groups from container insights")
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			target := Target{
+				Group:     tc.logGroupName,
+				Stream:    "Stream",
+				Retention: -1,
+			}
+			c.getDest(target)
+			assert.Equal(t, strings.Contains(agentinfo.UserAgent(), "container_insights"), tc.expectFlag)
+
+		})
 	}
 }

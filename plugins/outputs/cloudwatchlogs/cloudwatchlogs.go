@@ -132,7 +132,17 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	containerInsightRegexp := "^/aws/.*containerinsights/.*/(performance|prometheus)$"
 	r, _ := regexp.Compile(containerInsightRegexp)
 	if r.MatchString(t.Group) {
-		agentinfo.OutputPlugins = append(agentinfo.OutputPlugins, "container_insights")
+		hasCIFlag := false
+		for _, plugin := range agentinfo.OutputPlugins {
+			if plugin == "container_insights" {
+				hasCIFlag = true
+				break
+			}
+		}
+		if !hasCIFlag {
+			agentinfo.OutputPlugins = append(agentinfo.OutputPlugins, "container_insights")
+		}
+		agentinfo.ResetUserAgent()
 	}
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
 
