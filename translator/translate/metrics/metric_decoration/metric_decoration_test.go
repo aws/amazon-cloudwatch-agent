@@ -27,7 +27,7 @@ func TestMetricDecoration_ApplyRule(t *testing.T) {
 			}}`), &input)
 
 	require.Nil(t, err)
-	_, val := c.ApplyRule(input)
+	key, val := c.ApplyRule(input)
 	expected := []interface{}{
 		map[string]string{
 			"rename":   "CPU",
@@ -42,10 +42,11 @@ func TestMetricDecoration_ApplyRule(t *testing.T) {
 		},
 		// cpu_usage_guest will not translated into anything since there is no metric decoration configured for it.
 	}
+	assert.Equal(t, "metric_decoration", key)
 	assert.Equal(t, expected, val)
 }
 
-//Check the case when the input is in "cpu":{//specific configuration}
+//Check the case when the input is in "nvidia_gpu":{//specific configuration}
 func TestMetricDecoration_plugin_with_alias_ApplyRule(t *testing.T) {
 	c := new(MetricDecoration)
 	//Check whether override default config

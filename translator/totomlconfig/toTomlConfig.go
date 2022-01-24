@@ -30,6 +30,7 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery/taskdefinition"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus/emfprocessor"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/append_dimensions"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/drop_origin"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metric_decoration"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/agentInternal"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/collectd"
