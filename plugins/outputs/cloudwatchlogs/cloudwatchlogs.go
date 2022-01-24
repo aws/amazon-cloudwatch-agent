@@ -6,7 +6,6 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -39,10 +38,7 @@ const (
 	metricRetryTimeout = 2 * time.Minute
 
 	attributesInFields = "attributesInFields"
-	containerInsightRegexp = "^/aws/.*containerinsights/.*/(performance|prometheus)$"
 )
-
-var ciCompiledRegexp, _ = regexp.Compile(containerInsightRegexp)
 
 type CloudWatchLogs struct {
 	Region           string `toml:"region"`
@@ -131,21 +127,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
-
-	if ciCompiledRegexp.MatchString(t.Group) {
-		hasCIFlag := false
-		for _, plugin := range agentinfo.OutputPlugins {
-			if plugin == "container_insights" {
-				hasCIFlag = true
-				break
-			}
-		}
-		if !hasCIFlag {
-			agentinfo.OutputPlugins = append(agentinfo.OutputPlugins, "container_insights")
-		}
-		agentinfo.ResetUserAgent()
-	}
-	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
+	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent(t.Group)))
 
 	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
