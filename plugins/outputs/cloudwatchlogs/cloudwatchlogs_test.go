@@ -4,12 +4,9 @@
 package cloudwatchlogs
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateDest(t *testing.T) {
@@ -45,53 +42,5 @@ func TestCreateDest(t *testing.T) {
 
 	if d.pusher.Group != "G1" || d.pusher.Stream != "S1" {
 		t.Errorf("Empty create dest should return dest to default group and stream, %v/%v found", d.pusher.Group, d.pusher.Stream)
-	}
-}
-
-func TestUserAgent(t *testing.T) {
-	c := outputs.Outputs["cloudwatchlogs"]().(*CloudWatchLogs)
-	tests := []struct {
-		name         string
-		logGroupName string
-		expectFlag   bool
-	}{
-		{
-			"emptyLogGroup",
-			"",
-			false,
-		},
-		{
-			"non container insights",
-			"test-group",
-			false,
-		},
-		{
-			"container insights EKS",
-			"/aws/containerinsights/eks-cluster-name/performance",
-			true,
-		},
-		{
-			"container insights ECS",
-			"/aws/ecs/containerinsights/ecs-cluster-name/performance",
-			true,
-		},
-		{
-			"container insights prometheus",
-			"/aws/containerinsights/cluster-name/prometheus",
-			true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			target := Target{
-				Group:     tc.logGroupName,
-				Stream:    "Stream",
-				Retention: -1,
-			}
-			c.getDest(target)
-			assert.Equal(t, strings.Contains(agentinfo.UserAgent(), "container_insights"), tc.expectFlag)
-
-		})
 	}
 }

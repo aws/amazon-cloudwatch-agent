@@ -62,7 +62,7 @@ func Plugins(groupName string) string {
 		inputs += " run_as_user" // `inputs` is never empty, or agent will not start
 	}
 	if ciCompiledRegexp.MatchString(groupName) && !strings.Contains(outputs, "container_insights") {
-		outputs += "container_insights"
+		outputs += " container_insights"
 	}
 
 	return fmt.Sprintf("inputs:(%s) outputs:(%s)", inputs, outputs)
