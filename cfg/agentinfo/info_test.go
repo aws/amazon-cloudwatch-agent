@@ -82,20 +82,20 @@ func TestPlugins(t *testing.T) {
 
 	isRunningAsRoot = func() bool { return true }
 	plugins := Plugins("")
-	expected := fmt.Sprintf("inputs:(a b c) outputs:(x y z)")
+	expected := "inputs:(a b c) outputs:(x y z)"
+	if plugins != expected {
+		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
+	}
+
+	plugins = Plugins("/aws/ecs/containerinsights/ecs-cluster-name/performance")
+	expected = "inputs:(a b c) outputs:(x y z container_insights)"
 	if plugins != expected {
 		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
 	}
 
 	isRunningAsRoot = func() bool { return false }
 	plugins = Plugins("")
-	expected = fmt.Sprintf("inputs:(a b c run_as_user) outputs:(x y z)")
-	if plugins != expected {
-		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
-	}
-
-	plugins = Plugins("/aws/ecs/containerinsights/ecs-cluster-name/performance")
-	expected = fmt.Sprintf("inputs:(a b c run_as_user) outputs:(x y z container_insights)")
+	expected = "inputs:(a b c run_as_user) outputs:(x y z)"
 	if plugins != expected {
 		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
 	}
@@ -144,7 +144,6 @@ func TestUserAgent(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.expected, UserAgent(tc.logGroupName), tc.errorMessage)
-
 		})
 	}
 }
