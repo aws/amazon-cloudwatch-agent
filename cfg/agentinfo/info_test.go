@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestVersionUseInjectedIfAvailable(t *testing.T) {
@@ -80,22 +81,27 @@ func TestPlugins(t *testing.T) {
 	OutputPlugins = []string{"x", "y", "z"}
 
 	isRunningAsRoot = func() bool { return true }
-	plugins := Plugins()
-	expected := fmt.Sprintf("inputs:(a b c) outputs:(x y z)")
+	plugins := Plugins("")
+	expected := "inputs:(a b c) outputs:(x y z)"
+	if plugins != expected {
+		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
+	}
+
+	plugins = Plugins("/aws/ecs/containerinsights/ecs-cluster-name/performance")
+	expected = "inputs:(a b c) outputs:(x y z container_insights)"
 	if plugins != expected {
 		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
 	}
 
 	isRunningAsRoot = func() bool { return false }
-	plugins = Plugins()
-	expected = fmt.Sprintf("inputs:(a b c run_as_user) outputs:(x y z)")
+	plugins = Plugins("")
+	expected = "inputs:(a b c run_as_user) outputs:(x y z)"
 	if plugins != expected {
 		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
 	}
 }
 
 func TestUserAgent(t *testing.T) {
-	userAgent = ""
 	VersionStr = "VSTR"
 	BuildStr = "BSTR"
 	InputPlugins = []string{"a", "b", "c"}
@@ -103,19 +109,50 @@ func TestUserAgent(t *testing.T) {
 
 	isRunningAsRoot = func() bool { return true }
 
-	ua := UserAgent()
-	expected := fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z)", runtime.Version(), runtime.GOOS, runtime.GOARCH)
-	if ua != expected {
-		t.Errorf("wrong UserAgent string constructed '%v', expecting '%v'", ua, expected)
+	tests := []struct {
+		name         string
+		logGroupName string
+		expected     string
+		errorMessage string
+	}{
+		{
+			"non container insights",
+			"test-group",
+			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+			"wrong UserAgent string constructed",
+		},
+		{
+			"container insights EKS",
+			"/aws/containerinsights/eks-cluster-name/performance",
+			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+			"\"container_insights\" flag shoould be in the outputs plugin list in container insights mode",
+		},
+		{
+			"container insights ECS",
+			"/aws/ecs/containerinsights/ecs-cluster-name/performance",
+			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+			"\"container_insights\" flag shoould be in the outputs plugin list in container insights mode",
+		},
+		{
+			"container insights prometheus",
+			"/aws/containerinsights/cluster-name/prometheus",
+			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+			"\"container_insights\" flag shoould be in the outputs plugin list in container insights mode",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, UserAgent(tc.logGroupName), tc.errorMessage)
+		})
 	}
 }
 
 func TestUserAgentEnvOverride(t *testing.T) {
-	userAgent = ""
 	os.Setenv(envconfig.CWAGENT_USER_AGENT, "CUSTOM CWAGENT USER AGENT")
 	expected := "CUSTOM CWAGENT USER AGENT"
 
-	ua := UserAgent()
+	ua := UserAgent("TestUserAgentEnvOverride")
 	if ua != expected {
 		t.Errorf("UserAgent should use value configured in environment variable CWAGENT_USER_AGENT, but '%v' found, expecting '%v'", ua, expected)
 	}

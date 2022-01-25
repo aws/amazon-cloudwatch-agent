@@ -127,7 +127,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
-	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
+	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent(t.Group)))
 
 	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}

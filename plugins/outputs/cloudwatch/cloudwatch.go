@@ -145,7 +145,7 @@ func (c *CloudWatch) Connect() error {
 		})
 
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
-	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent()))
+	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent("")))
 
 	//Format unique roll up list
 	c.RollupDimensions = GetUniqueRollupList(c.RollupDimensions)
