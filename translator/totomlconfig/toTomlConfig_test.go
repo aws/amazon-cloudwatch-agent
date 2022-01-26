@@ -125,6 +125,11 @@ func TestAdvancedConfig(t *testing.T) {
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/advanced_config_windows.json"), "./sampleConfig/advanced_config_windows.conf", "windows")
 }
 
+func TestDropOriginConfig(t *testing.T) {
+	resetContext()
+	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/drop_origin_linux.json"), "./sampleConfig/drop_origin_linux.conf", "linux")
+}
+
 func TestLogOnlyConfig(t *testing.T) {
 	resetContext()
 	checkIfTranslateSucceed(t, ReadFromFile("./sampleConfig/log_only_config_windows.json"), "./sampleConfig/log_only_config_windows.conf", "windows")

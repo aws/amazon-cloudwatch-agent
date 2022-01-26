@@ -457,6 +457,29 @@ func TestMetricConfigsRead(t *testing.T) {
 	assert.Equal(t, expected, c.MetricConfigs)
 }
 
+func TestDroppingOriginMetrics(t *testing.T) {
+	contents := `[outputs.cloudwatch.drop_original_metrics]
+	 					cpu = ["cpu_usage_idle", "time_active"]
+      					nvidia_smi = ["temperature_gpu", "utilization_gpu"]
+	 				`
+	c, err := buildCloudWatchFromToml(contents)
+
+	assert.NoError(t, err)
+
+	expected := make(map[string][]string)
+	expected["cpu"] = []string{"cpu_usage_idle", "time_active"}
+	expected["nvidia_smi"] = []string{"temperature_gpu", "utilization_gpu"}
+
+	assert.Equal(t, expected, c.DropOriginConfigs)
+
+	expectedMap := make(map[string]map[string]struct{})
+	expectedMap["cpu"] = map[string]struct{}{"cpu_usage_idle": {}, "time_active": {}}
+	expectedMap["nvidia_smi"] = map[string]struct{}{"temperature_gpu": {}, "utilization_gpu": {}}
+
+	actual := GetDroppingDimensionMap(c.DropOriginConfigs)
+	assert.Equal(t, expectedMap, actual)
+}
+
 func TestMissMetricConfig(t *testing.T) {
 	contents := `[outputs.cloudwatch]
                      access_key = "metric_access_key"
@@ -570,4 +593,34 @@ func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
 
 	datums := c.BuildMetricDatum(input)
 	require.Len(t, datums[0].Dimensions, 1)
+}
+
+func TestIsDropping(t *testing.T) {
+	contents := `[outputs.cloudwatch.drop_original_metrics]
+	 					cpu = ["cpu_usage_idle", "time_active"]
+	 				`
+	c, err := buildCloudWatchFromToml(contents)
+
+	assert.NoError(t, err)
+
+	c.droppingOriginMetrics = GetDroppingDimensionMap(c.DropOriginConfigs)
+
+	assert.True(t, c.IsDropping("cpu", "cpu_usage_idle"))
+	assert.True(t, c.IsDropping("cpu", "time_active"))
+	assert.False(t, c.IsDropping("cpu", "usage_guest"))
+
+}
+
+func TestIsDroppingWildCard(t *testing.T) {
+	contents := `[outputs.cloudwatch.drop_original_metrics]
+      					nvidia_smi = ["*"]
+	 				`
+	c, err := buildCloudWatchFromToml(contents)
+
+	assert.NoError(t, err)
+
+	c.droppingOriginMetrics = GetDroppingDimensionMap(c.DropOriginConfigs)
+
+	assert.True(t, c.IsDropping("nvidia_smi", "any_metric_name"))
+	assert.True(t, c.IsDropping("nvidia_smi", "utilization_gpu"))
 }
