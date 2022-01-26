@@ -594,3 +594,33 @@ func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
 	datums := c.BuildMetricDatum(input)
 	require.Len(t, datums[0].Dimensions, 1)
 }
+
+func TestIsDropping(t *testing.T) {
+	contents := `[outputs.cloudwatch.drop_original_metrics]
+	 					cpu = ["cpu_usage_idle", "time_active"]
+	 				`
+	c, err := buildCloudWatchFromToml(contents)
+
+	assert.NoError(t, err)
+
+	c.droppingOriginMetrics = GetDroppingDimensionMap(c.DropOriginConfigs)
+
+	assert.True(t, c.IsDropping("cpu", "cpu_usage_idle"))
+	assert.True(t, c.IsDropping("cpu", "time_active"))
+	assert.False(t, c.IsDropping("cpu", "usage_guest"))
+
+}
+
+func TestIsDroppingWildCard(t *testing.T) {
+	contents := `[outputs.cloudwatch.drop_original_metrics]
+      					nvidia_smi = ["*"]
+	 				`
+	c, err := buildCloudWatchFromToml(contents)
+
+	assert.NoError(t, err)
+
+	c.droppingOriginMetrics = GetDroppingDimensionMap(c.DropOriginConfigs)
+
+	assert.True(t, c.IsDropping("nvidia_smi", "any_metric_name"))
+	assert.True(t, c.IsDropping("nvidia_smi", "utilization_gpu"))
+}

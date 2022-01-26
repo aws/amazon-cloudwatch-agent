@@ -45,6 +45,7 @@ const (
 const (
 	opPutLogEvents  = "PutLogEvents"
 	opPutMetricData = "PutMetricData"
+	dropOriginalWildcard = "*"
 )
 
 type CloudWatch struct {
@@ -481,7 +482,7 @@ func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.Metri
 		for index, dimensions := range dimensionsList {
 			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
 			//metric datum
-			if index == 0 && c.isDropping(point.Name(), k) {
+			if index == 0 && c.IsDropping(point.Name(), k) {
 				continue
 			}
 			if len(distList) == 0 {
@@ -625,11 +626,13 @@ func GetUniqueRollupList(inputLists [][]string) [][]string {
 	return uniqueLists
 }
 
-func (c *CloudWatch) isDropping(metricName string, dimensionName string) bool {
+func (c *CloudWatch) IsDropping(metricName string, dimensionName string) bool {
 	if droppingDimensions, ok := c.droppingOriginMetrics[metricName]; ok {
-		if _, dropping := droppingDimensions[dimensionName]; dropping {
+		if _, droppingAll := droppingDimensions[dropOriginalWildcard]; droppingAll {
 			return true
 		}
+		_, dropping := droppingDimensions[dimensionName]
+		return dropping
 	}
 	return false
 }
