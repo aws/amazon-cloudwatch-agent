@@ -7,33 +7,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
-func createPodKeyFromMetaData(pod *corev1.Pod) string {
-	namespace := pod.Namespace
-	podName := pod.Name
-	return k8sutil.CreatePodKey(namespace, podName)
-}
-
-func createPodKeyFromMetric(tags map[string]string) string {
-	namespace := tags[K8sNamespace]
-	podName := tags[K8sPodNameKey]
-	return k8sutil.CreatePodKey(namespace, podName)
-}
-
-func createContainerKeyFromMetric(tags map[string]string) string {
-	namespace := tags[K8sNamespace]
-	podName := tags[K8sPodNameKey]
-	containerName := tags[ContainerNamekey]
-	return k8sutil.CreateContainerKey(namespace, podName, containerName)
-}
-
 const (
-	// kubeAllowedStringAlphaNums holds the characters allowed in replicaset names from as parent deployment
+	// deploymentUnexpectedRegEx holds the characters allowed in replicaset names from as parent deployment
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
-	kubeAllowedStringAlphaNums = "bcdfghjklmnpqrstvwxz2456789"
-	cronJobUnexpectedRegex     = `^[^0-9]+$`
+	deploymentUnexpectedRegEx = `[^b-hj-np-tv-x|^z|^2|^4-9]+`
+	// cronJobUnexpectedRegex ensures the characters in cron job name are only numbers.
+	cronJobUnexpectedRegex = `^[^0-9]+$`
 )
 
 // get the deployment name by stripping the last dash following some rules
@@ -50,7 +33,7 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 
-	if !stringInRuneset(suffix, kubeAllowedStringAlphaNums) {
+	if containUnexpectedRuneSet(suffix, deploymentUnexpectedRegEx) {
 		// Invalid suffix
 		return ""
 	}
@@ -72,11 +55,12 @@ func parseCronJobFromJob(name string) string {
 
 	suffix := name[lastDash+1:]
 	suffixInt, _ := strconv.ParseInt(suffix, 10, 64)
+	//Convert Unix Time In Minutes to Unix Time
 	suffixStringMultiply := strconv.FormatInt(suffixInt*60, 10)
 
 	//Checking if the suffix is a unix time by checking: the length and contains character
 	// - Checking for the length: CronJobControllerV2 is Unix Time in Minutes (7-9 characters) while CronJob is Unix Time (10 characters).
-	//   However, multiply by 60 to convert the Unix Time In Minutes back to Unix Time in order to having the same condition as Unix Time
+	//   However, multiply by 60 to convert the Unix Time In Minutes back to Unix Time in order to have the same condition as Unix Time
 	if len(suffix) != 10 && len(suffixStringMultiply) != 10 {
 		return ""
 	}
@@ -89,19 +73,28 @@ func parseCronJobFromJob(name string) string {
 	return name[:lastDash]
 }
 
-func stringInRuneset(name, subset string) bool {
-	for _, r := range name {
-		if !strings.ContainsRune(subset, r) {
-			// Found an unexpected rune in suffix
-			return false
-		}
-	}
-	return true
-}
-
 func containUnexpectedRuneSet(name string, unexpectedRegEx string) bool {
 	var validUnixTimeRegExp = regexp.MustCompile(unexpectedRegEx)
 
 	return validUnixTimeRegExp.MatchString(name)
 
+}
+
+func createPodKeyFromMetaData(pod *corev1.Pod) string {
+	namespace := pod.Namespace
+	podName := pod.Name
+	return k8sutil.CreatePodKey(namespace, podName)
+}
+
+func createPodKeyFromMetric(tags map[string]string) string {
+	namespace := tags[K8sNamespace]
+	podName := tags[K8sPodNameKey]
+	return k8sutil.CreatePodKey(namespace, podName)
+}
+
+func createContainerKeyFromMetric(tags map[string]string) string {
+	namespace := tags[K8sNamespace]
+	podName := tags[K8sPodNameKey]
+	containerName := tags[ContainerNamekey]
+	return k8sutil.CreateContainerKey(namespace, podName, containerName)
 }

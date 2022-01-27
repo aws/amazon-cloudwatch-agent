@@ -11,13 +11,13 @@ import (
 )
 
 func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {
-	assert.Equal(t, "", parseDeploymentFromReplicaSet("cloudwatch-agent"))
-	assert.Equal(t, "cloudwatch-agent", parseDeploymentFromReplicaSet("cloudwatch-agent-42kcz"))
+	assert.Equal(t, parseDeploymentFromReplicaSet("cloudwatch-agent"), "")
+	assert.Equal(t, parseDeploymentFromReplicaSet("cloudwatch-agent-42kcz"), "cloudwatch-agent")
 }
 
 func TestUtils_parseCronJobFromJob(t *testing.T) {
-	assert.Equal(t, "hello", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)))
-	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"abc"))
-	assert.Equal(t, "hello", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)))
-	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"-name"))
+	assert.Equal(t, parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)), "hello")
+	assert.Equal(t, parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"abc"), "")
+	assert.Equal(t, parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)), "hello")
+	assert.Equal(t, parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"-name"), "")
 }
