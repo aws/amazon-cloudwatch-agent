@@ -8,8 +8,11 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
-jobs:
+concurrency:
+  group: build-and-test-${{ github.ref_name }}
+  cancel-in-progress: true
 
+jobs:
   build:
     name: Build
     runs-on: ${{ matrix.os }}
