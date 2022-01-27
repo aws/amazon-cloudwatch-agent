@@ -4,11 +4,10 @@
 package stores
 
 import (
-	"strings"
-
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sutil"
 	corev1 "k8s.io/api/core/v1"
+	"regexp"
+	"strings"
 )
 
 func createPodKeyFromMetaData(pod *corev1.Pod) string {
@@ -59,34 +58,32 @@ func parseDeploymentFromReplicaSet(name string) string {
 	return name[:lastDash]
 }
 
-// get the cronJob name by stripping the last dash following some rules
-// return empty if it is not following the rule
+// Get the cronJob name by stripping the last dash following by the naming convention: JobName-UnixTime
+// based on https://github.com/kubernetes/kubernetes/blob/c4d752765b3bbac2237bf87cf0b1c2e307844666/pkg/controller/cronjob/cronjob_controllerv2.go#L594-L596.
+// Before v1.21 CronJob in Kubernetes has used Unix Time in second; after v1.21 is a Unix Time in Minutes.
+
 func parseCronJobFromJob(name string) string {
 	lastDash := strings.LastIndexAny(name, "-")
+
+	//Return empty since the naming convention is: JobName-UnixTime, if it does not have the "-", meanings the job name is empty
 	if lastDash == -1 {
-		// No dash
-		return ""
-	}
-	suffix := name[lastDash+1:]
-	if len(suffix) != 10 {
-		// Invalid suffix if it is not 10 rune
 		return ""
 	}
 
-	if !stringInRuneset(suffix, cronJobAllowedString) {
-		// Invalid suffix
+	suffix := name[lastDash+1:]
+
+	//Checking if the suffix is a unix time by checking: the length and contains character
+	if !isUnixTime(suffix) {
 		return ""
 	}
 
 	return name[:lastDash]
 }
 
-func stringInRuneset(name, subset string) bool {
-	for _, r := range name {
-		if !strings.ContainsRune(subset, r) {
-			// Found an unexpected rune in suffix
-			return false
-		}
-	}
-	return true
+func isUnixTime(name string) bool {
+	//Checking for the length: CronJobControllerV2 is Unix Time in Minutes (9 characters) while CronJob is Unix Time (10 characters)
+	var validUnixTimeRegExp = regexp.MustCompile(`/^\d{9,10}$/`)
+
+	return validUnixTimeRegExp.MatchString(name)
+
 }
