@@ -9,7 +9,7 @@
 
 [Unit]
 Description=Amazon CloudWatch Agent
-After=network.target
+After=network-online.target
 
 [Service]
 Type=simple
