@@ -4,6 +4,7 @@
 package stores
 
 import (
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	"regexp"
