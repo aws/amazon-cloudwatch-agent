@@ -33,7 +33,7 @@ const (
 	// kubeAllowedStringAlphaNums holds the characters allowed in replicaset names from as parent deployment
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
 	kubeAllowedStringAlphaNums = "bcdfghjklmnpqrstvwxz2456789"
-	cronJobAllowedString       = "0123456789"
+	cronJobUnexpectedRegex     = `^[^0-9]+$`
 )
 
 // get the deployment name by stripping the last dash following some rules
@@ -71,18 +71,36 @@ func parseCronJobFromJob(name string) string {
 	}
 
 	suffix := name[lastDash+1:]
+	suffixInt, _ := strconv.ParseInt(suffix, 10, 64)
+	suffixStringMultiply := strconv.FormatInt(suffixInt*60, 10)
 
 	//Checking if the suffix is a unix time by checking: the length and contains character
-	if isSuffixAUnixTime := isUnixTime(suffix); !isSuffixAUnixTime {
+	// - Checking for the length: CronJobControllerV2 is Unix Time in Minutes (7-9 characters) while CronJob is Unix Time (10 characters).
+	//   However, multiply by 60 to convert the Unix Time In Minutes back to Unix Time in order to having the same condition as Unix Time
+	if len(suffix) != 10 && len(suffixStringMultiply) != 10 {
+		return ""
+	}
+
+	// - Checking for unexpected character such as having characters others than numbers
+	if containUnexpectedRuneSet(suffix, cronJobUnexpectedRegex) || containUnexpectedRuneSet(suffixStringMultiply, cronJobUnexpectedRegex) {
 		return ""
 	}
 
 	return name[:lastDash]
 }
 
-func isUnixTime(name string) bool {
-	//Checking for the length: CronJobControllerV2 is Unix Time in Minutes (9 characters) while CronJob is Unix Time (10 characters)
-	var validUnixTimeRegExp = regexp.MustCompile(`/^\d{9,10}$/`)
+func stringInRuneset(name, subset string) bool {
+	for _, r := range name {
+		if !strings.ContainsRune(subset, r) {
+			// Found an unexpected rune in suffix
+			return false
+		}
+	}
+	return true
+}
+
+func containUnexpectedRuneSet(name string, unexpectedRegEx string) bool {
+	var validUnixTimeRegExp = regexp.MustCompile(unexpectedRegEx)
 
 	return validUnixTimeRegExp.MatchString(name)
 

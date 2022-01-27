@@ -5,6 +5,7 @@ package stores
 
 import (
 	"github.com/docker/docker/pkg/testutil/assert"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -15,8 +16,8 @@ func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {
 }
 
 func TestUtils_parseCronJobFromJob(t *testing.T) {
-	assert.Equal(t, "hello", parseCronJobFromJob("hello"+strconv.Itoa(time.Now().Unix()/60)))
-	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.Itoa(time.Now().Unix()/60)+"abc"))
-	assert.Equal(t, "hello", parseCronJobFromJob("hello-"+strconv.Itoa(time.Now().Unix()/60)))
-	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.Itoa(time.Now().Unix()/60)+"-name"))
+	assert.Equal(t, "hello", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)))
+	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"abc"))
+	assert.Equal(t, "hello", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)))
+	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"-name"))
 }
