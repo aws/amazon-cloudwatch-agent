@@ -11,6 +11,32 @@ import (
 	"strings"
 )
 
+func containUnexpectedRuneSet(name string, unexpectedRegEx string) bool {
+	var validUnixTimeRegExp = regexp.MustCompile(unexpectedRegEx)
+
+	return validUnixTimeRegExp.MatchString(name)
+
+}
+
+func createPodKeyFromMetaData(pod *corev1.Pod) string {
+	namespace := pod.Namespace
+	podName := pod.Name
+	return k8sutil.CreatePodKey(namespace, podName)
+}
+
+func createPodKeyFromMetric(tags map[string]string) string {
+	namespace := tags[K8sNamespace]
+	podName := tags[K8sPodNameKey]
+	return k8sutil.CreatePodKey(namespace, podName)
+}
+
+func createContainerKeyFromMetric(tags map[string]string) string {
+	namespace := tags[K8sNamespace]
+	podName := tags[K8sPodNameKey]
+	containerName := tags[ContainerNamekey]
+	return k8sutil.CreateContainerKey(namespace, podName, containerName)
+}
+
 const (
 	// deploymentUnexpectedRegEx holds the characters allowed in replicaset names from as parent deployment
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
@@ -71,30 +97,4 @@ func parseCronJobFromJob(name string) string {
 	}
 
 	return name[:lastDash]
-}
-
-func containUnexpectedRuneSet(name string, unexpectedRegEx string) bool {
-	var validUnixTimeRegExp = regexp.MustCompile(unexpectedRegEx)
-
-	return validUnixTimeRegExp.MatchString(name)
-
-}
-
-func createPodKeyFromMetaData(pod *corev1.Pod) string {
-	namespace := pod.Namespace
-	podName := pod.Name
-	return k8sutil.CreatePodKey(namespace, podName)
-}
-
-func createPodKeyFromMetric(tags map[string]string) string {
-	namespace := tags[K8sNamespace]
-	podName := tags[K8sPodNameKey]
-	return k8sutil.CreatePodKey(namespace, podName)
-}
-
-func createContainerKeyFromMetric(tags map[string]string) string {
-	namespace := tags[K8sNamespace]
-	podName := tags[K8sPodNameKey]
-	containerName := tags[ContainerNamekey]
-	return k8sutil.CreateContainerKey(namespace, podName, containerName)
 }
