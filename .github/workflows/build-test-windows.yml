@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: build-and-test-windows-${{ github.event.pull_request.number }}
+  group: build-and-test-windows-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
