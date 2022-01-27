@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - master
+
+    paths-ignore:
+      - '.github/**'
+      - '!.github/workflows/build.yml'
+      - '!.github/workflows/build-test-windows.yml'
+      - '**.md'
+
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
