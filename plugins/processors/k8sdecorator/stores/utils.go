@@ -11,13 +11,6 @@ import (
 	"strings"
 )
 
-func containUnexpectedRuneSet(name string, unexpectedRegEx string) bool {
-	var validUnixTimeRegExp = regexp.MustCompile(unexpectedRegEx)
-
-	return validUnixTimeRegExp.MatchString(name)
-
-}
-
 func createPodKeyFromMetaData(pod *corev1.Pod) string {
 	namespace := pod.Namespace
 	podName := pod.Name
@@ -97,4 +90,9 @@ func parseCronJobFromJob(name string) string {
 	}
 
 	return name[:lastDash]
+}
+
+func containUnexpectedRuneSet(name string, unexpectedRegEx string) bool {
+	var validUnixTimeRegExp = regexp.MustCompile(unexpectedRegEx)
+	return validUnixTimeRegExp.MatchString(name)
 }
