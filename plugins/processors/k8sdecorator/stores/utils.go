@@ -73,7 +73,7 @@ func parseCronJobFromJob(name string) string {
 	suffix := name[lastDash+1:]
 
 	//Checking if the suffix is a unix time by checking: the length and contains character
-	if !isUnixTime(suffix) {
+	if isSuffixAUnixTime := isUnixTime(suffix); !isSuffixAUnixTime {
 		return ""
 	}
 
