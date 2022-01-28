@@ -6,9 +6,10 @@ on:
       - master
 
     paths-ignore:
+      - '**.md'
       - '.github/**'
       - '!.github/workflows/**'
-      - '**.md'
+
 
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
