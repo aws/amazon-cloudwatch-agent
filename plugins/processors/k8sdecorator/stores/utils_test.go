@@ -19,9 +19,11 @@ func TestUtils_parseCronJobFromJob(t *testing.T) {
 	//For CronJobControllV2 which is after K8s v1.21
 	assert.Equal(t, "hello", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)))
 	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"abc"))
+	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"-name"))
 
 	//For CronJob which is before K8s v1.21
 	assert.Equal(t, "hello", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix(), 10)))
 	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"-name"))
+	assert.Equal(t, "", parseCronJobFromJob("hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"&64"))
 	assert.Equal(t, "", parseCronJobFromJob("hello"+strconv.FormatInt(time.Now().Unix(), 10)+"-/@89@"))
 }
