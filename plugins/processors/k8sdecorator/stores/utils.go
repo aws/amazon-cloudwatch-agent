@@ -39,15 +39,6 @@ var (
 	cronJobUnexpectedRegex = regexp.MustCompile(`^[^0-9]+$`)
 )
 
-//Defining Embedding type to access to the RegExp methods (https://stackoverflow.com/a/43507669) since we cannot define new methods to non-local type
-type Regexp struct {
-	*regexp.Regexp
-}
-
-func (unexpectedRegEx *Regexp) containUnexpectedRuneSet(name string) bool {
-	return unexpectedRegEx.MatchString(name)
-}
-
 // get the deployment name by stripping the last dash following some rules
 // return empty if it is not following the rule
 func parseDeploymentFromReplicaSet(name string) string {
@@ -62,8 +53,7 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 
-	unexpectedRegEx := &Regexp{deploymentUnexpectedRegEx}
-	if unexpectedRegEx.containUnexpectedRuneSet(suffix) {
+	if deploymentUnexpectedRegEx.MatchString(suffix) {
 		// Invalid suffix
 		return ""
 	}
@@ -101,9 +91,8 @@ func parseCronJobFromJob(name string) string {
 		return ""
 	}
 	
-	unexpectedRegEx := &Regexp{cronJobUnexpectedRegex}
 	//Checking for unexpected character such as having characters others than numbers
-	if unexpectedRegEx.containUnexpectedRuneSet(suffix) || unexpectedRegEx.containUnexpectedRuneSet(suffixStringMultiply) {
+	if cronJobUnexpectedRegex.MatchString(suffix) || cronJobUnexpectedRegex.MatchString(suffixStringMultiply) {
 		return ""
 	}
 
