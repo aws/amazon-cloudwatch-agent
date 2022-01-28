@@ -50,45 +50,47 @@ func TestUtils_parseCronJobFromJob(t *testing.T) {
 		expected     string
 	}{
 		{
-			name: "Get CronJobControllerV2 Name after k8s v1.21 with correct Unix Time",
+			name: "Get CronJobControllerV2 or CronJob's Name with alphabet characters",
+			inputString: "hello-name",
+			expected: "",
+		},
+		{
+			name: "Get CronJobControllerV2 or CronJob's Name with special characters",
+			inputString: "hello-*&^*(*a",
+			expected: "",
+		},
+		{
+			name: "Get CronJobControllerV2 or CronJob's Name with Unix Time not equal to 10 letters",
+			inputString: "hello-238",
+			expected: "",
+		},
+		{
+			name: "Get CronJobControllerV2's Name after k8s v1.21 with correct Unix Time",
 			inputString: "hello-"+strconv.FormatInt(time.Now().Unix()/60, 10),
 			expected: "hello",
 		},
 		{
-			name: "Get CronJobControllerV2 Name after k8s v1.21 with alphabet Unix Time",
+			name: "Get CronJobControllerV2's Name after k8s v1.21 with alphabet Unix Time",
 			inputString: "hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"abc",
 			expected: "",
 		},
+		
 		{
-			name: "Get CronJobControllerV2 Name after k8s v1.21 with alphabet characters",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"-name",
+			name: "Get CronJobControllerV2's Name after k8s v1.21 with Unix Time not equal to 10 letters",
+			inputString: "hello"+strconv.FormatInt(time.Now().Unix()/60, 10)+"523",
 			expected: "",
 		},
 		{
-			name: "Get CronJobControllerV2 Name after k8s v1.21 with Unix Time not equal to 10 letters",
-			inputString: "hello"+strconv.FormatInt(time.Now().Unix()/60, 10)+"289",
-			expected: "",
-		},
-		{
-			name: "Get CronJob Name before k8s v1.21 with correct Unix Time",
+			name: "Get CronJob's Name before k8s v1.21 with correct Unix Time",
 			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10),
 			expected: "hello",
 		},
 		{
-			name: "Get CronJob Name before k8s v1.21 with alphabet characters",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"-name",
-			expected: "",
-		},
-		{
-			name: "Get CronJob Name before k8s v1.21 with special characters",
+			name: "Get CronJob's Name before k8s v1.21 with special characters",
 			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"&64",
 			expected: "",
 		},
-		{
-			name: "Get CronJob Name before k8s v1.21 with Unix Time not equal to 10 letters",
-			inputString: "hello"+strconv.FormatInt(time.Now().Unix(), 10)+"-289",
-			expected: "",
-		},
+		
 	}
 
 	for _, tc := range testcases {
