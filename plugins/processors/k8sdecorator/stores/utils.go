@@ -100,6 +100,11 @@ func parseCronJobFromJob(name string) string {
 }
 
 func containUnexpectedRuneSet(name, unexpectedRegEx string) bool {
-	var validUnixTimeRegExp = regexp.MustCompile(unexpectedRegEx)
+	validUnixTimeRegExp, err := regexp.Compile(unexpectedRegEx)
+
+	if err != nil {
+		return true
+	}
+
 	return validUnixTimeRegExp.MatchString(name)
 }
