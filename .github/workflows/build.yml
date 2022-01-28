@@ -7,7 +7,7 @@ on:
 
     paths-ignore:
       - '.github/**'
-      - '!.github/workflows/**'
+      - '!.github/workflows/build-*'
       - '**.md'
 
   pull_request:
