@@ -93,7 +93,7 @@ func parseCronJobFromJob(name string) string {
 	return name[:lastDash]
 }
 
-func containUnexpectedRuneSet(name string, unexpectedRegEx string) bool {
+func containUnexpectedRuneSet(name, unexpectedRegEx string) bool {
 	var validUnixTimeRegExp = regexp.MustCompile(unexpectedRegEx)
 	return validUnixTimeRegExp.MatchString(name)
 }
