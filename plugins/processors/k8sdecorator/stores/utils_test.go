@@ -18,7 +18,7 @@ func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {
 	}{
 		{
 			name: "Get ReplicaSet Name with unallowed characters",
-			inputString: "cloudwatch-agent",
+			inputString: "cloudwatch-ag",
 			expected: "",
 		},
 		{
@@ -35,7 +35,7 @@ func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, parseDeploymentFromReplicaSet(tc.inputString))
+			assert.Equal(t, parseDeploymentFromReplicaSet(tc.inputString), tc.expected, )
 		})
 	}
 }
@@ -92,7 +92,7 @@ func TestUtils_parseCronJobFromJob(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, parseCronJobFromJob(tc.inputString))
+			assert.Equal(t,parseCronJobFromJob(tc.inputString), tc.expected)
 		})
 	}
 }
