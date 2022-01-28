@@ -68,7 +68,7 @@ func TestUtils_parseCronJobFromJob(t *testing.T) {
 		},
 		{
 			name: "Get CronJobControllerV2's Name after k8s v1.21 with alphabet Unix Time",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"abc",
+			inputString: "hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"a28bc",
 			expected: "",
 		},
 		
