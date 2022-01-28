@@ -32,11 +32,11 @@ func createContainerKeyFromMetric(tags map[string]string) string {
 }
 
 var (
-	// deploymentUnexpectedRegEx holds the characters allowed in replicaset names from as parent deployment
+	// deploymentUnallowedRegExp holds the characters allowed in replicaset names from as parent deployment
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
-	deploymentUnexpectedRegExp = regexp.MustCompile(`[^b-hj-np-tv-xz-z2-24-9]+`)
-	// cronJobUnexpectedRegex ensures the characters in cron job name are only numbers.
-	cronJobUnexpectedRegexp = regexp.MustCompile(`^[^0-9]+$`)
+	deploymentUnallowedRegExp = regexp.MustCompile(`[^b-hj-np-tv-xz-z2-24-9]+`)
+	// cronJobUnallowedRegexp ensures the characters in cron job name are only numbers.
+	cronJobUnallowedRegexp = regexp.MustCompile(`^[^0-9]+$`)
 )
 
 // get the deployment name by stripping the last dash following some rules
@@ -53,7 +53,7 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 
-	if deploymentUnexpectedRegExp.MatchString(suffix) {
+	if deploymentUnallowedRegExp.MatchString(suffix) {
 		// Invalid suffix
 		return ""
 	}
@@ -91,8 +91,8 @@ func parseCronJobFromJob(name string) string {
 		return ""
 	}
 	
-	//Checking for unexpected character such as having characters others than numbers
-	if cronJobUnexpectedRegexp.MatchString(suffix) || cronJobUnexpectedRegexp.MatchString(suffixStringMultiply) {
+	//Checking for unallowed character such as having characters others than numbers
+	if cronJobUnallowedRegexp.MatchString(suffix) || cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
 		return ""
 	}
 
