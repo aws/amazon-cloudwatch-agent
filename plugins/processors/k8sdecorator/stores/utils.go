@@ -79,13 +79,14 @@ func parseCronJobFromJob(name string) string {
 	suffixStringMultiply := strconv.FormatInt(suffixInt*60, 10)
 
 	//Checking if the suffix is a unix time by checking: the length and contains character
-	// - Checking for the length: CronJobControllerV2 is Unix Time in Minutes (7-9 characters) while CronJob is Unix Time (10 characters).
-	//   However, multiply by 60 to convert the Unix Time In Minutes back to Unix Time in order to have the same condition as Unix Time
+	
+	//Checking for the length: CronJobControllerV2 is Unix Time in Minutes (7-9 characters) while CronJob is Unix Time (10 characters).
+	//However, multiply by 60 to convert the Unix Time In Minutes back to Unix Time in order to have the same condition as Unix Time
 	if len(suffix) != 10 && len(suffixStringMultiply) != 10 {
 		return ""
 	}
 
-	// - Checking for unexpected character such as having characters others than numbers
+	//Checking for unexpected character such as having characters others than numbers
 	if containUnexpectedRuneSet(suffix, cronJobUnexpectedRegex) || containUnexpectedRuneSet(suffixStringMultiply, cronJobUnexpectedRegex) {
 		return ""
 	}
