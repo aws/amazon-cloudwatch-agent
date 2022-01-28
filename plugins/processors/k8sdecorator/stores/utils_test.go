@@ -38,9 +38,6 @@ func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {
 			assert.Equal(t, tc.expected, parseDeploymentFromReplicaSet(tc.inputString))
 		})
 	}
-
-	assert.Equal(t, "", parseDeploymentFromReplicaSet("cloudwatch-agent"))
-	assert.Equal(t, "cloudwatch-agent", parseDeploymentFromReplicaSet("cloudwatch-agent-42kcz"))
 }
 
 func TestUtils_parseCronJobFromJob(t *testing.T) {

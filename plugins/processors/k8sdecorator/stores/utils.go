@@ -36,7 +36,7 @@ var (
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
 	deploymentUnallowedRegExp = regexp.MustCompile(`[^b-hj-np-tv-xz-z2-24-9]+`)
 	// cronJobUnallowedRegexp ensures the characters in cron job name are only numbers.
-	cronJobUnallowedRegexp = regexp.MustCompile(`^[^0-9]+$`)
+	cronJobUnallowedRegexp = regexp.MustCompile(`^[0-9]+`)
 )
 
 // get the deployment name by stripping the last dash following some rules
@@ -92,7 +92,7 @@ func parseCronJobFromJob(name string) string {
 	}
 	
 	//Checking for unallowed character such as having characters others than numbers
-	if cronJobUnallowedRegexp.MatchString(suffix) || cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
+	if !cronJobUnallowedRegexp.MatchString(suffix) || !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
 		return ""
 	}
 
