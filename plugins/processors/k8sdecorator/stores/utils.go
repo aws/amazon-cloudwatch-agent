@@ -34,9 +34,9 @@ func createContainerKeyFromMetric(tags map[string]string) string {
 var (
 	// deploymentUnexpectedRegEx holds the characters allowed in replicaset names from as parent deployment
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
-	deploymentUnexpectedRegEx = regexp.MustCompile(`[^b-hj-np-tv-xz-z2-24-9]+`)
+	deploymentUnexpectedRegExp = regexp.MustCompile(`[^b-hj-np-tv-xz-z2-24-9]+`)
 	// cronJobUnexpectedRegex ensures the characters in cron job name are only numbers.
-	cronJobUnexpectedRegex = regexp.MustCompile(`^[^0-9]+$`)
+	cronJobUnexpectedRegexp = regexp.MustCompile(`^[^0-9]+$`)
 )
 
 // get the deployment name by stripping the last dash following some rules
@@ -53,7 +53,7 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 
-	if deploymentUnexpectedRegEx.MatchString(suffix) {
+	if containUnexpectedRuneSet(suffix,deploymentUnexpectedRegExp) {
 		// Invalid suffix
 		return ""
 	}
@@ -92,10 +92,13 @@ func parseCronJobFromJob(name string) string {
 	}
 	
 	//Checking for unexpected character such as having characters others than numbers
-	if cronJobUnexpectedRegex.MatchString(suffix) || cronJobUnexpectedRegex.MatchString(suffixStringMultiply) {
+	if containUnexpectedRuneSet(suffix,cronJobUnexpectedRegexp) || containUnexpectedRuneSet(suffixStringMultiply,cronJobUnexpectedRegexp) {
 		return ""
 	}
 
 	return name[:lastDash]
 }
 
+func containUnexpectedRuneSet(name string, unexpectedRegexp *regexp.Regexp) bool {
+	return unexpectedRegexp.MatchString(name)
+}
