@@ -53,7 +53,7 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 
-	if containUnexpectedRuneSet(suffix,deploymentUnexpectedRegExp) {
+	if deploymentUnexpectedRegExp.MatchString(suffix) {
 		// Invalid suffix
 		return ""
 	}
@@ -92,13 +92,10 @@ func parseCronJobFromJob(name string) string {
 	}
 	
 	//Checking for unexpected character such as having characters others than numbers
-	if containUnexpectedRuneSet(suffix,cronJobUnexpectedRegexp) || containUnexpectedRuneSet(suffixStringMultiply,cronJobUnexpectedRegexp) {
+	if cronJobUnexpectedRegexp.MatchString(suffix) || cronJobUnexpectedRegexp.MatchString(suffixStringMultiply) {
 		return ""
 	}
 
 	return name[:lastDash]
 }
 
-func containUnexpectedRuneSet(name string, unexpectedRegexp *regexp.Regexp) bool {
-	return unexpectedRegexp.MatchString(name)
-}
