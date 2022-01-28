@@ -34,7 +34,7 @@ func createContainerKeyFromMetric(tags map[string]string) string {
 const (
 	// deploymentUnexpectedRegEx holds the characters allowed in replicaset names from as parent deployment
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
-	deploymentUnexpectedRegEx = `[^b-hj-np-tv-x|^z|^2|^4-9]+`
+	deploymentUnexpectedRegEx = `[^b-hj-np-tv-xz-z2-24-9]+`
 	// cronJobUnexpectedRegex ensures the characters in cron job name are only numbers.
 	cronJobUnexpectedRegex = `^[^0-9]+$`
 )
