@@ -31,13 +31,22 @@ func createContainerKeyFromMetric(tags map[string]string) string {
 	return k8sutil.CreateContainerKey(namespace, podName, containerName)
 }
 
-const (
+var (
 	// deploymentUnexpectedRegEx holds the characters allowed in replicaset names from as parent deployment
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
-	deploymentUnexpectedRegEx = `[^b-hj-np-tv-xz-z2-24-9]+`
+	deploymentUnexpectedRegEx = regexp.MustCompile(`[^b-hj-np-tv-xz-z2-24-9]+`)
 	// cronJobUnexpectedRegex ensures the characters in cron job name are only numbers.
-	cronJobUnexpectedRegex = `^[^0-9]+$`
+	cronJobUnexpectedRegex = regexp.MustCompile(`^[^0-9]+$`)
 )
+
+//Defining Embedding type to access to the RegExp methods (https://stackoverflow.com/a/43507669) since we cannot define new methods to non-local type
+type Regexp struct {
+	*regexp.Regexp
+}
+
+func (unexpectedRegEx *Regexp) containUnexpectedRuneSet(name string) bool {
+	return unexpectedRegEx.MatchString(name)
+}
 
 // get the deployment name by stripping the last dash following some rules
 // return empty if it is not following the rule
@@ -53,7 +62,8 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 
-	if containUnexpectedRuneSet(suffix, deploymentUnexpectedRegEx) {
+	unexpectedRegEx := &Regexp{deploymentUnexpectedRegEx}
+	if unexpectedRegEx.containUnexpectedRuneSet(suffix) {
 		// Invalid suffix
 		return ""
 	}
@@ -90,21 +100,13 @@ func parseCronJobFromJob(name string) string {
 	if len(suffix) != 10 && len(suffixStringMultiply) != 10 {
 		return ""
 	}
-
+	
+	unexpectedRegEx := &Regexp{cronJobUnexpectedRegex}
 	//Checking for unexpected character such as having characters others than numbers
-	if containUnexpectedRuneSet(suffix, cronJobUnexpectedRegex) || containUnexpectedRuneSet(suffixStringMultiply, cronJobUnexpectedRegex) {
+	if unexpectedRegEx.containUnexpectedRuneSet(suffix) || unexpectedRegEx.containUnexpectedRuneSet(suffixStringMultiply) {
 		return ""
 	}
 
 	return name[:lastDash]
 }
 
-func containUnexpectedRuneSet(name, unexpectedRegEx string) bool {
-	validUnixTimeRegExp, err := regexp.Compile(unexpectedRegEx)
-
-	if err != nil {
-		return true
-	}
-
-	return validUnixTimeRegExp.MatchString(name)
-}
