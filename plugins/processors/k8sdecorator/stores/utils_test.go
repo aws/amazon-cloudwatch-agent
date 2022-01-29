@@ -52,7 +52,7 @@ func TestUtils_parseCronJobFromJob(t *testing.T) {
 			expected: "",
 		},
 		{
-			name: "Get CronJobControllerV2 or CronJob's Name with special characters",
+			name: "Get CronJobControllerV2 or CronJob's Name with special characters and exact 10 characters",
 			inputString: "hello-1678995&64",
 			expected: "",
 		},
