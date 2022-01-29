@@ -21,14 +21,18 @@ jobs:
             cachepath: |
               ~/.cache/go-build
               ~/go/pkg/mod
-              /home/runner/.cache/go-build
           - os: macos-latest
             cachepath: |
               ~/Library/Caches/go-build
               ~/go/pkg/mod
-              /Users/runner/Library/Caches/go-build
     steps:  
-
+    - name: Cache if success
+      id: build-test
+      uses: actions/cache@v2
+      with:
+        path: AOC_GIT_SHA
+        key: ${{ github.workflow }}-${{ github.run_id }}-${{ matrix.os }}
+    
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:

@@ -11,6 +11,12 @@ jobs:
   windows-unittest:
     runs-on: windows-latest
     steps:
+      - name: Cache if success
+        id: build-test
+        uses: actions/cache@v2
+        with:
+          path: AOC_GIT_SHA
+          key: ${{ github.workflow }}-${{ github.run_id }}
       - name: Checkout Repo
         uses: actions/checkout@v2
 
@@ -25,7 +31,6 @@ jobs:
           path: |
             %LocalAppData%\go-build
             ~/go/pkg/mod
-            C:\Users\runneradmin\AppData\Local\go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
