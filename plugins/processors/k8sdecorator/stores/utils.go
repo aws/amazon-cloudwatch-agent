@@ -78,14 +78,13 @@ func parseCronJobFromJob(name string) string {
 	//Convert Unix Time In Minutes to Unix Time
 	suffixStringMultiply := strconv.FormatInt(suffixInt*60, 10)
 	//Checking if the suffix is a unix time by checking: the length and contains character
-
 	//Checking for the length: CronJobControllerV2 is Unix Time in Minutes (7-9 characters) while CronJob is Unix Time (10 characters).
 	//However, multiply by 60 to convert the Unix Time In Minutes back to Unix Time in order to have the same condition as Unix Time
-	if len(suffix) == 10 && !cronJobUnallowedRegexp.MatchString(suffix)  {
+	if len(suffix) == 10 && !cronJobUnallowedRegexp.MatchString(suffix)  { //Condition for CronJob before k8s v1.21
 		return name[:lastDash]
 	}
 	
-	if  len(suffixStringMultiply) == 10 && !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
+	if  len(suffixStringMultiply) == 10 && !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) { //Condition for CronJobControllerV2 after k8s v1.21
 		return name[:lastDash]
 	}
 
