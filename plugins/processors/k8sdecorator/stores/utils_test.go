@@ -84,7 +84,7 @@ func TestUtils_parseCronJobFromJob(t *testing.T) {
 		},
 		{
 			name: "Get CronJob's Name before k8s v1.21 with special characters",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"&64",
+			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"1678995&64",
 			expected: "",
 		},
 		

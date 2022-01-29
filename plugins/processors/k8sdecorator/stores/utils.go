@@ -77,12 +77,12 @@ func parseCronJobFromJob(name string) string {
 	suffixInt, err := strconv.ParseInt(suffix, 10, 64)
 
 	if err != nil {
+		//This convert can also be checked for unallowed characters besides numbers too
 		return ""
 	}
 
 	//Convert Unix Time In Minutes to Unix Time
 	suffixStringMultiply := strconv.FormatInt(suffixInt*60, 10)
-
 	//Checking if the suffix is a unix time by checking: the length and contains character
 
 	//Checking for the length: CronJobControllerV2 is Unix Time in Minutes (7-9 characters) while CronJob is Unix Time (10 characters).
@@ -91,8 +91,9 @@ func parseCronJobFromJob(name string) string {
 		return ""
 	}
 	
+	
 	//Checking for unallowed character such as having characters others than numbers
-	if cronJobUnallowedRegexp.MatchString(suffix) || cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
+	if cronJobUnallowedRegexp.MatchString(suffix) || !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
 		return ""
 	}
 
