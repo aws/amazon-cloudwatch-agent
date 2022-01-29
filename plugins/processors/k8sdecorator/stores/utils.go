@@ -93,7 +93,7 @@ func parseCronJobFromJob(name string) string {
 	
 	
 	//Checking for unallowed character such as having characters others than numbers
-	if cronJobUnallowedRegexp.MatchString(suffix) || !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
+	if cronJobUnallowedRegexp.MatchString(suffix) || cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
 		return ""
 	}
 
