@@ -53,7 +53,7 @@ func TestUtils_parseCronJobFromJob(t *testing.T) {
 		},
 		{
 			name: "Get CronJobControllerV2 or CronJob's Name with special characters",
-			inputString: "hello-*&^*(*a",
+			inputString: "hello-1678995&64",
 			expected: "",
 		},
 		{
@@ -84,7 +84,7 @@ func TestUtils_parseCronJobFromJob(t *testing.T) {
 		},
 		{
 			name: "Get CronJob's Name before k8s v1.21 with special characters",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"1678995&64",
+			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"&#64",
 			expected: "",
 		},
 		

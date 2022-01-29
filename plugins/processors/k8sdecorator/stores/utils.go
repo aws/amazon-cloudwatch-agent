@@ -48,17 +48,12 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 	suffix := name[lastDash+1:]
-	if len(suffix) < 3 {
+	if len(suffix) >= 3 && !deploymentUnallowedRegExp.MatchString(suffix) {
 		// Invalid suffix if it is less than 3
-		return ""
+		return name[:lastDash]
 	}
-
-	if deploymentUnallowedRegExp.MatchString(suffix) {
-		// Invalid suffix
-		return ""
-	}
-
-	return name[:lastDash]
+	
+	return ""
 }
 
 // Get the cronJob name by stripping the last dash following by the naming convention: JobName-UnixTime
@@ -74,12 +69,9 @@ func parseCronJobFromJob(name string) string {
 	}
 
 	suffix := name[lastDash+1:]
-	suffixInt, err := strconv.ParseInt(suffix, 10, 64)
+	suffixInt, _ := strconv.ParseInt(suffix, 10, 64)
 
-	if err != nil {
-		//This convert can also be checked for unallowed characters besides numbers too
-		return ""
-	}
+
 
 	//Convert Unix Time In Minutes to Unix Time
 	suffixStringMultiply := strconv.FormatInt(suffixInt*60, 10)
@@ -87,16 +79,15 @@ func parseCronJobFromJob(name string) string {
 
 	//Checking for the length: CronJobControllerV2 is Unix Time in Minutes (7-9 characters) while CronJob is Unix Time (10 characters).
 	//However, multiply by 60 to convert the Unix Time In Minutes back to Unix Time in order to have the same condition as Unix Time
-	if len(suffix) != 10 && len(suffixStringMultiply) != 10 {
-		return ""
+	if len(suffix) == 10 && !cronJobUnallowedRegexp.MatchString(suffix)  {
+		return name[:lastDash]
 	}
-	
 	
 	//Checking for unallowed character such as having characters others than numbers
-	if cronJobUnallowedRegexp.MatchString(suffix) || cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
-		return ""
+	if  len(suffixStringMultiply) == 10 && !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
+		return name[:lastDash]
 	}
 
-	return name[:lastDash]
+	return ""
 }
 
