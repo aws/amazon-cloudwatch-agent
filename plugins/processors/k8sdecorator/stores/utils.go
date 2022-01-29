@@ -48,12 +48,8 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 	suffix := name[lastDash+1:]
-	if len(suffix) < 3 {
+	if len(suffix) >= 3 && !deploymentUnallowedRegExp.MatchString(suffix){
 		// Invalid suffix if it is less than 3
-		return ""
-	}
-
-	if deploymentUnallowedRegExp.MatchString(suffix) {
 		return ""
 	}
 
