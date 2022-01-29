@@ -48,12 +48,16 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 	suffix := name[lastDash+1:]
-	if len(suffix) >= 3 && !deploymentUnallowedRegExp.MatchString(suffix) {
+	if len(suffix) < 3 {
 		// Invalid suffix if it is less than 3
-		return name[:lastDash]
+		return ""
 	}
 
-	return ""
+	if deploymentUnallowedRegExp.MatchString(suffix) {
+		return ""
+	}
+
+	return name[:lastDash]
 }
 
 // Get the cronJob name by stripping the last dash following by the naming convention: JobName-UnixTime
