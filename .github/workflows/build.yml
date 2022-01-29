@@ -34,24 +34,29 @@ jobs:
         key: ${{ github.workflow }}-${{ github.run_id }}-${{ matrix.os }}
     
     - name: Set up Go 1.x
+      if: steps.build-test.outputs.cache-hit != 'true'
       uses: actions/setup-go@v2
       with:
         go-version: ~1.15.15
-      id: go
+      
 
     - name: Configure git with longpath enabled (for windows)
+      if: steps.build-test.outputs.cache-hit != 'true'
       run: git config --global core.longpaths true
 
     - name: Check out code
+      if: steps.build-test.outputs.cache-hit != 'true'
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
         submodules: 'true'
 
     - name: Debug go.mod
+      if: steps.build-test.outputs.cache-hit != 'true'
       run: cat go.mod
 
     - name: Cache build output
+      if: steps.build-test.outputs.cache-hit != 'true'
       uses: actions/cache@v2
       with:
         path: ${{ matrix.cachepath }}
@@ -60,12 +65,15 @@ jobs:
           ${{ runner.os }}-go-
 
     - name: Test
+      if: steps.build-test.outputs.cache-hit != 'true'
       run: make test
 
     - name: Upload coverage to Codecov
+      if: steps.build-test.outputs.cache-hit != 'true'
       uses: codecov/codecov-action@v2
       with:
         verbose: true
 
     - name: Build
+      if: steps.build-test.outputs.cache-hit != 'true'
       run: make build
