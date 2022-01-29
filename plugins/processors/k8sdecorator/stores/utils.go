@@ -52,7 +52,7 @@ func parseDeploymentFromReplicaSet(name string) string {
 		// Invalid suffix if it is less than 3
 		return name[:lastDash]
 	}
-	
+
 	return ""
 }
 
@@ -69,9 +69,11 @@ func parseCronJobFromJob(name string) string {
 	}
 
 	suffix := name[lastDash+1:]
-	suffixInt, _ := strconv.ParseInt(suffix, 10, 64)
+	suffixInt, err := strconv.ParseInt(suffix, 10, 64)
 
-
+	if err != nil {
+		return ""
+	}
 
 	//Convert Unix Time In Minutes to Unix Time
 	suffixStringMultiply := strconv.FormatInt(suffixInt*60, 10)
@@ -83,7 +85,6 @@ func parseCronJobFromJob(name string) string {
 		return name[:lastDash]
 	}
 	
-	//Checking for unallowed character such as having characters others than numbers
 	if  len(suffixStringMultiply) == 10 && !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) {
 		return name[:lastDash]
 	}
