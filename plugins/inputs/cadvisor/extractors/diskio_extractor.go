@@ -5,12 +5,13 @@ package extractors
 
 import (
 	"fmt"
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
-	cinfo "github.com/google/cadvisor/info/v1"
 	"log"
 	"strings"
 	"time"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
+	cinfo "github.com/google/cadvisor/info/v1"
 )
 
 type DiskIOMetricExtractor struct {

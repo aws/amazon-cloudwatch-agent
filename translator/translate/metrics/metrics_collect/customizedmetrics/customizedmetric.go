@@ -4,11 +4,12 @@
 package customizedmetrics
 
 import (
+	"reflect"
+	"sort"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
-	"reflect"
-	"sort"
 )
 
 type customizedMetric struct {

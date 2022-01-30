@@ -4,12 +4,13 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSharedCrednetialsProviderExpiryWindowIsExpired(t *testing.T) {

@@ -4,9 +4,10 @@
 package prometheus_scraper
 
 import (
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetMetricKeyForMerging(t *testing.T) {

@@ -4,8 +4,9 @@
 package collect_list
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"strconv"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 type FilePath struct {

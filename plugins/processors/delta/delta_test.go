@@ -4,11 +4,12 @@
 package delta
 
 import (
+	"testing"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func deepCopy(original map[string]string) map[string]string {

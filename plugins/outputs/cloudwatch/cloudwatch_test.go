@@ -5,11 +5,12 @@ package cloudwatch
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"math"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"

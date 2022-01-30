@@ -6,10 +6,11 @@ package publisher
 import (
 	"context"
 	"errors"
-	"golang.org/x/sync/semaphore"
 	"log"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/semaphore"
 )
 
 // Publisher is go-routing safe

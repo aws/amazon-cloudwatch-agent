@@ -6,8 +6,9 @@ package context
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"os"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 const (

@@ -4,9 +4,10 @@
 package agent
 
 import (
+	"os"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"os"
 )
 
 type OmitHostname struct {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"errors"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/tls"
 	corev1 "k8s.io/api/core/v1"
 )

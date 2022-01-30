@@ -4,9 +4,10 @@
 package ecsdecorator
 
 import (
+	"os"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
-	"os"
 )
 
 const (

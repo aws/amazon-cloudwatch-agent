@@ -2,8 +2,9 @@ package gpu
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 //Check the case when the input is in "nvidia_gpu":{//specific configuration}
@@ -17,7 +18,7 @@ func TestSpecificConfig(t *testing.T) {
 	if err == nil {
 		_, actualVal := n.ApplyRule(input)
 		expectedVal := []interface{}{map[string]interface{}{
-			"fieldpass": []string{"utilization_gpu", "temperature_gpu"},
+			"fieldpass":  []string{"utilization_gpu", "temperature_gpu"},
 			"tagexclude": []string{"compute_mode", "pstate", "uuid"},
 		},
 		}
