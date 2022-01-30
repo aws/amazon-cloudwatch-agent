@@ -42,6 +42,12 @@ AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/logger.WindowsLogPath=C:\\ProgramData\\
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.unixExtraConfigPath=/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc/extracfg.txt
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.windowsExtraConfigPath=C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\CWAgentOtelCollector\\extracfg.txt
 
+CW_AGENT_IMPORT_PATH=https://github.com/aws/amazon-cloudwatch-agent.git
+ALL_SRC := $(shell find . -name '*.go' -type f | sort)
+TOOLS_BIN_DIR := $(abspath ./build/tools)
+GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
+GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
+
 release: clean test build package-rpm package-deb package-win package-darwin
 
 nightly-release: release
@@ -118,6 +124,9 @@ build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+
+install-tools:
+	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
 
 fmt: install-tools
 	go fmt ./...
