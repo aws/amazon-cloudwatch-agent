@@ -119,8 +119,12 @@ build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
-fmt:
+fmt: install-tools
 	go fmt ./...
+	echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
+
+fmt-sh:
+	shfmt -w -d -i 5 .
 
 test:
 	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
@@ -258,7 +262,7 @@ package-win: package-prepare-win-zip
 package-darwin: package-prepare-darwin-tar
 	ARCH=amd64 TARGET_SUPPORTED_ARCH=x86_64 PREPKGPATH="$(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg" $(BUILD_SPACE)/Tools/src/create_darwin.sh
 
-.PHONY: fmt build test clean
+.PHONY: fmt fmt-sh build test clean
 
 .PHONY: dockerized-build dockerized-build-vendor
 dockerized-build:
