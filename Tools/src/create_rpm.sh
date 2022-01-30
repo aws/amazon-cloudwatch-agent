@@ -6,7 +6,7 @@ set -e
 
 SPEC_FILE="${PREPKGPATH}/amazon-cloudwatch-agent.spec"
 BUILD_ROOT="${BUILD_SPACE}/private/linux_${ARCH}/rpm-build"
-AGENT_VERSION=`cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g"`
+AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g")
 
 echo "BUILD_SPACE: ${BUILD_SPACE}    agent_version: ${AGENT_VERSION}  pre-package location:${PREPKGPATH}"
 
@@ -46,7 +46,6 @@ cp ${PREPKGPATH}/cwagent-otel-collector ${BUILD_ROOT}/SOURCES/opt/aws/amazon-clo
 cp ${PREPKGPATH}/cwagent-otel-collector.service ${BUILD_ROOT}/SOURCES/etc/systemd/system/
 cp ${PREPKGPATH}/cwagent-otel-collector.conf ${BUILD_ROOT}/SOURCES/etc/init/
 cp ${PREPKGPATH}/predefined-config-data ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var/.predefined-config-data
-
 
 chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
 chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
