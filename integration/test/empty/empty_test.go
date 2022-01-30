@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 //go:build integration
-// +build integration
 
 package empty
 

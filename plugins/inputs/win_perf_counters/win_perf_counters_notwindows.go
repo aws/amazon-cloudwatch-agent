@@ -2,6 +2,5 @@
 // SPDX-License-Identifier: MIT
 
 //go:build !windows
-// +build !windows
 
 package win_perf_counters

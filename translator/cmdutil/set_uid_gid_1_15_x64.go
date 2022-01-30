@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 //go:build linux && (arm64 || amd64 || mips || mipsle || mips64 || mips64le || ppc || ppc64 || ppc64le || riscv64 || s390x) && !go1.16
-// +build linux
-// +build arm64 amd64 mips mipsle mips64 mips64le ppc ppc64 ppc64le riscv64 s390x
-// +build !go1.16
 
 package cmdutil
 

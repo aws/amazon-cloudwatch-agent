@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 //go:build linux || darwin
-// +build linux darwin
 
 package cadvisor
 

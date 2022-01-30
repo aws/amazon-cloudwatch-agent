@@ -2,9 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 //go:build linux && (386 || arm) && !go1.16
-// +build linux
-// +build 386 arm
-// +build !go1.16
 
 package cmdutil
 

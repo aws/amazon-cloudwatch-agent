@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 //go:build linux && integration
-// +build linux,integration
 
 package test
 
