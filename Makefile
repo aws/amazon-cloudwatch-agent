@@ -125,11 +125,6 @@ build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
-
-fmt: install-tools
-	go fmt ./...
-	echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
-
 test:
 	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
 
@@ -277,6 +272,15 @@ dockerized-build:
 # Use vendor instead of proxy when building w/ vendor folder
 dockerized-build-vendor:
 	$(DOCKER_BUILD_FROM_SOURCE) --build-arg GO111MODULE=off .
+
+.PHONY: fmt
+fmt: install-tools
+	go fmt ./...
+	echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
+
+.PHONY: fmt-sh
+fmt-sh:
+	shfmt -w -d -i 5 .
 
 .PHONY: install-tools
 install-tools:
