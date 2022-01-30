@@ -22,12 +22,10 @@ jobs:
             cachepath: |
               ~/.cache/go-build
               ~/go/pkg/mod
-              /home/runner/.cache/go-build
           - os: macos-latest
             cachepath: |
               ~/Library/Caches/go-build
               ~/go/pkg/mod
-              /Users/runner/Library/Caches/go-build
     steps:  
 
     - name: Set up Go 1.x
