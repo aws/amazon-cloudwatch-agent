@@ -4,9 +4,10 @@
 package regular
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"log"
 	"math"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 type RegularDistribution struct {

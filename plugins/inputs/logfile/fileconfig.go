@@ -6,13 +6,14 @@ package logfile
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"

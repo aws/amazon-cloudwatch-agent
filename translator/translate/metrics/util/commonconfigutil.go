@@ -5,6 +5,7 @@ package util
 
 import (
 	"fmt"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"

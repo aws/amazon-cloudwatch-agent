@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm"
+	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
 )
 
 const (

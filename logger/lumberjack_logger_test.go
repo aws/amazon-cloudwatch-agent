@@ -5,11 +5,6 @@ package logger
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/logger"
-	"github.com/influxdata/wlog"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,6 +12,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/wlog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func TestWriteLogToFile(t *testing.T) {

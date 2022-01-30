@@ -42,6 +42,12 @@ AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/logger.WindowsLogPath=C:\\ProgramData\\
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.unixExtraConfigPath=/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc/extracfg.txt
 AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.windowsExtraConfigPath=C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\CWAgentOtelCollector\\extracfg.txt
 
+CW_AGENT_IMPORT_PATH=https://github.com/aws/amazon-cloudwatch-agent.git
+ALL_SRC := $(shell find . -name '*.go' -type f | sort)
+TOOLS_BIN_DIR := $(abspath ./build/tools)
+GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
+GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
+
 release: clean test build package-rpm package-deb package-win package-darwin
 
 nightly-release: release
@@ -119,8 +125,10 @@ build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
-fmt:
+
+fmt: install-tools
 	go fmt ./...
+	echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
 
 test:
 	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
@@ -269,3 +277,9 @@ dockerized-build:
 # Use vendor instead of proxy when building w/ vendor folder
 dockerized-build-vendor:
 	$(DOCKER_BUILD_FROM_SOURCE) --build-arg GO111MODULE=off .
+
+.PHONY: install-tools
+install-tools:
+	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
+	GOBIN=$(TOOLS_BIN_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.42.0
+	GOBIN=$(TOOLS_BIN_DIR) go install honnef.co/go/tools/cmd/staticcheck@v0.2.0

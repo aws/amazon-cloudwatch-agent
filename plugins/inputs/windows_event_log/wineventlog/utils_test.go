@@ -8,8 +8,9 @@ package wineventlog
 
 import (
 	"encoding/hex"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPayload_Value(t *testing.T) {

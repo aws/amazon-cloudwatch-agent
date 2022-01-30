@@ -5,9 +5,10 @@ package collect_list
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestApplyLogFiltersRule(t *testing.T) {
@@ -61,5 +62,3 @@ func TestApplyLogFiltersRuleMissingConfigInsideFilters(t *testing.T) {
 	assert.Nil(t, retVal)
 	assert.Len(t, translator.ErrorMessages, 2)
 }
-
-

@@ -6,8 +6,6 @@ package logfile
 import (
 	"bytes"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,14 +17,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
 
 type tailerTestResources struct {
-	done *chan struct{}
-	consumed *int32
-	file *os.File
+	done      *chan struct{}
+	consumed  *int32
+	file      *os.File
 	statefile *os.File
 }
 
@@ -459,9 +460,9 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 	})
 
 	return tailerTestResources{
-		done: &done,
-		consumed: &consumed,
-		file: file,
+		done:      &done,
+		consumed:  &consumed,
+		file:      file,
 		statefile: statefile,
 	}
 }
@@ -470,7 +471,7 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 	var sleepDuration time.Duration
 	if multiLineWaitMs > 0 {
 		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
-		sleepDuration = time.Duration(multiLineWaitMs * 10) * time.Millisecond
+		sleepDuration = time.Duration(multiLineWaitMs*10) * time.Millisecond
 	}
 
 	for i := 0; i < n; i++ {

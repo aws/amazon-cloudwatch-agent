@@ -5,8 +5,9 @@ package rollup_dimensions
 
 import (
 	"encoding/json"
-	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 
 	"github.com/stretchr/testify/assert"
 )
