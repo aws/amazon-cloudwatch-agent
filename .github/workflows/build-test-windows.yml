@@ -15,7 +15,7 @@ jobs:
         id: build-test
         uses: actions/cache@v2
         with:
-          path: AOC_GIT_SHA
+          path: LICENSE
           key: ${{ github.workflow }}-${{ github.run_id }}
 
       - name: Checkout Repo
