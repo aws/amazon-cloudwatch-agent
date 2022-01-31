@@ -4,16 +4,27 @@ on:
   push:
     branches:
       - master
+
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+      - '!.github/workflows/build-*'
+      
+
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
-jobs:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
+jobs:
   build:
     name: Build
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         include:
