@@ -4,12 +4,13 @@
 package stores
 
 import (
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sutil"
-	corev1 "k8s.io/api/core/v1"
 	"regexp"
 	"strconv"
 	"strings"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sutil"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func createPodKeyFromMetaData(pod *corev1.Pod) string {
@@ -36,7 +37,7 @@ var (
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
 	deploymentUnallowedRegExp = regexp.MustCompile(`[^b-hj-np-tv-xz-z2-24-9]+`)
 	// cronJobUnallowedRegexp ensures the characters in cron job name are only numbers.
-	cronJobUnallowedRegexp = regexp.MustCompile(`[^0-9]+`)
+	cronJobUnallowedRegexp = regexp.MustCompile(`\D+`)
 )
 
 // get the deployment name by stripping the last dash following some rules
@@ -48,7 +49,7 @@ func parseDeploymentFromReplicaSet(name string) string {
 		return ""
 	}
 	suffix := name[lastDash+1:]
-	if len(suffix) >= 3 && !deploymentUnallowedRegExp.MatchString(suffix){
+	if len(suffix) >= 3 && !deploymentUnallowedRegExp.MatchString(suffix) {
 		// Invalid suffix if it is less than 3
 		return name[:lastDash]
 	}
@@ -80,14 +81,13 @@ func parseCronJobFromJob(name string) string {
 	//Checking if the suffix is a unix time by checking: the length and contains character
 	//Checking for the length: CronJobControllerV2 is Unix Time in Minutes (7-9 characters) while CronJob is Unix Time (10 characters).
 	//However, multiply by 60 to convert the Unix Time In Minutes back to Unix Time in order to have the same condition as Unix Time
-	if len(suffix) == 10 && !cronJobUnallowedRegexp.MatchString(suffix)  { //Condition for CronJob before k8s v1.21
+	if len(suffix) == 10 && !cronJobUnallowedRegexp.MatchString(suffix) { //Condition for CronJob before k8s v1.21
 		return name[:lastDash]
 	}
-	
-	if  len(suffixStringMultiply) == 10 && !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) { //Condition for CronJobControllerV2 after k8s v1.21
+
+	if len(suffixStringMultiply) == 10 && !cronJobUnallowedRegexp.MatchString(suffixStringMultiply) { //Condition for CronJobControllerV2 after k8s v1.21
 		return name[:lastDash]
 	}
 
 	return ""
 }
-
