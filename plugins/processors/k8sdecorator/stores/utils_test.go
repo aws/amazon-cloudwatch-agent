@@ -4,95 +4,99 @@
 package stores
 
 import (
-	"github.com/docker/docker/pkg/testutil/assert"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/docker/docker/pkg/testutil/assert"
 )
 
 func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {
 	testcases := []struct {
-		name         string
-		inputString  string
-		expected     string
+		name        string
+		inputString string
+		expected    string
 	}{
 		{
-			name: "Get ReplicaSet Name with unallowed characters",
+			name:        "Get ReplicaSet Name with unallowed characters",
 			inputString: "cloudwatch-ag",
-			expected: "",
+			expected:    "",
 		},
 		{
-			name: "Get ReplicaSet Name with allowed characters",
+			name:        "Get ReplicaSet Name with allowed characters",
 			inputString: "cloudwatch-agent-42kcz",
-			expected: "cloudwatch-agent",
+			expected:    "cloudwatch-agent",
 		},
 		{
-			name: "Get ReplicaSet Name with string smaller than 3 characters",
+			name:        "Get ReplicaSet Name with string smaller than 3 characters",
 			inputString: "cloudwatch-agent-sd",
-			expected: "",
+			expected:    "",
 		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, parseDeploymentFromReplicaSet(tc.inputString), tc.expected, )
+			assert.Equal(t, parseDeploymentFromReplicaSet(tc.inputString), tc.expected)
 		})
 	}
 }
 
 func TestUtils_parseCronJobFromJob(t *testing.T) {
+	unixTime := time.Now().Unix()
+	unixTimeString := strconv.FormatInt(unixTime, 10)
+	unixTimeMinutesString := strconv.FormatInt(unixTime/60, 10)
+
 	testcases := []struct {
-		name         string
-		inputString  string
-		expected     string
+		name        string
+		inputString string
+		expected    string
 	}{
 		{
-			name: "Get CronJobControllerV2 or CronJob's Name with alphabet characters",
+			name:        "Get CronJobControllerV2 or CronJob's Name with alphabet characters",
 			inputString: "hello-name",
-			expected: "",
+			expected:    "",
 		},
 		{
-			name: "Get CronJobControllerV2 or CronJob's Name with special characters and exact 10 characters",
+			name:        "Get CronJobControllerV2 or CronJob's Name with special characters and exact 10 characters",
 			inputString: "hello-1678995&64",
-			expected: "",
+			expected:    "",
 		},
 		{
-			name: "Get CronJobControllerV2 or CronJob's Name with Unix Time not equal to 10 letters",
+			name:        "Get CronJobControllerV2 or CronJob's Name with Unix Time not equal to 10 letters",
 			inputString: "hello-238",
-			expected: "",
+			expected:    "",
 		},
 		{
-			name: "Get CronJobControllerV2's Name after k8s v1.21 with correct Unix Time",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix()/60, 10),
-			expected: "hello",
+			name:        "Get CronJobControllerV2's Name after k8s v1.21 with correct Unix Time",
+			inputString: "hello-" + unixTimeMinutesString,
+			expected:    "hello",
 		},
 		{
-			name: "Get CronJobControllerV2's Name after k8s v1.21 with alphabet Unix Time",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix()/60, 10)+"a28bc",
-			expected: "",
+			name:        "Get CronJobControllerV2's Name after k8s v1.21 with alphabet Unix Time",
+			inputString: "hello-" + unixTimeMinutesString + "a28bc",
+			expected:    "",
 		},
-		
+
 		{
-			name: "Get CronJobControllerV2's Name after k8s v1.21 with Unix Time not equal to 10 letters",
-			inputString: "hello"+strconv.FormatInt(time.Now().Unix()/60, 10)+"523",
-			expected: "",
-		},
-		{
-			name: "Get CronJob's Name before k8s v1.21 with correct Unix Time",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10),
-			expected: "hello",
+			name:        "Get CronJobControllerV2's Name after k8s v1.21 with Unix Time not equal to 10 letters",
+			inputString: "hello" + unixTimeMinutesString + "523",
+			expected:    "",
 		},
 		{
-			name: "Get CronJob's Name before k8s v1.21 with special characters",
-			inputString: "hello-"+strconv.FormatInt(time.Now().Unix(), 10)+"&#64",
-			expected: "",
+			name:        "Get CronJob's Name before k8s v1.21 with correct Unix Time",
+			inputString: "hello-" + unixTimeString,
+			expected:    "hello",
 		},
-		
+		{
+			name:        "Get CronJob's Name before k8s v1.21 with special characters",
+			inputString: "hello-" + unixTimeString + "&#64",
+			expected:    "",
+		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t,parseCronJobFromJob(tc.inputString), tc.expected)
+			assert.Equal(t, parseCronJobFromJob(tc.inputString), tc.expected)
 		})
 	}
 }

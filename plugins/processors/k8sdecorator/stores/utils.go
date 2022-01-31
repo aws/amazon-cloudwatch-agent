@@ -33,10 +33,10 @@ func createContainerKeyFromMetric(tags map[string]string) string {
 }
 
 var (
-	// deploymentUnallowedRegExp holds the characters allowed in replicaset names from as parent deployment
+	// deploymentAllowedRegExp holds the characters allowed in replicaset names from as parent deployment
 	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
 	deploymentAllowedRegExp = regexp.MustCompile(`^[b-hj-np-tv-xz24-9]+$`)
-	// cronJobUnallowedRegexp ensures the characters in cron job name are only numbers.
+	// cronJobAllowedRegexp ensures the characters in cron job name are only numbers.
 	cronJobAllowedRegexp = regexp.MustCompile(`^\d+$`)
 )
 
