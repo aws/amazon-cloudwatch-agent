@@ -45,8 +45,11 @@ AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.windowsExtraConfigPath=C:\\
 CW_AGENT_IMPORT_PATH=https://github.com/aws/amazon-cloudwatch-agent.git
 ALL_SRC := $(shell find . -name '*.go' -type f | sort)
 TOOLS_BIN_DIR := $(abspath ./build/tools)
+
 GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
+
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
+SHFMT = $(TOOLS_BIN_DIR)/shfmt
 
 release: clean test build package-rpm package-deb package-win package-darwin
 
@@ -127,13 +130,14 @@ build-for-docker-arm64:
 
 install-tools:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
+	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@latest
 
 fmt: install-tools
 	go fmt ./...
 	echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
 
-fmt-sh:
-	shfmt -w -d -i 5 .
+fmt-sh: install-tools
+	${SHFMT} -w -d -i 5 .
 
 test:
 	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
