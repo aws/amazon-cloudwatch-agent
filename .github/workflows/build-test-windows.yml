@@ -36,8 +36,6 @@ jobs:
             %LocalAppData%\go-build
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Run Unit tests
         if: steps.build-test.outputs.cache-hit != 'true'
