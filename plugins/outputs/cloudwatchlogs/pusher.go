@@ -55,6 +55,7 @@ type pusher struct {
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
+	wg                    sync.WaitGroup
 }
 
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
@@ -71,6 +72,7 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		startNonBlockCh: make(chan struct{}),
 	}
 	p.putRetentionPolicy()
+	p.wg.Add(1)
 	go p.start()
 	return p
 }
@@ -122,9 +124,12 @@ func hasValidTime(e logs.LogEvent) bool {
 
 func (p *pusher) Stop() {
 	close(p.stop)
+	p.wg.Wait()
 }
 
 func (p *pusher) start() {
+	defer p.wg.Done()
+
 	ec := make(chan logs.LogEvent)
 
 	// Merge events from both blocking and non-blocking channel

@@ -144,7 +144,6 @@ func TestStopPusherWouldDoFinalSend(t *testing.T) {
 	}
 	time.Sleep(10 * time.Millisecond)
 	p.Stop()
-	time.Sleep(10 * time.Millisecond)
 	if !called {
 		t.Errorf("PutLogEvents has not been called after p has been Stopped.")
 	}
