@@ -43,7 +43,6 @@ jobs:
         path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-              /home/runner/.cache/go-build
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
     - name: Test

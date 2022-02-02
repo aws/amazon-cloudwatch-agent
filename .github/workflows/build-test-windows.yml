@@ -36,7 +36,6 @@ jobs:
           path: |
             %LocalAppData%\go-build
             ~/go/pkg/mod
-            C:\Users\runneradmin\AppData\Local\go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Install make
