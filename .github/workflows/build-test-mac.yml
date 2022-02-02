@@ -1,5 +1,7 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
 
-name: build-and-test-windows
+name: build-and-test-mac
 on:
   push:
     branches: [ main, master ]
@@ -18,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  windows-unittest:
+  mac-unittest:
     runs-on: macos-latest
     steps:
       - name: Checkout Repo
@@ -39,7 +41,7 @@ jobs:
             ~/Library/Caches/go-build
             ~/go/pkg/mod
           key: go-build-v1-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-          
+
       - name: Test
         run: make test
       

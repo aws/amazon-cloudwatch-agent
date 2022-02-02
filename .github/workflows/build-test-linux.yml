@@ -1,4 +1,7 @@
-name: build-and-test
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: build-and-test-linux
 
 on:
   push:
