@@ -1,0 +1,23 @@
+name: CodeQL Analysis
+
+on:
+  push:
+    branches: [master, main]
+
+concurrency:
+  group: codeql-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v1
+        with:
+          languages: go
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v1
