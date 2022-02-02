@@ -35,9 +35,6 @@ jobs:
         fetch-depth: 0
         submodules: 'true'
 
-    - name: Debug go.mod
-      run: cat go.mod
-
     - name: Cache build output
       uses: actions/cache@v2
       with:
