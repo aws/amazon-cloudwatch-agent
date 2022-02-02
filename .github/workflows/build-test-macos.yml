@@ -19,8 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-macos:
-    name: Build-macos
+  macos-unittest:
     runs-on: macos-latest
     steps:  
 
