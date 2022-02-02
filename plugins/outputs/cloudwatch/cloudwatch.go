@@ -43,8 +43,8 @@ const (
 )
 
 const (
-	opPutLogEvents  = "PutLogEvents"
-	opPutMetricData = "PutMetricData"
+	opPutLogEvents       = "PutLogEvents"
+	opPutMetricData      = "PutMetricData"
 	dropOriginalWildcard = "*"
 )
 
