@@ -22,8 +22,6 @@ jobs:
   build-linux:
     name: Build-linux
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     steps:  
 
     - name: Set up Go 1.x

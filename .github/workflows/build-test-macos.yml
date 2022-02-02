@@ -22,8 +22,6 @@ jobs:
   build-macos:
     name: Build-macos
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
     steps:  
 
     - name: Set up Go 1.x
