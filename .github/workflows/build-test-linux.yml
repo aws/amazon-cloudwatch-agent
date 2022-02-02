@@ -1,0 +1,68 @@
+name: build-and-test-linux
+
+on:
+  push:
+    branches:
+      - master
+
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+      - '!.github/workflows/build-*'
+      
+
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-linux:
+    name: Build-linux
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:  
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ~1.15.15
+      id: go
+
+    - name: Configure git with longpath enabled (for windows)
+      run: git config --global core.longpaths true
+
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: 'true'
+
+    - name: Debug go.mod
+      run: cat go.mod
+
+    - name: Cache build output
+      uses: actions/cache@v2
+      with:
+        path: |
+              ~/.cache/go-build
+              ~/go/pkg/mod
+              /home/runner/.cache/go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Test
+      run: make test
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        verbose: true
+
+    - name: Build
+      run: make build
