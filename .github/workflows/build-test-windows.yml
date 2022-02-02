@@ -39,6 +39,9 @@ jobs:
             ~/go/pkg/mod
           key: go-build-v1-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
+      - name: Install make
+        run: choco install make
+        
       - name: Test
         run: make test
       
