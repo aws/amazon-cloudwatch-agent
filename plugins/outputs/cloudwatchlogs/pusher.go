@@ -50,15 +50,15 @@ type pusher struct {
 	sequenceToken       *string
 	lastValidTime       int64
 	needSort            bool
-	stop                chan struct{}
+	stop                <-chan struct{}
 	lastSentTime        time.Time
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
-	wg                    sync.WaitGroup
+	wg                    *sync.WaitGroup
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
@@ -68,8 +68,9 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushTimer:      time.NewTimer(flushTimeout),
-		stop:            make(chan struct{}),
+		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
+		wg:              wg,
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
@@ -120,11 +121,6 @@ func hasValidTime(e logs.LogEvent) bool {
 		}
 	}
 	return true
-}
-
-func (p *pusher) Stop() {
-	close(p.stop)
-	p.wg.Wait()
 }
 
 func (p *pusher) start() {
