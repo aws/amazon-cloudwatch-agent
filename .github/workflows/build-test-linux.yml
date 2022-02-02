@@ -1,5 +1,5 @@
+name: build-and-test
 
-name: build-and-test-windows
 on:
   push:
     branches: [ main, master ]
@@ -13,16 +13,15 @@ on:
 
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: true
-
 jobs:
-  windows-unittest:
-    runs-on: windows-2019
+  linux-unittest:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: 'true'
 
       - name: Setup Go
         uses: actions/setup-go@v2
@@ -33,7 +32,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            %LocalAppData%\go-build
+            ~/.cache/go-build
             ~/go/pkg/mod
           key: go-build-v1-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 

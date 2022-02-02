@@ -19,10 +19,13 @@ concurrency:
 
 jobs:
   windows-unittest:
-    runs-on: windows-2019
+    runs-on: macos-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: 'true'
 
       - name: Setup Go
         uses: actions/setup-go@v2
@@ -33,10 +36,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            %LocalAppData%\go-build
+            ~/Library/Caches/go-build
             ~/go/pkg/mod
           key: go-build-v1-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-
+          
       - name: Test
         run: make test
       
