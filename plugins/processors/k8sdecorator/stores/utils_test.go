@@ -23,6 +23,11 @@ func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {
 			expected:    "",
 		},
 		{
+			name:        "Get ReplicaSet Name with allowed characters smaller than 3 characters",
+			inputString: "cloudwatch-agent-bj",
+			expected:    "",
+		},
+		{
 			name:        "Get ReplicaSet Name with allowed characters",
 			inputString: "cloudwatch-agent-42kcz",
 			expected:    "cloudwatch-agent",
