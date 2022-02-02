@@ -2,6 +2,7 @@
   "metrics": {
     "metrics_collected": {
       "cpu": {
+        "drop_original_metrics": ["cpu_usage_idle"],
         "resources": [
           "*"
         ],

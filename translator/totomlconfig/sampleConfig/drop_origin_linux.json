@@ -1,0 +1,61 @@
+{
+  "metrics": {
+    "append_dimensions": {
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "drop_original_metrics": ["cpu_usage_idle", "time_active"],
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          {"name": "cpu_usage_idle", "rename": "CPU_USAGE_IDLE", "unit": "unit"},
+          {"name": "cpu_usage_nice", "unit": "unit"},
+          "cpu_usage_guest",
+          "time_active",
+          "usage_active"
+        ],
+        "totalcpu": false,
+        "metrics_collection_interval": 10,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      },
+      "disk": {
+        "resources": [
+          "/",
+          "/dev",
+          "/sys"
+        ],
+        "measurement": [
+          "free",
+          "total",
+          "used"
+        ],
+        "metrics_collection_interval": 60,
+        "append_dimensions": {
+          "d3": "foo3",
+          "d4": "bar4"
+        },
+        "ignore_file_system_types": [
+          "sysfs", "devtmpfs"
+        ]
+      },
+      "nvidia_gpu": {
+        "drop_original_metrics": ["utilization_gpu", "temperature_gpu"],
+        "measurement": [
+          "utilization_gpu",
+          "utilization_memory",
+          "power_draw",
+          "temperature_gpu"
+        ],
+        "metrics_collection_interval": 60
+      }
+    }
+  }
+}
