@@ -38,8 +38,17 @@ jobs:
             ~/go/pkg/mod
             C:\Users\runneradmin\AppData\Local\go-build
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+
+      - name: Install make
+        run: choco install make
 
       - name: Run Unit tests
-        run: go test ./...
+        run: make test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          verbose: true
+
+      - name: Run build
+        run: make build
