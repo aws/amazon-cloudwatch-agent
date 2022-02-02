@@ -1,9 +1,10 @@
-name: build-and-test-linux
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
 
+name: build-and-test-linux
 on:
   push:
     branches: [master, main]
-
     paths-ignore:
       - '**.md'
       - '.github/**'
