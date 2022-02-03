@@ -51,12 +51,14 @@ require (
 	github.com/go-kit/kit v0.10.0
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cadvisor v0.36.0
+	github.com/google/go-cmp v0.4.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/influxdata/telegraf v0.0.0-00010101000000-000000000000
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/kardianos/service v1.0.0
+	github.com/kr/pretty v0.2.0 // indirect
 	github.com/oklog/run v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.5.1

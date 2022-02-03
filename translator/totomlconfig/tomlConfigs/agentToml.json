@@ -37,8 +37,8 @@
             "name": "cpu_usage_nice",
             "unit": "unit"
           },
-          "cpu_usage_guest",
           "time_active",
+          "cpu_usage_guest",
           "usage_active"
         ],
         "totalcpu": false,
