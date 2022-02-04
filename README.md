@@ -26,7 +26,7 @@ Use the following instructions to build and run Cloudwatch Agent:
 * To build and run from source, you must [install go]((https://golang.org/doc/install)) and use `make build`. For more information on requirements and building from source with different platforms, please follow [this document](docs/build/build-run-cwagent-from-source.md)
 * To build and run from container, you can simply use the below command. For more information on building from containers with different platforms, please follow [this document](amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile)
 ```
-docker buildx build --platform linux/amd64,linux/arm64 -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/Dockerfile .
+docker buildx build -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/Dockerfile .
 ```
 ### Make Targets
 The following targets are available. Each may be run with `make <target>`.
