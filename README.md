@@ -21,52 +21,10 @@ Amazon CloudWatch Agent uses the open-source project [telegraf](https://github.c
 ### Troubleshooting
 * [Troubleshooting CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html)
 
-## Building and Running from source
-
-* Install go. For more information, see [Getting started](https://golang.org/doc/install)
-* The agent uses go modules for dependency management. For more information, see [Go Modules](https://github.com/golang/go/wiki/Modules)
-
-* Install rpm-build
-```
-sudo yum install -y rpmdevtools rpm-build
-```
-* Run `make build` to build the CloudWatch Agent for Linux, Debian, Windows environment.
-
-* Run `make release` to build the agent. This also packages it into a RPM, DEB and ZIP package.
-
-The following folders are generated when the build completes:
-```
-build/bin/linux/arm64/amazon-cloudwatch-agent.rpm
-build/bin/linux/amd64/amazon-cloudwatch-agent.rpm
-build/bin/linux/arm64/amazon-cloudwatch-agent.deb
-build/bin/linux/amd64/amazon-cloudwatch-agent.deb
-build/bin/windows/amd64/amazon-cloudwatch-agent.zip
-build/bin/darwin/amd64/amazon-cloudwatch-agent.tar.gz
-```
-
-* Install your own build of the agent
-
-    1. rpm package
-
-        * `rpm -Uvh amazon-cloudwatch-agent.rpm`
-
-    1. deb package
-
-        * `dpkg -i -E ./amazon-cloudwatch-agent.deb`
-
-    1. windows package
-
-        * unzip `amazon-cloudwatch-agent.zip`
-        * `./install.ps1`
-
-    1. darwin package
-        * `tar -xvf amazon-cloudwatch-agent.tar.gz`
-        * `cp -rf ./opt/aws /opt`
-        * `cp -rf ./Library/LaunchDaemons/com.amazon.cloudwatch.agent.plist /Library/LaunchDaemons/`
-
-### Building and running container
-
-See [Dockerfiles](amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile).
+## Building and running Amazon CloudWatch Agent 
+Use the following instructions to build and run Cloudwatch Agent:
+* [Building and running from source.](docs/build/build-run-cwagent-from-source.md)
+* [Building and running from container.](amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile)
 
 ### Make Targets
 The following targets are available. Each may be run with `make <target>`.
