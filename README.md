@@ -82,10 +82,9 @@ The following targets are available. Each may be run with `make <target>`.
 It is using [Semantic versioning](https://semver.org/)
 
 ## Distributions
-Use the following instructions to install 
-You can download the official release from S3, refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/download-cloudwatch-agent-commandline.html)
-
-Nightly s3 release are not production ready and should be used at own risk
+Use the following instructions to install Cloudwatch Agent:
+* [Official release from s3](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/download-cloudwatch-agent-commandline.html)
+* [Nightly build from s3](docs/build/nightly-build.md)
 
 ## Security disclosures
 If you think you’ve found a potential security issue, please do not post it in the Issues.  Instead, please follow the instructions [here](https://aws.amazon.com/security/vulnerability-reporting/) or [email AWS security directly](mailto:aws-security@amazon.com).

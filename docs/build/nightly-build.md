@@ -1,4 +1,6 @@
 ## Nightly Build
+Nightly s3 release are not production ready and should be used at own risk
+
 ### 1. Download Binaries
 #### 1.1 Linux                                                                                                               |
 | ARCH    | Binary name                      | LINK                                                                                                                         |
