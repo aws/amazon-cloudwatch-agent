@@ -22,7 +22,7 @@ func setUid(uid int) (err error) {
 }
 
 func setGid(gid int) (err error) {
-	_, _, e1 := unix.RawSyscall(unix.SYS_SETUID, uintptr(gid), 0, 0)
+	_, _, e1 := unix.RawSyscall(unix.SYS_SETGID, uintptr(gid), 0, 0)
 	if e1 != 0 {
 		err = e1
 	}
