@@ -1,4 +1,4 @@
-package tomlConfigs
+package tomlConfigTemplate
 
 type (
 	TomlConfig struct {
@@ -66,7 +66,7 @@ type (
 	// Input Plugins
 
 	awsCsmListenerConfig struct {
-		DataFormat string 		`toml:"data_format"`
+		DataFormat string 			`toml:"data_format"`
 		ServiceAddress []string 	`toml:"service_address"`
 	}
 
@@ -78,11 +78,11 @@ type (
 	}
 
 	cpuConfig struct {
-		CollectCpuTime bool `toml:"collect_cpu_time"`
+		CollectCpuTime bool 	`toml:"collect_cpu_time"`
 		FieldPass []string
 		Interval string
 		PerCpu bool
-		ReportActive bool 	`toml:"report_active"`
+		ReportActive bool 		`toml:"report_active"`
 		TotalCpu bool
 		Tags map[string]string
 	}
@@ -137,7 +137,7 @@ type (
 
 	k8sApiServerConfig struct {
 		Interval string
-		NodeName string `toml:"node_name"`
+		NodeName string		`toml:"node_name"`
 		Tags map[string]string
 	}
 
@@ -218,7 +218,7 @@ type (
 	}
 
 	statsdConfig struct {
-		AllowedPendingMessages int 	`toml:"allowed_pending_messages"`
+		AllowedPendingMessages int 		`toml:"allowed_pending_messages"`
 		Interval string
 		MetricSeparator string 			`toml:"metric_separator"`
 		ParseDataDogTags bool 			`toml:"parse_data_dog_tags"`
@@ -249,8 +249,8 @@ type (
 	// Output plugins
 
 	awsCsmConfig struct {
-		LogLevel int 		`toml:"log_level"`
-		MemoryLimitInMb int	`toml:"memory_limit_in_mb"`
+		LogLevel int 			`toml:"log_level"`
+		MemoryLimitInMb int		`toml:"memory_limit_in_mb"`
 		Region string
 	}
 

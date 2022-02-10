@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/BurntSushi/toml"
-	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigs"
+	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
@@ -15,8 +15,6 @@ import (
 	"log"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 
@@ -178,15 +176,15 @@ func TestLogFilterConfig(t *testing.T) {
 
 func TestTomlToTomlComparison(t *testing.T) {
 	resetContext()
-	var jsonFilePath = "./tomlConfigs/agentToml.json"
+	var jsonFilePath = "./tomlConfigTemplate/agentToml.json"
 	var input interface{}
 
 	translator.SetTargetPlatform("linux")
 
 	err := json.Unmarshal([]byte(ReadFromFile(jsonFilePath)), &input)
-	require.Nil(t, err)
+	assert.NoError(t, err)
 	actualOutput := ToTomlConfig(input)
-	checkIfIdenticalToml(t, "./tomlConfigs/agentToml.conf", actualOutput)
+	checkIfIdenticalToml(t, "./tomlConfigTemplate/agentToml.conf", actualOutput)
 }
 
 func checkTomlTranslation(t *testing.T, jsonPath string, desiredTomlPath string, os string) {
@@ -194,7 +192,7 @@ func checkTomlTranslation(t *testing.T, jsonPath string, desiredTomlPath string,
 	translator.SetTargetPlatform(os)
 	var input interface{}
 	err := json.Unmarshal([]byte(ReadFromFile(jsonPath)), &input)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	actualOutput := ToTomlConfig(input)
 	checkIfIdenticalToml(t, desiredTomlPath, actualOutput)
 }
@@ -221,12 +219,13 @@ func resetContext() {
 	os.Setenv("ProgramData", "c:\\ProgramData")
 }
 
+// toml files in the given path will be parsed into the config toml struct and be compared as struct
 func checkIfIdenticalToml(t *testing.T, desiredTomlPath string, tomlStr string) {
-	var expect tomlConfigs.TomlConfig
+	var expect tomlConfigTemplate.TomlConfig
 	_, decodeError := toml.DecodeFile(desiredTomlPath, &expect)
 	assert.NoError(t, decodeError)
 
-	var actual tomlConfigs.TomlConfig
+	var actual tomlConfigTemplate.TomlConfig
 	_, decodeError2 := toml.Decode(tomlStr, &actual)
 	assert.NoError(t, decodeError2)
 	// This less function sort the content of string slice in a alphabetical order so the
