@@ -610,7 +610,7 @@ jobs:
             fi
       
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
+        if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3

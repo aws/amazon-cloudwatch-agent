@@ -31,8 +31,6 @@ import (
 
 // Test that each tag becomes one dimension
 func TestBuildDimensions(t *testing.T) {
-	const MaxDimensions = 10
-
 	assert := assert.New(t)
 
 	testPoint := testutil.TestMetric(1)
