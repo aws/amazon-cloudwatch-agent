@@ -15,7 +15,61 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  MakeBinary:
+    name: 'MakeBinary'
+    runs-on: ubuntu-latest
+    steps:
+      # Set up building environment, patch the dev repo code on dispatch events.
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.15.15
+
+      - name: Install rpm
+        run: sudo apt install rpm
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: 'true'
+
+      - name: Cache go
+        id: cached_go
+        uses: actions/cache@v2
+        env:
+          cache-name: cached_go_modules
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: v1-go-pkg-mod-${{ hashFiles('**/go.sum') }}
+
+      - name: Cache binaries
+        id: cached_binaries
+        uses: actions/cache@v2
+        with:
+          key: "cached_binaries_${{ github.sha }}"
+          path: build
+
+      - name: Build Binaries
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: make build package-rpm package-deb
+
+      - name: Upload to s3
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: aws s3 cp build/bin s3://cloudwatch-agent-integration-bucket/integration-test/binary/${{ github.sha }} --recursive
+
   EC2LinuxIntegrationTest:
+    needs:
+      - MakeBinary
     name: 'EC2LinuxIntegrationTest'
     runs-on: ubuntu-latest
     defaults:
@@ -28,14 +82,21 @@ jobs:
           { os: "ubuntu", package: "package-deb",  username: "ubuntu",
             installAgentCommand: "dpkg -i -E ./amazon-cloudwatch-agent.deb",
             ami: "cloudwatch-agent-integration-test-ubuntu", caCertPath: "/etc/ssl/certs/ca-certificates.crt",
-            arc: "amd64" },
+            arc: "amd64", binaryName: "amazon-cloudwatch-agent.deb" },
           { os: "al2", package: "package-rpm",  username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-al2", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64" }
+            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" }
         ]
     steps:
       - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
 
       - name: Echo OS
         run: echo run on ec2 instance os ${{ matrix.arrays.os }}
@@ -44,15 +105,13 @@ jobs:
         run: terraform --version
 
       - name: Terraform init
-        run: terraform init -var="aws_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}" -var="aws_secret_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}"
+        run: terraform init
 
       - name: Terraform apply
         run: >
           echo run terraform and execute test code &&
           terraform apply --auto-approve
           -var="ssh_key=${PRIVATE_KEY}"
-          -var="aws_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}"
-          -var="aws_secret_access_key=${TERRAFORM_AWS_SECRET_ACCESS_KEY}"
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           -var="github_sha=${GITHUB_SHA}"
           -var="package=${{ matrix.arrays.package }}"
@@ -61,11 +120,10 @@ jobs:
           -var="ami=${{ matrix.arrays.ami }}"
           -var="ca_cert_path=${{ matrix.arrays.caCertPath }}"
           -var="arc=${{ matrix.arrays.arc }}"
+          -var="binary_name=${{ matrix.arrays.binaryName }}"
 
       - name: Terraform destroy
         if: always()
         run: >
           terraform destroy --auto-approve
-          -var="aws_access_key=${TERRAFORM_AWS_ACCESS_KEY_ID}"
-          -var="aws_secret_access_key=${TERRAFORM_AWS_SECRET_ACCESS_KEY}"
           -var="ami=${{ matrix.arrays.ami }}"
