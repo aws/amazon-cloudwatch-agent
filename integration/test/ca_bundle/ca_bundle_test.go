@@ -42,8 +42,6 @@ func TestBundle(t *testing.T) {
 		{dataInput: "resources/integration/ssl/with/original/bundle", findTarget: true},
 		//Do not look for ca bundle should not connect thus target string found
 		{dataInput: "resources/integration/ssl/without/bundle", findTarget: true},
-		//Do not look for ca bundle should not connect thus target string found
-		{dataInput: "resources/integration/ssl/without/bundle", findTarget: true},
 	}
 
 	for _, parameter := range parameters {

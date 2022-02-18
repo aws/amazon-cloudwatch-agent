@@ -23,14 +23,6 @@ variable "region" {
   default = "us-west-2"
 }
 
-variable "aws_access_key" {
-  type = string
-}
-
-variable "aws_secret_access_key" {
-  type = string
-}
-
 variable "ami" {
   type = string
   default = ""
@@ -74,6 +66,11 @@ variable "ca_cert_path" {
 }
 
 variable "arc" {
+  type = string
+  default = ""
+}
+
+variable "binary_name" {
   type = string
   default = ""
 }
