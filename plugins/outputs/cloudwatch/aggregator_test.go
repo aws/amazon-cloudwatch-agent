@@ -206,9 +206,10 @@ func testCleanup(t *testing.T, metricChan <-chan telegraf.Metric, shutdown chan 
 func assertMetricContent(t *testing.T, metricChan <-chan telegraf.Metric, metricMaxWait time.Duration, originalMetric telegraf.Metric, expectedFieldContent ...expectedFieldContent) {
 	var aggregatedMetric telegraf.Metric
 
-	log.Printf("Waiting for metric.")
+	log.Print("Waiting for metric.")
 	select {
 	case aggregatedMetric = <-metricChan:
+		log.Print("Found metric")
 	case <-time.After(metricMaxWait):
 		assert.FailNow(t, "We should've seen 1 metric by now")
 	}
