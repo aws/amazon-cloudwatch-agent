@@ -198,10 +198,9 @@ func testPreparation() (chan telegraf.Metric, chan struct{}, Aggregator) {
 }
 
 func testCleanup(t *testing.T, metricChan <-chan telegraf.Metric, shutdown chan struct{}) {
+	assertNoMetricsInChan(t, metricChan)
 	close(shutdown)
 	wg.Wait()
-
-	assertNoMetricsInChan(t, metricChan)
 }
 
 func assertMetricContent(t *testing.T, metricChan <-chan telegraf.Metric, metricMaxWait time.Duration, originalMetric telegraf.Metric, expectedFieldContent ...expectedFieldContent) {
