@@ -21,14 +21,15 @@ var metricName = "metric1"
 var wg sync.WaitGroup
 
 func TestAggregator_NoAggregationKeyFound(t *testing.T) {
-	metricChan, shutdownChan, aggregator := testPreparation()
+	metricChan, shutdownChan, agg := testPreparation()
+	defer testCleanup(t, metricChan, shutdownChan)
 	//no aggregation key found
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value"}
 	fields := map[string]interface{}{"value": 1}
 	timestamp := time.Now()
 	m, _ := metric.New(metricName, tags, fields, timestamp)
 
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 	select {
 	case aggregatedMetric := <-metricChan:
 		assert.False(t, aggregatedMetric.HasTag(aggregationIntervalTagKey))
@@ -36,20 +37,18 @@ func TestAggregator_NoAggregationKeyFound(t *testing.T) {
 	default:
 		assert.Fail(t, "Got no metrics")
 	}
-
-	assertNoMetricsInChan(t, metricChan)
-	close(shutdownChan)
 }
 
 func TestAggregator_NotDurationType(t *testing.T) {
-	metricChan, shutdownChan, aggregator := testPreparation()
+	metricChan, shutdownChan, agg := testPreparation()
+	defer testCleanup(t, metricChan, shutdownChan)
 	//aggregation key found, but no time.Duration type for the value
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: "1"}
 	fields := map[string]interface{}{"value": 1}
 	timestamp := time.Now()
 	m, _ := metric.New(metricName, tags, fields, timestamp)
 
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 	select {
 	case aggregatedMetric := <-metricChan:
 		assert.False(t, aggregatedMetric.HasTag(aggregationIntervalTagKey))
@@ -57,13 +56,11 @@ func TestAggregator_NotDurationType(t *testing.T) {
 	default:
 		assert.Fail(t, "Got no metrics")
 	}
-
-	assertNoMetricsInChan(t, metricChan)
-	close(shutdownChan)
 }
 
 func TestAggregator_ProperAggregationKey(t *testing.T) {
-	metricChan, shutdownChan, aggregator := testPreparation()
+	metricChan, shutdownChan, agg := testPreparation()
+	defer testCleanup(t, metricChan, shutdownChan)
 	//normal proper aggregation key found
 	aggregationInterval := 1 * time.Second
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: aggregationInterval.String()}
@@ -71,17 +68,15 @@ func TestAggregator_ProperAggregationKey(t *testing.T) {
 	timestamp := time.Now()
 	m, _ := metric.New(metricName, tags, fields, timestamp)
 
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 	assertNoMetricsInChan(t, metricChan)
 	assertMetricContent(t, metricChan, aggregationInterval * 2, m, expectedFieldContent{"value", 1, 1, 1, 1, "",
 		[]float64{1.0488088481701516}, []float64{1}})
-
-	assertNoMetricsInChan(t, metricChan)
-	close(shutdownChan)
 }
 
 func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
-	metricChan, shutdownChan, aggregator := testPreparation()
+	metricChan, shutdownChan, agg := testPreparation()
+	defer testCleanup(t, metricChan, shutdownChan)
 	//multiple metrics with multiple aggregation period, some aggregation period are the same, some are not.
 	timestamp := time.Now()
 	aggregationInterval := 1 * time.Second
@@ -89,42 +84,39 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: aggregationInterval.String()}
 	fields := map[string]interface{}{"value": 1}
 	m, _ := metric.New(metricName, tags, fields, timestamp)
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 
 	fields = map[string]interface{}{"value": 2}
 	m, _ = metric.New(metricName, tags, fields, timestamp)
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 
 	fields = map[string]interface{}{"value": 3}
 	m, _ = metric.New(metricName, tags, fields, timestamp)
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 
 	tags = map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: (2 * aggregationInterval).String()}
 	fields = map[string]interface{}{"value": 4, "2nd value": 1}
 	m, _ = metric.New(metricName, tags, fields, timestamp)
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 
 	fields = map[string]interface{}{"value": 5, "2nd value": 2}
 	m, _ = metric.New(metricName, tags, fields, timestamp)
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 
 	assertNoMetricsInChan(t, metricChan)
-	assertMetricContent(t, metricChan, aggregationInterval * 3, m, expectedFieldContent{"value", 3, 1, 3, 6, "",
+	assertMetricContent(t, metricChan, aggregationInterval * 2, m, expectedFieldContent{"value", 3, 1, 3, 6, "",
 		[]float64{1.0488088481701516, 2.0438317370604793, 2.992374046230249}, []float64{1, 1, 1}})
 
 	assertNoMetricsInChan(t, metricChan)
 
-	assertMetricContent(t, metricChan, aggregationInterval * 3, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
+	assertMetricContent(t, metricChan, aggregationInterval * 2, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
 		[]float64{3.9828498555324616, 4.819248325194279}, []float64{1, 1}},
 		expectedFieldContent{"2nd value", 2, 1, 2, 3, "",
 			[]float64{1.0488088481701516, 2.0438317370604793}, []float64{1, 1}})
-
-	assertNoMetricsInChan(t, metricChan)
-	close(shutdownChan)
 }
 
 func TestAggregator_ShutdownBehavior(t *testing.T) {
-	metricChan, shutdownChan, aggregator := testPreparation()
+	metricChan, shutdownChan, agg := testPreparation()
 	// verify the remaining metrics can be read after shutdown
 	// the metrics should be available immediately after the shutdown even before aggregation period
 	aggregationInterval := 2 * time.Second
@@ -132,7 +124,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	fields := map[string]interface{}{"value": 1}
 	timestamp := time.Now()
 	m, _ := metric.New(metricName, tags, fields, timestamp)
-	aggregator.AddMetric(m)
+	agg.AddMetric(m)
 
 	//give some time to aggregation to do the work
 	time.Sleep(time.Second * 2)
@@ -140,7 +132,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	close(shutdownChan)
 	wg.Wait()
 
-	assertMetricContent(t, metricChan, 1 * time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
+	assertMetricContent(t, metricChan, 0 * time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
 	assertNoMetricsInChan(t, metricChan)
 }
 
@@ -201,8 +193,14 @@ func testPreparation() (chan telegraf.Metric, chan struct{}, Aggregator) {
 	distribution.NewDistribution = seh1.NewSEH1Distribution
 	metricChan := make(chan telegraf.Metric, metricChanBufferSize)
 	shutdownChan := make(chan struct{})
-	aggregator := NewAggregator(metricChan, shutdownChan, &wg)
-	return metricChan, shutdownChan, aggregator
+	agg := NewAggregator(metricChan, shutdownChan, &wg)
+	return metricChan, shutdownChan, agg
+}
+
+func testCleanup(t *testing.T, metricChan <-chan telegraf.Metric, shutdown chan struct{}) {
+	assertNoMetricsInChan(t, metricChan)
+	close(shutdown)
+	wg.Wait()
 }
 
 func assertMetricContent(t *testing.T, metricChan <-chan telegraf.Metric, metricMaxWait time.Duration, originalMetric telegraf.Metric, expectedFieldContent ...expectedFieldContent) {
