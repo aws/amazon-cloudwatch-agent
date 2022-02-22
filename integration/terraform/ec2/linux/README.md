@@ -8,6 +8,5 @@ Instance assumptions
 4. openssl
 5. git
 6. make
-7. rpm-build (on centos8 based os -rhel8 ol8-)
-8. aws-cli
-9. CloudWatchAgentServerRole is attached
+7. aws-cli
+8. CloudWatchAgentServerRole is attached
