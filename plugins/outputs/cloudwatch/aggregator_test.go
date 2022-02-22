@@ -94,7 +94,7 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 	m, _ = metric.New(metricName, tags, fields, timestamp)
 	agg.AddMetric(m)
 
-	tags = map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: (2 * aggregationInterval).String()}
+	tags = map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: (3 * aggregationInterval).String()}
 	fields = map[string]interface{}{"value": 4, "2nd value": 1}
 	m, _ = metric.New(metricName, tags, fields, timestamp)
 	agg.AddMetric(m)
@@ -109,7 +109,7 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 
 	assertNoMetricsInChan(t, metricChan)
 
-	assertMetricContent(t, metricChan, aggregationInterval * 2, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
+	assertMetricContent(t, metricChan, aggregationInterval * 4, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
 		[]float64{3.9828498555324616, 4.819248325194279}, []float64{1, 1}},
 		expectedFieldContent{"2nd value", 2, 1, 2, 3, "",
 			[]float64{1.0488088481701516, 2.0438317370604793}, []float64{1, 1}})
@@ -132,7 +132,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	close(shutdownChan)
 	wg.Wait()
 
-	assertMetricContent(t, metricChan, 0 * time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
+	assertMetricContent(t, metricChan, 1 * time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
 	assertNoMetricsInChan(t, metricChan)
 }
 
@@ -198,9 +198,10 @@ func testPreparation() (chan telegraf.Metric, chan struct{}, Aggregator) {
 }
 
 func testCleanup(t *testing.T, metricChan <-chan telegraf.Metric, shutdown chan struct{}) {
-	assertNoMetricsInChan(t, metricChan)
 	close(shutdown)
 	wg.Wait()
+
+	assertNoMetricsInChan(t, metricChan)
 }
 
 func assertMetricContent(t *testing.T, metricChan <-chan telegraf.Metric, metricMaxWait time.Duration, originalMetric telegraf.Metric, expectedFieldContent ...expectedFieldContent) {
