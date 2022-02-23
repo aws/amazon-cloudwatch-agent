@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
@@ -22,6 +24,8 @@ const (
 	taskLaunchTypeLabel  = "LaunchType"
 	taskJobNameLabel     = "job"
 	taskMetricsPathLabel = "__metrics_path__"
+	taskClusterNameLabel = "TaskClusterName"
+	taskIdLabel          = "TaskId"
 	ec2InstanceTypeLabel = "InstanceType"
 	ec2VpcIdLabel        = "VpcId"
 	ec2SubnetIdLabel     = "SubnetId"
@@ -138,6 +142,23 @@ func (t *DecoratedTask) generatePrometheusTarget(
 	addExporterLabels(labels, taskGroupLabel, t.Task.Group)
 	addExporterLabels(labels, taskStartedbyLabel, t.Task.StartedBy)
 	addExporterLabels(labels, taskLaunchTypeLabel, t.Task.LaunchType)
+
+	if arn, err := arn.Parse(*t.Task.TaskArn); err == nil {
+		// ARN formats: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-account-settings.html#ecs-resource-ids
+		splitResource := strings.Split(arn.Resource, "/")[1:]
+		if len(splitResource) == 1 {
+			// Old ARN format
+			taskId := splitResource[0]
+			addExporterLabels(labels, taskIdLabel, &taskId)
+		} else if len(splitResource) == 2 {
+			// New ARN format
+			clusterName := splitResource[0]
+			taskId := splitResource[1]
+			addExporterLabels(labels, taskClusterNameLabel, &clusterName)
+			addExporterLabels(labels, taskIdLabel, &taskId)
+		}
+	}
+
 	if t.EC2Info != nil {
 		addExporterLabels(labels, ec2InstanceTypeLabel, &t.EC2Info.InstanceType)
 		addExporterLabels(labels, ec2VpcIdLabel, &t.EC2Info.VpcId)

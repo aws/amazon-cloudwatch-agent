@@ -67,3 +67,17 @@ func ReadAgentOutput(d time.Duration) string {
 
 	return string(out)
 }
+
+func RunShellScript(path string) {
+	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
+
+	if err != nil {
+		log.Fatal(fmt.Sprint(err) + string(out))
+	}
+
+	out, err = exec.Command("bash", "-c", "sudo ./"+path).Output()
+
+	if err != nil {
+		log.Fatal(fmt.Sprint(err) + string(out))
+	}
+}
