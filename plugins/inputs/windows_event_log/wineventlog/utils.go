@@ -104,6 +104,24 @@ func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 	return decoded, err
 }
 
+func UTF16ToUTF8BytesWithoutLength(in []byte) ([]byte, error) {
+	i := 1<<17
+	for ; i-2 > 0; i -= 2 {
+		v1 := uint16(in[i-2]) | uint16(in[i-1])<<8
+		// Stop at non-null char.
+		if v1 != 0 {
+			break
+		}
+	}
+
+	win16be := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
+	utf16bom := unicode.BOMOverride(win16be.NewDecoder())
+	unicodeReader := transform.NewReader(bytes.NewReader(in[:i]), utf16bom)
+	decoded, err := ioutil.ReadAll(unicodeReader)
+	log.Printf("I! ###New decoding: #from: %s \n #to: %s", in, decoded)
+	return decoded, err
+}
+
 func WindowsEventLogLevelName(levelId int32) string {
 	switch levelId {
 	case 1:

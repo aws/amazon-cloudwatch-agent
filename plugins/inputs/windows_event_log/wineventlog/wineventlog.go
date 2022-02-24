@@ -329,6 +329,12 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	if err != nil {
 		return nil, fmt.Errorf("UTF16ToUTF8Bytes() err %v", err)
 	}
+	attempFix, err2 := UTF16ToUTF8BytesWithoutLength(renderBuf)
+	if err2 != nil {
+		return nil, fmt.Errorf("UTF16ToUTF8Bytes() err %v", err2)
+	}
+	log.Printf("I! ### Attempt fix: %s", attempFix)
+
 	switch w.renderFormat {
 	case FormatXml, FormatDefault:
 		//XML format
