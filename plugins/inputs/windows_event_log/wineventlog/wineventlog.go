@@ -344,7 +344,8 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	default:
 		return nil, fmt.Errorf("renderFormat is not recognized, %s", w.renderFormat)
 	}
-	log.Printf("I! ### Line: 347 new record system: %s, content: [%s]", newRecord.System.Description, newRecord.XmlFormatContent)
+	log.Printf("I! ### Line: 347 new record system: %s, content string[%d]: %s",
+		newRecord.System.Description, len(newRecord.XmlFormatContent), newRecord.XmlFormatContent)
 	return newRecord, nil
 }
 
