@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"syscall"
 	"time"
 
@@ -84,8 +85,11 @@ func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 		i = length - 1
 	}
 
+	count := 0
 	for ; i-2 > 0; i -= 2 {
 		v1 := uint16(in[i-2]) | uint16(in[i-1])<<8
+		count++
+		log.Printf("I! ###loop No.%d i: %d, decoding: [%s,%s] to: %s", count, i, in[i-2], in[i-1], v1)
 		// Stop at non-null char.
 		if v1 != 0 {
 			break
@@ -96,6 +100,7 @@ func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 	utf16bom := unicode.BOMOverride(win16be.NewDecoder())
 	unicodeReader := transform.NewReader(bytes.NewReader(in[:i]), utf16bom)
 	decoded, err := ioutil.ReadAll(unicodeReader)
+	log.Printf("I! ### decoding: #from: %s \n #to: %s", in, decoded)
 	return decoded, err
 }
 
