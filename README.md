@@ -78,6 +78,7 @@ The following targets are available. Each may be run with `make <target>`.
 | `clean`                  | `clean` removes build artifacts |
 | `dockerized-build`       | build using docker container without local go environment |
 
+## New Features
 ### Log Filtering
 CloudWatch agent supports log filtering, where the agent processes each log message with the filters that you specify, and only published events that pass all filters to CloudWatch Logs
 
@@ -100,7 +101,6 @@ For example, the following excerpt of the CloudWatch agent configuration file pu
         }
       ]
     },
-    .....
   ]
 }
 ```
