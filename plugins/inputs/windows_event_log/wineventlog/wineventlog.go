@@ -124,7 +124,6 @@ func (w *windowsEventLog) run() {
 					offset: recordNumber,
 					src:    w,
 				}
-				log.Printf("I! Line127: event name: %s, evt.msg: %s", evt.src.name, evt.msg)
 				w.outputFn(evt)
 			}
 		case <-w.done:
@@ -320,7 +319,6 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	}
 	var bufferUsed uint32
 	err = EvtFormatMessage(publisherMetadataEvtHandle, evtHandle, 0, 0, 0, EvtFormatMessageXml, uint32(bufferSize), &renderBuf[0], &bufferUsed)
-	log.Printf("I! ### Debugging: handler: %d, buffer size: %d, buffer used: %d, buffer: [%s]", publisherMetadataEvtHandle, bufferSize, bufferUsed, string(renderBuf))
 	EvtClose(publisherMetadataEvtHandle)
 	if err != nil {
 		return nil, fmt.Errorf("EvtFormatMessage() publisher %v, err %v", newRecord.System.Provider.Name, err)
@@ -329,11 +327,6 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	if err != nil {
 		return nil, fmt.Errorf("UTF16ToUTF8Bytes() err %v", err)
 	}
-	attempFix, err2 := UTF16ToUTF8BytesWithoutLength(renderBuf)
-	if err2 != nil {
-		return nil, fmt.Errorf("UTF16ToUTF8Bytes() err %v", err2)
-	}
-	log.Printf("I! ### Attempt fix: %s", attempFix)
 
 	switch w.renderFormat {
 	case FormatXml, FormatDefault:
@@ -350,8 +343,6 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	default:
 		return nil, fmt.Errorf("renderFormat is not recognized, %s", w.renderFormat)
 	}
-	log.Printf("I! ### Line: 347 new record system: %s, content string[%d]: %s",
-		newRecord.System.Description, len(newRecord.XmlFormatContent), newRecord.XmlFormatContent)
 	return newRecord, nil
 }
 
