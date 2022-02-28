@@ -86,6 +86,7 @@ func (agg *aggregator) AddMetric(m telegraf.Metric) {
 	}
 
 	durationAgg.addMetric(m)
+	log.Println("D! Submitted a metric!")
 }
 
 type durationAggregator struct {
