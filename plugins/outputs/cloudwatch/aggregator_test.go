@@ -109,7 +109,7 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 
 	assertNoMetricsInChan(t, metricChan)
 
-	assertMetricContent(t, metricChan, aggregationInterval * 2, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
+	assertMetricContent(t, metricChan, aggregationInterval * 3, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
 		[]float64{3.9828498555324616, 4.819248325194279}, []float64{1, 1}},
 		expectedFieldContent{"2nd value", 2, 1, 2, 3, "",
 			[]float64{1.0488088481701516, 2.0438317370604793}, []float64{1, 1}})
@@ -200,9 +200,12 @@ func testPreparation() (chan telegraf.Metric, chan struct{}, *sync.WaitGroup, Ag
 }
 
 func testCleanup(t *testing.T, metricChan <-chan telegraf.Metric, shutdown chan struct{}, wg *sync.WaitGroup) {
-	assertNoMetricsInChan(t, metricChan)
 	close(shutdown)
 	wg.Wait()
+
+	if !t.Failed() {
+		assertNoMetricsInChan(t, metricChan) // wait until the aggregator cleans up
+	}
 }
 
 func assertMetricContent(t *testing.T, metricChan <-chan telegraf.Metric, metricMaxWait time.Duration, originalMetric telegraf.Metric, expectedFieldContent ...expectedFieldContent) {

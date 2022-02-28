@@ -127,68 +127,72 @@ func (durationAgg *durationAggregator) aggregating() {
 	for {
 		select {
 		case m := <-durationAgg.aggregationChan:
-			// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
-			aggregatedTime := m.Time().Truncate(durationAgg.aggregationDuration)
-			metricMapKey := fmt.Sprint(computeHash(m), aggregatedTime.Unix())
-			var aggregatedMetric telegraf.Metric
-			var ok bool
-			var err error
-			if aggregatedMetric, ok = durationAgg.metricMap[metricMapKey]; !ok {
-				aggregatedMetric, err = metric.New(m.Name(), m.Tags(), map[string]interface{}{}, aggregatedTime)
-				if err != nil {
-					log.Printf("E! CloudWatch metrics aggregation failed: %v. The metric %v will be dropped.", err, m.Name())
-					continue
-				}
-				durationAgg.metricMap[metricMapKey] = aggregatedMetric
-			}
-			//When the code comes here, it means the aggregatedMetric object has the same metric name, tags and aggregated time.
-			//We just need to aggregate the additional fields if any and the values for the fields.
-			for k, v := range m.Fields() {
-				var value float64
-				var dist distribution.Distribution
-				switch t := v.(type) {
-				case int:
-					value = float64(t)
-				case int32:
-					value = float64(t)
-				case int64:
-					value = float64(t)
-				case float64:
-					value = t
-				case bool:
-					if t {
-						value = 1
-					} else {
-						value = 0
-					}
-				case time.Time:
-					value = float64(t.Unix())
-				case distribution.Distribution:
-					dist = t
-				default:
-					// Skip unsupported type.
-					continue
-				}
-				var existingValue interface{}
-				if existingValue, ok = aggregatedMetric.Fields()[k]; !ok {
-					existingValue = distribution.NewDistribution()
-					aggregatedMetric.AddField(k, existingValue)
-				}
-				existingDist := existingValue.(distribution.Distribution)
-				if dist != nil {
-					existingDist.AddDistribution(dist)
-				} else {
-					existingDist.AddEntry(value, 1)
-				}
-			}
+			durationAgg.aggregate(m)
 		case <-durationAgg.ticker.C:
-			durationAgg.flush()
+			durationAgg.flush(false)
 		case <-durationAgg.shutdownChan:
 			log.Printf("D! CloudWatch: aggregating routine receives the shutdown signal, do the final flush now for aggregation interval %v", durationAgg.aggregationDuration)
-			durationAgg.flush()
+			durationAgg.flush(true)
 			log.Printf("D! CloudWatch: aggregating routine receives the shutdown signal, exiting.")
 			durationAgg.wg.Done()
 			return
+		}
+	}
+}
+
+func (durationAgg *durationAggregator) aggregate(m telegraf.Metric) {
+	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
+	aggregatedTime := m.Time().Truncate(durationAgg.aggregationDuration)
+	metricMapKey := fmt.Sprint(computeHash(m), aggregatedTime.Unix())
+	var aggregatedMetric telegraf.Metric
+	var ok bool
+	var err error
+	if aggregatedMetric, ok = durationAgg.metricMap[metricMapKey]; !ok {
+		aggregatedMetric, err = metric.New(m.Name(), m.Tags(), map[string]interface{}{}, aggregatedTime)
+		if err != nil {
+			log.Printf("E! CloudWatch metrics aggregation failed: %v. The metric %v will be dropped.", err, m.Name())
+			return
+		}
+		durationAgg.metricMap[metricMapKey] = aggregatedMetric
+	}
+	//When the code comes here, it means the aggregatedMetric object has the same metric name, tags and aggregated time.
+	//We just need to aggregate the additional fields if any and the values for the fields.
+	for k, v := range m.Fields() {
+		var value float64
+		var dist distribution.Distribution
+		switch t := v.(type) {
+		case int:
+			value = float64(t)
+		case int32:
+			value = float64(t)
+		case int64:
+			value = float64(t)
+		case float64:
+			value = t
+		case bool:
+			if t {
+				value = 1
+			} else {
+				value = 0
+			}
+		case time.Time:
+			value = float64(t.Unix())
+		case distribution.Distribution:
+			dist = t
+		default:
+			// Skip unsupported type.
+			continue
+		}
+		var existingValue interface{}
+		if existingValue, ok = aggregatedMetric.Fields()[k]; !ok {
+			existingValue = distribution.NewDistribution()
+			aggregatedMetric.AddField(k, existingValue)
+		}
+		existingDist := existingValue.(distribution.Distribution)
+		if dist != nil {
+			existingDist.AddDistribution(dist)
+		} else {
+			existingDist.AddEntry(value, 1)
 		}
 	}
 }
@@ -197,7 +201,15 @@ func (durationAgg *durationAggregator) addMetric(m telegraf.Metric) {
 	durationAgg.aggregationChan <- m
 }
 
-func (durationAgg *durationAggregator) flush() {
+func (durationAgg *durationAggregator) flush(finalFlush bool) {
+	if finalFlush {
+		log.Println("D! Final flush before shutdown")
+		close(durationAgg.aggregationChan)
+		for m := range durationAgg.aggregationChan {
+			log.Printf("D! Capturing %v", m)
+			durationAgg.aggregate(m)
+		}
+	}
 	for _, v := range durationAgg.metricMap {
 		durationAgg.metricChan <- v
 	}
