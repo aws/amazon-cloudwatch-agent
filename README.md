@@ -78,6 +78,38 @@ The following targets are available. Each may be run with `make <target>`.
 | `clean`                  | `clean` removes build artifacts |
 | `dockerized-build`       | build using docker container without local go environment |
 
+## Features
+### Log Filtering
+CloudWatch agent supports log filtering, where the agent processes each log message with the filters that you specify, and only published events that pass all filters to CloudWatch Logs. See [docs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html#CloudWatch-Agent-Configuration-File-Logssection) for details.
+
+For example, the following excerpt of the CloudWatch agent configuration file publishes logs that are PUT and POST requests to CloudWatch Logs, but excluding logs that come from Firefox:
+```json
+{
+  "collect_list": [
+    {
+      "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+      "log_group_name": "test.log",
+      "log_stream_name": "test.log",
+      "filters": [
+        {
+          "type": "exclude",
+          "expression": "Firefox"
+        },
+        {
+          "type": "include",
+          "expression": "P(UT|OST)"
+        }
+      ]
+    },
+  ]
+}
+```
+Example with above config:
+```
+2021-09-27T19:36:35Z I! [logagent] Firefox Detected   // Agent excludes this 
+2021-09-27T19:36:35Z POST (StatusCode: 200).  // Agent would push this to CloudWatch
+2021-09-27T19:36:35Z GET (StatusCode: 400). // doesn't match regex, will be excluded
+```
 ## Versioning
 It is using [Semantic versioning](https://semver.org/)
 
