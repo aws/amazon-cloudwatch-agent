@@ -74,3 +74,8 @@ variable "binary_name" {
   type = string
   default = ""
 }
+
+variable "local_stack_host_name" {
+  type = string
+  default = "localhost.localstack.cloud"
+}
