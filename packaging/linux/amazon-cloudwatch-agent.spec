@@ -112,5 +112,6 @@ fi
 # restart agent after upgrade
 if [ -x /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ]; then
     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a cond-restart
+fi
 
 %clean
