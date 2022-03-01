@@ -1032,15 +1032,14 @@ var schema = `{
             "label_separator": {
               "type": "string"
             },
+            "metric_namespace": {
+              "type": "string"
+            },
             "metric_selectors": {
               "type": "array",
               "items": {
                 "type": "string"
               }
-            },
-	    "metric_namespace": {
-              "type": "string",
-              "description": "Define a namespace for a specific EMF metric which overrides the default top-level metric namespace"
             },
             "dimensions": {
               "type": "array",
