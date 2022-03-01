@@ -35,7 +35,7 @@ func (m *metricDeclaration) process(tags map[string]string, fields map[string]in
 	// Set destination namespace to send prometheus metrics from each job
 	destinationNamespace := defaultNamespace
 
-	if m.MetricNamespace !="" {
+	if m.MetricNamespace != "" {
 		destinationNamespace = m.MetricNamespace
 	}
 	// get concatenated source_labels

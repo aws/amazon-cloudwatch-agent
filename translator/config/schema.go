@@ -1040,7 +1040,7 @@ var schema = `{
             },
 			"metric_namespace": {
               "type": "string",
-              "description": "The namespace for each job scrapping with Prometheus and override the emf_processor's namespace if this property is set"
+              "description": "Define a namespace for a specific EMF metric which overrides the default top-level metric namespace"
             },
             "dimensions": {
               "type": "array",
