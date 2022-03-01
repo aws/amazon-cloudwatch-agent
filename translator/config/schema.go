@@ -1038,7 +1038,7 @@ var schema = `{
                 "type": "string"
               }
             },
-			"metric_namespace": {
+	    "metric_namespace": {
               "type": "string",
               "description": "Define a namespace for a specific EMF metric which overrides the default top-level metric namespace"
             },
