@@ -67,9 +67,45 @@ jobs:
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://cloudwatch-agent-integration-bucket/integration-test/binary/${{ github.sha }} --recursive
 
+  StartLocalStack:
+    name: 'StartLocalStack'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integration/terraform/ec2/localstack
+    outputs:
+      local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform apply
+        id: localstack
+        run: >
+          echo run terraform and execute test code &&
+          terraform apply --auto-approve
+          -var="ssh_key=${PRIVATE_KEY}"
+          -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          -var="github_sha=${GITHUB_SHA}" &&
+          LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
+          echo $LOCAL_STACK_HOST_NAME &&
+          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
+          aws s3 cp terraform.tfstate s3://cloudwatch-agent-integration-bucket/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
+
   EC2LinuxIntegrationTest:
-    needs:
-      - MakeBinary
+    needs: [MakeBinary, StartLocalStack]
     name: 'EC2LinuxIntegrationTest'
     runs-on: ubuntu-latest
     defaults:
@@ -166,9 +202,39 @@ jobs:
           -var="ca_cert_path=${{ matrix.arrays.caCertPath }}"
           -var="arc=${{ matrix.arrays.arc }}"
           -var="binary_name=${{ matrix.arrays.binaryName }}"
-
+          -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}"
       - name: Terraform destroy
         if: ${{ always() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
         run: >
           terraform destroy --auto-approve
           -var="ami=${{ matrix.arrays.ami }}"
+
+  StopLocalStack:
+    name: 'StopLocalStack'
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [StartLocalStack, EC2LinuxIntegrationTest]
+    defaults:
+      run:
+        working-directory: integration/terraform/ec2/localstack
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Copy state
+        run: aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform destroy
+        run: terraform destroy --auto-approve

@@ -30,7 +30,7 @@ type input struct {
 }
 
 //Must run this test with parallel 1 since this will fail if more than one test is running at the same time
-//This test uses a pem file created for the local stack endpoint to be able to coneect via ssl
+//This test uses a pem file created for the local stack endpoint to be able to connect via ssl
 func TestBundle(t *testing.T) {
 
 	parameters := []input{
@@ -48,6 +48,7 @@ func TestBundle(t *testing.T) {
 		//before test run
 		log.Printf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget), func(t *testing.T) {
+			test.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
 			test.CopyFile(parameter.dataInput + configJSON, configOutputPath)
 			test.CopyFile(parameter.dataInput + commonConfigTOML, commonConfigOutputPath)
 			test.StartAgent(configOutputPath);
