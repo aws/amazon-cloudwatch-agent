@@ -85,6 +85,7 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${RPM_BUILD
 # Stop the agent before upgrades.
 if [ $1 -ge 2 ]; then
     if [ -x /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ]; then
+        /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a prep-restart
         /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
     fi
 fi
@@ -106,5 +107,10 @@ if [ $1 -eq 0 ] ; then
         /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a preun
     fi
 fi
+
+%posttrans
+# restart agent after upgrade
+if [ -x /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ]; then
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a cond-restart
 
 %clean
