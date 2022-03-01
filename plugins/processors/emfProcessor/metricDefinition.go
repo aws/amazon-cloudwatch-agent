@@ -26,14 +26,14 @@ type metricDeclaration struct {
 }
 
 // calculate EMF MetricRule for each metric's tags and fields
-func (m *metricDeclaration) process(tags map[string]string, fields map[string]interface{}, namespace string, metricUnit map[string]string) (resRule *structuredlogscommon.MetricRule) {
+func (m *metricDeclaration) process(tags map[string]string, fields map[string]interface{}, defaultNamespace string, metricUnit map[string]string) (resRule *structuredlogscommon.MetricRule) {
 	// If there is no source_labels or metric_selectors defined, the metricDeclaration is not valid
 	if len(m.SourceLabels) == 0 || len(m.MetricSelectors) == 0 {
 		return
 	}
 
 	// Set destination namespace to send prometheus metrics from each job
-	destinationNamespace := namespace
+	destinationNamespace := defaultNamespace
 
 	if m.MetricNamespace !="" {
 		destinationNamespace = m.MetricNamespace
