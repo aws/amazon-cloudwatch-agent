@@ -63,9 +63,10 @@
             },
             {
               "label_matcher": "default",
+              "metric_namespace": "CustomizeMetricScrappingJobNamespace",
               "metric_selectors": [".*"],
-              "source_labels": ["Namespace"],
-              "metric_namespace": "CustomizeMetricScrappingJobNamespace"
+              "source_labels": ["Namespace"]
+
             }
           ]
         }
