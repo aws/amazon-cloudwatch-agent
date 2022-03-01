@@ -19,8 +19,8 @@ type metricDeclaration struct {
 	LabelSeparator  string     `toml:"label_separator"`
 	LabelMatcher    string     `toml:"label_matcher"`
 	MetricSelectors []string   `toml:"metric_selectors"`
+	MetricNamespace string     `toml:"metric_namespace"`
 	Dimensions      [][]string `toml:"dimensions"`
-
 	regexP        *regexp.Regexp
 	metricRegexPs []*regexp.Regexp
 }
@@ -32,6 +32,12 @@ func (m *metricDeclaration) process(tags map[string]string, fields map[string]in
 		return
 	}
 
+	// Set destination namespace to send prometheus metrics from each job
+	destinationNamespace := namespace
+
+	if m.MetricNamespace !="" {
+		destinationNamespace = m.MetricNamespace
+	}
 	// get concatenated source_labels
 	concatenatedLabels := m.getConcatenatedLabels(tags)
 
@@ -40,7 +46,7 @@ func (m *metricDeclaration) process(tags map[string]string, fields map[string]in
 		return
 	}
 
-	rule := &structuredlogscommon.MetricRule{Namespace: namespace}
+	rule := &structuredlogscommon.MetricRule{Namespace: destinationNamespace}
 
 	// For metric matching the labels_matcher, try match its fields with metric_selectors
 Loop:

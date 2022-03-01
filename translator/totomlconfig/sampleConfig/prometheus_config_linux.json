@@ -64,7 +64,8 @@
             {
               "label_matcher": "default",
               "metric_selectors": [".*"],
-              "source_labels": ["Namespace"]
+              "source_labels": ["Namespace"],
+              "metric_namespace": "CustomizeMetricScrappingJobNamespace"
             }
           ]
         }

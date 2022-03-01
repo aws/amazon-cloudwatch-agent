@@ -1038,6 +1038,10 @@ var schema = `{
                 "type": "string"
               }
             },
+			"metric_namespace": {
+              "type": "string",
+              "description": "The namespace for each job scrapping with Prometheus and override the emf_processor's namespace if this property is set"
+            },
             "dimensions": {
               "type": "array",
               "items": {
