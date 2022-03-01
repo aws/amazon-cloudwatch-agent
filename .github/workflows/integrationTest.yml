@@ -61,11 +61,102 @@ jobs:
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: make build package-rpm package-deb
+        run: make build package-rpm package-deb package-win
 
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://cloudwatch-agent-integration-bucket/integration-test/binary/${{ github.sha }} --recursive
+
+  MakeMSIZip:
+    name: 'MakeMSIZip'
+    runs-on: ubuntu-latest
+    needs: [MakeBinary]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.15.15
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Cache win zip
+        id: cached_win_zip
+        uses: actions/cache@v2
+        with:
+          key: "cached_win_zip_${{ github.sha }}"
+          path: buildMSI.zip
+
+      - name: Copy binary
+        if: steps.cached_win_zip.outputs.cache-hit != 'true'
+        run: |
+          aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/binary/${{ github.sha }} . --recursive
+
+      - uses: montudor/action-zip@v1
+        with:
+          args: unzip -qq windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
+
+      - name: Create msi dep folder and copy deps
+        run: |
+          export version=$(cat CWAGENT_VERSION)
+          echo cw agent version $version
+          mkdir msi_dep
+          cp -r integration/msi/tools/. msi_dep/
+          cp -r windows-agent/amazon-cloudwatch-agent/. msi_dep/
+          go run integration/msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>' --tags=integration
+          go run integration/msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__ --tags=integration
+
+      - uses: papeloto/action-zip@v1
+        if: steps.cached_win_zip.outputs.cache-hit != 'true'
+        with:
+          files: msi_dep/
+          dest: buildMSI.zip
+
+      - name: Upload zip
+        if: steps.cached_win_zip.outputs.cache-hit != 'true'
+        run: aws s3 cp buildMSI.zip s3://cloudwatch-agent-integration-bucket/integration-test/packaging/${{ github.sha }}/buildMSI.zip
+
+  BuildMSI:
+    name: 'BuildMSI'
+    runs-on: windows-latest
+    needs: [MakeMSIZip]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Cache msi
+        id: cached_msi
+        uses: actions/cache@v2
+        with:
+          key: "cached_msi_${{ github.sha }}"
+          path: buildMSI/amazon-cloudwatch-agent.msi
+
+      - name: Copy msi
+        if: steps.cached_msi.outputs.cache-hit != 'true'
+        run: aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/packaging/${{ github.sha }}/buildMSI.zip .
+
+      - name: Create msi
+        if: steps.cached_msi.outputs.cache-hit != 'true'
+        run : |
+          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
+          .\wix311.exe /install /quiet /norestart
+          $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.11\bin;"
+          $env:PATH = $env:PATH + $wixToolsetBinPath
+          Expand-Archive buildMSI.zip -Force
+          cd buildMSI
+          .\create_msi.ps1 ${{ github.sha }}
 
   StartLocalStack:
     name: 'StartLocalStack'
