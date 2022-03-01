@@ -10,3 +10,12 @@ Instance assumptions
 6. make
 7. aws-cli
 8. CloudWatchAgentServerRole is attached
+9. crontab
+
+**How are ami built?**
+
+AMI builder pipeline builds the ami
+
+The pipeline installs required packages and updates ami software
+
+This process generates a new ami we can then use for testing

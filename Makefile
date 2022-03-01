@@ -128,6 +128,9 @@ test:
 integration-test:
 	go test ./integration/test/... -p 1 -v --tags=integration
 
+integration-cleaner:
+	go run ./integration/clean/clean_ami.go --tags=clean
+
 clean::
 	rm -rf release/ build/
 	rm -f CWAGENT_VERSION
