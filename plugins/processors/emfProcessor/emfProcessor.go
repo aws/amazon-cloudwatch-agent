@@ -61,6 +61,7 @@ func (e *EmfProcessor) SampleConfig() string {
       labels_matcher = "my-nginx.*"
       labels_separator = ";"
       metric_selectors = ["^nginx_ingress_controller_requests$"]
+      metric_namespace = "ECS/ContainInsights/SampleOverridePrometheus"
       source_labels = ["Service"]
     [processors.emfProcessor.metric_unit]
       nginx_ingress_controller_requests = "Count"
