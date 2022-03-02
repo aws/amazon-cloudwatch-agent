@@ -327,6 +327,7 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	if err != nil {
 		return nil, fmt.Errorf("UTF16ToUTF8Bytes() err %v", err)
 	}
+
 	switch w.renderFormat {
 	case FormatXml, FormatDefault:
 		//XML format
