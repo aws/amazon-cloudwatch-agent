@@ -8,5 +8,5 @@ CWAGENT_VERSION
 *.iml
 .terraform.*
 terraform.*
-.terraform/*
+**/.terraform/*
 coverage.txt

@@ -7,7 +7,7 @@ resource "aws_instance" "integration-test" {
   provisioner "remote-exec" {
     inline = [
       "cloud-init status --wait",
-      "echo clone, build, and install agent",
+      "echo clone and install agent",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.github_sha}",
