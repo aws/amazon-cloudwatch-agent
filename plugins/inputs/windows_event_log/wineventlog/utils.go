@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"syscall"
 	"time"
 
@@ -65,8 +66,8 @@ func CreateQuery(path string, levels []string) (*uint16, error) {
 	}
 
 	//Ignore events older than 2 weeks
-	cutoOffPeriod := (time.Hour * 24 * 14).Nanoseconds()
-	ignoreOlderThanTwoWeeksFilter := fmt.Sprintf(eventIgnoreOldFilter, cutoOffPeriod/int64(time.Millisecond))
+	cutOffPeriod := (time.Hour * 24 * 14).Nanoseconds()
+	ignoreOlderThanTwoWeeksFilter := fmt.Sprintf(eventIgnoreOldFilter, cutOffPeriod/int64(time.Millisecond))
 	if filterLevels != "" {
 		filterLevels = "*[System[(" + filterLevels + ") and " + ignoreOlderThanTwoWeeksFilter + "]]"
 	} else {
@@ -78,10 +79,21 @@ func CreateQuery(path string, levels []string) (*uint16, error) {
 }
 
 func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
-	i := length
-
-	if length%2 != 0 {
-		i = length - 1
+	// Since Windows server 2022, the returned value of used buffer represents for double bytes char count,
+	// which is half of the actual buffer used by byte(what older Windows OS returns), checking if the length
+	//land on the end of used buffer, if no, double it.
+	var i int
+	if isTheEndOfContent(in, length) {
+		i = int(length)
+		if i%2 != 0 {
+			i--
+		}
+	} else {
+		log.Printf("D! Buffer used: %d is returning as double byte character count, doubling it for decoding", length)
+		i = int(length) * 2
+	}
+	if i > cap(in) {
+		i = cap(in)
 	}
 
 	for ; i-2 > 0; i -= 2 {
@@ -97,6 +109,28 @@ func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 	unicodeReader := transform.NewReader(bytes.NewReader(in[:i]), utf16bom)
 	decoded, err := ioutil.ReadAll(unicodeReader)
 	return decoded, err
+}
+
+func isTheEndOfContent(in []byte, length uint32) bool {
+	// scan next 100 characters, if any of them is none '0', return false
+	i := int(length)
+
+	if i%2 != 0 {
+		i -= 1
+	}
+	max := len(in)
+	if i+100 < max {
+		max = i+100
+	}
+
+	for ; i < max - 2; i += 2 {
+		v1 := uint16(in[i+2]) | uint16(in[i+1])<<8
+		// Stop at non-null char.
+		if v1 != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func WindowsEventLogLevelName(levelId int32) string {

@@ -38,6 +38,10 @@ assertStatus() {
 
 # init
 step=0
+aoc_user=$(cat /etc/passwd | grep aoc)
+if [ "${aoc_user}" = "" ]; then
+  echo 'aoc:x:995:991:AOC Agent:/home/aoc:/sbin/nologin' | sudo tee -a /etc/passwd
+fi
 /usr/bin/amazon-cloudwatch-agent-ctl -a remove-config -c all -o all
 /usr/bin/amazon-cloudwatch-agent-ctl -a stop
 
