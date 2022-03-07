@@ -81,3 +81,11 @@ func RunShellScript(path string) {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
 }
+
+func ReplaceLocalStackHostName(pathIn string) {
+	out, err := exec.Command("bash", "-c", "sed -i 's/localhost.localstack.cloud/'\"$LOCAL_STACK_HOST_NAME\"'/g' " + pathIn).Output()
+
+	if err != nil {
+		log.Fatal(fmt.Sprint(err) + string(out))
+	}
+}

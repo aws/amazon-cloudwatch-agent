@@ -8,6 +8,14 @@ Instance assumptions
 4. openssl
 5. git
 6. make
-7. rpm-build (on centos8 based os -rhel8 ol8-)
-8. aws-cli
-9. CloudWatchAgentServerRole is attached
+7. aws-cli
+8. CloudWatchAgentServerRole is attached
+9. crontab
+
+**How are ami built?**
+
+AMI builder pipeline builds the ami
+
+The pipeline installs required packages and updates ami software
+
+This process generates a new ami we can then use for testing

@@ -424,7 +424,6 @@ func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.Metri
 	//https://www.ardanlabs.com/blog/2013/08/understanding-slices-in-go-programming.html
 	var datums []*cloudwatch.MetricDatum
 	for k, v := range point.Fields() {
-		log.Printf("D! #Fields of the current point: k - %s v - %f", k, v)
 		var unit string
 		var value float64
 		var distList []distribution.Distribution

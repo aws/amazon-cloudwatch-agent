@@ -1,4 +1,29 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247350.0 (2022-01-19)
+========================================================================
+
+Enhancements and bug fixes:
+* Improve message in amazon-cloudwatch-agent.log for Invalid Sequence Token case.
+* Update To Otel Version 0.11.0.
+* Improve windows config migration wizard not to include empty files/windows_events field.
+* Improve runtime debugging with added environment variable CWAGENT_LOG_LEVEL.
+* Improve config wizard message regarding collectd.
+* Removed runc dependency
+* Fix potential infinite retry when uploading logs.
+* Fix windows event log plugin to use proper StateFile path.
+* Fix performance for container insights with Kubernetes API server.
+* Improve messages in amazon-cloudwatch-agent.log for dropped log lines in a monitored file.
+* Add messages in amazon-cloudwatch.agent.log when retrying requests with AWS SDK due to throttling.
+* Add support for implicit bridge network mode for ECS (#335)
+* Add feature for agent-side log filtering (#327)
+* Support log retention policy when writing or creating a log group (#250)
+* Add user-agent value for Container Insights for requests (#342)
+* Allow dropping metrics by name for aggregation (#336)
+* Update systemd network target (#344)
+* Fix for K8s naming rule for v1.21+ (#345)
+* Export task ARN resource via Prometheus (#334)
+
+========================================================================
 Amazon CloudWatch Agent 1.247349.0 (2021-07-15)
 ========================================================================
 
