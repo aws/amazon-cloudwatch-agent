@@ -388,7 +388,7 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
-	flag.Usage = func() { usageExit(0) }
+	// flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	args := flag.Args()
 
