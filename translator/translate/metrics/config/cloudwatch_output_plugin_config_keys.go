@@ -5,8 +5,8 @@ package config
 
 // CloudWatchOutputPluginKeys This served as a set that contains the supported CloudWatch output plugin keys
 var CloudWatchOutputPluginKeys = map[string]struct{}{
-	"metric_decoration": {},
-	"drop_original_metrics":       {},
+	"metric_decoration":     {},
+	"drop_original_metrics": {},
 }
 
 func ContainsKey(key string) bool {

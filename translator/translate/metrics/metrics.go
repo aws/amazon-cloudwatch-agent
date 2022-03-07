@@ -4,13 +4,14 @@
 package metrics
 
 import (
+	"sort"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
-	"sort"
 )
 
 type Rule translator.Rule
@@ -89,7 +90,7 @@ func (m *Metrics) Merge(source map[string]interface{}, result map[string]interfa
 
 // Sort items in map alphabetically to temporarily avoid unstable tests before introduce Toml-to-Toml comparison.
 func sortItems(vals map[string][]string) {
-	for _,val := range vals {
+	for _, val := range vals {
 		sort.Strings(val)
 	}
 }

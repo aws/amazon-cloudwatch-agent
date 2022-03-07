@@ -4,9 +4,10 @@
 package seh1
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"log"
 	"math"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 var bucketForZero int16 = math.MinInt16

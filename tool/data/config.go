@@ -5,6 +5,7 @@ package data
 
 import (
 	"fmt"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"

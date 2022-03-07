@@ -4,7 +4,7 @@ echo "Creating deb file for Debian Linux ${ARCH}"
 echo "****************************************"
 set -e
 
-AGENT_VERSION=`cat ${PREPKGPATH}/CWAGENT_VERSION`
+AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION)
 BUILD_ROOT="${BUILD_SPACE}/private/linux_${ARCH}/debian"
 echo "BUILD_SPACE: ${BUILD_SPACE}    agent_version: ${AGENT_VERSION}   pre-package location:${PREPKGPATH}"
 echo "Creating debian folders"
@@ -60,7 +60,6 @@ mkdir -p ${BUILD_ROOT}/var/run/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${BUILD_ROOT}/var/run/amazon/amazon-cloudwatch-agent
 ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${BUILD_ROOT}/var/run/amazon/cwagent-otel-collector
 
-
 cp ${BUILD_SPACE}/packaging/debian/conffiles ${BUILD_ROOT}/
 cp ${BUILD_SPACE}/packaging/debian/preinst ${BUILD_ROOT}/
 cp ${BUILD_SPACE}/packaging/debian/prerm ${BUILD_ROOT}/
@@ -73,20 +72,26 @@ chmod ug+rx ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-
 chmod ug+rx ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
 
 echo "Constructing the control file"
-echo 'Package: amazon-cloudwatch-agent' > ${BUILD_ROOT}/control
-echo "Architecture: ${ARCH}" >> ${BUILD_ROOT}/control
-echo -n 'Version: ' >> ${BUILD_ROOT}/control
-echo -n ${AGENT_VERSION} >> ${BUILD_ROOT}/control
-echo '-1' >> ${BUILD_ROOT}/control
+echo 'Package: amazon-cloudwatch-agent' >${BUILD_ROOT}/control
+echo "Architecture: ${ARCH}" >>${BUILD_ROOT}/control
+echo -n 'Version: ' >>${BUILD_ROOT}/control
+echo -n ${AGENT_VERSION} >>${BUILD_ROOT}/control
+echo '-1' >>${BUILD_ROOT}/control
 
-cat ${BUILD_SPACE}/packaging/debian/control >> ${BUILD_ROOT}/control
+cat ${BUILD_SPACE}/packaging/debian/control >>${BUILD_ROOT}/control
 
 echo "Setting permissioning as required by debian"
-cd ${BUILD_ROOT}/..; find ./debian -type d | xargs chmod 755; cd ~-
+cd ${BUILD_ROOT}/..
+find ./debian -type d | xargs chmod 755
+cd ~-
 
 # the below permissioning is required by debian
-cd ${BUILD_ROOT}; tar czf data.tar.gz opt etc usr var --owner=0 --group=0 ; cd ~-
-cd ${BUILD_ROOT}; tar czf control.tar.gz control conffiles preinst prerm postinst --owner=0 --group=0 ; cd ~-
+cd ${BUILD_ROOT}
+tar czf data.tar.gz opt etc usr var --owner=0 --group=0
+cd ~-
+cd ${BUILD_ROOT}
+tar czf control.tar.gz control conffiles preinst prerm postinst --owner=0 --group=0
+cd ~-
 
 echo "Creating the debian package"
 echo "Constructing the deb packagage"

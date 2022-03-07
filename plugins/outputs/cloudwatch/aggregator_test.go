@@ -73,7 +73,7 @@ func TestAggregator_ProperAggregationKey(t *testing.T) {
 
 	aggregator.AddMetric(m)
 	assertNoMetricsInChan(t, metricChan)
-	assertMetricContent(t, metricChan, aggregationInterval * 2, m, expectedFieldContent{"value", 1, 1, 1, 1, "",
+	assertMetricContent(t, metricChan, aggregationInterval*2, m, expectedFieldContent{"value", 1, 1, 1, 1, "",
 		[]float64{1.0488088481701516}, []float64{1}})
 
 	assertNoMetricsInChan(t, metricChan)
@@ -109,12 +109,12 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 	aggregator.AddMetric(m)
 
 	assertNoMetricsInChan(t, metricChan)
-	assertMetricContent(t, metricChan, aggregationInterval * 3, m, expectedFieldContent{"value", 3, 1, 3, 6, "",
+	assertMetricContent(t, metricChan, aggregationInterval*3, m, expectedFieldContent{"value", 3, 1, 3, 6, "",
 		[]float64{1.0488088481701516, 2.0438317370604793, 2.992374046230249}, []float64{1, 1, 1}})
 
 	assertNoMetricsInChan(t, metricChan)
 
-	assertMetricContent(t, metricChan, aggregationInterval * 3, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
+	assertMetricContent(t, metricChan, aggregationInterval*3, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
 		[]float64{3.9828498555324616, 4.819248325194279}, []float64{1, 1}},
 		expectedFieldContent{"2nd value", 2, 1, 2, 3, "",
 			[]float64{1.0488088481701516, 2.0438317370604793}, []float64{1, 1}})
@@ -140,7 +140,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	close(shutdownChan)
 	wg.Wait()
 
-	assertMetricContent(t, metricChan, 1 * time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
+	assertMetricContent(t, metricChan, 1*time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
 	assertNoMetricsInChan(t, metricChan)
 }
 

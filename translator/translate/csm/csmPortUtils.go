@@ -5,9 +5,10 @@ package csm
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"net"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 func computeIPv4LoopbackAddressFromPort(port interface{}) string {

@@ -600,11 +600,11 @@ func TestLogFilters(t *testing.T) {
 		"retention_in_days": -1,
 		"filters": []interface{}{
 			map[string]interface{}{
-				"type": "include",
+				"type":       "include",
 				"expression": "foo",
 			},
 			map[string]interface{}{
-				"type": "exclude",
+				"type":       "exclude",
 				"expression": "bar",
 			},
 		},

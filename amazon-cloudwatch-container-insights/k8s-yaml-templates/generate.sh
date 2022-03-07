@@ -12,17 +12,17 @@ rm ./fluentd/fluentd.yaml.bak
 
 OUTPUT=./quickstart/cwagent-fluentd-quickstart.yaml
 
-cat ./cloudwatch-namespace.yaml > ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
-cat ./cwagent-kubernetes-monitoring/cwagent-serviceaccount.yaml >> ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
+cat ./cloudwatch-namespace.yaml >${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
+cat ./cwagent-kubernetes-monitoring/cwagent-serviceaccount.yaml >>${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
 cat ./cwagent-kubernetes-monitoring/cwagent-configmap.yaml | sed "s|\"logs|\"agent\": {\\
         \"region\": \"{{region_name}}\"\\
       },\\
-      \"logs|g" >> ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
-cat ./cwagent-kubernetes-monitoring/cwagent-daemonset.yaml >> ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
-cat ./fluentd/fluentd-configmap.yaml >> ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
-cat ./fluentd/fluentd.yaml >> ${OUTPUT}
+      \"logs|g" >>${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
+cat ./cwagent-kubernetes-monitoring/cwagent-daemonset.yaml >>${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
+cat ./fluentd/fluentd-configmap.yaml >>${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
+cat ./fluentd/fluentd.yaml >>${OUTPUT}

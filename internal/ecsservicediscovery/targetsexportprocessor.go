@@ -5,10 +5,11 @@ package ecsservicediscovery
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"regexp"
+
+	"gopkg.in/yaml.v2"
 )
 
 // Prometheus <labelname> definition: a string matching the regular expression [a-zA-Z_][a-zA-Z0-9_]*

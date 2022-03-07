@@ -5,11 +5,13 @@ package metric_decoration
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
+
 //Check the case when the input is in "cpu":{//specific configuration}
 func TestMetricDecoration_ApplyRule(t *testing.T) {
 	c := new(MetricDecoration)
