@@ -356,11 +356,6 @@ func runAgent(ctx context.Context,
 	return ag.Run(ctx)
 }
 
-func usageExit(rc int) {
-	//fmt.Println(internal.Usage)
-	os.Exit(rc)
-}
-
 type program struct {
 	inputFilters      []string
 	outputFilters     []string
@@ -388,7 +383,6 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
-	// flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	args := flag.Args()
 
