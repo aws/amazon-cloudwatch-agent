@@ -6,6 +6,7 @@ package ec2util
 import (
 	"log"
 	"sync"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -20,6 +21,8 @@ type ec2Util struct {
 	InstanceID string
 	Hostname   string
 }
+
+const allowedRetries = 3
 
 var e *ec2Util
 var once sync.Once
@@ -43,6 +46,14 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		return
 	}
 	md := ec2metadata.New(ses)
+	for i := 0; i < allowedRetries; i++ {
+		if md.Available() {
+			continue
+		}
+		log.Println("W! [EC2] network not available yet. Sleeping for 1 second")
+		time.Sleep(1 * time.Second)
+	}
+
 	if !md.Available() {
 		log.Println("E! ec2metadata is not available")
 		return
