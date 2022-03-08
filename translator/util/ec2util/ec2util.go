@@ -4,14 +4,13 @@
 package ec2util
 
 import (
-	"log"
-	"sync"
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"log"
+	"sync"
+	"time"
 )
 
 // this is a singleton struct
@@ -40,15 +39,15 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		return
 	}
 
-	ses, e := session.NewSession()
-	if e != nil {
-		log.Println("E! [EC2] getting new session info: ", e)
+	ses, err := session.NewSession()
+	if err != nil {
+		log.Println("E! [EC2] getting new session info: ", err)
 		return
 	}
 	md := ec2metadata.New(ses)
 	for i := 0; i < allowedRetries; i++ {
 		if md.Available() {
-			continue
+			break
 		}
 		log.Println("W! [EC2] network not available yet. Sleeping for 1 second")
 		time.Sleep(1 * time.Second)
@@ -59,28 +58,28 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		return
 	}
 
-	if info, e := md.GetMetadata("instance-id"); e == nil {
+	if info, err := md.GetMetadata("instance-id"); err == nil {
 		newInstance.InstanceID = info
 	} else {
-		log.Println("E! getting instance-id from EC2 metadata fail: ", e)
+		log.Println("E! getting instance-id from EC2 metadata fail: ", err)
 	}
 
-	if info, e := md.GetMetadata("hostname"); e == nil {
+	if info, err := md.GetMetadata("hostname"); err == nil {
 		newInstance.Hostname = info
 	} else {
-		log.Println("E! getting hostname from EC2 metadata fail: ", e)
+		log.Println("E! getting hostname from EC2 metadata fail: ", err)
 	}
 
-	if info, e := md.GetMetadata("local-ipv4"); e == nil {
+	if info, err := md.GetMetadata("local-ipv4"); err == nil {
 		newInstance.PrivateIP = info
 	} else {
-		log.Println("E! getting local-ipv4 from EC2 metadata fail: ", e)
+		log.Println("E! getting local-ipv4 from EC2 metadata fail: ", err)
 	}
 
-	if info, e := md.GetInstanceIdentityDocument(); e == nil {
+	if info, err := md.GetInstanceIdentityDocument(); err == nil {
 		newInstance.Region = info.Region
 	} else {
-		log.Println("E! getting region from EC2 metadata fail: ", e)
+		log.Println("E! getting region from EC2 metadata fail: ", err)
 	}
 
 	return
