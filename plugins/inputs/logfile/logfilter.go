@@ -5,8 +5,9 @@ package logfile
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"regexp"
+
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
 const (

@@ -6,8 +6,6 @@ package statsd
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd/graphite"
 	"log"
 	"net"
 	"sort"
@@ -15,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd/graphite"
 
 	//"github.com/influxdata/telegraf/plugins/parsers/graphite"
 

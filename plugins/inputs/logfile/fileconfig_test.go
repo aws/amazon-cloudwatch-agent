@@ -187,8 +187,8 @@ func TestFileConfigInitWithFilters(t *testing.T) {
 	}
 
 	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
-		Filters:               []*LogFilter{&filter1, &filter2},
+		FilePath: "/tmp/logfile.log",
+		Filters:  []*LogFilter{&filter1, &filter2},
 	}
 
 	err := fileConfig.init()
@@ -207,7 +207,7 @@ func TestFileConfigInitWithFilters(t *testing.T) {
 
 func TestFileConfigInitWithFiltersFails(t *testing.T) {
 	fileConfig := &FileConfig{
-		FilePath:              "/tmp/logfile.log",
+		FilePath: "/tmp/logfile.log",
 		Filters: []*LogFilter{
 			{
 				Type:       excludeFilterType,
@@ -427,11 +427,11 @@ func BenchmarkLogFilterExclusionsDoNotDropUnmatchedLog(b *testing.B) {
 func BenchmarkLogFilterMatchesMultipleInclusionExpressions(b *testing.B) {
 	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
 		{
-			Type: includeFilterType,
+			Type:       includeFilterType,
 			Expression: "(WARN|ERROR)",
 		},
 		{
-			Type: includeFilterType,
+			Type:       includeFilterType,
 			Expression: "StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+",
 		},
 	})
@@ -446,11 +446,11 @@ func BenchmarkLogFilterMatchesMultipleInclusionExpressions(b *testing.B) {
 func BenchmarkLogFilterDoesNotMatchMultipleInclusionExpressions(b *testing.B) {
 	filters := initializeLogFiltersForBenchmarks(b, []*LogFilter{
 		{
-			Type: includeFilterType,
+			Type:       includeFilterType,
 			Expression: "(WARN|ERROR)",
 		},
 		{
-			Type: includeFilterType,
+			Type:       includeFilterType,
 			Expression: "StatusCode: [4-5]\\d{2} for call to (/(\\w)+)+",
 		},
 	})

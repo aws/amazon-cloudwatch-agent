@@ -4,8 +4,9 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/credentials"
 )
 
 type Refreshable_shared_credentials_provider struct {

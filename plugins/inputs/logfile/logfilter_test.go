@@ -4,8 +4,9 @@
 package logfile
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLogFilterInit(t *testing.T) {
@@ -78,7 +79,7 @@ func BenchmarkLogFilterShouldNotPublish(b *testing.B) {
 
 func initLogFilter(filterType, expressionStr string) (LogFilter, error) {
 	filter := LogFilter{
-		Type: filterType,
+		Type:       filterType,
 		Expression: expressionStr,
 	}
 	err := filter.init()

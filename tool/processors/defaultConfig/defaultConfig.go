@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"log"
+	"strconv"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig/advancedPlan"
@@ -17,8 +20,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/logs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-	"log"
-	"strconv"
 )
 
 var Processor processors.Processor = &processor{}

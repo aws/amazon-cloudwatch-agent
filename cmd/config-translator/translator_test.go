@@ -174,7 +174,7 @@ func TestValidLogFilterConfig(t *testing.T) {
 func TestInvalidLogFilterConfig(t *testing.T) {
 	expectedErrorMap := map[string]int{
 		"additional_property_not_allowed": 1,
-		"enum": 1,
+		"enum":                            1,
 	}
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogFilesWithFilters.json", false, expectedErrorMap)
 }

@@ -6,10 +6,11 @@ package totomlconfig
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 

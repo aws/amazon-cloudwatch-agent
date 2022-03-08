@@ -175,7 +175,6 @@ func Test_ExportDockerLabelBasedTarget_Fargate_AWSVPC(t *testing.T) {
 	assert.Equal(t, "/metrics", target.Labels["__metrics_path__"])
 	assert.Equal(t, "/metrics", target.Labels["ECS_PROMETHEUS_METRICS_PATH"])
 
-
 }
 
 func Test_ExportTaskDefBasedTarget_Fargate_AWSVPC(t *testing.T) {

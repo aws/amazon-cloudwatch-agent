@@ -5,9 +5,10 @@ package append_dimensions
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNoAgentConfi1g(t *testing.T) {

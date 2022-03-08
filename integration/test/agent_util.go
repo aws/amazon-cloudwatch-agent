@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-// +build linux
-// +build integration
+//go:build linux && integration
+// +build linux,integration
 
 package test
 
@@ -23,18 +23,18 @@ func CopyFile(pathIn string, pathOut string) {
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	out, err := exec.Command("bash", "-c", "sudo cp " + pathInAbs + " " + pathOut).Output()
+	out, err := exec.Command("bash", "-c", "sudo cp "+pathInAbs+" "+pathOut).Output()
 
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
 
-	log.Printf("File : %s copied to : %s", pathIn, pathOut);
+	log.Printf("File : %s copied to : %s", pathIn, pathOut)
 }
 
 func StartAgent(configOutputPath string) {
 	out, err := exec.
-		Command("bash", "-c", "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:" + configOutputPath).
+		Command("bash", "-c", "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:"+configOutputPath).
 		Output()
 
 	if err != nil {
@@ -53,7 +53,7 @@ func StopAgent() {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
 
-	log.Printf("Agent is stopped");
+	log.Printf("Agent is stopped")
 }
 
 func ReadAgentOutput(d time.Duration) string {
@@ -69,13 +69,13 @@ func ReadAgentOutput(d time.Duration) string {
 }
 
 func RunShellScript(path string) {
-	out, err := exec.Command("bash", "-c", "chmod +x " + path).Output()
+	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
 
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
 
-	out, err = exec.Command("bash", "-c", "sudo ./" + path).Output()
+	out, err = exec.Command("bash", "-c", "sudo ./"+path).Output()
 
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))
@@ -83,7 +83,7 @@ func RunShellScript(path string) {
 }
 
 func ReplaceLocalStackHostName(pathIn string) {
-	out, err := exec.Command("bash", "-c", "sed -i 's/localhost.localstack.cloud/'\"$LOCAL_STACK_HOST_NAME\"'/g' " + pathIn).Output()
+	out, err := exec.Command("bash", "-c", "sed -i 's/localhost.localstack.cloud/'\"$LOCAL_STACK_HOST_NAME\"'/g' "+pathIn).Output()
 
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))

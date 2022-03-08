@@ -5,12 +5,13 @@ package collect_list
 
 import (
 	"fmt"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 const (
-	FiltersSectionKey = "filters"
-	FiltersTypeSectionKey = "type"
+	FiltersSectionKey           = "filters"
+	FiltersTypeSectionKey       = "type"
 	FiltersExpressionSectionKey = "expression"
 )
 

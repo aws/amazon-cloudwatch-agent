@@ -4,10 +4,11 @@
 package emfProcessor
 
 import (
+	"log"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"log"
 )
 
 type EmfProcessor struct {

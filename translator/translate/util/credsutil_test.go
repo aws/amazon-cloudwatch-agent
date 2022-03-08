@@ -5,9 +5,10 @@ package util
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestCreds(t *testing.T) {

@@ -120,10 +120,10 @@ func isTheEndOfContent(in []byte, length uint32) bool {
 	}
 	max := len(in)
 	if i+100 < max {
-		max = i+100
+		max = i + 100
 	}
 
-	for ; i < max - 2; i += 2 {
+	for ; i < max-2; i += 2 {
 		v1 := uint16(in[i+2]) | uint16(in[i+1])<<8
 		// Stop at non-null char.
 		if v1 != 0 {

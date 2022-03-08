@@ -4,9 +4,10 @@
 package ecsservicediscovery
 
 import (
+	"testing"
+
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func buildTestingTask() []*DecoratedTask {

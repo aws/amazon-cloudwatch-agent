@@ -1,14 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-// +build linux
-// +build integration
+//go:build linux && integration
+// +build linux,integration
 
 package sanity
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 )
 
 func TestAgentStatus(t *testing.T) {

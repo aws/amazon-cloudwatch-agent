@@ -21,8 +21,8 @@ type metricDeclaration struct {
 	MetricSelectors []string   `toml:"metric_selectors"`
 	MetricNamespace string     `toml:"metric_namespace"`
 	Dimensions      [][]string `toml:"dimensions"`
-	regexP        *regexp.Regexp
-	metricRegexPs []*regexp.Regexp
+	regexP          *regexp.Regexp
+	metricRegexPs   []*regexp.Regexp
 }
 
 // calculate EMF MetricRule for each metric's tags and fields

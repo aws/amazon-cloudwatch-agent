@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm"
+	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/providers"
 )
 

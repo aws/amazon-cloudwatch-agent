@@ -4,43 +4,44 @@
 # SPDX-License-Identifier: MIT
 
 assertStatus() {
-  keyToCheck="${1:-}"
-  expectedVal="${2:-}"
+     keyToCheck="${1:-}"
+     expectedVal="${2:-}"
 
-  grepKey='unknown'
-  case "${keyToCheck}" in
-    cwa_running_status)
-        grepKey="\"status\""
-        ;;
-    cwa_config_status)
-        grepKey="\"configstatus\""
-        ;;
-    cwoc_running_status)
-        grepKey="\"cwoc_status\""
-        ;;
-    cwoc_config_status)
-        grepKey="\"cwoc_configstatus\""
-        ;;
-    *)  echo "Invalid Key To Check: ${keyToCheck}" >&2
-        exit 1
-        ;;
-  esac
+     grepKey='unknown'
+     case "${keyToCheck}" in
+     cwa_running_status)
+          grepKey="\"status\""
+          ;;
+     cwa_config_status)
+          grepKey="\"configstatus\""
+          ;;
+     cwoc_running_status)
+          grepKey="\"cwoc_status\""
+          ;;
+     cwoc_config_status)
+          grepKey="\"cwoc_configstatus\""
+          ;;
+     *)
+          echo "Invalid Key To Check: ${keyToCheck}" >&2
+          exit 1
+          ;;
+     esac
 
-  result=$(/usr/bin/amazon-cloudwatch-agent-ctl -a status | grep "${grepKey}" | awk -F: '{print $2}' | sed 's/ "//; s/",//')
+     result=$(/usr/bin/amazon-cloudwatch-agent-ctl -a status | grep "${grepKey}" | awk -F: '{print $2}' | sed 's/ "//; s/",//')
 
-  if [ "${result}" = "${expectedVal}" ]; then
-      echo "In step ${step}, ${keyToCheck} is expected"
-  else
-      echo "In step ${step}, ${keyToCheck} is NOT expected. (actual="${result}"; expected="${expectedVal}")"
-      exit 1
-  fi
+     if [ "${result}" = "${expectedVal}" ]; then
+          echo "In step ${step}, ${keyToCheck} is expected"
+     else
+          echo "In step ${step}, ${keyToCheck} is NOT expected. (actual="${result}"; expected="${expectedVal}")"
+          exit 1
+     fi
 }
 
 # init
 step=0
 aoc_user=$(cat /etc/passwd | grep aoc)
 if [ "${aoc_user}" = "" ]; then
-  echo 'aoc:x:995:991:AOC Agent:/home/aoc:/sbin/nologin' | sudo tee -a /etc/passwd
+     echo 'aoc:x:995:991:AOC Agent:/home/aoc:/sbin/nologin' | sudo tee -a /etc/passwd
 fi
 /usr/bin/amazon-cloudwatch-agent-ctl -a remove-config -c all -o all
 /usr/bin/amazon-cloudwatch-agent-ctl -a stop

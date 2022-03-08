@@ -5,8 +5,9 @@ package mem
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 //Check the case when the input is in "mem":{//specific configuration}

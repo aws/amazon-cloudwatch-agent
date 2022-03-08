@@ -4,10 +4,11 @@
 package agent
 
 import (
+	"os"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"os"
 )
 
 type Hostname struct {

@@ -274,7 +274,7 @@ func (p *pusher) send() {
 			p.putRetentionPolicy()
 		case *cloudwatchlogs.InvalidSequenceTokenException:
 			if p.sequenceToken == nil {
-				p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v",  p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
+				p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v", p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
 			} else {
 				p.Log.Warnf("Invalid SequenceToken used (%v) while sending logs to %v/%v, will use new token and retry: %v", p.sequenceToken, p.Group, p.Stream, e.Message())
 			}
