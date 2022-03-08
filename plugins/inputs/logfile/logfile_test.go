@@ -438,10 +438,6 @@ func TestLogsFileAutoRemoval(t *testing.T) {
 		t.Errorf("Wrong log found from 2nd file: \n% x\nExpecting:\n% x\n", e.Message(), logEntryString)
 	}
 
-	//Sleep for avoiding race condition between opening tmpfile2 to delete tmpfile1 with auto_removal and opening tmpfile1
-	//to check it exist
-	time.Sleep(2 * time.Second)
-
 	_, err = os.Open(tmpfile1.Name())
 	assert.True(t, os.IsNotExist(err))
 
