@@ -21,11 +21,13 @@ const (
 	ipAddressPlaceholder     = "{ip_address}"
 	awsRegionPlaceholder     = "{aws_region}"
 	datePlaceholder          = "{date}"
+	accountIdPlaceholder     = "{account_id}"
 
 	unknownInstanceId = "i-UNKNOWN"
 	unknownHostname   = "UNKNOWN-HOST"
 	unknownIpAddress  = "UNKNOWN-IP"
 	unknownAwsRegion  = "UNKNOWN-REGION"
+	unknownAccountId  = "UNKNOWN-ACCOUNT"
 )
 
 //resolve place holder for log group and log stream.
@@ -64,8 +66,15 @@ func GetMetadataInfo() map[string]string {
 		awsRegion = unknownAwsRegion
 	}
 
+	accountID := ec2util.GetEC2UtilSingleton().AccountID
+	if accountID == "" {
+		accountID = unknownAccountId
+	}
+
 	return map[string]string{instanceIdPlaceholder: instanceID, hostnamePlaceholder: hostname,
-		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress, awsRegionPlaceholder: awsRegion}
+		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress, awsRegionPlaceholder: awsRegion,
+		accountIdPlaceholder: accountID,
+	}
 }
 
 func getHostName() string {
