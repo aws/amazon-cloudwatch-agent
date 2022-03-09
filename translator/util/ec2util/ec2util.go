@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"log"
+	"net"
 	"sync"
 	"time"
 )
@@ -21,7 +22,7 @@ type ec2Util struct {
 	Hostname   string
 }
 
-const allowedRetries = 3
+const allowedRetries = 5
 
 var e *ec2Util
 var once sync.Once
@@ -39,19 +40,41 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		return
 	}
 
+	// Need to account for the scenario where a user running the CloudWatch agent on-premises,
+	// and doesn't require connectivity with the EC2 instance metadata service, while still
+	// gracefully waiting for network access on EC2 instances.
+	networkUp := false
+	for retry := 0; !networkUp && retry < allowedRetries; retry++ {
+		ifs, err := net.Interfaces()
+
+		if err != nil {
+			log.Println("E! [EC2] An error occurred while fetching network interfaces: ", err)
+		}
+
+		for _, in := range ifs {
+			if (in.Flags&net.FlagUp) != 0 && (in.Flags&net.FlagLoopback) == 0 {
+				networkUp = true
+				break
+			}
+		}
+		if networkUp {
+			log.Println("D! [EC2] Found active network interface")
+			break
+		}
+
+		log.Println("W! [EC2] Sleep until network is up")
+		time.Sleep(1 * time.Second)
+	}
+	if !networkUp {
+		log.Println("E! [EC2] No available network interface")
+	}
+
 	ses, err := session.NewSession()
 	if err != nil {
 		log.Println("E! [EC2] getting new session info: ", err)
 		return
 	}
 	md := ec2metadata.New(ses)
-	for i := 0; i < allowedRetries; i++ {
-		if md.Available() {
-			break
-		}
-		log.Println("W! [EC2] network not available yet. Sleeping for 1 second")
-		time.Sleep(1 * time.Second)
-	}
 
 	if !md.Available() {
 		log.Println("E! ec2metadata is not available")
