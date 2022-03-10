@@ -19,7 +19,7 @@ func applyServiceAddressesRule(input interface{}) (returnKey string, returnVal i
 	stringAddresses := inputAddresses.([]string)
 	addresses := []string{}
 
-	metadata := util.GetMetadataInfo()
+	metadata := util.GetMetadataInfo(util.Ec2MetadataInfoProvider)
 
 	for _, addr := range stringAddresses {
 		resolvedAddr := util.ResolvePlaceholder(addr, metadata)

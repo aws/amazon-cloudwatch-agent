@@ -14,6 +14,24 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
+type Metadata struct {
+	InstanceID string
+	Hostname string
+	PrivateIP string
+	AccountID string
+}
+
+type MetadataInfoProvider func() *Metadata
+
+var Ec2MetadataInfoProvider = func() *Metadata {
+	return &Metadata{
+		InstanceID: ec2util.GetEC2UtilSingleton().InstanceID,
+		Hostname: ec2util.GetEC2UtilSingleton().Hostname,
+		PrivateIP: ec2util.GetEC2UtilSingleton().PrivateIP,
+		AccountID: ec2util.GetEC2UtilSingleton().AccountID,
+	}
+}
+
 const (
 	instanceIdPlaceholder    = "{instance_id}"
 	hostnamePlaceholder      = "{hostname}"
@@ -43,20 +61,20 @@ func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	return tmpString
 }
 
-func GetMetadataInfo() map[string]string {
+func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	localHostname := getHostName()
 
-	instanceID := ec2util.GetEC2UtilSingleton().InstanceID
+	instanceID := provider().InstanceID
 	if instanceID == "" {
 		instanceID = unknownInstanceId
 	}
 
-	hostname := ec2util.GetEC2UtilSingleton().Hostname
+	hostname := provider().Hostname
 	if hostname == "" {
 		hostname = localHostname
 	}
 
-	ipAddress := ec2util.GetEC2UtilSingleton().PrivateIP
+	ipAddress := provider().PrivateIP
 	if ipAddress == "" {
 		ipAddress = getIpAddress()
 	}
@@ -66,7 +84,7 @@ func GetMetadataInfo() map[string]string {
 		awsRegion = unknownAwsRegion
 	}
 
-	accountID := ec2util.GetEC2UtilSingleton().AccountID
+	accountID := provider().AccountID
 	if accountID == "" {
 		accountID = unknownAccountId
 	}
