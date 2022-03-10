@@ -41,7 +41,7 @@ func buildMetricUnit() (mu map[string]string) {
 }
 
 func buildTestMetrics(ts time.Time) (ms []telegraf.Metric) {
-	m1, _ := metric.New("prometheus_scraper",
+	m1 := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "v1"},
 		map[string]interface{}{"metric_a": 0.1},
 		ts)
@@ -66,7 +66,7 @@ func buildEMFMetricRuleWithUnit() *structuredlogscommon.MetricRule {
 }
 
 func buildExpectedMetrics(ts time.Time) (ms []telegraf.Metric) {
-	m1, _ := metric.New("prometheus_scraper",
+	m1 := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "v1", "attributesInFields": "CloudWatchMetrics"},
 		map[string]interface{}{"metric_a": 0.1, "CloudWatchMetrics": []structuredlogscommon.MetricRule{*buildEMFMetricRule(), *buildEMFMetricRule()}},
 		ts)
@@ -75,7 +75,7 @@ func buildExpectedMetrics(ts time.Time) (ms []telegraf.Metric) {
 }
 
 func buildExpectedDeduppedMetrics(ts time.Time) (ms []telegraf.Metric) {
-	m1, _ := metric.New("prometheus_scraper",
+	m1 := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "v1", "attributesInFields": "CloudWatchMetrics"},
 		map[string]interface{}{"metric_a": 0.1, "CloudWatchMetrics": []structuredlogscommon.MetricRule{*buildEMFMetricRule()}},
 		ts)
@@ -84,7 +84,7 @@ func buildExpectedDeduppedMetrics(ts time.Time) (ms []telegraf.Metric) {
 }
 
 func buildExpectedMetricsWithUnit(ts time.Time) (ms []telegraf.Metric) {
-	m1, _ := metric.New("prometheus_scraper",
+	m1 := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "v1", "attributesInFields": "CloudWatchMetrics"},
 		map[string]interface{}{"metric_a": 0.1, "CloudWatchMetrics": []structuredlogscommon.MetricRule{*buildEMFMetricRuleWithUnit(), *buildEMFMetricRuleWithUnit()}},
 		ts)
@@ -93,7 +93,7 @@ func buildExpectedMetricsWithUnit(ts time.Time) (ms []telegraf.Metric) {
 }
 
 func buildExpectedDeduppedMetricsWithUnit(ts time.Time) (ms []telegraf.Metric) {
-	m1, _ := metric.New("prometheus_scraper",
+	m1 := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "v1", "attributesInFields": "CloudWatchMetrics"},
 		map[string]interface{}{"metric_a": 0.1, "CloudWatchMetrics": []structuredlogscommon.MetricRule{*buildEMFMetricRuleWithUnit()}},
 		ts)

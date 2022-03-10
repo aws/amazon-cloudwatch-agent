@@ -117,7 +117,8 @@ func TestWriteToFileInRotation(t *testing.T) {
 		MaxAge:     1,
 		Compress:   false,
 	}
-	log.SetOutput(logger.NewTelegrafWriter(lumberjackLogger))
+	w, _ := logger.NewTelegrafWriter(lumberjackLogger, config)
+	log.SetOutput(w)
 	var logWriter interface{} = lumberjackLogger
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
 	closer, isCloser := logWriter.(io.Closer)

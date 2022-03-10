@@ -37,7 +37,9 @@ func (t *lumberjackLogCreator) CreateLogger(config telegraf_logger.LogConfig) (i
 		writer = defaultWriter
 	}
 
-	return telegraf_logger.NewTelegrafWriter(writer), nil
+	// Writer will be created with timezone from config.log LogWithTimezone.
+	// Empty string will result in writer created with UTC.
+	return telegraf_logger.NewTelegrafWriter(writer, config)
 }
 
 func init() {
