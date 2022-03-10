@@ -12,7 +12,7 @@ import (
 )
 
 func TestCleanupRules_ValidRules(t *testing.T) {
-	m, _ := metric.New("prometheus_scraper",
+	m := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "a", "tagB": "b"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2},
 		time.Now())
@@ -43,7 +43,7 @@ func TestCleanupRules_ValidRules(t *testing.T) {
 }
 
 func TestCleanupRules_EmptyRules_EmptyMetrics(t *testing.T) {
-	m, _ := metric.New("prometheus_scraper",
+	m := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "a", "tagB": "b"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2},
 		time.Now())
@@ -61,7 +61,7 @@ func TestCleanupRules_EmptyRules_EmptyMetrics(t *testing.T) {
 }
 
 func TestCleanupRules_EmptyRules_EmptyDimension(t *testing.T) {
-	m, _ := metric.New("prometheus_scraper",
+	m := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "a", "tagB": "b"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2},
 		time.Now())

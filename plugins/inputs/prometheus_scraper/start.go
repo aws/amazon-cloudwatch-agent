@@ -37,7 +37,7 @@ import (
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
-	sdConfig "github.com/prometheus/prometheus/discovery/config"
+	// sdConfig "github.com/prometheus/prometheus/discovery/config"
 	"github.com/prometheus/prometheus/pkg/relabel"
 	promRuntime "github.com/prometheus/prometheus/pkg/runtime"
 	"github.com/prometheus/prometheus/scrape"
@@ -107,7 +107,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		// they need to read the most updated config when receiving the new targets list.
 		scrapeManager.ApplyConfig,
 		func(cfg *config.Config) error {
-			c := make(map[string]sdConfig.ServiceDiscoveryConfig)
+			c := make(map[string]discovery.Configs)
 			for _, v := range cfg.ScrapeConfigs {
 				c[v.JobName] = v.ServiceDiscoveryConfig
 			}

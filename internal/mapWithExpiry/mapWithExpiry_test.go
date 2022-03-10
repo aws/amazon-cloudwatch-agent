@@ -4,10 +4,10 @@
 package mapWithExpiry
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/pkg/testutil/assert"
 )
 
 func TestMapWithExpiry_add(t *testing.T) {

@@ -132,13 +132,8 @@ func (durationAgg *durationAggregator) aggregating() {
 			metricMapKey := fmt.Sprint(computeHash(m), aggregatedTime.Unix())
 			var aggregatedMetric telegraf.Metric
 			var ok bool
-			var err error
 			if aggregatedMetric, ok = durationAgg.metricMap[metricMapKey]; !ok {
-				aggregatedMetric, err = metric.New(m.Name(), m.Tags(), map[string]interface{}{}, aggregatedTime)
-				if err != nil {
-					log.Printf("E! CloudWatch metrics aggregation failed: %v. The metric %v will be dropped.", err, m.Name())
-					continue
-				}
+				aggregatedMetric = metric.New(m.Name(), m.Tags(), map[string]interface{}{}, aggregatedTime)
 				durationAgg.metricMap[metricMapKey] = aggregatedMetric
 			}
 			//When the code comes here, it means the aggregatedMetric object has the same metric name, tags and aggregated time.
