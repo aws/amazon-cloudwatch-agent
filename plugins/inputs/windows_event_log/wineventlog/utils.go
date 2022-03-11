@@ -23,6 +23,7 @@ const (
 	eventLogQueryTemplate = `<QueryList><Query Id="0"><Select Path="%s">%s</Select></Query></QueryList>`
 	eventLogLevelFilter   = "Level='%s'"
 	eventIgnoreOldFilter  = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
+	emptySpaceScanLength  = 20
 
 	CRITICAL    = "CRITICAL"
 	ERROR       = "ERROR"
@@ -112,15 +113,15 @@ func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 }
 
 func isTheEndOfContent(in []byte, length uint32) bool {
-	// scan next 100 characters, if any of them is none '0', return false
+	// scan next 20 bytes, if any of them is none '0', return false
 	i := int(length)
 
 	if i%2 != 0 {
 		i -= 1
 	}
 	max := len(in)
-	if i+100 < max {
-		max = i+100
+	if i+emptySpaceScanLength < max {
+		max = i+emptySpaceScanLength
 	}
 
 	for ; i < max - 2; i += 2 {
