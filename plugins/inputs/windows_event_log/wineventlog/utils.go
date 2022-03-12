@@ -23,7 +23,7 @@ const (
 	eventLogQueryTemplate = `<QueryList><Query Id="0"><Select Path="%s">%s</Select></Query></QueryList>`
 	eventLogLevelFilter   = "Level='%s'"
 	eventIgnoreOldFilter  = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
-	emptySpaceScanLength  = 20
+	emptySpaceScanLength  = 100
 	UnknownBytesPerCharacter = 0
 
 	CRITICAL                 = "CRITICAL"
@@ -34,7 +34,7 @@ const (
 	UNKNOWN                  = "UNKNOWN"
 )
 
-var numbersOfBytesPerCharacter = UnknownBytesPerCharacter
+var NumbersOfBytesPerCharacter = UnknownBytesPerCharacter
 
 func RenderEventXML(eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
 	var bufferUsed, propertyCount uint32
@@ -83,27 +83,11 @@ func CreateQuery(path string, levels []string) (*uint16, error) {
 }
 
 func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
-	var i int
-	// Since Windows server 2022, the returned value of used buffer represents for double bytes char count,
-	// which is half of the actual buffer used by byte(what older Windows OS returns), checking if the length
-	// land on the end of used buffer, if no, double it.
-	if numbersOfBytesPerCharacter == UnknownBytesPerCharacter {
-		if isTheEndOfContent(in, length) {
-			numbersOfBytesPerCharacter = 1
-		} else {
-			log.Printf("D! Buffer used: %d is returning as double byte character count, doubling it for decoding", length)
-			numbersOfBytesPerCharacter = 2
-		}
-	}
 
-	i = int(length) * numbersOfBytesPerCharacter
+	i := length
 
-	if i%2 != 0 {
-		i--
-	}
-
-	if i > cap(in) {
-		i = cap(in)
+	if length%2 != 0 {
+		i = length - 1
 	}
 
 	for ; i-2 > 0; i -= 2 {
@@ -121,8 +105,31 @@ func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 	return decoded, err
 }
 
+func UTF16ToUTF8BytesForWindowsEventBuffer(in []byte, length uint32) ([]byte, error) {
+	// Since Windows server 2022, the returned value of used buffer represents for double bytes char count,
+	// which is half of the actual buffer used by byte(what older Windows OS returns), checking if the length
+	//land on the end of used buffer, if no, double it.
+	if NumbersOfBytesPerCharacter == UnknownBytesPerCharacter {
+		if isTheEndOfContent(in, length) {
+			log.Printf("I! Buffer used: %d is returning as single byte character count", length)
+			NumbersOfBytesPerCharacter = 1
+		} else {
+			log.Printf("I! Buffer used: %d is returning as double byte character count, doubling it to get the whole buffer content.", length)
+			NumbersOfBytesPerCharacter = 2
+		}
+	}
+
+	i := int(length) * NumbersOfBytesPerCharacter
+
+	if i > cap(in) {
+		i = cap(in)
+	}
+
+	return UTF16ToUTF8Bytes(in, uint32(i))
+}
+
 func isTheEndOfContent(in []byte, length uint32) bool {
-	// scan next 20 bytes, if any of them is none '0', return false
+	// scan next 100 bytes, if any of them is none '0', return false
 	i := int(length)
 
 	if i%2 != 0 {
