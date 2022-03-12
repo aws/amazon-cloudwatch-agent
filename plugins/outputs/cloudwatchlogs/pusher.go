@@ -300,7 +300,15 @@ func (p *pusher) send() {
 		}
 
 		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCount, wait)
-		time.Sleep(wait)
+
+		select {
+		case <-p.stop:
+			p.Log.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
+			p.reset()
+			return
+		case <-time.After(wait):
+		}
+
 		retryCount++
 	}
 

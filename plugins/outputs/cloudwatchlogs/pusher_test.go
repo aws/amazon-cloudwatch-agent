@@ -159,6 +159,32 @@ func TestStopPusherWouldDoFinalSend(t *testing.T) {
 	}
 }
 
+func TestStopPusherWouldStopRetries(t *testing.T) {
+	var s svcMock
+
+	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return nil, &cloudwatchlogs.ServiceUnavailableException{}
+	}
+
+	stop, p := testPreparation(1, &s, 1*time.Hour, maxRetryTimeout)
+	p.AddEvent(evtMock{"MSG", time.Now(), nil})
+
+	sendComplete := make(chan struct{})
+
+	go func() {
+		defer close(sendComplete)
+		p.send()
+	}()
+
+	close(stop)
+
+	select {
+	case <-time.After(50 * time.Millisecond):
+		t.Errorf("send did not quit retrying after p has been Stopped.")
+	case <-sendComplete:
+	}
+}
+
 func TestLongMessageGetsTruncated(t *testing.T) {
 	var s svcMock
 	nst := "NEXT_SEQ_TOKEN"
