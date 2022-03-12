@@ -24,14 +24,17 @@ const (
 	eventLogLevelFilter   = "Level='%s'"
 	eventIgnoreOldFilter  = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
 	emptySpaceScanLength  = 20
+	UnknownBytesPerCharacter = 0
 
-	CRITICAL    = "CRITICAL"
-	ERROR       = "ERROR"
-	WARNING     = "WARNING"
-	INFORMATION = "INFORMATION"
-	VERBOSE     = "VERBOSE"
-	UNKNOWN     = "UNKNOWN"
+	CRITICAL                 = "CRITICAL"
+	ERROR                    = "ERROR"
+	WARNING                  = "WARNING"
+	INFORMATION              = "INFORMATION"
+	VERBOSE                  = "VERBOSE"
+	UNKNOWN                  = "UNKNOWN"
 )
+
+var numbersOfBytesPerCharacter = UnknownBytesPerCharacter
 
 func RenderEventXML(eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
 	var bufferUsed, propertyCount uint32
@@ -80,19 +83,25 @@ func CreateQuery(path string, levels []string) (*uint16, error) {
 }
 
 func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
+	var i int
 	// Since Windows server 2022, the returned value of used buffer represents for double bytes char count,
 	// which is half of the actual buffer used by byte(what older Windows OS returns), checking if the length
-	//land on the end of used buffer, if no, double it.
-	var i int
-	if isTheEndOfContent(in, length) {
-		i = int(length)
-		if i%2 != 0 {
-			i--
+	// land on the end of used buffer, if no, double it.
+	if numbersOfBytesPerCharacter == UnknownBytesPerCharacter {
+		if isTheEndOfContent(in, length) {
+			numbersOfBytesPerCharacter = 1
+		} else {
+			log.Printf("D! Buffer used: %d is returning as double byte character count, doubling it for decoding", length)
+			numbersOfBytesPerCharacter = 2
 		}
-	} else {
-		log.Printf("D! Buffer used: %d is returning as double byte character count, doubling it for decoding", length)
-		i = int(length) * 2
 	}
+
+	i = int(length) * numbersOfBytesPerCharacter
+
+	if i%2 != 0 {
+		i--
+	}
+
 	if i > cap(in) {
 		i = cap(in)
 	}
