@@ -34,7 +34,7 @@ const (
 	UNKNOWN                  = "UNKNOWN"
 )
 
-var NumbersOfBytesPerCharacter = UnknownBytesPerCharacter
+var NumberOfBytesPerCharacter = UnknownBytesPerCharacter
 
 func RenderEventXML(eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
 	var bufferUsed, propertyCount uint32
@@ -43,7 +43,9 @@ func RenderEventXML(eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error when rendering events. Details: %v", err)
 	}
 
-	return UTF16ToUTF8Bytes(renderBuf, bufferUsed)
+	// Per MSDN as of Mar 14th 2022(https://docs.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtrender)
+	// EvtRender function is still returning buffer used as BYTES, not characters. So keep using utf16ToUTF8Bytes()
+	return utf16ToUTF8Bytes(renderBuf, bufferUsed)
 }
 
 func CreateBookmark(channel string, recordID uint64) (h EvtHandle, err error) {
@@ -82,7 +84,7 @@ func CreateQuery(path string, levels []string) (*uint16, error) {
 	return syscall.UTF16PtrFromString(xml)
 }
 
-func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
+func utf16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 
 	i := length
 
@@ -109,27 +111,27 @@ func UTF16ToUTF8BytesForWindowsEventBuffer(in []byte, length uint32) ([]byte, er
 	// Since Windows server 2022, the returned value of used buffer represents for double bytes char count,
 	// which is half of the actual buffer used by byte(what older Windows OS returns), checking if the length
 	//land on the end of used buffer, if no, double it.
-	if NumbersOfBytesPerCharacter == UnknownBytesPerCharacter {
+	if NumberOfBytesPerCharacter == UnknownBytesPerCharacter {
 		if isTheEndOfContent(in, length) {
 			log.Printf("I! Buffer used: %d is returning as single byte character count", length)
-			NumbersOfBytesPerCharacter = 1
+			NumberOfBytesPerCharacter = 1
 		} else {
 			log.Printf("I! Buffer used: %d is returning as double byte character count, doubling it to get the whole buffer content.", length)
-			NumbersOfBytesPerCharacter = 2
+			NumberOfBytesPerCharacter = 2
 		}
 	}
 
-	i := int(length) * NumbersOfBytesPerCharacter
+	i := int(length) * NumberOfBytesPerCharacter
 
 	if i > cap(in) {
 		i = cap(in)
 	}
 
-	return UTF16ToUTF8Bytes(in, uint32(i))
+	return utf16ToUTF8Bytes(in, uint32(i))
 }
 
 func isTheEndOfContent(in []byte, length uint32) bool {
-	// scan next 100 bytes, if any of them is none '0', return false
+	// scan next (emptySpaceScanLength) bytes, if any of them is none '0', return false
 	i := int(length)
 
 	if i%2 != 0 {
