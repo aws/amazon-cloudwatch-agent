@@ -24,11 +24,12 @@ type Metadata struct {
 type MetadataInfoProvider func() *Metadata
 
 var Ec2MetadataInfoProvider = func() *Metadata {
+	ec2 := ec2util.GetEC2UtilSingleton()
 	return &Metadata{
-		InstanceID: ec2util.GetEC2UtilSingleton().InstanceID,
-		Hostname: ec2util.GetEC2UtilSingleton().Hostname,
-		PrivateIP: ec2util.GetEC2UtilSingleton().PrivateIP,
-		AccountID: ec2util.GetEC2UtilSingleton().AccountID,
+		InstanceID: ec2.InstanceID,
+		Hostname: ec2.Hostname,
+		PrivateIP: ec2.PrivateIP,
+		AccountID: ec2.AccountID,
 	}
 }
 
