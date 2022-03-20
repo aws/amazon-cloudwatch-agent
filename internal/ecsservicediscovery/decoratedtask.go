@@ -72,12 +72,13 @@ func addExporterLabels(labels map[string]string, labelKey string, labelValue *st
 // Get the private ip of the decorated task.
 // Return "" when fail to get the private ip
 func (t *DecoratedTask) getPrivateIp() string {
-	if t.TaskDefinition.NetworkMode == nil || *t.TaskDefinition.NetworkMode == ecs.NetworkModeNone {
+	networkMode := aws.StringValue(t.TaskDefinition.NetworkMode)
+	if networkMode == ecs.NetworkModeNone {
 		return ""
 	}
 
 	// AWSVPC: Get Private IP from tasks->attachments (ElasticNetworkInterface -> privateIPv4Address)
-	if *t.TaskDefinition.NetworkMode == ecs.NetworkModeAwsvpc {
+	if networkMode == ecs.NetworkModeAwsvpc {
 		for _, v := range t.Task.Attachments {
 			if aws.StringValue(v.Type) == "ElasticNetworkInterface" {
 				for _, d := range v.Details {

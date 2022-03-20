@@ -323,9 +323,9 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	if err != nil {
 		return nil, fmt.Errorf("EvtFormatMessage() publisher %v, err %v", newRecord.System.Provider.Name, err)
 	}
-	descriptionBytes, err := UTF16ToUTF8Bytes(renderBuf, bufferUsed)
+	descriptionBytes, err := UTF16ToUTF8BytesForWindowsEventBuffer(renderBuf, bufferUsed)
 	if err != nil {
-		return nil, fmt.Errorf("UTF16ToUTF8Bytes() err %v", err)
+		return nil, fmt.Errorf("utf16ToUTF8Bytes() err %v", err)
 	}
 
 	switch w.renderFormat {

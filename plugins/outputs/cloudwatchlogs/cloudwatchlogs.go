@@ -61,7 +61,9 @@ type CloudWatchLogs struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	cwDests map[Target]*cwDest
+	pusherStopChan  chan struct{}
+	pusherWaitGroup sync.WaitGroup
+	cwDests         map[Target]*cwDest
 }
 
 func (c *CloudWatchLogs) Connect() error {
@@ -69,9 +71,13 @@ func (c *CloudWatchLogs) Connect() error {
 }
 
 func (c *CloudWatchLogs) Close() error {
+	close(c.pusherStopChan)
+	c.pusherWaitGroup.Wait()
+
 	for _, d := range c.cwDests {
 		d.Stop()
 	}
+
 	return nil
 }
 
@@ -129,7 +135,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent(t.Group)))
 
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log)
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
@@ -290,7 +296,6 @@ func (cd *cwDest) Publish(events []logs.LogEvent) error {
 }
 
 func (cd *cwDest) Stop() {
-	cd.pusher.Stop()
 	cd.retryer.Stop()
 	cd.stopped = true
 }
@@ -365,6 +370,7 @@ func init() {
 	outputs.Add("cloudwatchlogs", func() telegraf.Output {
 		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
+			pusherStopChan:     make(chan struct{}),
 			cwDests:            make(map[Target]*cwDest),
 		}
 	})

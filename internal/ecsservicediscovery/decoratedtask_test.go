@@ -306,7 +306,7 @@ func Test_ExportMixedSDTarget_Fargate_AWSVPC(t *testing.T) {
 	assert.True(t, ok, "Missing target: 10.0.0.129:9406/metrics")
 }
 
-func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceName string, networkMode string) *DecoratedTask {
+func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceName string, networkMode *string) *DecoratedTask {
 	taskContainersArn := "arn:aws:ecs:us-east-2:211220956907:container/3b288961-eb2c-4de5-a4c5-682c0a7cc625"
 	var taskContainersDynamicHostPort int64 = 32774
 	var taskContainersMappedHostPort int64 = 9494
@@ -366,7 +366,7 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceNa
 			},
 		},
 		TaskDefinition: &ecs.TaskDefinition{
-			NetworkMode:       &networkMode,
+			NetworkMode:       networkMode,
 			TaskDefinitionArn: &taskDefinitionArn,
 			Revision:          &taskRevision,
 			ContainerDefinitions: []*ecs.ContainerDefinition{
@@ -402,18 +402,20 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceNa
 }
 
 func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
-	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, ecs.NetworkModeBridge, 2)
+	networkMode := ecs.NetworkModeBridge
+	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, &networkMode, 2)
 }
 
 func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort_With_Implicit_NetworkMode(t *testing.T) {
-	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, "", 2)
+	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, nil, 2)
 }
 
 func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort_With_NetworkModeNone(t *testing.T) {
-	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, ecs.NetworkModeNone, 0)
+	networkMode := ecs.NetworkModeNone
+	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, &networkMode, 0)
 }
 
-func testExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode string, expectedTargets int) {
+func testExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode *string, expectedTargets int) {
 	fullTask := buildWorkloadEC2BridgeDynamicPort(true, true, "", networkMode)
 	if expectedTargets == 0 {
 		assert.Equal(t, "", fullTask.getPrivateIp())
@@ -491,7 +493,7 @@ func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort_With_NetworkModeNon
 }
 
 func testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode string, expectedTargets int) {
-	fullTask := buildWorkloadEC2BridgeDynamicPort(false, true, "", networkMode)
+	fullTask := buildWorkloadEC2BridgeDynamicPort(false, true, "", &networkMode)
 	log.Print(fullTask)
 	if expectedTargets == 0 {
 		assert.Equal(t, "", fullTask.getPrivateIp())

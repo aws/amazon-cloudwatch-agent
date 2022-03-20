@@ -50,14 +50,15 @@ type pusher struct {
 	sequenceToken       *string
 	lastValidTime       int64
 	needSort            bool
-	stop                chan struct{}
+	stop                <-chan struct{}
 	lastSentTime        time.Time
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
+	wg                    *sync.WaitGroup
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
@@ -67,10 +68,12 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushTimer:      time.NewTimer(flushTimeout),
-		stop:            make(chan struct{}),
+		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
+		wg:              wg,
 	}
 	p.putRetentionPolicy()
+	p.wg.Add(1)
 	go p.start()
 	return p
 }
@@ -120,11 +123,9 @@ func hasValidTime(e logs.LogEvent) bool {
 	return true
 }
 
-func (p *pusher) Stop() {
-	close(p.stop)
-}
-
 func (p *pusher) start() {
+	defer p.wg.Done()
+
 	ec := make(chan logs.LogEvent)
 
 	// Merge events from both blocking and non-blocking channel
@@ -299,7 +300,15 @@ func (p *pusher) send() {
 		}
 
 		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCount, wait)
-		time.Sleep(wait)
+
+		select {
+		case <-p.stop:
+			p.Log.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
+			p.reset()
+			return
+		case <-time.After(wait):
+		}
+
 		retryCount++
 	}
 

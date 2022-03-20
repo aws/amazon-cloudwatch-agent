@@ -23,14 +23,18 @@ const (
 	eventLogQueryTemplate = `<QueryList><Query Id="0"><Select Path="%s">%s</Select></Query></QueryList>`
 	eventLogLevelFilter   = "Level='%s'"
 	eventIgnoreOldFilter  = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
+	emptySpaceScanLength  = 100
+	UnknownBytesPerCharacter = 0
 
-	CRITICAL    = "CRITICAL"
-	ERROR       = "ERROR"
-	WARNING     = "WARNING"
-	INFORMATION = "INFORMATION"
-	VERBOSE     = "VERBOSE"
-	UNKNOWN     = "UNKNOWN"
+	CRITICAL                 = "CRITICAL"
+	ERROR                    = "ERROR"
+	WARNING                  = "WARNING"
+	INFORMATION              = "INFORMATION"
+	VERBOSE                  = "VERBOSE"
+	UNKNOWN                  = "UNKNOWN"
 )
+
+var NumberOfBytesPerCharacter = UnknownBytesPerCharacter
 
 func RenderEventXML(eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
 	var bufferUsed, propertyCount uint32
@@ -39,7 +43,9 @@ func RenderEventXML(eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error when rendering events. Details: %v", err)
 	}
 
-	return UTF16ToUTF8Bytes(renderBuf, bufferUsed)
+	// Per MSDN as of Mar 14th 2022(https://docs.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtrender)
+	// EvtRender function is still returning buffer used as BYTES, not characters. So keep using utf16ToUTF8Bytes()
+	return utf16ToUTF8Bytes(renderBuf, bufferUsed)
 }
 
 func CreateBookmark(channel string, recordID uint64) (h EvtHandle, err error) {
@@ -78,22 +84,12 @@ func CreateQuery(path string, levels []string) (*uint16, error) {
 	return syscall.UTF16PtrFromString(xml)
 }
 
-func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
-	// Since Windows server 2022, the returned value of used buffer represents for double bytes char count,
-	// which is half of the actual buffer used by byte(what older Windows OS returns), checking if the length
-	//land on the end of used buffer, if no, double it.
-	var i int
-	if isTheEndOfContent(in, length) {
-		i = int(length)
-		if i%2 != 0 {
-			i--
-		}
-	} else {
-		log.Printf("D! Buffer used: %d is returning as double byte character count, doubling it for decoding", length)
-		i = int(length) * 2
-	}
-	if i > cap(in) {
-		i = cap(in)
+func utf16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
+
+	i := length
+
+	if length%2 != 0 {
+		i = length - 1
 	}
 
 	for ; i-2 > 0; i -= 2 {
@@ -111,19 +107,42 @@ func UTF16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 	return decoded, err
 }
 
+func UTF16ToUTF8BytesForWindowsEventBuffer(in []byte, length uint32) ([]byte, error) {
+	// Since Windows server 2022, the returned value of used buffer represents for double bytes char count,
+	// which is half of the actual buffer used by byte(what older Windows OS returns), checking if the length
+	//land on the end of used buffer, if no, double it.
+	if NumberOfBytesPerCharacter == UnknownBytesPerCharacter {
+		if isTheEndOfContent(in, length) {
+			log.Printf("I! Buffer used: %d is returning as single byte character count", length)
+			NumberOfBytesPerCharacter = 1
+		} else {
+			log.Printf("I! Buffer used: %d is returning as double byte character count, doubling it to get the whole buffer content.", length)
+			NumberOfBytesPerCharacter = 2
+		}
+	}
+
+	i := int(length) * NumberOfBytesPerCharacter
+
+	if i > cap(in) {
+		i = cap(in)
+	}
+
+	return utf16ToUTF8Bytes(in, uint32(i))
+}
+
 func isTheEndOfContent(in []byte, length uint32) bool {
-	// scan next 100 characters, if any of them is none '0', return false
+	// scan next (emptySpaceScanLength) bytes, if any of them is none '0', return false
 	i := int(length)
 
 	if i%2 != 0 {
 		i -= 1
 	}
 	max := len(in)
-	if i+100 < max {
-		max = i + 100
+	if i+emptySpaceScanLength < max {
+		max = i+emptySpaceScanLength
 	}
 
-	for ; i < max-2; i += 2 {
+	for ; i < max - 2; i += 2 {
 		v1 := uint16(in[i+2]) | uint16(in[i+1])<<8
 		// Stop at non-null char.
 		if v1 != 0 {
