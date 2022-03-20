@@ -360,6 +360,8 @@ func TestLogsFileRemove(t *testing.T) {
 
 //When another file is created for the same file config and the file config has auto_removal as true, the old files will stop at EOF and removed afterwards
 func TestLogsFileAutoRemoval(t *testing.T) {
+	var wg sync.WaitGroup
+
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
 	filePrefix := "file_auto_removal"
@@ -400,7 +402,12 @@ func TestLogsFileAutoRemoval(t *testing.T) {
 			os.Remove(tmpfile2.Name())
 		}
 	}()
+
+	wg.Add(1)
+	
 	go func() {
+		defer wg.Done()
+
 		time.Sleep(1 * time.Second)
 
 		// create a new file matching configured pattern
@@ -437,6 +444,10 @@ func TestLogsFileAutoRemoval(t *testing.T) {
 	if e.Message() != logEntryString {
 		t.Errorf("Wrong log found from 2nd file: \n% x\nExpecting:\n% x\n", e.Message(), logEntryString)
 	}
+
+	//Use Wait Group to avoid race condition between opening tmpfile2 to delete tmpfile1 with auto_removal and opening tmpfile1
+	//to check it exist
+	wg.Wait()
 
 	_, err = os.Open(tmpfile1.Name())
 	assert.True(t, os.IsNotExist(err))
