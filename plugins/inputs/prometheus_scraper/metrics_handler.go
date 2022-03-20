@@ -27,6 +27,7 @@ type metricsHandler struct {
 	filter      *MetricsFilter
 	clusterName string
 	mtHandler   *metricsTypeHandler
+	dropUnsupportedMetric bool
 }
 
 func (mh *metricsHandler) start(shutDownChan chan interface{}, wg *sync.WaitGroup) {
@@ -47,7 +48,7 @@ func (mh *metricsHandler) handle(pmb PrometheusMetricBatch) {
 	pmb = mh.mtHandler.Handle(pmb)
 
 	// Filter out Histogram and untyped Metrics and adding logging
-	pmb = mh.filter.Filter(pmb)
+	pmb = mh.filter.Filter(pmb,mh.dropUnsupportedMetric)
 
 	// do calculation: calculate delta for counter
 	pmb = mh.calculator.Calculate(pmb)

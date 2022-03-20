@@ -592,6 +592,9 @@ var schema = `{
                 "prometheus_config_path": {
                   "type": "string"
                 },
+				"drop_unsupported_metric": {
+                  "type": "boolean"
+				},
                 "emf_processor": {
                   "$ref": "#/definitions/emfProcessorDefinition"
                 },

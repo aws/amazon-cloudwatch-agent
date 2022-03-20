@@ -10,7 +10,6 @@ import (
 
 const (
 	MaxDropMetricsLogged = 1000
-	dropUnsupportedMetrics = false
 )
 
 type MetricsFilter struct {
@@ -20,7 +19,7 @@ type MetricsFilter struct {
 }
 
 // Filter out and Log the unsupported metric types
-func (mf *MetricsFilter) Filter(pmb PrometheusMetricBatch) (result PrometheusMetricBatch) {
+func (mf *MetricsFilter) Filter(pmb PrometheusMetricBatch,dropUnsupportedMetrics bool) (result PrometheusMetricBatch) {
 	for _, pm := range pmb {
 		if !pm.isGauge() && !pm.isCounter() && !pm.isSummary() {
 			if dropUnsupportedMetrics {

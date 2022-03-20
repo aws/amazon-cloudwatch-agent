@@ -14,6 +14,7 @@ import (
 type PrometheusScraper struct {
 	PrometheusConfigPath string                                      `toml:"prometheus_config_path"`
 	ClusterName          string                                      `toml:"cluster_name"`
+	DropUnsupportedMetric bool										 `toml:"drop_unsupported_metric"`
 	ECSSDConfig          *ecsservicediscovery.ServiceDiscoveryConfig `toml:"ecs_service_discovery"`
 	mbCh                 chan PrometheusMetricBatch
 	shutDownChan         chan interface{}
@@ -24,6 +25,7 @@ const sampleConfig = `
   [[inputs.prometheus_scraper]]
     cluster_name = "EC2-EC2-Justin-Testing"
     prometheus_config_path = "/opt/aws/amazon-cloudwatch-agent/etc/prometheus.yaml"
+	drop_unsupported_metric = true
     [inputs.prometheus_scraper.ecs_service_discovery]
       sd_cluster_region = "us-east-2"
       sd_frequency = "15s"
@@ -62,12 +64,14 @@ func (p *PrometheusScraper) Gather(_ telegraf.Accumulator) error {
 func (p *PrometheusScraper) Start(accIn telegraf.Accumulator) error {
 	mth := NewMetricsTypeHandler()
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
-	handler := &metricsHandler{mbCh: p.mbCh,
+	handler := &metricsHandler{
+		mbCh: p.mbCh,
 		acc:         accIn,
 		calculator:  NewCalculator(),
 		filter:      NewMetricsFilter(),
 		clusterName: p.ClusterName,
 		mtHandler:   mth,
+		dropUnsupportedMetric: p.DropUnsupportedMetric,
 	}
 
 	ecssd := &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
