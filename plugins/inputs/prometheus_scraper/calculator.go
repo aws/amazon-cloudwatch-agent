@@ -25,7 +25,8 @@ func (c *Calculator) Calculate(pmb PrometheusMetricBatch) (result PrometheusMetr
 	var gauges PrometheusMetricBatch
 	var counters PrometheusMetricBatch
 	var summaries PrometheusMetricBatch
-
+	var unknowns PrometheusMetricBatch
+	
 	for _, pm := range pmb {
 		if pm.isGauge() {
 			gauges = appendValidValue(gauges, pm)
@@ -43,12 +44,17 @@ func (c *Calculator) Calculate(pmb PrometheusMetricBatch) (result PrometheusMetr
 			} else {
 				summaries = appendValidValue(summaries, pm)
 			}
+		} else if pm.isUnknown(){
+			unknowns = appendValidValue(unknowns, pm)
+			
 		}
 	}
 
 	result = append(result, gauges...)
 	result = append(result, counters...)
 	result = append(result, summaries...)
+	result = append(result, unknowns...)
+		
 	return
 }
 

@@ -55,6 +55,10 @@ func (pm *PrometheusMetric) isSummary() bool {
 	return pm.metricType == textparse.MetricTypeSummary
 }
 
+func (pm *PrometheusMetric) isUnknown() bool {
+	return pm.metricType == textparse.MetricTypeUnknown
+}
+
 // Adapter to prometheus scrape.Target
 type metadataCache interface {
 	Metadata(metricName string) (scrape.MetricMetadata, bool)
