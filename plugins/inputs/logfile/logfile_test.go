@@ -408,8 +408,6 @@ func TestLogsFileAutoRemoval(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		time.Sleep(1 * time.Second)
-
 		// create a new file matching configured pattern
 		tmpfile2, err = createTempFile("", filePrefix)
 		require.NoError(t, err)
