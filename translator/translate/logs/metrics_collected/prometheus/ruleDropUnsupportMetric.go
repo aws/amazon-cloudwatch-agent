@@ -1,4 +1,4 @@
-package ecsservicediscovery
+package emfprocessor
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -12,7 +12,7 @@ const (
 type DropUnsupportedMetric struct {
 }
 
-func (d *MetricNamespace) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (d *DropUnsupportedMetric) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	returnKey, returnVal = translator.DefaultCase(SectionKeyDropUnsupportedMetric, "", input)
 	if returnVal != "" {
 		return

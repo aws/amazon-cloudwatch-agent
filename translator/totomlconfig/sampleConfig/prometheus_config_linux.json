@@ -6,6 +6,7 @@
     "metrics_collected": {
       "prometheus": {
         "cluster_name": "TestCluster",
+        "drop_unsupported_metric": false,
         "log_group_name": "/aws/ecs/containerinsights/TestCluster/prometheus",
         "prometheus_config_path": "file:/tmp/prometheus.yaml",
         "ecs_service_discovery": {

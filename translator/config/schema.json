@@ -582,8 +582,7 @@
                 },
                 "drop_unsupported_metric": {
                   "type": "boolean"
-                }
-              }
+                },
                 "emf_processor": {
                   "$ref": "#/definitions/emfProcessorDefinition"
                 },
