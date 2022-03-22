@@ -33,7 +33,7 @@ func TestMetricsFilterFilter_NoDropMetrics(t *testing.T) {
 	p := &MetricsFilter{maxDropMetricsLogged: 3}
 
 	batch := buildTestData(1, 0)
-	batch = p.Filter(batch)
+	batch = p.Filter(batch,true)
 
 	assert.Equal(t, 3, p.maxDropMetricsLogged)
 	assert.Equal(t, 1, len(batch))
@@ -46,7 +46,7 @@ func TestMetricsFilterFilter_DropMetrics(t *testing.T) {
 	p := &MetricsFilter{maxDropMetricsLogged: 3}
 
 	batch := buildTestData(2, 2)
-	batch = p.Filter(batch)
+	batch = p.Filter(batch,true)
 
 	assert.Equal(t, 3, p.maxDropMetricsLogged)
 	assert.Equal(t, 2, len(batch))
@@ -59,7 +59,7 @@ func TestMetricsFilterFilter_HitMaxDroppedMetrics(t *testing.T) {
 	p := &MetricsFilter{maxDropMetricsLogged: 3}
 
 	batch := buildTestData(7, 3)
-	batch = p.Filter(batch)
+	batch = p.Filter(batch,true)
 
 	assert.Equal(t, 3, p.maxDropMetricsLogged)
 	assert.Equal(t, 7, len(batch))
@@ -72,7 +72,7 @@ func TestMetricsFilterFilter_ExceedMaxDroppedMetrics(t *testing.T) {
 	p := &MetricsFilter{maxDropMetricsLogged: 3}
 
 	batch := buildTestData(2, 12)
-	batch = p.Filter(batch)
+	batch = p.Filter(batch,true)
 
 	assert.Equal(t, 3, p.maxDropMetricsLogged)
 	assert.Equal(t, 2, len(batch))
