@@ -151,7 +151,7 @@ func TestCsmOnlyConfig(t *testing.T) {
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/csm_only_config.json"), "linux", expectedEnvVars)
 }
 
-func TestCsmServiceAdressesConfig(t *testing.T) {
+func TestCsmServiceAddressesConfig(t *testing.T) {
 	resetContext()
 	expectedEnvVars := map[string]string{
 		"AWS_CSM_ENABLED": "TRUE",
