@@ -42,7 +42,7 @@ func (l *Logs) ApplyRule(input interface{}) (returnKey string, returnVal interfa
 	inputs := map[string]interface{}{}
 	processors := map[string]interface{}{}
 	cloudwatchConfig := map[string]interface{}{}
-	GlobalLogConfig.MetadataInfo = util.GetMetadataInfo()
+	GlobalLogConfig.MetadataInfo = util.GetMetadataInfo(util.Ec2MetadataInfoProvider)
 
 	//Check if this plugin exist in the input instance
 	//If not, not process

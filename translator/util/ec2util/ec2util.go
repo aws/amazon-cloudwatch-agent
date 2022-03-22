@@ -20,6 +20,7 @@ type ec2Util struct {
 	PrivateIP  string
 	InstanceID string
 	Hostname   string
+	AccountID string
 }
 
 const allowedRetries = 5
@@ -101,8 +102,9 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 
 	if info, err := md.GetInstanceIdentityDocument(); err == nil {
 		newInstance.Region = info.Region
+		newInstance.AccountID = info.AccountID
 	} else {
-		log.Println("E! getting region from EC2 metadata fail: ", err)
+		log.Println("E! fetching identity document from EC2 metadata fail: ", err)
 	}
 
 	return
