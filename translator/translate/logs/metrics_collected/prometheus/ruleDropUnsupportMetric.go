@@ -6,7 +6,7 @@ import (
 
 const (
 	SectionKeyDropUnsupportedMetric = "drop_unsupported_metric"
-	DefaultDropUnsupportedMetric = false
+	DefaultDropUnsupportedMetric = true
 )
 
 type DropUnsupportedMetric struct {
