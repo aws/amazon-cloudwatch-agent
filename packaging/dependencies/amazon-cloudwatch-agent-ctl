@@ -54,6 +54,7 @@ UsageString="
             stop:                                   stop the agent process.
             start:                                  start the agent process.
             status:                                 get the status of the agent process.
+            validate:                               validate the agent's configuration
             fetch-config:                           apply config for agent, followed by -c or -o or both. Target config can be based on location (ssm parameter store name, file name), or 'default'.
             append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
             remove-config:                          remove config for agent, followed by -c or -o or both. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
@@ -162,6 +163,9 @@ agent_stop() {
      else
           stop "${agent_name}" || return
      fi
+}
+
+agent_validate() {
 }
 
 # disable cwagent-otel-collector in Systemd, amazon-cloudwatch-agent will not be disabled for now (TBD)
