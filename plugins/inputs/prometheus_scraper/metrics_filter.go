@@ -26,7 +26,7 @@ func (mf *MetricsFilter) Filter(pmb PrometheusMetricBatch,dropUnsupportedMetrics
 				if mf.droppedMetrics == nil {
 					mf.droppedMetrics = make(map[string]string, mf.maxDropMetricsLogged)
 					log.Println("I! Drop Prometheus metrics with unsupported types. Only Gauge, Counter and Summary are supported.")
-					log.Printf("I! Please enable CWAgent debug mode to view the first %d dropped metrics \n", mf.maxDropMetricsLogged)
+					log.Printf("I! Please enable CWAgent debug mode to view the first %d dropped metrics or set drop_unsupported_metric as false to set these metrics as Unknown type. \n", mf.maxDropMetricsLogged)
 				}
 
 				if !mf.hitMaxLimit && (len(mf.droppedMetrics) < mf.maxDropMetricsLogged) {
