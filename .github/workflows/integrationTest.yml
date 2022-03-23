@@ -102,10 +102,12 @@ jobs:
           aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/binary/${{ github.sha }} . --recursive
 
       - uses: montudor/action-zip@v1
+        if: steps.cached_win_zip.outputs.cache-hit != 'true'
         with:
           args: unzip -qq windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
 
       - name: Create msi dep folder and copy deps
+        if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           export version=$(cat CWAGENT_VERSION)
           echo cw agent version $version
