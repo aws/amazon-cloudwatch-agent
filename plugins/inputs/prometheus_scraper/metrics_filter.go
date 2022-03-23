@@ -41,13 +41,15 @@ func (mf *MetricsFilter) Filter(pmb PrometheusMetricBatch,dropUnsupportedMetrics
 							mf.droppedMetrics = make(map[string]string)
 						}
 					}
+
 				}
+				
+				continue
 			} else {
 				pm.metricType = textparse.MetricTypeUnknown
 			}
-		} else {
-			result = append(result, pm)
 		}
+		result = append(result, pm)
 	}
 	return
 }

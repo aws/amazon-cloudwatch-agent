@@ -30,54 +30,119 @@ func buildTestData(pass int, drop int) (result PrometheusMetricBatch) {
 }
 
 func TestMetricsFilterFilter_NoDropMetrics(t *testing.T) {
-	p := &MetricsFilter{maxDropMetricsLogged: 3}
+	var dropUnsupportedMetric bool
+	//Filter Metric with DroppingUnsupportedMetric equals to true
+	metricFilterWithDroppingUnsupportedMetric := &MetricsFilter{maxDropMetricsLogged: 3}
 
-	batch := buildTestData(1, 0)
-	batch = p.Filter(batch,true)
+	dropUnsupportedMetric = true
+	metricBatchWithDroppingUnsupportedMetric := buildTestData(1, 0)
+	metricBatchWithDroppingUnsupportedMetric = metricFilterWithDroppingUnsupportedMetric.Filter(metricBatchWithDroppingUnsupportedMetric,dropUnsupportedMetric)
 
-	assert.Equal(t, 3, p.maxDropMetricsLogged)
-	assert.Equal(t, 1, len(batch))
-	assert.Equal(t, false, p.hitMaxLimit)
-	assert.Equal(t, 0, len(p.droppedMetrics))
+
+	assert.Equal(t, 3, metricFilterWithDroppingUnsupportedMetric.maxDropMetricsLogged)
+	assert.Equal(t, 1, len(metricBatchWithDroppingUnsupportedMetric))
+	assert.Equal(t, false, metricFilterWithDroppingUnsupportedMetric.hitMaxLimit)
+	assert.Equal(t, 0, len(metricFilterWithDroppingUnsupportedMetric.droppedMetrics))
+
+	//Filter Metric with DroppingUnsupportedMetric equals to false
+	metricFilterWithoutDroppingUnsupportedMetric := &MetricsFilter{maxDropMetricsLogged: 3}
+
+	dropUnsupportedMetric = false
+	metricBatchWithoutDroppingUnsupportedMetric := buildTestData(1, 0)
+	metricBatchWithoutDroppingUnsupportedMetric = metricFilterWithoutDroppingUnsupportedMetric.Filter(metricBatchWithoutDroppingUnsupportedMetric,dropUnsupportedMetric)
+
+
+	assert.Equal(t, 3, metricFilterWithoutDroppingUnsupportedMetric.maxDropMetricsLogged)
+	assert.Equal(t, 1, len(metricBatchWithoutDroppingUnsupportedMetric))
+	assert.Equal(t, false, metricFilterWithoutDroppingUnsupportedMetric.hitMaxLimit)
+	assert.Equal(t, 0, len(metricFilterWithoutDroppingUnsupportedMetric.droppedMetrics))
 }
 
 func TestMetricsFilterFilter_DropMetrics(t *testing.T) {
+	var dropUnsupportedMetric bool
+	//Filter Metric with DroppingUnsupportedMetric equals to true
+	metricFilterWithDroppingUnsupportedMetric := &MetricsFilter{maxDropMetricsLogged: 3}
 
-	p := &MetricsFilter{maxDropMetricsLogged: 3}
+	dropUnsupportedMetric = true
+	metricBatchWithDroppingUnsupportedMetric := buildTestData(2, 2)
+	metricBatchWithDroppingUnsupportedMetric = metricFilterWithDroppingUnsupportedMetric.Filter(metricBatchWithDroppingUnsupportedMetric,dropUnsupportedMetric)
 
-	batch := buildTestData(2, 2)
-	batch = p.Filter(batch,true)
 
-	assert.Equal(t, 3, p.maxDropMetricsLogged)
-	assert.Equal(t, 2, len(batch))
-	assert.Equal(t, false, p.hitMaxLimit)
-	assert.Equal(t, 2, len(p.droppedMetrics))
+	assert.Equal(t, 3, metricFilterWithDroppingUnsupportedMetric.maxDropMetricsLogged)
+	assert.Equal(t, 2, len(metricBatchWithDroppingUnsupportedMetric))
+	assert.Equal(t, false, metricFilterWithDroppingUnsupportedMetric.hitMaxLimit)
+	assert.Equal(t, 2, len(metricFilterWithDroppingUnsupportedMetric.droppedMetrics))
+
+	//Filter Metric with DroppingUnsupportedMetric equals to false
+	metricFilterWithoutDroppingUnsupportedMetric := &MetricsFilter{maxDropMetricsLogged: 3}
+
+	dropUnsupportedMetric = false
+	metricBatchWithoutDroppingUnsupportedMetric := buildTestData(2, 2)
+	metricBatchWithoutDroppingUnsupportedMetric = metricFilterWithoutDroppingUnsupportedMetric.Filter(metricBatchWithoutDroppingUnsupportedMetric,dropUnsupportedMetric)
+
+
+	assert.Equal(t, 3, metricFilterWithoutDroppingUnsupportedMetric.maxDropMetricsLogged)
+	assert.Equal(t, 4, len(metricBatchWithoutDroppingUnsupportedMetric))
+	assert.Equal(t, false, metricFilterWithoutDroppingUnsupportedMetric.hitMaxLimit)
+	assert.Equal(t, 0, len(metricFilterWithoutDroppingUnsupportedMetric.droppedMetrics))
 }
 
 func TestMetricsFilterFilter_HitMaxDroppedMetrics(t *testing.T) {
+	var dropUnsupportedMetric bool
+	//Filter Metric with DroppingUnsupportedMetric equals to true
+	metricFilterWithDroppingUnsupportedMetric := &MetricsFilter{maxDropMetricsLogged: 3}
 
-	p := &MetricsFilter{maxDropMetricsLogged: 3}
+	dropUnsupportedMetric = true
+	metricBatchWithDroppingUnsupportedMetric := buildTestData(7, 3)
+	metricBatchWithDroppingUnsupportedMetric = metricFilterWithDroppingUnsupportedMetric.Filter(metricBatchWithDroppingUnsupportedMetric,dropUnsupportedMetric)
 
-	batch := buildTestData(7, 3)
-	batch = p.Filter(batch,true)
 
-	assert.Equal(t, 3, p.maxDropMetricsLogged)
-	assert.Equal(t, 7, len(batch))
-	assert.Equal(t, true, p.hitMaxLimit)
-	assert.Equal(t, 0, len(p.droppedMetrics))
+	assert.Equal(t, 3, metricFilterWithDroppingUnsupportedMetric.maxDropMetricsLogged)
+	assert.Equal(t, 7, len(metricBatchWithDroppingUnsupportedMetric))
+	assert.Equal(t, true, metricFilterWithDroppingUnsupportedMetric.hitMaxLimit)
+	assert.Equal(t, 0, len(metricFilterWithDroppingUnsupportedMetric.droppedMetrics))
+
+	//Filter Metric with DroppingUnsupportedMetric equals to false
+	metricFilterWithoutDroppingUnsupportedMetric := &MetricsFilter{maxDropMetricsLogged: 3}
+
+	dropUnsupportedMetric = false
+	metricBatchWithoutDroppingUnsupportedMetric := buildTestData(7, 3)
+	metricBatchWithoutDroppingUnsupportedMetric = metricFilterWithoutDroppingUnsupportedMetric.Filter(metricBatchWithoutDroppingUnsupportedMetric,dropUnsupportedMetric)
+
+
+	assert.Equal(t, 3, metricFilterWithoutDroppingUnsupportedMetric.maxDropMetricsLogged)
+	assert.Equal(t, 10, len(metricBatchWithoutDroppingUnsupportedMetric))
+	assert.Equal(t, false, metricFilterWithoutDroppingUnsupportedMetric.hitMaxLimit)
+	assert.Equal(t, 0, len(metricFilterWithoutDroppingUnsupportedMetric.droppedMetrics))
 }
 
 func TestMetricsFilterFilter_ExceedMaxDroppedMetrics(t *testing.T) {
+	var dropUnsupportedMetric bool
+	//Filter Metric with DroppingUnsupportedMetric equals to true
+	metricFilterWithDroppingUnsupportedMetric := &MetricsFilter{maxDropMetricsLogged: 3}
 
-	p := &MetricsFilter{maxDropMetricsLogged: 3}
+	dropUnsupportedMetric = true
+	metricBatchWithDroppingUnsupportedMetric := buildTestData(2, 12)
+	metricBatchWithDroppingUnsupportedMetric = metricFilterWithDroppingUnsupportedMetric.Filter(metricBatchWithDroppingUnsupportedMetric,dropUnsupportedMetric)
 
-	batch := buildTestData(2, 12)
-	batch = p.Filter(batch,true)
 
-	assert.Equal(t, 3, p.maxDropMetricsLogged)
-	assert.Equal(t, 2, len(batch))
-	assert.Equal(t, true, p.hitMaxLimit)
-	assert.Equal(t, 0, len(p.droppedMetrics))
+	assert.Equal(t, 3, metricFilterWithDroppingUnsupportedMetric.maxDropMetricsLogged)
+	assert.Equal(t, 2, len(metricBatchWithDroppingUnsupportedMetric))
+	assert.Equal(t, true, metricFilterWithDroppingUnsupportedMetric.hitMaxLimit)
+	assert.Equal(t, 0, len(metricFilterWithDroppingUnsupportedMetric.droppedMetrics))
+
+	//Filter Metric with DroppingUnsupportedMetric equals to false
+	metricFilterWithoutDroppingUnsupportedMetric := &MetricsFilter{maxDropMetricsLogged: 3}
+
+	dropUnsupportedMetric = false
+	metricBatchWithoutDroppingUnsupportedMetric := buildTestData(2, 12)
+	metricBatchWithoutDroppingUnsupportedMetric = metricFilterWithoutDroppingUnsupportedMetric.Filter(metricBatchWithoutDroppingUnsupportedMetric,dropUnsupportedMetric)
+
+
+	assert.Equal(t, 3, metricFilterWithoutDroppingUnsupportedMetric.maxDropMetricsLogged)
+	assert.Equal(t, 14, len(metricBatchWithoutDroppingUnsupportedMetric))
+	assert.Equal(t, false, metricFilterWithoutDroppingUnsupportedMetric.hitMaxLimit)
+	assert.Equal(t, 0, len(metricFilterWithoutDroppingUnsupportedMetric.droppedMetrics))
 }
 
 func TestMetricsFilterFilter_MetricsFilter(t *testing.T) {
