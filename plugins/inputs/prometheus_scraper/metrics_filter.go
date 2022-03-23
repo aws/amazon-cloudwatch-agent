@@ -26,12 +26,12 @@ func (mf *MetricsFilter) Filter(pmb PrometheusMetricBatch,dropUnsupportedMetrics
 				if mf.droppedMetrics == nil {
 					mf.droppedMetrics = make(map[string]string, mf.maxDropMetricsLogged)
 					log.Println("I! Drop Prometheus metrics with unsupported types. Only Gauge, Counter and Summary are supported.")
-					log.Println("I! Please enable CWAgent debug mode to view the first %d dropped metrics", mf.maxDropMetricsLogged)
+					log.Printf("I! Please enable CWAgent debug mode to view the first %d dropped metrics \n", mf.maxDropMetricsLogged)
 				}
 
 				if !mf.hitMaxLimit && (len(mf.droppedMetrics) < mf.maxDropMetricsLogged) {
 					if _, ok := mf.droppedMetrics[pm.metricName]; !ok {
-						log.Println("D! [%d/%d] Unsupported Prometheus metric: %s with type: %s",
+						log.Printf("D! [%d/%d] Unsupported Prometheus metric: %s with type: %s",
 							len(mf.droppedMetrics)+1,
 							mf.maxDropMetricsLogged, pm.metricName,
 							pm.metricType)
@@ -48,6 +48,7 @@ func (mf *MetricsFilter) Filter(pmb PrometheusMetricBatch,dropUnsupportedMetrics
 				pm.metricType = textparse.MetricTypeUnknown
 			}
 		}
+		
 		result = append(result, pm)
 	}
 	return
