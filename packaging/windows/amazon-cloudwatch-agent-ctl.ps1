@@ -15,6 +15,8 @@ Param (
     [Parameter(Mandatory = $false)]
     [string]$Mode = 'ec2',
     [Parameter(Mandatory = $false)]
+    [string]$StrictValidation = 'false',
+    [Parameter(Mandatory = $false)]
     [string]$LogLevel = '',
     [parameter(ValueFromRemainingArguments=$true)]
     $unsupportedVars
@@ -32,6 +34,7 @@ $UsageString = @"
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
+                [-v true|false]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
 
         e.g.
@@ -70,6 +73,8 @@ $UsageString = @"
 
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
+
+        -v: Return exit code 99 if validating agent's json config fails. Valid values: true, false
 
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
@@ -374,7 +379,7 @@ Function CWAConfig() {
         Remove-Item "${TOML}" -Force -ErrorAction SilentlyContinue
     } else {
         Write-Output "Start configuration validation..."
-        & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
+        & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} --strict-validation ${StrictValidation} 2>&1"
         CheckCMDResult
         # Let command pass so we can check return code and give user-friendly error-message
         $ErrorActionPreference = "Continue"

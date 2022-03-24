@@ -40,6 +40,7 @@ UsageString="
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
+                [-v true|false]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
 
         e.g.
@@ -80,10 +81,10 @@ UsageString="
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
+        -v: Return exit code 99 if validating agent's json config fails. Valid values: true, false
+
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
-
-        -v: Return exit code 99 if validating agent's json config fails. Valid values: true, false
 
 "
 
@@ -121,7 +122,7 @@ agent_start() {
                return 0
           fi
           echo "Both ${CWA_NAME} and ${CWOC_NAME} are not configured. Applying amazon-cloudwatch-agent default configuration."
-          cwa_config 'default' 'false' "${mode}" 'default'
+          cwa_config 'default' 'false' "${strict_validation}" "${mode}" 'default'
      fi
 
      if [ "${SYSTEMD}" = 'true' ]; then
@@ -341,15 +342,15 @@ config_all() {
      # default cwa config depends on the existence of cwoc config
      if [ -n "${cwa_config_location}" ]; then
           echo "****** processing amazon-cloudwatch-agent ******"
-          cwa_config "${cwa_config_location}" "${restart}" "${param_mode}" "${multi_config}"
+          cwa_config "${cwa_config_location}" "${restart}" "${strict_validation}" "${param_mode}" "${multi_config}"
      fi
 }
 
 cwa_config() {
      cwa_config_location="${1:-}"
      restart="${2:-}"
-     param_mode="${3:-}"
-     strict_validation="${4:-}"
+     strict_validation="${3:-}"
+     param_mode="${4:-}"
      multi_config="${5:-}"
 
      if [ "${cwa_config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
@@ -370,7 +371,7 @@ cwa_config() {
           rm -f "${TOML}"
      else
           echo "Start configuration validation..."
-          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}" --strict_validation ${strict_validation}
+          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} --strict-validation ${strict_validation}"
           echo "${runTranslatorCommand}"
           ${runTranslatorCommand} || return
 

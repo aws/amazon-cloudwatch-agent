@@ -36,7 +36,7 @@ readonly ALL_CONFIG='all'
 UsageString="
 
 
-        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s]
+        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s] [-v true|false]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -65,6 +65,8 @@ UsageString="
             file:<file-path>:                       file path on the host
             all:                                    all existing configs. Only apply to remove-config action.
 
+        -v: Return exit code 99 if validating agent's json config fails. Valid values: true, false
+
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
@@ -79,7 +81,7 @@ cwa_start() {
 
      if [ ! -f "${TOML}" ]; then
           echo "amazon-cloudwatch-agent is not configured. Applying default configuration before starting it."
-          cwa_config 'default' 'false' "${mode}" 'default'
+          cwa_config 'default' 'false' 'false' "${mode}" 'default'
      fi
 
      launchctl load $AGENT_LAUNCHD_CONFIG
@@ -162,8 +164,9 @@ cwa_pid() {
 cwa_config() {
      config_location="${1:-}"
      restart="${2:-}"
-     mode="${3:-}"
-     multi_config="${4:-}"
+     strict_validation="${3:-}"
+     mode="${4:-}"
+     multi_config="${5:-}"
 
      mkdir -p "${CONFDIR}"
 
@@ -201,7 +204,7 @@ cwa_config() {
           echo "all amazon-cloudwatch-agent configurations have been removed"
           rm -f "${TOML}"
      else
-          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} --strict-validation ${strict_validation}"
           echo ${runTranslatorCommand}
           ${runTranslatorCommand}
 
@@ -256,6 +259,7 @@ main() {
      action=''
      config_location='default'
      restart='false'
+     strict_validation='false'
      mode='auto'
 
      OPTIND=1
@@ -269,6 +273,7 @@ main() {
           a) action="${OPTARG}" ;;
           c) config_location="${OPTARG}" ;;
           m) mode="${OPTARG}" ;;
+          v) strict_validation="${OPTARG}" ;;
           \?)
                echo "Invalid option: -${OPTARG} ${UsageString}" >&2
                ;;
@@ -302,9 +307,9 @@ main() {
      case "${action}" in
      stop) cwa_stop ;;
      start) cwa_start "${mode}" ;;
-     fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default' ;;
-     append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append' ;;
-     remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove' ;;
+     fetch-config) cwa_config "${config_location}" "${restart}" "${strict_validation}" "${mode}" 'default' ;;
+     append-config) cwa_config "${config_location}" "${restart}" "${strict_validation}" "${mode}" 'append' ;;
+     remove-config) cwa_config "${config_location}" "${restart}" "${strict_validation}" "${mode}" 'remove' ;;
      status) cwa_status ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install
