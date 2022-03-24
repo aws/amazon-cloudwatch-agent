@@ -26,7 +26,7 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 			}
 		}
 		
-		if strictValidation || multiConfig == "remove" {
+		if strictValidation=="true" || multiConfig == "remove" {
 			fmt.Println("No json config files found or invalid config, please provide an appropriate config, exit now")
 			os.Exit(config.ERR_CODE_NOJSONFILE)
 		} else {

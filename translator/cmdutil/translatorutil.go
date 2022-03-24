@@ -119,7 +119,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 	// for the append operation when the existing file name and new .tmp file name have diff
 	// only for the ".tmp" suffix, i.e. it is override operation even it says append.
 	var jsonConfigMapMap = make(map[string]map[string]interface{})
-
+	
 	if ctx.MultiConfig() == "append" || ctx.MultiConfig() == "remove" {
 		// backwards compatible for the old json config file
 		// this backwards compatible file can be treated as existing files
