@@ -43,7 +43,7 @@ func initFlags() {
 	ctx.SetMultiConfig(*multiConfig)
 	ctx.SetOutputTomlFilePath(*inputTomlFile)
 	ctx.SetStrictValidation(*strictValidation)
-	log.Printf("%t ", *strictValidation)
+	
 	if *inputConfig != "" {
 		f, err := os.Open(*inputConfig)
 		if err != nil {

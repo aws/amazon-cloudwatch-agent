@@ -89,11 +89,11 @@ func (ctx *Context) SetOutputTomlFilePath(outputTomlFilePath string) {
 	ctx.outputTomlFilePath = outputTomlFilePath
 }
 
-func (ctx *Context) StrictValidation() bool {
+func (ctx *Context) StrictValidation() string {
 	return ctx.strictValidation
 }
 
-func (ctx *Context) SetStrictValidation(strictValidation bool) {
+func (ctx *Context) SetStrictValidation(strictValidation string) {
 	ctx.strictValidation = strictValidation
 }
 
