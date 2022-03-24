@@ -529,7 +529,7 @@ main() {
           c) cwa_config_location="${OPTARG}" ;;
           o) cwoc_config_location="${OPTARG}" ;;
           m) mode="${OPTARG}" ;;
-          v) strict_validation="${OPTARG}" ;;
+          v) strict_validation="true" ;;
           l) log_level="${OPTARG}" ;;
           \?)
                echo "Invalid option: -${OPTARG} ${UsageString}" >&2
