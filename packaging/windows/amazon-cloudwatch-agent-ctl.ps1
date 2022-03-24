@@ -379,7 +379,7 @@ Function CWAConfig() {
         Remove-Item "${TOML}" -Force -ErrorAction SilentlyContinue
     } else {
         Write-Output "Start configuration validation..."
-        & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} --strict-validation ${StrictValidation} 2>&1"
+        & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} --strict-validation=${StrictValidation} 2>&1"
         CheckCMDResult
         # Let command pass so we can check return code and give user-friendly error-message
         $ErrorActionPreference = "Continue"

@@ -32,7 +32,7 @@ func initFlags() {
 	var inputMode = flag.String("mode", "ec2", "Please provide the mode, i.e. ec2, onPrem")
 	var inputConfig = flag.String("config", "", "Please provide the common-config file")
 	var multiConfig = flag.String("multi-config", "remove", "valid values: default, append, remove")
-	var strictValidation = flag.String("strict-validation", "false", "Return exit code 99 if validating agent's json config fails. Valid values: true, false")
+	var strictValidation = flag.Bool("strict-validation", false, "Return exit code 99 if validating agent's json config fails. Valid values: true, false")
 
 	flag.Parse()
 

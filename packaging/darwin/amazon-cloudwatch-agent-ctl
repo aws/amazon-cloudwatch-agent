@@ -204,7 +204,7 @@ cwa_config() {
           echo "all amazon-cloudwatch-agent configurations have been removed"
           rm -f "${TOML}"
      else
-          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} --strict-validation ${strict_validation}"
+          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} --strict-validation=${strict_validation}"
           echo ${runTranslatorCommand}
           ${runTranslatorCommand}
 
