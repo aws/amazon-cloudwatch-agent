@@ -83,6 +83,8 @@ UsageString="
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
 
+        -v: Return exit code 99 if validating agent's json config fails. Valid values: true, false
+
 "
 
 start_all() {
