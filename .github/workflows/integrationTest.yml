@@ -299,8 +299,65 @@ jobs:
           -var="arc=${{ matrix.arrays.arc }}"
           -var="binary_name=${{ matrix.arrays.binaryName }}"
           -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}"
+
       - name: Terraform destroy
         if: ${{ always() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        run: >
+          terraform destroy --auto-approve
+          -var="ami=${{ matrix.arrays.ami }}"
+
+  EC2WinIntegrationTest:
+    needs: [BuildMSI]
+    name: 'EC2WinIntegrationTest'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integration/terraform/ec2/win
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: [
+          { os: "win-2022", ami: "cloudwatch-agent-integration-test-win-2022*"}
+        ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: ec2-win-integration-test
+        uses: actions/cache@v2
+        with:
+          path: |
+            RELEASE_NOTES
+          key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+
+      - name: Echo OS
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }}
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform apply
+        if: steps.ec2-win-integration-test.outputs.cache-hit != 'true'
+        run: >
+          echo run terraform and execute test code &&
+          terraform apply --auto-approve
+          -var="ssh_key=${PRIVATE_KEY}"
+          -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          -var="github_sha=${GITHUB_SHA}"
+          -var="ami=${{ matrix.arrays.ami }}"
+
+      - name: Terraform destroy
+        if: ${{ always() && steps.ec2-win-integration-test.outputs.cache-hit != 'true' }}
         run: >
           terraform destroy --auto-approve
           -var="ami=${{ matrix.arrays.ami }}"
