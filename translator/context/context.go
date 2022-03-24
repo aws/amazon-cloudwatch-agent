@@ -41,6 +41,7 @@ type Context struct {
 	multiConfig         string
 	outputTomlFilePath  string
 	mode                string
+	strictValidation    bool
 	credentials         map[string]string
 	proxy               map[string]string
 	ssl                 map[string]string
@@ -86,6 +87,14 @@ func (ctx *Context) OutputTomlFilePath() string {
 
 func (ctx *Context) SetOutputTomlFilePath(outputTomlFilePath string) {
 	ctx.outputTomlFilePath = outputTomlFilePath
+}
+
+func (ctx *Context) StrictValidation() bool {
+	return ctx.strictValidation
+}
+
+func (ctx *Context) SetStrictValidation(strictValidation bool) {
+	ctx.strictValidation = strictValidation
 }
 
 func (ctx *Context) Mode() string {
