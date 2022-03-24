@@ -19,7 +19,7 @@ resource "aws_instance" "integration-test" {
       "cat snakeoil.pem > server.test.pem.crt",
       "cd ~/amazon-cloudwatch-agent/integration/localstack",
       "docker-compose up -d --force-recreate",
-      "aws s3 cp ls_tmp s3://cloudwatch-agent-integration-bucket/integration-test/ls_tmp/${var.github_sha} --recursive"
+      "aws s3 cp ls_tmp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.github_sha} --recursive"
     ]
     connection {
       type        = "ssh"
@@ -36,7 +36,7 @@ resource "aws_instance" "integration-test" {
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self"]
+  owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"
