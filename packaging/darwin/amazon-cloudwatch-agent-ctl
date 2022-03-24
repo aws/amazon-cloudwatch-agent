@@ -65,7 +65,7 @@ UsageString="
             file:<file-path>:                       file path on the host
             all:                                    all existing configs. Only apply to remove-config action.
 
-        -v: Return exit code 99 if validating agent's json config fails. Valid values: true, false
+        -v: Return exit code 99 if validating agent's json config fails.
 
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
@@ -263,7 +263,7 @@ main() {
      mode='auto'
 
      OPTIND=1
-     while getopts ":hsa:r:c:m:" opt; do
+     while getopts ":vhsa:r:c:m:" opt; do
           case "${opt}" in
           h)
                echo "${UsageString}"
@@ -273,7 +273,7 @@ main() {
           a) action="${OPTARG}" ;;
           c) config_location="${OPTARG}" ;;
           m) mode="${OPTARG}" ;;
-          v) strict_validation="${OPTARG}" ;;
+          v) strict_validation="true" ;;
           \?)
                echo "Invalid option: -${OPTARG} ${UsageString}" >&2
                ;;

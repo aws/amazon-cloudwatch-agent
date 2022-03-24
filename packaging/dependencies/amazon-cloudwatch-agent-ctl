@@ -81,7 +81,7 @@ UsageString="
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
-        -v: Return exit code 99 if validating agent's json config fails. Valid values: true, false
+        -v: Return exit code 99 if validating agent's json config fails.
 
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
@@ -521,7 +521,7 @@ main() {
      fi
 
      OPTIND=1
-     while getopts ":hsa:c:o:m:l:" opt; do
+     while getopts ":vhsa:c:o:m:l:" opt; do
           case "${opt}" in
           h)
                echo "${UsageString}"
