@@ -34,7 +34,7 @@ $UsageString = @"
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
-                [-v true|false]
+                [-v]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
 
         e.g.

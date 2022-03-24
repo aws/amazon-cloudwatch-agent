@@ -20,7 +20,34 @@ func TestProcessor_NextProcessor(t *testing.T) {
 }
 
 func TestDetermineCreds(t *testing.T) {
+	inputChan := testutil.SetUpTestInputStream()
 
+	ctx := new(runtime.Context)
+
+	accessKey, secretKey, creds := util.SDKCredentials()
+	if creds != nil {
+		testutil.Type(inputChan, "")
+		actualCreds := determineCreds(ctx)
+		value, err := actualCreds.Get()
+		assert.NoError(t, err)
+		assert.Equal(t, accessKey, value.AccessKeyID)
+		assert.Equal(t, secretKey, value.SecretAccessKey)
+
+		testutil.Type(inputChan, "2", "AK1", "SK1")
+		actualCreds = determineCreds(ctx)
+		value, err = actualCreds.Get()
+		assert.NoError(t, err)
+		assert.Equal(t, "AK1", value.AccessKeyID)
+		assert.Equal(t, "SK1", value.SecretAccessKey)
+	} else {
+		testutil.Type(inputChan, "AK1", "SK1")
+		actualCreds := determineCreds(ctx)
+		value, err := actualCreds.Get()
+		assert.NoError(t, err)
+		assert.Equal(t, "AK1", value.AccessKeyID)
+		assert.Equal(t, "SK1", value.SecretAccessKey)
+
+	}
 }
 
 func TestDetermineParameterStoreName(t *testing.T) {

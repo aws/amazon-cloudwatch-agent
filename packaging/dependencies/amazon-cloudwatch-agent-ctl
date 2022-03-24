@@ -40,7 +40,7 @@ UsageString="
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
-                [-v true|false]
+                [-v]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
 
         e.g.
@@ -166,9 +166,6 @@ agent_stop() {
      else
           stop "${agent_name}" || return
      fi
-}
-
-agent_validate() {
 }
 
 # disable cwagent-otel-collector in Systemd, amazon-cloudwatch-agent will not be disabled for now (TBD)
