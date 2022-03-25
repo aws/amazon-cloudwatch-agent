@@ -199,11 +199,15 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 		}
 	}
 
+	if err != nil && ctx.StrictValidation(){
+		os.Exit(config.ERR_CODE_INVALIDJSONFILE)
+	}
+
 	defaultConfig, err := translatorUtil.GetDefaultJsonConfigMap(ctx.Os(), ctx.Mode())
 	if err != nil {
 		return nil, err
 	}
-	mergedJsonConfigMap, err := jsonconfig.MergeJsonConfigMaps(jsonConfigMapMap, defaultConfig, ctx.MultiConfig(), ctx.StrictValidation())
+	mergedJsonConfigMap, err := jsonconfig.MergeJsonConfigMaps(jsonConfigMapMap, defaultConfig, ctx.MultiConfig())
 	if err != nil {
 		return nil, err
 	}
