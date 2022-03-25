@@ -15,7 +15,8 @@ Param (
     [Parameter(Mandatory = $false)]
     [string]$Mode = 'ec2',
     [Parameter(Mandatory = $false)]
-    [string]$StrictValidation = 'false',
+    [Alias("strict")]
+    [switch]$StrictValidation = $false,
     [Parameter(Mandatory = $false)]
     [string]$LogLevel = '',
     [parameter(ValueFromRemainingArguments=$true)]
@@ -74,10 +75,10 @@ $UsageString = @"
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
-        -v: Return exit code 99 if validating agent's json config fails. Valid values: true, false
-
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
+
+        -strict: Return exit code 98 if validating agent's json config fails.
 
 "@
 

@@ -46,7 +46,7 @@ UsageString="
         3. query agent status:
             amazon-cloudwatch-agent-ctl -a status
 
-        -a: action
+        -a/--action: action
             stop:                                   stop the agent process.
             start:                                  start the agent process.
             status:                                 get the status of the agent process.
@@ -54,7 +54,7 @@ UsageString="
             append-config:                          append json config with the existing json configs if any.
             remove-config:                          remove json config based on the location (ssm parameter store name, file name)
 
-        -m: mode
+        -m/--mode: mode
             ec2:                                    indicate this is on ec2 host.
             onPremise:                              indicate this is on onPremise host.
             auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
@@ -65,10 +65,10 @@ UsageString="
             file:<file-path>:                       file path on the host
             all:                                    all existing configs. Only apply to remove-config action.
 
-        -v: Return exit code 99 if validating agent's json config fails.
-
-        -s: optionally restart after configuring the agent configuration
+        -s/--restart: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
+
+        --strict: Return exit code 98 if validating agent's json config fails.
 
 "
 
@@ -255,6 +255,68 @@ cwa_config() {
      fi
 }
 
+getopts_long() {
+    # Function utilizies getopts, which "upgrades" the built-in getopts with support for GNU-style long options
+    # Documentation: https://github.com/UrsaDK/getopts_long
+    # Example for using getopts: https://github.com/UrsaDK/getopts_long#example-script
+    # There are two ways of using it without external dependencies:
+    # - Use docker (up-to-date with github; however, do we want every customer to install docker before using cwagent when they only use the binaries and artifacts')
+    # - Create a getopts_long function(not up-to-date with github; however, do not need to install docker)
+
+    : "${1:?Missing required parameter -- long optspec}"
+    : "${2:?Missing required parameter -- variable name}"
+
+    local optspec_short="${1%% *}-:"
+    local optspec_long="${1#* }"
+    local optvar="${2}"
+
+    shift 2
+
+    if [[ "${#}" == 0 ]]; then
+        local args=()
+        while [[ ${#BASH_ARGV[@]} -gt ${#args[@]} ]]; do
+            local index=$(( ${#BASH_ARGV[@]} - ${#args[@]} - 1 ))
+            args[${#args[@]}]="${BASH_ARGV[${index}]}"
+        done
+        set -- "${args[@]}"
+    fi
+
+    builtin getopts "${optspec_short}" "${optvar}" "${@}" || return 1
+    [[ "${!optvar}" == '-' ]] || return 0
+
+    printf -v "${optvar}" "%s" "${OPTARG%%=*}"
+
+    if [[ "${optspec_long}" =~ (^|[[:space:]])${!optvar}:([[:space:]]|$) ]]; then
+        OPTARG="${OPTARG#${!optvar}}"
+        OPTARG="${OPTARG#=}"
+
+        # Missing argument
+        if [[ -z "${OPTARG}" ]]; then
+            OPTARG="${!OPTIND}" && OPTIND=$(( OPTIND + 1 ))
+            [[ -z "${OPTARG}" ]] || return 0
+
+            if [[ "${optspec_short:0:1}" == ':' ]]; then
+                OPTARG="${!optvar}" && printf -v "${optvar}" ':'
+            else
+                [[ "${OPTERR}" == 0 ]] || \
+                    echo "${0}: option requires an argument -- ${!optvar}" >&2
+                unset OPTARG && printf -v "${optvar}" '?'
+            fi
+        fi
+    elif [[ "${optspec_long}" =~ (^|[[:space:]])${!optvar}([[:space:]]|$) ]]; then
+        unset OPTARG
+    else
+        # Invalid option
+        if [[ "${optspec_short:0:1}" == ':' ]]; then
+            OPTARG="${!optvar}"
+        else
+            [[ "${OPTERR}" == 0 ]] || echo "${0}: illegal option -- ${!optvar}" >&2
+            unset OPTARG
+        fi
+        printf -v "${optvar}" '?'
+    fi
+}
+
 main() {
      action=''
      config_location='default'
@@ -263,17 +325,17 @@ main() {
      mode='auto'
 
      OPTIND=1
-     while getopts ":vhsa:r:c:m:" opt; do
+     while getopts_long ":hsa:r:c:m: help restart strict action: mode:" opt; do
           case "${opt}" in
-          h)
+          'h'|'help')
                echo "${UsageString}"
                exit 0
                ;;
-          s) restart='true' ;;
-          a) action="${OPTARG}" ;;
+          's'|'restart') restart='true' ;;
+          'a'|'action') action="${OPTARG}" ;;
           c) config_location="${OPTARG}" ;;
-          m) mode="${OPTARG}" ;;
-          v) strict_validation="true" ;;
+          'm'|'mode') mode="${OPTARG}" ;;
+          'strict') strict_validation='true';;
           \?)
                echo "Invalid option: -${OPTARG} ${UsageString}" >&2
                ;;
