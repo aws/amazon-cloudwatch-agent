@@ -68,7 +68,7 @@ UsageString="
         -s/--restart: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
-        --strict: Return exit code 98 if validating agent's json config fails.
+        --strict: Return exit code 99 if validating agent's json config fails.
 
 "
 
