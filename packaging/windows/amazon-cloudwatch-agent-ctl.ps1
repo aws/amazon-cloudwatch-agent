@@ -46,7 +46,7 @@ $UsageString = @"
         3. query agent status:
             amazon-cloudwatch-agent-ctl.ps1 -a status
 
-        -a: action
+        -a/-action: action
             stop:                                   stop both amazon-cloudwatch-agent and cwagent-otel-collector if running.
             start:                                  start both amazon-cloudwatch-agent and cwagent-otel-collector if configuration is available.
             status:                                 get the status of both agent processes.
@@ -55,7 +55,7 @@ $UsageString = @"
             remove-config:                          remove config for agent, followed by -c or -o or both. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
             set-log-level:                          sets the log level, followed by -l to provide the level in all caps.
 
-        -m: mode
+        -m/-mode: mode
             ec2:                                    indicate this is on ec2 host.
             onPremise:                              indicate this is on onPremise host.
             auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
