@@ -35,8 +35,8 @@ $UsageString = @"
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
-                [-v]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
+                [-strict]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
