@@ -51,7 +51,7 @@ UsageString="
         3. query agent status:
             amazon-cloudwatch-agent-ctl -a status
 
-        -a: action
+        -a/--action: action
             stop:                                   stop the agent process.
             start:                                  start the agent process.
             status:                                 get the status of the agent process.
@@ -61,7 +61,7 @@ UsageString="
             remove-config:                          remove config for agent, followed by -c or -o or both. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
             set-log-level:                          sets the log level, followed by -l to provide the level in all caps.
 
-        -m: mode
+        -m/--mode: mode
             ec2:                                    indicate this is on ec2 host.
             onPremise:                              indicate this is on onPremise host.
             auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
@@ -78,13 +78,13 @@ UsageString="
             file:<file-path>:                       file path on the host.
             all:                                    all existing configs. Only apply to remove-config action.
 
-        -s: optionally restart after configuring the agent configuration
+        -s/--restart: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
-        -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
+        -l/--log: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
 
-        -strict: Return exit code 98 if validating agent's json config fails.
+        --strict: Return exit code 98 if validating agent's json config fails.
 
 "
 
@@ -580,7 +580,7 @@ main() {
      fi
 
      OPTIND=1
-     while getopts_long ":hsa:r:c:m: help restart strict action: mode:" opt; do
+     while getopts_long ":hsa:r:c:m: help restart strict action: mode: log:" opt; do
           case "${opt}" in
           'h' | 'help')
                echo "${UsageString}"
@@ -592,7 +592,7 @@ main() {
           o) cwoc_config_location="${OPTARG}" ;;
           'm' | 'mode') mode="${OPTARG}" ;;
           'strict') strict_validation="true" ;;
-          l) log_level="${OPTARG}" ;;
+          'l' | 'log') log_level="${OPTARG}" ;;
           \?)
                echo "Invalid option: -${OPTARG} ${UsageString}" >&2
                ;;
