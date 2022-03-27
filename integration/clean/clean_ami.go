@@ -69,7 +69,9 @@ func cleanAMI() []error {
 			}
 		}
 	}
-
+	
+	log.Print("Finish cleaning EC2 AMI")
+	
 	if len(errors) != 0 {
 		return errors
 	}
