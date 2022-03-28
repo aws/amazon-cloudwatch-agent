@@ -6,6 +6,7 @@ env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
   TERRAFORM_AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+  S3_INTEGRATION_BUCKET: cloudwatch-agent-integration-bucket
 
 on:
   push:
@@ -68,7 +69,7 @@ jobs:
 
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: aws s3 cp build/bin s3://cloudwatch-agent-integration-bucket/integration-test/binary/${{ github.sha }} --recursive
+        run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -99,7 +100,7 @@ jobs:
       - name: Copy binary
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
-          aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/binary/${{ github.sha }} . --recursive
+          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} . --recursive
 
       - uses: montudor/action-zip@v1
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
@@ -125,7 +126,7 @@ jobs:
 
       - name: Upload zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
-        run: aws s3 cp buildMSI.zip s3://cloudwatch-agent-integration-bucket/integration-test/packaging/${{ github.sha }}/buildMSI.zip
+        run: aws s3 cp buildMSI.zip s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/buildMSI.zip
 
   BuildMSI:
     name: 'BuildMSI'
@@ -150,7 +151,7 @@ jobs:
 
       - name: Copy msi
         if: steps.cached_msi.outputs.cache-hit != 'true'
-        run: aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/packaging/${{ github.sha }}/buildMSI.zip .
+        run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/buildMSI.zip .
 
       - name: Create msi
         if: steps.cached_msi.outputs.cache-hit != 'true'
@@ -194,11 +195,12 @@ jobs:
           terraform apply --auto-approve
           -var="ssh_key=${PRIVATE_KEY}"
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-          -var="github_sha=${GITHUB_SHA}" &&
+          -var="github_sha=${GITHUB_SHA}" 
+          -var="s3_bucket=${S3_INTEGRATION_BUCKET}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
-          aws s3 cp terraform.tfstate s3://cloudwatch-agent-integration-bucket/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
+          aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack]
@@ -211,47 +213,47 @@ jobs:
       fail-fast: false
       matrix:
         arrays: [
-          { os: "ubuntu", package: "package-deb",  username: "ubuntu",
+          { os: "ubuntu", username: "ubuntu",
             installAgentCommand: "dpkg -i -E ./amazon-cloudwatch-agent.deb",
             ami: "cloudwatch-agent-integration-test-ubuntu*", caCertPath: "/etc/ssl/certs/ca-certificates.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.deb" },
-          { os: "al2", package: "package-rpm",  username: "ec2-user",
+          { os: "al2", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-al2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8", package: "package-rpm",  username: "ec2-user",
+          { os: "rhel8", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-rhel8-base*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-1", package: "package-rpm",  username: "ec2-user",
+          { os: "rhel8-1", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-rhel8-1*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-2", package: "package-rpm",  username: "ec2-user",
+          { os: "rhel8-2", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-rhel8-2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-3", package: "package-rpm",  username: "ec2-user",
+          { os: "rhel8-3", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-rhel8-3*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-4", package: "package-rpm",  username: "ec2-user",
+          { os: "rhel8-4", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-rhel8-4*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-1", package: "package-rpm",  username: "ec2-user",
+          { os: "ol8-1", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-ol8-1*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-2", package: "package-rpm",  username: "ec2-user",
+          { os: "ol8-2", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-ol8-2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "o8-3", package: "package-rpm",  username: "ec2-user",
+          { os: "o8-3", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-ol8-3*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-4", package: "package-rpm",  username: "ec2-user",
+          { os: "ol8-4", username: "ec2-user",
             installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
             ami: "cloudwatch-agent-integration-test-ol8-4*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" }
@@ -291,7 +293,6 @@ jobs:
           -var="ssh_key=${PRIVATE_KEY}"
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           -var="github_sha=${GITHUB_SHA}"
-          -var="package=${{ matrix.arrays.package }}"
           -var="install_agent=${{ matrix.arrays.installAgentCommand }}"
           -var="user=${{ matrix.arrays.username }}"
           -var="ami=${{ matrix.arrays.ami }}"
@@ -299,12 +300,11 @@ jobs:
           -var="arc=${{ matrix.arrays.arc }}"
           -var="binary_name=${{ matrix.arrays.binaryName }}"
           -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}"
+          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
 
       - name: Terraform destroy
         if: ${{ always() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
-        run: >
-          terraform destroy --auto-approve
-          -var="ami=${{ matrix.arrays.ami }}"
+        run: terraform destroy --auto-approve
 
   EC2WinIntegrationTest:
     needs: [BuildMSI]
@@ -381,7 +381,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Copy state
-        run: aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
+        run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
 
       - name: Verify Terraform version
         run: terraform --version
