@@ -108,14 +108,17 @@ func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
 	}
 
 	configMapInterface := k8sclient.Get().ClientSet.CoreV1().ConfigMaps(lockNamespace)
-	if configMap, err := configMapInterface.Get(lockName, metav1.GetOptions{}); configMap == nil || err != nil {
+	var opts metav1.CreateOptions
+	if configMap, err := configMapInterface.Get(ctx, lockName, metav1.GetOptions{}); configMap == nil || err != nil {
 		log.Printf("I! Cannot get the leader config map: %v, try to create the config map...", err)
-		configMap, err = configMapInterface.Create(&v1.ConfigMap{
+		configMap, err = configMapInterface.Create(ctx, &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: lockNamespace,
 				Name:      lockName,
 			},
-		})
+		},
+		opts,
+		)
 		log.Printf("I! configMap: %v, err: %v", configMap, err)
 	}
 

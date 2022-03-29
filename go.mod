@@ -28,11 +28,6 @@ replace github.com/tencentcloud/tencentcloud-sdk-go => github.com/tencentcloud/t
 //go-discover is used only by consul and consul is used only in telegraf, so the replacement here should not affect amazon-cloudwatch-agent
 replace github.com/hashicorp/go-discover => github.com/hashicorp/go-discover v0.0.0-20200713171816-3392d2f47463
 
-//to be consistent with prometheus: https://github.com/prometheus/prometheus/blame/58556c19be97f9f3e54c009870a21943bc2c10c0/go.mod#L80
-replace k8s.io/klog => github.com/simonpasquier/klog-gokit v0.3.0
-
-replace k8s.io/klog/v2 => github.com/simonpasquier/klog-gokit/v2 v2.1.0
-
 //proxy.golang.org has versions of golang.zx2c4.com/wireguard with leading v's, whereas the git repo has tags without
 //leading v's: https://git.zx2c4.com/wireguard-go/refs/tags
 //So, fetching this module with version v0.0.20200121 (as done by the transitive dependency
@@ -41,8 +36,8 @@ replace k8s.io/klog/v2 => github.com/simonpasquier/klog-gokit/v2 v2.1.0
 //Replacing with the pseudo-version works around this.
 replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v0.0.0-20200121152719-05b03c675090
 
-// to be consistent with Telegraf
-replace github.com/prometheus/prometheus v1.8.2 => github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
+// BurntSushi 0.4.1 do not decode .toml with '[]' into empty slice anymore which breaks confmigrate.
+replace github.com/BurntSushi/toml v0.4.1 => github.com/BurntSushi/toml v0.3.1
 
 require (
 	github.com/BurntSushi/toml v0.4.1
@@ -71,6 +66,8 @@ require (
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/common v0.33.0
 	github.com/prometheus/prometheus v1.8.2
+	github.com/prometheus/common v0.32.1
+	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
 	github.com/shirou/gopsutil v3.21.5+incompatible
 	github.com/stretchr/testify v1.7.1
 	github.com/xeipuuv/gojsonschema v1.2.0
@@ -87,6 +84,7 @@ require (
 	k8s.io/apimachinery v0.23.4
 	k8s.io/client-go v0.23.3
 	k8s.io/klog v1.0.0
+// sigs.k8s.io/structured-merge-diff v0.0.0-20190525122527-15d366b2352e // indirect
 )
 
 require (
@@ -111,6 +109,7 @@ require (
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.8.0 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.11.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.5 // indirect
@@ -150,6 +149,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/go-kit/log v0.2.0 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
+	github.com/go-logr/logr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
@@ -281,3 +281,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
+
+require github.com/kr/text v0.2.0 // indirect

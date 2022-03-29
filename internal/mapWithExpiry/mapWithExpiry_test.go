@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
-
 )
 
 func TestMapWithExpiry_add(t *testing.T) {

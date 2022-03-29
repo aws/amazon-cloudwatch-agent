@@ -186,10 +186,12 @@ func createEndpointListWatch(client kubernetes.Interface, ns string) cache.Liste
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 			opts.ResourceVersion = ""
-			return client.CoreV1().Endpoints(ns).List(opts)
+			// Passing nil context as this was not required by old List()
+			return client.CoreV1().Endpoints(ns).List(nil, opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
-			return client.CoreV1().Endpoints(ns).Watch(opts)
+			// Passing nil context as this was not required by old Watch()
+			return client.CoreV1().Endpoints(ns).Watch(nil, opts)
 		},
 	}
 }

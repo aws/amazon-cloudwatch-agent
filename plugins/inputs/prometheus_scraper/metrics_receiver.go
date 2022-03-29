@@ -4,7 +4,9 @@
 package prometheus_scraper
 
 import (
+	"context"
 	"errors"
+	"github.com/prometheus/prometheus/pkg/exemplar"
 	"log"
 	"math"
 
@@ -44,7 +46,7 @@ type metricAppender struct {
 	batch    PrometheusMetricBatch
 }
 
-func (mr *metricsReceiver) Appender() storage.Appender {
+func (mr *metricsReceiver) Appender(ctx context.Context) storage.Appender {
 	return &metricAppender{receiver: mr, batch: PrometheusMetricBatch{}}
 }
 
@@ -57,7 +59,7 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 	return nil
 }
 
-func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, error) {
+func (ma *metricAppender) Append(ref uint64, ls labels.Labels, t int64, v float64) (uint64, error) {
 	metricName := ""
 
 	labelMap := make(map[string]string, len(ls))
@@ -94,11 +96,6 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 	return uint64(0), nil //return 0 to indicate caching is not supported
 }
 
-// always returns error since caching is not supported by Add() function
-func (ma *metricAppender) AddFast(_ uint64, _ int64, _ float64) error {
-	return storage.ErrNotFound
-}
-
 func (ma *metricAppender) Commit() error {
 	return ma.receiver.feed(ma.batch)
 }
@@ -107,4 +104,9 @@ func (ma *metricAppender) Rollback() error {
 	// wipe the batch
 	ma.batch = PrometheusMetricBatch{}
 	return nil
+}
+
+func (ma *metricAppender) AppendExemplar(ref uint64, l labels.Labels, e exemplar.Exemplar) (uint64, error) {
+	ma.Append(ref, l, e.Ts, e.Value)
+	return 0, nil
 }

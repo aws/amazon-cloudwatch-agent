@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"testing"
 	"time"
-
 )
 
 func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {
