@@ -5,12 +5,14 @@ package cmdutil
 
 import (
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"errors"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -131,62 +133,68 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 			jsonConfigMapMap[ctx.InputJsonFilePath()] = jsonConfigMap
 		}
 	}
-
-	err := filepath.Walk(
-		ctx.InputJsonDirPath(),
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Printf("Cannot access %v: %v", path, err)
-				return err
-			}
-			if info.Mode()&os.ModeSymlink != 0 {
-				log.Printf("Find symbolic link %s \n", path)
-				path, err := filepath.EvalSymlinks(path)
+	
+	var inputJsonDirPathErr error
+	
+	if (ctx.InputJsonDirPath() !="") {
+		inputJsonDirPathErr = filepath.Walk(
+			ctx.InputJsonDirPath(),
+			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
-					log.Printf("Symbolic link %v will be ignored due to err: %v. \n", path, err)
+					log.Printf("%v",info)
+					fmt.Printf("Cannot access %v: %v \n", path, err)
+					return err
+				}
+				if info.Mode()&os.ModeSymlink != 0 {
+					log.Printf("Find symbolic link %s \n", path)
+					path, err := filepath.EvalSymlinks(path)
+					if err != nil {
+						log.Printf("Symbolic link %v will be ignored due to err: %v. \n", path, err)
+						return nil
+					}
+					info, err = os.Stat(path)
+					if err != nil {
+						log.Printf("Path %v will be ignored due to err: %v. \n", path, err)
+					}
+				}
+				if info.IsDir() {
 					return nil
 				}
-				info, err = os.Stat(path)
-				if err != nil {
-					log.Printf("Path %v will be ignored due to err: %v. \n", path, err)
-				}
-			}
-			if info.IsDir() {
-				return nil
-			}
 
-			if filepath.Ext(path) == context.TmpFileSuffix {
-				// .tmp files
-				if ctx.MultiConfig() == "default" || ctx.MultiConfig() == "append" {
-					jsonConfigMap, err := getJsonConfigMap(path, ctx.Os())
-					if err != nil {
-						return err
+				if filepath.Ext(path) == context.TmpFileSuffix {
+					// .tmp files
+					if ctx.MultiConfig() == "default" || ctx.MultiConfig() == "append" {
+						jsonConfigMap, err := getJsonConfigMap(path, ctx.Os())
+						if err != nil {
+							return err
+						}
+						if jsonConfigMap != nil {
+							jsonConfigMapMap[strings.TrimSuffix(path, context.TmpFileSuffix)] = jsonConfigMap
+						}
 					}
-					if jsonConfigMap != nil {
-						jsonConfigMapMap[strings.TrimSuffix(path, context.TmpFileSuffix)] = jsonConfigMap
-					}
-				}
-			} else {
-				// non .tmp / existing files
-				if ctx.MultiConfig() == "append" || ctx.MultiConfig() == "remove" {
-					jsonConfigMap, err := getJsonConfigMap(path, ctx.Os())
-					if err != nil {
-						return err
-					}
-					if jsonConfigMap != nil {
-						if _, ok := jsonConfigMapMap[path]; !ok {
-							jsonConfigMapMap[path] = jsonConfigMap
+				} else {
+					// non .tmp / existing files
+					if ctx.MultiConfig() == "append" || ctx.MultiConfig() == "remove" {
+						jsonConfigMap, err := getJsonConfigMap(path, ctx.Os())
+						if err != nil {
+							return err
+						}
+						if jsonConfigMap != nil {
+							if _, ok := jsonConfigMapMap[path]; !ok {
+								jsonConfigMapMap[path] = jsonConfigMap
+							}
 						}
 					}
 				}
-			}
 
-			return nil
-		})
-	if err != nil {
-		log.Printf("unable to scan config dir %v with error: %v", ctx.InputJsonDirPath(), err)
+				return nil
+			})
+
+		if inputJsonDirPathErr != nil {
+			log.Printf("unable to scan config dir %v with error: %v", ctx.InputJsonDirPath(), inputJsonDirPathErr)
+		}
 	}
-
+	
 	if len(jsonConfigMapMap) == 0 {
 		// For containerized agent, try to read env variable only when json configuration file is absent
 		if jsonConfigContent, ok := os.LookupEnv(config.CWConfigContent); ok && os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE {
@@ -196,6 +204,9 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				return nil, fmt.Errorf("unable to get json map from environment variable %v with error: %v", config.CWConfigContent, err)
 			}
 			jsonConfigMapMap[config.CWConfigContent] = jm
+		} else if errors.Is(inputJsonDirPathErr, fs.ErrNotExist) && ctx.StrictValidation() {
+			log.Printf("No agent's json config was found from containerized environment and file path.")
+			os.Exit(config.ERR_CODE_NOJSONFILE)
 		}
 	}
 

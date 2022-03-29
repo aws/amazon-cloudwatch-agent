@@ -60,6 +60,11 @@ func translateConfig() error {
 			case status.Exited():
 				log.Printf("I! Return exit error: exit code=%d\n", status.ExitStatus())
 
+				if status.ExitStatus() == config.ERR_CODE_NOJSONFILE {
+					log.Printf("I! No json configuration was found when running translator\n")
+					os.Exit(0)
+				}
+				
 				if status.ExitStatus() == config.ERR_CODE_INVALIDJSONFILE {
 					log.Printf("I! An invalid json configuration was found when running translator\n")
 					os.Exit(0)
