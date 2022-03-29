@@ -13,7 +13,7 @@ import (
 func EMFParserCreator(metricName string) telegraf.Parser {
 	// Telegraf will create parser with metricName only, and initFromConfig will be called to get the tags
 	return &emf.EMFParser{
-		MetricName:  metricName,
+		MetricName: metricName,
 	}
 }
 

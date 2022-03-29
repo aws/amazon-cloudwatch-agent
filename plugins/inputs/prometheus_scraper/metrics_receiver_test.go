@@ -20,14 +20,14 @@ func Test_metricAppender_Add_BadMetricName(t *testing.T) {
 		{Name: "name_b", Value: "value_b"},
 	}
 
-	r, err := ma.Add(ls, ts, v)
+	r, err := ma.Append(0, ls, ts, v)
 	assert.Equal(t, uint64(0), r)
 	assert.Equal(t, "metricName of the times-series is missing", err.Error())
 }
 
 func Test_metricAppender_Add(t *testing.T) {
 	mr := metricsReceiver{}
-	ma := mr.Appender()
+	ma := mr.Appender(nil)
 	var ts int64 = 10
 	var v float64 = 10.0
 	ls := []labels.Label{
@@ -35,7 +35,7 @@ func Test_metricAppender_Add(t *testing.T) {
 		{Name: "tag_a", Value: "a"},
 	}
 
-	ref, err := ma.Add(ls, ts, v)
+	ref, err := ma.Append(0, ls, ts, v)
 	assert.Equal(t, ref, uint64(0))
 	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)
@@ -60,7 +60,7 @@ func Test_metricAppender_isValueStale(t *testing.T) {
 
 func Test_metricAppender_Rollback(t *testing.T) {
 	mr := metricsReceiver{}
-	ma := mr.Appender()
+	ma := mr.Appender(nil)
 	var ts int64 = 10
 	var v float64 = 10.0
 	ls := []labels.Label{
@@ -68,7 +68,7 @@ func Test_metricAppender_Rollback(t *testing.T) {
 		{Name: "tag_a", Value: "a"},
 	}
 
-	ref, err := ma.Add(ls, ts, v)
+	ref, err := ma.Append(0, ls, ts, v)
 	assert.Equal(t, ref, uint64(0))
 	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)
@@ -81,7 +81,7 @@ func Test_metricAppender_Rollback(t *testing.T) {
 func Test_metricAppender_Commit(t *testing.T) {
 	mbCh := make(chan PrometheusMetricBatch, 3)
 	mr := metricsReceiver{pmbCh: mbCh}
-	ma := mr.Appender()
+	ma := mr.Appender(nil)
 	var ts int64 = 10
 	var v float64 = 10.0
 	ls := []labels.Label{
@@ -89,7 +89,7 @@ func Test_metricAppender_Commit(t *testing.T) {
 		{Name: "tag_a", Value: "a"},
 	}
 
-	ref, err := ma.Add(ls, ts, v)
+	ref, err := ma.Append(0, ls, ts, v)
 	assert.Equal(t, ref, uint64(0))
 	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)

@@ -37,7 +37,6 @@ import (
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
-	// sdConfig "github.com/prometheus/prometheus/discovery/config"
 	"github.com/prometheus/prometheus/pkg/relabel"
 	promRuntime "github.com/prometheus/prometheus/pkg/runtime"
 	"github.com/prometheus/prometheus/scrape"
@@ -93,7 +92,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	level.Info(logger).Log("build_context", version.BuildContext())
 	level.Info(logger).Log("host_details", promRuntime.Uname())
 	level.Info(logger).Log("fd_limits", promRuntime.FdLimits())
-	level.Info(logger).Log("vm_limits", promRuntime.VmLimits())
+	level.Info(logger).Log("vm_limits", promRuntime.VMLimits())
 
 	var (
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
@@ -109,7 +108,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		func(cfg *config.Config) error {
 			c := make(map[string]discovery.Configs)
 			for _, v := range cfg.ScrapeConfigs {
-				c[v.JobName] = v.ServiceDiscoveryConfig
+				c[v.JobName] = v.ServiceDiscoveryConfigs
 			}
 			return discoveryManagerScrape.ApplyConfig(c)
 		},
@@ -280,7 +279,7 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 		}
 	}()
 
-	conf, err := config.LoadFile(filename)
+	conf, err := config.LoadFile(filename, false, logger)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
 	}

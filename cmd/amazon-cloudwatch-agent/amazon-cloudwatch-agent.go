@@ -47,6 +47,7 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
+	LogTargetEventLog = "eventlog"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -273,14 +274,14 @@ func runAgent(ctx context.Context,
 		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
-	if int64(c.Agent.Interval.Duration) <= 0 {
+	if int64(c.Agent.Interval) <= 0 {
 		return fmt.Errorf("Agent interval must be positive, found %s",
-			c.Agent.Interval.Duration)
+			c.Agent.Interval)
 	}
 
-	if int64(c.Agent.FlushInterval.Duration) <= 0 {
+	if int64(c.Agent.FlushInterval) <= 0 {
 		return fmt.Errorf("Agent flush_interval must be positive; found %s",
-			c.Agent.Interval.Duration)
+			c.Agent.Interval)
 	}
 
 	if *fSchemaTest {
@@ -548,10 +549,13 @@ func main() {
 			}
 			os.Exit(0)
 		} else {
-			winlogger, err := s.Logger(nil)
+			_, err := s.Logger(nil)
 			if err == nil {
 				//When in service mode, register eventlog target and setup default logging to eventlog
-				logger.RegisterEventLogger(winlogger)
+				e := logger.RegisterEventLogger(LogTargetEventLog)
+				if e != nil {
+					log.Println("E! Cannot register event log " + e.Error())
+				}
 				logger.SetupLogging(logger.LogConfig{LogTarget: lumberjack.LogTargetLumberjack})
 			}
 			err = s.Run()
