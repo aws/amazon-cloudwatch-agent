@@ -122,7 +122,7 @@ agent_start() {
                return 0
           fi
           echo "Both ${CWA_NAME} and ${CWOC_NAME} are not configured. Applying amazon-cloudwatch-agent default configuration."
-          cwa_config 'default' 'false' "${strict_validation}" "${mode}" 'default'
+          cwa_config 'default' 'false' "${mode}" 'default' 'false'
      fi
 
      if [ "${SYSTEMD}" = 'true' ]; then
@@ -300,9 +300,9 @@ config_all() {
      cwa_config_location="${1:-}"
      cwoc_config_location="${2:-}"
      restart="${3:-}"
-     strict_validation="${4:-}"
-     mode="${5:-}"
-     multi_config="${6:-}"
+     mode="${4:-}"
+     multi_config="${5:-}"
+     strict_validation="${6:-}"
 
      if [ -z "${cwa_config_location}" ] && [ -z "${cwoc_config_location}" ]; then
           cwa_config_location='default'
@@ -330,7 +330,7 @@ config_all() {
      if [ -n "${cwoc_config_location}" ]; then
           echo "****** processing cwagent-otel-collector ******"
           set +e
-          cwoc_config "${cwoc_config_location}" "${restart}" "${param_mode}" "${strict_validation}" "${multi_config}"
+          cwoc_config "${cwoc_config_location}" "${restart}" "${param_mode}" "${multi_config}"
           set -e
           echo ""
      fi
@@ -339,16 +339,16 @@ config_all() {
      # default cwa config depends on the existence of cwoc config
      if [ -n "${cwa_config_location}" ]; then
           echo "****** processing amazon-cloudwatch-agent ******"
-          cwa_config "${cwa_config_location}" "${restart}" "${strict_validation}" "${param_mode}" "${multi_config}"
+          cwa_config "${cwa_config_location}" "${restart}" "${param_mode}" "${multi_config}" "${strict_validation}"
      fi
 }
 
 cwa_config() {
      cwa_config_location="${1:-}"
      restart="${2:-}"
-     strict_validation="${3:-}"
-     param_mode="${4:-}"
-     multi_config="${5:-}"
+     param_mode="${3:-}"
+     multi_config="${4:-}"
+     strict_validation="${5:-}"
 
      if [ "${cwa_config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
           echo "ignore cwa configuration \"${ALL_CONFIG}\" as it is only supported by action \"remove-config\""
@@ -620,9 +620,9 @@ main() {
      case "${action}" in
      stop) stop_all ;;
      start) start_all "${mode}" ;;
-     fetch-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${strict_validation}" "${mode}" 'default' ;;
-     append-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${strict_validation}" "${mode}" 'append' ;;
-     remove-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${strict_validation}" "${mode}" 'remove' ;;
+     fetch-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'default' "${strict_validation}" ;;
+     append-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'append' "${strict_validation}";;
+     remove-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'remove' "${strict_validation}";;
      status) status_all ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install

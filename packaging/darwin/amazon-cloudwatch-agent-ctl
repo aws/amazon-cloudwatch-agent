@@ -164,9 +164,9 @@ cwa_pid() {
 cwa_config() {
      config_location="${1:-}"
      restart="${2:-}"
-     strict_validation="${3:-}"
-     mode="${4:-}"
-     multi_config="${5:-}"
+     mode="${3:-}"
+     multi_config="${4:-}"
+     strict_validation="${5:-}"
 
      mkdir -p "${CONFDIR}"
 
@@ -369,9 +369,9 @@ main() {
      case "${action}" in
      stop) cwa_stop ;;
      start) cwa_start "${mode}" ;;
-     fetch-config) cwa_config "${config_location}" "${restart}" "${strict_validation}" "${mode}" 'default' ;;
-     append-config) cwa_config "${config_location}" "${restart}" "${strict_validation}" "${mode}" 'append' ;;
-     remove-config) cwa_config "${config_location}" "${restart}" "${strict_validation}" "${mode}" 'remove' ;;
+     fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default' "${strict_validation}";;
+     append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append' "${strict_validation}";;
+     remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove' "${strict_validation}";;
      status) cwa_status ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install
