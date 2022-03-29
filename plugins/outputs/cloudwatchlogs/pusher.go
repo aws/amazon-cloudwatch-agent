@@ -344,9 +344,14 @@ func (p *pusher) createLogGroupAndStream() error {
 					LogStreamName: &p.Stream,
 				})
 			} else {
-				p.Log.Errorf("creating group fail due to : %v \n", err)
+				p.Log.Debugf("creating group fail due to : %v \n", err)
 			}
 		}
+	}
+
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
+		p.Log.Debugf("Resource was already created. %v\n", err)
+		return nil // if the log group or log stream already exist, this is not worth returning an error for
 	}
 
 	return err
