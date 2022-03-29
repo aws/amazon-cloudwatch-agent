@@ -167,23 +167,6 @@ cwa_config() {
 
      mkdir -p "${CONFDIR}"
 
-     param_mode="ec2"
-     case "${mode}" in
-     ec2)
-          param_mode="ec2"
-          ;;
-     onPremise)
-          param_mode="onPrem"
-          ;;
-     auto)
-          param_mode="auto"
-          ;;
-     *)
-          echo "Invalid mode: ${mode}" >&2
-          exit 1
-          ;;
-     esac
-
      if [ "${config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
           echo "ignore cwa configuration \"${ALL_CONFIG}\" as it is only supported by action \"remove-config\""
           return
@@ -192,7 +175,7 @@ cwa_config() {
      if [ "${config_location}" = "${ALL_CONFIG}" ]; then
           rm -rf "${JSON_DIR}"/*
      else
-          runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+          runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${config_location} --mode ${mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
           echo ${runDownloaderCommand}
           ${runDownloaderCommand}
      fi
@@ -201,7 +184,7 @@ cwa_config() {
           echo "all amazon-cloudwatch-agent configurations have been removed"
           rm -f "${TOML}"
      else
-          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
           echo ${runTranslatorCommand}
           ${runTranslatorCommand}
 
@@ -248,7 +231,7 @@ cwa_config() {
 
      if [ "${restart}" = 'true' ]; then
           cwa_stop
-          cwa_start "${param_mode}"
+          cwa_start "${mode}"
      fi
 }
 
@@ -282,11 +265,8 @@ main() {
 
      case "${mode}" in
      ec2) ;;
-
      onPremise) ;;
-
      auto) ;;
-
      *)
           echo "Invalid mode: ${mode} ${UsageString}" >&2
           exit 1
