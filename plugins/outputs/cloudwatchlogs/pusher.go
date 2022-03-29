@@ -331,7 +331,7 @@ func (p *pusher) createLogGroupAndStream() error {
 	})
 
 	if err != nil {
-		p.Log.Debugf("creating stream fail due to : %v \n", err)
+		p.Log.Debugf("creating stream fail due to : %v", err)
 		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
 			_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
 				LogGroupName: &p.Group,
@@ -339,12 +339,16 @@ func (p *pusher) createLogGroupAndStream() error {
 
 			// create stream again if group created successfully.
 			if err == nil {
+				p.Log.Debugf("successfully created log group %v. Retrying log stream", &p.Group)
 				_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 					LogGroupName:  &p.Group,
 					LogStreamName: &p.Stream,
 				})
+				if err == nil {
+					p.Log.Debugf("successfully created log stream %v", &p.Stream)
+				}
 			} else {
-				p.Log.Debugf("creating group fail due to : %v \n", err)
+				p.Log.Debugf("creating group fail due to : %v", err)
 			}
 		}
 	}
@@ -366,7 +370,14 @@ func (p *pusher) putRetentionPolicy() {
 		}
 		_, err := p.Service.PutRetentionPolicy(putRetentionInput)
 		if err != nil {
-			p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
+			// since this gets called both before we start pushing logs, and after we first attempt
+			// to push a log to a non-existent log group, we don't want to dirty the log with an error
+			// if the error is that the log group doesn't exist (yet).
+			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
+				p.Log.Debugf("Log group %v not created yet: %v", &p.Group, err)
+			} else {
+				p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
+			}
 		}
 	}
 }
