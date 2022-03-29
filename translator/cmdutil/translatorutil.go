@@ -5,7 +5,6 @@ package cmdutil
 
 import (
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -134,8 +133,9 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 		}
 	}
 
-	//Avoid when no input for flag InputJsonDirPath.
-	var inputJsonDirPathErr = fs.ErrNotExist
+	//Avoid when no input for flag InputJsonDirPath. Also would change to use fs.ErrNotExist after updating to go 1.16 since
+	//fs can only be used after https://pkg.go.dev/io/fs@go1.16.7?tab=versions
+	var inputJsonDirPathErr = os.ErrNotExist
 	
 	if (ctx.InputJsonDirPath() !="") {
 		//When update to golang 1.16, use WalkDir instead of Walk based on documents: https://pkg.go.dev/path/filepath#Walk
@@ -143,7 +143,6 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 			ctx.InputJsonDirPath(),
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
-					log.Printf("%v",info)
 					fmt.Printf("Cannot access %v: %v \n", path, err)
 					return err
 				}
@@ -206,7 +205,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				return nil, fmt.Errorf("unable to get json map from environment variable %v with error: %v", config.CWConfigContent, err)
 			}
 			jsonConfigMapMap[config.CWConfigContent] = jm
-		} else if errors.Is(inputJsonDirPathErr, fs.ErrNotExist) && ctx.StrictValidation() {
+		} else if errors.Is(inputJsonDirPathErr, os.ErrNotExist) && ctx.StrictValidation() {
 			//When there is no input from flag --input, --input-dir and cannot find agent's config through containerized environment
 			log.Printf("No agent's json config was found from containerized environment and file path.")
 			os.Exit(config.ERR_CODE_NOJSONFILE)
