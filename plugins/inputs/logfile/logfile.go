@@ -412,8 +412,9 @@ func (t *LogFile) checkForDuplicateRetentionSettings() {
 		if configMap[logGroup] != 0 {
 			// different retentions has been set for the same log group, panic and stop the agent
 			if configMap[logGroup] != fileConfig.RetentionInDays {
-				t.Log.Errorf("The Log Group %v has differing retentionInDays values defined in two or more places. Panicking and shutting down agent", fileConfig.LogGroupName)
-				panic(fmt.Sprintf("error: The Log Group %v has differing retentionInDays values defined in two or more places.", fileConfig.LogGroupName))
+				msg := fmt.Sprintf("error: The Log Group %v has differing retentionInDays values defined in two or more places.", fileConfig.LogGroupName)
+				t.Log.Errorf(msg)
+				panic(msg)
 			}
 			// The same retention for a log group has been configured in multiple places. Unset it so that the retention api is only called once
 			fileConfig.RetentionInDays = -1
