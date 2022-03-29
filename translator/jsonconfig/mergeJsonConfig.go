@@ -6,8 +6,9 @@ package jsonconfig
 import (
 	"fmt"
 	"os"
+	"log"
 	"sort"
-
+	"errors"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -16,7 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, defaultJsonConfigMap map[string]interface{}, multiConfig string, strictValidation bool) (map[string]interface{}, error) {
+func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, defaultJsonConfigMap map[string]interface{}, multiConfig string, strictValidation bool, inputJsonDirPathErr error ) (map[string]interface{}, error) {
 	if jsonConfigMapMap == nil || len(jsonConfigMapMap) == 0 {
 		if os.Getenv(config.USE_DEFAULT_CONFIG) == config.USE_DEFAULT_CONFIG_TRUE {
 			// When USE_DEFAULT_CONFIG is true, ECS and EKS will be supposed to use different default config. EKS default config logic will be added when necessary
@@ -25,12 +26,20 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 				return util.GetJsonMapFromJsonBytes([]byte(config.DefaultECSJsonConfig()))
 			}
 		}
-		
-		if strictValidation || multiConfig == "remove" {
-			fmt.Println("Invalid agent's json config files, please provide an appropriate config, exit now")
+
+		if errors.Is(inputJsonDirPathErr, os.ErrNotExist) {
+			//When there is no input from flag --input, --input-dir and cannot find agent's config through containerized environment
+			log.Printf("No agent's json config was found from containerized environment or file path.")
+			if strictValidation{
+				os.Exit(config.ERR_CODE_NOJSONFILE)
+			}
+			log.Printf("Use the default agent's json config.")
+		} else if strictValidation || multiConfig == "remove" {
+			log.Printf("Invalid agent's json config files, please provide an appropriate config.")
 			os.Exit(config.ERR_CODE_INVALIDJSONFILE)
 		} else {
-			fmt.Println("Invalid agent's json config files, use the default one")
+			log.Printf("Invalid agent's json config files")
+			log.Printf("Use the default agent's json config.")
 		}
 		return defaultJsonConfigMap, nil
 	}

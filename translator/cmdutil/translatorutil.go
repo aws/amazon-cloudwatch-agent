@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"errors"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -205,18 +204,14 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				return nil, fmt.Errorf("unable to get json map from environment variable %v with error: %v", config.CWConfigContent, err)
 			}
 			jsonConfigMapMap[config.CWConfigContent] = jm
-		} else if errors.Is(inputJsonDirPathErr, os.ErrNotExist) && ctx.StrictValidation() {
-			//When there is no input from flag --input, --input-dir and cannot find agent's config through containerized environment
-			log.Printf("No agent's json config was found from containerized environment and file path.")
-			os.Exit(config.ERR_CODE_NOJSONFILE)
-		}
+		} 
 	}
 
 	defaultConfig, err := translatorUtil.GetDefaultJsonConfigMap(ctx.Os(), ctx.Mode())
 	if err != nil {
 		return nil, err
 	}
-	mergedJsonConfigMap, err := jsonconfig.MergeJsonConfigMaps(jsonConfigMapMap, defaultConfig, ctx.MultiConfig(),ctx.StrictValidation())
+	mergedJsonConfigMap, err := jsonconfig.MergeJsonConfigMaps(jsonConfigMapMap, defaultConfig, ctx.MultiConfig(),ctx.StrictValidation(),inputJsonDirPathErr)
 	if err != nil {
 		return nil, err
 	}
