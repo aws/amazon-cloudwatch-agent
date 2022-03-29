@@ -133,10 +133,12 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 			jsonConfigMapMap[ctx.InputJsonFilePath()] = jsonConfigMap
 		}
 	}
-	
-	var inputJsonDirPathErr error
+
+	//Avoid when no input for flag InputJsonDirPath.
+	var inputJsonDirPathErr = fs.ErrNotExist
 	
 	if (ctx.InputJsonDirPath() !="") {
+		//When update to golang 1.16, use WalkDir instead of Walk based on documents: https://pkg.go.dev/path/filepath#Walk
 		inputJsonDirPathErr = filepath.Walk(
 			ctx.InputJsonDirPath(),
 			func(path string, info os.FileInfo, err error) error {
@@ -205,6 +207,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 			}
 			jsonConfigMapMap[config.CWConfigContent] = jm
 		} else if errors.Is(inputJsonDirPathErr, fs.ErrNotExist) && ctx.StrictValidation() {
+			//When there is no input from flag --input, --input-dir and cannot find agent's config through containerized environment
 			log.Printf("No agent's json config was found from containerized environment and file path.")
 			os.Exit(config.ERR_CODE_NOJSONFILE)
 		}
