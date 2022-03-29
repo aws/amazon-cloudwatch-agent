@@ -374,7 +374,7 @@ func (p *pusher) putRetentionPolicy() {
 			// to push a log to a non-existent log group, we don't want to dirty the log with an error
 			// if the error is that the log group doesn't exist (yet).
 			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
-				p.Log.Debugf("Log group %v not created yet: %v", &p.Group, err)
+				p.Log.Debugf("Log group %v not created yet: %v", p.Group, err)
 			} else {
 				p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
 			}
