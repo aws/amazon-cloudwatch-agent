@@ -78,7 +78,7 @@ $UsageString = @"
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
 
-        -strict: Return exit code 99 if validating agent's json config fails.
+        -strict: Return exit code 98 if validating agent's json config fails and 99 if no config json was found.
 
 "@
 
