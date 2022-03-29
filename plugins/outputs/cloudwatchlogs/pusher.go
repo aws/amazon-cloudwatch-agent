@@ -330,27 +330,31 @@ func (p *pusher) createLogGroupAndStream() error {
 		LogStreamName: &p.Stream,
 	})
 
-	if err != nil {
-		p.Log.Debugf("creating stream fail due to : %v", err)
-		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
-			_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
-				LogGroupName: &p.Group,
-			})
+	if err == nil {
+		p.Log.Debugf("successfully created log stream %v", p.Stream)
+		return nil
+	}
 
-			// create stream again if group created successfully.
+	p.Log.Debugf("creating stream fail due to : %v", err)
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
+		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
+			LogGroupName: &p.Group,
+		})
+
+		// attempt to create stream again if group created successfully.
+		if err == nil {
+			p.Log.Debugf("successfully created log group %v. Retrying log stream %v", p.Group, p.Stream)
+			_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
+				LogGroupName:  &p.Group,
+				LogStreamName: &p.Stream,
+			})
 			if err == nil {
-				p.Log.Debugf("successfully created log group %v. Retrying log stream %v", p.Group, p.Stream)
-				_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
-					LogGroupName:  &p.Group,
-					LogStreamName: &p.Stream,
-				})
-				if err == nil {
-					p.Log.Debugf("successfully created log stream %v", p.Stream)
-				}
-			} else {
-				p.Log.Debugf("creating group fail due to : %v", err)
+				p.Log.Debugf("successfully created log stream %v", p.Stream)
 			}
+		} else {
+			p.Log.Debugf("creating group fail due to : %v", err)
 		}
+
 	}
 
 	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
@@ -378,6 +382,8 @@ func (p *pusher) putRetentionPolicy() {
 			} else {
 				p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
 			}
+		} else {
+			p.Log.Debugf("successfully updated log retention policy for log group %v", p.Group)
 		}
 	}
 }
