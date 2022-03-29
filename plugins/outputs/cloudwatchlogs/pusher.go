@@ -339,13 +339,13 @@ func (p *pusher) createLogGroupAndStream() error {
 
 			// create stream again if group created successfully.
 			if err == nil {
-				p.Log.Debugf("successfully created log group %v. Retrying log stream", &p.Group)
+				p.Log.Debugf("successfully created log group %v. Retrying log stream %v", p.Group, p.Stream)
 				_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 					LogGroupName:  &p.Group,
 					LogStreamName: &p.Stream,
 				})
 				if err == nil {
-					p.Log.Debugf("successfully created log stream %v", &p.Stream)
+					p.Log.Debugf("successfully created log stream %v", p.Stream)
 				}
 			} else {
 				p.Log.Debugf("creating group fail due to : %v", err)
