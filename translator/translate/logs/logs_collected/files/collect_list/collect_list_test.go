@@ -394,7 +394,7 @@ func TestEncoding_Invalid(t *testing.T) {
 	assert.Equal(t, expectVal, val)
 	assert.False(t, translator.IsTranslateSuccess())
 	assert.Equal(t, 1, len(translator.ErrorMessages))
-	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/encoding | Error : Encoding xxx is an invalid value.", translator.ErrorMessages[0])
+	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/encoding | Error : Encoding xxx is an invalid value.", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 }
 
 func TestAutoRemoval(t *testing.T) {
@@ -648,7 +648,6 @@ func TestRetention(t *testing.T) {
 		"retention_in_days": 3,
 		"from_beginning":    true,
 	}}
-	assert.Equal(t, 0, len(translator.ErrorMessages))
 	assert.Equal(t, expectVal, val)
 }
 
@@ -686,7 +685,6 @@ func TestDuplicateRetention(t *testing.T) {
 		"retention_in_days": -1,
 		"from_beginning":    true,
 	}}
-	assert.Equal(t, 0, len(translator.ErrorMessages))
 	assert.Equal(t, expectVal, val)
 }
 
@@ -724,7 +722,6 @@ func TestConflictingRetention(t *testing.T) {
 		"retention_in_days": -1,
 		"from_beginning":    true,
 	}}
-	assert.Equal(t, 1, len(translator.ErrorMessages))
-	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/collect_list | Error : Different Retention values can't be set for the same log group: test1", translator.ErrorMessages[0])
+	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different Retention values can't be set for the same log group: test1",  translator.ErrorMessages[len(translator.ErrorMessages)-1])
 	assert.Equal(t, expectVal, val)
 }
