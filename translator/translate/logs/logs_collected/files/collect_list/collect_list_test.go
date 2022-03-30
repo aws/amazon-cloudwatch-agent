@@ -476,11 +476,13 @@ func TestFileConfigOutputFile(t *testing.T) {
 		{"collect_list":[
 			{
 				"file_path":"path2",
-				"log_group_name":"group2"
+				"log_group_name":"group2",
+				"retention_in_days": 5
 			},
 			{
 				"file_path":"path4",
-				"log_group_name":"group2"
+				"log_group_name":"group2",
+				"retention_in_days": 5
 			},
 			{
 				"file_path":"path1",
@@ -609,5 +611,120 @@ func TestLogFilters(t *testing.T) {
 			},
 		},
 	}}
+	assert.Equal(t, expectVal, val)
+}
+
+func TestRetention(t *testing.T) {
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1",
+       			"log_group_name":"test2",
+				"retention_in_days":3
+			},
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test2",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+	}, map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+	}}
+	assert.Equal(t, 0, len(translator.ErrorMessages))
+	assert.Equal(t, expectVal, val)
+}
+
+func TestDuplicateRetention(t *testing.T) {
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3
+			},
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+	}, map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": -1,
+		"from_beginning":    true,
+	}}
+	assert.Equal(t, 0, len(translator.ErrorMessages))
+	assert.Equal(t, expectVal, val)
+}
+
+func TestConflictingRetention(t *testing.T) {
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3
+			},
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":5
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+	}, map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": -1,
+		"from_beginning":    true,
+	}}
+	assert.Equal(t, 1, len(translator.ErrorMessages))
+	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/collect_list | Error : Different Retention values can't be set for the same log group: test1", translator.ErrorMessages[0])
 	assert.Equal(t, expectVal, val)
 }
