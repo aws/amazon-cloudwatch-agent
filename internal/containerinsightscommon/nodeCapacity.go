@@ -4,7 +4,6 @@
 package containerinsightscommon
 
 import (
-	"fmt"
 	"log"
 	"os"
 	
