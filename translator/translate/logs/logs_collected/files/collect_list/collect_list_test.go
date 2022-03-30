@@ -476,11 +476,11 @@ func TestFileConfigOutputFile(t *testing.T) {
 		{"collect_list":[
 			{
 				"file_path":"path2",
-				"log_group_name":"group2",
+				"log_group_name":"group2"
 			},
 			{
 				"file_path":"path4",
-				"log_group_name":"group2",
+				"log_group_name":"group2"
 			},
 			{
 				"file_path":"path1",
