@@ -72,10 +72,10 @@ func getJsonConfigMap(jsonConfigFilePath, osType string) (map[string]interface{}
 		curPath := getCurBinaryPath()
 		if osType == config.OS_TYPE_WINDOWS {
 			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Windows)
-		} else if osType == config.OS_TYPE_LINUX {
-			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Linux)
-		} else {
+		} else if osType == config.OS_TYPE_DARWIN {
 			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Darwin)
+		} else {
+			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Linux)
 		}
 	}
 	log.Printf("Reading json config file path: %v ...", jsonConfigFilePath)
