@@ -477,12 +477,10 @@ func TestFileConfigOutputFile(t *testing.T) {
 			{
 				"file_path":"path2",
 				"log_group_name":"group2",
-				"retention_in_days": 5
 			},
 			{
 				"file_path":"path4",
 				"log_group_name":"group2",
-				"retention_in_days": 5
 			},
 			{
 				"file_path":"path1",
@@ -722,6 +720,6 @@ func TestConflictingRetention(t *testing.T) {
 		"retention_in_days": -1,
 		"from_beginning":    true,
 	}}
-	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different Retention values can't be set for the same log group: test1",  translator.ErrorMessages[len(translator.ErrorMessages)-1])
+	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different Retention values can't be set for the same log group: test1", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 	assert.Equal(t, expectVal, val)
 }
