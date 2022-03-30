@@ -5,6 +5,7 @@ package linux
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
@@ -64,7 +65,9 @@ func addLogConfig(logsConfig *config.Logs, filePath, section string, p *configpa
 	if encoding != "" {
 		normalized := NormalizeEncoding(encoding)
 		if normalized == "" {
-			panic(fmt.Sprintf("Encoding %s is not supported.", encoding))
+			errorMessage := fmt.Sprintf("E! Encoding %s is not supported.", encoding)
+			log.Printf(errorMessage)
+			panic(errorMessage)
 		} else {
 			encoding = normalized
 		}

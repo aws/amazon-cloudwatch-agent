@@ -11,10 +11,10 @@ import (
 )
 
 func TestAppendDimensions(t *testing.T) {
-	e := new(appendDimensions)
+	a := new(appendDimensions)
 	//Check whether override default config
 	var input interface{}
-	err := json.Unmarshal([]byte(`{
+	e := json.Unmarshal([]byte(`{
       "append_dimensions": {
         "ImageId": "${aws:ImageId}",
         "InstanceId": "${aws:InstanceId}",
@@ -23,7 +23,7 @@ func TestAppendDimensions(t *testing.T) {
       }
     }`), &input)
 	if err == nil {
-		_, actual := e.ApplyRule(input)
+		_, actual := a.ApplyRule(input)
 		expected := map[string]interface{}{
 			"ec2tagger": []interface{}{
 				map[string]interface{}{
@@ -37,6 +37,6 @@ func TestAppendDimensions(t *testing.T) {
 		}
 		assert.Equal(t, expected, actual, "Expect to be equal")
 	} else {
-		panic(err)
+		panic(e)
 	}
 }

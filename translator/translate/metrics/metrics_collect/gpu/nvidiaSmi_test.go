@@ -11,11 +11,11 @@ import (
 func TestSpecificConfig(t *testing.T) {
 	n := new(NvidiaSmi)
 	var input interface{}
-	err := json.Unmarshal([]byte(`{"nvidia_gpu":{"measurement": [
+	e := json.Unmarshal([]byte(`{"nvidia_gpu":{"measurement": [
 						"utilization_gpu",
 						"temperature_gpu"
 					]}}`), &input)
-	if err == nil {
+	if e == nil {
 		_, actualVal := n.ApplyRule(input)
 		expectedVal := []interface{}{map[string]interface{}{
 			"fieldpass":  []string{"utilization_gpu", "temperature_gpu"},
@@ -24,7 +24,7 @@ func TestSpecificConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedVal, actualVal, "Expect to be equal")
 	} else {
-		panic(err)
+		panic(e)
 	}
 }
 
@@ -43,7 +43,7 @@ func TestNoFieldConfig(t *testing.T) {
 func TestFullConfig(t *testing.T) {
 	n := new(NvidiaSmi)
 	var input interface{}
-	err := json.Unmarshal([]byte(`{"nvidia_gpu":{"measurement": [
+	e := json.Unmarshal([]byte(`{"nvidia_gpu":{"measurement": [
 						"utilization_gpu", 
 						"temperature_gpu", 
 						"power_draw", 
@@ -63,7 +63,7 @@ func TestFullConfig(t *testing.T) {
 						"clocks_current_memory", 
 						"clocks_current_video"
 					]}}`), &input)
-	if err == nil {
+	if e == nil {
 		_, actualVal := n.ApplyRule(input)
 		expectedVal := []interface{}{map[string]interface{}{
 			"fieldpass": []string{"utilization_gpu", "temperature_gpu", "power_draw", "utilization_memory",
@@ -76,7 +76,7 @@ func TestFullConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedVal, actualVal, "Expect to be equal")
 	} else {
-		panic(err)
+		panic(e)
 	}
 }
 

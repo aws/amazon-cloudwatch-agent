@@ -35,8 +35,10 @@ func DetectRunAsUser(mergedJsonConfigMap map[string]interface{}) (runAsUser stri
 			if runasuser, ok := user.(string); ok {
 				return runasuser, nil
 			}
-			fmt.Printf("E! run_as_user is not string %v \n", user)
-			panic("E! run_as_user is not string \n")
+
+			errorMessage := fmt.Sprintf("E! run_as_user is not string %v \n", user)
+			log.Printf(errorMessage)
+			panic(errorMessage)
 		}
 
 		// agent section exists, but "runasuser" does not exist, then use "root"
@@ -116,7 +118,9 @@ func VerifyCredentials(ctx *context.Context, runAsUser string) {
 	if config.ModeOnPrem == ctx.Mode() {
 		if runAsUser != "root" {
 			if _, ok := credentials["shared_credential_file"]; !ok {
-				panic("E! Credentials path is not set while runasuser is not root \n")
+				errorMessage := fmt.Sprintf("E! Credentials path is not set while runasuser is not root")
+				log.Printf(errorMessage)
+				panic(errorMessage)
 			}
 		}
 	}

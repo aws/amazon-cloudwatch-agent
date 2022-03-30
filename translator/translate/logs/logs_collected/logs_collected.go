@@ -55,7 +55,9 @@ func (l *LogsCollected) ApplyRule(input interface{}) (returnKey string, returnVa
 	case config.OS_TYPE_WINDOWS:
 		targetRuleMap = windowsMetricCollectRule
 	default:
-		panic("unknown target platform " + translator.GetTargetPlatform())
+		errorMessage := fmt.Sprintf("E! Unknown target platform ", translator.GetTargetPlatform())
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	if _, ok := im[SectionKey]; !ok {

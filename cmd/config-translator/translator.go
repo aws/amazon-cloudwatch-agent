@@ -90,7 +90,9 @@ func main() {
 
 	mergedJsonConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ctx)
 	if err != nil {
-		panic(fmt.Sprintf("E! Failed to generate merged json config: %v", err))
+		errorMessage := fmt.Sprintf("E! Failed to generate merged json config: %v", err)
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	if !ctx.RunInContainer() {
@@ -99,7 +101,9 @@ func main() {
 		if e == nil && current.Name == "root" {
 			runAsUser, err := cmdutil.DetectRunAsUser(mergedJsonConfigMap)
 			if err != nil {
-				panic("E! Failed to detectRunAsUser\n")
+				errorMessage := fmt.Sprintf("E! Failed to detectRunAsUser\n")
+				log.Printf(errorMessage)
+				panic(errorMessage)
 			}
 			cmdutil.VerifyCredentials(ctx, runAsUser)
 		}

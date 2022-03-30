@@ -64,7 +64,9 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create json map for environment variables. Reason: %s \n", err.Error()))
+		errorMessage := fmt.Sprintf("Failed to create json map for environment variables. Reason: %s \n", err.Error())
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 	return bytes
 }

@@ -24,11 +24,11 @@ func TestMemSpecificConfig(t *testing.T) {
 	}
 
 	var input1 interface{}
-	err := json.Unmarshal([]byte(`{"mem":{"measurement": [
+	e = json.Unmarshal([]byte(`{"mem":{"measurement": [
 						"free",
 						"total"
 					]}}`), &input1)
-	if err == nil {
+	if e == nil {
 		_, actualVal := m.ApplyRule(input1)
 		expectedVal := []interface{}{map[string]interface{}{
 			"fieldpass": []string{"free", "total"},
@@ -36,6 +36,6 @@ func TestMemSpecificConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedVal, actualVal, "Expect to be equal")
 	} else {
-		panic(err)
+		panic(e)
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
-
+	"log"
 	"strings"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -125,13 +125,15 @@ func main() {
 	if inputConfig != "" {
 		f, err := os.Open(inputConfig)
 		if err != nil {
-			fmt.Printf("E! Failed to open Common Config: %v\n", err)
-			panic(err)
+			errorMessage := fmt.Sprintf("E! Failed to open Common Config: %v\n", err)
+			log.Printf(errorMessage)
+			panic(errorMessage)
 		}
 
 		if err := cc.Parse(f); err != nil {
-			fmt.Printf("E! Failed to parse Common Config: %v\n", err)
-			panic(err)
+			errorMessage := fmt.Sprintf("E! Failed to parse Common Config: %v\n", err)
+			log.Printf(errorMessage)
+			panic(errorMessage)
 		}
 	}
 	util.SetProxyEnv(cc.ProxyMap())
@@ -140,10 +142,11 @@ func main() {
 	if downloadLocation == "" || outputDir == "" {
 		executable, e := os.Executable()
 		if e == nil {
-			errorMessage = fmt.Sprintf("usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
+			errorMessage = fmt.Sprintf("E! usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
 		} else {
-			errorMessage = fmt.Sprintf("usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")
+			errorMessage = fmt.Sprintf("E! usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")
 		}
+		log.Printf(errorMessage)
 		panic(errorMessage)
 	}
 
@@ -154,11 +157,12 @@ func main() {
 	if region == "" && downloadLocation != locationDefault {
 		fmt.Println("Unable to determine aws-region.")
 		if mode == config.ModeEC2 {
-			errorMessage = fmt.Sprintf("Please check if you can access the metadata service. For exampe, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' ")
+			errorMessage = fmt.Sprintf("E! Please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' ")
 		} else {
-			errorMessage = fmt.Sprintf("Please make sure the credentials and region set correctly on your hosts.\n" +
+			errorMessage = fmt.Sprintf("E! Please make sure the credentials and region set correctly on your hosts.\n" +
 				"Refer to http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html")
 		}
+		log.Printf(errorMessage)
 		panic(errorMessage)
 	}
 
@@ -187,7 +191,9 @@ func main() {
 
 	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
 	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
-		panic(fmt.Sprintf("downloadLocation %s is malformated.\n", downloadLocation))
+		errorMessage := fmt.Sprintf("E! downloadLocation %s is malformated.\n", downloadLocation)
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	var config, outputFilePath string
@@ -209,25 +215,33 @@ func main() {
 			config, err = readFromFile(locationArray[1])
 		}
 	default:
-		panic(fmt.Sprintf("location type %s is not supported.", locationArray[0]))
+		errorMessage := fmt.Sprintf("E! Location type %s is not supported.", locationArray[0])
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	if err != nil {
-		panic(fmt.Sprintf("Fail to fetch/remove json config: %v\n", err))
+		errorMessage := fmt.Sprintf("E! Fail to fetch/remove json config: %v\n", err)
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	if multiConfig != "remove" {
 		outputFilePath = filepath.Join(outputDir, outputFilePath+context.TmpFileSuffix)
 		err = ioutil.WriteFile(outputFilePath, []byte(config), 0644)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to write the json file %v: %v\n", outputFilePath, err))
+			errorMessage := fmt.Sprintf("E! Failed to write the json file %v: %v\n", outputFilePath, err)
+			log.Printf(errorMessage)
+			panic(errorMessage)
 		} else {
 			fmt.Printf("Successfully fetched the config and saved in %s\n", outputFilePath)
 		}
 	} else {
 		outputFilePath = filepath.Join(outputDir, outputFilePath)
 		if err := os.Remove(outputFilePath); err != nil {
-			panic(fmt.Sprintf("Failed to remove the json file %v: %v", outputFilePath, err))
+			errorMessage := fmt.Sprintf("E! Failed to remove the json file %v: %v", outputFilePath, err)
+			log.Printf(errorMessage)
+			panic(errorMessage)
 		} else {
 			fmt.Printf("Successfully removed the config file %s\n", outputFilePath)
 		}

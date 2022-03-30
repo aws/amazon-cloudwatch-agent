@@ -12,9 +12,9 @@ import (
 )
 
 func TestGetJsonSchema(t *testing.T) {
-	jsonFile, err := ioutil.ReadFile("./schema.json")
-	if err != nil {
-		panic(err)
+	jsonFile, e := ioutil.ReadFile("./schema.json")
+	if e != nil {
+		panic(e)
 	}
 	str := strings.ReplaceAll(string(jsonFile), "\r\n", "\n")
 	assert.Equal(t, str, GetJsonSchema(), "Json schema is inconsistent")

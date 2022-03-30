@@ -74,7 +74,9 @@ func NewPodStore(hostIP string, prefFullPodName bool) *PodStore {
 
 	// Try to detect kubelet permission issue here
 	if _, err := podStore.kubeClient.ListPods(); err != nil {
-		panic(fmt.Sprintf("Cannot get pod from kubelet, err: %v", err))
+		errorMessage := fmt.Sprintf("Cannot get pod from kubelet, err: %v", err)
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	return podStore

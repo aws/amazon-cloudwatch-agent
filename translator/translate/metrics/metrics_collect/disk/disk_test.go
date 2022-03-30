@@ -24,7 +24,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 	}
 	//Check whether provide specific config
 	var input1 interface{}
-	err := json.Unmarshal([]byte(`{"disk":{
+	e = json.Unmarshal([]byte(`{"disk":{
 					"resources": [
 						"/", "/dev", "/sys"
 					],
@@ -36,7 +36,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 						"total",
 						"used"
 					]}}`), &input1)
-	if err == nil {
+	if e == nil {
 		_, actualVal := d.ApplyRule(input1)
 		expectedVal := []interface{}{map[string]interface{}{
 			"ignore_fs":    []interface{}{"sysfs", "devtmpfs"},
@@ -47,12 +47,12 @@ func TestDiskSpecificConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedVal, actualVal, "Expect to be equal")
 	} else {
-		panic(err)
+		panic(e)
 	}
 
 	//check when "drop_device" = true
 	var input2 interface{}
-	er := json.Unmarshal([]byte(`{"disk":{
+	e = json.Unmarshal([]byte(`{"disk":{
 					"resources": [
 						"/", "/dev", "/sys"
 					],
@@ -66,7 +66,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 					],
 					"drop_device": true
 					}}`), &input2)
-	if er == nil {
+	if e == nil {
 		_, actualValue := d.ApplyRule(input2)
 		expectedValue := []interface{}{map[string]interface{}{
 			"ignore_fs":    []interface{}{"sysfs", "devtmpfs"},
@@ -77,12 +77,12 @@ func TestDiskSpecificConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedValue, actualValue, "Expect to be equal")
 	} else {
-		panic(er)
+		panic(e)
 	}
 
 	//check when "drop_device" = false
 	var input3 interface{}
-	err3 := json.Unmarshal([]byte(`{"disk":{
+	e = json.Unmarshal([]byte(`{"disk":{
 					"resources": [
 						"/", "/dev", "/sys"
 					],
@@ -96,7 +96,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 					],
 					"drop_device": false
 					}}`), &input3)
-	if err3 == nil {
+	if e == nil {
 		_, actualValue := d.ApplyRule(input3)
 		expectedValue := []interface{}{map[string]interface{}{
 			"ignore_fs":    []interface{}{"sysfs", "devtmpfs"},
@@ -107,7 +107,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedValue, actualValue, "Expect to be equal")
 	} else {
-		panic(err3)
+		panic(e)
 	}
 
 }
