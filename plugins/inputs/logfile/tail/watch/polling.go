@@ -4,6 +4,7 @@
 package watch
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"runtime"

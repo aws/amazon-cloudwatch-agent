@@ -5,7 +5,7 @@ package context
 
 import (
 	"fmt"
-
+	"log"
 	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"

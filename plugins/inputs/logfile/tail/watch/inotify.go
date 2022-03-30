@@ -61,7 +61,7 @@ func (fw *InotifyFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 			return tomb.ErrDying
 		}
 	}
-	errorMessage := fmt.Sprintf("E! Unreachable to file with InotifyFileWatcher",fw.Filename)
+	errorMessage := fmt.Sprintf("E! Unreachable to file with InotifyFileWatcher %s",fw.Filename)
 	log.Printf(errorMessage)
 	panic(errorMessage)
 }

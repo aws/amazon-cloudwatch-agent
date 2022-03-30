@@ -58,7 +58,7 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 	case config.OS_TYPE_WINDOWS:
 		targetRuleMap = windowsTranslateRule
 	default:
-		errorMessage := fmt.Sprintf("E! Unknown target platform ", translator.GetTargetPlatform())
+		errorMessage := fmt.Sprintf("E! Unknown target platform %s", translator.GetTargetPlatform())
 		log.Printf(errorMessage)
 		panic(errorMessage)
 	}

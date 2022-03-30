@@ -25,9 +25,7 @@ type node struct {
 
 func NewNonBlockingLifoQueue(size int) *NonBlockingLifoQueue {
 	if size <= 0 {
-		errorMessage := fmt.Sprintf("E! Queue Size should be larger than 0!")
-		log.Printf(errorMessage)
-		panic(errorMessage)
+		panic("Queue Size should be larger than 0!")
 	}
 	return &NonBlockingLifoQueue{maxSize: size}
 }

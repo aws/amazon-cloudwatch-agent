@@ -44,14 +44,14 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 func processConfigFromPythonConfigParserFile(filePath string, logsConfig *config.Logs) {
 	p, err := configparser.NewConfigParserFromFile(filePath)
 	if err != nil {
-		errorMessage := fmt.Printf("Error in reading old python config from file %s: %v\n", filePath, err)
+		errorMessage := fmt.Sprintf("Error in reading old python config from file %s: %v", filePath, err)
 		log.Printf(errorMessage)
 		panic(errorMessage)
 	}
 	if p.HasSection(genericSectionName) {
 		err := p.RemoveSection(genericSectionName)
 		if err != nil {
-			errorMessage := fmt.Sprintf("E! Error in removing generic section from the config file %s:\n %v\n", filePath, err)
+			errorMessage := fmt.Sprintf("E! Error in removing generic section from the config file %s: %v", filePath, err)
 			log.Printf(errorMessage)
 			panic(errorMessage)
 		}

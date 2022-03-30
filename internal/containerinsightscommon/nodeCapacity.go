@@ -4,9 +4,10 @@
 package containerinsightscommon
 
 import (
+	"fmt"
 	"log"
 	"os"
-
+	
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 )

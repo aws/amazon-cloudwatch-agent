@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
-
+	"log"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"

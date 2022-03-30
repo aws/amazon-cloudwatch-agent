@@ -22,7 +22,7 @@ func TestAppendDimensions(t *testing.T) {
         "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
       }
     }`), &input)
-	if err == nil {
+	if e == nil {
 		_, actual := a.ApplyRule(input)
 		expected := map[string]interface{}{
 			"ec2tagger": []interface{}{

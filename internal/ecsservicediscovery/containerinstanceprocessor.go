@@ -4,6 +4,7 @@
 package ecsservicediscovery
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
