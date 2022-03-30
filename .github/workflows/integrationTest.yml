@@ -6,7 +6,10 @@ env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
   TERRAFORM_AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-  S3_INTEGRATION_BUCKET: cloudwatch-agent-integration-bucket
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  VPC_SECURITY_GROUPS_IDS: ${{ secrets.VPC_SECURITY_GROUPS_IDS }}
+  IAM_ROLE: ${{ secrets.IAM_ROLE }}
 
 on:
   push:
@@ -149,9 +152,10 @@ jobs:
           key: "cached_msi_${{ github.sha }}"
           path: buildMSI/amazon-cloudwatch-agent.msi
 
+      # Using the env variable returns "" for bucket name thus use the secret
       - name: Copy msi
         if: steps.cached_msi.outputs.cache-hit != 'true'
-        run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/buildMSI.zip .
+        run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ github.sha }}/buildMSI.zip .
 
       - name: Create msi
         if: steps.cached_msi.outputs.cache-hit != 'true'
@@ -162,7 +166,7 @@ jobs:
           $env:PATH = $env:PATH + $wixToolsetBinPath
           Expand-Archive buildMSI.zip -Force
           cd buildMSI
-          .\create_msi.ps1 ${{ github.sha }}
+          .\create_msi.ps1 ${{ github.sha }} ${{ secrets.S3_INTEGRATION_BUCKET }}
 
   StartLocalStack:
     name: 'StartLocalStack'
@@ -196,7 +200,10 @@ jobs:
           -var="ssh_key=${PRIVATE_KEY}"
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           -var="github_sha=${GITHUB_SHA}" 
-          -var="s3_bucket=${S3_INTEGRATION_BUCKET}" &&
+          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
+          -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}"
+          -var="key_name=${KEY_NAME}"
+          -var="iam_instance_profile=${IAM_ROLE}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
@@ -301,6 +308,10 @@ jobs:
           -var="binary_name=${{ matrix.arrays.binaryName }}"
           -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}"
           -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
+          -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}"
+          -var="key_name=${KEY_NAME}"
+          -var="test_name=${{ matrix.arrays.os }}"
+          -var="iam_instance_profile=${IAM_ROLE}"
 
       - name: Terraform destroy
         if: ${{ always() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
@@ -352,9 +363,14 @@ jobs:
           echo run terraform and execute test code &&
           terraform apply --auto-approve
           -var="ssh_key=${PRIVATE_KEY}"
+          -var="key_name=${KEY_NAME}"
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           -var="github_sha=${GITHUB_SHA}"
           -var="ami=${{ matrix.arrays.ami }}"
+          -var="test_name=${{ matrix.arrays.os }}"
+          -var="iam_instance_profile=${IAM_ROLE}"
+          -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}"
+          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
 
       - name: Terraform destroy
         if: ${{ always() && steps.ec2-win-integration-test.outputs.cache-hit != 'true' }}

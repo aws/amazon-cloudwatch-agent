@@ -32,6 +32,9 @@ resource "aws_instance" "integration-test" {
       host        = self.public_dns
     }
   }
+  tags = {
+    Name = var.test_name
+  }
 }
 
 data "aws_ami" "latest" {

@@ -123,3 +123,22 @@ This process generates a new ami we can then use for testing
       1. cd ${path to agent dir}/integration/terraform/ec2/localstack
    3. Tear down localstack state
       1. terraform destroy --auto-approve
+
+**How To Run On Your Own Fork**
+1. Follow "Create resources and setup local" except install terraform
+   1. You may skip installing terraform since terraform will be installed on GitHub action runners
+2. Set up GitHub action secrets in your fork
+   1. Left side is the key name: right side is key value
+   2. Do not wrap values in quotes
+      1. This is a correct value
+      2. "This is not a correct value"
+   3. Must be repository secrets not environment secrets
+   4. ```
+        AWS_PRIVATE_KEY: ${Your private key}
+        TERRAFORM_AWS_ACCESS_KEY_ID: ${User aws access key}
+        TERRAFORM_AWS_SECRET_ACCESS_KEY: ${User aws secret key}
+        S3_INTEGRATION_BUCKET: ${Bucket to save build}
+        KEY_NAME: ${Key pair name for ec2}
+        VPC_SECURITY_GROUPS_IDS: ${Security group within your vpc the value should look like ["sg-013585129c1f92bf0"]}
+        IAM_ROLE: ${Role the ec2 instance should assume}
+        ```

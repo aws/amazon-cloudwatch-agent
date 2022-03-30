@@ -42,3 +42,13 @@ variable "github_repo" {
   type = string
   default = ""
 }
+
+variable "test_name" {
+  type = string
+  default = ""
+}
+
+variable "s3_bucket" {
+  type = string
+  default = ""
+}
