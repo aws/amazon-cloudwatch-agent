@@ -8,6 +8,7 @@ package cadvisor
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
