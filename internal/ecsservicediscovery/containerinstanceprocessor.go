@@ -45,7 +45,9 @@ func NewContainerInstanceProcessor(ecs *ecs.ECS, ec2 *ec2.EC2, s *ProcessorStats
 
 func splitMapKeys(a map[string]*EC2MetaData, size int) [][]string {
 	if size == 0 {
-		panic("splitMapKeys size cannot be zero.")
+		errorMessage := fmt.Sprintf("splitMapKeys size cannot be zero.")
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	result := make([][]string, 0)

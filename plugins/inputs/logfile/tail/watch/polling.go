@@ -39,7 +39,9 @@ func (fw *PollingFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 			return tomb.ErrDying
 		}
 	}
-	panic("unreachable")
+	errorMessage := fmt.Sprintf("E! Unreachable to file %s with PollingFileWatcher",fw.Filename)
+	log.Printf(errorMessage)
+	panic(errorMessage)
 }
 
 func (fw *PollingFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChanges, error) {

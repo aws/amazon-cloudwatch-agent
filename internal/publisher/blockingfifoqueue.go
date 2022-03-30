@@ -10,7 +10,9 @@ type BlockingFifoQueue struct {
 
 func NewBlockingFifoQueue(size int) *BlockingFifoQueue {
 	if size <= 0 {
-		panic("Queue Size should be larger than 0!")
+		errorMessage := fmt.Sprintf("E! Queue Size should be larger than 0!")
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	return &BlockingFifoQueue{queue: make(chan interface{}, size)}

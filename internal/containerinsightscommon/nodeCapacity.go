@@ -18,7 +18,9 @@ type NodeCapacity struct {
 
 func NewNodeCapacity() *NodeCapacity {
 	if _, err := os.Lstat("/rootfs/proc"); os.IsNotExist(err) {
-		panic("/rootfs/proc doesn't exists")
+		errorMessage := fmt.Sprintf("E! /rootfs/proc doesn't exists\n")
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 	if err := os.Setenv(GoPSUtilProcDirEnv, "/rootfs/proc"); err != nil {
 		log.Printf("E! NodeCapacity cannot set goPSUtilProcDirEnv to /rootfs/proc %v", err)

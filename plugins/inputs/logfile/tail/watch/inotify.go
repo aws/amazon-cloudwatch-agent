@@ -61,7 +61,9 @@ func (fw *InotifyFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 			return tomb.ErrDying
 		}
 	}
-	panic("unreachable")
+	errorMessage := fmt.Sprintf("E! Unreachable to file with InotifyFileWatcher",fw.Filename)
+	log.Printf(errorMessage)
+	panic(errorMessage)
 }
 
 func (fw *InotifyFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChanges, error) {

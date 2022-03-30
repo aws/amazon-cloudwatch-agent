@@ -86,7 +86,9 @@ func (c *Cadvisor) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	if c.manager == nil && c.initManager() != nil {
-		panic("Cannot initiate manager")
+		errorMessage := fmt.Sprintf("E! Cannot initiate manager")
+		log.Printf(errorMessage)
+		panic(errorMessage)
 	}
 
 	req := &cinfo.ContainerInfoRequest{
