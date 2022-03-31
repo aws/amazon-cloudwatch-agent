@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 	"time"
-	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 
@@ -181,9 +180,7 @@ func getBaseTestPodInfo() *corev1.Pod {
 	pods := corev1.PodList{}
 	err := json.Unmarshal([]byte(podJson), &pods)
 	if err != nil {
-		errorMessage := fmt.Sprintf("unmarshal pod err %v", err)
-		log.Printf(errorMessage)
-		panic(errorMessage)
+		panic(fmt.Sprintf("unmarshal pod err %v", err))
 	}
 
 	return &pods.Items[0]

@@ -36,7 +36,7 @@ func (do *dropOrigin) ApplyRule(input interface{}) (returnKey string, returnVal 
 						if reflect.TypeOf(value).String() == "string" {
 							droppingDimensions = append(droppingDimensions, value.(string))
 						} else {
-							log.Panic("Fail to translate the JSON config, invalid format of dropping dimensions.")
+							log.Panicf("Fail to translate the JSON config, invalid format of dropping dimensions.")
 						}
 					}
 

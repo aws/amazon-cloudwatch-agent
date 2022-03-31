@@ -5,7 +5,6 @@ package toenvconfig
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -64,9 +63,7 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 
 	bytes, err := json.MarshalIndent(envVars, "", "\t")
 	if err != nil {
-		errorMessage := fmt.Sprintf("Failed to create json map for environment variables. Reason: %s \n", err.Error())
-		log.Printf(errorMessage)
-		panic(errorMessage)
+		log.Panicf("Failed to create json map for environment variables. Reason: %s", err.Error())
 	}
 	return bytes
 }

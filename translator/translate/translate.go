@@ -4,7 +4,6 @@
 package translate
 
 import (
-	"fmt"
 	"log"
 	"sort"
 	
@@ -58,9 +57,7 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 	case config.OS_TYPE_WINDOWS:
 		targetRuleMap = windowsTranslateRule
 	default:
-		errorMessage := fmt.Sprintf("E! Unknown target platform %s", translator.GetTargetPlatform())
-		log.Printf(errorMessage)
-		panic(errorMessage)
+		log.Panicf("E! Unknown target platform %s", translator.GetTargetPlatform())
 	}
 
 	//We need to apply agent rule first, since global setting lies there, which will impact the override logic

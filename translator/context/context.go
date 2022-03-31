@@ -4,7 +4,6 @@
 package context
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -114,9 +113,7 @@ func (ctx *Context) SetMode(mode string) {
 	case config.ModeOnPrem:
 		ctx.mode = config.ModeOnPrem
 	default:
-		errorMessage := fmt.Sprintf("Invalid mode %s. Valid mode values are %s and %s.\n", mode, config.ModeEC2, config.ModeOnPrem)
-		log.Printf(errorMessage)
-		panic(errorMessage)
+		log.Panicf("Invalid mode %s. Valid mode values are %s and %s.", mode, config.ModeEC2, config.ModeOnPrem)
 	}
 }
 

@@ -35,9 +35,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 	res := totomlconfig.ToTomlConfig(jsonConfigValue)
 	if translator.IsTranslateSuccess() {
 		if err := ioutil.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); err != nil {
-			errorMessage := fmt.Sprintf("Failed to create the configuration validation file. Reason: %s", err.Error())
-			log.Printf(errorMessage)
-			panic(errorMessage)
+			log.Panicf("Failed to create the configuration validation file. Reason: %s", err.Error())
 		} else {
 			for _, infoMessage := range translator.InfoMessages {
 				fmt.Println(infoMessage)
@@ -45,9 +43,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 			fmt.Println(exitSuccessMessage)
 		}
 	} else {
-		errorMessage := fmt.Sprintf("Failed to generate configuration validation content.")
-		log.Printf(errorMessage)
-		panic(errorMessage)
+		log.Panicf("Failed to generate configuration validation content.")
 	}
 }
 
@@ -58,9 +54,7 @@ func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, env
 	}
 	bytes := toenvconfig.ToEnvConfig(jsonConfigValue)
 	if err := ioutil.WriteFile(envConfigPath, bytes, 0644); err != nil {
-		errorMessage := fmt.Sprintf("Failed to create env config. Reason: %s", err.Error())
-		log.Printf(errorMessage)
-		panic(errorMessage)
+		log.Panicf("Failed to create env config. Reason: %s", err.Error())
 	}
 }
 

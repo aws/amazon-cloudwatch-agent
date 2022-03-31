@@ -65,9 +65,7 @@ func addLogConfig(logsConfig *config.Logs, filePath, section string, p *configpa
 	if encoding != "" {
 		normalized := NormalizeEncoding(encoding)
 		if normalized == "" {
-			errorMessage := fmt.Sprintf("E! Encoding %s is not supported.", encoding)
-			log.Printf(errorMessage)
-			panic(errorMessage)
+			log.Panicf("E! Encoding %s is not supported.", encoding)
 		} else {
 			encoding = normalized
 		}

@@ -4,7 +4,6 @@
 package agent
 
 import (
-	"fmt"
 	"log"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -33,9 +32,8 @@ func getDefaultValue() string {
 	case config.OS_TYPE_WINDOWS:
 		return util.GetWindowsProgramDataPath() + "\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
 	default:
-		errorMessage := fmt.Sprintf("Unsupported platform %v for logRule", targetPlatform)
-		log.Printf(errorMessage)
-		panic(errorMessage)
+		log.Panicf("Unsupported platform %v for logRule", targetPlatform)
+		return ""
 	}
 }
 
