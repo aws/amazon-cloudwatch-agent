@@ -45,12 +45,12 @@ func TestApplyRule(t *testing.T) {
 
 	var actual interface{}
 
-	e := json.Unmarshal([]byte(rawJsonString), &input)
-	if e == nil {
+	err := json.Unmarshal([]byte(rawJsonString), &input)
+	if err == nil {
 		context.CurrentContext().SetOs(config.OS_TYPE_WINDOWS)
 		_, actual = w.ApplyRule(input)
 		assert.Equal(t, expected, actual)
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

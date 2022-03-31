@@ -69,8 +69,8 @@ func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) (region s
 	}
 	CheckAndSetHomeDir()
 	opts.SharedConfigState = session.SharedConfigEnable
-	ses, e := session.NewSessionWithOptions(opts)
-	if e != nil {
+	ses, err := session.NewSessionWithOptions(opts)
+	if err != nil {
 		return ""
 	}
 	if ses.Config != nil && ses.Config.Region != nil {
@@ -128,7 +128,7 @@ func detectHomeDirectory() string {
 		systemDrivePath := GetWindowsSystemDrivePath() // C:
 		homeDir = systemDrivePath + "\\Users\\Administrator"
 	} else {
-		if usr, e := user.Current(); e == nil {
+		if usr, err := user.Current(); err == nil {
 			homeDir = usr.HomeDir
 		}
 		if homeDir == "" {

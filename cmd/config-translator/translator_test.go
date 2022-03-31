@@ -19,14 +19,14 @@ import (
 func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldSuccess bool, expectedErrorMap map[string]int) {
 	actualErrorMap := make(map[string]int)
 
-	jsonInputMap, e := util.GetJsonMapFromFile(jsonInputPath)
-	if e != nil {
-		t.Fatalf("Failed to get json map from %v with error: %v", jsonInputPath, e)
+	jsonInputMap, err := util.GetJsonMapFromFile(jsonInputPath)
+	if err != nil {
+		t.Fatalf("Failed to get json map from %v with error: %v", jsonInputPath, err)
 	}
 
-	result, e := cmdutil.RunSchemaValidation(jsonInputMap)
-	if e != nil {
-		t.Fatalf("Failed to run schema validation: %v", e)
+	result, err := cmdutil.RunSchemaValidation(jsonInputMap)
+	if err != nil {
+		t.Fatalf("Failed to run schema validation: %v", err)
 	}
 
 	if result.Valid() {
@@ -181,7 +181,7 @@ func TestInvalidLogFilterConfig(t *testing.T) {
 
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
-	if files, e := ioutil.ReadDir("../../translator/totomlconfig/sampleConfig/"); e == nil {
+	if files, err := ioutil.ReadDir("../../translator/totomlconfig/sampleConfig/"); err == nil {
 		re := regexp.MustCompile(".json")
 		for _, file := range files {
 			if re.MatchString(file.Name()) {
@@ -191,6 +191,6 @@ func TestSampleConfigSchema(t *testing.T) {
 			}
 		}
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

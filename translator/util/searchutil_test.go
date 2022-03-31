@@ -35,12 +35,12 @@ func TestSetWithSameKeyIfFound(t *testing.T) {
 		"tagC":  map[string]interface{}{"key1": "value1", "key2": "value2"},
 	}
 	var actual = map[string]interface{}{}
-	e := json.Unmarshal([]byte(rawJsonString), &input)
-	if e == nil {
+	err := json.Unmarshal([]byte(rawJsonString), &input)
+	if err == nil {
 		SetWithSameKeyIfFound(input, target_key_list, actual)
 		assert.Equal(t, expected, actual)
 	} else {
-		panic(e)
+		panic(err)
 	}
 }
 
@@ -69,11 +69,11 @@ func TestSetWithCustomizedKeyIfFound(t *testing.T) {
 		"tagCMapped":  map[string]interface{}{"key1": "value1", "key2": "value2"},
 	}
 	var actual = map[string]interface{}{}
-	e := json.Unmarshal([]byte(rawJsonString), &input)
-	if e == nil {
+	err := json.Unmarshal([]byte(rawJsonString), &input)
+	if err == nil {
 		SetWithCustomizedKeyIfFound(input, targetKeyMap, actual)
 		assert.Equal(t, expected, actual)
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

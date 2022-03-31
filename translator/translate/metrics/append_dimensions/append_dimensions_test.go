@@ -14,7 +14,7 @@ func TestAppendDimensions(t *testing.T) {
 	a := new(appendDimensions)
 	//Check whether override default config
 	var input interface{}
-	e := json.Unmarshal([]byte(`{
+	err := json.Unmarshal([]byte(`{
       "append_dimensions": {
         "ImageId": "${aws:ImageId}",
         "InstanceId": "${aws:InstanceId}",
@@ -22,7 +22,7 @@ func TestAppendDimensions(t *testing.T) {
         "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
       }
     }`), &input)
-	if e == nil {
+	if err == nil {
 		_, actual := a.ApplyRule(input)
 		expected := map[string]interface{}{
 			"ec2tagger": []interface{}{
@@ -37,6 +37,6 @@ func TestAppendDimensions(t *testing.T) {
 		}
 		assert.Equal(t, expected, actual, "Expect to be equal")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

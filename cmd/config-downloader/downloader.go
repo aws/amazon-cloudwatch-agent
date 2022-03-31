@@ -136,8 +136,8 @@ func main() {
 	util.SetSSLEnv(cc.SSLMap())
 	var errorMessage string
 	if downloadLocation == "" || outputDir == "" {
-		executable, e := os.Executable()
-		if e == nil {
+		executable, err := os.Executable()
+		if err == nil {
 			errorMessage = fmt.Sprintf("E! usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
 		} else {
 			errorMessage = fmt.Sprintf("E! usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")

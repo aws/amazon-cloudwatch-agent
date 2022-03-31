@@ -15,10 +15,10 @@ import (
 func TestRollupDimensions(t *testing.T) {
 	r := new(rollupDimensions)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{
+	err := json.Unmarshal([]byte(`{
       "aggregation_dimensions": [["ImageId"], ["InstanceId", "InstanceType"], ["d1"],[]]
     }`), &input)
-	if e == nil {
+	if err == nil {
 		_, actual := r.ApplyRule(input)
 		expected := map[string]interface{}{
 			"rollup_dimensions": []interface{}{
@@ -29,7 +29,7 @@ func TestRollupDimensions(t *testing.T) {
 		}
 		assert.Equal(t, expected, actual, "Expect to be equal")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }
 
@@ -57,9 +57,9 @@ func TestInvalidRollupList(t *testing.T) {
     }`),
 	}
 	for _, testInput := range testInputs {
-		e := json.Unmarshal(testInput, &tmp)
-		if e != nil {
-			panic(e)
+		err := json.Unmarshal(testInput, &tmp)
+		if err != nil {
+			panic(err)
 		}
 		if im, ok := tmp.(map[string]interface{}); ok {
 			actualVal = im[SectionKey]
@@ -75,7 +75,7 @@ func TestValidRollupList(t *testing.T) {
 	var input interface{}
 	var actualVal interface{}
 
-	e := json.Unmarshal([]byte(`{
+	err := json.Unmarshal([]byte(`{
       "aggregation_dimensions":[["ImageId"], ["InstanceId", "InstanceType"], ["d1"],[]]
     }`), &input)
 
@@ -85,9 +85,9 @@ func TestValidRollupList(t *testing.T) {
 		t.FailNow()
 	}
 
-	if e == nil {
+	if err == nil {
 		assert.Equal(t, true, isValidRollupList(actualVal), "Expect to be true")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

@@ -11,11 +11,11 @@ import (
 func TestSpecificConfig(t *testing.T) {
 	n := new(NvidiaSmi)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"nvidia_gpu":{"measurement": [
+	err := json.Unmarshal([]byte(`{"nvidia_gpu":{"measurement": [
 						"utilization_gpu",
 						"temperature_gpu"
 					]}}`), &input)
-	if e == nil {
+	if err == nil {
 		_, actualVal := n.ApplyRule(input)
 		expectedVal := []interface{}{map[string]interface{}{
 			"fieldpass":  []string{"utilization_gpu", "temperature_gpu"},
@@ -24,7 +24,7 @@ func TestSpecificConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedVal, actualVal, "Expect to be equal")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }
 
@@ -102,15 +102,15 @@ func TestInvalidMetrics(t *testing.T) {
 func TestNonGpuConfig(t *testing.T) {
 	c := new(NvidiaSmi)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"nvidia_smi":{"foo":"bar"}}`), &input)
+	err := json.Unmarshal([]byte(`{"nvidia_smi":{"foo":"bar"}}`), &input)
 
-	if e == nil {
+	if err == nil {
 		actualKey, actualVal := c.ApplyRule(input)
 		expectedKey := ""
 		expectedVal := ""
 		assert.Equal(t, expectedKey, actualKey, "ReturnKey should be empty")
 		assert.Equal(t, expectedVal, actualVal, "ReturnVal should be empty")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

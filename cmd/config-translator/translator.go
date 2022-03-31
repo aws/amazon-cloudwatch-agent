@@ -94,8 +94,8 @@ func main() {
 
 	if !ctx.RunInContainer() {
 		// run as user only applies to non container situation.
-		current, e := user.Current()
-		if e == nil && current.Name == "root" {
+		current, err := user.Current()
+		if err == nil && current.Name == "root" {
 			runAsUser, err := cmdutil.DetectRunAsUser(mergedJsonConfigMap)
 			if err != nil {
 				log.Panicf("E! Failed to detectRunAsUser")
