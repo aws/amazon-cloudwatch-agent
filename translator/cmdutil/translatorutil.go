@@ -104,13 +104,13 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 		log.Panicf("E! Failed to run schema validation because of %v",err)
 	}
 	if result.Valid() {
-		fmt.Println("Valid Json input schema.")
+		log.Print("I! Valid Json input schema.")
 	} else {
 		errorDetails := result.Errors()
 		for _, errorDetail := range errorDetails {
 			translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
 		}
-		log.Panic("Invalid Json input schema.")
+		log.Panic("E! Invalid Json input schema.")
 	}
 }
 

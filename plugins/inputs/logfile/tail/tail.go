@@ -596,7 +596,7 @@ func (tail *Tail) exitOnDeletion() {
 // with the last chunk of variable size.
 func partitionString(s string, chunkSize int) []string {
 	if chunkSize <= 0 {
-		log.Panic("Invalid chunkSize")
+		panic("Invalid chunkSize")
 	}
 	length := len(s)
 	chunks := 1 + length/chunkSize
