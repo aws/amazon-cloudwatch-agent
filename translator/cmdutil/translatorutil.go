@@ -201,7 +201,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 			log.Printf("Reading json config from from environment variable %v.", config.CWConfigContent)
 			jm, err := translatorUtil.GetJsonMapFromJsonBytes([]byte(jsonConfigContent))
 			if err != nil {
-				return nil, fmt.Errorf("unable to get json map from environment variable %v with error: %v", config.CWConfigContent, err)
+				return nil, fmt.Errorf("Unable to get json map from environment variable %v with error: %v", config.CWConfigContent, err)
 			}
 			jsonConfigMapMap[config.CWConfigContent] = jm
 		} 

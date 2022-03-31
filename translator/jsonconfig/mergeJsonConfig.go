@@ -29,18 +29,18 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 
 		if errors.Is(inputJsonDirPathErr, os.ErrNotExist) {
 			//When there is no input from flag --input, --input-dir and cannot find agent's config through containerized environment
-			log.Printf("No agent's json config was found from containerized environment or file path.")
+			log.Printf("No agent's json config was found.")
 			if strictValidation{
 				os.Exit(config.ERR_CODE_NOJSONFILE)
 			}
-			log.Printf("Use the default agent's json config.")
-		} else if strictValidation || multiConfig == "remove" {
-			log.Printf("Invalid agent's json config files, please provide an appropriate config.")
-			os.Exit(config.ERR_CODE_INVALIDJSONFILE)
 		} else {
 			log.Printf("Invalid agent's json config files")
-			log.Printf("Use the default agent's json config.")
+			if strictValidation || multiConfig == "remove" {
+				os.Exit(config.ERR_CODE_INVALIDJSONFILE)
+			}
 		}
+		
+		log.Printf("Use the default agent's json config.")
 		return defaultJsonConfigMap, nil
 	}
 
