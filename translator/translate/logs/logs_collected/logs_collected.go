@@ -5,7 +5,7 @@ package logs_collected
 
 import (
 	"log"
-	
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
@@ -57,7 +57,7 @@ func (l *LogsCollected) ApplyRule(input interface{}) (returnKey string, returnVa
 	case config.OS_TYPE_WINDOWS:
 		targetRuleMap = windowsMetricCollectRule
 	default:
-		log.Panicf("E! Unknown target platform: %s ",translator.GetTargetPlatform())
+		log.Panicf("E! Unknown target platform: %s ", translator.GetTargetPlatform())
 	}
 
 	if _, ok := im[SectionKey]; !ok {

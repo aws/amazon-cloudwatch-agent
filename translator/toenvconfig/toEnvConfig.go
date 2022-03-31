@@ -6,6 +6,7 @@ package toenvconfig
 import (
 	"encoding/json"
 	"log"
+
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/csm"

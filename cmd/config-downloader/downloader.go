@@ -6,8 +6,8 @@ package main
 import (
 	"flag"
 	"io/ioutil"
-	"os"
 	"log"
+	"os"
 	"strings"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"

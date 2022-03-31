@@ -35,8 +35,8 @@ func DetectRunAsUser(mergedJsonConfigMap map[string]interface{}) (runAsUser stri
 			if runasuser, ok := user.(string); ok {
 				return runasuser, nil
 			}
-			
-			log.Panicf("E! run_as_user is not string %v",user)
+
+			log.Panicf("E! run_as_user is not string %v", user)
 		}
 
 		// agent section exists, but "runasuser" does not exist, then use "root"

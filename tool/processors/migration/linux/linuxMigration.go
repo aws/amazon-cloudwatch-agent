@@ -5,6 +5,7 @@ package linux
 
 import (
 	"log"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"

@@ -5,7 +5,7 @@ package ecsservicediscovery
 
 import (
 	"log"
-	
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/hashicorp/golang-lru/simplelru"

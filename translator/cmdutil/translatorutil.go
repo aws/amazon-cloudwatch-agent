@@ -61,7 +61,7 @@ func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, env
 func getCurBinaryPath() string {
 	ex, err := os.Executable()
 	if err != nil {
-		log.Panicf("E! Failed to get executable path because of %v",err)
+		log.Panicf("E! Failed to get executable path because of %v", err)
 	}
 	return path.Dir(ex)
 }
@@ -101,7 +101,7 @@ func RunSchemaValidation(inputJsonMap map[string]interface{}) (*gojsonschema.Res
 func checkSchema(inputJsonMap map[string]interface{}) {
 	result, err := RunSchemaValidation(inputJsonMap)
 	if err != nil {
-		log.Panicf("E! Failed to run schema validation because of %v",err)
+		log.Panicf("E! Failed to run schema validation because of %v", err)
 	}
 	if result.Valid() {
 		log.Print("I! Valid Json input schema.")

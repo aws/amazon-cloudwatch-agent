@@ -6,7 +6,7 @@ package containerinsightscommon
 import (
 	"log"
 	"os"
-	
+
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 )

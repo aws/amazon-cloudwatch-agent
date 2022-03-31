@@ -22,14 +22,14 @@ func ToValidOs(os string) string {
 		// Give it a last try, using current osType type
 		os = runtime.GOOS
 	}
-	
+
 	formattedOs := strings.ToLower(os)
 	for _, val := range supportedOs {
 		if formattedOs == val {
 			return formattedOs
 		}
 	}
-	
+
 	log.Panicf("E! %v is not a supported osType type", os)
 	return ""
 }
