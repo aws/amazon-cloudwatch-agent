@@ -58,9 +58,9 @@ func ToTomlConfig(c interface{}) string {
 	_, val := r.ApplyRule(c)
 	buf := bytes.Buffer{}
 	enc := toml.NewEncoder(&buf)
-	err := enc.Encode(val)
-	if err != nil {
-		panic(err)
+	e := enc.Encode(val)
+	if e != nil {
+		panic(e)
 	}
 	return buf.String()
 }

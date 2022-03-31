@@ -110,7 +110,7 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 		for _, errorDetail := range errorDetails {
 			translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
 		}
-		panic("Invalid Json input schema.")
+		log.Panic("Invalid Json input schema.")
 	}
 }
 

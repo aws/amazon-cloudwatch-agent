@@ -30,9 +30,9 @@ import (
 )
 
 func ReadFromFile(filename string) string {
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		panic(err)
+	data, e := ioutil.ReadFile(filename)
+	if e != nil {
+		panic(e)
 	}
 	str := string(data)
 	return strings.ReplaceAll(str, "\r\n", "\n")
