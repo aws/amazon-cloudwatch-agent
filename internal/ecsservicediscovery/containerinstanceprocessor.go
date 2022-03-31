@@ -37,7 +37,7 @@ func NewContainerInstanceProcessor(ecs *ecs.ECS, ec2 *ec2.EC2, s *ProcessorStats
 	// initiate the container instance metadata LRU caching
 	lru, err := simplelru.NewLRU(ec2metadataCacheSize, nil)
 	if err != nil {
-		panic(err)
+		log.Panicf("E! Initial container instance with caching failed because of %v", err)
 	}
 	p.ec2MetaDataCache = lru
 	return p
