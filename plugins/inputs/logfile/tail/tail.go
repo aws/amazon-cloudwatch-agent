@@ -465,9 +465,6 @@ func (tail *Tail) waitForChanges() error {
 	case <-tail.Dying():
 		return ErrStop
 	}
-	errorMessage := fmt.Sprintf("E! Unreachable to file %s", tail.Filename)
-	tail.Logger.Errorf(errorMessage)
-	panic(errorMessage)
 
 }
 
