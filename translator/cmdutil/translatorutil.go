@@ -35,7 +35,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 	res := totomlconfig.ToTomlConfig(jsonConfigValue)
 	if translator.IsTranslateSuccess() {
 		if err := ioutil.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); err != nil {
-			log.Panicf("Failed to create the configuration validation file. Reason: %s", err.Error())
+			log.Panicf("E! Failed to create the configuration validation file. Reason: %s", err.Error())
 		} else {
 			for _, infoMessage := range translator.InfoMessages {
 				fmt.Println(infoMessage)
@@ -43,7 +43,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 			fmt.Println(exitSuccessMessage)
 		}
 	} else {
-		log.Panicf("Failed to generate configuration validation content.")
+		log.Panicf("E! Failed to generate configuration validation content.")
 	}
 }
 
@@ -54,14 +54,14 @@ func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, env
 	}
 	bytes := toenvconfig.ToEnvConfig(jsonConfigValue)
 	if err := ioutil.WriteFile(envConfigPath, bytes, 0644); err != nil {
-		log.Panicf("Failed to create env config. Reason: %s", err.Error())
+		log.Panicf("E! Failed to create env config. Reason: %s", err.Error())
 	}
 }
 
 func getCurBinaryPath() string {
 	ex, err := os.Executable()
 	if err != nil {
-		panic(err)
+		log.Panicf("E! Failed to get executable path because of %v",err)
 	}
 	return path.Dir(ex)
 }
@@ -101,7 +101,7 @@ func RunSchemaValidation(inputJsonMap map[string]interface{}) (*gojsonschema.Res
 func checkSchema(inputJsonMap map[string]interface{}) {
 	result, err := RunSchemaValidation(inputJsonMap)
 	if err != nil {
-		panic(err.Error())
+		log.Panicf("E! Failed to run schema validation because of %v",err)
 	}
 	if result.Valid() {
 		fmt.Println("Valid Json input schema.")
