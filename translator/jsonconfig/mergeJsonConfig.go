@@ -17,7 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, defaultJsonConfigMap map[string]interface{}, multiConfig string, strictValidation bool, inputJsonDirPathErr error ) (map[string]interface{}, error) {
+func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, defaultJsonConfigMap map[string]interface{}, multiConfig string, strictValidation bool, isNotExistError bool ) (map[string]interface{}, error) {
 	if jsonConfigMapMap == nil || len(jsonConfigMapMap) == 0 {
 		if os.Getenv(config.USE_DEFAULT_CONFIG) == config.USE_DEFAULT_CONFIG_TRUE {
 			// When USE_DEFAULT_CONFIG is true, ECS and EKS will be supposed to use different default config. EKS default config logic will be added when necessary
@@ -27,7 +27,7 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 			}
 		}
 
-		if errors.Is(inputJsonDirPathErr, os.ErrNotExist) {
+		if isNotExistError {
 			//When there is no input from flag --input, --input-dir and cannot find agent's config through containerized environment
 			log.Printf("No agent's json config was found.")
 			if strictValidation{

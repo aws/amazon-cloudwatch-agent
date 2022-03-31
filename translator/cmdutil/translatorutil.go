@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"errors"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -134,8 +135,9 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 
 	//Avoid when no input for flag InputJsonDirPath. Also would change to use fs.ErrNotExist after updating to go 1.16 since
 	//fs can only be used after https://pkg.go.dev/io/fs@go1.16.7?tab=versions
-	var inputJsonDirPathErr = os.ErrNotExist
-	
+	var inputJsonDirPathErr error = os.ErrNotExist
+	var isNotExitError bool = true
+
 	if (ctx.InputJsonDirPath() !="") {
 		//When update to golang 1.16, use WalkDir instead of Walk based on documents: https://pkg.go.dev/path/filepath#Walk
 		inputJsonDirPathErr = filepath.Walk(
@@ -204,14 +206,16 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				return nil, fmt.Errorf("Unable to get json map from environment variable %v with error: %v", config.CWConfigContent, err)
 			}
 			jsonConfigMapMap[config.CWConfigContent] = jm
-		} 
+		} else if !errors.Is(inputJsonDirPathErr, os.ErrNotExist){
+			isNotExitError = false
+		}
 	}
 
 	defaultConfig, err := translatorUtil.GetDefaultJsonConfigMap(ctx.Os(), ctx.Mode())
 	if err != nil {
 		return nil, err
 	}
-	mergedJsonConfigMap, err := jsonconfig.MergeJsonConfigMaps(jsonConfigMapMap, defaultConfig, ctx.MultiConfig(),ctx.StrictValidation(),inputJsonDirPathErr)
+	mergedJsonConfigMap, err := jsonconfig.MergeJsonConfigMaps(jsonConfigMapMap, defaultConfig, ctx.MultiConfig(),ctx.StrictValidation(), isNotExitError)
 	if err != nil {
 		return nil, err
 	}
