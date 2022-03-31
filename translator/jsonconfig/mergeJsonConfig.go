@@ -8,7 +8,6 @@ import (
 	"os"
 	"log"
 	"sort"
-	"errors"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
