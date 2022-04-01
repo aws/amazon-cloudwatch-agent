@@ -27,7 +27,7 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 		
 		if isJsonConfigExist {
 			log.Printf("I! No agent's json config was found.")
-			if ctx.StrictValidation(){
+			if strictValidation(){
 				os.Exit(config.ERR_CODE_NOJSONFILE)
 			}
 		} else {
