@@ -65,7 +65,7 @@ func executeTest(t *testing.T, testData TestData) {
 		jsonConfigMapMap[jsonFileName] = jsonConfigMap
 	}
 
-	resultMap, err := MergeJsonConfigMaps(jsonConfigMapMap, nil, "default", false)
+	resultMap, err := MergeJsonConfigMaps(jsonConfigMapMap, nil, "default", false,false)
 	if err != nil {
 		t.Fatalf("Failed to merge json maps with error: %v", err)
 	}

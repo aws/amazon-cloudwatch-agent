@@ -15,7 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, defaultJsonConfigMap map[string]interface{}, multiConfig string, strictValidation bool ) (map[string]interface{}, error) {
+func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, defaultJsonConfigMap map[string]interface{}, multiConfig string, strictValidation bool, isJsonConfigExist bool ) (map[string]interface{}, error) {
 	if jsonConfigMapMap == nil || len(jsonConfigMapMap) == 0 {
 		if os.Getenv(config.USE_DEFAULT_CONFIG) == config.USE_DEFAULT_CONFIG_TRUE {
 			// When USE_DEFAULT_CONFIG is true, ECS and EKS will be supposed to use different default config. EKS default config logic will be added when necessary
@@ -24,13 +24,21 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 				return util.GetJsonMapFromJsonBytes([]byte(config.DefaultECSJsonConfig()))
 			}
 		}
-
-		if strictValidation || multiConfig == "remove" {
-			log.Println("I! Invalid json config, please provide an appropriate config, exit now")
-			os.Exit(config.ERR_CODE_INVALIDJSONFILE)
+		
+		if isJsonConfigExist {
+			log.Printf("I! No agent's json config was found.")
+			if ctx.StrictValidation(){
+				os.Exit(config.ERR_CODE_NOJSONFILE)
+			}
+		} else {
+			log.Printf("I! Invalid json config")
+			if strictValidation || multiConfig == "remove" {
+				log.Printf("I! Please provide an appropriate config. Exit now")
+				os.Exit(config.ERR_CODE_INVALIDJSONFILE)
+			}
 		}
 
-		log.Printf("I! Invalid json config,  CWAgent will use the agent's default json config.")
+		log.Printf("I! CWAgent will use the agent's default json config.")
 		return defaultJsonConfigMap, nil
 	}
 
