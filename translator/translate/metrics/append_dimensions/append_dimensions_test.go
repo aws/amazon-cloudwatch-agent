@@ -23,7 +23,7 @@ func TestAppendDimensions(t *testing.T) {
       }
     }`), &input)
 	if err == nil {
-		_, actual := a.ApplyRule(input)
+		_, actual := e.ApplyRule(input)
 		expected := map[string]interface{}{
 			"ec2tagger": []interface{}{
 				map[string]interface{}{

@@ -63,7 +63,7 @@ func TestFullConfig(t *testing.T) {
 						"clocks_current_memory", 
 						"clocks_current_video"
 					]}}`), &input)
-	if e == nil {
+	if err == nil {
 		_, actualVal := n.ApplyRule(input)
 		expectedVal := []interface{}{map[string]interface{}{
 			"fieldpass": []string{"utilization_gpu", "temperature_gpu", "power_draw", "utilization_memory",
@@ -76,7 +76,7 @@ func TestFullConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedVal, actualVal, "Expect to be equal")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }
 
