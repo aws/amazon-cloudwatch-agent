@@ -4,7 +4,7 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"runtime"
 	"strings"
 )
@@ -30,6 +30,5 @@ func ToValidOs(os string) string {
 		}
 	}
 
-	log.Panicf("E! %v is not a supported osType type", os)
-	return ""
+	panic(fmt.Sprintf("%v is not a supported osType type", os))
 }

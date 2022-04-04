@@ -33,8 +33,7 @@ func getDefaultValue() string {
 	case config.OS_TYPE_WINDOWS:
 		return util.GetWindowsProgramDataPath() + "\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
 	default:
-		log.Panicf("Unsupported platform %v for logRule", targetPlatform)
-		return ""
+		panic(fmt.Sprintf("Unsupported platform %v for logRule", targetPlatform))
 	}
 }
 
