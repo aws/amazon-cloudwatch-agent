@@ -185,8 +185,7 @@ func main() {
 
 	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
 	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
-		errorMessage := fmt.Sprintf("E! downloadLocation %s is malformated.", downloadLocation)
-		log.Panicf(errorMessage)
+		log.Panicf("E! downloadLocation %s is malformated.", downloadLocation)
 	}
 
 	var config, outputFilePath string
