@@ -59,11 +59,11 @@ func TestApplyRule(t *testing.T) {
 
 	var actual interface{}
 
-	e := json.Unmarshal([]byte(rawJsonString), &input)
-	if e == nil {
+	err := json.Unmarshal([]byte(rawJsonString), &input)
+	if err == nil {
 		_, actual = c.ApplyRule(input)
 		assert.Equal(t, expected, actual)
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

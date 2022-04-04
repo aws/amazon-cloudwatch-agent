@@ -11,7 +11,7 @@ import (
 )
 
 func TestAppendDimensions(t *testing.T) {
-	a := new(appendDimensions)
+	e := new(appendDimensions)
 	//Check whether override default config
 	var input interface{}
 	err := json.Unmarshal([]byte(`{
