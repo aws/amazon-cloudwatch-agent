@@ -4,6 +4,7 @@
 package totomlconfig
 
 import (
+	"log"
 	"bytes"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
@@ -60,6 +61,7 @@ func ToTomlConfig(c interface{}) string {
 	enc := toml.NewEncoder(&buf)
 	err := enc.Encode(val)
 	if err != nil {
+		log.Panicf("")
 		panic(err)
 	}
 	return buf.String()
