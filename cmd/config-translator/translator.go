@@ -98,7 +98,7 @@ func main() {
 		if err == nil && current.Name == "root" {
 			runAsUser, err := cmdutil.DetectRunAsUser(mergedJsonConfigMap)
 			if err != nil {
-				log.Panicf("E! Failed to detectRunAsUser")
+				log.Panic("E! Failed to detectRunAsUser")
 			}
 			cmdutil.VerifyCredentials(ctx, runAsUser)
 		}

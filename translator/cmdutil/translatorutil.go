@@ -43,7 +43,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 			fmt.Println(exitSuccessMessage)
 		}
 	} else {
-		log.Panicf("E! Failed to generate configuration validation content.")
+		log.Panic("E! Failed to generate configuration validation content.")
 	}
 }
 

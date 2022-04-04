@@ -55,7 +55,7 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 	}
 
 	if !translator.IsTranslateSuccess() {
-		log.Panicf("Failed to merge multiple json config files.")
+		log.Panic("Failed to merge multiple json config files.")
 	}
 
 	return resultMap, nil

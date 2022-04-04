@@ -43,7 +43,7 @@ func TestNoFieldConfig(t *testing.T) {
 func TestFullConfig(t *testing.T) {
 	n := new(NvidiaSmi)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"nvidia_gpu":{"measurement": [
+	err := json.Unmarshal([]byte(`{"nvidia_gpu":{"measurement": [
 						"utilization_gpu", 
 						"temperature_gpu", 
 						"power_draw", 

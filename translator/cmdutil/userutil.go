@@ -116,7 +116,7 @@ func VerifyCredentials(ctx *context.Context, runAsUser string) {
 	if config.ModeOnPrem == ctx.Mode() {
 		if runAsUser != "root" {
 			if _, ok := credentials["shared_credential_file"]; !ok {
-				log.Panicf("E! Credentials path is not set while runasuser is not root")
+				log.Panic("E! Credentials path is not set while runasuser is not root")
 			}
 		}
 	}
