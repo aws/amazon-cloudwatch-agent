@@ -117,7 +117,7 @@ func getValidMetric(targetOs string, pluginName string, metricName string) strin
 	case translatorConfig.OS_TYPE_WINDOWS:
 		return metricName
 	default:
-		log.Panicf("unknown os platform in getValidMetric: %s", targetOs)
+		log.Panicf("E! Unknown os platform in getValidMetric: %s", targetOs)
 	}
 	if val, ok := registeredMetrics[pluginName]; ok {
 		formatted_metricName := getFormattedMetricName(metricName, pluginName)

@@ -13,13 +13,13 @@ import (
 )
 
 func TestRollupDimensions(t *testing.T) {
-	r := new(rollupDimensions)
+	e := new(rollupDimensions)
 	var input interface{}
 	err := json.Unmarshal([]byte(`{
       "aggregation_dimensions": [["ImageId"], ["InstanceId", "InstanceType"], ["d1"],[]]
     }`), &input)
 	if err == nil {
-		_, actual := r.ApplyRule(input)
+		_, actual := e.ApplyRule(input)
 		expected := map[string]interface{}{
 			"rollup_dimensions": []interface{}{
 				[]interface{}{"ImageId"},
