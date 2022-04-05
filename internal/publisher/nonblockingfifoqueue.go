@@ -18,7 +18,7 @@ type NonBlockingFifoQueue struct {
 
 func NewNonBlockingFifoQueue(size int) *NonBlockingFifoQueue {
 	if size <= 0 {
-		panic("Queue Size should be larger than 0!")
+		log.Panic("E! Queue Size should be larger than 0!")
 	}
 	return &NonBlockingFifoQueue{
 		queue:   list.New(),

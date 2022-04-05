@@ -7,11 +7,11 @@ package translator
 // This method is mainly to merge maps which don't have same key, it's a shallow merge. Fail this method if not serving this purpose.
 func MergeTwoUniqueMaps(map1 map[string]interface{}, map2 map[string]interface{}) map[string]interface{} {
 	mergeResult := make(map[string]interface{})
-	errorMessages := "Fail to merge two map, since both of them use same key"
+	errorMessage := "Fail to merge two map, since both of them use same key"
 
 	for k, v := range map1 {
 		if _, ok := mergeResult[k]; ok {
-			panic(errorMessages)
+			panic(errorMessage)
 		} else {
 			mergeResult[k] = v
 		}
@@ -19,7 +19,7 @@ func MergeTwoUniqueMaps(map1 map[string]interface{}, map2 map[string]interface{}
 
 	for k, v := range map2 {
 		if _, ok := mergeResult[k]; ok {
-			panic(errorMessages)
+			panic(errorMessage)
 		} else {
 			mergeResult[k] = v
 		}

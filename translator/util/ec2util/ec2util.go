@@ -4,14 +4,15 @@
 package ec2util
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"log"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 // this is a singleton struct
@@ -20,7 +21,7 @@ type ec2Util struct {
 	PrivateIP  string
 	InstanceID string
 	Hostname   string
-	AccountID string
+	AccountID  string
 }
 
 const allowedRetries = 5

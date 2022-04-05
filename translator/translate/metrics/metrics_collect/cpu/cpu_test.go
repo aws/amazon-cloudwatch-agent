@@ -15,35 +15,35 @@ func TestCpuSpecificConfig(t *testing.T) {
 	c := new(Cpu)
 	//Check whether override default config
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"cpu":{"metrics_collection_interval":"11s"}}`), &input)
-	if e == nil {
+	err := json.Unmarshal([]byte(`{"cpu":{"metrics_collection_interval":"11s"}}`), &input)
+	if err == nil {
 		actualReturnKey, _ := c.ApplyRule(input)
 		assert.Equal(t, "", actualReturnKey, "Expect to be equal")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }
 
 func TestNonCpuConfig(t *testing.T) {
 	c := new(Cpu)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"NotCpu":{"foo":"bar"}}`), &input)
+	err := json.Unmarshal([]byte(`{"NotCpu":{"foo":"bar"}}`), &input)
 
-	if e == nil {
+	if err == nil {
 		actualKey, actualVal := c.ApplyRule(input)
 		expectedKey := ""
 		expectedVal := ""
 		assert.Equal(t, expectedKey, actualKey, "ReturnKey should be empty")
 		assert.Equal(t, expectedVal, actualVal, "ReturnVal should be empty")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }
 
 func TestInvalidMetrics(t *testing.T) {
 	c := new(Cpu)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"cpu": {
+	err := json.Unmarshal([]byte(`{"cpu": {
 					"resources": [
 						"*"
 					],
@@ -55,10 +55,10 @@ func TestInvalidMetrics(t *testing.T) {
 					"totalcpu": true,
 					"metrics_collection_interval": "1s"
 				}}`), &input)
-	if e == nil {
+	if err == nil {
 		actualKey, _ := c.ApplyRule(input)
 		assert.Equal(t, "", actualKey, "return key should be empty")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

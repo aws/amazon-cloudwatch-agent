@@ -15,16 +15,16 @@ func TestMemSpecificConfig(t *testing.T) {
 	m := new(Mem)
 	//Check whether provide specific config
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"mem":{"metrics_collection_interval":"60s"}}`), &input)
-	if e == nil {
+	err := json.Unmarshal([]byte(`{"mem":{"metrics_collection_interval":"60s"}}`), &input)
+	if err == nil {
 		actualReturnKey, _ := m.ApplyRule(input)
 		assert.Equal(t, "", actualReturnKey, "return key should be empty")
 	} else {
-		panic(e)
+		panic(err)
 	}
 
 	var input1 interface{}
-	err := json.Unmarshal([]byte(`{"mem":{"measurement": [
+	err = json.Unmarshal([]byte(`{"mem":{"measurement": [
 						"free",
 						"total"
 					]}}`), &input1)

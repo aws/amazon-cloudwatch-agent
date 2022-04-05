@@ -24,9 +24,9 @@ func TestCsm_Defaults(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"csm":{}}`), &input)
-	if e != nil {
-		assert.Fail(t, e.Error())
+	err := json.Unmarshal([]byte(`{"csm":{}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
 	}
 
 	_, actual := c.ApplyRule(input)
