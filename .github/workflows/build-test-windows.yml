@@ -23,7 +23,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ windows-2019 ]
+        os: [ windows-2019, windows-latest ]
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
