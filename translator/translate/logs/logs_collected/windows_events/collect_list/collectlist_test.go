@@ -144,7 +144,7 @@ func TestDuplicateRetention(t *testing.T) {
 		assert.Equal(t, 0, len(translator.ErrorMessages))
 		assert.Equal(t, expected, actual)
 	} else {
-		panic(error)
+		assert.Fail(t, error.Error())
 	}
 }
 
@@ -202,9 +202,9 @@ func TestConflictingRetention(t *testing.T) {
 	if error == nil {
 		_, actual = c.ApplyRule(input)
 		assert.GreaterOrEqual(t, 1, len(translator.ErrorMessages))
-		assert.Equal(t, "Under path : /logs/logs_collected/windows_events/collect_list/ | Error : Different Retention values can't be set for the same log group: system", translator.ErrorMessages[len(translator.ErrorMessages)-1])
+		assert.Equal(t, "Under path : /logs/logs_collected/windows_events/collect_list/ | Error : Different retention_in_days values can't be set for the same log group: system", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 		assert.Equal(t, expected, actual)
 	} else {
-		panic(error)
+		assert.Fail(t, error.Error())
 	}
 }

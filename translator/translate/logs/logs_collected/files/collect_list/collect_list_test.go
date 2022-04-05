@@ -612,7 +612,7 @@ func TestLogFilters(t *testing.T) {
 	assert.Equal(t, expectVal, val)
 }
 
-func TestRetention(t *testing.T) {
+func TestRetentionDifferentLogGroups(t *testing.T) {
 	f := new(FileConfig)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
@@ -720,6 +720,6 @@ func TestConflictingRetention(t *testing.T) {
 		"retention_in_days": -1,
 		"from_beginning":    true,
 	}}
-	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different Retention values can't be set for the same log group: test1", translator.ErrorMessages[len(translator.ErrorMessages)-1])
+	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different retention_in_days values can't be set for the same log group: test1", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 	assert.Equal(t, expectVal, val)
 }
