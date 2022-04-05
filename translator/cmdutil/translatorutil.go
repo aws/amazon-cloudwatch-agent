@@ -27,6 +27,7 @@ const (
 	tomlFileMode             = 0644
 	jsonTemplateName_Linux   = "default_linux_config.json"
 	jsonTemplateName_Windows = "default_windows_config.json"
+	jsonTemplateName_Darwin  = "default_darwin_config.json"
 	defaultTomlConfigName    = "CWAgent.conf"
 	exitSuccessMessage       = "Configuration validation first phase succeeded"
 )
@@ -71,6 +72,8 @@ func getJsonConfigMap(jsonConfigFilePath, osType string) (map[string]interface{}
 		curPath := getCurBinaryPath()
 		if osType == config.OS_TYPE_WINDOWS {
 			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Windows)
+		} else if osType == config.OS_TYPE_DARWIN {
+			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Darwin)
 		} else {
 			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Linux)
 		}

@@ -10,7 +10,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events"
+	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+
 )
 
 type Rule translator.Rule
@@ -57,6 +59,7 @@ func (c *CollectList) ApplyRule(input interface{}) (returnKey string, returnVal 
 			result = append(result, singleTransformedConfig)
 		}
 	}
+	logUtil.ValidateLogRetentionSettings(result, GetCurPath())
 	return EventConfigTomlKey, result
 }
 

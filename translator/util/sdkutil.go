@@ -46,7 +46,7 @@ func DetectAgentMode(configuredMode string) string {
 		fmt.Println("I! Detected the instance is ECS")
 		return config.ModeEC2
 	}
-	fmt.Println("I! Detected the instance is OnPrem")
+	fmt.Println("I! Detected the instance is OnPremise")
 	return config.ModeOnPrem
 }
 

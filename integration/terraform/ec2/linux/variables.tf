@@ -25,7 +25,7 @@ variable "region" {
 
 variable "ami" {
   type = string
-  default = ""
+  default = "cloudwatch-agent-integration-test-ubuntu*"
 }
 
 variable "ssh_key" {
@@ -44,12 +44,6 @@ variable "github_sha" {
 }
 
 variable "github_repo" {
-  type = string
-  default = ""
-}
-
-variable "package" {
-  description = "make command of package to build ex package-deb"
   type = string
   default = ""
 }
@@ -78,4 +72,14 @@ variable "binary_name" {
 variable "local_stack_host_name" {
   type = string
   default = "localhost.localstack.cloud"
+}
+
+variable "s3_bucket" {
+  type = string
+  default = ""
+}
+
+variable "test_name" {
+  type = string
+  default = ""
 }

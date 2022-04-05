@@ -5,16 +5,16 @@ package collect_list
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"path/filepath"
-	"sort"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
+	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
+	"io/ioutil"
+	"path/filepath"
+	"sort"
 )
 
 type Rule translator.Rule
@@ -63,7 +63,7 @@ func (f *FileConfig) ApplyRule(input interface{}) (returnKey string, returnVal i
 			}
 			res = append(res, result)
 		}
-
+		logUtil.ValidateLogRetentionSettings(res, GetCurPath())
 		outputLogConfig(res)
 	} else {
 		returnKey = ""

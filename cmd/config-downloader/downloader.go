@@ -113,7 +113,7 @@ func main() {
 
 	var region, mode, downloadLocation, outputDir, inputConfig, multiConfig string
 
-	flag.StringVar(&mode, "mode", "ec2", "The mode value, i.e. ec2 or onPrem")
+	flag.StringVar(&mode, "mode", "ec2", "Please provide the mode, i.e. ec2, onPremise, auto")
 	flag.StringVar(&downloadLocation, "download-source", "",
 		"Download source. Example: \"ssm:my-parameter-store-name\" for an EC2 SSM Parameter Store Name holding your CloudWatch Agent configuration.")
 	flag.StringVar(&outputDir, "output-dir", "", "Path of output json config directory.")

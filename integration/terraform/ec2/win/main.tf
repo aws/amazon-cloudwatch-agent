@@ -12,7 +12,7 @@ resource "aws_instance" "integration-test" {
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.github_sha}",
-      "aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
       "msiexec /i amazon-cloudwatch-agent.msi",
     ]
     connection {
@@ -24,11 +24,14 @@ resource "aws_instance" "integration-test" {
       target_platform = "windows"
     }
   }
+  tags = {
+    Name = var.test_name
+  }
 }
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self"]
+  owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"

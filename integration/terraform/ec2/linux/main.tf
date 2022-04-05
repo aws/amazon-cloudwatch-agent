@@ -11,11 +11,11 @@ resource "aws_instance" "integration-test" {
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.github_sha}",
-      "aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/binary/${var.github_sha}/linux/${var.arc}/${var.binary_name} .",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.github_sha}/linux/${var.arc}/${var.binary_name} .",
       "sudo ${var.install_agent}",
       "echo get ssl pem for localstack and export local stack host name",
       "cd ~/amazon-cloudwatch-agent/integration/localstack/ls_tmp",
-      "aws s3 cp s3://cloudwatch-agent-integration-bucket/integration-test/ls_tmp/${var.github_sha} . --recursive",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.github_sha} . --recursive",
       "cat ${var.ca_cert_path} > original.pem",
       "cat original.pem snakeoil.pem > combine.pem",
       "sudo cp original.pem /opt/aws/amazon-cloudwatch-agent/original.pem",
@@ -32,11 +32,14 @@ resource "aws_instance" "integration-test" {
       host        = self.public_dns
     }
   }
+  tags = {
+    Name = var.test_name
+  }
 }
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self"]
+  owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"
