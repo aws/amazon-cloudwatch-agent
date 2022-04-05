@@ -32,7 +32,7 @@ func ValidateLogRetentionSettings(logConfigs []interface{}, currPath string) []i
 								fmt.Sprintf("Different retention_in_days values can't be set for the same log group: %v", logGroup))
 						}
 						// Retention for a log group has been configured in multiple places. Unset it so that the retention api is only called once
-						logConfigMap["retention_in_days"] = -1
+						logConfigMap[logRetentionKey] = -1
 					} else {
 						configMap[logGroup] = retention
 					}
