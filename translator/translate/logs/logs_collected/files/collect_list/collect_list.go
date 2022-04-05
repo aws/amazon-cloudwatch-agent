@@ -63,7 +63,7 @@ func (f *FileConfig) ApplyRule(input interface{}) (returnKey string, returnVal i
 			}
 			res = append(res, result)
 		}
-		logUtil.CheckForConflictingRetentionSettings(res, GetCurPath())
+		logUtil.ValidateLogRetentionSettings(res, GetCurPath())
 		outputLogConfig(res)
 	} else {
 		returnKey = ""

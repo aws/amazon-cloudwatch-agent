@@ -59,7 +59,7 @@ func (c *CollectList) ApplyRule(input interface{}) (returnKey string, returnVal 
 			result = append(result, singleTransformedConfig)
 		}
 	}
-	logUtil.CheckForConflictingRetentionSettings(result, GetCurPath())
+	logUtil.ValidateLogRetentionSettings(result, GetCurPath())
 	return EventConfigTomlKey, result
 }
 
