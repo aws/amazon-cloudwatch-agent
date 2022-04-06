@@ -57,9 +57,9 @@ func TestInvalidRollupList(t *testing.T) {
     }`),
 	}
 	for _, testInput := range testInputs {
-		e := json.Unmarshal(testInput, &tmp)
-		if e != nil {
-			panic(e)
+		err := json.Unmarshal(testInput, &tmp)
+		if err != nil {
+			panic(err)
 		}
 		if im, ok := tmp.(map[string]interface{}); ok {
 			actualVal = im[SectionKey]

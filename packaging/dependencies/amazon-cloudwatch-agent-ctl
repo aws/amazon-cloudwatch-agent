@@ -305,27 +305,10 @@ config_all() {
 
      mkdir -p "${CONFDIR}"
 
-     param_mode="ec2"
-     case "${mode}" in
-     ec2)
-          param_mode="ec2"
-          ;;
-     onPremise)
-          param_mode="onPrem"
-          ;;
-     auto)
-          param_mode="auto"
-          ;;
-     *)
-          echo "Invalid mode: ${mode}" >&2
-          exit 1
-          ;;
-     esac
-
      if [ -n "${cwoc_config_location}" ]; then
           echo "****** processing cwagent-otel-collector ******"
           set +e
-          cwoc_config "${cwoc_config_location}" "${restart}" "${param_mode}" "${multi_config}"
+          cwoc_config "${cwoc_config_location}" "${restart}" "${mode}" "${multi_config}"
           set -e
           echo ""
      fi
@@ -334,7 +317,7 @@ config_all() {
      # default cwa config depends on the existence of cwoc config
      if [ -n "${cwa_config_location}" ]; then
           echo "****** processing amazon-cloudwatch-agent ******"
-          cwa_config "${cwa_config_location}" "${restart}" "${param_mode}" "${multi_config}"
+          cwa_config "${cwa_config_location}" "${restart}" "${mode}" "${multi_config}"
      fi
 }
 
@@ -536,11 +519,8 @@ main() {
 
      case "${mode}" in
      ec2) ;;
-
      onPremise) ;;
-
      auto) ;;
-
      *)
           echo "Invalid mode: ${mode} ${UsageString}" >&2
           exit 1

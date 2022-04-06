@@ -34,8 +34,8 @@ func ReadFromFile(filename string) string {
 func checkIfTranslateSucceed(t *testing.T, jsonStr string, targetOs string, expectedEnvVars map[string]string) {
 	var input map[string]interface{}
 	translator.SetTargetPlatform(targetOs)
-	e := json.Unmarshal([]byte(jsonStr), &input)
-	if e == nil {
+	err := json.Unmarshal([]byte(jsonStr), &input)
+	if err == nil {
 		envVarsBytes := ToEnvConfig(input)
 		fmt.Println(string(envVarsBytes))
 		var actualEnvVars = make(map[string]string)
@@ -43,7 +43,7 @@ func checkIfTranslateSucceed(t *testing.T, jsonStr string, targetOs string, expe
 		assert.NoError(t, err)
 		assert.Equal(t, expectedEnvVars, actualEnvVars, "Expect to be equal")
 	} else {
-		fmt.Printf("Got error %v", e)
+		fmt.Printf("Got error %v", err)
 		t.Fail()
 	}
 }

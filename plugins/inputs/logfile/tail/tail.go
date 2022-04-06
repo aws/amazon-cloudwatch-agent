@@ -465,7 +465,7 @@ func (tail *Tail) waitForChanges() error {
 	case <-tail.Dying():
 		return ErrStop
 	}
-	panic("unreachable")
+
 }
 
 func (tail *Tail) openReader() {
@@ -593,7 +593,7 @@ func (tail *Tail) exitOnDeletion() {
 // with the last chunk of variable size.
 func partitionString(s string, chunkSize int) []string {
 	if chunkSize <= 0 {
-		panic("invalid chunkSize")
+		panic("Invalid chunkSize")
 	}
 	length := len(s)
 	chunks := 1 + length/chunkSize

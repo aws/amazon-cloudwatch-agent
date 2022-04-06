@@ -50,13 +50,13 @@ func TestBundle(t *testing.T) {
 		log.Printf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget), func(t *testing.T) {
 			test.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
-			test.CopyFile(parameter.dataInput + configJSON, configOutputPath)
-			test.CopyFile(parameter.dataInput + commonConfigTOML, commonConfigOutputPath)
-			test.StartAgent(configOutputPath);
-			time.Sleep(agentRuntime);
-			log.Printf("Agent has been running for : %s", agentRuntime.String());
-			test.StopAgent();
-			output := test.ReadAgentOutput(agentRuntime);
+			test.CopyFile(parameter.dataInput+configJSON, configOutputPath)
+			test.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
+			test.StartAgent(configOutputPath)
+			time.Sleep(agentRuntime)
+			log.Printf("Agent has been running for : %s", agentRuntime.String())
+			test.StopAgent()
+			output := test.ReadAgentOutput(agentRuntime)
 			containsTarget := outputLogContainsTarget(output)
 			if (parameter.findTarget && !containsTarget) || (!parameter.findTarget && containsTarget) {
 				t.Errorf("Find target is %t contains target is %t", parameter.findTarget, containsTarget)
