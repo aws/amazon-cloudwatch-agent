@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/ssm"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
@@ -17,38 +18,106 @@ import (
 	"time"
 )
 
+const (
+	daysToKeep = 30
+	keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
+	expirationDate = time.Now().UTC().Add(keepDuration)
+)
+
 func main() {
-	err := cleanAMI()
-	if err != nil {
-		log.Fatalf("errors cleaning %v", err)
-	}
+	log.Println("Begin to clean EC2 AMI")
+	//cleanAMI()
+
+	log.Println("Begin to clean SSM Parameter Store")
+	cleanSSMParameterStore()
+
+	log.Println("Finished cleaning resources.")
 }
 
-const daysToKeep = 60
-const keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
-
-var expirationDate = time.Now().UTC().Add(keepDuration)
-
-func cleanAMI() []error {
-	log.Print("Begin to clean EC2 AMI")
-
+func cleanSSMParameterStore() {
 	cxt := context.Background()
 	defaultConfig, err := config.LoadDefaultConfig(cxt)
+
 	if err != nil {
-		return []error{err}
+		log.Printf("Load default config failed because of %v",err)
+		return
 	}
+
+	ssmClient := ssm.NewFromConfig(defaultConfig)
+
+	//Allow to load all th since the default respond is paginated auto scaling groups.
+	//Look into the documentations and read the starting-token for more details
+	//Documentation: https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-auto-scaling-groups.html#options
+	var nextToken *string
+	var errors []error
+
+	for {
+		describeParametersInput := ssm.DescribeParametersInput{}
+		describeParametersOutput, err := ec2client.DescribeImages(cxt, &describeParametersInput)
+		if err != nil {
+			return []error{err}
+		}
+
+		for _, asg := range describeParametersOutput.AutoScalingGroups {
+
+			//Skipping Store Parameters that does not older than 1 months
+			if !expirationDate.After(*asg.CreatedTime) {
+				continue
+			}
+
+			deleteAutoScalingGroupInput := &autoscaling.DeleteAutoScalingGroupInput{
+				AutoScalingGroupName: asg.AutoScalingGroupName,
+				ForceDelete:          aws.Bool(true),
+			}
+
+			_, err = autoscalingclient.DeleteAutoScalingGroup(deleteAutoScalingGroupInput)
+
+			if err != nil {
+				return err
+			}
+
+			deleteLaunchConfigurationInput := &autoscaling.DeleteLaunchConfigurationInput{
+				LaunchConfigurationName: asg.LaunchConfigurationName,
+			}
+
+			if _, err = autoscalingclient.DeleteLaunchConfiguration(deleteLaunchConfigurationInput); err != nil {
+				return err
+			}
+
+			logger.Printf("Deleted asg %s successfully", *asg.AutoScalingGroupName)
+		}
+
+		if describeAutoScalingOutputs.NextToken == nil {
+			break
+		}
+
+		nextToken = describeImagesOutput.NextToken
+	}
+
+}
+
+func cleanAMI() {
+	cxt := context.Background()
+	defaultConfig, err := config.LoadDefaultConfig(cxt)
+
+	if err != nil {
+		log.Printf("Load default config failed because of %v",err)
+		return
+	}
+
 	ec2client := ec2.NewFromConfig(defaultConfig)
 
 	// Get list of ami
-	nameFilter := types.Filter{Name: aws.String("name"), Values: []string{
+	nameFilter := types.Filter{Key: aws.String("name"), Values: []string{
 		"cloudwatch-agent-integration-test*",
 	}}
 
 	//get instances to delete
-	describeImagesInput := ec2.DescribeImagesInput{Filters: []types.Filter{nameFilter}}
+	describeImagesInput := ec2.DescribeImagesInput{}
 	describeImagesOutput, err := ec2client.DescribeImages(cxt, &describeImagesInput)
 	if err != nil {
-		return []error{err}
+		log.Printf("Describe images failed because of %v",err)
+		return
 	}
 
 	var errors []error
@@ -58,7 +127,7 @@ func cleanAMI() []error {
 			errors = append(errors, err)
 			continue
 		}
-		log.Printf("image name %v image id %v experation date %v creation date parsed %v image creation date raw %v",
+		log.Printf("Image name %v image id %v experation date %v creation date parsed %v image creation date raw %v",
 			*image.Name, *image.ImageId, creationDate, expirationDate, *image.CreationDate)
 		if expirationDate.After(creationDate) {
 			log.Printf("Try to delete ami %s tags %v launch-date %s", *image.Name, image.Tags, *image.CreationDate)
@@ -71,8 +140,7 @@ func cleanAMI() []error {
 	}
 
 	if len(errors) != 0 {
-		return errors
+		log.Printf("Deleted some of AMIs failed because of %v", err)
+		return
 	}
-
-	return nil
 }
