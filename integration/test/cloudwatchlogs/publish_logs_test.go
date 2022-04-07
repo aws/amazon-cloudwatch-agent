@@ -7,7 +7,6 @@
 package cloudwatchlogs
 
 import (
-	"context"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/stretchr/testify/assert"
@@ -23,21 +22,19 @@ const (
 )
 
 var (
-	cwClient *cloudwatchlogs.Client
-	ctx      context.Context
-	logGroup = "cloudwatch-agent-integ-test"
+	logGroup  = "cloudwatch-agent-integ-test"
 	logStream = "test-logs"
 )
 
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	start := time.Now().UnixNano() / 1e6 // convert to milliseconds
-	numLogs := 100 // number of each log type to emit
+	numLogs := 100                       // number of each log type to emit
 
 	test.CopyFile("resources/config_log.json", configOutputPath)
 
 	// give some buffer time before writing to ensure consistent
 	// usage of the StartTime parameter for GetLogEvents
-	time.Sleep(1*time.Minute)
+	time.Sleep(1 * time.Minute)
 
 	test.RunShellScript("write_log.sh", strconv.Itoa(numLogs)) // write logs before starting the agent
 	test.StartAgent(configOutputPath)
