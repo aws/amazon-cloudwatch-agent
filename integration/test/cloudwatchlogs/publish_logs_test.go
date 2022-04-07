@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"strconv"
 
 	"testing"
@@ -31,31 +32,30 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	// usage of the StartTime parameter for GetLogEvents
 	time.Sleep(1 * time.Minute)
 
-	t.Logf("Writing %d of each log type", numLogs)
+	log.Printf("Writing %d of each log type\n", numLogs)
 	test.RunShellScript("write_log.sh", strconv.Itoa(numLogs)) // write logs before starting the agent
+
+	log.Println("Finished writing logs. Sleeping before starting agent...")
 	time.Sleep(5 * time.Second)
 	test.StartAgent(configOutputPath)
 	time.Sleep(agentRunTime)
 	test.StopAgent()
 
 	// check CWL to ensure we got the expected number of logs in the log stream
-	t.Log("Getting AWS SDK client")
+	log.Println("Getting AWS SDK client")
 	c, testCtx, err := test.GetClient()
-	if err != nil {
-		t.Fatalf("Error retrieving SDK client: %v", err)
-	}
+	assert.NoError(t, err)
 
+	log.Printf("Get log events from %s/%s since %v\n", test.LogGroupName, test.LogStreamName, start)
 	events, err := c.GetLogEvents(testCtx, &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName:  &test.LogGroupName,
 		LogStreamName: &test.LogStreamName,
 		StartTime:     &start,
 	})
 
-	if err != nil {
-		t.Fatalf("Error retrieving SDK client: %v", err)
-	}
+	assert.NoError(t, err)
 
-	t.Logf("Payload: %v", events)
+	log.Printf("Payload: %v", events)
 
 	assert.Len(t, events.Events, numLogs*2)
 }

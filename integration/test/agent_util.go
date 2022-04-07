@@ -72,7 +72,7 @@ func RunShellScript(path string, args ...string) {
 	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
 	}
 
 	bashArgs := []string{"-c", "sudo ./"+path}
@@ -82,7 +82,7 @@ func RunShellScript(path string, args ...string) {
 	out, err = exec.Command("bash", bashArgs...).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Erorr occurred when executing %s: %s | %s", path, err.Error(), string(out))
 	}
 }
 
