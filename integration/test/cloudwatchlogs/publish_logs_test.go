@@ -21,11 +21,6 @@ const (
 	agentRunTime     = 1 * time.Minute
 )
 
-var (
-	logGroup  = "cloudwatch-agent-integ-test"
-	logStream = "test-logs"
-)
-
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	start := time.Now().UnixNano() / 1e6 // convert to milliseconds
 	numLogs := 100                       // number of each log type to emit
@@ -36,21 +31,31 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	// usage of the StartTime parameter for GetLogEvents
 	time.Sleep(1 * time.Minute)
 
+	t.Logf("Writing %d of each log type", numLogs)
 	test.RunShellScript("write_log.sh", strconv.Itoa(numLogs)) // write logs before starting the agent
+	time.Sleep(5 * time.Second)
 	test.StartAgent(configOutputPath)
 	time.Sleep(agentRunTime)
 	test.StopAgent()
 
 	// check CWL to ensure we got the expected number of logs in the log stream
+	t.Log("Getting AWS SDK client")
 	c, testCtx, err := test.GetClient()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Error retrieving SDK client: %v", err)
+	}
 
 	events, err := c.GetLogEvents(testCtx, &cloudwatchlogs.GetLogEventsInput{
-		LogGroupName:  &logGroup,
-		LogStreamName: &logStream,
+		LogGroupName:  &test.LogGroupName,
+		LogStreamName: &test.LogStreamName,
 		StartTime:     &start,
 	})
-	assert.NoError(t, err)
+
+	if err != nil {
+		t.Fatalf("Error retrieving SDK client: %v", err)
+	}
+
+	t.Logf("Payload: %v", events)
 
 	assert.Len(t, events.Events, numLogs*2)
 }

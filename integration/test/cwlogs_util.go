@@ -15,6 +15,8 @@ import (
 var (
 	cwClient *cloudwatchlogs.Client
 	ctx context.Context
+	LogGroupName  = "cloudwatch-agent-integ-test"
+	LogStreamName = "test-logs"
 )
 
 func GetClient() (*cloudwatchlogs.Client, context.Context, error) {
