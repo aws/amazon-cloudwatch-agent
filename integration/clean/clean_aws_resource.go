@@ -9,10 +9,11 @@ package main
 import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/ssm"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	ssmType "github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	ec2Type "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	smithyTime "github.com/aws/smithy-go/time"
 	"log"
 	"time"
@@ -21,12 +22,13 @@ import (
 const (
 	daysToKeep = 30
 	keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
-	expirationDate = time.Now().UTC().Add(keepDuration)
 )
+
+var expirationDate = time.Now().UTC().Add(keepDuration)
 
 func main() {
 	log.Println("Begin to clean EC2 AMI")
-	//cleanAMI()
+	cleanAMI()
 
 	log.Println("Begin to clean SSM Parameter Store")
 	cleanSSMParameterStore()
@@ -35,8 +37,8 @@ func main() {
 }
 
 func cleanSSMParameterStore() {
-	cxt := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
+	ctx := context.Background()
+	defaultConfig, err := config.LoadDefaultConfig(ctx)
 
 	if err != nil {
 		log.Printf("Load default config failed because of %v",err)
@@ -49,56 +51,52 @@ func cleanSSMParameterStore() {
 	//Look into the documentations and read the starting-token for more details
 	//Documentation: https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-auto-scaling-groups.html#options
 	var nextToken *string
-	var errors []error
 
+	var parameterStoreNameFilter = ssmType.ParameterStringFilter{
+		Key: aws.String("Name"),
+		Option: aws.String("BeginsWith"), 
+		Values: []string{"AmazonCloudWatch"},
+	}
+	
 	for {
-		describeParametersInput := ssm.DescribeParametersInput{}
-		describeParametersOutput, err := ec2client.DescribeImages(cxt, &describeParametersInput)
+		describeParametersInput := ssm.DescribeParametersInput{
+			ParameterFilters: []ssmType.ParameterStringFilter{parameterStoreNameFilter},
+			NextToken: nextToken,
+		}
+		describeParametersOutput, err := ssmClient.DescribeParameters(ctx, &describeParametersInput)
+
 		if err != nil {
-			return []error{err}
+			log.Printf("Describe Parameter Stores failed because of %v",err)
+			return
 		}
 
-		for _, asg := range describeParametersOutput.AutoScalingGroups {
-
-			//Skipping Store Parameters that does not older than 1 months
-			if !expirationDate.After(*asg.CreatedTime) {
+		for _, parameter := range describeParametersOutput.Parameters {
+			
+			if !expirationDate.After(*parameter.LastModifiedDate) {
 				continue
 			}
 
-			deleteAutoScalingGroupInput := &autoscaling.DeleteAutoScalingGroupInput{
-				AutoScalingGroupName: asg.AutoScalingGroupName,
-				ForceDelete:          aws.Bool(true),
+			log.Printf("Trying to delete Parameter Store with name %s and creation date %v", *parameter.Name, *parameter.LastModifiedDate)
+			
+			deleteParameterInput := ssm.DeleteParameterInput{Name: parameter.Name}
+
+			if _, err := ssmClient.DeleteParameter(ctx,&deleteParameterInput); err != nil {
+				log.Printf("Failed to delete Parameter Store with name %s because of %v", *parameter.Name, err)
+				return
 			}
-
-			_, err = autoscalingclient.DeleteAutoScalingGroup(deleteAutoScalingGroupInput)
-
-			if err != nil {
-				return err
-			}
-
-			deleteLaunchConfigurationInput := &autoscaling.DeleteLaunchConfigurationInput{
-				LaunchConfigurationName: asg.LaunchConfigurationName,
-			}
-
-			if _, err = autoscalingclient.DeleteLaunchConfiguration(deleteLaunchConfigurationInput); err != nil {
-				return err
-			}
-
-			logger.Printf("Deleted asg %s successfully", *asg.AutoScalingGroupName)
 		}
 
-		if describeAutoScalingOutputs.NextToken == nil {
+		if describeParametersOutput.NextToken == nil {
 			break
 		}
 
-		nextToken = describeImagesOutput.NextToken
+		nextToken = describeParametersOutput.NextToken
 	}
-
 }
 
 func cleanAMI() {
-	cxt := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
+	ctx := context.Background()
+	defaultConfig, err := config.LoadDefaultConfig(ctx)
 
 	if err != nil {
 		log.Printf("Load default config failed because of %v",err)
@@ -107,14 +105,14 @@ func cleanAMI() {
 
 	ec2client := ec2.NewFromConfig(defaultConfig)
 
-	// Get list of ami
-	nameFilter := types.Filter{Key: aws.String("name"), Values: []string{
+	// Filter name of EC2
+	ec2NameFilter := ec2Type.Filter{Name: aws.String("name"), Values: []string{
 		"cloudwatch-agent-integration-test*",
 	}}
 
 	//get instances to delete
-	describeImagesInput := ec2.DescribeImagesInput{}
-	describeImagesOutput, err := ec2client.DescribeImages(cxt, &describeImagesInput)
+	describeImagesInput := ec2.DescribeImagesInput{Filters: []ec2Type.Filter{ec2NameFilter}}
+	describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
 	if err != nil {
 		log.Printf("Describe images failed because of %v",err)
 		return
@@ -132,7 +130,7 @@ func cleanAMI() {
 		if expirationDate.After(creationDate) {
 			log.Printf("Try to delete ami %s tags %v launch-date %s", *image.Name, image.Tags, *image.CreationDate)
 			deregisterImageInput := ec2.DeregisterImageInput{ImageId: image.ImageId}
-			_, err := ec2client.DeregisterImage(cxt, &deregisterImageInput)
+			_, err := ec2client.DeregisterImage(ctx, &deregisterImageInput)
 			if err != nil {
 				errors = append(errors, err)
 			}
