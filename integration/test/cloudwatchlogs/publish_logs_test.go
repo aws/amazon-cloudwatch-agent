@@ -41,9 +41,9 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 	log.Printf("Writing %d of each log type\n", numLogs)
 	test.RunShellScript("resources/write_logs.sh", strconv.Itoa(numLogs)) // write logs before starting the agent
-
 	log.Println("Finished writing logs. Sleeping before starting agent...")
 	time.Sleep(5 * time.Second)
+
 	test.StartAgent(configOutputPath)
 	time.Sleep(agentRunTime)
 	test.StopAgent()
