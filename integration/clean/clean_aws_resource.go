@@ -8,19 +8,20 @@ package main
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	ssmType "github.com/aws/aws-sdk-go-v2/service/ssm/types"
-	ec2Type "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	smithyTime "github.com/aws/smithy-go/time"
 	"log"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Type "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	ssmType "github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithyTime "github.com/aws/smithy-go/time"
 )
 
 const (
-	daysToKeep = 30
+	daysToKeep   = 30
 	keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
 )
 
@@ -41,7 +42,7 @@ func cleanSSMParameterStore() {
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 
 	if err != nil {
-		log.Printf("Load default config failed because of %v",err)
+		log.Printf("Load default config failed because of %v", err)
 		return
 	}
 
@@ -53,34 +54,34 @@ func cleanSSMParameterStore() {
 	var nextToken *string
 
 	var parameterStoreNameFilter = ssmType.ParameterStringFilter{
-		Key: aws.String("Name"),
-		Option: aws.String("BeginsWith"), 
+		Key:    aws.String("Name"),
+		Option: aws.String("BeginsWith"),
 		Values: []string{"AmazonCloudWatch"},
 	}
-	
+
 	for {
 		describeParametersInput := ssm.DescribeParametersInput{
 			ParameterFilters: []ssmType.ParameterStringFilter{parameterStoreNameFilter},
-			NextToken: nextToken,
+			NextToken:        nextToken,
 		}
 		describeParametersOutput, err := ssmClient.DescribeParameters(ctx, &describeParametersInput)
 
 		if err != nil {
-			log.Printf("Describe Parameter Stores failed because of %v",err)
+			log.Printf("Describe Parameter Stores failed because of %v", err)
 			return
 		}
 
 		for _, parameter := range describeParametersOutput.Parameters {
-			
+
 			if !expirationDate.After(*parameter.LastModifiedDate) {
 				continue
 			}
 
 			log.Printf("Trying to delete Parameter Store with name %s and creation date %v", *parameter.Name, *parameter.LastModifiedDate)
-			
+
 			deleteParameterInput := ssm.DeleteParameterInput{Name: parameter.Name}
 
-			if _, err := ssmClient.DeleteParameter(ctx,&deleteParameterInput); err != nil {
+			if _, err := ssmClient.DeleteParameter(ctx, &deleteParameterInput); err != nil {
 				log.Printf("Failed to delete Parameter Store with name %s because of %v", *parameter.Name, err)
 				return
 			}
@@ -99,7 +100,7 @@ func cleanAMI() {
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 
 	if err != nil {
-		log.Printf("Load default config failed because of %v",err)
+		log.Printf("Load default config failed because of %v", err)
 		return
 	}
 
@@ -114,7 +115,7 @@ func cleanAMI() {
 	describeImagesInput := ec2.DescribeImagesInput{Filters: []ec2Type.Filter{ec2NameFilter}}
 	describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
 	if err != nil {
-		log.Printf("Describe images failed because of %v",err)
+		log.Printf("Describe images failed because of %v", err)
 		return
 	}
 

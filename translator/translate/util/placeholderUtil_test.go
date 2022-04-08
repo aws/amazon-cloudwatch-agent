@@ -11,9 +11,9 @@ import (
 
 const (
 	dummyInstanceId = "some_instance_id"
-	dummyHostName = "some_hostname"
-	dummyPrivateIp = "some_private_ip"
-	dummyAccountId = "some_account_id"
+	dummyHostName   = "some_hostname"
+	dummyPrivateIp  = "some_private_ip"
+	dummyAccountId  = "some_account_id"
 )
 
 func TestHostName(t *testing.T) {
@@ -56,9 +56,9 @@ func mockMetadataProvider(instanceId, hostname, privateIp, accountId string) fun
 	return func() *Metadata {
 		return &Metadata{
 			InstanceID: instanceId,
-			Hostname: hostname,
-			PrivateIP: privateIp,
-			AccountID: accountId,
+			Hostname:   hostname,
+			PrivateIP:  privateIp,
+			AccountID:  accountId,
 		}
 	}
 }

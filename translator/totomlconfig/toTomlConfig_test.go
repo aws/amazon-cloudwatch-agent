@@ -6,15 +6,16 @@ package totomlconfig
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
+	"log"
+	"strings"
+	"testing"
+
 	"github.com/BurntSushi/toml"
 	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
-	"io/ioutil"
-	"log"
-	"strings"
-	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 
@@ -43,8 +44,8 @@ func TestLogMetricOnly(t *testing.T) {
 	context.CurrentContext().SetRunInContainer(true)
 	os.Setenv(config.HOST_NAME, "host_name_from_env")
 	os.Setenv(config.HOST_IP, "127.0.0.1")
-	checkTomlTranslation(t, "./sampleConfig/log_metric_only.json","./sampleConfig/log_metric_only.conf", "linux")
-	checkTomlTranslation(t, "./sampleConfig/log_metric_only.json","./sampleConfig/log_metric_only.conf", "darwin")
+	checkTomlTranslation(t, "./sampleConfig/log_metric_only.json", "./sampleConfig/log_metric_only.conf", "linux")
+	checkTomlTranslation(t, "./sampleConfig/log_metric_only.json", "./sampleConfig/log_metric_only.conf", "darwin")
 	os.Unsetenv(config.HOST_NAME)
 	os.Unsetenv(config.HOST_IP)
 }
@@ -234,6 +235,6 @@ func checkIfIdenticalToml(t *testing.T, desiredTomlPath string, tomlStr string) 
 		return pretty.Sprint(x) < pretty.Sprint(y)
 	})
 	diff := cmp.Diff(expect, actual)
-	log.Printf("D! Toml diff: %s", diff )
+	log.Printf("D! Toml diff: %s", diff)
 	assert.True(t, cmp.Equal(expect, actual, opt))
 }

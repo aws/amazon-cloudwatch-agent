@@ -16,9 +16,9 @@ import (
 
 type Metadata struct {
 	InstanceID string
-	Hostname string
-	PrivateIP string
-	AccountID string
+	Hostname   string
+	PrivateIP  string
+	AccountID  string
 }
 
 type MetadataInfoProvider func() *Metadata
@@ -27,9 +27,9 @@ var Ec2MetadataInfoProvider = func() *Metadata {
 	ec2 := ec2util.GetEC2UtilSingleton()
 	return &Metadata{
 		InstanceID: ec2.InstanceID,
-		Hostname: ec2.Hostname,
-		PrivateIP: ec2.PrivateIP,
-		AccountID: ec2.AccountID,
+		Hostname:   ec2.Hostname,
+		PrivateIP:  ec2.PrivateIP,
+		AccountID:  ec2.AccountID,
 	}
 }
 
