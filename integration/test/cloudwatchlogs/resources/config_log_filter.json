@@ -10,7 +10,13 @@
             "file_path": "/tmp/test.log",
             "log_group_name": "cloudwatch-agent-integ-test",
             "log_stream_name": "test-logs",
-            "timezone": "UTC"
+            "timezone": "UTC",
+            "filters": [
+              {
+                "type": "include",
+                "expression": "foo"
+              }
+            ]
           }
         ]
       }
