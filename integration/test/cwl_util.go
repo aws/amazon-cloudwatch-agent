@@ -25,7 +25,7 @@ var (
 )
 
 func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int, since time.Time) {
-	log.Printf("Checking %s/%s since %v for %d expected logs", logGroup, logStream, since, numExpectedLogs)
+	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), numExpectedLogs)
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
 	if err != nil {
 		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
