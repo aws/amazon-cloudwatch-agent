@@ -25,19 +25,20 @@ const (
 	keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
 )
 
-var expirationDate = time.Now().UTC().Add(keepDuration)
-
 func main() {
-	log.Println("Begin to clean EC2 AMI")
-	cleanAMI()
+	var expirationDate = time.Now().UTC().Add(keepDuration)
 
-	log.Println("Begin to clean SSM Parameter Store")
-	cleanSSMParameterStore()
+	log.Println("Begin to clean AWS resources.")
 
-	log.Println("Finished cleaning resources.")
+	cleanAMI(expirationDate)
+	cleanSSMParameterStore(expirationDate)
+
+	log.Println("Finished cleaning AWS resources.")
 }
 
-func cleanSSMParameterStore() {
+func cleanSSMParameterStore(expirationDate time.Time) {
+	log.Println("Begin to clean SSM Parameter Store")
+
 	ctx := context.Background()
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 
@@ -93,9 +94,13 @@ func cleanSSMParameterStore() {
 
 		nextToken = describeParametersOutput.NextToken
 	}
+
+	log.Println("End cleaning SSM Parameter Store")
 }
 
-func cleanAMI() {
+func cleanAMI(expirationDate time.Time) {
+	log.Println("Begin to clean EC2 AMI")
+
 	ctx := context.Background()
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 
@@ -142,4 +147,6 @@ func cleanAMI() {
 		log.Printf("Deleted some of AMIs failed because of %v", err)
 		return
 	}
+
+	log.Println("End cleaning EC2 AMI")
 }
