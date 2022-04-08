@@ -7,7 +7,10 @@
 package cloudwatchlogs
 
 import (
+	"context"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"log"
 	"strconv"
 
@@ -21,16 +24,8 @@ const (
 	agentRunTime     = 1 * time.Minute
 )
 
-// Using a single set of log group/log stream means we cannot run these tests
-// in parallel without a rewrite. Publishing to the same log stream in parallel
-// would mess up the count of log events that get returned in a GetLogEvents call
-var (
-	LogGroupName  = "cloudwatch-agent-integ-test"
-	LogStreamName = "test-logs"
-)
-
 type input struct {
-	testName string
+	testName        string
 	iterations      int
 	numExpectedLogs int
 	configPath      string
@@ -38,13 +33,13 @@ type input struct {
 
 var testParameters = []input{
 	{
-		testName: "Happy path",
+		testName:        "Happy path",
 		iterations:      100,
 		numExpectedLogs: 200,
 		configPath:      "resources/config_log.json",
 	},
 	{
-		testName: "Client-side log filtering",
+		testName:        "Client-side log filtering",
 		iterations:      100,
 		numExpectedLogs: 100,
 		configPath:      "resources/config_log_filter.json",
@@ -52,6 +47,23 @@ var testParameters = []input{
 }
 
 func TestWriteLogsToCloudWatch(t *testing.T) {
+	// this uses the {instance_id} placeholder in the agent configuration,
+	// so we need to determine the host's instance ID for validation
+	ctx := context.Background()
+	c, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		// fail fast so we don't continue the test
+		t.Fatalf("Error occurred while creating SDK config: %v", err)
+	}
+	client := imds.NewFromConfig(c)
+	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
+		t.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
+	}
+	log.Printf("Found instance id %s", metadata.InstanceID)
+	instanceId := metadata.InstanceID
+	defer cleanUp(instanceId)
+
 	for _, param := range testParameters {
 		t.Run(param.testName, func(t *testing.T) {
 			start := time.Now()
@@ -63,10 +75,9 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			writeLogsAndRunAgent(param.iterations, agentRunTime)
 
 			// check CWL to ensure we got the expected number of logs in the log stream
-			test.ValidateLogs(t, LogGroupName, LogStreamName, param.numExpectedLogs, start)
+			test.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)
 		})
 	}
-	cleanUp()
 }
 
 func writeLogsAndRunAgent(iterations int, runtime time.Duration) {
@@ -80,6 +91,6 @@ func writeLogsAndRunAgent(iterations int, runtime time.Duration) {
 	test.StopAgent()
 }
 
-func cleanUp() {
-	test.DeleteLogGroupAndStream(LogGroupName, LogStreamName)
+func cleanUp(instanceId string) {
+	test.DeleteLogGroupAndStream(instanceId, instanceId)
 }

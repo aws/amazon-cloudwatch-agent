@@ -8,8 +8,8 @@
         "collect_list": [
           {
             "file_path": "/tmp/test.log",
-            "log_group_name": "cloudwatch-agent-integ-test",
-            "log_stream_name": "test-logs",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "{instance_id}",
             "timezone": "UTC"
           }
         ]
