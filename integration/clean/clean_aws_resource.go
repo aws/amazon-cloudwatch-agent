@@ -96,7 +96,7 @@ func cleanSSMParameterStore(expirationDate time.Time) {
 	}
 
 	if len(errors) != 0 {
-		log.Printf("Deleted some of Parameter Store failed because of %v", err)
+		log.Fatalf("Deleted some of Parameter Store failed because of %v", err)
 		return
 	}
 	
@@ -150,7 +150,7 @@ func cleanAMI(expirationDate time.Time) {
 	}
 
 	if len(errors) != 0 {
-		log.Printf("Deleted some of AMIs failed because of %v", err)
+		log.Fatalf("Deleted some of AMIs failed because of %v", err)
 		return
 	}
 
