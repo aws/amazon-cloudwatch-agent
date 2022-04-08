@@ -7,7 +7,9 @@
 package cloudwatchlogs
 
 import (
+	"context"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -20,6 +22,11 @@ import (
 const (
 	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentRunTime     = 1 * time.Minute
+)
+
+var (
+	LogGroupName  = "cloudwatch-agent-integ-test"
+	LogStreamName = "test-logs"
 )
 
 func TestWriteLogsToCloudWatch(t *testing.T) {
@@ -42,18 +49,23 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	test.StopAgent()
 
 	// check CWL to ensure we got the expected number of logs in the log stream
-	log.Println("Getting AWS SDK client")
-	c, testCtx, err := test.GetClient()
-	assert.NoError(t, err)
+	ctx := context.Background()
+	c, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		t.Fatalf("An error occurred loading the SDK config: %v", err.Error())
+	}
 
-	log.Printf("Get log events from %s/%s since %v\n", test.LogGroupName, test.LogStreamName, start)
-	events, err := c.GetLogEvents(testCtx, &cloudwatchlogs.GetLogEventsInput{
-		LogGroupName:  &test.LogGroupName,
-		LogStreamName: &test.LogStreamName,
+	cwl := cloudwatchlogs.NewFromConfig(c)
+
+	log.Printf("Get log events from %s/%s since %v\n", LogGroupName, LogStreamName, start)
+	events, err := cwl.GetLogEvents(ctx, &cloudwatchlogs.GetLogEventsInput{
+		LogGroupName:  &LogGroupName,
+		LogStreamName: &LogStreamName,
 		StartTime:     &start,
 	})
-
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("An error occurred getting logs from CWL: %v", err.Error())
+	}
 
 	log.Printf("Payload: %v", events)
 
