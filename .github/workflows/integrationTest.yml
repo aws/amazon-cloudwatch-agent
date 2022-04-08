@@ -268,7 +268,7 @@ jobs:
         arrays: [
           { os: "ubuntu", username: "ubuntu",
             # ubuntu needs to have dpkg lock cleared before installing cw agent
-            installAgentCommand: "yes | sudo aptdcon --safe-upgrade --hide-terminal && sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
+            installAgentCommand: "aptdcon --safe-upgrade && sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
             ami: "cloudwatch-agent-integration-test-ubuntu*", caCertPath: "/etc/ssl/certs/ca-certificates.crt",
             arc: "amd64", binaryName: "amazon-cloudwatch-agent.deb" },
           { os: "al2", username: "ec2-user",
