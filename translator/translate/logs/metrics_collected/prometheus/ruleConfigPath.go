@@ -4,7 +4,6 @@
 package emfprocessor
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -34,7 +33,7 @@ type ConfigPath struct {
 func splitConfigPath(configPath string) string {
 	locationArray := strings.SplitN(configPath, sourceSeparator, 2)
 	if locationArray == nil || len(locationArray) < 2 {
-		panic(fmt.Sprintf("Prometheus config path: %s is malformated.\n", configPath))
+		log.Panicf("Prometheus config path: %s is malformated.", configPath)
 	}
 
 	return locationArray[1]
@@ -67,12 +66,12 @@ func (obj *ConfigPath) ApplyRule(input interface{}) (string, interface{}) {
 		configEnv := splitConfigPath(configPath)
 		if cc, ok := os.LookupEnv(configEnv); ok {
 			if error := ioutil.WriteFile(downloadingPath, []byte(cc), yamlFileMode); error != nil {
-				panic(fmt.Sprintf("Failed to download the Prometheus config yaml file. Reason: %s \n", error.Error()))
+				log.Panicf("Failed to download the Prometheus config yaml file. Reason: %s", error.Error())
 			} else {
 				log.Printf("Downloaded the prometheus config from ENV: %v.", configEnv)
 			}
 		} else {
-			panic(fmt.Sprintf("Failed to download the Prometheus config yaml from ENV: %v. Reason: ENV does not exist \n", configEnv))
+			log.Panicf("Failed to download the Prometheus config yaml from ENV: %v. Reason: ENV does not exist", configEnv)
 		}
 		return SectionKeyConfigPath, downloadingPath
 	}

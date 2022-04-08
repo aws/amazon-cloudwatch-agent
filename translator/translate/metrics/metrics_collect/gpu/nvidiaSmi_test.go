@@ -102,15 +102,15 @@ func TestInvalidMetrics(t *testing.T) {
 func TestNonGpuConfig(t *testing.T) {
 	c := new(NvidiaSmi)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"nvidia_smi":{"foo":"bar"}}`), &input)
+	err := json.Unmarshal([]byte(`{"nvidia_smi":{"foo":"bar"}}`), &input)
 
-	if e == nil {
+	if err == nil {
 		actualKey, actualVal := c.ApplyRule(input)
 		expectedKey := ""
 		expectedVal := ""
 		assert.Equal(t, expectedKey, actualKey, "ReturnKey should be empty")
 		assert.Equal(t, expectedVal, actualVal, "ReturnVal should be empty")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

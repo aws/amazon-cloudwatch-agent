@@ -5,7 +5,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -90,16 +89,16 @@ func main() {
 
 	mergedJsonConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ctx)
 	if err != nil {
-		panic(fmt.Sprintf("E! Failed to generate merged json config: %v", err))
+		log.Panicf("E! Failed to generate merged json config: %v", err)
 	}
 
 	if !ctx.RunInContainer() {
 		// run as user only applies to non container situation.
-		current, e := user.Current()
-		if e == nil && current.Name == "root" {
+		current, err := user.Current()
+		if err == nil && current.Name == "root" {
 			runAsUser, err := cmdutil.DetectRunAsUser(mergedJsonConfigMap)
 			if err != nil {
-				panic("E! Failed to detectRunAsUser\n")
+				log.Panic("E! Failed to detectRunAsUser")
 			}
 			cmdutil.VerifyCredentials(ctx, runAsUser)
 		}
