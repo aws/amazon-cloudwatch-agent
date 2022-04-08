@@ -8,8 +8,10 @@ package test
 
 import (
 	"context"
+	"errors"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -40,7 +42,8 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 		t.Fatalf("Error occurred when calling GetLogEvents: %v", err.Error())
 	}
 
-	assert.Len(t, events.Events, numExpectedLogs)
+	// using assert.Len() prints out the whole splice of log events which bloats the test log
+	assert.Equal(t, numExpectedLogs, len(events.Events))
 }
 
 func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
@@ -50,18 +53,22 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 		return // terminate gracefully so this alone doesn't cause integration test failures
 	}
 
+	// catch ResourceNotFoundException when deleting the log group and log stream, as these
+	// are not useful exceptions to log errors on during cleanup
+	var rnf *types.ResourceNotFoundException
+
 	_, err = cwlClient.DeleteLogStream(*clientContext, &cloudwatchlogs.DeleteLogStreamInput{
 		LogGroupName:  aws.String(logGroupName),
 		LogStreamName: aws.String(logStreamName),
 	})
-	if err != nil {
+	if err != nil && !errors.As(err, &rnf) {
 		log.Printf("Error occurred while deleting log stream %s: %v", logStreamName, err)
 	}
 
 	_, err = cwlClient.DeleteLogGroup(*clientContext, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),
 	})
-	if err != nil {
+	if err != nil && !errors.As(err, &rnf) {
 		log.Printf("Error occurred while deleting log group %s: %v", logGroupName, err)
 	}
 }

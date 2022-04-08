@@ -30,6 +30,7 @@ var (
 )
 
 type input struct {
+	testName string
 	iterations      int
 	numExpectedLogs int
 	configPath      string
@@ -37,11 +38,13 @@ type input struct {
 
 var testParameters = []input{
 	{
+		testName: "Happy path",
 		iterations:      100,
 		numExpectedLogs: 200,
 		configPath:      "resources/config_log.json",
 	},
 	{
+		testName: "Client-side log filtering",
 		iterations:      100,
 		numExpectedLogs: 100,
 		configPath:      "resources/config_log_filter.json",
@@ -49,27 +52,28 @@ var testParameters = []input{
 }
 
 func TestWriteLogsToCloudWatch(t *testing.T) {
-	cleanUp()
-
 	for _, param := range testParameters {
-		start := time.Now()
-		test.CopyFile(param.configPath, configOutputPath)
+		t.Run(param.testName, func(t *testing.T) {
+			start := time.Now()
+			test.CopyFile(param.configPath, configOutputPath)
 
-		// give some buffer time before writing to ensure consistent
-		// usage of the StartTime parameter for GetLogEvents
-		time.Sleep(5 * time.Second)
-		writeLogsAndRunAgent(param.iterations, agentRunTime)
+			// give some buffer time before writing to ensure consistent
+			// usage of the StartTime parameter for GetLogEvents
+			time.Sleep(5 * time.Second)
+			writeLogsAndRunAgent(param.iterations, agentRunTime)
 
-		// check CWL to ensure we got the expected number of logs in the log stream
-		test.ValidateLogs(t, LogGroupName, LogStreamName, param.numExpectedLogs, start)
+			// check CWL to ensure we got the expected number of logs in the log stream
+			test.ValidateLogs(t, LogGroupName, LogStreamName, param.numExpectedLogs, start)
+		})
 	}
+	cleanUp()
 }
 
 func writeLogsAndRunAgent(iterations int, runtime time.Duration) {
 	log.Printf("Writing %d of each log type\n", iterations)
 	test.RunShellScript(logScriptPath, strconv.Itoa(iterations)) // write logs before starting the agent
 	log.Println("Finished writing logs. Sleeping before starting agent...")
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	test.StartAgent(configOutputPath)
 	time.Sleep(runtime)
