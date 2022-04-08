@@ -53,6 +53,7 @@ func cleanSSMParameterStore(expirationDate time.Time) {
 	//Look into the documentations and read the starting-token for more details
 	//Documentation: https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-auto-scaling-groups.html#options
 	var nextToken *string
+	var errors []error
 
 	var parameterStoreNameFilter = ssmType.ParameterStringFilter{
 		Key:    aws.String("Name"),
@@ -83,8 +84,7 @@ func cleanSSMParameterStore(expirationDate time.Time) {
 			deleteParameterInput := ssm.DeleteParameterInput{Name: parameter.Name}
 
 			if _, err := ssmClient.DeleteParameter(ctx, &deleteParameterInput); err != nil {
-				log.Printf("Failed to delete Parameter Store with name %s because of %v", *parameter.Name, err)
-				return
+				errors = append(errors, err)
 			}
 		}
 
@@ -95,6 +95,11 @@ func cleanSSMParameterStore(expirationDate time.Time) {
 		nextToken = describeParametersOutput.NextToken
 	}
 
+	if len(errors) != 0 {
+		log.Printf("Deleted some of Parameter Store failed because of %v", err)
+		return
+	}
+	
 	log.Println("End cleaning SSM Parameter Store")
 }
 
@@ -119,6 +124,7 @@ func cleanAMI(expirationDate time.Time) {
 	//get instances to delete
 	describeImagesInput := ec2.DescribeImagesInput{Filters: []ec2Type.Filter{ec2NameFilter}}
 	describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
+	
 	if err != nil {
 		log.Printf("Describe images failed because of %v", err)
 		return
