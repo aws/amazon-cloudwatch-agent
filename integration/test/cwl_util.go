@@ -41,7 +41,6 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 	}
 
 	assert.Len(t, events.Events, numExpectedLogs)
-	log.Println("Found expected number of logs")
 }
 
 func DeleteLogGroupAndStream(logGroupName, logStreamName string) {

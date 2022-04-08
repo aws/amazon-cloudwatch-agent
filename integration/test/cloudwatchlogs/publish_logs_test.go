@@ -49,9 +49,10 @@ var testParameters = []input{
 }
 
 func TestWriteLogsToCloudWatch(t *testing.T) {
-	start := time.Now()
+	cleanUp()
 
 	for _, param := range testParameters {
+		start := time.Now()
 		test.CopyFile(param.configPath, configOutputPath)
 
 		// give some buffer time before writing to ensure consistent
@@ -62,7 +63,6 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 		// check CWL to ensure we got the expected number of logs in the log stream
 		test.ValidateLogs(t, LogGroupName, LogStreamName, param.numExpectedLogs, start)
 	}
-	cleanUp()
 }
 
 func writeLogsAndRunAgent(iterations int, runtime time.Duration) {
