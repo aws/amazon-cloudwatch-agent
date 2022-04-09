@@ -43,8 +43,7 @@ func cleanSSMParameterStore(expirationDate time.Time) {
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 
 	if err != nil {
-		log.Printf("Load default config failed because of %v", err)
-		return
+		log.Fatalf("Load default config failed because of %v", err)
 	}
 
 	ssmClient := ssm.NewFromConfig(defaultConfig)
@@ -69,8 +68,7 @@ func cleanSSMParameterStore(expirationDate time.Time) {
 		describeParametersOutput, err := ssmClient.DescribeParameters(ctx, &describeParametersInput)
 
 		if err != nil {
-			log.Printf("Describe Parameter Stores failed because of %v", err)
-			return
+			log.Fatalf("Describe Parameter Stores failed because of %v", err)
 		}
 
 		for _, parameter := range describeParametersOutput.Parameters {
@@ -97,7 +95,6 @@ func cleanSSMParameterStore(expirationDate time.Time) {
 
 	if len(errors) != 0 {
 		log.Fatalf("Deleted some of Parameter Store failed because of %v", err)
-		return
 	}
 	
 	log.Println("End cleaning SSM Parameter Store")
@@ -110,8 +107,7 @@ func cleanAMI(expirationDate time.Time) {
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 
 	if err != nil {
-		log.Printf("Load default config failed because of %v", err)
-		return
+		log.Fatalf("Load default config failed because of %v", err)
 	}
 
 	ec2client := ec2.NewFromConfig(defaultConfig)
@@ -126,8 +122,7 @@ func cleanAMI(expirationDate time.Time) {
 	describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
 	
 	if err != nil {
-		log.Printf("Describe images failed because of %v", err)
-		return
+		log.Fatalf("Describe images failed because of %v", err)
 	}
 
 	var errors []error
@@ -137,21 +132,22 @@ func cleanAMI(expirationDate time.Time) {
 			errors = append(errors, err)
 			continue
 		}
-		log.Printf("Image name %v image id %v experation date %v creation date parsed %v image creation date raw %v",
-			*image.Name, *image.ImageId, creationDate, expirationDate, *image.CreationDate)
-		if expirationDate.After(creationDate) {
-			log.Printf("Try to delete ami %s tags %v launch-date %s", *image.Name, image.Tags, *image.CreationDate)
-			deregisterImageInput := ec2.DeregisterImageInput{ImageId: image.ImageId}
-			_, err := ec2client.DeregisterImage(ctx, &deregisterImageInput)
-			if err != nil {
-				errors = append(errors, err)
-			}
+
+		if !expirationDate.After(creationDate) {
+			continue
+		}
+		
+		log.Printf("Try to delete ami %s with image id %s, tags %v launch-date %s", *image.Name,  *image.ImageId, image.Tags, *image.CreationDate)
+		
+		deregisterImageInput := ec2.DeregisterImageInput{ImageId: image.ImageId}
+		
+		if _, err := ec2client.DeregisterImage(ctx, &deregisterImageInput); err != nil {
+			errors = append(errors, err)
 		}
 	}
 
 	if len(errors) != 0 {
 		log.Fatalf("Deleted some of AMIs failed because of %v", err)
-		return
 	}
 
 	log.Println("End cleaning EC2 AMI")
