@@ -141,4 +141,7 @@ This process generates a new ami we can then use for testing
         KEY_NAME: ${Key pair name for ec2}
         VPC_SECURITY_GROUPS_IDS: ${Security group within your vpc the value should look like ["sg-013585129c1f92bf0"]}
         IAM_ROLE: ${Role the ec2 instance should assume}
+        GPG_PRIVATE_KEY: ${Your gpg private key}
+        PASSPHRASE: ${Passpharse for your gpg key}
+        GPG_KEY_NAME: ${Name of your gpg key}
         ```
