@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_binaries_${{ github.sha }}"
-          path: build
+          path: go.mod
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
@@ -98,7 +98,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_win_zip_${{ github.sha }}"
-          path: buildMSI.zip
+          path: go.mod
 
       - name: Copy binary
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
@@ -155,7 +155,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_pkg_${{ github.sha }}"
-          path: RELEASE_NOTES
+          path: go.mod
 
       - name: Copy binary
         if: steps.cached_pkg.outputs.cache-hit != 'true'
@@ -196,7 +196,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_msi_${{ github.sha }}"
-          path: buildMSI/amazon-cloudwatch-agent.msi
+          path: go.mod
 
       # Using the env variable returns "" for bucket name thus use the secret
       - name: Copy msi
@@ -326,8 +326,7 @@ jobs:
         id: ec2-linux-integration-test
         uses: actions/cache@v2
         with:
-          path: |
-            RELEASE_NOTES
+          path: go.mod
           key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
       - name: Echo OS
@@ -391,8 +390,7 @@ jobs:
         id: ec2-win-integration-test
         uses: actions/cache@v2
         with:
-          path: |
-            RELEASE_NOTES
+          path: go.mod
           key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
       - name: Echo OS
