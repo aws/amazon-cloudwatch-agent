@@ -23,7 +23,7 @@ resource "aws_instance" "integration-test" {
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "echo run tests with the tag integration, one at a time, and verbose",
       "cd ~/amazon-cloudwatch-agent",
-      "make integration-test"
+      "go test ./integration/test/... -p 1 -v --tags=${var.tag}"
     ]
     connection {
       type        = "ssh"

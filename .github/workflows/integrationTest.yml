@@ -86,6 +86,33 @@ jobs:
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
 
+  GenerateTestMatrix:
+    name: 'GenerateTestMatrix'
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+    steps:
+      - uses: actions/checkout@v2
+
+      #TODO upgrade to 1.17 after @ZhenyuTan-amz updates our go build version
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.15.15
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          go run --tags=generator integration/generator/test_case_generator.go
+          echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/linux_complete_test_matrix.json))"
+          echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/windows_complete_test_matrix.json))"
+
+      - name: Echo test plan matrix
+        run: |
+          echo ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+          echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+
   MakeMSIZip:
     name: 'MakeMSIZip'
     runs-on: ubuntu-latest
@@ -311,7 +338,7 @@ jobs:
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
   EC2LinuxIntegrationTest:
-    needs: [MakeBinary, StartLocalStack]
+    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'EC2LinuxIntegrationTest'
     runs-on: ubuntu-latest
     defaults:
@@ -320,53 +347,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arrays: [
-          { os: "ubuntu", username: "ubuntu",
-            # ubuntu needs to have dpkg lock cleared before installing cw agent
-            installAgentCommand: "aptdcon --safe-upgrade && sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
-            ami: "cloudwatch-agent-integration-test-ubuntu*", caCertPath: "/etc/ssl/certs/ca-certificates.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.deb" },
-          { os: "al2", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-al2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-base*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-1", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-1*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-2", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-3", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-3*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-4", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-4*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-1", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-ol8-1*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-2", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-ol8-2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "o8-3", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-ol8-3*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-4", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-ol8-4*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" }
-        ]
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
     steps:
       - uses: actions/checkout@v2
 
@@ -413,13 +394,14 @@ jobs:
           -var="key_name=${KEY_NAME}"
           -var="test_name=cw-integ-test-${{ matrix.arrays.os }}"
           -var="iam_instance_profile=${IAM_ROLE}"
+          -var="tag=${{ matrix.arrays.tag }}"
 
       - name: Terraform destroy
         if: ${{ always() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
         run: terraform destroy --auto-approve
 
   EC2WinIntegrationTest:
-    needs: [BuildMSI]
+    needs: [BuildMSI, GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
     defaults:
@@ -428,9 +410,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arrays: [
-          { os: "win-2022", ami: "cloudwatch-agent-integration-test-win-2022*"}
-        ]
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_matrix) }}
     steps:
       - uses: actions/checkout@v2
 

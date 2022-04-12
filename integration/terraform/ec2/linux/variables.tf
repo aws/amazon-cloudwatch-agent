@@ -83,3 +83,8 @@ variable "test_name" {
   type = string
   default = ""
 }
+
+variable "tag" {
+  type = string
+  default = ""
+}
