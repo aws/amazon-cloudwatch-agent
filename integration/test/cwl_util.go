@@ -9,14 +9,15 @@ package test
 import (
 	"context"
 	"errors"
+	"log"
+	"testing"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"testing"
-	"time"
 )
 
 var (
@@ -24,6 +25,9 @@ var (
 	cwl *cloudwatchlogs.Client
 )
 
+// ValidateLogs takes a log group and log stream, and fetches the log events via the GetLogEvents
+// API for all of the logs since a given timestamp, and checks if the number of log events matches
+// the expected value.
 func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int, since time.Time) {
 	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), numExpectedLogs)
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
@@ -46,6 +50,8 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 	assert.Equal(t, numExpectedLogs, len(events.Events))
 }
 
+// DeleteLogGroupAndStream cleans up a log group and stream by name. This gracefully handles
+// ResourceNotFoundException errors from calling the APIs
 func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
 	if err != nil {
@@ -73,6 +79,7 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 	}
 }
 
+// getCloudWatchLogsClient returns a singleton SDK client for interfacing with CloudWatch Logs
 func getCloudWatchLogsClient() (*cloudwatchlogs.Client, *context.Context, error) {
 	if cwl == nil {
 		ctx = context.Background()

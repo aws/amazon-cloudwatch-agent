@@ -68,23 +68,21 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
 	}
-	log.Printf("Found instance id %s", metadata.InstanceID)
 	instanceId := metadata.InstanceID
+	log.Printf("Found instance id %s", instanceId)
+
 	defer cleanUp(instanceId)
 
 	for _, param := range testParameters {
 		t.Run(param.testName, func(t *testing.T) {
 			start := time.Now()
-			var wg sync.WaitGroup
 
 			test.CopyFile(param.configPath, configOutputPath)
 
 			test.StartAgent(configOutputPath)
 
 			time.Sleep(agentRuntime) // make sure that there is enough time between the timestamps
-			wg.Add(1)
-			go writeLogs(t, &wg, logFilePath, param.iterations)
-			wg.Wait()
+			writeLogs(t, logFilePath, param.iterations)
 			time.Sleep(agentRuntime)
 			test.StopAgent()
 
@@ -94,9 +92,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	}
 }
 
-func writeLogs(t *testing.T, wg *sync.WaitGroup, filePath string, iterations int) {
-	defer wg.Done() // always release the lock
-
+func writeLogs(t *testing.T, filePath string, iterations int) {
 	f, err := os.Create(filePath)
 	if err != nil {
 		t.Fatalf("Error occurred creating log file for writing: %v", err)
