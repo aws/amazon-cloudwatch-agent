@@ -81,6 +81,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			test.StartAgent(configOutputPath)
 
+			time.Sleep(agentRuntime) // make sure that there is enough time between the timestamps
 			wg.Add(1)
 			go writeLogs(t, &wg, logFilePath, param.iterations)
 			wg.Wait()
@@ -102,17 +103,19 @@ func writeLogs(t *testing.T, wg *sync.WaitGroup, filePath string, iterations int
 	}
 	defer f.Close()
 
+	log.Printf("Writing %d logs to %s", iterations*len(logLineIds), filePath)
+
 	for i := 0; i < iterations; i++ {
 		ts := time.Now()
 		for _, id := range logLineIds {
-			_, err = f.WriteString(fmt.Sprintf("%s - %s This is a log line.\n", ts.Format(time.StampMilli), id))
+			_, err = f.WriteString(fmt.Sprintf("%s - [%s] This is a log line.\n", ts.Format(time.StampMilli), id))
 			if err != nil {
 				// don't need to fatal error here. if a log line doesn't get written, the count
 				// when validating the log stream should be incorrect and fail there.
 				t.Logf("Error occurred writing log line: %v", err)
 			}
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
 }
 
