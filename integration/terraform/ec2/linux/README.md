@@ -174,10 +174,7 @@ configuring GitHub Actions secrets.
 ## Local setup (Not recommended)
 
 ### Install terraform
-Install `terraform` on your local machine. This is simple with brew:
-```shell
-brew install terraform
-```
+Install `terraform` on your local machine ([download](https://www.terraform.io/downloads)).
 
 ### Build and upload agent artifacts
 1. Run `make release` to test, build, and generate agent artifacts that can be installed and tested.
