@@ -10,6 +10,9 @@ env:
   KEY_NAME: ${{ secrets.KEY_NAME }}
   VPC_SECURITY_GROUPS_IDS: ${{ secrets.VPC_SECURITY_GROUPS_IDS }}
   IAM_ROLE: ${{ secrets.IAM_ROLE }}
+  GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+  PASSPHRASE: ${{ secrets.PASSPHRASE }}
+  GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
 
 on:
   push:
@@ -64,11 +67,20 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_binaries_${{ github.sha }}"
-          path: build
+          path: go.mod
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: make build package-rpm package-deb package-win package-darwin
+
+      - uses: olafurpg/setup-gpg@v3
+
+      - name: Sign packages
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: |
+          export GPG_TTY=$(tty)
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
+          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done  
 
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
@@ -98,7 +110,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_win_zip_${{ github.sha }}"
-          path: buildMSI.zip
+          path: go.mod
 
       - name: Copy binary
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
@@ -155,7 +167,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_pkg_${{ github.sha }}"
-          path: RELEASE_NOTES
+          path: go.mod
 
       - name: Copy binary
         if: steps.cached_pkg.outputs.cache-hit != 'true'
@@ -196,7 +208,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_msi_${{ github.sha }}"
-          path: buildMSI/amazon-cloudwatch-agent.msi
+          path: go.mod
 
       # Using the env variable returns "" for bucket name thus use the secret
       - name: Copy msi
@@ -213,6 +225,49 @@ jobs:
           Expand-Archive buildMSI.zip -Force
           cd buildMSI
           .\create_msi.ps1 ${{ github.sha }} ${{ secrets.S3_INTEGRATION_BUCKET }}
+
+  #GH actions set up gpg only works on ubuntu as of this commit date
+  GPGSignMacAndWindowsPackage:
+    name: 'SignMacAndWindowsPackage'
+    runs-on: ubuntu-latest
+    needs: [BuildMSI, MakeMacPkg]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: olafurpg/setup-gpg@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Cache sig
+        id: cached_sig
+        uses: actions/cache@v2
+        with:
+          key: "cached_sig_${{ github.sha }}"
+          path: go.mod
+
+      - name: Download from s3
+        if: steps.cached_sig.outputs.cache-hit != 'true'
+        run: |
+          mkdir packages
+          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
+          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.pkg ./packages/amazon-cloudwatch-agent.pkg
+
+      - name: Sign packages
+        if: steps.cached_sig.outputs.cache-hit != 'true'
+        run: |
+          export GPG_TTY=$(tty)
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
+          for f in $(find packages/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done  
+
+      - name: Upload to s3
+        if: steps.cached_sig.outputs.cache-hit != 'true'
+        run: |
+          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi.sig
+          aws s3 cp packages/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.pkg.sig
 
   StartLocalStack:
     name: 'StartLocalStack'
@@ -326,8 +381,7 @@ jobs:
         id: ec2-linux-integration-test
         uses: actions/cache@v2
         with:
-          path: |
-            RELEASE_NOTES
+          path: go.mod
           key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
       - name: Echo OS
@@ -391,8 +445,7 @@ jobs:
         id: ec2-win-integration-test
         uses: actions/cache@v2
         with:
-          path: |
-            RELEASE_NOTES
+          path: go.mod
           key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
       - name: Echo OS

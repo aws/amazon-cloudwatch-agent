@@ -164,6 +164,9 @@ configuring GitHub Actions secrets.
 | `KEY_NAME` | EC2 key pair name
 | `VPC_SECURITY_GROUPS_IDS` | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars) |
 | `IAM_ROLE` | Name of the IAM role to attach to the EC2 instances |
+| `GPG_PRIVATE_KEY` | The contents of your GPG private key |
+| `PASSPHRASE` | The passphrase to use for GPG signing | 
+| `GPG_KEY_NAME` | The name of your GPG key |
 
 ### Run the integration test action on your fork
 1. Navigate to your fork
