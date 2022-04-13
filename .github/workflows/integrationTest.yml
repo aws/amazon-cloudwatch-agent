@@ -13,6 +13,7 @@ env:
   GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
   PASSPHRASE: ${{ secrets.PASSPHRASE }}
   GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
+  GPG_TTY: $(tty)
 
 on:
   push:
@@ -78,9 +79,8 @@ jobs:
       - name: Sign packages
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: |
-          export GPG_TTY=$(tty)
           echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
-          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done  
+          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
 
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
@@ -259,9 +259,8 @@ jobs:
       - name: Sign packages
         if: steps.cached_sig.outputs.cache-hit != 'true'
         run: |
-          export GPG_TTY=$(tty)
           echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
-          for f in $(find packages/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done  
+          for f in $(find packages/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
 
       - name: Upload to s3
         if: steps.cached_sig.outputs.cache-hit != 'true'
