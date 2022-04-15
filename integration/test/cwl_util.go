@@ -36,18 +36,27 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 	}
 
 	sinceMs := since.UnixNano() / 1e6 // convert to millisecond timestamp
-	events, err := cwlClient.GetLogEvents(*clientContext, &cloudwatchlogs.GetLogEventsInput{
+
+	// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html
+	// GetLogEvents can return an empty result while still having more log events on a subsequent page,
+	// so rather than expecting all of the events to show up in one GetLogEvents API call, paginate.
+	paginator := cloudwatchlogs.NewGetLogEventsPaginator(cwlClient, &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
 		StartTime:     aws.Int64(sinceMs),
 	})
 
-	if err != nil {
-		t.Fatalf("Error occurred when calling GetLogEvents: %v", err.Error())
+	numLogsFound := 0
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(*clientContext)
+		if err != nil {
+			t.Fatalf("Error occurred while getting log events: %v", err.Error())
+		}
+		numLogsFound += len(page.Events)
 	}
 
 	// using assert.Len() prints out the whole splice of log events which bloats the test log
-	assert.Equal(t, numExpectedLogs, len(events.Events))
+	assert.Equal(t, numExpectedLogs, numLogsFound)
 }
 
 // DeleteLogGroupAndStream cleans up a log group and stream by name. This gracefully handles

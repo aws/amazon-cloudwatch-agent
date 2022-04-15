@@ -80,7 +80,9 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			test.StartAgent(configOutputPath)
 
-			time.Sleep(agentRuntime) // make sure that there is enough time between the timestamps
+			// ensure that there is enough time from the "start" time and the first log line,
+			// so we don't miss it in the GetLogEvents call
+			time.Sleep(agentRuntime)
 			writeLogs(t, logFilePath, param.iterations)
 			time.Sleep(agentRuntime)
 			test.StopAgent()
