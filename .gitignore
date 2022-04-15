@@ -10,3 +10,4 @@ CWAGENT_VERSION
 terraform.*
 **/.terraform/*
 coverage.txt
+integration/generator/resources/*complete*.json
