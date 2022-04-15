@@ -97,7 +97,8 @@ func TestBuildMetricDatums(t *testing.T) {
 
 	invalidDistribution := distribution.NewDistribution()
 	err := invalidDistribution.AddEntry(-1, 1)
-	assert.Error(err)
+	expectedErrMsg := "negative value"
+	assert.EqualError(err, expectedErrMsg)
 	invalidMetrics := []telegraf.Metric{
 		testutil.TestMetric("Foo"),
 		testutil.TestMetric(invalidDistribution),
