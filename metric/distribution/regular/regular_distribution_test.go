@@ -13,9 +13,9 @@ func TestSEH1Distribution(t *testing.T) {
 	//dist new and add entry
 	dist := NewRegularDistribution()
 
-	dist.AddEntry(20, 1)
-	dist.AddEntry(30, 1)
-	dist.AddEntryWithUnit(50, 1, "Count")
+	assert.NoError(t, dist.AddEntry(20, 1))
+	assert.NoError(t, dist.AddEntry(30, 1))
+	assert.NoError(t, dist.AddEntryWithUnit(50, 1, "Count"))
 
 	assert.Equal(t, 100.0, dist.Sum())
 	assert.Equal(t, 3.0, dist.SampleCount())

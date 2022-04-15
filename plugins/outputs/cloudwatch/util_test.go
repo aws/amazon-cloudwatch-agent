@@ -58,9 +58,9 @@ func TestResize(t *testing.T) {
 	assert.Equal(t, float64(1), sampleCount)
 	assert.Equal(t, float64(1), sum)
 
-	dist.AddEntry(2, 1)
-	dist.AddEntry(3, 1)
-	dist.AddEntry(4, 1)
+	assert.NoError(t, dist.AddEntry(2, 1))
+	assert.NoError(t, dist.AddEntry(3, 1))
+	assert.NoError(t, dist.AddEntry(4, 1))
 
 	distList = resize(dist, maxListSize)
 	assert.Equal(t, 2, len(distList))
