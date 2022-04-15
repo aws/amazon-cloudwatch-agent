@@ -48,9 +48,9 @@ linters-settings:
 linters:
   disable:
     - errcheck
-  enable:
     - gofmt
     - goimports
+  enable:
     - gosimple
     - deadcode
     - gosec
