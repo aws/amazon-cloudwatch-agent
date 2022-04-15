@@ -68,17 +68,21 @@ func ReadAgentOutput(d time.Duration) string {
 	return string(out)
 }
 
-func RunShellScript(path string) {
+func RunShellScript(path string, args ...string) {
 	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
 	}
 
-	out, err = exec.Command("bash", "-c", "sudo ./"+path).Output()
+	bashArgs := []string{"-c", "sudo ./" + path}
+	bashArgs = append(bashArgs, args...)
+
+	//out, err = exec.Command("bash", "-c", "sudo ./"+path, args).Output()
+	out, err = exec.Command("bash", bashArgs...).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
 	}
 }
 

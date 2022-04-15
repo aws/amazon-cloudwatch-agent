@@ -10,6 +10,10 @@ env:
   KEY_NAME: ${{ secrets.KEY_NAME }}
   VPC_SECURITY_GROUPS_IDS: ${{ secrets.VPC_SECURITY_GROUPS_IDS }}
   IAM_ROLE: ${{ secrets.IAM_ROLE }}
+  GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+  PASSPHRASE: ${{ secrets.PASSPHRASE }}
+  GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
+  GPG_TTY: $(tty)
 
 on:
   push:
@@ -64,15 +68,50 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_binaries_${{ github.sha }}"
-          path: build
+          path: go.mod
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: make build package-rpm package-deb package-win package-darwin
 
+      - uses: olafurpg/setup-gpg@v3
+
+      - name: Sign packages
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: |
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
+          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
+
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
+
+  GenerateTestMatrix:
+    name: 'GenerateTestMatrix'
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+    steps:
+      - uses: actions/checkout@v2
+
+      #TODO upgrade to 1.17 after @ZhenyuTan-amz updates our go build version
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.15.15
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          go run --tags=generator integration/generator/test_case_generator.go
+          echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/linux_complete_test_matrix.json))"
+          echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/windows_complete_test_matrix.json))"
+
+      - name: Echo test plan matrix
+        run: |
+          echo ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+          echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -98,7 +137,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_win_zip_${{ github.sha }}"
-          path: buildMSI.zip
+          path: go.mod
 
       - name: Copy binary
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
@@ -155,7 +194,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_pkg_${{ github.sha }}"
-          path: RELEASE_NOTES
+          path: go.mod
 
       - name: Copy binary
         if: steps.cached_pkg.outputs.cache-hit != 'true'
@@ -196,7 +235,7 @@ jobs:
         uses: actions/cache@v2
         with:
           key: "cached_msi_${{ github.sha }}"
-          path: buildMSI/amazon-cloudwatch-agent.msi
+          path: go.mod
 
       # Using the env variable returns "" for bucket name thus use the secret
       - name: Copy msi
@@ -213,6 +252,48 @@ jobs:
           Expand-Archive buildMSI.zip -Force
           cd buildMSI
           .\create_msi.ps1 ${{ github.sha }} ${{ secrets.S3_INTEGRATION_BUCKET }}
+
+  #GH actions set up gpg only works on ubuntu as of this commit date
+  GPGSignMacAndWindowsPackage:
+    name: 'SignMacAndWindowsPackage'
+    runs-on: ubuntu-latest
+    needs: [BuildMSI, MakeMacPkg]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: olafurpg/setup-gpg@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Cache sig
+        id: cached_sig
+        uses: actions/cache@v2
+        with:
+          key: "cached_sig_${{ github.sha }}"
+          path: go.mod
+
+      - name: Download from s3
+        if: steps.cached_sig.outputs.cache-hit != 'true'
+        run: |
+          mkdir packages
+          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
+          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.pkg ./packages/amazon-cloudwatch-agent.pkg
+
+      - name: Sign packages
+        if: steps.cached_sig.outputs.cache-hit != 'true'
+        run: |
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
+          for f in $(find packages/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
+
+      - name: Upload to s3
+        if: steps.cached_sig.outputs.cache-hit != 'true'
+        run: |
+          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi.sig
+          aws s3 cp packages/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.pkg.sig
 
   StartLocalStack:
     name: 'StartLocalStack'
@@ -256,7 +337,7 @@ jobs:
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
   EC2LinuxIntegrationTest:
-    needs: [MakeBinary, StartLocalStack]
+    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'EC2LinuxIntegrationTest'
     runs-on: ubuntu-latest
     defaults:
@@ -265,53 +346,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arrays: [
-          { os: "ubuntu", username: "ubuntu",
-            # ubuntu needs to have dpkg lock cleared before installing cw agent
-            installAgentCommand: "aptdcon --safe-upgrade && sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
-            ami: "cloudwatch-agent-integration-test-ubuntu*", caCertPath: "/etc/ssl/certs/ca-certificates.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.deb" },
-          { os: "al2", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-al2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-base*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-1", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-1*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-2", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-3", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-3*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "rhel8-4", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-rhel8-4*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-1", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-ol8-1*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-2", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-ol8-2*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "o8-3", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-ol8-3*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" },
-          { os: "ol8-4", username: "ec2-user",
-            installAgentCommand: "rpm -U ./amazon-cloudwatch-agent.rpm",
-            ami: "cloudwatch-agent-integration-test-ol8-4*", caCertPath: "/etc/ssl/certs/ca-bundle.crt",
-            arc: "amd64", binaryName: "amazon-cloudwatch-agent.rpm" }
-        ]
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
     steps:
       - uses: actions/checkout@v2
 
@@ -326,8 +361,7 @@ jobs:
         id: ec2-linux-integration-test
         uses: actions/cache@v2
         with:
-          path: |
-            RELEASE_NOTES
+          path: go.mod
           key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
       - name: Echo OS
@@ -359,13 +393,14 @@ jobs:
           -var="key_name=${KEY_NAME}"
           -var="test_name=cw-integ-test-${{ matrix.arrays.os }}"
           -var="iam_instance_profile=${IAM_ROLE}"
+          -var="tag=${{ matrix.arrays.tag }}"
 
       - name: Terraform destroy
         if: ${{ always() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
         run: terraform destroy --auto-approve
 
   EC2WinIntegrationTest:
-    needs: [BuildMSI]
+    needs: [BuildMSI, GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
     defaults:
@@ -374,9 +409,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arrays: [
-          { os: "win-2022", ami: "cloudwatch-agent-integration-test-win-2022*"}
-        ]
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_matrix) }}
     steps:
       - uses: actions/checkout@v2
 
@@ -391,8 +424,7 @@ jobs:
         id: ec2-win-integration-test
         uses: actions/cache@v2
         with:
-          path: |
-            RELEASE_NOTES
+          path: go.mod
           key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
       - name: Echo OS

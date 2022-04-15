@@ -142,9 +142,6 @@ fmt-sh: install-tools
 test:
 	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
 
-integration-test:
-	go test ./integration/test/... -p 1 -v --tags=integration
-
 integration-cleaner:
 	go run ./integration/clean/clean_aws_resource.go --tags=clean
 
