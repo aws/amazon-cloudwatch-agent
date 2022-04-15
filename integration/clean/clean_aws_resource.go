@@ -48,9 +48,9 @@ func cleanSSMParameterStore(expirationDate time.Time) {
 
 	ssmClient := ssm.NewFromConfig(defaultConfig)
 
-	//Allow to load all th since the default respond is paginated auto scaling groups.
+	//Allow to load all th since the default respond is paginated SSM Parameter Stores.
 	//Look into the documentations and read the starting-token for more details
-	//Documentation: https://docs.aws.amazon.com/cli/latest/reference/autoscaling/describe-auto-scaling-groups.html#options
+	//Documentation: https://docs.aws.amazon.com/cli/latest/reference/ssm/describe-parameters.html
 	var nextToken *string
 	var errors []error
 
