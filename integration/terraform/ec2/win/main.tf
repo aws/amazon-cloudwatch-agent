@@ -7,6 +7,7 @@ resource "aws_instance" "integration-test" {
   get_password_data = true
   provisioner "remote-exec" {
     # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
+    # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
     inline = [
       "echo clone and install agent",
       "git clone ${var.github_repo}",
