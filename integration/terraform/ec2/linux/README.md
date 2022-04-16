@@ -121,17 +121,6 @@ on creating the key pair.
 **Reminder: the EC2 key pair must be in the same region as the instances, so this assumes that the key pair is created
 in the `us-west-2` region.**
 
-### Create a GPG signing key
-
-Build artifacts get signed before being pushed out to S3.
-
-GitHub has a
-good [guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key)
-on how to generate a new GPG key. It is good practice to create a signing key with a passphrase, and it's expected for
-the GitHub actions set up.
-
-> Note: Store the signing key in a secure location!
-
 ## Required parameters for Terraform to have handy
 
 1. GitHub repo (ex: https://github.com/aws/amazon-cloudwatch-agent.git)
@@ -147,6 +136,18 @@ the GitHub actions set up.
 The integration test GitHub actions workflow installs terraform, builds the agent and uploads the installable packages
 to the configured S3 bucket, so all you need to do is configure the secrets in the GitHub repo in order to allow the
 actions to run.
+
+### Create a GPG signing key
+
+Build artifacts get signed before being pushed out to S3. This is part of the GitHub actions workflow, so it's not
+required for testing locally but is required for testing on your personal fork.
+
+GitHub has a
+good [guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key)
+on how to generate a new GPG key. It is good practice to create a signing key with a passphrase, and it's an expected
+repository secret for the GitHub actions workflow.
+
+> Note: Store the signing key in a secure location!
 
 ### Set up secrets on GitHub Actions
 
@@ -184,12 +185,9 @@ Install `terraform` on your local machine ([download](https://www.terraform.io/d
 1. Run `make release` to test, build, and generate agent artifacts that can be installed and tested.
     1. If targeting a specific OS, you can run a more specific make command. `make build && make package-deb` would
        build and package for Ubuntu.
-2. Sign the files with your GPG key
-    1. `echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -`
-    2. `for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done`
-3. Copy the artifacts to the test S3
+2. Copy the artifacts to the test S3
    bucket: `aws s3 cp ./build/bin s3://{your bucket name}/integration-test/binary/{commit SHA} --recursive`
-    1. Substitute out the values wrapped in `{}` with what you have for testing
+    2. Substitute out the values wrapped in `{}` with what you have for testing
 
 ### Start localstack
 
