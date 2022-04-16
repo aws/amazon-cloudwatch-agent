@@ -2,7 +2,7 @@
   {
     "os": "ubuntu",
     "username": "ubuntu",
-    "installAgentCommand": "sudo apt-get install build-essential -y && sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
+    "installAgentCommand": "sudo apt install build-essential -y && sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
     "ami": "cloudwatch-agent-integration-test-ubuntu*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
     "arc": "amd64", "binaryName": "amazon-cloudwatch-agent.deb"
