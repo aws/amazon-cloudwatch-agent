@@ -71,14 +71,6 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 		numLogsFound += len(output.Events)
 	}
 
-	//for paginator.HasMorePages() {
-	//	output, err = paginator.NextPage(*clientContext)
-	//	if err != nil {
-	//		t.Fatalf("Error occurred while getting log events: %v", err.Error())
-	//	}
-	//	numLogsFound += len(output.Events)
-	//}
-
 	// using assert.Len() prints out the whole splice of log events which bloats the test log
 	assert.Equal(t, numExpectedLogs, numLogsFound)
 }
