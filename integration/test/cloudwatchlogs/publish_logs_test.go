@@ -24,7 +24,7 @@ const (
 	logLineId1       = "foo"
 	logLineId2       = "bar"
 	logFilePath      = "/tmp/test.log"  // TODO: not sure how well this will work on Windows
-	agentRuntime     = 10 * time.Second // default flush interval is 5 seconds
+	agentRuntime     = 20 * time.Second // default flush interval is 5 seconds
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
@@ -112,6 +112,7 @@ func writeLogs(t *testing.T, filePath string, iterations int) {
 				t.Logf("Error occurred writing log line: %v", err)
 			}
 		}
+		time.Sleep(1 * time.Millisecond)
 	}
 }
 
