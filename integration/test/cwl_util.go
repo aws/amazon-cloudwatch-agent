@@ -9,7 +9,6 @@ package test
 import (
 	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"log"
 	"testing"
 	"time"
@@ -40,24 +39,45 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 
 	// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html
 	// GetLogEvents can return an empty result while still having more log events on a subsequent page,
-	// so rather than expecting all of the events to show up in one GetLogEvents API call, paginate.
+	// so rather than expecting all the events to show up in one GetLogEvents API call, we need to paginate.
 	params := &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
 		StartTime:     aws.Int64(sinceMs),
 	}
-	paginator := cloudwatchlogs.NewGetLogEventsPaginator(cwlClient, params)
+	//paginator := cloudwatchlogs.NewGetLogEventsPaginator(cwlClient, params)
 
 	numLogsFound := 0
 	var output *cloudwatchlogs.GetLogEventsOutput
+	var nextToken *string
 
-	for paginator.HasMorePages() {
-		output, err = paginator.NextPage(*clientContext)
+	for {
+		if nextToken != nil {
+			params.NextToken = nextToken
+		}
+		output, err = cwlClient.GetLogEvents(*clientContext, params)
+
 		if err != nil {
 			t.Fatalf("Error occurred while getting log events: %v", err.Error())
 		}
+
+		if *output.NextForwardToken == *nextToken {
+			// From the docs: If you have reached the end of the stream, it returns the same token you passed in.
+			log.Printf("Done paginating log events for %s/%s and found %d logs", logGroup, logStream, numLogsFound)
+			break
+		}
+
+		nextToken = output.NextForwardToken
 		numLogsFound += len(output.Events)
 	}
+
+	//for paginator.HasMorePages() {
+	//	output, err = paginator.NextPage(*clientContext)
+	//	if err != nil {
+	//		t.Fatalf("Error occurred while getting log events: %v", err.Error())
+	//	}
+	//	numLogsFound += len(output.Events)
+	//}
 
 	// using assert.Len() prints out the whole splice of log events which bloats the test log
 	assert.Equal(t, numExpectedLogs, numLogsFound)
@@ -101,13 +121,7 @@ func getCloudWatchLogsClient() (*cloudwatchlogs.Client, *context.Context, error)
 			return nil, nil, err
 		}
 
-		r := retry.NewStandard(func(options *retry.StandardOptions) {
-			options.Backoff = retry.NewExponentialJitterBackoff(2 * time.Minute)
-		})
-
-		cwl = cloudwatchlogs.NewFromConfig(c, func(options *cloudwatchlogs.Options) {
-			options.Retryer = r
-		})
+		cwl = cloudwatchlogs.NewFromConfig(c)
 	}
 	return cwl, &ctx, nil
 }
