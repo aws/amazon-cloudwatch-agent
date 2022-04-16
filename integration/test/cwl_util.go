@@ -61,7 +61,7 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 			t.Fatalf("Error occurred while getting log events: %v", err.Error())
 		}
 
-		if *output.NextForwardToken == *nextToken {
+		if nextToken != nil && output.NextForwardToken != nil && *output.NextForwardToken == *nextToken {
 			// From the docs: If you have reached the end of the stream, it returns the same token you passed in.
 			log.Printf("Done paginating log events for %s/%s and found %d logs", logGroup, logStream, numLogsFound)
 			break
