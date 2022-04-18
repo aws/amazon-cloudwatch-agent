@@ -36,18 +36,43 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 	}
 
 	sinceMs := since.UnixNano() / 1e6 // convert to millisecond timestamp
-	events, err := cwlClient.GetLogEvents(*clientContext, &cloudwatchlogs.GetLogEventsInput{
+
+	// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html
+	// GetLogEvents can return an empty result while still having more log events on a subsequent page,
+	// so rather than expecting all the events to show up in one GetLogEvents API call, we need to paginate.
+	params := &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName:  aws.String(logGroup),
 		LogStreamName: aws.String(logStream),
 		StartTime:     aws.Int64(sinceMs),
-	})
+	}
+	//paginator := cloudwatchlogs.NewGetLogEventsPaginator(cwlClient, params)
 
-	if err != nil {
-		t.Fatalf("Error occurred when calling GetLogEvents: %v", err.Error())
+	numLogsFound := 0
+	var output *cloudwatchlogs.GetLogEventsOutput
+	var nextToken *string
+
+	for {
+		if nextToken != nil {
+			params.NextToken = nextToken
+		}
+		output, err = cwlClient.GetLogEvents(*clientContext, params)
+
+		if err != nil {
+			t.Fatalf("Error occurred while getting log events: %v", err.Error())
+		}
+
+		if nextToken != nil && output.NextForwardToken != nil && *output.NextForwardToken == *nextToken {
+			// From the docs: If you have reached the end of the stream, it returns the same token you passed in.
+			log.Printf("Done paginating log events for %s/%s and found %d logs", logGroup, logStream, numLogsFound)
+			break
+		}
+
+		nextToken = output.NextForwardToken
+		numLogsFound += len(output.Events)
 	}
 
 	// using assert.Len() prints out the whole splice of log events which bloats the test log
-	assert.Equal(t, numExpectedLogs, len(events.Events))
+	assert.Equal(t, numExpectedLogs, numLogsFound)
 }
 
 // DeleteLogGroupAndStream cleans up a log group and stream by name. This gracefully handles

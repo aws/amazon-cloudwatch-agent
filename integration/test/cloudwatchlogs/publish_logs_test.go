@@ -24,7 +24,7 @@ const (
 	logLineId1       = "foo"
 	logLineId2       = "bar"
 	logFilePath      = "/tmp/test.log"  // TODO: not sure how well this will work on Windows
-	agentRuntime     = 10 * time.Second // default flush interval is 5 seconds
+	agentRuntime     = 20 * time.Second // default flush interval is 5 seconds
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
@@ -80,7 +80,9 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			test.StartAgent(configOutputPath)
 
-			time.Sleep(agentRuntime) // make sure that there is enough time between the timestamps
+			// ensure that there is enough time from the "start" time and the first log line,
+			// so we don't miss it in the GetLogEvents call
+			time.Sleep(agentRuntime)
 			writeLogs(t, logFilePath, param.iterations)
 			time.Sleep(agentRuntime)
 			test.StopAgent()
@@ -110,6 +112,7 @@ func writeLogs(t *testing.T, filePath string, iterations int) {
 				t.Logf("Error occurred writing log line: %v", err)
 			}
 		}
+		time.Sleep(1 * time.Millisecond)
 	}
 }
 
