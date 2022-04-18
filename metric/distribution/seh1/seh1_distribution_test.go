@@ -13,9 +13,9 @@ func TestSEH1Distribution(t *testing.T) {
 	//dist new and add entry
 	dist := NewSEH1Distribution()
 
-	dist.AddEntry(20, 1)
-	dist.AddEntry(30, 1)
-	dist.AddEntryWithUnit(50, 1, "Count")
+	assert.NoError(t, dist.AddEntry(20, 1))
+	assert.NoError(t, dist.AddEntry(30, 1))
+	assert.NoError(t, dist.AddEntryWithUnit(50, 1, "Count"))
 
 	assert.Equal(t, 100.0, dist.Sum())
 	assert.Equal(t, 3.0, dist.SampleCount())
@@ -34,9 +34,9 @@ func TestSEH1Distribution(t *testing.T) {
 	//another dist new and add entry
 	anotherDist := NewSEH1Distribution()
 
-	anotherDist.AddEntry(21, 1)
-	anotherDist.AddEntry(22, 1)
-	anotherDist.AddEntry(23, 2)
+	assert.NoError(t, anotherDist.AddEntry(21, 1))
+	assert.NoError(t, anotherDist.AddEntry(22, 1))
+	assert.NoError(t, anotherDist.AddEntry(23, 2))
 
 	assert.Equal(t, 89.0, anotherDist.Sum())
 	assert.Equal(t, 4.0, anotherDist.SampleCount())
