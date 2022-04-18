@@ -113,7 +113,7 @@ The security group(s) that the integration tests use should include the followin
 
 | Protocol | Port | Source    | 
 |----------|------|-----------|
-| TCP      | 4556 | 0.0.0.0/0 |
+| TCP      | 4566 | 0.0.0.0/0 |
 | HTTPS    | 443  | 0.0.0.0/0 |
 | HTTP     | 80   | 0.0.0.0/0 |
 | SSH      | 22   | 0.0.0.0/0 |
