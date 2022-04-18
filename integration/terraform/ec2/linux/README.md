@@ -109,8 +109,16 @@ require public access.
 
 ### Configure security group(s)
 
-The list of security groups should include ingress/egress for SSH, HTTP, and HTTPS from ipv4. Note that the default
-security group is sufficient.
+The security group(s) that the integration tests use should include the following for ingress:
+
+| Protocol | Port | Source    | 
+|----------|------|-----------|
+| TCP      | 4556 | 0.0.0.0/0 |
+| HTTPS    | 443  | 0.0.0.0/0 |
+| HTTP     | 80   | 0.0.0.0/0 |
+| SSH      | 22   | 0.0.0.0/0 |
+
+By default, egress allows all traffic. This is fine. 
 
 ### Create an EC2 key pair
 
