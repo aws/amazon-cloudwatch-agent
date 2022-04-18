@@ -340,9 +340,6 @@ jobs:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'EC2LinuxIntegrationTest'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: integration/terraform/ec2/linux
     strategy:
       fail-fast: false
       matrix:
@@ -370,42 +367,50 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
-      - name: Terraform init
-        run: terraform init
-
+      # nick-invision/retry@v2 starts at base dir
       - name: Terraform apply
         if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
-        run: >
-          echo run terraform and execute test code &&
-          terraform apply --auto-approve
-          -var="ssh_key=${PRIVATE_KEY}"
-          -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-          -var="github_sha=${GITHUB_SHA}"
-          -var="install_agent=${{ matrix.arrays.installAgentCommand }}"
-          -var="user=${{ matrix.arrays.username }}"
-          -var="ami=${{ matrix.arrays.ami }}"
-          -var="ca_cert_path=${{ matrix.arrays.caCertPath }}"
-          -var="arc=${{ matrix.arrays.arc }}"
-          -var="binary_name=${{ matrix.arrays.binaryName }}"
-          -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}"
-          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
-          -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}"
-          -var="key_name=${KEY_NAME}"
-          -var="test_name=cw-integ-test-${{ matrix.arrays.os }}"
-          -var="iam_instance_profile=${IAM_ROLE}"
-          -var="tag=${{ matrix.arrays.tag }}"
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 15
+          retry_wait_seconds: 5
+          command: |
+            cd integration/terraform/ec2/linux
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
+              -var="key_name=${KEY_NAME}" \
+              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+              -var="iam_instance_profile=${IAM_ROLE}" \
+              -var="tag=${{ matrix.arrays.tag }}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
 
+      #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ always() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
-        run: terraform destroy --auto-approve
+        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
 
   EC2WinIntegrationTest:
     needs: [BuildMSI, GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: integration/terraform/ec2/win
     strategy:
       fail-fast: false
       matrix:
@@ -433,29 +438,38 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
-      - name: Terraform init
-        run: terraform init
-
+        # nick-invision/retry@v2 starts at base dir
       - name: Terraform apply
         if: steps.ec2-win-integration-test.outputs.cache-hit != 'true'
-        run: >
-          echo run terraform and execute test code &&
-          terraform apply --auto-approve
-          -var="ssh_key=${PRIVATE_KEY}"
-          -var="key_name=${KEY_NAME}"
-          -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-          -var="github_sha=${GITHUB_SHA}"
-          -var="ami=${{ matrix.arrays.ami }}"
-          -var="test_name=cw-integ-test-${{ matrix.arrays.os }}"
-          -var="iam_instance_profile=${IAM_ROLE}"
-          -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}"
-          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 15
+          retry_wait_seconds: 5
+          command: |
+            cd integration/terraform/ec2/win
+            terraform init
+            if terraform apply --auto-approve \
+            -var="ssh_key=${PRIVATE_KEY}" -var="key_name=${KEY_NAME}" \
+            -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+            -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
+            -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+            -var="iam_instance_profile=${IAM_ROLE}" \
+            -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
+            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
 
+      #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ always() && steps.ec2-win-integration-test.outputs.cache-hit != 'true' }}
-        run: >
-          terraform destroy --auto-approve
-          -var="ami=${{ matrix.arrays.ami }}"
+        if: ${{ cancelled() && steps.ec2-win-integration-test.outputs.cache-hit != 'true' }}
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd cd integration/terraform/ec2/win && terraform destroy --auto-approve -var="ami=${{ matrix.arrays.ami }}"
 
   StopLocalStack:
     name: 'StopLocalStack'
