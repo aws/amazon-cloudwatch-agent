@@ -25,7 +25,7 @@ variable "region" {
 
 variable "ami" {
   type = string
-  default = ""
+  default = "cloudwatch-agent-integration-test-win-2022*"
 }
 
 variable "ssh_key" {
