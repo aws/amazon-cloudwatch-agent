@@ -142,9 +142,6 @@ fmt-sh: install-tools
 test:
 	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
 
-integration-cleaner:
-	go run ./integration/clean/clean_ami.go --tags=clean
-
 clean::
 	rm -rf release/ build/
 	rm -f CWAGENT_VERSION
