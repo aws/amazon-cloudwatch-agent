@@ -275,13 +275,13 @@ func runAgent(ctx context.Context,
 	}
 
 	if int64(c.Agent.Interval) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %s",
+		return fmt.Errorf("Agent interval must be positive, found %v",
 			c.Agent.Interval)
 	}
 
 	if int64(c.Agent.FlushInterval) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %s",
-			c.Agent.Interval)
+		return fmt.Errorf("Agent flush_interval must be positive; found %v",
+			c.Agent.FlushInterval)
 	}
 
 	if *fSchemaTest {
@@ -551,11 +551,11 @@ func main() {
 		} else {
 			_, err := s.Logger(nil)
 			if err == nil {
-				//When in service mode, register eventlog target and setup default logging to eventlog
-				e := logger.RegisterEventLogger(LogTargetEventLog)
-				if e != nil {
-					log.Println("E! Cannot register event log " + e.Error())
-				}
+				// When in service mode, register eventlog target and setup default logging to eventlog
+				//e := logger.RegisterEventLogger(LogTargetEventLog)
+				//if e != nil {
+				//	log.Println("E! Cannot register event log " + e.Error())
+				//}
 				logger.SetupLogging(logger.LogConfig{LogTarget: lumberjack.LogTargetLumberjack})
 			}
 			err = s.Run()

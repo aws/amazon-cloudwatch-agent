@@ -173,7 +173,7 @@ func (durationAgg *durationAggregator) aggregating() {
 				if dist != nil {
 					existingDist.AddDistribution(dist)
 				} else {
-					err = existingDist.AddEntry(value, 1)
+					err := existingDist.AddEntry(value, 1)
 					if err != nil {
 						log.Printf("W! error: %s, metric %s, value %v", err, m.Name(), value)
 					}
