@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -18,6 +19,9 @@ import (
 	smithyTime "github.com/aws/smithy-go/time"
 )
 
+const daysToKeep = 60
+const keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
+
 func main() {
 	err := cleanAMI()
 	if err != nil {
@@ -25,18 +29,14 @@ func main() {
 	}
 }
 
-const daysToKeep = 60
-const keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
-
-var expirationDate = time.Now().UTC().Add(keepDuration)
-
-func cleanAMI() []error {
+func cleanAMI() error {
 	log.Print("Begin to clean EC2 AMI")
 
+	expirationDate := time.Now().UTC().Add(keepDuration)
 	cxt := context.Background()
 	defaultConfig, err := config.LoadDefaultConfig(cxt)
 	if err != nil {
-		return []error{err}
+		return err
 	}
 	ec2client := ec2.NewFromConfig(defaultConfig)
 
@@ -49,14 +49,14 @@ func cleanAMI() []error {
 	describeImagesInput := ec2.DescribeImagesInput{Filters: []types.Filter{nameFilter}}
 	describeImagesOutput, err := ec2client.DescribeImages(cxt, &describeImagesInput)
 	if err != nil {
-		return []error{err}
+		return err
 	}
 
-	var errors []error
+	var errList []error
 	for _, image := range describeImagesOutput.Images {
 		creationDate, err := smithyTime.ParseDateTime(*image.CreationDate)
 		if err != nil {
-			errors = append(errors, err)
+			errList = append(errList, err)
 			continue
 		}
 		log.Printf("image name %v image id %v experation date %v creation date parsed %v image creation date raw %v",
@@ -66,13 +66,13 @@ func cleanAMI() []error {
 			deregisterImageInput := ec2.DeregisterImageInput{ImageId: image.ImageId}
 			_, err := ec2client.DeregisterImage(cxt, &deregisterImageInput)
 			if err != nil {
-				errors = append(errors, err)
+				errList = append(errList, err)
 			}
 		}
 	}
 
-	if len(errors) != 0 {
-		return errors
+	if len(errList) != 0 {
+		return fmt.Errorf("%v", errList)
 	}
 
 	return nil
