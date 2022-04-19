@@ -188,7 +188,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 			tailer, err := tail.TailFile(filename,
 				tail.Config{
-					ReOpen:      false,
+					ReOpen:      true,
 					Follow:      true,
 					Location:    seekFile,
 					MustExist:   true,
