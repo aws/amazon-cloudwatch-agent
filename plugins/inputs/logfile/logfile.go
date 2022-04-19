@@ -109,7 +109,7 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 
 	// Clean state file regularly
 	go func() {
-		ticker := time.NewTicker(1 * time.Hour)
+		ticker := time.NewTicker(1 * time.Minute) // TODO: clean the state file every minute to see if this fixes https://github.com/aws/amazon-cloudwatch-agent/issues/447
 		defer ticker.Stop()
 		for {
 			select {
