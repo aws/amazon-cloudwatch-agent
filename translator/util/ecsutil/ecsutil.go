@@ -17,6 +17,7 @@ import (
 const (
 	v2MetadataEndpoint    = "http://169.254.170.2/v2/metadata"
 	v3MetadataEndpointEnv = "ECS_CONTAINER_METADATA_URI"
+	v4MetadataEndpointEnv = "ECS_CONTAINER_METADATA_URI_V4"
 )
 
 type ecsMetadataResponse struct {
@@ -66,10 +67,12 @@ func (e *ecsUtil) IsECS() bool {
 
 func (e *ecsUtil) getECSMetadata() (em *ecsMetadataResponse, err error) {
 	// choose available endpoint
-	if v3MetadataEndpoint, ok := os.LookupEnv(v3MetadataEndpointEnv); !ok {
-		em, err = e.getMetadataResponse(v2MetadataEndpoint)
-	} else {
+	if v4MetadataEndpoint, ok := os.LookupEnv(v4MetadataEndpointEnv); ok {
+		em, err = e.getMetadataResponse(v4MetadataEndpoint + "/task")
+	} else if v3MetadataEndpoint, ok := os.LookupEnv(v3MetadataEndpointEnv); ok {
 		em, err = e.getMetadataResponse(v3MetadataEndpoint + "/task")
+	} else {
+		em, err = e.getMetadataResponse(v2MetadataEndpoint)
 	}
 	return
 }

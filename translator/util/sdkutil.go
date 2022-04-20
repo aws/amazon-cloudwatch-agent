@@ -31,12 +31,7 @@ func DetectAgentMode(configuredMode string) string {
 	if configuredMode != "auto" {
 		return configuredMode
 	}
-
-	if runInAws == config.RUN_IN_AWS_TRUE {
-		fmt.Println("I! Detected from ENV instance is EC2")
-		return config.ModeEC2
-	}
-
+	
 	if defaultEC2Region() != "" {
 		fmt.Println("I! Detected the instance is EC2")
 		return config.ModeEC2
