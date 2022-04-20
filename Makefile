@@ -142,7 +142,7 @@ fmt: install-tools
 fmt-sh: install-tools
 	${SHFMT} -w -d -i 5 .
 
-linter: install-tools
+lint: install-tools
 	${LINTER} run ./...
 
 test:

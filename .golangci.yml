@@ -58,3 +58,4 @@ linters:
     - structcheck
     - misspell
     - revive
+    - golint
