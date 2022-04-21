@@ -358,100 +358,128 @@ func TestLogsFileRemove(t *testing.T) {
 	tt.Stop()
 }
 
-//When another file is created for the same file config and the file config has auto_removal as true, the old files will stop at EOF and removed afterwards
-func TestLogsFileAutoRemoval(t *testing.T) {
-	var wg sync.WaitGroup
+// getLogSrc returns a LogSrc from the given LogFile, and the channel for output.
+// Verifies 1 and only 1 LogSrc is discovered.
+func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent) {
+	logSources := logFile.FindLogSrc()
+	require.Equal(t, 1, len(logSources))
+	logSource := logSources[0]
+	evts := make(chan logs.LogEvent)
+	logSource.SetOutput(func(e logs.LogEvent) {
+		if e != nil {
+			evts <- e
+		}
+	})
+	return &logSource, evts
+}
 
+func writeSomeLines(t *testing.T, file *os.File, numLines int, msg string) {
+	for i := 0; i < numLines; i++ {
+		//time.Sleep(1 * time.Millisecond)
+		//fmt.Printf("write i %v\n", i)
+		_, err := file.WriteString(msg + "\n")
+		require.NoError(t, err)
+	}
+}
+
+// TestLogsFileAutoRemoval verifies when a new file matching the configured
+// FilePath is discovered, the old file will be automatically deleted after
+// being read to the end-of-file.
+func TestLogsFileAutoRemoval(t *testing.T) {
+	// Override global in tailersrc.go.
 	multilineWaitPeriod = 10 * time.Millisecond
-	logEntryString := "anything"
+
 	filePrefix := "file_auto_removal"
 	tmpfile1, err := createTempFile("", filePrefix)
+	fmt.Printf("Created 1st temp file, %s\n", tmpfile1.Name())
 	require.NoError(t, err)
 
-	_, err = tmpfile1.WriteString(logEntryString + "\n")
-	require.NoError(t, err)
-	tmpfile1.Sync()
-	tmpfile1.Close()
-
-	tt := NewLogFile()
-	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{
+	logFile := NewLogFile()
+	defer logFile.Stop()
+	logFile.Log = TestLogger{t}
+	logFile.FileConfig = []FileConfig{{
 		FilePath:      filepath.Join(filepath.Dir(tmpfile1.Name()), filePrefix+"*"),
 		FromBeginning: true,
 		AutoRemoval:   true,
 	}}
-	tt.FileConfig[0].init()
-	tt.started = true
+	logFile.FileConfig[0].init()
+	logFile.started = true
 
-	lsrcs := tt.FindLogSrc()
-	if len(lsrcs) != 1 {
-		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
-	}
+	logSource, evts := getLogSrc(t, logFile)
+	defer (*logSource).Stop()
 
-	lsrc := lsrcs[0]
-	evts := make(chan logs.LogEvent)
-	lsrc.SetOutput(func(e logs.LogEvent) {
-		if e != nil {
-			evts <- e
-		}
-	})
+	fmt.Println("Fill temp file with sufficient lines to be read.")
+	numLogLinesToWrite := 10000
+	logEntryString := "this is the best log line ever written to a file"
+	writeSomeLines(t, tmpfile1, numLogLinesToWrite, logEntryString)
+	tmpfile1.Close()
 
 	var tmpfile2 *os.File
+	var logSource2 *logs.LogSrc
+	var	evts2 chan logs.LogEvent
 	defer func() {
+		if logSource2 != nil {
+			(*logSource2).Stop()
+		}
 		if tmpfile2 != nil {
+			tmpfile2.Close()
 			os.Remove(tmpfile2.Name())
 		}
 	}()
 
-	wg.Add(1)
+	fmt.Println("Verify every line written to the first temp file is received.")
+	// Do this in a goroutine in case there is a bug and it hangs.
+	readerDone := make(chan bool)
+	// Need to make sure tmpfile2 is created before accessing evts2
+	fileCreatorDone := make(chan bool)
 
 	go func() {
-		defer wg.Done()
-
-		// create a new file matching configured pattern
-		tmpfile2, err = createTempFile("", filePrefix)
-		require.NoError(t, err)
-
-		_, err = tmpfile2.WriteString(logEntryString + "\n")
-		require.NoError(t, err)
-
+		defer close(readerDone)
+		for i := 0; i < numLogLinesToWrite; i++ {
+			logEvent := <- evts
+			require.Equal(t, logEntryString, logEvent.Message())
+			if i != numLogLinesToWrite / 2 {
+				continue
+			}
+			// Halfway through receiving events create a new temp file.
+			// Still expect to recv all events from the first file.
+			// Need to do this in a goroutine since FindLogSrc()
+			// will block until tailer reaches EOF on first temp file.
+			go func() {
+				defer close(fileCreatorDone)
+				tmpfile2, err = createTempFile("", filePrefix)
+				fmt.Printf("Created 2nd temp file, %s\n", tmpfile2.Name())
+				require.NoError(t, err)
+				_, err = tmpfile2.WriteString(logEntryString + "\n")
+				require.NoError(t, err)
+				logSource2, evts2 = getLogSrc(t, logFile)
+			}()
+		}
 	}()
 
-	e := <-evts
-	if e.Message() != logEntryString {
-		t.Errorf("Wrong log found from first file: \n%v\nExpecting:\n%v\n", e.Message(), logEntryString)
-	}
-	defer lsrc.Stop()
-
-	for {
-		lsrcs = tt.FindLogSrc()
-		if len(lsrcs) > 0 {
-			break
-		}
-		time.Sleep(1 * time.Second)
+	fmt.Println("Verify reader completed.")
+	select {
+	case <-readerDone:
+		fmt.Println("Completed before timeout (as expected)")
+	case <-time.After(time.Second * 10):
+		t.Fatalf("timeout waiting for reader")
 	}
 
-	lsrc = lsrcs[0]
-	lsrc.SetOutput(func(e logs.LogEvent) {
-		if e != nil {
-			evts <- e
-		}
-	})
-
-	e = <-evts
-	if e.Message() != logEntryString {
-		t.Errorf("Wrong log found from 2nd file: \n% x\nExpecting:\n% x\n", e.Message(), logEntryString)
+	fmt.Println("Verify 2nd tmp file created and discovered.")
+	select {
+	case <-fileCreatorDone:
+		fmt.Println("Completed before timeout (as expected)")
+	case <-time.After(time.Second * 10):
+		t.Fatalf("timeout waiting for 2nd temp file.")
 	}
 
-	//Use Wait Group to avoid race condition between opening tmpfile2 to delete tmpfile1 with auto_removal and opening tmpfile1
-	//to check it exist
-	wg.Wait()
+	fmt.Println("Verify message in 2nd temp file.")
+	e2 := <- evts2
+	assert.Equal(t, logEntryString, e2.Message())
 
+	fmt.Println("Verify 1st temp file was auto deleted.")
 	_, err = os.Open(tmpfile1.Name())
 	assert.True(t, os.IsNotExist(err))
-
-	lsrc.Stop()
-	tt.Stop()
 }
 
 func TestLogsTimestampAsMultilineStarter(t *testing.T) {
