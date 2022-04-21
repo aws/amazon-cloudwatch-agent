@@ -24,7 +24,8 @@ resource "aws_instance" "integration-test" {
       "export AWS_REGION=${var.region}",
       "echo run tests with the tag integration, one at a time, and verbose",
       "cd ~/amazon-cloudwatch-agent",
-      "go test ./integration/test/... -p 1 -v --tags=${var.tag}"
+      "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
+      "go test ${var.test_dir} -p 1 -v --tags=integration"
     ]
     connection {
       type        = "ssh"

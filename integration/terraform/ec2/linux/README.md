@@ -73,6 +73,7 @@ for how to easily generate a new policy.
       "Action": [
         "cloudwatch:GetMetricData",
         "cloudwatch:PutMetricData",
+        "cloudwatch:ListMetrics"
         "ec2:DescribeVolumes",
         "ec2:DescribeTags",
         "logs:PutLogEvents",

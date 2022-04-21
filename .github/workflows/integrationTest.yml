@@ -361,8 +361,8 @@ jobs:
           path: go.mod
           key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
-      - name: Echo OS
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }}
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} test dir ${{ matrix.arrays.test_dir }}
 
       - name: Verify Terraform version
         run: terraform --version
@@ -392,7 +392,7 @@ jobs:
               -var="key_name=${KEY_NAME}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="iam_instance_profile=${IAM_ROLE}" \
-              -var="tag=${{ matrix.arrays.tag }}" ; then terraform destroy -auto-approve
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
