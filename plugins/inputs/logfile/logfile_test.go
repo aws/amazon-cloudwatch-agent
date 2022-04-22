@@ -358,6 +358,26 @@ func TestLogsFileRemove(t *testing.T) {
 	tt.Stop()
 }
 
+func setupLogFileForTest(t *testing.T, file *os.File, prefix string) *LogFile {
+	logFile := NewLogFile()
+	logFile.Log = TestLogger{t}
+	logFile.FileConfig = []FileConfig{{
+		FilePath:      filepath.Join(filepath.Dir(file.Name()), prefix+"*"),
+		FromBeginning: true,
+		AutoRemoval:   true,
+	}}
+	logFile.FileConfig[0].init()
+	logFile.started = true
+	return logFile
+}
+
+func makeTempFile(t *testing.T, prefix string) *os.File {
+	file, err := createTempFile("", prefix)
+	t.Logf("Created temp file, %s\n", file.Name())
+	require.NoError(t, err)
+	return file
+}
+
 // getLogSrc returns a LogSrc from the given LogFile, and the channel for output.
 // Verifies 1 and only 1 LogSrc is discovered.
 func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent) {
@@ -373,12 +393,62 @@ func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent
 	return &logSource, evts
 }
 
-func writeSomeLines(t *testing.T, file *os.File, numLines int, msg string) {
+func writeLines(t *testing.T, file *os.File, numLines int, msg string) {
+	t.Log("Fill temp file with sufficient lines to be read.")
 	for i := 0; i < numLines; i++ {
-		//time.Sleep(1 * time.Millisecond)
-		//fmt.Printf("write i %v\n", i)
 		_, err := file.WriteString(msg + "\n")
 		require.NoError(t, err)
+	}
+}
+
+// createWriteRead creates a temp file, writes to it, then verifies events
+// are received. If isParent is true, then spawn a 2nd goroutine for createWriteRead.
+// Close the given channel when complete to let caller know it was successful.
+func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bool, isParent bool) {
+	// Let caller know when the goroutine is done.
+	defer close(done)
+	// done2 is only passed to child if this is the parent.
+	done2 := make(chan bool)
+	file := makeTempFile(t, prefix)
+	if isParent {
+		logFile = setupLogFileForTest(t, file, prefix)
+		defer logFile.Stop()
+	}
+	logSrc, evts := getLogSrc(t, logFile)
+	defer (*logSrc).Stop()
+	defer close(evts)
+	const numLines int = 1000
+	const msg string = "this is the best log line ever written to a file"
+	writeLines(t, file, numLines, msg)
+	file.Close()
+	if !isParent {
+		// Child creates 2nd temp file which is NOT auto removed.
+		defer os.Remove(file.Name())
+	}
+	t.Log("Verify every line written to the temp file is received.")
+	for i := 0; i < numLines; i++ {
+		logEvent := <- evts
+		require.Equal(t, msg, logEvent.Message())
+		if i != numLines / 2 {
+			continue
+		}
+		// Halfway through start another goroutine to create another temp file.
+		if isParent {
+			go createWriteRead(t, prefix, logFile, done2, false)
+		}
+	}
+	// Only wait for child if it was spawned
+	if isParent {
+		t.Log("Verify child completed.")
+		select {
+		case <-done2:
+			t.Log("Completed before timeout (as expected)")
+		case <-time.After(time.Second * 5):
+			require.Fail(t, "timeout waiting for child")
+		}
+		t.Log("Verify 1st temp file was auto deleted.")
+		_, err := os.Open(file.Name())
+		assert.True(t, os.IsNotExist(err))
 	}
 }
 
@@ -388,98 +458,16 @@ func writeSomeLines(t *testing.T, file *os.File, numLines int, msg string) {
 func TestLogsFileAutoRemoval(t *testing.T) {
 	// Override global in tailersrc.go.
 	multilineWaitPeriod = 10 * time.Millisecond
-
-	filePrefix := "file_auto_removal"
-	tmpfile1, err := createTempFile("", filePrefix)
-	fmt.Printf("Created 1st temp file, %s\n", tmpfile1.Name())
-	require.NoError(t, err)
-
-	logFile := NewLogFile()
-	defer logFile.Stop()
-	logFile.Log = TestLogger{t}
-	logFile.FileConfig = []FileConfig{{
-		FilePath:      filepath.Join(filepath.Dir(tmpfile1.Name()), filePrefix+"*"),
-		FromBeginning: true,
-		AutoRemoval:   true,
-	}}
-	logFile.FileConfig[0].init()
-	logFile.started = true
-
-	logSource, evts := getLogSrc(t, logFile)
-	defer (*logSource).Stop()
-
-	fmt.Println("Fill temp file with sufficient lines to be read.")
-	numLogLinesToWrite := 10000
-	logEntryString := "this is the best log line ever written to a file"
-	writeSomeLines(t, tmpfile1, numLogLinesToWrite, logEntryString)
-	tmpfile1.Close()
-
-	var tmpfile2 *os.File
-	var logSource2 *logs.LogSrc
-	var	evts2 chan logs.LogEvent
-	defer func() {
-		if logSource2 != nil {
-			(*logSource2).Stop()
-		}
-		if tmpfile2 != nil {
-			tmpfile2.Close()
-			os.Remove(tmpfile2.Name())
-		}
-	}()
-
-	fmt.Println("Verify every line written to the first temp file is received.")
-	// Do this in a goroutine in case there is a bug and it hangs.
-	readerDone := make(chan bool)
-	// Need to make sure tmpfile2 is created before accessing evts2
-	fileCreatorDone := make(chan bool)
-
-	go func() {
-		defer close(readerDone)
-		for i := 0; i < numLogLinesToWrite; i++ {
-			logEvent := <- evts
-			require.Equal(t, logEntryString, logEvent.Message())
-			if i != numLogLinesToWrite / 2 {
-				continue
-			}
-			// Halfway through receiving events create a new temp file.
-			// Still expect to recv all events from the first file.
-			// Need to do this in a goroutine since FindLogSrc()
-			// will block until tailer reaches EOF on first temp file.
-			go func() {
-				defer close(fileCreatorDone)
-				tmpfile2, err = createTempFile("", filePrefix)
-				fmt.Printf("Created 2nd temp file, %s\n", tmpfile2.Name())
-				require.NoError(t, err)
-				_, err = tmpfile2.WriteString(logEntryString + "\n")
-				require.NoError(t, err)
-				logSource2, evts2 = getLogSrc(t, logFile)
-			}()
-		}
-	}()
-
-	fmt.Println("Verify reader completed.")
+	prefix := "file_auto_removal"
+	done := make(chan bool)
+	createWriteRead(t, prefix, nil, done, true)
+	t.Log("Verify 1st tmp file created and discovered.")
 	select {
-	case <-readerDone:
-		fmt.Println("Completed before timeout (as expected)")
-	case <-time.After(time.Second * 10):
-		t.Fatalf("timeout waiting for reader")
+	case <-done:
+		t.Log("Completed before timeout (as expected)")
+	case <-time.After(time.Second * 5):
+		require.Fail(t, "timeout waiting for 2nd temp file.")
 	}
-
-	fmt.Println("Verify 2nd tmp file created and discovered.")
-	select {
-	case <-fileCreatorDone:
-		fmt.Println("Completed before timeout (as expected)")
-	case <-time.After(time.Second * 10):
-		t.Fatalf("timeout waiting for 2nd temp file.")
-	}
-
-	fmt.Println("Verify message in 2nd temp file.")
-	e2 := <- evts2
-	assert.Equal(t, logEntryString, e2.Message())
-
-	fmt.Println("Verify 1st temp file was auto deleted.")
-	_, err = os.Open(tmpfile1.Name())
-	assert.True(t, os.IsNotExist(err))
 }
 
 func TestLogsTimestampAsMultilineStarter(t *testing.T) {
