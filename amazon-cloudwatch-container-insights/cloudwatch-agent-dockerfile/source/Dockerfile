@@ -6,6 +6,8 @@ FROM $GO_IMAGE as builder
 # NOTE: This arg will be populated by docker buildx
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 ARG TARGETARCH
+    ARG GOPROXY="direct"
+ENV GOPROXY=${GOPROXY}
 RUN mkdir -p /go/src/github.com/aws/amazon-cloudwatch-agent/
 WORKDIR /go/src/github.com/aws/amazon-cloudwatch-agent/
 

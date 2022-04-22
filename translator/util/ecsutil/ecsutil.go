@@ -49,6 +49,7 @@ func initECSUtilSingleton() (newInstance *ecsUtil) {
 	}
 	log.Println("I! attempt to access ECS task metadata to determine whether I'm running in ECS.")
 	ecsMetadataResponse, err := newInstance.getECSMetadata()
+	log.Printf("I! Metadata respond %v", ecsMetadataResponse)
 	if err != nil {
 		log.Printf("I! access ECS task metadata fail with response %v, assuming I'm not running in ECS.\n", err)
 		return

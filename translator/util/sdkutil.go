@@ -25,7 +25,6 @@ const (
 
 var DetectRegion func(mode string, credsConfig map[string]string) string = detectRegion
 var DetectCredentialsPath func() string = detectCredentialsPath
-var runInAws = os.Getenv(config.RUN_IN_AWS)
 
 func DetectAgentMode(configuredMode string) string {
 	if configuredMode != "auto" {
