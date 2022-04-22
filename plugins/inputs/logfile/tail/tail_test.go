@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
-var linesWrittenToFile int = 10
+const linesWrittenToFile int = 10
 
 type testLogger struct {
 	debugs, infos, warns, errors []string
