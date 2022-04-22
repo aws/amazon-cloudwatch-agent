@@ -716,14 +716,16 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.Stop()
 }
 
-// TestLogsFileRecreate verifies that if a log file was previously deleted,
-// we do not restore from the statefile offset, and instead start
-// reading from the beginning of the log file.
+// TestLogsFileRecreate verifies the following:
+// 1. When reading from a log file that has an existing offset, honor that
+// 2. When reading from a log file that gets deleted, attempt to reopen the file,
+//    and do not read from the offset
 func TestLogsFileRecreate(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	line1 := "abcdefghijklmnopqrst"
 	line2 := "09876098760987609876"
 	line3 := "123456789012345678901234567890"
+	startingOffset := 10
 
 	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
@@ -731,103 +733,57 @@ func TestLogsFileRecreate(t *testing.T) {
 	_, err = tmpfile.WriteString(line1 + "\n")
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("", "state")
-	require.NoError(t, err)
-	defer os.Remove(stateDir)
-
-	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
-	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
-	require.NoError(t, err)
-	_, err = stateFile.WriteString("10")
-	defer os.Remove(stateFileName)
-
-	tt := NewLogFile()
-	tt.FileStateFolder = stateDir
-	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
-	tt.FileConfig[0].init()
-	tt.started = true
+	fileConfig := FileConfig{
+		FilePath:      tmpfile.Name(),
+		FromBeginning: true,
+	}
+	tt := setupLogFile(t, []FileConfig{fileConfig})
 	defer tt.Stop()
+
+	stateDir, stateFile := setupStateFile(t, tmpfile.Name(), startingOffset)
+	defer os.Remove(stateDir)
+	defer os.Remove(stateFile)
+
+	tt.FileStateFolder = stateDir
+
+	evts, files := setupTestChannels()
+	defer close(evts)
+	defer close(files)
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
 
-	evts := make(chan logs.LogEvent)
-	var e logs.LogEvent
-
-	lsrc1 := lsrcs[0]
-	lsrc1.SetOutput(func(e logs.LogEvent) {
+	lsrc := lsrcs[0]
+	lsrc.SetOutput(func(e logs.LogEvent) {
 		if e != nil {
 			evts <- e
 		}
 	})
-	defer lsrc1.Stop()
+	defer lsrc.Stop()
 
-	go func() {
-		time.Sleep(1 * time.Second)
+	// at this point, there is already a log in the file that is consumed
+	validateLogMessageConsumed(t, evts, line1[startingOffset:])
 
-		// recreate file
-		err = os.Remove(tmpfile.Name())
-		require.NoError(t, err)
-		require.NoError(t, tmpfile.Close())
-		// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
-		time.Sleep(time.Second * 1)
-		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
-		require.NoError(t, err)
-
-		_, err = tmpfile.WriteString(line2 + "\n") // write a different line to the file
-		require.NoError(t, err)
-
-	}()
+	go recreateLogFileWithNewMessage(t, files, tmpfile, line2)
 
 	select {
-	case e = <-evts:
-	case <-time.After(3 * time.Second):
-		t.Fatal("Should have received a log event by now")
+	case tmpfile = <-files:
+	case <-time.After(5 * time.Second):
+		t.Fatal("The log file should have been rotated by now")
 	}
 
-	if e.Message() != line1[10:] {
-		t.Errorf("Wrong log found before file replacement: \n%v\nExpecting:\n%v\n", e.Message(), line1)
-	}
+	// the file should have rotated, and we should get a new log line
+	validateLogMessageConsumed(t, evts, line2)
 
+	go recreateLogFileWithNewMessage(t, files, tmpfile, line3)
 	select {
-	case e = <-evts:
-	case <-time.After(3 * time.Second):
-		t.Fatal("Should have received a log event by now")
+	case tmpfile = <-files:
+	case <-time.After(5 * time.Second):
+		t.Fatal("The log file should have been rotated by now")
 	}
-
-	if e.Message() != line2 {
-		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), line2)
-	}
-
-	go func() {
-		time.Sleep(1 * time.Second)
-
-		// recreate file
-		err = os.Remove(tmpfile.Name())
-		require.NoError(t, err)
-		require.NoError(t, tmpfile.Close())
-		// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
-		time.Sleep(time.Second * 1)
-		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
-		require.NoError(t, err)
-
-		_, err = tmpfile.WriteString(line3 + "\n") // write a different line to the file
-		require.NoError(t, err)
-
-	}()
-
-	select {
-	case e = <-evts:
-	case <-time.After(3 * time.Second):
-		t.Fatal("Should have received a log event by now")
-	}
-
-	if e.Message() != line3 {
-		t.Errorf("Wrong log found before file replacement: \n%v\nExpecting:\n%v\n", e.Message(), line3)
-	}
+	validateLogMessageConsumed(t, evts, line3)
 }
 
 func TestLogsPartialLineReading(t *testing.T) {
@@ -1100,4 +1056,74 @@ func TestGenerateLogGroupName(t *testing.T) {
 		"The log group name %s is not the same as %s.",
 		logGroupName,
 		expectLogGroup))
+}
+
+func setupLogFile(t *testing.T, files []FileConfig) *LogFile {
+	tt := NewLogFile()
+	tt.Log = TestLogger{t: t}
+	tt.FileConfig = files
+	for _, f := range files {
+		err := f.init()
+		if err != nil {
+			t.Fatalf("error occurred when initializing file config: %v", err)
+		}
+	}
+	tt.started = true
+
+	return tt
+}
+
+func setupStateFile(t *testing.T, logFileName string, offset int) (dir, stateFileName string) {
+	require.Greater(t, offset, 0)
+	dir, err := ioutil.TempDir("", "state")
+	require.NoError(t, err)
+
+	stateFileName = filepath.Join(dir, escapeFilePath(logFileName))
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	require.NoError(t, err)
+	_, err = stateFile.WriteString(strconv.Itoa(offset))
+	require.NoError(t, err)
+
+	return
+}
+
+func setupTestChannels() (chan logs.LogEvent, chan *os.File) {
+	eventsCh := make(chan logs.LogEvent)
+	fileCh := make(chan *os.File)
+
+	return eventsCh, fileCh
+}
+
+func recreateLogFileWithNewMessage(t *testing.T, fileChan chan *os.File, origFile *os.File, logLine string) {
+	t.Logf("Recreating log file %s and writing log line %s", origFile.Name(), logLine)
+	time.Sleep(1 * time.Second)
+
+	// recreate file
+	err := os.Remove(origFile.Name())
+	require.NoError(t, err)
+	require.NoError(t, origFile.Close())
+
+	// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
+	time.Sleep(1 * time.Second)
+	newFile, err := os.OpenFile(origFile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	require.NoError(t, err)
+
+	_, err = newFile.WriteString(logLine + "\n")
+	require.NoError(t, err)
+
+	// after writing, publish back the file struct to the channel
+	fileChan <- newFile
+	t.Logf("Finished writing '%s'", logLine)
+}
+
+func validateLogMessageConsumed(t *testing.T, evts <-chan logs.LogEvent, expectedMessage string) {
+	t.Logf("Checking for expected message '%s' to be consumed", expectedMessage)
+	var e logs.LogEvent
+	select {
+	case e = <-evts:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("Did not consume '%s' from the log file in time", expectedMessage)
+	}
+
+	require.Equal(t, expectedMessage, e.Message())
 }
