@@ -32,9 +32,11 @@ type ecsUtil struct {
 	httpClient *httpclient.HttpClient
 }
 
+var ecsUtilInstance *ecsUtil
+
 var ecsUtilOnce sync.Once
 
-func GetECSUtilSingleton() (ecsUtilInstance *ecsUtil) {
+func GetECSUtilSingleton() *ecsUtil {
 	ecsUtilOnce.Do(func() {
 		ecsUtilInstance = initECSUtilSingleton()
 	})
