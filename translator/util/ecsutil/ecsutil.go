@@ -90,7 +90,7 @@ func (e *ecsUtil) getMetadataResponse(endpoint string) (em *ecsMetadataResponse,
 	err = json.Unmarshal(resp, em)
 	if err != nil {
 		log.Printf("E! Unable to parse response from ecsmetadata endpoint, error: %v", err)
-		log.Printf("D! Respond content is %s", string(resp))
+		log.Printf("D! Content is %s", string(resp))
 	}
 	return
 }
