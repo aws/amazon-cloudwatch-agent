@@ -285,6 +285,13 @@ func (ts *tailerSrc) cleanUp() {
 	}
 }
 
+func (ts *tailerSrc) removeStateFile() {
+	err := os.Remove(ts.stateFilePath)
+	if err != nil {
+		log.Printf("D! [logfile] failed to delete state file '%s': %v", ts.stateFilePath, err)
+	}
+}
+
 func (ts *tailerSrc) runSaveState() {
 	t := time.NewTicker(100 * time.Millisecond)
 	defer t.Stop()
