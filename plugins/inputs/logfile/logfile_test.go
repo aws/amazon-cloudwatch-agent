@@ -336,8 +336,10 @@ func TestLogsFileRemove(t *testing.T) {
 	ts := lsrcs[0].(*tailerSrc)
 	ts.outputFn = func(e logs.LogEvent) {}
 
+	delay := 500 * time.Millisecond
+
 	go func() {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(delay)
 		if err := os.Remove(tmpfile.Name()); err != nil {
 			t.Errorf("Failed to remove tmp file '%v': %v", tmpfile.Name(), err)
 		}
@@ -350,9 +352,9 @@ func TestLogsFileRemove(t *testing.T) {
 	}()
 
 	select {
-	case <-time.After(1 * time.Second):
-		t.Errorf("tailerSrc should have stopped after tile is removed")
+	case <-time.After(2 * delay):
 	case <-stopped:
+		t.Errorf("tailerSrc should have reopened after deletion")
 	}
 
 	tt.Stop()
@@ -714,19 +716,19 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.Stop()
 }
 
-// TestLogsFileRecreate verifies that if a LogSrc matching a LogConfig is detected,
-// We only receive log lines beginning at the offset specified in the corresponding state-file.
-// And if the file happens to get deleted and recreated we expect to receive log lines beginning
-// at that same offset in the state file.
+// TestLogsFileRecreate verifies that if a log file was previously deleted,
+// we do not restore from the statefile offset, and instead start
+// reading from the beginning of the log file.
 func TestLogsFileRecreate(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	logEntryString := "xxxxxxxxxxContentAfterOffset"
-	expectedContent := "ContentAfterOffset"
+	line1 := "abcdefghijklmnopqrst"
+	line2 := "09876098760987609876"
+	line3 := "123456789012345678901234567890"
 
 	tmpfile, err := createTempFile("", "")
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
-	_, err = tmpfile.WriteString(logEntryString + "\n")
+	_, err = tmpfile.WriteString(line1 + "\n")
 	require.NoError(t, err)
 
 	stateDir, err := ioutil.TempDir("", "state")
@@ -745,19 +747,23 @@ func TestLogsFileRecreate(t *testing.T) {
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
+	defer tt.Stop()
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
 
-	lsrc := lsrcs[0]
 	evts := make(chan logs.LogEvent)
-	lsrc.SetOutput(func(e logs.LogEvent) {
+	var e logs.LogEvent
+
+	lsrc1 := lsrcs[0]
+	lsrc1.SetOutput(func(e logs.LogEvent) {
 		if e != nil {
 			evts <- e
 		}
 	})
+	defer lsrc1.Stop()
 
 	go func() {
 		time.Sleep(1 * time.Second)
@@ -771,42 +777,57 @@ func TestLogsFileRecreate(t *testing.T) {
 		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 		require.NoError(t, err)
 
-		_, err = tmpfile.WriteString(logEntryString + "\n")
+		_, err = tmpfile.WriteString(line2 + "\n") // write a different line to the file
 		require.NoError(t, err)
 
 	}()
 
-	e := <-evts
-	if e.Message() != expectedContent {
-		t.Errorf("Wrong log found before file replacement: \n%v\nExpecting:\n%v\n", e.Message(), expectedContent)
+	select {
+	case e = <-evts:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Should have received a log event by now")
 	}
-	defer lsrc.Stop()
 
-	// Waiting 10 seconds for the recreated temp file to be detected is plenty sufficient on any OS.
-	for start := time.Now(); time.Since(start) < 10*time.Second; {
-		lsrcs = tt.FindLogSrc()
-		if len(lsrcs) > 0 {
-			break
-		}
+	if e.Message() != line1[10:] {
+		t.Errorf("Wrong log found before file replacement: \n%v\nExpecting:\n%v\n", e.Message(), line1)
+	}
+
+	select {
+	case e = <-evts:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Should have received a log event by now")
+	}
+
+	if e.Message() != line2 {
+		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), line2)
+	}
+
+	go func() {
 		time.Sleep(1 * time.Second)
-	}
-	if len(lsrcs) != 1 {
-		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
-	}
-	lsrc = lsrcs[0]
-	lsrc.SetOutput(func(e logs.LogEvent) {
-		if e != nil {
-			evts <- e
-		}
-	})
 
-	e = <-evts
-	if e.Message() != expectedContent {
-		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), expectedContent)
+		// recreate file
+		err = os.Remove(tmpfile.Name())
+		require.NoError(t, err)
+		require.NoError(t, tmpfile.Close())
+		// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
+		time.Sleep(time.Second * 1)
+		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+		require.NoError(t, err)
+
+		_, err = tmpfile.WriteString(line3 + "\n") // write a different line to the file
+		require.NoError(t, err)
+
+	}()
+
+	select {
+	case e = <-evts:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Should have received a log event by now")
 	}
 
-	lsrc.Stop()
-	tt.Stop()
+	if e.Message() != line3 {
+		t.Errorf("Wrong log found before file replacement: \n%v\nExpecting:\n%v\n", e.Message(), line3)
+	}
 }
 
 func TestLogsPartialLineReading(t *testing.T) {
