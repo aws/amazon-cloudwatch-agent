@@ -250,7 +250,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 				}
 			}(src))
-			src.AddCleanUpFn(src.removeStateFile)
 
 			srcs = append(srcs, src)
 
