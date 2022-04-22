@@ -49,7 +49,7 @@ func initECSUtilSingleton() (newInstance *ecsUtil) {
 	}
 	log.Println("I! attempt to access ECS task metadata to determine whether I'm running in ECS.")
 	ecsMetadataResponse, err := newInstance.getECSMetadata()
-	log.Printf("I! Metadata respond %v", ecsMetadataResponse)
+
 	if err != nil {
 		log.Printf("I! access ECS task metadata fail with response %v, assuming I'm not running in ECS.\n", err)
 		return
@@ -68,9 +68,9 @@ func (e *ecsUtil) IsECS() bool {
 
 func (e *ecsUtil) getECSMetadata() (em *ecsMetadataResponse, err error) {
 	// choose available endpoint
-	if v4MetadataEndpoint, ok := os.LookupEnv(v4MetadataEndpointEnv); ok {
+	if v4MetadataEndpoint, ok := os.LookupEnv(v4MetadataEndpointEnv).(string); ok {
 		em, err = e.getMetadataResponse(v4MetadataEndpoint + "/task")
-	} else if v3MetadataEndpoint, ok := os.LookupEnv(v3MetadataEndpointEnv); ok {
+	} else if v3MetadataEndpoint, ok := os.LookupEnv(v3MetadataEndpointEnv).(string); ok {
 		em, err = e.getMetadataResponse(v3MetadataEndpoint + "/task")
 	} else {
 		em, err = e.getMetadataResponse(v2MetadataEndpoint)
@@ -81,14 +81,15 @@ func (e *ecsUtil) getECSMetadata() (em *ecsMetadataResponse, err error) {
 func (e *ecsUtil) getMetadataResponse(endpoint string) (em *ecsMetadataResponse, err error) {
 	em = &ecsMetadataResponse{}
 	resp, err := e.httpClient.Request(endpoint)
+	
 	if err != nil {
 		return
 	}
 
 	err = json.Unmarshal(resp, em)
 	if err != nil {
-		log.Printf("E! unable to parse resp from ecsmetadata endpoint, error: %v", err)
-		log.Printf("D! resp content is %s", string(resp))
+		log.Printf("E! Unable to parse response from ecsmetadata endpoint, error: %v", err)
+		log.Printf("D! Respond content is %s", string(resp))
 	}
 	return
 }
