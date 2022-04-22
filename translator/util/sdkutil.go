@@ -87,15 +87,13 @@ func detectRegion(mode string, credsConfig map[string]string) (region string) {
 
 	// For ec2, fallback to metadata when no region info found in credential profile.
 	if region == "" && mode == config.ModeEC2 {
-		region = defaultEC2Region()
+		fmt.Println("I! Detect region from EC2/ECS")
+		if region = defaultEC2Region(); region == "" {
+			// Try to get region from ecs metadata
+			region = defaultECSRegion()
+		}
 	}
-
-	// try to get region from ecs metadata
-	if region == "" && mode == config.ModeEC2 {
-		fmt.Println("I! detect region from ecs")
-		region = defaultECSRegion()
-	}
-
+	
 	return
 }
 

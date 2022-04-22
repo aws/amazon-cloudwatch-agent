@@ -32,10 +32,9 @@ type ecsUtil struct {
 	httpClient *httpclient.HttpClient
 }
 
-var ecsUtilInstance *ecsUtil
 var ecsUtilOnce sync.Once
 
-func GetECSUtilSingleton() *ecsUtil {
+func GetECSUtilSingleton() (ecsUtilInstance *ecsUtil) {
 	ecsUtilOnce.Do(func() {
 		ecsUtilInstance = initECSUtilSingleton()
 	})
@@ -67,7 +66,7 @@ func (e *ecsUtil) IsECS() bool {
 }
 
 func (e *ecsUtil) getECSMetadata() (em *ecsMetadataResponse, err error) {
-	// choose available endpoint
+	// Based on endpoint to get ECS metadata, for more information on the respond, https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint.html
 	if v4MetadataEndpoint, ok := os.LookupEnv(v4MetadataEndpointEnv).(string); ok {
 		em, err = e.getMetadataResponse(v4MetadataEndpoint + "/task")
 	} else if v3MetadataEndpoint, ok := os.LookupEnv(v3MetadataEndpointEnv).(string); ok {
