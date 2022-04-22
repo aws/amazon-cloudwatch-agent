@@ -60,7 +60,6 @@ func (l *testLogger) Info(args ...interface{}) {
 
 func TestNotTailedCompeletlyLogging(t *testing.T) {
 	tmpfile, tail, tlog := setup(t)
-	tmpfile.Close()
 	defer tearDown(tmpfile)
 
 	readThreelines(t, tail)
