@@ -27,9 +27,9 @@ func (l *LogStreamName) ApplyRule(input interface{}) (returnKey string, returnVa
 			// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html#API_PutLogEvents_RequestParameters
 			// Log stream name cannot have ":" or "*". Replace ":" with "_". ECS task arn won't have "*".
 			defaultVal = strings.ReplaceAll(ecsutil.GetECSUtilSingleton().TaskARN, ":", "_")
-		} else if podName, ok := os.LookupEnv(config.POD_NAME).(string); ok {
+		} else if podName, ok := os.LookupEnv(config.POD_NAME); ok {
 			defaultVal = podName
-		} else if hostName, ok := os.LookupEnv(config.HOST_NAME).(string); ok {
+		} else if hostName, ok := os.LookupEnv(config.HOST_NAME); ok {
 			defaultVal = hostName
 		} else if hostName, err := os.Hostname(); err == nil {
 			defaultVal = hostName
