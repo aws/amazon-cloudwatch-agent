@@ -77,7 +77,6 @@ func (e *ecsUtil) getECSMetadata() (em *ecsMetadataResponse, err error) {
 		if v3FinalMetadataEndpoint, ok := v3MetadataEndpoint.(string); ok {
 			em, err = e.getMetadataResponse(v3FinalMetadataEndpoint + "/task")
 		}
-		
 	} else {
 		em, err = e.getMetadataResponse(v2MetadataEndpoint)
 	}
