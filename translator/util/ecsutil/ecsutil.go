@@ -70,9 +70,14 @@ func (e *ecsUtil) IsECS() bool {
 func (e *ecsUtil) getECSMetadata() (em *ecsMetadataResponse, err error) {
 	// Based on endpoint to get ECS metadata, for more information on the respond, https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint.html
 	if v4MetadataEndpoint, ok := os.LookupEnv(v4MetadataEndpointEnv); ok {
-		em, err = e.getMetadataResponse(v4MetadataEndpoint + "/task")
+		if v4FinalMetadataEndpoint, ok := v4MetadataEndpoint.(string); ok {
+			em, err = e.getMetadataResponse(v4FinalMetadataEndpoint + "/task")
+		}
 	} else if v3MetadataEndpoint, ok := os.LookupEnv(v3MetadataEndpointEnv); ok {
-		em, err = e.getMetadataResponse(v3MetadataEndpoint + "/task")
+		if v3FinalMetadataEndpoint, ok := v3MetadataEndpoint.(string); ok {
+			em, err = e.getMetadataResponse(v3FinalMetadataEndpoint + "/task")
+		}
+		
 	} else {
 		em, err = e.getMetadataResponse(v2MetadataEndpoint)
 	}
