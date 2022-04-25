@@ -8,12 +8,15 @@ package cloudwatchlogs
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/stretchr/testify/require"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	"testing"
@@ -35,6 +38,10 @@ type input struct {
 	iterations      int
 	numExpectedLogs int
 	configPath      string
+}
+
+type logline struct {
+	Metric string
 }
 
 var testParameters = []input{
@@ -71,7 +78,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	instanceId := metadata.InstanceID
 	log.Printf("Found instance id %s", instanceId)
 
-	defer cleanUp(instanceId)
+	defer test.DeleteLogGroupAndStream(instanceId, instanceId)
 
 	for _, param := range testParameters {
 		t.Run(param.testName, func(t *testing.T) {
@@ -97,10 +104,6 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 // Validate https://github.com/aws/amazon-cloudwatch-agent/issues/447
 func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	cfgFilePath := "resources/config_log_rotated.json"
-	line1 := strings.Repeat("12345", 5)
-	line2 := strings.Repeat("09876", 5)
-	line3 := strings.Repeat("1234567890", 5)
-	lines := []string{line1, line2, line3}
 
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
@@ -119,8 +122,10 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	}
 	instanceId := metadata.InstanceID
 	log.Printf("Found instance id %s", instanceId)
+	logGroup := instanceId
+	logStream := instanceId + "Rotated"
 
-	defer cleanUp(instanceId)
+	defer test.DeleteLogGroupAndStream(logGroup, logStream)
 
 	start := time.Now()
 	test.CopyFile(cfgFilePath, configOutputPath)
@@ -130,13 +135,31 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call
 	time.Sleep(agentRuntime)
-	truncateAndWriteLogs(t, logFilePath, lines)
+	writeAndRotateLogs(t, "resources/write_and_rotate_logs.py")
 	time.Sleep(agentRuntime)
 	test.StopAgent()
 
 	t.Log(test.ReadAgentOutput(1 * time.Minute))
 
-	test.ValidateLogsInOrder(t, instanceId, instanceId+"Rotated", lines, start)
+	// expected log lines are JSON strings
+	line1, err := json.Marshal(logline{
+		Metric: strings.Repeat("12345", 10),
+	})
+	require.NoError(t, err)
+	line2, err := json.Marshal(logline{
+		Metric: strings.Repeat("09876", 10),
+	})
+	require.NoError(t, err)
+	line3, err := json.Marshal(logline{
+		Metric: strings.Repeat("1234567890", 10),
+	})
+	require.NoError(t, err)
+	lines := []string{
+		string(line1),
+		string(line2),
+		string(line3),
+	}
+	test.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
 }
 
 func writeLogs(t *testing.T, filePath string, iterations int) {
@@ -162,24 +185,10 @@ func writeLogs(t *testing.T, filePath string, iterations int) {
 	}
 }
 
-func truncateAndWriteLogs(t *testing.T, filePath string, lines []string) {
-	log.Printf("Writing %d lines to %s", len(lines), filePath)
+func writeAndRotateLogs(t *testing.T, execPath string) {
+	_, err := exec.Command("bash", "-c", "python "+execPath).Output()
 
-	for _, logLine := range lines {
-		_ = os.Remove(filePath) // try to remove the file regardless of whether it exists or not
-		time.Sleep(1 * time.Second)
-		f, err := os.Create(filePath)
-		if err != nil {
-			t.Fatalf("Error occurred creating log file for writing: %v", err)
-		}
-		_, err = f.WriteString(logLine + "\n")
-		if err != nil {
-			t.Fatalf("Error occurred when writing %s to %s: %v", logLine, filePath, err)
-		}
-		time.Sleep(100 * time.Millisecond)
+	if err != nil {
+		t.Fatalf("Error occurred executing script to generate logs: %v", err)
 	}
-}
-
-func cleanUp(instanceId string) {
-	test.DeleteLogGroupAndStream(instanceId, instanceId)
 }
