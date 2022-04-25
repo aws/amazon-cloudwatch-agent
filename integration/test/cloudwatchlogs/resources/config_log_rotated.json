@@ -10,7 +10,7 @@
           {
             "file_path": "/tmp/test.*",
             "log_group_name": "{instance_id}",
-            "log_stream_name": "{instance_id}",
+            "log_stream_name": "{instance_id}Rotated",
             "timezone": "UTC"
           }
         ]

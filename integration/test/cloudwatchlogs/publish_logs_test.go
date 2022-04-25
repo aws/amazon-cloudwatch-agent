@@ -122,7 +122,6 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 
 	defer cleanUp(instanceId)
 
-	time.Sleep(1 * time.Second)
 	start := time.Now()
 	test.CopyFile(cfgFilePath, configOutputPath)
 
@@ -137,7 +136,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 
 	t.Log(test.ReadAgentOutput(1 * time.Minute))
 
-	test.ValidateLogsInOrder(t, instanceId, instanceId, lines, start)
+	test.ValidateLogsInOrder(t, instanceId, instanceId+"Rotated", lines, start)
 }
 
 func writeLogs(t *testing.T, filePath string, iterations int) {
