@@ -7,7 +7,6 @@
 package windows_event_log
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
