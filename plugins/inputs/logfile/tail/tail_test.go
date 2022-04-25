@@ -93,7 +93,7 @@ func TestStopAtEOF(t *testing.T) {
 	case <-done:
 		t.Fatalf("StopAtEOF() completed unexpectedly")
 	case <-time.After(time.Second * 1):
-		fmt.Println("timeout waiting for StopAtEOF() (as expected)")
+		t.Log("timeout waiting for StopAtEOF() (as expected)")
 	}
 
 	assert.Equal(t, errStopAtEOF, tail.Err())
