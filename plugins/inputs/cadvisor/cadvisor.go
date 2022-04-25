@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux || darwin
-// +build linux darwin
+//go:build linux
+// +build linux
 
 package cadvisor
 
@@ -13,12 +13,12 @@ import (
 	"time"
 
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor/mesos"
 	"github.com/google/cadvisor/cache/memory"
 	cadvisormetrics "github.com/google/cadvisor/container"
 	"github.com/google/cadvisor/container/containerd"
 	"github.com/google/cadvisor/container/crio"
 	"github.com/google/cadvisor/container/docker"
-	"github.com/google/cadvisor/container/mesos"
 	"github.com/google/cadvisor/container/systemd"
 	cinfo "github.com/google/cadvisor/info/v1"
 	"github.com/google/cadvisor/manager"
@@ -31,10 +31,10 @@ import (
 const statsCacheDuration = 2 * time.Minute
 
 // Max collection interval, it is not meaningful if allowDynamicHousekeeping = false
-const maxHousekeepingInterval = 15 * time.Second
+var maxHousekeepingInterval = 15 * time.Second
 
 // When allowDynamicHousekeeping is true, the collection interval is floating between 1s(default) to maxHousekeepingInterval
-const allowDynamicHousekeeping = true
+var allowDynamicHousekeeping = true
 
 const defaultHousekeepingInterval = 10 * time.Second
 
@@ -108,6 +108,10 @@ func (c *Cadvisor) Gather(acc telegraf.Accumulator) error {
 
 func (c *Cadvisor) initManager() error {
 	sysFs := sysfs.NewRealSysFs()
+	houskeepingConfig := manager.HouskeepingConfig{
+		Interval:     &maxHousekeepingInterval,
+		AllowDynamic: &allowDynamicHousekeeping,
+	}
 	includedMetrics := cadvisormetrics.MetricSet{
 		cadvisormetrics.CpuUsageMetrics:     struct{}{},
 		cadvisormetrics.MemoryUsageMetrics:  struct{}{},
@@ -121,7 +125,7 @@ func (c *Cadvisor) initManager() error {
 	}
 
 	// Create and start the cAdvisor container manager.
-	m, err := manager.New(memory.New(statsCacheDuration, nil), sysFs, maxHousekeepingInterval, allowDynamicHousekeeping, includedMetrics, http.DefaultClient, cgroupRoots)
+	m, err := manager.New(memory.New(statsCacheDuration, nil), sysFs, houskeepingConfig, includedMetrics, http.DefaultClient, cgroupRoots, []string{}, "", 0)
 	if err != nil {
 		log.Println("E! manager allocate failed, ", err)
 		return err
