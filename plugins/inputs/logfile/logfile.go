@@ -188,7 +188,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 			tailer, err := tail.TailFile(filename,
 				tail.Config{
-					ReOpen:      false, // mirror tail -F functionality https://github.com/aws/amazon-cloudwatch-agent/issues/447
+					ReOpen:      true, // mirror tail -F functionality https://github.com/aws/amazon-cloudwatch-agent/issues/447
 					Follow:      true,
 					Location:    seekFile,
 					MustExist:   true,
