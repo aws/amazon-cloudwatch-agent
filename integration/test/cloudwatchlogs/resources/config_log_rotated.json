@@ -1,6 +1,7 @@
 {
   "agent": {
-    "run_as_user": "root"
+    "run_as_user": "root",
+    "debug": true
   },
   "logs": {
     "logs_collected": {
