@@ -8,12 +8,10 @@ package cloudwatchlogs
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	"github.com/stretchr/testify/require"
 	"log"
 	"os"
 	"os/exec"
@@ -28,7 +26,7 @@ const (
 	logLineId1       = "foo"
 	logLineId2       = "bar"
 	logFilePath      = "/tmp/test.log"  // TODO: not sure how well this will work on Windows
-	agentRuntime     = 10 * time.Second // default flush interval is 5 seconds
+	agentRuntime     = 15 * time.Second // default flush interval is 5 seconds
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
@@ -38,10 +36,6 @@ type input struct {
 	iterations      int
 	numExpectedLogs int
 	configPath      string
-}
-
-type logline struct {
-	Metric string
 }
 
 var testParameters = []input{
@@ -139,25 +133,13 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	time.Sleep(agentRuntime)
 	test.StopAgent()
 
+	time.Sleep(agentRuntime)
 	t.Log(tailAgentLogFile(t, 250))
 
-	// expected log lines are JSON strings
-	line1, err := json.Marshal(logline{
-		Metric: strings.Repeat("12345", 10),
-	})
-	require.NoError(t, err)
-	line2, err := json.Marshal(logline{
-		Metric: strings.Repeat("09876", 10),
-	})
-	require.NoError(t, err)
-	line3, err := json.Marshal(logline{
-		Metric: strings.Repeat("1234567890", 10),
-	})
-	require.NoError(t, err)
 	lines := []string{
-		string(line1),
-		string(line2),
-		string(line3),
+		deriveJsonLogLine(strings.Repeat("12345", 10)),
+		deriveJsonLogLine(strings.Repeat("09876", 10)),
+		deriveJsonLogLine(strings.Repeat("1234567890", 10)),
 	}
 	test.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
 }
@@ -191,6 +173,10 @@ func writeAndRotateLogs(t *testing.T, execPath string) {
 	if err != nil {
 		t.Fatalf("Error occurred executing script to generate logs: %v", err)
 	}
+}
+
+func deriveJsonLogLine(s string) string {
+	return fmt.Sprintf("{\"Metric\": \"%s\"}", s)
 }
 
 func tailAgentLogFile(t *testing.T, numLines int) string {
