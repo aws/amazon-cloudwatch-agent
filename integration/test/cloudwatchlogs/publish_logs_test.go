@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"log"
 	"os"
+	"strings"
 
 	"testing"
 	"time"
@@ -93,6 +94,49 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	}
 }
 
+// Validate https://github.com/aws/amazon-cloudwatch-agent/issues/447
+func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
+	cfgFilePath := "resources/config_log_rotated.json"
+	line1 := strings.Repeat("12345", 5)
+	line2 := strings.Repeat("09876", 5)
+	line3 := strings.Repeat("1234567890", 5)
+	lines := []string{line1, line2, line3}
+
+	// this uses the {instance_id} placeholder in the agent configuration,
+	// so we need to determine the host's instance ID for validation
+	ctx := context.Background()
+	c, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		// fail fast so we don't continue the test
+		t.Fatalf("Error occurred while creating SDK config: %v", err)
+	}
+
+	// TODO: this only works for EC2 based testing
+	client := imds.NewFromConfig(c)
+	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
+		t.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
+	}
+	instanceId := metadata.InstanceID
+	log.Printf("Found instance id %s", instanceId)
+
+	defer cleanUp(instanceId)
+
+	start := time.Now()
+	test.CopyFile(cfgFilePath, configOutputPath)
+
+	test.StartAgent(configOutputPath)
+
+	// ensure that there is enough time from the "start" time and the first log line,
+	// so we don't miss it in the GetLogEvents call
+	time.Sleep(agentRuntime)
+	truncateAndWriteLogs(t, logFilePath, lines)
+	time.Sleep(agentRuntime)
+	test.StopAgent()
+
+	test.ValidateLogsInOrder(t, instanceId, instanceId, lines, start)
+}
+
 func writeLogs(t *testing.T, filePath string, iterations int) {
 	f, err := os.Create(filePath)
 	if err != nil {
@@ -113,6 +157,24 @@ func writeLogs(t *testing.T, filePath string, iterations int) {
 			}
 		}
 		time.Sleep(1 * time.Millisecond)
+	}
+}
+
+func truncateAndWriteLogs(t *testing.T, filePath string, lines []string) {
+	log.Printf("Writing %d lines to %s", len(lines), filePath)
+
+	for _, logLine := range lines {
+		_ = os.Remove(filePath) // try to remove the file regardless of whether it exists or not
+		time.Sleep(1 * time.Second)
+		f, err := os.Create(filePath)
+		if err != nil {
+			t.Fatalf("Error occurred creating log file for writing: %v", err)
+		}
+		_, err = f.WriteString(logLine + "\n")
+		if err != nil {
+			t.Fatalf("Error occurred when writing %s to %s: %v", logLine, filePath, err)
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
