@@ -96,7 +96,7 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 		StartFromHead: aws.Bool(true), // read from the beginning
 	}
 
-	foundLogs := make([]string, len(logLines))
+	foundLogs := make([]string, 0)
 	var output *cloudwatchlogs.GetLogEventsOutput
 	var nextToken *string
 

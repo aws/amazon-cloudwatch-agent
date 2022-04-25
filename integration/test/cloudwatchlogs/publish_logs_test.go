@@ -28,7 +28,7 @@ const (
 	logLineId1       = "foo"
 	logLineId2       = "bar"
 	logFilePath      = "/tmp/test.log"  // TODO: not sure how well this will work on Windows
-	agentRuntime     = 20 * time.Second // default flush interval is 5 seconds
+	agentRuntime     = 10 * time.Second // default flush interval is 5 seconds
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
@@ -139,7 +139,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	time.Sleep(agentRuntime)
 	test.StopAgent()
 
-	t.Log(test.ReadAgentOutput(1 * time.Minute))
+	t.Log(tailAgentLogFile(t, 250))
 
 	// expected log lines are JSON strings
 	line1, err := json.Marshal(logline{
@@ -191,4 +191,14 @@ func writeAndRotateLogs(t *testing.T, execPath string) {
 	if err != nil {
 		t.Fatalf("Error occurred executing script to generate logs: %v", err)
 	}
+}
+
+func tailAgentLogFile(t *testing.T, numLines int) string {
+	out, err := exec.Command("bash", "-c", fmt.Sprintf("tail -n %d /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log", numLines)).Output()
+
+	if err != nil {
+		t.Fatalf("Error occurred while tailing agent log file")
+	}
+
+	return string(out)
 }
