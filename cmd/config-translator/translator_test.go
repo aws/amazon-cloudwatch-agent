@@ -4,7 +4,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"regexp"
 	"testing"
@@ -34,13 +33,13 @@ func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldS
 	} else {
 		errorDetails := result.Errors()
 		for _, errorDetail := range errorDetails {
-			fmt.Printf("String: %v \n", errorDetail.String())
-			fmt.Printf("Context: %v \n", errorDetail.Context().String())
-			fmt.Printf("Description: %v \n", errorDetail.Description())
-			fmt.Printf("Details: %v \n", errorDetail.Details())
-			fmt.Printf("Field: %v \n", errorDetail.Field())
-			fmt.Printf("Type: %v \n", errorDetail.Type())
-			fmt.Printf("Value: %v \n", errorDetail.Value())
+			t.Logf("String: %v \n", errorDetail.String())
+			t.Logf("Context: %v \n", errorDetail.Context().String())
+			t.Logf("Description: %v \n", errorDetail.Description())
+			t.Logf("Details: %v \n", errorDetail.Details())
+			t.Logf("Field: %v \n", errorDetail.Field())
+			t.Logf("Type: %v \n", errorDetail.Type())
+			t.Logf("Value: %v \n", errorDetail.Value())
 			if _, ok := actualErrorMap[errorDetail.Type()]; ok {
 				actualErrorMap[errorDetail.Type()] += 1
 			} else {
@@ -185,9 +184,9 @@ func TestSampleConfigSchema(t *testing.T) {
 		re := regexp.MustCompile(".json")
 		for _, file := range files {
 			if re.MatchString(file.Name()) {
-				fmt.Printf("Validating ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
+				t.Logf("Validating ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
 				checkIfSchemaValidateAsExpected(t, "../../translator/totomlconfig/sampleConfig/"+file.Name(), true, map[string]int{})
-				fmt.Printf("Validated ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
+				t.Logf("Validated ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
 			}
 		}
 	} else {

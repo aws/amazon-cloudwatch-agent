@@ -106,7 +106,7 @@ func TestStopAtEOF(t *testing.T) {
 	// Verify StopAtEOF() has completed.
 	select {
 	case <-done:
-		fmt.Println("StopAtEOF() completed (as expected)")
+		t.Log("StopAtEOF() completed (as expected)")
 	case <- time.After(time.Second * 1):
 		t.Fatalf("StopAtEOF() has not completed")
 	}
