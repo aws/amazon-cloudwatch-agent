@@ -311,7 +311,7 @@ func TestLogsMultilineEvent(t *testing.T) {
 	tt.Stop()
 }
 
-//When file is removed, the related tail routing should exit
+//When file is removed, the related tail process should attempt to reopen the file
 func TestLogsFileRemove(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
@@ -327,6 +327,7 @@ func TestLogsFileRemove(t *testing.T) {
 	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
+	defer tt.Stop()
 
 	lsrcs := tt.FindLogSrc()
 	if len(lsrcs) != 1 {
@@ -335,6 +336,7 @@ func TestLogsFileRemove(t *testing.T) {
 
 	ts := lsrcs[0].(*tailerSrc)
 	ts.outputFn = func(e logs.LogEvent) {}
+	defer ts.Stop()
 
 	delay := 500 * time.Millisecond
 
@@ -352,12 +354,10 @@ func TestLogsFileRemove(t *testing.T) {
 	}()
 
 	select {
-	case <-time.After(2 * delay):
+	case <-time.After(3 * delay):
 	case <-stopped:
 		t.Errorf("tailerSrc should have reopened after deletion")
 	}
-
-	tt.Stop()
 }
 
 //When another file is created for the same file config and the file config has auto_removal as true, the old files will stop at EOF and removed afterwards
