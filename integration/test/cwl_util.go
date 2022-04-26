@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,7 +77,8 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 
 // ValidateLogsInOrder takes a log group, log stream, a list of specific log lines and a timestamp.
 // It should query the given log stream for log events, and then confirm that the log lines that are
-// returned match the expected log lines.
+// returned match the expected log lines. This also sanitizes the log lines from both the output and
+// the expected lines input to ensure that they don't diverge in JSON representation (" vs ')
 func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []string, since time.Time) {
 	log.Printf("Checking %s/%s since %s for %d expected logs", logGroup, logStream, since.UTC().Format(time.RFC3339), len(logLines))
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
@@ -126,7 +128,9 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 	// Validate that each of the logs are found, in order and in full.
 	assert.Len(t, foundLogs, len(logLines))
 	for i := 0; i < len(logLines); i++ {
-		assert.Equal(t, logLines[i], foundLogs[i])
+		expected := strings.ReplaceAll(logLines[i], "'", "\"")
+		actual := strings.ReplaceAll(foundLogs[i], "'", "\"")
+		assert.Equal(t, expected, actual)
 	}
 }
 

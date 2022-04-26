@@ -1096,12 +1096,12 @@ func setupTestChannels() (chan logs.LogEvent, chan *os.File) {
 
 func recreateLogFileWithNewMessage(t *testing.T, fileChan chan *os.File, origFile *os.File, logLine string) {
 	t.Logf("Recreating log file %s and writing log line %s", origFile.Name(), logLine)
-	time.Sleep(2 * time.Second) // TODO: see if this alleviates the issue on windows
+	time.Sleep(1 * time.Second)
 
 	// recreate file
+	require.NoError(t, origFile.Close())
 	err := os.Remove(origFile.Name())
 	require.NoError(t, err)
-	require.NoError(t, origFile.Close())
 
 	// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
 	time.Sleep(1 * time.Second)
