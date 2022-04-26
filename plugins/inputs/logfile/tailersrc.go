@@ -164,6 +164,7 @@ func (ts *tailerSrc) runTail() {
 	var msgBuf bytes.Buffer
 	var cnt int
 	fo := &fileOffset{}
+	log.Print("Start tailing")
 
 	ignoreUntilNextEvent := false
 	for {

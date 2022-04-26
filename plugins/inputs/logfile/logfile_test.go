@@ -335,7 +335,11 @@ func TestLogsFileRemove(t *testing.T) {
 	}
 
 	ts := lsrcs[0].(*tailerSrc)
-	ts.outputFn = func(e logs.LogEvent) {}
+	ts.outputFn = func(e logs.LogEvent) {
+		if e != nil {
+			t.Logf("Consumed some message: %s", e.Message())
+		}
+	}
 	defer ts.Stop()
 
 	delay := 500 * time.Millisecond
