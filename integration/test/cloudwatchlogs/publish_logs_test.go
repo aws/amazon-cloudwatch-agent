@@ -128,14 +128,14 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	// so we don't miss it in the GetLogEvents call
 	time.Sleep(agentRuntime)
 	t.Log("Writing logs and rotating")
-	test.RunCommand("python resources/write_and_rotate_logs.py")
+	test.RunCommand("/usr/bin/python3 resources/write_and_rotate_logs.py")
 	time.Sleep(agentRuntime)
 	test.StopAgent()
 
 	lines := []string{
-		fmt.Sprintf("{'Metric': '%s'}", strings.Repeat("12345", 10)),
-		fmt.Sprintf("{'Metric': '%s'}", strings.Repeat("09876", 10)),
-		fmt.Sprintf("{'Metric': '%s'}", strings.Repeat("1234567890", 10)),
+		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("12345", 10)),
+		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("09876", 10)),
+		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("1234567890", 10)),
 	}
 	test.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
 }
