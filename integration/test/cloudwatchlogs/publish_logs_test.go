@@ -81,22 +81,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	cfgFilePath := "resources/config_log_rotated.json"
 
-	// this uses the {instance_id} placeholder in the agent configuration,
-	// so we need to determine the host's instance ID for validation
-	ctx := context.Background()
-	c, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		// fail fast so we don't continue the test
-		t.Fatalf("Error occurred while creating SDK config: %v", err)
-	}
-
-	// TODO: this only works for EC2 based testing
-	client := imds.NewFromConfig(c)
-	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
-	if err != nil {
-		t.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
-	}
-	instanceId := metadata.InstanceID
+	instanceId := test.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
 	logGroup := instanceId
 	logStream := instanceId + "Rotated"

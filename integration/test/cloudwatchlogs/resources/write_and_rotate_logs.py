@@ -1,3 +1,8 @@
+"""
+Lifted this from https://github.com/aws/amazon-cloudwatch-agent/issues/447
+because I was not able to adequately reproduce the issue natively in Go,
+directly in the integration test code.
+"""
 import json
 import logging
 import time
