@@ -164,7 +164,6 @@ func (ts *tailerSrc) runTail() {
 	var msgBuf bytes.Buffer
 	var cnt int
 	fo := &fileOffset{}
-	log.Print("Start tailing")
 
 	ignoreUntilNextEvent := false
 	for {
@@ -185,7 +184,6 @@ func (ts *tailerSrc) runTail() {
 						ts.outputFn(e)
 					}
 				}
-				log.Print("Returned at A")
 				return
 			}
 
@@ -268,7 +266,6 @@ func (ts *tailerSrc) runTail() {
 			msgBuf.Reset()
 			cnt = 0
 		case <-ts.done:
-			log.Print("Returned at B")
 			return
 		}
 	}

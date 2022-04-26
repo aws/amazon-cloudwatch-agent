@@ -171,7 +171,6 @@ func (tail *Tail) StopAtEOF() error {
 var errStopAtEOF = errors.New("tail: stop at eof")
 
 func (tail *Tail) close() {
-	tail.Logger.Warn("Closing tail")
 	if tail.dropCnt > 0 {
 		tail.Logger.Errorf("Dropped %v lines for stopped tail for file %v", tail.dropCnt, tail.Filename)
 	}
@@ -196,6 +195,8 @@ func (tail *Tail) reopen() error {
 		tail.curOffset = 0
 		if err != nil {
 			if os.IsPermission(err) {
+				// Specifically on Windows, reopening the file too quickly can result in an access denied error.
+				// Retry to allow for some leniency for when the file on the host becomes available.
 				tail.Logger.Debugf("Access denied on %s. Retried %d times so far", tail.Filename, numTries)
 				if numTries < fileOpenMaxRetries {
 					tail.Logger.Debugf("Sleeping for %v ms and retrying", waitDuration.Milliseconds())
@@ -324,8 +325,6 @@ func (tail *Tail) tailFileSync() {
 	defer tail.Done()
 	defer tail.close()
 
-	tail.Logger.Info("Starting to run tail plugin")
-
 	if !tail.MustExist {
 		// deferred first open.
 		err := tail.reopen()
@@ -404,7 +403,6 @@ func (tail *Tail) tailFileSync() {
 			// implementation (inotify or polling).
 			err := tail.waitForChanges()
 			if err != nil {
-				tail.Logger.Warnf("error got caught: %s", err.Error())
 				if err == ErrDeletedNotReOpen {
 					for {
 						line, errReadLine := tail.readLine()
@@ -421,14 +419,12 @@ func (tail *Tail) tailFileSync() {
 			}
 		} else {
 			// non-EOF error
-			tail.Logger.Warnf("Error reading %s: %s", tail.Filename, err)
 			tail.Killf("Error reading %s: %s", tail.Filename, err)
 			return
 		}
 
 		select {
 		case <-tail.Dying():
-			tail.Logger.Error("Dying")
 			if tail.Err() == errStopAtEOF {
 				continue
 			}
