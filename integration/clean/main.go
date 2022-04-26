@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	defaultDaysToKeep = 5
+	defaultDaysToKeep = 30
 	cleanerTypeAll    = "all"
 	delimiter         = ","
 )
