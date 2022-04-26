@@ -86,6 +86,14 @@ func RunShellScript(path string, args ...string) {
 	}
 }
 
+func RunCommand(cmd string) {
+	out, err := exec.Command("bash", "-c", cmd)
+
+	if err != nil {
+		log.Fatalf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
+	}
+}
+
 func ReplaceLocalStackHostName(pathIn string) {
 	out, err := exec.Command("bash", "-c", "sed -i 's/localhost.localstack.cloud/'\"$LOCAL_STACK_HOST_NAME\"'/g' "+pathIn).Output()
 

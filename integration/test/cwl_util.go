@@ -112,7 +112,6 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 
 		for _, e := range output.Events {
 			foundLogs = append(foundLogs, *e.Message)
-			log.Printf("Found log: %s", *e.Message)
 		}
 
 		if nextToken != nil && output.NextForwardToken != nil && *output.NextForwardToken == *nextToken {

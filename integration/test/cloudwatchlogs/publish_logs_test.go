@@ -129,17 +129,15 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	// ensure that there is enough time from the "start" time and the first log line,
 	// so we don't miss it in the GetLogEvents call
 	time.Sleep(agentRuntime)
-	writeAndRotateLogs(t, "resources/write_and_rotate_logs.py")
+	t.Log("Writing logs and rotating")
+	test.RunCommand("python resources/write_and_rotate_logs.py")
 	time.Sleep(agentRuntime)
 	test.StopAgent()
 
-	time.Sleep(agentRuntime)
-	t.Log(tailAgentLogFile(t, 250))
-
 	lines := []string{
-		deriveJsonLogLine(strings.Repeat("12345", 10)),
-		deriveJsonLogLine(strings.Repeat("09876", 10)),
-		deriveJsonLogLine(strings.Repeat("1234567890", 10)),
+		fmt.Sprintf("{'Metric': '%s'}", strings.Repeat("12345", 10)),
+		fmt.Sprintf("{'Metric': '%s'}", strings.Repeat("09876", 10)),
+		fmt.Sprintf("{'Metric': '%s'}", strings.Repeat("1234567890", 10)),
 	}
 	test.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
 }
@@ -165,26 +163,4 @@ func writeLogs(t *testing.T, filePath string, iterations int) {
 		}
 		time.Sleep(1 * time.Millisecond)
 	}
-}
-
-func writeAndRotateLogs(t *testing.T, execPath string) {
-	_, err := exec.Command("bash", "-c", "python "+execPath).Output()
-
-	if err != nil {
-		t.Fatalf("Error occurred executing script to generate logs: %v", err)
-	}
-}
-
-func deriveJsonLogLine(s string) string {
-	return fmt.Sprintf("{\"Metric\": \"%s\"}", s)
-}
-
-func tailAgentLogFile(t *testing.T, numLines int) string {
-	out, err := exec.Command("bash", "-c", fmt.Sprintf("tail -n %d /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log", numLines)).Output()
-
-	if err != nil {
-		t.Fatalf("Error occurred while tailing agent log file")
-	}
-
-	return string(out)
 }
