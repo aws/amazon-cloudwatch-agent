@@ -2,10 +2,10 @@ module github.com/aws/amazon-cloudwatch-agent
 
 go 1.17
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.5-0.20220425184733-7af1aa375593
+replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20220425213530-1fcf6fd26f0c
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
-replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20220425184733-7af1aa375593
+replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20220425213530-1fcf6fd26f0c
 
 //pin consul to a newer version to fix the ambiguous import issue
 //see https://github.com/hashicorp/consul/issues/6019 and https://github.com/hashicorp/consul/issues/6414

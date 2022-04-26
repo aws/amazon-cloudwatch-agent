@@ -31,7 +31,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 
-	lumberjack "github.com/aws/amazon-cloudwatch-agent/logger"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
@@ -549,14 +548,10 @@ func main() {
 			}
 			os.Exit(0)
 		} else {
-			_, err := s.Logger(nil)
-			if err == nil {
-				// When in service mode, register eventlog target and setup default logging to eventlog
-				//e := logger.RegisterEventLogger(LogTargetEventLog)
-				//if e != nil {
-				//	log.Println("E! Cannot register event log " + e.Error())
-				//}
-				logger.SetupLogging(logger.LogConfig{LogTarget: lumberjack.LogTargetLumberjack})
+			// When in service mode, register eventlog target and setup default logging to eventlog
+			e := RegisterEventLogger()
+			if e != nil {
+				log.Println("E! Cannot register event log " + e.Error())
 			}
 			err = s.Run()
 
