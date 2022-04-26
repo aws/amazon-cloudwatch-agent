@@ -7,7 +7,11 @@
 package test
 
 import (
+	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -100,4 +104,29 @@ func ReplaceLocalStackHostName(pathIn string) {
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
+}
+
+func GetInstanceId() string {
+	ctx := context.Background()
+	c, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		// fail fast so we don't continue the test
+		log.Fatalf("Error occurred while creating SDK config: %v", err)
+	}
+
+	// TODO: this only works for EC2 based testing
+	client := imds.NewFromConfig(c)
+	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
+		log.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
+	}
+	return metadata.InstanceID
+}
+
+func GetCWClient(cxt context.Context) *cloudwatch.Client {
+	defaultConfig, err := config.LoadDefaultConfig(cxt)
+	if err != nil {
+		log.Fatalf("err occurred while creating config %v", err)
+	}
+	return cloudwatch.NewFromConfig(defaultConfig)
 }

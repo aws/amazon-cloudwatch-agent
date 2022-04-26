@@ -15,24 +15,27 @@ const (
 	linux   = "linux"
 	windows = "windows"
 	mac     = "mac"
-	tag     = "tag"
+	testDir = "test_dir"
 )
 
 //you can't have a const map in golang
-var osToTagMap = map[string][]string{
-	linux:   {"integration"},
-	windows: {},
+var osToTestDirMap = map[string][]string{
+	linux: {"./integration/test/ca_bundle",
+		"./integration/test/cloudwatchlogs",
+		"./integration/test/metrics_number_dimension"},
+	// @TODO add real tests
+	windows: {""},
 	mac:     {},
 }
 
 func main() {
-	for osType, tags := range osToTagMap {
-		testMatrix := genMatrix(osType, tags)
+	for osType, testDir := range osToTestDirMap {
+		testMatrix := genMatrix(osType, testDir)
 		writeTestMatrixFile(osType, testMatrix)
 	}
 }
 
-func genMatrix(targetOS string, tags []string) []map[string]string {
+func genMatrix(targetOS string, testDirList []string) []map[string]string {
 	openTestMatrix, err := os.Open(fmt.Sprintf("integration/generator/resources/%v_test_matrix.json", targetOS))
 	if err != nil {
 		log.Panicf("can't read file %v_test_matrix.json err %v", targetOS, err)
@@ -47,11 +50,11 @@ func genMatrix(targetOS string, tags []string) []map[string]string {
 
 	var testMatrixComplete []map[string]string
 	for _, test := range testMatrix {
-		testLine := copyMap(test)
-		for _, testTag := range tags {
-			testLine[tag] = testTag
+		for _, testDirectory := range testDirList {
+			testLine := copyMap(test)
+			testLine[testDir] = testDirectory
+			testMatrixComplete = append(testMatrixComplete, testLine)
 		}
-		testMatrixComplete = append(testMatrixComplete, testLine)
 	}
 	return testMatrixComplete
 }

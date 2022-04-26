@@ -84,7 +84,7 @@ variable "test_name" {
   default = ""
 }
 
-variable "tag" {
+variable "test_dir" {
   type = string
   default = ""
 }

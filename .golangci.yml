@@ -1,0 +1,61 @@
+run:
+  # The default concurrency value is the number of available CPU.
+  concurrency: 4
+
+  # Timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 20m
+
+  # Exit code when at least one issue was found, default is 1
+  issues-exit-code: 1
+
+  # Include test files or not, default is true
+  tests: true
+
+  # If invoked with -mod=readonly, the go command is disallowed from the implicit
+  # automatic updating of go.mod described above. Instead, it fails when any changes
+  # to go.mod are needed. This setting is most useful to check that go.mod does
+  # not need updates, such as in a continuous integration and testing system.
+  modules-download-mode: readonly
+
+output:
+  # colored-line-number|line-number|json|tab|checkstyle|code-climate, default is "colored-line-number"
+  format: colored-line-number
+
+  # print lines of code with issue, default is true
+  print-issued-lines: true
+
+  # print linter name in the end of issue text, default is true
+  print-linter-name: true
+
+# All available settings of specific linters
+linters-settings:
+  revive:
+    # minimal confidence for issues, default is 0.8
+    min-confidence: 0.7
+  gofmt:
+    # Simplify code: gofmt with `-s` option, true by default
+    simplify: true
+  goimports:
+    # Put imports beginning with prefix after 3rd-party packages.
+    # It's a comma-separated list of prefixes.
+    local-prefixes: github.com/aws/amazon-cloudwatch-agent
+  misspell:
+    # Correct spellings using locale preferences for US or UK.
+    # Default is to use a neutral variety of English.
+    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
+    locale: US
+    
+linters:
+  disable:
+    - errcheck
+    - gofmt
+    - goimports
+  enable:
+    - gosimple
+    - deadcode
+    - gosec
+    - unused
+    - structcheck
+    - misspell
+    - revive
+    - golint
