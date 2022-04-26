@@ -18,6 +18,11 @@ import (
 	"gopkg.in/tomb.v1"
 )
 
+const (
+	fileOpenMaxRetries    = 5
+	fileOpenRetryDuration = 100 * time.Millisecond
+)
+
 var (
 	ErrStop                     = errors.New("Tail should now stop")
 	ErrDeletedNotReOpen         = errors.New("File was deleted, tail should now stop")
@@ -183,11 +188,23 @@ func (tail *Tail) closeFile() {
 
 func (tail *Tail) reopen() error {
 	tail.closeFile()
+	numTries := 0
+	waitDuration := fileOpenRetryDuration
 	for {
 		var err error
 		tail.file, err = OpenFile(tail.Filename)
 		tail.curOffset = 0
 		if err != nil {
+			if os.IsPermission(err) {
+				tail.Logger.Debugf("Access denied on %s. Retried %d times so far", tail.Filename, numTries)
+				if numTries < fileOpenMaxRetries {
+					tail.Logger.Debugf("Sleeping for %v ms and retrying", waitDuration.Milliseconds())
+					time.Sleep(waitDuration)
+				}
+				numTries += 1
+				waitDuration *= 2
+				continue
+			}
 			if os.IsNotExist(err) {
 				tail.Logger.Debugf("Waiting for %s to appear...", tail.Filename)
 				if err := tail.watcher.BlockUntilExists(&tail.Tomb); err != nil {
