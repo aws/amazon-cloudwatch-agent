@@ -149,6 +149,7 @@ func (ts tailerSrc) Done(offset fileOffset) {
 }
 
 func (ts *tailerSrc) Stop() {
+	log.Print("Stopping tailer")
 	close(ts.done)
 }
 
@@ -171,6 +172,7 @@ func (ts *tailerSrc) runTail() {
 
 		select {
 		case line, ok := <-ts.tailer.Lines:
+			log.Print("Found line")
 			if !ok {
 				if msgBuf.Len() > 0 {
 					msg := msgBuf.String()
@@ -185,6 +187,7 @@ func (ts *tailerSrc) runTail() {
 						ts.outputFn(e)
 					}
 				}
+				log.Print("Returned at A")
 				return
 			}
 
@@ -267,6 +270,7 @@ func (ts *tailerSrc) runTail() {
 			msgBuf.Reset()
 			cnt = 0
 		case <-ts.done:
+			log.Print("Returned at B")
 			return
 		}
 	}
