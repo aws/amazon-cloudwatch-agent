@@ -5,29 +5,30 @@ package dedicated_host
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"log"
-	"time"
 )
 
 // Can't release a host if it was being used within the last 24 hr add 2 hr as a buffer
 const (
-	Type = "dedicated_host"
-	tagName = "tag:Name"
+	Type     = "dedicated_host"
+	tagName  = "tag:Name"
 	tagValue = "IntegrationTestMacDedicatedHost"
 )
 
 func Clean(ctx context.Context, expirationDate time.Time) error {
 	log.Print("Begin to clean EC2 Dedicated Host")
-	
+
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return err
 	}
-	
+
 	ec2client := ec2.NewFromConfig(defaultConfig)
 	dedicatedHosts, err := getDedicatedHost(ctx, ec2client)
 	if err != nil {
@@ -52,7 +53,7 @@ func Clean(ctx context.Context, expirationDate time.Time) error {
 	log.Printf("Dedicated hosts to release %v", dedicatedHostIds)
 	releaseDedicatedHost := ec2.ReleaseHostsInput{HostIds: dedicatedHostIds}
 	_, err = ec2client.ReleaseHosts(ctx, &releaseDedicatedHost)
-	
+
 	if err != nil {
 		return err
 	}

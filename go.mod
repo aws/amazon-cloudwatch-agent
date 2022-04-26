@@ -48,7 +48,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.18.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.4
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.29.0
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.25.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.25.1
 	github.com/aws/smithy-go v1.11.2
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
 	github.com/docker/docker v1.13.1

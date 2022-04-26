@@ -4,9 +4,10 @@
 package ami
 
 import (
+	"context"
 	"log"
 	"time"
-	"context"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -25,9 +26,9 @@ func Clean(ctx context.Context, expirationDate time.Time) error {
 	if err != nil {
 		return err
 	}
-	
+
 	ec2client := ec2.NewFromConfig(defaultConfig)
-	
+
 	// Get list of ami
 	nameFilter := types.Filter{Name: aws.String("name"), Values: []string{
 		"cloudwatch-agent-integration-test*",
@@ -58,7 +59,7 @@ func Clean(ctx context.Context, expirationDate time.Time) error {
 			}
 		}
 	}
-	
+
 	log.Println("Finished cleaning EC2 AMI")
 	return nil
 }

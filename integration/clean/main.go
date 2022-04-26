@@ -4,12 +4,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"strings"
 	"time"
-	"context"
 
 	"github.com/aws/amazon-cloudwatch-agent/integration/clean/ami"
 	"github.com/aws/amazon-cloudwatch-agent/integration/clean/dedicated_host"
@@ -27,7 +27,7 @@ var (
 	daysToKeep    int
 	cleanersToRun string
 
-	cleanerTypes   = []string{ssm.Type, ami.Type, dedicated_host.Type }
+	cleanerTypes   = []string{ssm.Type, ami.Type, dedicated_host.Type}
 	cleanerOptions = strings.Join(cleanerTypes, delimiter)
 )
 

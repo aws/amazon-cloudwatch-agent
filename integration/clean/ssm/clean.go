@@ -4,9 +4,9 @@
 package ssm
 
 import (
+	"context"
 	"log"
 	"time"
-	"context"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -15,17 +15,16 @@ import (
 )
 
 const (
-	Type = "ssm" 
+	Type                    = "ssm"
 	containSSMParameterName = "AmazonCloudWatch"
 )
-
 
 func Clean(ctx context.Context, expirationDate time.Time) error {
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return err
 	}
-	
+
 	log.Println("Begin to clean SSM Parameter Store")
 	ssmClient := ssm.NewFromConfig(defaultConfig)
 
@@ -72,7 +71,7 @@ func Clean(ctx context.Context, expirationDate time.Time) error {
 
 		nextToken = describeParametersOutput.NextToken
 	}
-	
+
 	log.Println("End cleaning SSM Parameter Store")
 	return nil
 }
