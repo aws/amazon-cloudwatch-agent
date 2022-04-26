@@ -342,7 +342,7 @@ func TestLogsFileRemove(t *testing.T) {
 	}
 	defer ts.Stop()
 
-	delay := 500 * time.Millisecond
+	delay := 2 * time.Second
 
 	go func() {
 		time.Sleep(delay)
