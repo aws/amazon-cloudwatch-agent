@@ -87,7 +87,7 @@ func RunShellScript(path string, args ...string) {
 }
 
 func RunCommand(cmd string) {
-	out, err := exec.Command("bash", "-c", cmd)
+	out, err := exec.Command("bash", "-c", cmd).Output()
 
 	if err != nil {
 		log.Fatalf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
