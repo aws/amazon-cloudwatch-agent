@@ -1096,7 +1096,7 @@ func setupTestChannels() (chan logs.LogEvent, chan *os.File) {
 
 func recreateLogFileWithNewMessage(t *testing.T, fileChan chan *os.File, origFile *os.File, logLine string) {
 	t.Logf("Recreating log file %s and writing log line %s", origFile.Name(), logLine)
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second) // TODO: see if this alleviates the issue on windows
 
 	// recreate file
 	err := os.Remove(origFile.Name())
