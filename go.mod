@@ -42,11 +42,13 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Jeffail/gabs v1.4.0
 	github.com/aws/aws-sdk-go v1.30.15
-	github.com/aws/aws-sdk-go-v2 v1.16.2
+	github.com/aws/aws-sdk-go-v2 v1.16.3
 	github.com/aws/aws-sdk-go-v2/config v1.15.3
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.3
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.18.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.15.4
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.29.0
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.25.1 // indirect
 	github.com/aws/smithy-go v1.11.2
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
 	github.com/docker/docker v1.13.1

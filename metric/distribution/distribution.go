@@ -19,10 +19,10 @@ type Distribution interface {
 	Size() int
 
 	// weight is 1/samplingRate
-	AddEntryWithUnit(value float64, weight float64, unit string)
+	AddEntryWithUnit(value float64, weight float64, unit string) error
 
 	// weight is 1/samplingRate
-	AddEntry(value float64, weight float64)
+	AddEntry(value float64, weight float64) error
 
 	AddDistribution(distribution Distribution)
 

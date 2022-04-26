@@ -1,0 +1,58 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "MetricNumberDimensionTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ],
+        "metrics_collection_interval": 60,
+        "append_dimensions": {
+          "append0": "append0",
+          "append1": "append1",
+          "append2": "append2",
+          "append3": "append3",
+          "append4": "append4",
+          "append5": "append5",
+          "append6": "append6",
+          "append7": "append7",
+          "append8": "append8",
+          "append9": "append9",
+          "append10": "append10",
+          "append11": "append11",
+          "append12": "append12",
+          "append13": "append13",
+          "append14": "append14",
+          "append15": "append15",
+          "append16": "append16",
+          "append17": "append17",
+          "append18": "append18",
+          "append19": "append19",
+          "append20": "append20",
+          "append21": "append21",
+          "append22": "append22",
+          "append23": "append23",
+          "append24": "append24",
+          "append25": "append25",
+          "append26": "append26",
+          "append27": "append27",
+          "append28": "append28",
+          "append29": "append29",
+          "append30": "append30",
+          "append31": "append31",
+          "append32": "append32",
+          "append33": "append33"
+        }
+      }
+    }
+  }
+}
