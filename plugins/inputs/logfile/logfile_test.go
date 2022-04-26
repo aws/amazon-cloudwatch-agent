@@ -316,6 +316,7 @@ func TestLogsFileRemove(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
 	tmpfile, err := createTempFile("", "")
+	t.Logf("Created tmpfile %s", tmpfile.Name())
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
@@ -336,16 +337,18 @@ func TestLogsFileRemove(t *testing.T) {
 
 	ts := lsrcs[0].(*tailerSrc)
 	ts.outputFn = func(e logs.LogEvent) {
+		t.Log("Consumed something")
 		if e != nil {
-			t.Logf("Consumed some message: %s", e.Message())
+			t.Logf("Got message: %s", e.Message())
 		}
 	}
 	defer ts.Stop()
 
-	delay := 2 * time.Second
+	delay := 500 * time.Millisecond
 
 	go func() {
 		time.Sleep(delay)
+		t.Logf("Removing %s", tmpfile.Name())
 		if err := os.Remove(tmpfile.Name()); err != nil {
 			t.Errorf("Failed to remove tmp file '%v': %v", tmpfile.Name(), err)
 		}
@@ -353,12 +356,15 @@ func TestLogsFileRemove(t *testing.T) {
 
 	stopped := make(chan struct{})
 	go func() {
+		t.Log("Running tail")
 		ts.runTail()
+		t.Log("Tailer stopped fully")
 		close(stopped)
 	}()
 
 	select {
 	case <-time.After(3 * delay):
+		t.Log("Timed out as expected")
 	case <-stopped:
 		t.Errorf("tailerSrc should have reopened after deletion")
 	}
