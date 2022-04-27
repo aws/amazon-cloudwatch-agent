@@ -7,13 +7,13 @@ The cleaner first searches for ami names (these are the ami created by the pipel
 
 Then checks to see if the creation date is greater than 60 days. (The aws sdk v2 gives creation date as a pointer to string. To convert to golang time we use the aws smithy go time. This allows us to compare to 60 days in past time)
 
-If the ami is older than 60 days old then we delete the ami
+If the ami is older than 30 days old as default (can be configured) then we delete the ami
 
 ###Cleans dedicated hosts for mac
 
 The cleaner first searches for dedicated host tag Name:IntegrationTestMacDedicatedHost
 
-Then checks to see if the creation date is greater than 26 hours and host status is available
+Then checks to see if the creation date is greater than 30 days as default (can be configured) and host status is available
 
 Delete is true
 
