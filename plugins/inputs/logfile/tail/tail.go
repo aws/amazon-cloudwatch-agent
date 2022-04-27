@@ -197,14 +197,14 @@ func (tail *Tail) reopen() error {
 			if os.IsPermission(err) {
 				// Specifically on Windows, reopening the file too quickly can result in an access denied error.
 				// Retry to allow for some leniency for when the file on the host becomes available.
-				tail.Logger.Debugf("Access denied on %s. Retried %d times so far", tail.Filename, numTries)
+				tail.Logger.Debugf("Access denied on %s. Retried %d/%d times so far", tail.Filename, numTries, fileOpenMaxRetries)
 				if numTries < fileOpenMaxRetries {
 					tail.Logger.Debugf("Sleeping for %v ms and retrying", waitDuration.Milliseconds())
 					time.Sleep(waitDuration)
+					numTries += 1
+					waitDuration *= 2
+					continue
 				}
-				numTries += 1
-				waitDuration *= 2
-				continue
 			}
 			if os.IsNotExist(err) {
 				tail.Logger.Debugf("Waiting for %s to appear...", tail.Filename)

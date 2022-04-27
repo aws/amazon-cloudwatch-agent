@@ -25,6 +25,7 @@ import (
 )
 
 type tailerTestResources struct {
+	ts        *tailerSrc
 	done      *chan struct{}
 	consumed  *int32
 	file      *os.File
@@ -49,7 +50,7 @@ func TestTailerSrc(t *testing.T) {
 
 	tailer, err := tail.TailFile(file.Name(),
 		tail.Config{
-			ReOpen:      false,
+			ReOpen:      true,
 			Follow:      true,
 			Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
 			MustExist:   true,
@@ -144,10 +145,7 @@ func TestTailerSrc(t *testing.T) {
 		fmt.Fprintln(file, l)
 	}
 
-	// Removal of log file should stop tailersrc
-	if err := os.Remove(file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
-	}
+	ts.Stop()
 	<-done
 }
 
@@ -169,7 +167,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 
 	tailer, err := tail.TailFile(file.Name(),
 		tail.Config{
-			ReOpen:      false,
+			ReOpen:      true,
 			Follow:      true,
 			Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
 			MustExist:   true,
@@ -303,10 +301,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	}
 	time.Sleep(2 * time.Second)
 
-	// Removal of log file should stop tailersrc
-	if err := os.Remove(file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
-	}
+	ts.Stop()
 	<-done
 	if i < 35 {
 		t.Errorf("Not enough logs have been processed, only %v are processed", i)
@@ -316,6 +311,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	original := multilineWaitPeriod
 	defer resetState(original)
+	multilineWaitPeriod = 100 * time.Millisecond
 	resources := setupTailer(t, nil, defaultMaxEventSize)
 	defer teardown(resources)
 
@@ -324,10 +320,7 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	unmatchedLog := "Some other log message"
 	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 0)
 
-	// Removal of log file should stop tailersrc
-	if err := os.Remove(resources.file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", resources.file.Name(), err)
-	}
+	resources.ts.Stop()
 	<-*resources.done
 	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
@@ -356,10 +349,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 
 	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 100)
 
-	// Removal of log file should stop tailersrc
-	if err := os.Remove(resources.file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", resources.file.Name(), err)
-	}
+	resources.ts.Stop()
 	<-*resources.done
 	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
@@ -408,7 +398,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 
 	tailer, err := tail.TailFile(file.Name(),
 		tail.Config{
-			ReOpen:      false,
+			ReOpen:      true,
 			Follow:      true,
 			Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
 			MustExist:   true,
@@ -460,6 +450,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 	})
 
 	return tailerTestResources{
+		ts:        ts,
 		done:      &done,
 		consumed:  &consumed,
 		file:      file,
