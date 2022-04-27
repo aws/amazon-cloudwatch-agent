@@ -22,6 +22,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+var offsetThreshold int64 = 1024 * 1024 // PutLogEvents API maxes out at 1mb for a payload
+
 type LogFile struct {
 	//array of file config for file to be monitored.
 	FileConfig []FileConfig `toml:"file_config"`
@@ -330,6 +332,11 @@ func (t *LogFile) restoreState(filename string) (int64, error) {
 	if err != nil {
 		t.Log.Warnf("Issue encountered when parsing offset value %v: %v", byteArray, err)
 		return 0, err
+	}
+
+	if offset < offsetThreshold {
+		t.Log.Errorf("Offset %d is less than the max size of a batch of logs sent to PLE. Publish from the beginning", offset)
+		offset = 0
 	}
 
 	t.Log.Infof("Reading from offset %v in %s", offset, filename)

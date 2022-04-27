@@ -198,7 +198,34 @@ func TestRestoreState(t *testing.T) {
 	logFilePath := "/tmp/logfile.log"
 	logFileStateFileName := "_tmp_logfile.log"
 
-	offset := int64(9323)
+	offset := offsetThreshold + 1
+	err = ioutil.WriteFile(
+		tmpfolder+string(filepath.Separator)+logFileStateFileName,
+		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
+		os.ModePerm)
+	require.NoError(t, err)
+
+	tt := NewLogFile()
+	tt.Log = TestLogger{t}
+	tt.FileStateFolder = tmpfolder
+	roffset, err := tt.restoreState(logFilePath)
+	assert.Equal(t, offset, roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
+	tt.Stop()
+}
+
+// TestRestoreStateReadFromBeginning ensures that if the offset stored in the state file
+// is less than the defined offsetThreshold, we read from the beginning instead of upholding
+// the stored offset. https://github.com/aws/amazon-cloudwatch-agent/issues/447
+func TestRestoreStateReadFromBeginning(t *testing.T) {
+	multilineWaitPeriod = 10 * time.Millisecond
+	tmpfolder, err := ioutil.TempDir("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpfolder)
+
+	logFilePath := "/tmp/logfile.log"
+	logFileStateFileName := "_tmp_logfile.log"
+
+	offset := offsetThreshold + 1
 	err = ioutil.WriteFile(
 		tmpfolder+string(filepath.Separator)+logFileStateFileName,
 		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
@@ -618,6 +645,7 @@ func TestLogsFileTruncate(t *testing.T) {
 
 func TestLogsFileWithOffset(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
+	offsetThreshold = 10
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 
 	tmpfile, err := createTempFile("", "")
@@ -668,6 +696,7 @@ func TestLogsFileWithOffset(t *testing.T) {
 
 func TestLogsFileWithInvalidOffset(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
+	offsetThreshold = 10
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 
 	tmpfile, err := createTempFile("", "")
@@ -720,6 +749,8 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 // at that same offset in the state file.
 func TestLogsFileRecreate(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
+	offsetThreshold = 10
+
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 	expectedContent := "ContentAfterOffset"
 
