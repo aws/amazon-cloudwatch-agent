@@ -335,7 +335,7 @@ func (t *LogFile) restoreState(filename string) (int64, error) {
 	}
 
 	if offset < offsetThreshold {
-		t.Log.Errorf("Offset %d is less than the max size of a batch of logs sent to PLE. Publish from the beginning", offset)
+		t.Log.Debugf("Offset %d is less than allowed %d for publishing logs. Reset to zero offset", offset, offsetThreshold)
 		offset = 0
 	}
 
