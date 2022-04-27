@@ -1,4 +1,4 @@
-**What does the cleaner do?**
+# What does the cleaner do?
 
 ###Cleaner cleans out old ami (ami older than 60 days)
 
@@ -16,3 +16,13 @@ The cleaner first searches for dedicated host tag Name:IntegrationTestMacDedicat
 Then checks to see if the creation date is greater than 26 hours and host status is available
 
 Delete is true
+
+# How to use the script?
+By running the below command **with or without replacing these variables**:
+* **keep:** days to keep your resources (i.e 5 which is deleting resources after existing for 5 days)
+* **clean:** resources need to be cleaned (only support dedicated_host, ssm, ami)
+```
+go run ./integration/clean/main.go \
+    -keep {{ days to keep the resources }} \
+    -clean {{ resources cleaning }}
+```
