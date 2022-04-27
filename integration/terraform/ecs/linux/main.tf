@@ -11,23 +11,15 @@ resource "aws_ecs_task_definition" "main" {
   memory                   = 512
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
   task_role_arn            = aws_iam_role.ecs_task_role.arn
-  container_definitions = jsonencode([{
-   name        = "cwagent"
-   image       = "167129616597.dkr.ecr.us-west-2.amazonaws.com/cwagent-testing:fargate"
-   essential   = true
-   "secrets": [{
-     "name": "CW_CONFIG_CONTENT",
-     "valueFrom": "arn:aws:ssm:us-west-2:167129616597:parameter/AmazonCloudWatch-CWAgentConfig-CWAgentFargateTestUpdate-FARGATE-awsvpc"
-    }],
-   "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-          "awslogs-region" : "us-west-1",
-          "awslogs-group" : "stream-to-log-fluentd",
-          "awslogs-stream-prefix" : "project"
-      }
-    }
-   }])
+  container_definitions    = jsonencode([{
+    name              : "cwagent",
+    image             : "167129616597.dkr.ecr.us-west-2.amazonaws.com/cwagent-testing:fargate",
+    essential         : true,
+    secrets           : [{
+      name: "CW_CONFIG_CONTENT",
+      valueFrom: "arn:aws:ssm:us-west-2:167129616597:parameter/AmazonCloudWatch-CWAgentConfig-CWAgentFargateTestUpdate-FARGATE-awsvpc",
+    }]
+  }])
 }
 
 resource "aws_ecs_service" "main" {
