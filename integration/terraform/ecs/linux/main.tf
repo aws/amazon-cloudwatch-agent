@@ -22,7 +22,7 @@ data "template_file" "task_def" {
   vars = {
     region                         = var.region
     ssm_parameter_arn              = aws_ssm_parameter.cwagent_config.name
-    cwagent_image                  = "167129616597.dkr.ecr.us-west-2.amazonaws.com/cwagent-testing:fargate"
+    cwagent_image                  = var.cwagent_image
   }
 }
 

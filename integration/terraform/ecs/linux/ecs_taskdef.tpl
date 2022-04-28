@@ -14,9 +14,9 @@
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/ecs/ecs-cwagent-prometheus",
+        "awslogs-group": "ecs",
         "awslogs-region": "${region}",
-        "awslogs-stream-prefix": "ecs-FARGATE-awsvpc/cloudwatch-agent-prometheus/df194e312d944f6fbc478e13797af18f",
+        "awslogs-stream-prefix": "ecs-FARGATE-awsvpc",
         "awslogs-create-group": "true"
       }
     }
