@@ -297,6 +297,7 @@ func (ts *tailerSrc) runSaveState() {
 	t := time.NewTicker(100 * time.Millisecond)
 	defer t.Stop()
 
+	var deletedStateFile bool
 	var offset, lastSavedOffset fileOffset
 	for {
 		select {
@@ -315,7 +316,13 @@ func (ts *tailerSrc) runSaveState() {
 			}
 			lastSavedOffset = offset
 		case <-ts.tailer.FileDeletedCh:
-			os.Remove(ts.stateFilePath)
+			if !deletedStateFile {
+				log.Printf("W! [logfile] deleting state file %s", ts.stateFilePath)
+				err := os.Remove(ts.stateFilePath)
+				if err == nil {
+					deletedStateFile = true
+				}
+			}
 		case <-ts.done:
 			err := ts.saveState(offset.offset)
 			if err != nil {
