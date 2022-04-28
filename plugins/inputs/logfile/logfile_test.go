@@ -831,8 +831,10 @@ func TestLogsFileRecreate(t *testing.T) {
 		}
 	})
 
+	// after the file gets deleted, the state file should be deleted too, so
+	// the tailer should start from the beginning.
 	e = <-evts
-	if e.Message() != expectedContent {
+	if e.Message() != logEntryString {
 		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), expectedContent)
 	}
 

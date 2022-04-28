@@ -252,6 +252,17 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 				}
 			}(src))
+			//src.AddCleanUpFn(func(ts *tailerSrc) func() {
+			//	return func() {
+			//		select {
+			//		case closed := <-ts.tailer.FileDeletedCh:
+			//			if closed {
+			//				os.Remove(ts.stateFilePath)
+			//			}
+			//		default:
+			//		}
+			//	}
+			//}(src))
 
 			srcs = append(srcs, src)
 
@@ -334,10 +345,12 @@ func (t *LogFile) restoreState(filename string) (int64, error) {
 		return 0, err
 	}
 
-	if offset < offsetThreshold {
-		t.Log.Debugf("Offset %d is less than allowed %d for publishing logs. Reset to zero offset", offset, offsetThreshold)
-		offset = 0
-	}
+	// https://github.com/aws/amazon-cloudwatch-agent/issues/447
+	// try to not drop the first log in a log file when rotated by reasoning that if the
+	//if offset < offsetThreshold {
+	//	t.Log.Debugf("Offset %d is less than allowed %d for publishing logs. Reset to zero offset", offset, offsetThreshold)
+	//	offset = 0
+	//}
 
 	t.Log.Infof("Reading from offset %v in %s", offset, filename)
 

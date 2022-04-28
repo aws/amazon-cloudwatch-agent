@@ -83,6 +83,8 @@ type Tail struct {
 	dropCnt   int
 
 	lk sync.Mutex
+
+	FileDeletedCh chan bool
 }
 
 // TailFile begins tailing the file. Output stream is made available
@@ -95,9 +97,10 @@ func TailFile(filename string, config Config) (*Tail, error) {
 	}
 
 	t := &Tail{
-		Filename: filename,
-		Lines:    make(chan *Line),
-		Config:   config,
+		Filename:      filename,
+		Lines:         make(chan *Line),
+		Config:        config,
+		FileDeletedCh: make(chan bool),
 	}
 
 	// when Logger was not specified in config, create new one
@@ -168,6 +171,9 @@ var errStopAtEOF = errors.New("tail: stop at eof")
 func (tail *Tail) close() {
 	if tail.dropCnt > 0 {
 		tail.Logger.Errorf("Dropped %v lines for stopped tail for file %v", tail.dropCnt, tail.Filename)
+	}
+	if tail.isFileDeleted() {
+		close(tail.FileDeletedCh)
 	}
 	close(tail.Lines)
 	tail.closeFile()
