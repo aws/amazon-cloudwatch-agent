@@ -94,6 +94,7 @@ func main() {
 	log.Printf("I! Config has been translated into TOML %s \n", tomlConfigPath)
 
 	if err := startAgent(writer); err != nil {
+		log.Printf("E! Error when starting Agent, Error is %v \n", err)
 		os.Exit(1)
 	}
 }

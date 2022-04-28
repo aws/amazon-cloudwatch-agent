@@ -47,6 +47,7 @@ import (
 const (
 	defaultEnvCfgFileName = "env-config.json"
 	LogTargetEventLog = "eventlog"
+	LogTargetLumberjack = "lumberjack"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -304,6 +305,7 @@ func runAgent(ctx context.Context,
 		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
 		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
 		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+		LogWithTimezone:     "",
 	}
 
 	logger.SetupLogging(logConfig)
