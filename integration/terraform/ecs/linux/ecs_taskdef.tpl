@@ -1,24 +1,49 @@
 [
-  {
-    "name": "cloudwatch-agent",
-    "image": "${cwagent_image}",
-    "cpu": 10,
-    "memory": 256,
-    "secrets": [
-      {
-        "name": "CW_CONFIG_CONTENT",
-        "valueFrom": "${ssm_parameter_arn}"
-      }
-    ],
-    "essential": true,
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "ecs",
-        "awslogs-region": "${region}",
-        "awslogs-stream-prefix": "ecs-FARGATE-awsvpc",
-        "awslogs-create-group": "true"
-      }
-    }
-  }
+        {
+                "name": "${prefix}-app",
+                "image": "${cwagent_image}",
+                "essential": true,
+                "logConfiguration": {
+                        "logDriver": "awslogs",
+                        "options": {
+                                "awslogs-region": "${region}",
+                                "awslogs-stream-prefix": "${prefix}-service",
+                                "awslogs-group": "${prefix}-log-group"
+                        }
+                },
+                "portMappings": [
+                        {
+                                "containerPort": ${port},
+                                "hostPort": ${port},
+                                "protocol": "tcp"
+                        }
+                ],
+                "cpu": 1,
+                "environment": [
+                                %{ for env_key, env_value in envvars }
+                        {
+                                "name": "${env_key}",
+                                "value": "${env_value}"
+                        },
+                                %{ endfor ~}
+                        {
+                                "name": "NODE_ENV",
+                                "value": "staging"
+                        },
+                        {
+                                "name": "PORT",
+                                "value": "${port}"
+                        }
+                ],
+                                       "ulimits": [
+                                               {
+                                                       "name": "nofile",
+                                                       "softLimit": 65536,
+                                                       "hardLimit": 65536
+                                               }
+                                       ],
+                                       "mountPoints": [],
+                                       "memory": 2048,
+                                       "volumesFrom": []
+        }
 ]

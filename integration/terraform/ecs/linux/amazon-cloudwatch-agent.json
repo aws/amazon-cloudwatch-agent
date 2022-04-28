@@ -1,15 +1,28 @@
 {
   "agent": {
-    "region": "us-west-2"
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true
   },
   "logs": {
     "metrics_collected": {
-      "emf": {
-      },
-      "ecs": {
-        "metrics_collection_interval": 30
+      "emf": {}
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "disk": {
+        "measurement": [
+          "used_percent"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "*"
+        ],
+        "append_dimensions": {
+          "khanh-ecs-fargate-test": "khanh-ecs-fargate-test"
+        }
       }
-    },
-    "force_flush_interval": 5
+    }
   }
 }
