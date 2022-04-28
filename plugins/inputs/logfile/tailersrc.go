@@ -281,12 +281,12 @@ func (ts *tailerSrc) cleanUp() {
 		clf()
 	}
 
-	// delete state file if log file was closed
-	select {
-	case <-ts.tailer.FileDeletedCh:
-		os.Remove(ts.stateFilePath)
-	default:
-	}
+	//// delete state file if log file was closed
+	//select {
+	//case <-ts.tailer.FileDeletedCh:
+	//	os.Remove(ts.stateFilePath)
+	//default:
+	//}
 
 	if ts.outputFn != nil {
 		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
@@ -314,6 +314,8 @@ func (ts *tailerSrc) runSaveState() {
 				continue
 			}
 			lastSavedOffset = offset
+		case <-ts.tailer.FileDeletedCh:
+			os.Remove(ts.stateFilePath)
 		case <-ts.done:
 			err := ts.saveState(offset.offset)
 			if err != nil {
