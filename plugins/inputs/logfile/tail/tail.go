@@ -172,9 +172,6 @@ func (tail *Tail) close() {
 	if tail.dropCnt > 0 {
 		tail.Logger.Errorf("Dropped %v lines for stopped tail for file %v", tail.dropCnt, tail.Filename)
 	}
-	if tail.isFileDeleted() {
-		close(tail.FileDeletedCh)
-	}
 	close(tail.Lines)
 	tail.closeFile()
 }
@@ -391,6 +388,7 @@ func (tail *Tail) tailFileSync() {
 			err := tail.waitForChanges()
 			if err != nil {
 				if err == ErrDeletedNotReOpen {
+					close(tail.FileDeletedCh)
 					for {
 						line, errReadLine := tail.readLine()
 						if errReadLine == nil {
