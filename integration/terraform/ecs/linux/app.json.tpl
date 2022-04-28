@@ -1,6 +1,6 @@
 [
   {
-    "name": "Cloudwatch Agent",
+    "name": "cloudwatch_agent",
     "image": "${cwagent_image}",
     "essential": true,
     "secrets": [
