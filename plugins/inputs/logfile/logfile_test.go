@@ -805,7 +805,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	// the tailer should start from the beginning.
 	e = <-evts
 	if e.Message() != logEntryString {
-		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), expectedContent)
+		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), logEntryString)
 	}
 
 	lsrc.Stop()
