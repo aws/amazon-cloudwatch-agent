@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 )
 
@@ -14,43 +15,46 @@ const (
 	linux   = "linux"
 	windows = "windows"
 	mac     = "mac"
-	tag     = "tag"
+	testDir = "test_dir"
 )
 
 //you can't have a const map in golang
-var osToTagMap = map[string][]string{
-	linux:   {"integration"},
-	windows: {},
+var osToTestDirMap = map[string][]string{
+	linux: {"./integration/test/ca_bundle",
+		"./integration/test/cloudwatchlogs",
+		"./integration/test/metrics_number_dimension"},
+	// @TODO add real tests
+	windows: {""},
 	mac:     {},
 }
 
 func main() {
-	for osType, tags := range osToTagMap {
-		testMatrix := genMatrix(osType, tags)
+	for osType, testDir := range osToTestDirMap {
+		testMatrix := genMatrix(osType, testDir)
 		writeTestMatrixFile(osType, testMatrix)
 	}
 }
 
-func genMatrix(targetOS string, tags []string) []map[string]string {
+func genMatrix(targetOS string, testDirList []string) []map[string]string {
 	openTestMatrix, err := os.Open(fmt.Sprintf("integration/generator/resources/%v_test_matrix.json", targetOS))
 	if err != nil {
-		panic(fmt.Sprintf("can't read file %v_test_matrix.json err %v", targetOS, err))
+		log.Panicf("can't read file %v_test_matrix.json err %v", targetOS, err)
 	}
 	byteValueTestMatrix, _ := ioutil.ReadAll(openTestMatrix)
 	_ = openTestMatrix.Close()
 	var testMatrix []map[string]string
-	err = json.Unmarshal([]byte(byteValueTestMatrix), &testMatrix)
+	err = json.Unmarshal(byteValueTestMatrix, &testMatrix)
 	if err != nil {
-		panic(fmt.Sprintf("can't unmarshall file %v_test_matrix.json err %v", targetOS, err))
+		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", targetOS, err)
 	}
 
 	var testMatrixComplete []map[string]string
 	for _, test := range testMatrix {
-		testLine := copyMap(test)
-		for _, testTag := range tags {
-			testLine[tag] = testTag
+		for _, testDirectory := range testDirList {
+			testLine := copyMap(test)
+			testLine[testDir] = testDirectory
+			testMatrixComplete = append(testMatrixComplete, testLine)
 		}
-		testMatrixComplete = append(testMatrixComplete, testLine)
 	}
 	return testMatrixComplete
 }
@@ -58,11 +62,11 @@ func genMatrix(targetOS string, tags []string) []map[string]string {
 func writeTestMatrixFile(targetOS string, testMatrix []map[string]string) {
 	bytes, err := json.MarshalIndent(testMatrix, "", " ")
 	if err != nil {
-		panic(fmt.Sprintf("Can't marshal json for target os %v, err %v", targetOS, err))
+		log.Panicf("Can't marshal json for target os %v, err %v", targetOS, err)
 	}
 	err = ioutil.WriteFile(fmt.Sprintf("integration/generator/resources/%v_complete_test_matrix.json", targetOS), bytes, os.ModePerm)
 	if err != nil {
-		panic(fmt.Sprintf("Can't write json to file for target os %v, err %v", targetOS, err))
+		log.Panicf("Can't write json to file for target os %v, err %v", targetOS, err)
 	}
 }
 

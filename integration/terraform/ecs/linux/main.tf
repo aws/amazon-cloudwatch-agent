@@ -26,11 +26,12 @@ resource "aws_security_group" "ecs_security_group" {
     from_port   = 0
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
   }
 }
 
 data "template_file" "cwagent_config" {
-  template = file("./default_amazon-cloudwatch-agent.json")
+  template = file(var.cwagent_config)
   vars = {
   }
 }
@@ -70,21 +71,12 @@ resource "aws_ecs_service" "service" {
   task_definition = aws_ecs_task_definition.task_definition.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  wait_for_steady_state = true
 
   network_configuration {
     security_groups  = [aws_security_group.ecs_security_group.id]
     subnets          = data.aws_subnet_ids.default.ids
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
-}
-
-resource "null_resource" "push" {
-  provisioner "local-exec" {
-    command     = "echo command"
-    interpreter = ["bash", "-c"]
-  }
-  depends_on = [aws_ecs_service.service]
 }

@@ -7,11 +7,8 @@
 package cloudwatchlogs
 
 import (
-	"context"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"log"
 	"os"
 
@@ -24,7 +21,7 @@ const (
 	logLineId1       = "foo"
 	logLineId2       = "bar"
 	logFilePath      = "/tmp/test.log"  // TODO: not sure how well this will work on Windows
-	agentRuntime     = 10 * time.Second // default flush interval is 5 seconds
+	agentRuntime     = 20 * time.Second // default flush interval is 5 seconds
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
@@ -54,20 +51,7 @@ var testParameters = []input{
 func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
-	ctx := context.Background()
-	c, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		// fail fast so we don't continue the test
-		t.Fatalf("Error occurred while creating SDK config: %v", err)
-	}
-
-	// TODO: this only works for EC2 based testing
-	client := imds.NewFromConfig(c)
-	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
-	if err != nil {
-		t.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
-	}
-	instanceId := metadata.InstanceID
+	instanceId := test.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
 
 	defer cleanUp(instanceId)
@@ -80,7 +64,9 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 
 			test.StartAgent(configOutputPath)
 
-			time.Sleep(agentRuntime) // make sure that there is enough time between the timestamps
+			// ensure that there is enough time from the "start" time and the first log line,
+			// so we don't miss it in the GetLogEvents call
+			time.Sleep(agentRuntime)
 			writeLogs(t, logFilePath, param.iterations)
 			time.Sleep(agentRuntime)
 			test.StopAgent()
@@ -110,6 +96,7 @@ func writeLogs(t *testing.T, filePath string, iterations int) {
 				t.Logf("Error occurred writing log line: %v", err)
 			}
 		}
+		time.Sleep(1 * time.Millisecond)
 	}
 }
 

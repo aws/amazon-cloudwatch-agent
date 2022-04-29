@@ -11,13 +11,10 @@
   },
   "metrics": {
     "namespace": "ECSMetadataTest",
-    "append_dimensions": {
-      "InstanceId": "${aws:InstanceId}"
-    },
     "metrics_collected": {
       "disk": {
         "measurement": [
-          "mem_used_percent"
+          "used_percent"
         ],
         "metrics_collection_interval": 60,
         "resources": [

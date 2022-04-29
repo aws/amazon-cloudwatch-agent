@@ -8,14 +8,15 @@ import (
 	"context"
 	"testing"
 	"fmt"
-
+	
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	
 )
 const namespace = "ECSMetadataTest"
-const metricName = "mem_used_percent"
+const metricName = "used_percent"
 
 //Must run this test with parallel 1 since this will fail if more than one test is running at the same time
 func TestNumberMetricDimension(t *testing.T) {
