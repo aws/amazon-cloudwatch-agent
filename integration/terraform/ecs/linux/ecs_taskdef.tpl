@@ -6,7 +6,11 @@
     "secrets": [
       {
         "name": "CW_CONFIG_CONTENT",
-        "valueFrom": "${ssm_parameter_arn}"
+        "valueFrom": "${cwagent_ssm_parameter_arn}"
+      },
+      {
+        "name": "PROMETHEUS_CONFIG_CONTENT",
+        "valueFrom": "${prometheus_ssm_parameter_arn}"
       }
     ],
     "logConfiguration": {

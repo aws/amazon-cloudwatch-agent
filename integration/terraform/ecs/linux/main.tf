@@ -7,27 +7,8 @@ resource "aws_ecs_cluster" "cluster" {
   name = "cwagent-integ-test-cluster-${random_id.testing_id.hex}"
 }
 
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnet_ids" "default" {
-  vpc_id = data.aws_vpc.default.id
-}
-
 resource "aws_cloudwatch_log_group" "log_group" {
   name = "cwagent-integ-test-log-group"
-}
-
-resource "aws_security_group" "ecs_security_group" {
-  name = "cwagent-sg"
-  egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
 }
 
 data "template_file" "cwagent_config" {
@@ -37,16 +18,29 @@ data "template_file" "cwagent_config" {
 }
 
 resource "aws_ssm_parameter" "cwagent_config" {
-  name  = "cwagent-config"
+  name  = "cwagent-integ-test-ssm-config"
   type  = "String"
   value = data.template_file.cwagent_config.rendered
+}
+
+data "template_file" "prometheus_config" {
+  template = file("./ecs_prometheus.tpl")
+  vars = {
+  }
+}
+
+resource "aws_ssm_parameter" "prometheus_config" {
+  name  = "prometheus-integ-test-ssm-config"
+  type  = "String"
+  value = data.template_file.prometheus_config.rendered
 }
 
 data "template_file" "task_def" {
   template = file("./ecs_taskdef.tpl")
   vars = {
     region            = var.region
-    ssm_parameter_arn = aws_ssm_parameter.cwagent_config.name
+    cwagent_ssm_parameter_arn = aws_ssm_parameter.cwagent_config.name
+    prometheus_ssm_parameter_arn = aws_ssm_parameter.prometheus_config.name
     cwagent_image     = var.cwagent_image
     log_group         = aws_cloudwatch_log_group.log_group.name
     testing_id        = random_id.testing_id.hex

@@ -16,7 +16,7 @@ import (
 	
 )
 const namespace = "ECSMetadataTest"
-const metricName = "used_percent"
+const metricName = "disk_used_percent"
 
 //Must run this test with parallel 1 since this will fail if more than one test is running at the same time
 func TestNumberMetricDimension(t *testing.T) {
@@ -29,11 +29,17 @@ func TestNumberMetricDimension(t *testing.T) {
 		MetricName: aws.String(metricName),
 		Namespace:  aws.String(namespace),
 	}
-	data, err := client.ListMetrics(cxt, &listMetricsInput)
+	metrics, err := client.ListMetrics(cxt, &listMetricsInput)
 	if err != nil {
 		t.Errorf("Error getting metric data %v", err)
 	}
-	fmt.Printf("%v",data)
+	for _, metric := range metrics.Metrics {
+		for _, dimension := range metric.Dimensions {
+			fmt.Printf("%v %v \n",*metric.MetricName,*dimension.Name)
+		}
+
+	}
+
 	
 
 }
