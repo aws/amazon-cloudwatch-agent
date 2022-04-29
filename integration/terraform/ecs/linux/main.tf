@@ -30,7 +30,7 @@ resource "aws_security_group" "ecs_security_group" {
 }
 
 data "template_file" "cwagent_config" {
-  template = file("./amazon-cloudwatch-agent.json")
+  template = file("./default_amazon-cloudwatch-agent.json")
   vars = {
   }
 }
@@ -42,7 +42,7 @@ resource "aws_ssm_parameter" "cwagent_config" {
 }
 
 data "template_file" "task_def" {
-  template = file("./app.json.tpl")
+  template = file("./ecs_taskdef.tpl")
   vars = {
     region            = var.region
     ssm_parameter_arn = aws_ssm_parameter.cwagent_config.name
@@ -64,12 +64,13 @@ resource "aws_ecs_task_definition" "task_definition" {
   depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
 }
 
-resource "aws_ecs_service" "staging" {
+resource "aws_ecs_service" "service" {
   name            = "cwagent-service-${random_id.testing_id.hex}"
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.task_definition.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  wait_for_steady_state = true
 
   network_configuration {
     security_groups  = [aws_security_group.ecs_security_group.id]
@@ -78,4 +79,12 @@ resource "aws_ecs_service" "staging" {
   }
 
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
+}
+
+resource "null_resource" "push" {
+  provisioner "local-exec" {
+    command     = "echo command"
+    interpreter = ["bash", "-c"]
+  }
+  depends_on = [aws_ecs_service.service]
 }
