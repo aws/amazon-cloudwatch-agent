@@ -1,11 +1,11 @@
 variable "region" {
   type    = string
-  default = "us-east-2"
+  default = "us-west-2"
 }
 
 variable "cwagent_image" {
   type    = string
-  default = "167129616597.dkr.ecr.us-west-2.amazonaws.com/cwagent-testing:fargate"
+  default = "167129616597.dkr.ecr.us-west-2.amazonaws.com/cwagent-testing:fargate_test"
 }
 
 variable "cwagent_config" {
