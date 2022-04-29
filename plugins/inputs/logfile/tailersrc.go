@@ -305,7 +305,6 @@ func (ts *tailerSrc) runSaveState() {
 			if offset == lastSavedOffset {
 				continue
 			}
-			log.Printf("E! [logfile] saving to state file because of ticker")
 			err := ts.saveState(offset.offset)
 			if err != nil {
 				log.Printf("E! [logfile] Error happened when saving file state %s to file state folder %s: %v", ts.tailer.Filename, ts.stateFilePath, err)
@@ -328,7 +327,6 @@ func (ts *tailerSrc) runSaveState() {
 			log.Printf("E! [logfile] failed to delete state file %s", ts.stateFilePath)
 			return
 		case <-ts.done:
-			log.Printf("E! [logfile] saving to state file because channel closed")
 			err := ts.saveState(offset.offset)
 			if err != nil {
 				log.Printf("E! [logfile] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", ts.tailer.Filename, ts.stateFilePath, err)
