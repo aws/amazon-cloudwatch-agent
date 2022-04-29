@@ -57,7 +57,7 @@ func initECSUtilSingleton() (newInstance *ecsUtil) {
 	}
 
 	newInstance.parseRegion(ecsMetadataResponse)
-	newInstance.Cluster = ecsMetadataResponse.Cluster
+	newInstance.parseClusterName(ecsMetadataResponse)
 	newInstance.TaskARN = ecsMetadataResponse.TaskARN
 	return
 
@@ -106,4 +106,15 @@ func (e *ecsUtil) parseRegion(em *ecsMetadataResponse) {
 		log.Printf("E! Invalid ecs task arn: %s", em.TaskARN)
 	}
 	e.Region = splitedContent[3]
+}
+
+// There is only one format for ClusterArn (https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Cluster.html)
+// arn:aws:ecs:region:aws_account_id:cluster/cluster-name
+func (e *ecsUtil) parseClusterName(em *ecsMetadataResponse) {
+	splitedContent := strings.Split(em.Cluster, "/")
+	// When splitting the ClusterName with /, the last is always the cluster name
+	if len(splitedContent) == 0 {
+		log.Printf("E! Invalid cluster arn: %s", em.Cluster)
+	}
+	e.Cluster = splitedContent[len(splitedContent)-1]
 }
