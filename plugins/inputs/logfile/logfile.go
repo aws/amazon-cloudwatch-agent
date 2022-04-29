@@ -250,17 +250,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 				}
 			}(src))
-			//src.AddCleanUpFn(func(ts *tailerSrc) func() {
-			//	return func() {
-			//		select {
-			//		case closed := <-ts.tailer.FileDeletedCh:
-			//			if closed {
-			//				os.Remove(ts.stateFilePath)
-			//			}
-			//		default:
-			//		}
-			//	}
-			//}(src))
 
 			srcs = append(srcs, src)
 
