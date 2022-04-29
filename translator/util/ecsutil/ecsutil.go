@@ -57,7 +57,7 @@ func initECSUtilSingleton() (newInstance *ecsUtil) {
 	}
 
 	newInstance.parseRegion(ecsMetadataResponse)
-	newInstance.parseClusterName(ecsMetadataResponse)
+	newInstance.Cluster = ecsMetadataResponse.Cluster
 	newInstance.TaskARN = ecsMetadataResponse.TaskARN
 	return
 
