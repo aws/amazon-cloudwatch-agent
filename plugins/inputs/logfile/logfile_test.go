@@ -735,7 +735,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	defer os.Remove(stateDir)
 
 	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
-	stateFile, err := os.OpenFile(stateFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
 	defer os.Remove(stateFileName)
