@@ -292,7 +292,7 @@ func (ts *tailerSrc) runSaveState() {
 	t := time.NewTicker(100 * time.Millisecond)
 	defer t.Stop()
 
-	waitDuration := fileDeleteWaitPeriod
+	//waitDuration := fileDeleteWaitPeriod
 
 	var offset, lastSavedOffset fileOffset
 	for {
@@ -305,7 +305,6 @@ func (ts *tailerSrc) runSaveState() {
 			if offset == lastSavedOffset {
 				continue
 			}
-			log.Printf("E! [logfile] saving to state file because of ticker")
 			err := ts.saveState(offset.offset)
 			if err != nil {
 				log.Printf("E! [logfile] Error happened when saving file state %s to file state folder %s: %v", ts.tailer.Filename, ts.stateFilePath, err)
@@ -314,21 +313,21 @@ func (ts *tailerSrc) runSaveState() {
 			lastSavedOffset = offset
 		case <-ts.tailer.FileDeletedCh:
 			log.Printf("W! [logfile] deleting state file %s", ts.stateFilePath)
-			for i := 0; i < fileDeleteMaxRetries; i++ {
-				err := os.Remove(ts.stateFilePath)
-				if err == nil {
-					return
-				}
-				log.Printf("W! [logfile] error occurred deleting state file %s: %v", ts.stateFilePath, err)
-				time.Sleep(waitDuration)
-
-				waitDuration *= 2
-			}
-			// reaching here means we exhausted retries on deleting the state file
-			log.Printf("E! [logfile] failed to delete state file %s", ts.stateFilePath)
+			os.Remove(ts.stateFilePath)
+			//for i := 0; i < fileDeleteMaxRetries; i++ {
+			//	err := os.Remove(ts.stateFilePath)
+			//	if err == nil {
+			//		return
+			//	}
+			//	log.Printf("W! [logfile] error occurred deleting state file %s: %v", ts.stateFilePath, err)
+			//	time.Sleep(waitDuration)
+			//
+			//	waitDuration *= 2
+			//}
+			//// reaching here means we exhausted retries on deleting the state file
+			//log.Printf("E! [logfile] failed to delete state file %s", ts.stateFilePath)
 			return
 		case <-ts.done:
-			log.Printf("E! [logfile] saving to state file because channel closed")
 			err := ts.saveState(offset.offset)
 			if err != nil {
 				log.Printf("E! [logfile] Error happened during final file state saving of logfile %s to file state folder %s, duplicate log maybe sent at next start: %v", ts.tailer.Filename, ts.stateFilePath, err)
