@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
@@ -43,7 +42,8 @@ func DetectAgentMode(configuredMode string) string {
 	}
 
 	if defaultECSRegion() != "" {
-		fmt.Printf("I! Detected the instance is ECS with region: %s and cluster: %s",defaultECSRegion(),defaultClusterName())
+		fmt.Println("I! Detected the instance is ECS")
+		fmt.Printf("I! Cluster: %s, region: %s \n",defaultECSRegion(),defaultClusterName())
 		return config.ModeEC2
 	}
 	fmt.Println("I! Detected the instance is OnPremise")

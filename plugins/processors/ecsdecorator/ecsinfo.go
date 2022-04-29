@@ -104,6 +104,7 @@ func (e *ecsInfo) getMemReserved() int64 {
 func newECSInfo(hostIP string) (e *ecsInfo) {
 	e = &ecsInfo{hostIP: hostIP, refreshInterval: 1 * time.Minute, shutdownC: make(chan bool), httpClient: httpclient.New()}
 	containerInstance := e.getContainerInstanceInfo()
+	//Sample Cluster Name: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-agent-introspection.html
 	e.clusterName = containerInstance.Cluster
 	e.containerInstanceId = e.getContainerInstanceIdFromArn(containerInstance.ContainerInstanceArn)
 	e.cgroup = newCGroupScannerForContainer()

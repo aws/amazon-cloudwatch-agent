@@ -4,8 +4,6 @@
 package util
 
 import (
-	"strings"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -17,19 +15,7 @@ func GetECSClusterName(sectionKey string, input map[string]interface{}) string {
 	}
 
 	if clusterName == "" {
-		clusterName = GetECSClusterNameFromEnv()
-	}
-	return clusterName
-}
-
-func GetECSClusterNameFromEnv() string {
-	var clusterName string
-	if ecsutil.GetECSUtilSingleton().IsECS() {
 		clusterName = ecsutil.GetECSUtilSingleton().Cluster
-		res := strings.Split(clusterName, "/")
-		if len(res) > 0 {
-			clusterName = res[len(res)-1]
-		}
 	}
 	return clusterName
 }
