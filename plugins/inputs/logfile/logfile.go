@@ -22,8 +22,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-var offsetThreshold int64 = 1024 * 1024 // PutLogEvents API maxes out at 1mb for a payload
-
 type LogFile struct {
 	//array of file config for file to be monitored.
 	FileConfig []FileConfig `toml:"file_config"`
@@ -344,13 +342,6 @@ func (t *LogFile) restoreState(filename string) (int64, error) {
 		t.Log.Warnf("Issue encountered when parsing offset value %v: %v", byteArray, err)
 		return 0, err
 	}
-
-	// https://github.com/aws/amazon-cloudwatch-agent/issues/447
-	// try to not drop the first log in a log file when rotated by reasoning that if the
-	//if offset < offsetThreshold {
-	//	t.Log.Debugf("Offset %d is less than allowed %d for publishing logs. Reset to zero offset", offset, offsetThreshold)
-	//	offset = 0
-	//}
 
 	t.Log.Infof("Reading from offset %v in %s", offset, filename)
 

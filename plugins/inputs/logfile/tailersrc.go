@@ -281,13 +281,6 @@ func (ts *tailerSrc) cleanUp() {
 		clf()
 	}
 
-	//// delete state file if log file was closed
-	//select {
-	//case <-ts.tailer.FileDeletedCh:
-	//	os.Remove(ts.stateFilePath)
-	//default:
-	//}
-
 	if ts.outputFn != nil {
 		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
 	}
