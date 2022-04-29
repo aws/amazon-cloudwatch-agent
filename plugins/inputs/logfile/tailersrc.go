@@ -18,8 +18,10 @@ import (
 )
 
 const (
-	stateFileMode = 0644
-	bufferLimit   = 50
+	stateFileMode        = 0644
+	bufferLimit          = 50
+	fileDeleteMaxRetries = 5
+	fileDeleteWaitPeriod = 10 * time.Millisecond
 )
 
 var (
@@ -290,6 +292,8 @@ func (ts *tailerSrc) runSaveState() {
 	t := time.NewTicker(100 * time.Millisecond)
 	defer t.Stop()
 
+	waitDuration := fileDeleteWaitPeriod
+
 	var offset, lastSavedOffset fileOffset
 	for {
 		select {
@@ -309,10 +313,18 @@ func (ts *tailerSrc) runSaveState() {
 			lastSavedOffset = offset
 		case <-ts.tailer.FileDeletedCh:
 			log.Printf("W! [logfile] deleting state file %s", ts.stateFilePath)
-			err := os.Remove(ts.stateFilePath)
-			if err != nil {
-				log.Printf("E! [logfile] error occurred deleting state file %s: %v", ts.stateFilePath, err)
+			for i := 0; i < fileDeleteMaxRetries; i++ {
+				err := os.Remove(ts.stateFilePath)
+				if err == nil {
+					return
+				}
+				log.Printf("W! [logfile] error occurred deleting state file %s: %v", ts.stateFilePath, err)
+				time.Sleep(waitDuration)
+
+				waitDuration *= 2
 			}
+			// reaching here means we exhausted retries on deleting the state file
+			log.Printf("E! [logfile] failed to delete state file %s", ts.stateFilePath)
 			return
 		case <-ts.done:
 			err := ts.saveState(offset.offset)
