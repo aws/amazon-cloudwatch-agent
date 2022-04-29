@@ -309,7 +309,10 @@ func (ts *tailerSrc) runSaveState() {
 			lastSavedOffset = offset
 		case <-ts.tailer.FileDeletedCh:
 			log.Printf("W! [logfile] deleting state file %s", ts.stateFilePath)
-			os.Remove(ts.stateFilePath)
+			err := os.Remove(ts.stateFilePath)
+			if err != nil {
+				log.Printf("E! [logfile] error occurred deleting state file %s: %v", ts.stateFilePath, err)
+			}
 			return
 		case <-ts.done:
 			err := ts.saveState(offset.offset)
