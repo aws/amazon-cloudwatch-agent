@@ -4,6 +4,7 @@
 package util
 
 import (
+	"strings"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
