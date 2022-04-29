@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"log"
 	"os"
+	"strings"
 
 	"testing"
 	"time"
@@ -54,7 +55,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	instanceId := test.GetInstanceId()
 	log.Printf("Found instance id %s", instanceId)
 
-	defer cleanUp(instanceId)
+	defer test.DeleteLogGroupAndStream(instanceId, instanceId)
 
 	for _, param := range testParameters {
 		t.Run(param.testName, func(t *testing.T) {
@@ -75,6 +76,39 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			test.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)
 		})
 	}
+}
+
+// Validate https://github.com/aws/amazon-cloudwatch-agent/issues/447
+func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
+	cfgFilePath := "resources/config_log_rotated.json"
+
+	instanceId := test.GetInstanceId()
+	log.Printf("Found instance id %s", instanceId)
+	logGroup := instanceId
+	logStream := instanceId + "Rotated"
+
+	defer test.DeleteLogGroupAndStream(logGroup, logStream)
+
+	start := time.Now()
+	test.CopyFile(cfgFilePath, configOutputPath)
+
+	test.StartAgent(configOutputPath)
+
+	// ensure that there is enough time from the "start" time and the first log line,
+	// so we don't miss it in the GetLogEvents call
+	time.Sleep(agentRuntime)
+	t.Log("Writing logs and rotating")
+	// execute the script used in the repro case
+	test.RunCommand("/usr/bin/python3 resources/write_and_rotate_logs.py")
+	time.Sleep(agentRuntime)
+	test.StopAgent()
+
+	lines := []string{
+		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("12345", 10)),
+		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("09876", 10)),
+		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("1234567890", 10)),
+	}
+	test.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
 }
 
 func writeLogs(t *testing.T, filePath string, iterations int) {
@@ -98,8 +132,4 @@ func writeLogs(t *testing.T, filePath string, iterations int) {
 		}
 		time.Sleep(1 * time.Millisecond)
 	}
-}
-
-func cleanUp(instanceId string) {
-	test.DeleteLogGroupAndStream(instanceId, instanceId)
 }

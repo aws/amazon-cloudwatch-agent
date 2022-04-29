@@ -313,3 +313,5 @@ terraform destroy --auto-approve
 7. aws-cli
 8. CloudWatchAgentServerRole is attached
 9. crontab
+10. gcc
+11. python3
