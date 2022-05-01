@@ -11,26 +11,41 @@
         "ecs_service_discovery": {
           "sd_frequency": "1m",
           "sd_result_file": "/tmp/cwagent_ecs_auto_sd.yaml",
-          "docker_label": {}
-        }
-      }
-    }
-  },
-  "metrics": {
-    "namespace": "ECSMetadataTest",
-    "metrics_collected": {
-      "disk": {
-        "measurement": [
-          "used_percent"
-        ],
-        "metrics_collection_interval": 60,
-        "resources": [
-          "*"
-        ],
-        "append_dimensions": {
-          "khanh-ecs-fargate-test": "khanh-ecs-fargate-test"
+          "docker_label": {},
+          "task_definition_list": [
+            {
+              "sd_job_name": "ecs-memcached",
+              "sd_metrics_ports": "9150",
+              "sd_task_definition_arn_pattern": ".*:task-definition/memcached-prometheus-demo.*:[0-9]+"
+            }
+          ]
+        },
+        "emf_processor": {
+          "metric_declaration": [
+            {
+              "source_labels": ["container_name"],
+              "label_matcher": "memcached-exporter-.*",
+              "dimensions": [["ClusterName", "TaskDefinitionFamily"]],
+              "metric_selectors": [
+                "^memcached_current_(bytes|items|connections)$",
+                "^memcached_items_(reclaimed|evicted)_total$",
+                "^memcached_(written|read)_bytes_total$",
+                "^memcached_limit_bytes$",
+                "^memcached_commands_total$"
+              ]
+            },
+            {
+              "source_labels": ["container_name"],
+              "label_matcher": "memcached-exporter-.*",
+              "dimensions": [["ClusterName", "TaskDefinitionFamily","status","command"], ["ClusterName", "TaskDefinitionFamily","command"]],
+              "metric_selectors": [
+                "^memcached_commands_total$"
+              ]
+            }
+          ]
         }
       }
     }
   }
+
 }

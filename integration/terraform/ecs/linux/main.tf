@@ -36,7 +36,7 @@ resource "aws_ssm_parameter" "prometheus_config" {
 }
 
 data "template_file" "task_def" {
-  template = file("./ecs_taskdef.tpl")
+  template = file(var.ecs_taskdef)
   vars = {
     region            = var.region
     cwagent_ssm_parameter_arn = aws_ssm_parameter.cwagent_config.name
