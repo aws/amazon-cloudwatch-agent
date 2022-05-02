@@ -1,5 +1,5 @@
 resource "aws_iam_role" "ecs_task_role" {
-  name = "role-name-task"
+  name = "cwagent-integ-test-task-role-${random_id.testing_id.hex}"
 
   assume_role_policy = <<EOF
 {
@@ -33,7 +33,7 @@ data "aws_iam_policy_document" "ecs_task_execution_role" {
 }
 
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "role-name"
+  name = "cwagent-integ-test-task-execution-role-${random_id.testing_id.hex}"
 
   assume_role_policy = <<EOF
 {
@@ -68,8 +68,8 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
 }
 
 resource "aws_iam_policy" "service_discovery_policy" {
-  name = "service_discovery_policy"
-  policy = "${data.aws_iam_policy_document.user-managed-policy-document.json}"
+  name   = "service_discovery_policy"
+  policy = data.aws_iam_policy_document.user-managed-policy-document.json
 
 }
 
@@ -81,17 +81,12 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role" {
 
 resource "aws_iam_role_policy_attachment" "ssm_task_execution_role" {
   role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "agent_task" {
   role       = aws_iam_role.ecs_task_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "log_task" {
-  role       = aws_iam_role.ecs_task_role.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 resource "aws_iam_role_policy_attachment" "service_discovery_task" {

@@ -9,11 +9,16 @@ variable "cwagent_image" {
 }
 
 variable "cwagent_config" {
-  type = string
+  type    = string
   default = "./default_amazon_cloudwatch_agent.json"
 }
 
 variable "ecs_taskdef" {
-  type = string
+  type    = string
   default = "./default_ecs_taskdef.tpl"
+}
+
+variable "ecs_extra_apps" {
+  type    = string
+  default = ""
 }

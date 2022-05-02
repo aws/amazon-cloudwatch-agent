@@ -4,11 +4,6 @@
     "run_as_user": "root",
     "debug": true
   },
-  "logs": {
-    "metrics_collected": {
-      "emf": {}
-    }
-  },
   "metrics": {
     "metrics_collected": {
       "disk": {
@@ -20,7 +15,7 @@
           "*"
         ],
         "append_dimensions": {
-          "khanh-ecs-fargate-test": "khanh-ecs-fargate-test"
+          "cwagent-integration-test": "cwagent-integration-test"
         }
       }
     }

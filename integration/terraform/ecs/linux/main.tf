@@ -8,7 +8,7 @@ resource "aws_ecs_cluster" "cluster" {
 }
 
 resource "aws_cloudwatch_log_group" "log_group" {
-  name = "cwagent-integ-test-log-group"
+  name = "cwagent-integ-test-log-group-${random_id.testing_id.hex}"
 }
 
 data "template_file" "cwagent_config" {
@@ -24,7 +24,7 @@ resource "aws_ssm_parameter" "cwagent_config" {
 }
 
 data "template_file" "prometheus_config" {
-  template = file("./ecs_prometheus.tpl")
+  template = file("./default_ecs_prometheus.tpl")
   vars = {
   }
 }
@@ -35,19 +35,23 @@ resource "aws_ssm_parameter" "prometheus_config" {
   value = data.template_file.prometheus_config.rendered
 }
 
-data "template_file" "task_def" {
+##########################################
+# CloudWatch Agent
+##########################################
+
+data "template_file" "cwagent_container_definitions" {
   template = file(var.ecs_taskdef)
   vars = {
-    region            = var.region
-    cwagent_ssm_parameter_arn = aws_ssm_parameter.cwagent_config.name
+    region                       = var.region
+    cwagent_ssm_parameter_arn    = aws_ssm_parameter.cwagent_config.name
     prometheus_ssm_parameter_arn = aws_ssm_parameter.prometheus_config.name
-    cwagent_image     = var.cwagent_image
-    log_group         = aws_cloudwatch_log_group.log_group.name
-    testing_id        = random_id.testing_id.hex
+    cwagent_image                = var.cwagent_image
+    log_group                    = aws_cloudwatch_log_group.log_group.name
+    testing_id                   = random_id.testing_id.hex
   }
 }
 
-resource "aws_ecs_task_definition" "task_definition" {
+resource "aws_ecs_task_definition" "cwagent_task_definition" {
   family                   = "cwagent-task-family-${random_id.testing_id.hex}"
   network_mode             = "awsvpc"
   task_role_arn            = aws_iam_role.ecs_task_role.arn
@@ -55,14 +59,56 @@ resource "aws_ecs_task_definition" "task_definition" {
   cpu                      = 256
   memory                   = 2048
   requires_compatibilities = ["FARGATE"]
-  container_definitions    = data.template_file.task_def.rendered
+  container_definitions    = data.template_file.cwagent_container_definitions.rendered
   depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
 }
 
-resource "aws_ecs_service" "service" {
+resource "aws_ecs_service" "cwagent_service" {
   name            = "cwagent-service-${random_id.testing_id.hex}"
   cluster         = aws_ecs_cluster.cluster.id
-  task_definition = aws_ecs_task_definition.task_definition.arn
+  task_definition = aws_ecs_task_definition.cwagent_task_definition.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    security_groups  = [aws_security_group.ecs_security_group.id]
+    subnets          = data.aws_subnet_ids.default.ids
+    assign_public_ip = true
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
+}
+
+#####################################################################
+# Sample app for scrapping metrics and logs and sending to cloudwatch
+#####################################################################
+
+data "template_file" "extra_apps" {
+  template = file(var.ecs_extra_apps)
+  vars = {
+    region    = var.region
+    log_group = aws_cloudwatch_log_group.log_group.name
+  }
+}
+
+resource "aws_ecs_task_definition" "extra_apps_task_definition" {
+  family                   = "extra-apps-family-${random_id.testing_id.hex}"
+  count                    = var.ecs_extra_apps ? 1 : 0
+  network_mode             = "awsvpc"
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  cpu                      = 256
+  memory                   = 1024
+  requires_compatibilities = ["FARGATE"]
+  container_definitions    = data.template_file.extra_apps.rendered
+  depends_on               = [aws_cloudwatch_log_group.log_group, aws_iam_role.ecs_task_role, aws_iam_role.ecs_task_execution_role]
+}
+
+resource "aws_ecs_service" "extra_apps_service" {
+  name            = "extra-apps-service-${random_id.testing_id.hex}"
+  count           = var.ecs_extra_apps ? 1 : 0
+  cluster         = aws_ecs_cluster.cluster.id
+  task_definition = aws_ecs_task_definition.extra_apps_task_definition.arn
   desired_count   = 1
   launch_type     = "FARGATE"
 
