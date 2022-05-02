@@ -11,14 +11,7 @@
         "ecs_service_discovery": {
           "sd_frequency": "1m",
           "sd_result_file": "/tmp/cwagent_ecs_auto_sd.yaml",
-          "docker_label": {},
-          "task_definition_list": [
-            {
-              "sd_job_name": "ecs-memcached",
-              "sd_metrics_ports": "9150",
-              "sd_task_definition_arn_pattern": ".*:task-definition/memcached-prometheus-demo.*:[0-9]+"
-            }
-          ]
+          "docker_label": {}
         },
         "emf_processor": {
           "metric_declaration": [

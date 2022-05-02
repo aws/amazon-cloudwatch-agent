@@ -7,10 +7,21 @@
           "sd_frequency": "1m",
           "sd_result_file": "/tmp/cwagent_ecs_auto_sd.yaml",
           "docker_label": {}
+        },
+        "emf_processor": {
+          "metric_declaration": [
+            {
+              "source_labels": ["container_name"],
+              "label_matcher": "^redis-exporter-.*$",
+              "dimensions": [["ClusterName","TaskDefinitionFamily","db"]],
+              "metric_selectors": [
+                "^redis_db_keys$"
+              ]
+            }
+          ]
         }
       }
-    }
-  },
+    },
   "metrics": {
     "metrics_collected": {
       "disk": {
