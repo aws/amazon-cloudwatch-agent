@@ -27,8 +27,8 @@ const (
 
 var clusterName = flag.String("clusterName", "", "Please provide the os preference, valid value: windows/linux.")
 
-func TestNumberMetricDimension(t *testing.T) {
-	// test for cloud watch metrics
+func TestValidatingCloudWatchLogs(t *testing.T) {
+
 	ctx := context.Background()
 	client := test.GetCWLogsClient(ctx)
 
