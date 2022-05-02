@@ -48,6 +48,7 @@ func TestNumberMetricDimension(t *testing.T) {
 		if len(describeLogGroupOutput.LogGroups) > 0 {
 			break
 		}
+		
 		fmt.Printf("Current retry: %v/%v and begin to sleep for 20s \n", currentRetry, RetryTime)
 		time.Sleep(20 * time.Second)
 	}
