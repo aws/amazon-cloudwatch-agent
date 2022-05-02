@@ -540,7 +540,7 @@ jobs:
         run: |
             cd integration/terraform/ecs/linux
             terraform init
-            if terraform apply --auto-approve -lock=false -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=ed38de2ce48ef470619c217eed44a7e7a6a5978b" ; then 
+            if terraform apply --auto-approve -lock=false -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=cwagent-testing" -var="cwagent_image_tag=fargate_normal" ; then 
               terraform destroy -auto-approve -lock=false
             else
               terraform destroy -auto-approve -lock=false && exit 1
