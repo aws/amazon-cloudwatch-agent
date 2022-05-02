@@ -76,7 +76,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}::${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}
           build-args: BUILDMODE=copy
           cache-from: type=registry
           cache-to: type=inline
