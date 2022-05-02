@@ -74,7 +74,6 @@ require (
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 	golang.org/x/sys v0.0.0-20200316230553-a7d97aace0b0
 	golang.org/x/text v0.3.3
-	golang.org/x/tools v0.1.7 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
