@@ -68,7 +68,7 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
 }
 
 resource "aws_iam_policy" "service_discovery_policy" {
-  name   = "service_discovery_policy"
+  name   = "service_discovery_policy-${random_id.testing_id.hex}"
   policy = data.aws_iam_policy_document.user-managed-policy-document.json
 
 }
