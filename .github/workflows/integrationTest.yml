@@ -582,7 +582,7 @@ jobs:
         id: ecs-fargate-linux-integration-test
         uses: actions/cache@v2
         with:
-          path: RELEASE_NOTES
+          path: go.mod
           key: ecs-fargate-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
       - name: Verify Terraform version
