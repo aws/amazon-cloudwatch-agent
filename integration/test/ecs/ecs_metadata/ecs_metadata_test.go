@@ -7,15 +7,12 @@
 package ecs_metadata
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 )
 
 // Purpose: Detect the changes in metadata endpoint for ECS Container Agent https://github.com/aws/amazon-cloudwatch-agent/blob/master/translator/util/ecsutil/ecsutil.go#L67-L75
@@ -31,24 +28,15 @@ const (
 var clusterName = flag.String("clusterName", "", "Please provide the os preference, valid value: windows/linux.")
 
 func TestValidatingCloudWatchLogs(t *testing.T) {
-
-	ctx := context.Background()
-	client := test.GetCWLogsClient(ctx)
+	logGroupName := fmt.Sprintf(ECSLogGroupNameFormat, *clusterName)
 
 	for currentRetry := 1; ; currentRetry++ {
+
 		if currentRetry == RetryTime {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
-		describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
-			LogGroupNamePrefix: aws.String(fmt.Sprintf(ECSLogGroupNameFormat, *clusterName)),
-		}
-		describeLogGroupOutput, err := client.DescribeLogGroups(ctx, &describeLogGroupInput)
 
-		if err != nil {
-			t.Errorf("Error getting log group data %v", err)
-		}
-
-		if len(describeLogGroupOutput.LogGroups) > 0 {
+		if test.isLogGroupExists(t,logGroupName) {
 			break
 		}
 

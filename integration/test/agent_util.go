@@ -17,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 )
 
 func CopyFile(pathIn string, pathOut string) {
@@ -125,10 +124,3 @@ func GetCWClient(cxt context.Context) *cloudwatch.Client {
 	return cloudwatch.NewFromConfig(defaultConfig)
 }
 
-func GetCWLogsClient(cxt context.Context) *cloudwatchlogs.Client {
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
-	if err != nil {
-		log.Fatalf("err occurred while creating config %v", err)
-	}
-	return cloudwatchlogs.NewFromConfig(defaultConfig)
-}
