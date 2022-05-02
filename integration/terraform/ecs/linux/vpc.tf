@@ -8,6 +8,7 @@ data "aws_subnet_ids" "default" {
 
 resource "aws_security_group" "ecs_security_group" {
   name = "cwagent-sg-${random_id.testing_id.hex}"
+
   egress {
     from_port   = 0
     to_port     = 0

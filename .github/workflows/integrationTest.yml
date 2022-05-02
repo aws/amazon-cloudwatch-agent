@@ -29,7 +29,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
- 
 
   MakeBinary:
     name: 'MakeBinary'
@@ -528,12 +527,16 @@ jobs:
           aws-region: us-west-2
 
       - name: Cache if success
-        id: ecs-fargate-linux-integration-test
+        id: ecs-fargate-integration-test
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ecs-fargate-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+          key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
 
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+          
       - name: Verify Terraform version
         run: terraform --version
 
@@ -541,14 +544,13 @@ jobs:
         run: |
             cd integration/terraform/ecs/linux
             terraform init
-            if terraform apply --auto-approve -lock=false -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=cwagent-testing" -var="cwagent_image_tag=fargate_test" ; then 
+            if terraform apply --auto-approve -lock=false -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/cwagent-testing" -var="cwagent_image_tag=fargate_test" ; then 
               terraform destroy -auto-approve -lock=false
             else
               terraform destroy -auto-approve -lock=false && exit 1
             fi
       
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ecs-fargate-linux-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3
