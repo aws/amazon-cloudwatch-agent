@@ -146,6 +146,7 @@ jobs:
     outputs:
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+      ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
     steps:
       - uses: actions/checkout@v2
 
@@ -159,13 +160,15 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator integration/generator/test_case_generator.go
-          echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/linux_complete_test_matrix.json))"
-          echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/windows_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/ec2_linux_complete_test_matrix.json))"
+          echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/ec2_windows_complete_test_matrix.json))"
+          echo "::set-output name=ecs_fargate_matrix::$(echo $(cat integration/generator/resources/ecs_fargate_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
           echo ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
           echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+          echo ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -558,10 +561,11 @@ jobs:
   ECSFargateLinuxIntegrationTest:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
+    needs: [MakeDockerImage, GenerateTestMatrix]
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_matrix) }}
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ecs_fargate_matrix) }}
     steps:
       - uses: actions/checkout@v2
 
@@ -592,7 +596,7 @@ jobs:
           command: |
             cd integration/terraform/ecs/linux
             terraform init
-            if terraform apply --auto-approve -var="test_dir=${PRIVATE_KEY}"; then 
+            if terraform apply --auto-approve -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then 
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1

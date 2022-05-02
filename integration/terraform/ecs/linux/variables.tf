@@ -3,9 +3,14 @@ variable "region" {
   default = "us-east-2"
 }
 
-variable "cwagent_image" {
+variable "cwagent_image_repo" {
   type    = string
   default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:latest"
+}
+
+variable "cwagent_image_tag" {
+  type = string
+  default = "latest"
 }
 
 variable "test_dir" {

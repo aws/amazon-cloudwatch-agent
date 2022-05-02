@@ -56,7 +56,7 @@ data "template_file" "cwagent_container_definitions" {
     region                       = var.region
     cwagent_ssm_parameter_arn    = aws_ssm_parameter.cwagent_config.name
     prometheus_ssm_parameter_arn = aws_ssm_parameter.prometheus_config.name
-    cwagent_image                = var.cwagent_image
+    cwagent_image                = "${var.cwagent_image_repo}:${var.cwagent_image_tag}"
     log_group                    = aws_cloudwatch_log_group.log_group.name
     testing_id                   = random_id.testing_id.hex
   }
