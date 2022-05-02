@@ -18,7 +18,7 @@ data "template_file" "cwagent_config" {
 }
 
 resource "aws_ssm_parameter" "cwagent_config" {
-  name  = "cwagent-integ-test-ssm-config"
+  name  = "cwagent-integ-test-ssm-config-${random_id.testing_id.hex}"
   type  = "String"
   value = data.template_file.cwagent_config.rendered
 }
@@ -30,7 +30,7 @@ data "template_file" "prometheus_config" {
 }
 
 resource "aws_ssm_parameter" "prometheus_config" {
-  name  = "prometheus-integ-test-ssm-config"
+  name  = "prometheus-integ-test-ssm-config-${random_id.testing_id.hex}"
   type  = "String"
   value = data.template_file.prometheus_config.rendered
 }
@@ -40,7 +40,7 @@ resource "aws_ssm_parameter" "prometheus_config" {
 ##########################################
 
 data "template_file" "cwagent_container_definitions" {
-  template = file(var.ecs_taskdef)
+  template = file(var.cwagent_taskdef)
   vars = {
     region                       = var.region
     cwagent_ssm_parameter_arn    = aws_ssm_parameter.cwagent_config.name
@@ -84,7 +84,7 @@ resource "aws_ecs_service" "cwagent_service" {
 #####################################################################
 
 data "template_file" "extra_apps" {
-  template = file(var.ecs_extra_apps)
+  template = file(var.extra_apps)
   vars = {
     region    = var.region
     log_group = aws_cloudwatch_log_group.log_group.name
@@ -93,7 +93,6 @@ data "template_file" "extra_apps" {
 
 resource "aws_ecs_task_definition" "extra_apps_task_definition" {
   family                   = "extra-apps-family-${random_id.testing_id.hex}"
-  count                    = var.ecs_extra_apps ? 1 : 0
   network_mode             = "awsvpc"
   task_role_arn            = aws_iam_role.ecs_task_role.arn
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
@@ -106,7 +105,6 @@ resource "aws_ecs_task_definition" "extra_apps_task_definition" {
 
 resource "aws_ecs_service" "extra_apps_service" {
   name            = "extra-apps-service-${random_id.testing_id.hex}"
-  count           = var.ecs_extra_apps ? 1 : 0
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.extra_apps_task_definition.arn
   desired_count   = 1
@@ -119,4 +117,14 @@ resource "aws_ecs_service" "extra_apps_service" {
   }
 
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role]
+}
+
+resource "null_resource" "validator" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Validating metrics/logs"
+      go test ${var.test_dir} -clusterName=${aws_ecs_cluster.cluster.name}
+    EOT
+  }
+  depends_on = [aws_ecs_service.cwagent_service,aws_ecs_service.extra_apps_service]
 }

@@ -5,47 +5,50 @@
 package ecs_metadata
 
 import (
+	"flag"
 	"context"
 	"testing"
 	"fmt"
-	
+	"time"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	
 )
-const namespace = "ECSMetadataTest"
-const metricName = "disk_used_percent"
 
-//Must run this test with parallel 1 since this will fail if more than one test is running at the same time
-func TestNumberMetricDimension(t *testing.T) {
-
-
-	// test for cloud watch metrics
-	cxt := context.Background()
-	client := test.GetCWClient(cxt)
-	listMetricsInput := cloudwatch.ListMetricsInput{
-		MetricName: aws.String(metricName),
-		Namespace:  aws.String(namespace),
-	}
-	metrics, err := client.ListMetrics(cxt, &listMetricsInput)
-	if err != nil {
-		t.Errorf("Error getting metric data %v", err)
-	}
-	for _, metric := range metrics.Metrics {
-		for _, dimension := range metric.Dimensions {
-			fmt.Printf("%v %v \n",*metric.MetricName,*dimension.Name)
-		}
-
-	}
-
-	
-
+type RetriableError struct {
+	Err        error
+	RetryAfter time.Duration
 }
 
-func getClusterInfo() (string, string) {
-	ecsCluster := ecsutil.GetECSUtilSingleton()
-	return ecsCluster.Region, ecsCluster.Cluster
+const (
+	RetryTime = 10
+	ECSLogGroupNameFormat = "/aws/ecs/containerinsights/%s/prometheus"
+)
+var clusterName = flag.String("clusterName", "", "Please provide the os preference, valid value: windows/linux.")
+
+func TestNumberMetricDimension(t *testing.T) {
+	// test for cloud watch metrics
+	ctx := context.Background()
+	client := test.GetCWLogsClient(ctx)
 	
+	for currentRetry := 1; ; currentRetry++ {
+		if currentRetry == RetryTime {
+			t.Fatalf("Test metadata has exhausted %v retry time",RetryTime)
+		}
+		describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
+			LogGroupNamePrefix: aws.String(fmt.Sprintf(ECSLogGroupNameFormat, *clusterName)),
+		}
+		describeLogGroupOutput, err := client.DescribeLogGroups(ctx, &describeLogGroupInput)
+		
+		if err != nil {
+			t.Errorf("Error getting metric data %v", err)
+		}
+		
+		if len(describeLogGroupOutput.LogGroups) > 0 {
+			break
+		}
+		fmt.Printf("Current retry: %v/%v and begin to sleep for 20s \n", currentRetry, RetryTime)
+		time.Sleep(20 * time.Second)
+	}
 }

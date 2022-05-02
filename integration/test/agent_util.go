@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
-
 package test
 
 import (
@@ -12,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -121,4 +119,12 @@ func GetCWClient(cxt context.Context) *cloudwatch.Client {
 		log.Fatalf("err occurred while creating config %v", err)
 	}
 	return cloudwatch.NewFromConfig(defaultConfig)
+}
+
+func GetCWLogsClient(cxt context.Context) *cloudwatchlogs.Client {
+	defaultConfig, err := config.LoadDefaultConfig(cxt)
+	if err != nil {
+		log.Fatalf("err occurred while creating config %v", err)
+	}
+	return cloudwatchlogs.NewFromConfig(defaultConfig)
 }

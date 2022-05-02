@@ -13,12 +13,22 @@ variable "cwagent_config" {
   default = "./default_amazon_cloudwatch_agent.json"
 }
 
-variable "ecs_taskdef" {
+variable "cwagent_taskdef" {
   type    = string
   default = "./default_ecs_taskdef.tpl"
 }
 
-variable "ecs_extra_apps" {
+variable "prometheus_config" {
   type    = string
+  default = "./default_ecs_prometheus.tpl"
+}
+
+variable "extra_apps" {
+  type    = string
+  default = "./default_extra_apps.tpl"
+}
+
+variable "test_dir" {
+  type = string
   default = ""
 }
