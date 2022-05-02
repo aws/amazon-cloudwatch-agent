@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build integration
+// +build integration
 
 package ecs_metadata
 
@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 )
 
@@ -36,7 +35,7 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		if test.isLogGroupExists(t,logGroupName) {
+		if test.isLogGroupExists(t,logGroupName).(bool) {
 			break
 		}
 
