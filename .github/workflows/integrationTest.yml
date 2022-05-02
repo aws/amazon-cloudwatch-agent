@@ -560,7 +560,7 @@ jobs:
       - name: Terraform destroy
         run: terraform destroy --auto-approve
 
-  ECSFargateLinuxIntegrationTest:
+  ECSFargateIntegrationTest:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
     needs: [MakeDockerImage, GenerateTestMatrix]
