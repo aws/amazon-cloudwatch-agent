@@ -134,7 +134,7 @@ resource "null_resource" "validator" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Validating metrics/logs"
-      go test "../../../test/${var.test_dir}" -clusterName=${aws_ecs_cluster.cluster.name}
+      go test ${var.test_dir} -clusterName=${aws_ecs_cluster.cluster.name}
     EOT
   }
   depends_on = [aws_ecs_service.cwagent_service, aws_ecs_service.extra_apps_service]

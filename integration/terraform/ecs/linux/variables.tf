@@ -15,5 +15,5 @@ variable "cwagent_image_tag" {
 
 variable "test_dir" {
   type    = string
-  default = "ecs/ecs_metadata/"
+  default = "../../../test/ecs/ecs_metadata"
 }
