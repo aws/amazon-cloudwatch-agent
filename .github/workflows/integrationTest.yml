@@ -592,10 +592,10 @@ jobs:
         run: |
             cd integration/terraform/ecs/linux
             terraform init
-            if terraform apply --auto-approve -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then 
-              terraform destroy -auto-approve
+            if terraform apply --auto-approve -lock=false -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then 
+              terraform destroy -auto-approve -lock=false
             else
-              terraform destroy -auto-approve && exit 1
+              terraform destroy -auto-approve -lock=false && exit 1
             fi
       
       - name: Terraform destroy
@@ -605,4 +605,4 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd integration/terraform/ecs/linux && terraform destroy --auto-approve 
+          command: cd integration/terraform/ecs/linux && terraform destroy --auto-approve -lock=false
