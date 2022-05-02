@@ -5,9 +5,9 @@ package collect_list
 
 import (
 	"fmt"
-	"strings"
-	"regexp"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"regexp"
+	"strings"
 )
 
 /*
@@ -160,7 +160,7 @@ func (t *TimestampRegax) ApplyRule(input interface{}) (returnKey string, returnV
 		returnKey = "timestamp_regex"
 		returnVal = res
 		if _, err := regexp.Compile(res); err != nil {
-			translator.AddErrorMessages(GetCurPath() + "timestamp_format", fmt.Sprintf("Timestamp format %s is invalid", val))
+			translator.AddErrorMessages(GetCurPath()+"timestamp_format", fmt.Sprintf("Timestamp format %s is invalid", val))
 		}
 	}
 	return

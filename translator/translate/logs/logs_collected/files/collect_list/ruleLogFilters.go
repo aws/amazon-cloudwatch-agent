@@ -5,8 +5,8 @@ package collect_list
 
 import (
 	"fmt"
-	"regexp"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"regexp"
 )
 
 const (
