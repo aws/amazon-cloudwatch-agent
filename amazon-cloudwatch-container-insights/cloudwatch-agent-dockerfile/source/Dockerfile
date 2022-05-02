@@ -9,8 +9,6 @@ ARG TARGETARCH
 RUN mkdir -p /go/src/github.com/aws/amazon-cloudwatch-agent/
 WORKDIR /go/src/github.com/aws/amazon-cloudwatch-agent/
 
-ENV GOPROXY=direct
-
 ARG GO111MODULE="on"
 ENV GO111MODULE=${GO111MODULE}
 
