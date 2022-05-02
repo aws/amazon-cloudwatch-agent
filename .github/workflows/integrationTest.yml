@@ -14,7 +14,7 @@ env:
   PASSPHRASE: ${{ secrets.PASSPHRASE }}
   GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
   GPG_TTY: $(tty)
-  ECR_INTEGRATION_TEST_REPO: "cwagent-opensource-integration-test"
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
 
 on:
   push:
