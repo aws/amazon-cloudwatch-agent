@@ -5,7 +5,7 @@ variable "region" {
 
 variable "cwagent_image" {
   type    = string
-  default = "167129616597.dkr.ecr.us-east-2.amazonaws.com/cwagent-testing:test_again"
+  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:latest"
 }
 
 variable "test_dir" {

@@ -2,8 +2,9 @@ package util
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 const (
