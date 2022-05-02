@@ -73,8 +73,7 @@ func TestApplyLogFiltersRuleInvalidRegex(t *testing.T) {
 		]
 	}`), &input)
 	assert.Nil(t, e)
-	retKey, retVal := r.ApplyRule(input)
-	assert.Equal(t, "filters", retKey)
+	_, retVal := r.ApplyRule(input)
 	assert.Nil(t, retVal)
 	assert.Len(t, translator.ErrorMessages, 1)
 }
