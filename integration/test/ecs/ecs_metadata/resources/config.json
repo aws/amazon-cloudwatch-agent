@@ -24,28 +24,37 @@
           "metric_declaration": [
             {
               "source_labels": ["container_name"],
-              "label_matcher": "memcached-exporter-.*",
-              "dimensions": [["ClusterName", "TaskDefinitionFamily"]],
+              "label_matcher": "^redis-exporter-.*$",
+              "dimensions": [["ClusterName","TaskDefinitionFamily"]],
               "metric_selectors": [
-                "^memcached_current_(bytes|items|connections)$",
-                "^memcached_items_(reclaimed|evicted)_total$",
-                "^memcached_(written|read)_bytes_total$",
-                "^memcached_limit_bytes$",
-                "^memcached_commands_total$"
+                "^redis_net_(in|out)put_bytes_total$",
+                "^redis_(expired|evicted)_keys_total$",
+                "^redis_keyspace_(hits|misses)_total$",
+                "^redis_memory_used_bytes$",
+                "^redis_connected_clients$"
               ]
             },
             {
               "source_labels": ["container_name"],
-              "label_matcher": "memcached-exporter-.*",
-              "dimensions": [["ClusterName", "TaskDefinitionFamily","status","command"], ["ClusterName", "TaskDefinitionFamily","command"]],
+              "label_matcher": "^redis-exporter-.*$",
+              "dimensions": [["ClusterName","TaskDefinitionFamily","cmd"]],
               "metric_selectors": [
-                "^memcached_commands_total$"
+                "^redis_commands_total$"
+              ]
+            },
+            {
+              "source_labels": ["container_name"],
+              "label_matcher": "^redis-exporter-.*$",
+              "dimensions": [["ClusterName","TaskDefinitionFamily","db"]],
+              "metric_selectors": [
+                "^redis_db_keys$"
               ]
             }
           ]
         }
       }
-    }
+    },
+    "force_flush_interval": 5
   }
 
 }
