@@ -8,12 +8,13 @@ package main
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"log"
-	"time"
 )
 
 // Can't release a host if it was being used within the last 24 hr add 2 hr as a buffer

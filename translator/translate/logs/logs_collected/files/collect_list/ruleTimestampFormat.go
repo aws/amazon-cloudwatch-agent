@@ -5,9 +5,10 @@ package collect_list
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"regexp"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 /*

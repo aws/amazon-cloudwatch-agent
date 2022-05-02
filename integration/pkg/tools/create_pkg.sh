@@ -11,8 +11,8 @@ COMMON_CONFIG_PATH=/tmp/AmazonCWAgentPackage/opt/aws/amazon-cloudwatch-agent/etc
 SAMPLE_SUFFIX=SAMPLE_DO_NOT_MODIFY
 mv ${COMMON_CONFIG_PATH} ${COMMON_CONFIG_PATH}.${SAMPLE_SUFFIX}
 if [ $? -ne 0 ]; then
-    echo "Failed to mv common-config.toml"
-    exit 1
+     echo "Failed to mv common-config.toml"
+     exit 1
 fi
 
 mkdir /tmp/AmazonAgentScripts
