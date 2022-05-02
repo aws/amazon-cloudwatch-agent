@@ -29,58 +29,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  MakeDockerImage:
-    name: 'MakeDockerImage'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Cache if success
-        id: build-docker-image
-        uses: actions/cache@v2
-        with:
-          path: |
-            RELEASE_NOTES
-          key: build-docker-image-${{ github.run_id }}
-
-      - name: Configure AWS Credentials
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-
-      - name: Login ECR
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Set up Docker Buildx
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        uses: docker/setup-buildx-action@v1
-
-      - name: Set up QEMU
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        uses: docker/setup-qemu-action@v1
-
-        #Build the cloudwatch agent image for two primary reasons:
-        #-Using the cloudwatch agent image to do the integration test (can be used for internal)
-        #-Export it for the future use in CD release pipeline
-        #Documentation: https://github.com/docker/build-push-action
-      - name: Build Cloudwatch Agent Image
-        uses: docker/build-push-action@v2
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        with:
-          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
-          context: .
-          push: true
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}
-          build-args: BUILDMODE=copy
-          cache-from: type=registry
-          cache-to: type=inline
-          platforms: linux/amd64, linux/arm64
 
   MakeBinary:
     name: 'MakeBinary'
@@ -563,7 +511,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [MakeDockerImage, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     strategy:
       fail-fast: false
       matrix:
@@ -592,7 +540,7 @@ jobs:
         run: |
             cd integration/terraform/ecs/linux
             terraform init
-            if terraform apply --auto-approve -lock=false -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then 
+            if terraform apply --auto-approve -lock=false -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=ed38de2ce48ef470619c217eed44a7e7a6a5978b" ; then 
               terraform destroy -auto-approve -lock=false
             else
               terraform destroy -auto-approve -lock=false && exit 1
