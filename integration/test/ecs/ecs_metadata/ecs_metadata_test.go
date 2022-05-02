@@ -35,7 +35,7 @@ func TestValidatingCloudWatchLogs(t *testing.T) {
 			t.Fatalf("Test metadata has exhausted %v retry time", RetryTime)
 		}
 
-		if test.isLogGroupExists(t,logGroupName).(bool) {
+		if test.IsLogGroupExists(t,logGroupName) {
 			break
 		}
 

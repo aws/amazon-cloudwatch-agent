@@ -106,7 +106,7 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 
 // isLogGroupExists confirms whether the logGroupName exists or not
 
-func isLogGroupExists(t *testing.T, logGroupName string) bool {
+func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
 	if err != nil {
