@@ -1,4 +1,3 @@
-# Extra apps based on https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights-Prometheus-Setup-redis-ecs.html
 [
   {
     "name": "redis-0",

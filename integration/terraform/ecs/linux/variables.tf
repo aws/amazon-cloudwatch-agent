@@ -5,7 +5,7 @@ variable "region" {
 
 variable "cwagent_image_repo" {
   type    = string
-  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent:latest"
+  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
 }
 
 variable "cwagent_image_tag" {
