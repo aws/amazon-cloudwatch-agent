@@ -43,14 +43,11 @@ To be more specifically,
 
 # 2. Run tests in your AWS account
 ````
-cd terraform/ecs && terraform init && terraform apply -auto-approve \
-    -var="test_dir=../../../test/ecs/ecs_metadata/ \
-    -var="aoc_version={{the aoc binary version}}" \
-    -var="testcase=../testcases/{{your test case folder name}}" \
-    -var-file="../testcases/{{your test case folder name}}/parameters.tfvars"
+cd integration/terraform/ecs && terraform init && terraform apply -auto-approve \
+    -var="test_dir={{your test case folder name}} \
 ````
 
-Don't forget to clean up your resources:
+Don't forget to clean up your resources after integration test has passed:
 ````
 terraform destroy -auto-approve
 ````
