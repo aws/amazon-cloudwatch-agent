@@ -43,7 +43,6 @@ func DetectAgentMode(configuredMode string) string {
 
 	if defaultECSRegion() != "" {
 		fmt.Println("I! Detected the instance is ECS")
-		fmt.Printf("I! Cluster: %s, region: %s \n",defaultECSRegion(),defaultClusterName())
 		return config.ModeEC2
 	}
 	fmt.Println("I! Detected the instance is OnPremise")
@@ -86,10 +85,6 @@ func defaultEC2Region() string {
 
 func defaultECSRegion() string {
 	return ecsutil.GetECSUtilSingleton().Region
-}
-
-func defaultClusterName() string {
-	return ecsutil.GetECSUtilSingleton().Cluster
 }
 
 func detectRegion(mode string, credsConfig map[string]string) (region string) {
