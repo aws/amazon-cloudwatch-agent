@@ -5,12 +5,12 @@ variable "region" {
 
 variable "cwagent_image_repo" {
   type    = string
-  default = "167129616597.dkr.ecr.us-west-2.amazonaws.com/cwagent-testing"
+  default = "public.ecr.aws/cloudwatch-agent/cloudwatch-agent"
 }
 
 variable "cwagent_image_tag" {
   type = string
-  default = "fargate_test"
+  default = "latest"
 }
 
 variable "test_dir" {
