@@ -110,6 +110,11 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	time.Sleep(agentRuntime)
 	test.StopAgent()
 
+	// These expected log lines are created using resources/write_and_rotate_logs.py,
+	// which are taken directly from the repro case in https://github.com/aws/amazon-cloudwatch-agent/issues/447
+	// logging.info(json.dumps({"Metric": "12345"*10}))
+	// logging.info(json.dumps({"Metric": "09876"*10}))
+	// logging.info({"Metric": "1234567890"*10})
 	lines := []string{
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("12345", 10)),
 		fmt.Sprintf("{\"Metric\": \"%s\"}", strings.Repeat("09876", 10)),
