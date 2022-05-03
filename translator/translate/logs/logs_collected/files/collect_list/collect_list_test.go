@@ -310,6 +310,22 @@ func TestTimestampFormat_Template(t *testing.T) {
 	assert.Equal(t, time.Date(0, 8, 9, 20, 45, 51, 0, time.Local), parsedTime)
 }
 
+func TestTimestampFormat_InvalidRegex(t *testing.T) {
+	translator.ResetMessages()
+	r := new(TimestampRegax)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"timestamp_format":"%Y-%m-%dT%H:%M%S+00:00"
+	}`), &input)
+	assert.Nil(t, e)
+
+	retKey, retVal := r.ApplyRule(input)
+	assert.Equal(t, "timestamp_regex", retKey)
+	assert.Nil(t, retVal)
+	assert.Len(t, translator.ErrorMessages, 1)
+
+}
+
 func TestMultiLineStartPattern(t *testing.T) {
 	f := new(FileConfig)
 	var input interface{}
@@ -371,6 +387,7 @@ func TestEncoding(t *testing.T) {
 }
 
 func TestEncoding_Invalid(t *testing.T) {
+	translator.ResetMessages()
 	f := new(FileConfig)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
@@ -687,6 +704,7 @@ func TestDuplicateRetention(t *testing.T) {
 }
 
 func TestConflictingRetention(t *testing.T) {
+	translator.ResetMessages()
 	f := new(FileConfig)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
