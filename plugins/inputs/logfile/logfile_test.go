@@ -716,10 +716,11 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 
 // TestLogsFileRecreate verifies that if a LogSrc matching a LogConfig is detected,
 // We only receive log lines beginning at the offset specified in the corresponding state-file.
-// And if the file happens to get deleted and recreated we expect to receive log lines beginning
-// at that same offset in the state file.
+// And if the file happens to get deleted and recreated we expect to receive log lines
+// from the beginning of the file. See https://github.com/aws/amazon-cloudwatch-agent/issues/447
 func TestLogsFileRecreate(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
+
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 	expectedContent := "ContentAfterOffset"
 
@@ -734,9 +735,12 @@ func TestLogsFileRecreate(t *testing.T) {
 	defer os.Remove(stateDir)
 
 	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
-	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
+	require.NoError(t, err)
+	err = stateFile.Close()
+	require.NoError(t, err)
 	defer os.Remove(stateFileName)
 
 	tt := NewLogFile()
@@ -800,9 +804,11 @@ func TestLogsFileRecreate(t *testing.T) {
 		}
 	})
 
+	// after the file gets deleted, the state file should be deleted too, so
+	// the tailer should start from the beginning.
 	e = <-evts
-	if e.Message() != expectedContent {
-		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), expectedContent)
+	if e.Message() != logEntryString {
+		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), logEntryString)
 	}
 
 	lsrc.Stop()
