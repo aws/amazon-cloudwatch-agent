@@ -1,9 +1,4 @@
 {
-  "agent": {
-    "metrics_collection_interval": 60,
-    "run_as_user": "root",
-    "debug": true
-  },
   "logs": {
     "metrics_collected": {
       "prometheus": {
