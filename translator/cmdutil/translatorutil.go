@@ -139,7 +139,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 		ctx.InputJsonDirPath(),
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				fmt.Printf("Cannot access %v: %v", path, err)
+				fmt.Printf("Cannot access %v: %v \n", path, err)
 				return err
 			}
 			if info.Mode()&os.ModeSymlink != 0 {
