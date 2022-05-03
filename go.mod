@@ -71,7 +71,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
-	golang.org/x/sys v0.0.0-20220429121018-84afa8d3f7b3
+	golang.org/x/sys v0.0.0-20200316230553-a7d97aace0b0
 	golang.org/x/text v0.3.3
 	gopkg.in/fsnotify.v1 v1.4.7
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
