@@ -1,4 +1,9 @@
 {
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true
+  },
   "logs": {
     "metrics_collected": {
       "prometheus": {
@@ -13,6 +18,26 @@
             {
               "source_labels": ["container_name"],
               "label_matcher": "^redis-exporter-.*$",
+              "dimensions": [["ClusterName","TaskDefinitionFamily"]],
+              "metric_selectors": [
+                "^redis_net_(in|out)put_bytes_total$",
+                "^redis_(expired|evicted)_keys_total$",
+                "^redis_keyspace_(hits|misses)_total$",
+                "^redis_memory_used_bytes$",
+                "^redis_connected_clients$"
+              ]
+            },
+            {
+              "source_labels": ["container_name"],
+              "label_matcher": "^redis-exporter-.*$",
+              "dimensions": [["ClusterName","TaskDefinitionFamily","cmd"]],
+              "metric_selectors": [
+                "^redis_commands_total$"
+              ]
+            },
+            {
+              "source_labels": ["container_name"],
+              "label_matcher": "^redis-exporter-.*$",
               "dimensions": [["ClusterName","TaskDefinitionFamily","db"]],
               "metric_selectors": [
                 "^redis_db_keys$"
@@ -22,20 +47,6 @@
         }
       }
     },
-  "metrics": {
-    "metrics_collected": {
-      "disk": {
-        "measurement": [
-          "used_percent"
-        ],
-        "metrics_collection_interval": 60,
-        "resources": [
-          "*"
-        ],
-        "append_dimensions": {
-          "cwagent-integration-test": "cwagent-integration-test"
-        }
-      }
-    }
+    "force_flush_interval": 5
   }
 }

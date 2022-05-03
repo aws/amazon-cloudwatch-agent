@@ -83,7 +83,7 @@ resource "aws_ecs_service" "cwagent_service" {
 
   network_configuration {
     security_groups  = [aws_security_group.ecs_security_group.id]
-    subnets          = data.aws_subnet_ids.default.ids
+    subnets          = toset(data.aws_subnets.default.ids)
     assign_public_ip = true
   }
 
@@ -123,7 +123,7 @@ resource "aws_ecs_service" "extra_apps_service" {
 
   network_configuration {
     security_groups  = [aws_security_group.ecs_security_group.id]
-    subnets          = data.aws_subnet_ids.default.ids
+    subnets          = toset(data.aws_subnets.default.ids)
     assign_public_ip = true
   }
 
