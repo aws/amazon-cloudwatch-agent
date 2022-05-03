@@ -62,3 +62,18 @@ func TestApplyLogFiltersRuleMissingConfigInsideFilters(t *testing.T) {
 	assert.Nil(t, retVal)
 	assert.Len(t, translator.ErrorMessages, 2)
 }
+
+func TestApplyLogFiltersRuleInvalidRegex(t *testing.T) {
+	translator.ResetMessages()
+	r := new(LogFilter)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"filters": [
+			{"type": "exclude", "expression": "(?!re)"}
+		]
+	}`), &input)
+	assert.Nil(t, e)
+	_, retVal := r.ApplyRule(input)
+	assert.Nil(t, retVal)
+	assert.Len(t, translator.ErrorMessages, 1)
+}

@@ -5,6 +5,10 @@ package collect_list
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"path/filepath"
+	"sort"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
@@ -12,9 +16,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
 	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
-	"io/ioutil"
-	"path/filepath"
-	"sort"
 )
 
 type Rule translator.Rule

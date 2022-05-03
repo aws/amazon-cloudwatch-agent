@@ -12,7 +12,6 @@ import (
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events"
 	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-
 )
 
 type Rule translator.Rule
