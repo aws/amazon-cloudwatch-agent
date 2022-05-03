@@ -30,7 +30,7 @@ func (d *LogGroupName) ApplyRule(input interface{}) (string, interface{}) {
 
 	if context.CurrentContext().RunInContainer() {
 		if ecsutil.GetECSUtilSingleton().IsECS() {
-			clusterName := util.GetECSClusterNameFromEnv()
+			clusterName := ecsutil.GetECSUtilSingleton().Cluster
 			if clusterName != "" {
 				lgName = fmt.Sprintf(ECSLogGroupNameFormat, clusterName)
 			}
