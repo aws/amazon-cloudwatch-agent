@@ -29,7 +29,7 @@ var osToTestDirMap = map[string][]string{
 	"ec2_windows": {""},
 	"ec2_mac":     {},
 	"ecs_fargate": {
-		"../../../test/ecs/ecs_metadata",
+		"./integration/test/ecs/ecs_metadata",
 	},
 }
 
