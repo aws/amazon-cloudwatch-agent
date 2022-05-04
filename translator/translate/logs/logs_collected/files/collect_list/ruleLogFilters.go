@@ -5,6 +5,7 @@ package collect_list
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
@@ -35,6 +36,10 @@ func (lf *LogFilter) ApplyRule(input interface{}) (returnKey string, returnVal i
 			_, filterVal = translator.DefaultCase(FiltersExpressionSectionKey, "", filter)
 			if filterVal == "" {
 				translator.AddErrorMessages(GetCurPath()+FiltersSectionKey, fmt.Sprintf("Filter %s is invalid", filter))
+				continue
+			}
+			if _, err := regexp.Compile(filterVal.(string)); err != nil {
+				translator.AddErrorMessages(GetCurPath()+FiltersSectionKey, fmt.Sprintf("Filter expression %s is invalid", filter))
 				continue
 			}
 			filterMap[FiltersExpressionSectionKey] = filterVal

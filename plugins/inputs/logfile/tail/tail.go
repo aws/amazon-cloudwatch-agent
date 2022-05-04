@@ -83,6 +83,8 @@ type Tail struct {
 	dropCnt   int
 
 	lk sync.Mutex
+
+	FileDeletedCh chan bool
 }
 
 // TailFile begins tailing the file. Output stream is made available
@@ -95,9 +97,10 @@ func TailFile(filename string, config Config) (*Tail, error) {
 	}
 
 	t := &Tail{
-		Filename: filename,
-		Lines:    make(chan *Line),
-		Config:   config,
+		Filename:      filename,
+		Lines:         make(chan *Line),
+		Config:        config,
+		FileDeletedCh: make(chan bool),
 	}
 
 	// when Logger was not specified in config, create new one
@@ -385,6 +388,7 @@ func (tail *Tail) tailFileSync() {
 			err := tail.waitForChanges()
 			if err != nil {
 				if err == ErrDeletedNotReOpen {
+					close(tail.FileDeletedCh)
 					for {
 						line, errReadLine := tail.readLine()
 						if errReadLine == nil {

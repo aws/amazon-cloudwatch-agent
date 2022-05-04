@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 if [ "$1" = "upgrade" ]; then
-    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a prep-restart
-    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
+     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a prep-restart
+     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
 fi
 
 if ! grep "^cwagent:" /etc/group >/dev/null 2>&1; then
@@ -18,11 +18,11 @@ if ! id cwagent >/dev/null 2>&1; then
 fi
 
 if ! grep "^aoc:" /etc/group >/dev/null 2>&1; then
-    groupadd -r aoc >/dev/null 2>&1
-    echo "create group aoc, result: $?"
+     groupadd -r aoc >/dev/null 2>&1
+     echo "create group aoc, result: $?"
 fi
 
 if ! id aoc >/dev/null 2>&1; then
-    useradd -r -M aoc -d /home/aoc -g aoc >/dev/null 2>&1
-    echo "create user aoc, result: $?"
+     useradd -r -M aoc -d /home/aoc -g aoc >/dev/null 2>&1
+     echo "create user aoc, result: $?"
 fi
