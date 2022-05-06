@@ -1,0 +1,31 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "prometheus": {
+        "prometheus_config_path": "env:PROMETHEUS_CONFIG_CONTENT",
+        "ecs_service_discovery": {
+          "sd_frequency": "1m",
+          "sd_result_file": "/tmp/cwagent_ecs_auto_sd.yaml",
+          "docker_label": {}
+        },
+        "emf_processor": {
+          "metric_declaration": [
+            {
+              "source_labels": ["container_name"],
+              "label_matcher": "^redis-exporter-.*$",
+              "dimensions": [["ClusterName","TaskDefinitionFamily"]],
+              "metric_selectors": [
+                "^redis_net_(in|out)put_bytes_total$",
+                "^redis_(expired|evicted)_keys_total$",
+                "^redis_keyspace_(hits|misses)_total$",
+                "^redis_memory_used_bytes$",
+                "^redis_connected_clients$"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "force_flush_interval": 5
+  }
+}

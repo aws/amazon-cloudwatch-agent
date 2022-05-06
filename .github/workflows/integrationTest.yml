@@ -14,11 +14,13 @@ env:
   PASSPHRASE: ${{ secrets.PASSPHRASE }}
   GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
   GPG_TTY: $(tty)
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
 
 on:
   push:
     branches:
       - master
+    
   workflow_dispatch:
 
 concurrency:
@@ -26,6 +28,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  MakeDockerImage:
+    name: 'MakeDockerImage'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache if success
+        id: build-docker-image
+        uses: actions/cache@v2
+        with:
+          path: |
+            RELEASE_NOTES
+          key: build-docker-image-${{ github.run_id }}
+
+      - name: Configure AWS Credentials
+        if: steps.build-docker-image.outputs.cache-hit != 'true'
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Login ECR
+        if: steps.build-docker-image.outputs.cache-hit != 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        if: steps.build-docker-image.outputs.cache-hit != 'true'
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set up QEMU
+        if: steps.build-docker-image.outputs.cache-hit != 'true'
+        uses: docker/setup-qemu-action@v1
+
+        #Build the cloudwatch agent image for two primary reasons:
+        #-Using the cloudwatch agent image to do the integration test (can be used for internal)
+        #-Export it for the future use in CD release pipeline
+        #Documentation: https://github.com/docker/build-push-action
+      - name: Build Cloudwatch Agent Image
+        uses: docker/build-push-action@v2
+        if: steps.build-docker-image.outputs.cache-hit != 'true'
+        with:
+          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
+          context: .
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}
+          build-args: BUILDMODE=copy
+          cache-from: type=registry
+          cache-to: type=inline
+          platforms: linux/amd64, linux/arm64
+
   MakeBinary:
     name: 'MakeBinary'
     runs-on: ubuntu-latest
@@ -92,6 +147,7 @@ jobs:
     outputs:
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+      ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
     steps:
       - uses: actions/checkout@v2
 
@@ -105,13 +161,15 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator integration/generator/test_case_generator.go
-          echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/linux_complete_test_matrix.json))"
-          echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/windows_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/ec2_linux_complete_test_matrix.json))"
+          echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/ec2_windows_complete_test_matrix.json))"
+          echo "::set-output name=ecs_fargate_matrix::$(echo $(cat integration/generator/resources/ecs_fargate_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
           echo ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
           echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+          echo ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -500,3 +558,62 @@ jobs:
 
       - name: Terraform destroy
         run: terraform destroy --auto-approve
+
+  ECSFargateIntegrationTest:
+    name: 'ECSFargateIntegrationTest'
+    runs-on: ubuntu-latest
+    needs: [MakeDockerImage, GenerateTestMatrix]
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ecs_fargate_matrix) }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Cache if success
+        id: ecs-fargate-integration-test
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+
+      - name: Login ECR
+        id: login-ecr
+        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
+        uses: aws-actions/amazon-ecr-login@v1
+        
+      - name: Verify Terraform version
+        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 15
+          retry_wait_seconds: 5
+          command: |
+            cd integration/terraform/ecs/linux
+            terraform init
+            if terraform apply --auto-approve -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then 
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+      
+      - name: Terraform destroy
+        if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd integration/terraform/ecs/linux && terraform destroy --auto-approve
