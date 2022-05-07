@@ -1,0 +1,36 @@
+### Downloading
+
+  | ARCH  | OS          | LINK                                                                                                                               |
+  |-------|-------------|------------------------------------------------------------------------------------------------------------------------------------|
+  | AMD64 | AMAZONLINUX | https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/__VERSION__/amazon-cloudwatch-agent.rpm                         |
+  |       |             | https://s3.`region`.amazonaws.com/amazoncloudwatch-agent-`region`/amazon_linux/amd64/__VERSION__/amazon-cloudwatch-agent.rpm       |
+  | ARM64 | AMAZONLINUX | https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/arm64/__VERSION__/amazon-cloudwatch-agent.rpm                         |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/amazon_linux/arm64/__VERSION__/amazon-cloudwatch-agent.rpm           |
+  | AMD64 | REDHAT      | https://s3.amazonaws.com/amazoncloudwatch-agent/redhat/amd64/__VERSION__/amazon-cloudwatch-agent.rpm                               |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/redhat/amd64/__VERSION__/amazon-cloudwatch-agent.rpm                 |
+  | ARM64 | REDHAT      | https://s3.amazonaws.com/amazoncloudwatch-agent/redhat/arm64/__VERSION__/amazon-cloudwatch-agent.rpm                               |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/redhat/arm64/__VERSION__/amazon-cloudwatch-agent.rpm                 |
+  | AMD64 | CENTOS      | https://s3.amazonaws.com/amazoncloudwatch-agent/centos/amd64/__VERSION__/amazon-cloudwatch-agent.rpm                               |
+  |       |             | https://s3.amazonaws.com/amazoncloudwatch-agent/centos/amd64/__VERSION__/amazon-cloudwatch-agent.rpm                               |
+  | AMD64 | SUSE        | https://s3.amazonaws.com/amazoncloudwatch-agent/suse/amd64/__VERSION__/amazon-cloudwatch-agent.rpm                                 |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/suse/amd64/__VERSION__/amazon-cloudwatch-agent.rpm                   |
+  | ARM64 | SUSE        | https://s3.amazonaws.com/amazoncloudwatch-agent/suse/arm64/__VERSION__/amazon-cloudwatch-agent.rpm                                 |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/suse/arm64/__VERSION__/amazon-cloudwatch-agent.rpm                   |
+  | AMD64 | DEBIAN      | https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/__VERSION__/amazon-cloudwatch-agent.deb                               |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/debian/amd64/__VERSION__/amazon-cloudwatch-agent.deb                 |
+  | AMD64 | UBUNTU      | https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/__VERSION__/amazon-cloudwatch-agent.deb                               |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/ubuntu/amd64/__VERSION__/amazon-cloudwatch-agent.deb                 |
+  | ARM64 | UBUNTU      | https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/arm64/__VERSION__/amazon-cloudwatch-agent.deb                               |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/ubuntu/arm64/__VERSION__/amazon-cloudwatch-agent.deb                 |
+  | AMD64 | ORACLE      | https://s3.amazonaws.com/amazoncloudwatch-agent/oracle_linux/amd64/__VERSION__/amazon-cloudwatch-agent.rpm                         |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/oracle_linux/amd64/__VERSION__/amazon-cloudwatch-agent.rpm           |
+  | AMD64 | MACOS       | https://s3.amazonaws.com/amazoncloudwatch-agent/darwin/amd64/__VERSION__/amazon-cloudwatch-agent.pkg                               |
+  |       |             | https://s3.amazonaws.com/amazoncloudwatch-agent/darwin/amd64/__VERSION__/amazon-cloudwatch-agent.pkg                               |
+  | AMD64 | WINDOWS     | https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/__VERSION__/amazon-cloudwatch-agent.msi                              |
+  |       |             | https://s3.region.amazonaws.com/amazoncloudwatch-agent-region/windows/amd64/__VERSION__/amazon-cloudwatch-agent.msi                |
+
+### Docker
+  docker pull amazon/cloudwatch-agent:__VERSION__
+
+### AWS Public ECR
+  docker pull public.ecr.aws/cloudwatch-agent/cloudwatch-agent:__VERSION__
