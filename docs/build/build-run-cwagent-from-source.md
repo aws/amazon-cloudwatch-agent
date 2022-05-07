@@ -26,10 +26,10 @@ build/bin/darwin/amd64/amazon-cloudwatch-agent.tar.gz
 
 ### 3. Install your own build of the agent
 #### 3.1 RPM package
-* `rpm -Uvh amazon-cloudwatch-agent.rpm`
+* `sudo rpm -Uvh amazon-cloudwatch-agent.rpm`
    
 #### 3.2 DEB package
-* `dpkg -i -E ./amazon-cloudwatch-agent.deb`
+* `sudo dpkg -i -E ./amazon-cloudwatch-agent.deb`
 
 #### 3.3 Windows package
 * unzip `amazon-cloudwatch-agent.zip`
