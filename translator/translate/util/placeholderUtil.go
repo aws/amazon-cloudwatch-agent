@@ -14,6 +14,25 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
+type Metadata struct {
+	InstanceID string
+	Hostname   string
+	PrivateIP  string
+	AccountID  string
+}
+
+type MetadataInfoProvider func() *Metadata
+
+var Ec2MetadataInfoProvider = func() *Metadata {
+	ec2 := ec2util.GetEC2UtilSingleton()
+	return &Metadata{
+		InstanceID: ec2.InstanceID,
+		Hostname:   ec2.Hostname,
+		PrivateIP:  ec2.PrivateIP,
+		AccountID:  ec2.AccountID,
+	}
+}
+
 const (
 	instanceIdPlaceholder    = "{instance_id}"
 	hostnamePlaceholder      = "{hostname}"
@@ -21,11 +40,13 @@ const (
 	ipAddressPlaceholder     = "{ip_address}"
 	awsRegionPlaceholder     = "{aws_region}"
 	datePlaceholder          = "{date}"
+	accountIdPlaceholder     = "{account_id}"
 
 	unknownInstanceId = "i-UNKNOWN"
 	unknownHostname   = "UNKNOWN-HOST"
 	unknownIpAddress  = "UNKNOWN-IP"
 	unknownAwsRegion  = "UNKNOWN-REGION"
+	unknownAccountId  = "UNKNOWN-ACCOUNT"
 )
 
 //resolve place holder for log group and log stream.
@@ -41,20 +62,20 @@ func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	return tmpString
 }
 
-func GetMetadataInfo() map[string]string {
+func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	localHostname := getHostName()
 
-	instanceID := ec2util.GetEC2UtilSingleton().InstanceID
+	instanceID := provider().InstanceID
 	if instanceID == "" {
 		instanceID = unknownInstanceId
 	}
 
-	hostname := ec2util.GetEC2UtilSingleton().Hostname
+	hostname := provider().Hostname
 	if hostname == "" {
 		hostname = localHostname
 	}
 
-	ipAddress := ec2util.GetEC2UtilSingleton().PrivateIP
+	ipAddress := provider().PrivateIP
 	if ipAddress == "" {
 		ipAddress = getIpAddress()
 	}
@@ -64,8 +85,15 @@ func GetMetadataInfo() map[string]string {
 		awsRegion = unknownAwsRegion
 	}
 
+	accountID := provider().AccountID
+	if accountID == "" {
+		accountID = unknownAccountId
+	}
+
 	return map[string]string{instanceIdPlaceholder: instanceID, hostnamePlaceholder: hostname,
-		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress, awsRegionPlaceholder: awsRegion}
+		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress, awsRegionPlaceholder: awsRegion,
+		accountIdPlaceholder: accountID,
+	}
 }
 
 func getHostName() string {

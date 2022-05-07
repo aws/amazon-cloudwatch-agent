@@ -352,7 +352,7 @@ Function CWAConfig() {
 
     $param_mode="ec2"
     if (!$EC2) {
-        $param_mode="onPrem"
+        $param_mode="onPremise"
     }
 
     if ($ConfigLocation -eq $AllConfig -And $multi_config -ne 'remove') {
@@ -435,7 +435,7 @@ Function CWOCConfig() {
 
     $param_mode="ec2"
     if (!$EC2) {
-        $param_mode="onPrem"
+        $param_mode="onPremise"
     }
 
     if ($OtelConfigLocation -eq $AllConfig -And $multi_config -ne 'remove') {

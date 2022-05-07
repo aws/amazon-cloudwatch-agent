@@ -20,9 +20,9 @@ func Test_metricAppender_Add_BadMetricName(t *testing.T) {
 		{Name: "name_b", Value: "value_b"},
 	}
 
-	r, e := ma.Add(ls, ts, v)
+	r, err := ma.Add(ls, ts, v)
 	assert.Equal(t, uint64(0), r)
-	assert.Equal(t, "metricName of the times-series is missing", e.Error())
+	assert.Equal(t, "metricName of the times-series is missing", err.Error())
 }
 
 func Test_metricAppender_Add(t *testing.T) {
@@ -35,9 +35,9 @@ func Test_metricAppender_Add(t *testing.T) {
 		{Name: "tag_a", Value: "a"},
 	}
 
-	ref, e := ma.Add(ls, ts, v)
+	ref, err := ma.Add(ls, ts, v)
 	assert.Equal(t, ref, uint64(0))
-	assert.Nil(t, e)
+	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)
 	assert.Equal(t, 1, len(mac.batch))
 
@@ -68,9 +68,9 @@ func Test_metricAppender_Rollback(t *testing.T) {
 		{Name: "tag_a", Value: "a"},
 	}
 
-	ref, e := ma.Add(ls, ts, v)
+	ref, err := ma.Add(ls, ts, v)
 	assert.Equal(t, ref, uint64(0))
-	assert.Nil(t, e)
+	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)
 	assert.Equal(t, 1, len(mac.batch))
 
@@ -89,12 +89,12 @@ func Test_metricAppender_Commit(t *testing.T) {
 		{Name: "tag_a", Value: "a"},
 	}
 
-	ref, e := ma.Add(ls, ts, v)
+	ref, err := ma.Add(ls, ts, v)
 	assert.Equal(t, ref, uint64(0))
-	assert.Nil(t, e)
+	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)
 	assert.Equal(t, 1, len(mac.batch))
-	err := ma.Commit()
+	err = ma.Commit()
 	assert.Equal(t, nil, err)
 
 	pmb := <-mbCh

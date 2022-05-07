@@ -70,7 +70,7 @@ func TestDropMultipleOriginal(t *testing.T) {
 	actualKey, actualVal := e.ApplyRule(input)
 	expectedKey := "drop_original_metrics"
 	expectedVal := map[string][]string{
-		"cpu": {"cpu_usage_guest", "cpu_usage_idle"},
+		"cpu":        {"cpu_usage_guest", "cpu_usage_idle"},
 		"nvidia_smi": {"utilization_gpu", "temperature_gpu"},
 	}
 

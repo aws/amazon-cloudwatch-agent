@@ -4,6 +4,7 @@
 package translate
 
 import (
+	"log"
 	"sort"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -56,7 +57,7 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 	case config.OS_TYPE_WINDOWS:
 		targetRuleMap = windowsTranslateRule
 	default:
-		panic("unknown target platform " + translator.GetTargetPlatform())
+		log.Panicf("E! Unknown target platform %s", translator.GetTargetPlatform())
 	}
 
 	//We need to apply agent rule first, since global setting lies there, which will impact the override logic

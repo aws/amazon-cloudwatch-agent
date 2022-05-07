@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
@@ -36,7 +35,7 @@ func DetectAgentMode(configuredMode string) string {
 		fmt.Println("I! Detected from ENV instance is EC2")
 		return config.ModeEC2
 	}
-
+	
 	if defaultEC2Region() != "" {
 		fmt.Println("I! Detected the instance is EC2")
 		return config.ModeEC2
@@ -46,7 +45,7 @@ func DetectAgentMode(configuredMode string) string {
 		fmt.Println("I! Detected the instance is ECS")
 		return config.ModeEC2
 	}
-	fmt.Println("I! Detected the instance is OnPrem")
+	fmt.Println("I! Detected the instance is OnPremise")
 	return config.ModeOnPrem
 }
 
@@ -69,8 +68,8 @@ func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) (region s
 	}
 	CheckAndSetHomeDir()
 	opts.SharedConfigState = session.SharedConfigEnable
-	ses, e := session.NewSessionWithOptions(opts)
-	if e != nil {
+	ses, err := session.NewSessionWithOptions(opts)
+	if err != nil {
 		return ""
 	}
 	if ses.Config != nil && ses.Config.Region != nil {
@@ -93,15 +92,16 @@ func detectRegion(mode string, credsConfig map[string]string) (region string) {
 
 	// For ec2, fallback to metadata when no region info found in credential profile.
 	if region == "" && mode == config.ModeEC2 {
+		fmt.Println("I! Trying to detect region from ec2")
 		region = defaultEC2Region()
 	}
 
 	// try to get region from ecs metadata
 	if region == "" && mode == config.ModeEC2 {
-		fmt.Println("I! detect region from ecs")
+		fmt.Println("I! Trying to detect region from ecs")
 		region = defaultECSRegion()
 	}
-
+	
 	return
 }
 
@@ -128,7 +128,7 @@ func detectHomeDirectory() string {
 		systemDrivePath := GetWindowsSystemDrivePath() // C:
 		homeDir = systemDrivePath + "\\Users\\Administrator"
 	} else {
-		if usr, e := user.Current(); e == nil {
+		if usr, err := user.Current(); err == nil {
 			homeDir = usr.HomeDir
 		}
 		if homeDir == "" {

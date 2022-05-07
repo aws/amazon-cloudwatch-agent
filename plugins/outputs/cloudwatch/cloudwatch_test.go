@@ -5,11 +5,12 @@ package cloudwatch
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"math"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
@@ -95,7 +96,9 @@ func TestBuildMetricDatums(t *testing.T) {
 	}
 
 	invalidDistribution := distribution.NewDistribution()
-	invalidDistribution.AddEntry(-1, 1)
+	err := invalidDistribution.AddEntry(-1, 1)
+	expectedErrMsg := "negative value"
+	assert.EqualError(err, expectedErrMsg)
 	invalidMetrics := []telegraf.Metric{
 		testutil.TestMetric("Foo"),
 		testutil.TestMetric(invalidDistribution),

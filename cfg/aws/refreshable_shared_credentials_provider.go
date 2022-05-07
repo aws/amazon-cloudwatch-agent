@@ -4,8 +4,9 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/credentials"
 )
 
 type Refreshable_shared_credentials_provider struct {
@@ -21,7 +22,7 @@ type Refreshable_shared_credentials_provider struct {
 func (p *Refreshable_shared_credentials_provider) Retrieve() (credentials.Value, error) {
 
 	p.SetExpiration(time.Now().Add(p.ExpiryWindow), 0)
-	creds, e := p.sharedCredentialsProvider.Retrieve()
+	creds, err := p.sharedCredentialsProvider.Retrieve()
 
-	return creds, e
+	return creds, err
 }

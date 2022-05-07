@@ -149,8 +149,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 	t.cleanUpStoppedTailerSrc()
 
-	// If a log group has differing retentionInDays values defined in multiple places, stop the agent
-	t.checkForDuplicateRetentionSettings()
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
@@ -394,30 +392,6 @@ func (t *LogFile) cleanUpStoppedTailerSrc() {
 			}
 		default:
 			return
-		}
-	}
-}
-
-// checkForDuplicateRetentionSettings: Checks if a log group has retention set differently in multiple places and stops the agent if found
-func (t *LogFile) checkForDuplicateRetentionSettings() {
-	configMap := make(map[string]int)
-	for i := range t.FileConfig {
-		fileConfig := &t.FileConfig[i]
-		logGroup := strings.ToLower(fileConfig.LogGroupName)
-		// if retention is 0, -1 or less it's either invalid or default
-		if fileConfig.RetentionInDays < 1 {
-			continue
-		}
-		// if the configMap[logGroup] exists, retention has been set for the same logGroup somewhere
-		if configMap[logGroup] != 0 {
-			// different retentions has been set for the same log group, panic and stop the agent
-			if configMap[logGroup] != fileConfig.RetentionInDays {
-				panic(fmt.Sprintf("error: The Log Group has differing retentionInDays values defined in two or more places. Log Group Name: %v", fileConfig.LogGroupName))
-			}
-			// The same retention for a log group has been configured in multiple places. Unset it so that the retention api is only called once
-			fileConfig.RetentionInDays = -1
-		} else {
-			configMap[logGroup] = fileConfig.RetentionInDays
 		}
 	}
 }

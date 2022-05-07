@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"fmt"
-	"github.com/Jeffail/gabs"
 	"os"
+
+	"github.com/Jeffail/gabs"
 )
 
 const (

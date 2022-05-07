@@ -5,7 +5,7 @@ echo "****************************************"
 set -e
 
 BUILD_ROOT="${BUILD_SPACE}/private/windows_${ARCH}/"
-AGENT_VERSION=`cat ${PREPKGPATH}/CWAGENT_VERSION`
+AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION)
 echo "BUILD_SPACE: ${BUILD_SPACE}    agent_version: ${AGENT_VERSION}  pre-package location:${PREPKGPATH}"
 echo "Creating windows folders"
 
@@ -34,9 +34,8 @@ cp ${PREPKGPATH}/predefined-config-data ${BUILD_ROOT}/amazon-cloudwatch-agent/
 
 echo "Constructing the zip package"
 
-if [ -f ${BUILD_ROOT}/amazon-cloudwatch-agent.zip ]
-then
-    rm ${BUILD_ROOT}/amazon-cloudwatch-agent.zip
+if [ -f ${BUILD_ROOT}/amazon-cloudwatch-agent.zip ]; then
+     rm ${BUILD_ROOT}/amazon-cloudwatch-agent.zip
 fi
 cd ${BUILD_ROOT}
 
@@ -44,4 +43,3 @@ zip -r amazon-cloudwatch-agent-${AGENT_VERSION}.zip *
 
 mv ${BUILD_ROOT}/amazon-cloudwatch-agent-${AGENT_VERSION}.zip ${BUILD_SPACE}/bin/windows/${ARCH}/amazon-cloudwatch-agent.zip
 ls -ltr ${BUILD_SPACE}/bin/windows/${ARCH}/amazon-cloudwatch-agent.zip
-

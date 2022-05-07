@@ -280,6 +280,7 @@ func (ts *tailerSrc) cleanUp() {
 	for _, clf := range ts.cleanUpFns {
 		clf()
 	}
+
 	if ts.outputFn != nil {
 		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
 	}
@@ -306,6 +307,13 @@ func (ts *tailerSrc) runSaveState() {
 				continue
 			}
 			lastSavedOffset = offset
+		case <-ts.tailer.FileDeletedCh:
+			log.Printf("W! [logfile] deleting state file %s", ts.stateFilePath)
+			err := os.Remove(ts.stateFilePath)
+			if err != nil {
+				log.Printf("E! [logfile] Error happened while deleting state file %s on cleanup", ts.stateFilePath)
+			}
+			return
 		case <-ts.done:
 			err := ts.saveState(offset.offset)
 			if err != nil {

@@ -13,7 +13,7 @@ import (
 func TestProcessLinuxCommonConfigNoValidMetrics(t *testing.T) {
 	var input interface{}
 	result := map[string]interface{}{}
-	e := json.Unmarshal([]byte(`{
+	err := json.Unmarshal([]byte(`{
 					"resources": [
 						"*"
 					],
@@ -25,18 +25,18 @@ func TestProcessLinuxCommonConfigNoValidMetrics(t *testing.T) {
 					"totalcpu": true,
 					"metrics_collection_interval": 1
 				}`), &input)
-	if e == nil {
+	if err == nil {
 		hasValidMetrics := ProcessLinuxCommonConfig(input, "cpu", "", result)
 		assert.False(t, hasValidMetrics, "Shouldn't return any valid metrics")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }
 
 func TestProcessLinuxCommonConfigHappy(t *testing.T) {
 	var input interface{}
 	actualResult := map[string]interface{}{}
-	e := json.Unmarshal([]byte(`{
+	err := json.Unmarshal([]byte(`{
 					"resources": [
 						"*"
 					],
@@ -48,7 +48,7 @@ func TestProcessLinuxCommonConfigHappy(t *testing.T) {
 					"totalcpu": true,
 					"metrics_collection_interval": 1
 				}`), &input)
-	if e == nil {
+	if err == nil {
 		hasValidMetrics := ProcessLinuxCommonConfig(input, "cpu", "", actualResult)
 		expectedResult := map[string]interface{}{
 			"fieldpass": []string{"usage_idle", "usage_nice"},
@@ -58,6 +58,6 @@ func TestProcessLinuxCommonConfigHappy(t *testing.T) {
 		assert.True(t, hasValidMetrics, "Should return valid metrics")
 		assert.Equal(t, expectedResult, actualResult, "should be equal")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

@@ -73,8 +73,7 @@ func TestAggregator_ProperAggregationKey(t *testing.T) {
 
 	aggregator.AddMetric(m)
 	assertNoMetricsInChan(t, metricChan)
-	time.Sleep(2 * aggregationInterval)
-	assertMetricContent(t, metricChan, m, expectedFieldContent{"value", 1, 1, 1, 1, "",
+	assertMetricContent(t, metricChan, aggregationInterval*2, m, expectedFieldContent{"value", 1, 1, 1, 1, "",
 		[]float64{1.0488088481701516}, []float64{1}})
 
 	assertNoMetricsInChan(t, metricChan)
@@ -110,14 +109,12 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 	aggregator.AddMetric(m)
 
 	assertNoMetricsInChan(t, metricChan)
-	time.Sleep(2 * aggregationInterval)
-	assertMetricContent(t, metricChan, m, expectedFieldContent{"value", 3, 1, 3, 6, "",
+	assertMetricContent(t, metricChan, aggregationInterval*3, m, expectedFieldContent{"value", 3, 1, 3, 6, "",
 		[]float64{1.0488088481701516, 2.0438317370604793, 2.992374046230249}, []float64{1, 1, 1}})
 
 	assertNoMetricsInChan(t, metricChan)
 
-	time.Sleep(2 * aggregationInterval)
-	assertMetricContent(t, metricChan, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
+	assertMetricContent(t, metricChan, aggregationInterval*3, m, expectedFieldContent{"value", 5, 4, 2, 9, "",
 		[]float64{3.9828498555324616, 4.819248325194279}, []float64{1, 1}},
 		expectedFieldContent{"2nd value", 2, 1, 2, 3, "",
 			[]float64{1.0488088481701516, 2.0438317370604793}, []float64{1, 1}})
@@ -143,7 +140,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	close(shutdownChan)
 	wg.Wait()
 
-	assertMetricContent(t, metricChan, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
+	assertMetricContent(t, metricChan, 1*time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
 	assertNoMetricsInChan(t, metricChan)
 }
 
@@ -208,48 +205,53 @@ func testPreparation() (chan telegraf.Metric, chan struct{}, Aggregator) {
 	return metricChan, shutdownChan, aggregator
 }
 
-func assertMetricContent(t *testing.T, metricChan <-chan telegraf.Metric, originalMetric telegraf.Metric, expectedFieldContent ...expectedFieldContent) {
-	log.Printf("The metric chan len is %v.", len(metricChan))
+func assertMetricContent(t *testing.T, metricChan <-chan telegraf.Metric, metricMaxWait time.Duration, originalMetric telegraf.Metric, expectedFieldContent ...expectedFieldContent) {
+	var aggregatedMetric telegraf.Metric
+
+	log.Printf("Waiting for metric.")
 	select {
-	case aggregatedMetric := <-metricChan:
-		assert.False(t, aggregatedMetric.HasTag(aggregationIntervalTagKey))
-		assert.Equal(t, "true", aggregatedMetric.Tags()[highResolutionTagKey])
-
-		for _, fieldContent := range expectedFieldContent {
-			dist, ok := aggregatedMetric.Fields()[fieldContent.fieldName].(distribution.Distribution)
-			assert.True(t, ok)
-
-			assert.Equal(t, fieldContent.max, dist.Maximum())
-			assert.Equal(t, fieldContent.sampleCount, dist.SampleCount())
-			assert.Equal(t, fieldContent.unit, dist.Unit())
-			assert.Equal(t, fieldContent.min, dist.Minimum())
-			assert.Equal(t, fieldContent.sum, dist.Sum())
-
-			values, counts := dist.ValuesAndCounts()
-			assert.Equal(t, len(fieldContent.expectedValues), len(values))
-			assert.Equal(t, len(fieldContent.expectedCounts), len(counts))
-
-			sort.Float64s(fieldContent.expectedValues)
-			sort.Float64s(values)
-			assert.Equal(t, fieldContent.expectedValues, values)
-
-			var expectedCountInts []int
-			for _, count := range fieldContent.expectedCounts {
-				expectedCountInts = append(expectedCountInts, int(count))
-			}
-			sort.Ints(expectedCountInts)
-			var countInts []int
-			for _, count := range counts {
-				countInts = append(countInts, int(count))
-			}
-			sort.Ints(countInts)
-			assert.Equal(t, expectedCountInts, countInts)
-		}
-
-		assert.NotEqual(t, originalMetric, aggregatedMetric, "The aggregatedMetric should not exactly equal to m since the field will be distribution.Distribution")
-	default:
-		assert.Fail(t, "We should got 1 metric now")
+	case aggregatedMetric = <-metricChan:
+	case <-time.After(metricMaxWait):
+		assert.FailNow(t, "We should've seen 1 metric by now")
 	}
+
+	log.Printf("Checking metric.")
+
+	assert.False(t, aggregatedMetric.HasTag(aggregationIntervalTagKey))
+	assert.Equal(t, "true", aggregatedMetric.Tags()[highResolutionTagKey])
+
+	for _, fieldContent := range expectedFieldContent {
+		dist, ok := aggregatedMetric.Fields()[fieldContent.fieldName].(distribution.Distribution)
+		assert.True(t, ok)
+
+		assert.Equal(t, fieldContent.max, dist.Maximum())
+		assert.Equal(t, fieldContent.sampleCount, dist.SampleCount())
+		assert.Equal(t, fieldContent.unit, dist.Unit())
+		assert.Equal(t, fieldContent.min, dist.Minimum())
+		assert.Equal(t, fieldContent.sum, dist.Sum())
+
+		values, counts := dist.ValuesAndCounts()
+		assert.Equal(t, len(fieldContent.expectedValues), len(values))
+		assert.Equal(t, len(fieldContent.expectedCounts), len(counts))
+
+		sort.Float64s(fieldContent.expectedValues)
+		sort.Float64s(values)
+		assert.Equal(t, fieldContent.expectedValues, values)
+
+		var expectedCountInts []int
+		for _, count := range fieldContent.expectedCounts {
+			expectedCountInts = append(expectedCountInts, int(count))
+		}
+		sort.Ints(expectedCountInts)
+		var countInts []int
+		for _, count := range counts {
+			countInts = append(countInts, int(count))
+		}
+		sort.Ints(countInts)
+		assert.Equal(t, expectedCountInts, countInts)
+	}
+
+	assert.NotEqual(t, originalMetric, aggregatedMetric, "The aggregatedMetric should not exactly equal to m since the field will be distribution.Distribution")
 }
 
 func assertNoMetricsInChan(t *testing.T, metricChan <-chan telegraf.Metric) {

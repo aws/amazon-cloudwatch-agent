@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build linux || darwin
 // +build linux darwin
 
 package cadvisor
@@ -85,7 +86,7 @@ func (c *Cadvisor) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	if c.manager == nil && c.initManager() != nil {
-		panic("Cannot initiate manager")
+		log.Panic("E! Cannot initiate manager")
 	}
 
 	req := &cinfo.ContainerInfoRequest{

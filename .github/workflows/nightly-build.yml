@@ -13,9 +13,11 @@ jobs:
     steps:
 
       - name: Set up Go 1.x
+        id: go
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.15
+          go-version: ~1.15.15
+        
 
       #Need to install rpm so ubuntu can make rpm by default ubuntu can make deb
       - name: Install rpm
@@ -26,14 +28,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'true'
-
-      - name: Cache build output
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Release
         run: make nightly-release

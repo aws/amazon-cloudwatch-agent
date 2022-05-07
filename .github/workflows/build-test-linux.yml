@@ -9,7 +9,7 @@ on:
       - '**.md'
       - '.github/**'
       - '!.github/workflows/build-*'
-      
+
 
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -34,6 +34,14 @@ jobs:
       with:
         fetch-depth: 0
         submodules: 'true'
+
+    # This requires the go mod tidy to not look at the go proxy
+    - name: Go proxy direct
+      run: GOPROXY=direct
+
+    - uses: zencargo/github-action-go-mod-tidy@v1
+      with:
+        go-version: 1.15
 
     - name: Cache build output
       uses: actions/cache@v2

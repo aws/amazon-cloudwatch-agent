@@ -1,0 +1,25 @@
+{
+  "agent": {
+    "run_as_user": "root"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/tmp/test.log",
+            "log_group_name": "{instance_id}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC",
+            "filters": [
+              {
+                "type": "include",
+                "expression": "foo"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

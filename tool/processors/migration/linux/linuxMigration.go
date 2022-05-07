@@ -4,7 +4,7 @@
 package linux
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
@@ -44,14 +44,12 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 func processConfigFromPythonConfigParserFile(filePath string, logsConfig *config.Logs) {
 	p, err := configparser.NewConfigParserFromFile(filePath)
 	if err != nil {
-		fmt.Printf("Error in reading old python config from file %s: %v\n", filePath, err)
-		panic(err)
+		log.Panicf("E! Error in reading old python config from file %s: %v", filePath, err)
 	}
 	if p.HasSection(genericSectionName) {
 		err := p.RemoveSection(genericSectionName)
 		if err != nil {
-			fmt.Printf("Error in removing generic section from the config file %s:\n %v\n", filePath, err)
-			panic(err)
+			log.Panicf("E! Error in removing generic section from the config file %s: %v", filePath, err)
 		}
 	}
 	for _, section := range p.Sections() {

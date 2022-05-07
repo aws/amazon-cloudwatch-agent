@@ -3,14 +3,15 @@ version: "3.8"
 services:
   localstack:
     container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
-    image: localstack/localstack
+    # @TODO use latest when this is fixed https://github.com/localstack/localstack/issues/5502
+    # Use 0.12.20 since this is last version that worked for now
+    image: localstack/localstack:0.12.20
     network_mode: bridge
     ports:
       - "127.0.0.1:53:53"
       - "127.0.0.1:53:53/udp"
       - "127.0.0.1:443:443"
-      - "127.0.0.1:4566:4566"
-      - "127.0.0.1:4571:4571"
+      - "0.0.0.0:4566:4566"
     environment:
       - SERVICES=${SERVICES- }
       - DEBUG=true

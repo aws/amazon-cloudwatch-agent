@@ -5,7 +5,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -29,7 +28,7 @@ func initFlags() {
 	var inputJsonFile = flag.String("input", "", "Please provide the path of input agent json config file")
 	var inputJsonDir = flag.String("input-dir", "", "Please provide the path of input agent json config directory.")
 	var inputTomlFile = flag.String("output", "", "Please provide the path of the output CWAgent config file")
-	var inputMode = flag.String("mode", "ec2", "Please provide the mode, i.e. ec2, onPrem")
+	var inputMode = flag.String("mode", "ec2", "Please provide the mode, i.e. ec2, onPremise, auto")
 	var inputConfig = flag.String("config", "", "Please provide the common-config file")
 	var multiConfig = flag.String("multi-config", "remove", "valid values: default, append, remove")
 	flag.Parse()
@@ -90,16 +89,16 @@ func main() {
 
 	mergedJsonConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ctx)
 	if err != nil {
-		panic(fmt.Sprintf("E! Failed to generate merged json config: %v", err))
+		log.Panicf("E! Failed to generate merged json config: %v", err)
 	}
 
 	if !ctx.RunInContainer() {
 		// run as user only applies to non container situation.
-		current, e := user.Current()
-		if e == nil && current.Name == "root" {
+		current, err := user.Current()
+		if err == nil && current.Name == "root" {
 			runAsUser, err := cmdutil.DetectRunAsUser(mergedJsonConfigMap)
 			if err != nil {
-				panic("E! Failed to detectRunAsUser\n")
+				log.Panic("E! Failed to detectRunAsUser")
 			}
 			cmdutil.VerifyCredentials(ctx, runAsUser)
 		}

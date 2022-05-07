@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
+	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 )
 
 type Rule translator.Rule
@@ -63,7 +64,7 @@ func (f *FileConfig) ApplyRule(input interface{}) (returnKey string, returnVal i
 			}
 			res = append(res, result)
 		}
-
+		logUtil.ValidateLogRetentionSettings(res, GetCurPath())
 		outputLogConfig(res)
 	} else {
 		returnKey = ""

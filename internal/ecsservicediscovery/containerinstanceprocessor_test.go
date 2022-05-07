@@ -4,8 +4,9 @@
 package ecsservicediscovery
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSplitMapKeys(t *testing.T) {

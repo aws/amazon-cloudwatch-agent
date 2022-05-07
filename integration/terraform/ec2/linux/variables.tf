@@ -23,17 +23,9 @@ variable "region" {
   default = "us-west-2"
 }
 
-variable "aws_access_key" {
-  type = string
-}
-
-variable "aws_secret_access_key" {
-  type = string
-}
-
 variable "ami" {
   type = string
-  default = ""
+  default = "cloudwatch-agent-integration-test-ubuntu*"
 }
 
 variable "ssh_key" {
@@ -56,12 +48,6 @@ variable "github_repo" {
   default = ""
 }
 
-variable "package" {
-  description = "make command of package to build ex package-deb"
-  type = string
-  default = ""
-}
-
 variable "install_agent" {
   description = "command of package to install ex dpkg -i -E ./amazon-cloudwatch-agent.deb"
   type = string
@@ -74,6 +60,31 @@ variable "ca_cert_path" {
 }
 
 variable "arc" {
+  type = string
+  default = ""
+}
+
+variable "binary_name" {
+  type = string
+  default = ""
+}
+
+variable "local_stack_host_name" {
+  type = string
+  default = "localhost.localstack.cloud"
+}
+
+variable "s3_bucket" {
+  type = string
+  default = ""
+}
+
+variable "test_name" {
+  type = string
+  default = ""
+}
+
+variable "test_dir" {
   type = string
   default = ""
 }
