@@ -5,4 +5,4 @@ scrape_configs:
   - job_name: cwagent-ecs-file-sd-config
     sample_limit: 10000
     file_sd_configs:
-      - files: [ "/tmp/cwagent_ecs_auto_sd.yaml" ] 
+      - files: [ "/tmp/cwagent_ecs_auto_sd.yaml" ]
