@@ -3,7 +3,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-VERSION=$(cat CWAGENT_VERSION)
+if [[ -z "${VERSION}" ]]; then
+        error_exit "Missing input for flag version"
+fi
 
 sed "s/__VERSION__/$VERSION/g" tools/release/header.md.template >header
 sed "s/__VERSION__/$VERSION/g" tools/release/downloading-links.md.template >downloading-links
