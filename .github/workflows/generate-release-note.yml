@@ -23,7 +23,7 @@ jobs:
           ref: ${{ github.event.inputs.sha }}
 
       - name: Generate release-note
-        run: VERSION=${{ github.event.inputs.version }} bash tools/release/image-binary-release/s3-release.sh
+        run: VERSION=${{ github.event.inputs.version }} bash Tools/release/generate-release-note.sh
 
       - name: Create release
         uses: actions/create-release@v1
