@@ -36,7 +36,7 @@ jobs:
 
       - name: Cache if success
         id: build-docker-image
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             RELEASE_NOTES
@@ -109,7 +109,7 @@ jobs:
 
       - name: Cache go
         id: cached_go
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cached_go_modules
         with:
@@ -120,7 +120,7 @@ jobs:
 
       - name: Cache binaries
         id: cached_binaries
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_binaries_${{ github.sha }}"
           path: go.mod
@@ -192,7 +192,7 @@ jobs:
 
       - name: Cache win zip
         id: cached_win_zip
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_win_zip_${{ github.sha }}"
           path: go.mod
@@ -249,7 +249,7 @@ jobs:
 
       - name: Cache pkg
         id: cached_pkg
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_pkg_${{ github.sha }}"
           path: go.mod
@@ -290,7 +290,7 @@ jobs:
 
       - name: Cache msi
         id: cached_msi
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_msi_${{ github.sha }}"
           path: go.mod
@@ -329,7 +329,7 @@ jobs:
 
       - name: Cache sig
         id: cached_sig
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           key: "cached_sig_${{ github.sha }}"
           path: go.mod
@@ -414,7 +414,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-linux-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
@@ -485,7 +485,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-win-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
@@ -579,7 +579,7 @@ jobs:
 
       - name: Cache if success
         id: ecs-fargate-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
