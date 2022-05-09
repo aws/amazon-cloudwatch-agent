@@ -23,20 +23,20 @@ Amazon CloudWatch Agent uses the open-source project [telegraf](https://github.c
 
 ## Building and running Amazon CloudWatch Agent 
 Use the following instructions to build and run Cloudwatch Agent:
-* To build and run from source, you must [install go]((https://golang.org/doc/install)) and use `make build`. For more information on requirements and building from source with different platforms, please follow [this document](docs/build/build-run-cwagent-from-source.md)
-* To build and run from container, you can simply use the below command. For more information on building from containers with different platforms, please follow [this document](amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile)
+* To build Amazon CloudWatch Agent's binaries, you must [install go]((https://golang.org/doc/install)) and use `make build` to build the agent on Linux, Debian, Windows, Darwin. For more information on requirements,building and packaging binaries, please follow [this document](docs/build/build-run-package-cwagent-binaries.md)
+* To build Amazon CloudWatch Agent's Image, you can simply use `make dockerized-build` to **build image from source** or use the below command to **build image from our latest public binaries**. For more information on building image with different platforms, please follow [this document](amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile)
 ```
 docker buildx build -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/Dockerfile .
 ```
 ### Make Targets
 The following targets are available. Each may be run with `make <target>`.
 
-| Make Target              | Description |
-|:-------------------------|:------------|
-| `build`                  | `build` builds the agent for Linux, Debian and Windows amd64 environment |
-| `release`                | *(Default)* `release` builds the agent and also packages it into a RPM, DEB and ZIP package |
-| `clean`                  | `clean` removes build artifacts |
-| `dockerized-build`       | build using docker container without local go environment |
+| Make Target              | Description                                                          |
+|:-------------------------|:---------------------------------------------------------------------|
+| `build`                  | build the agent on Linux, Debian, Windows with **amd64, arm64        |
+| `release`                | build the agent and also packages it into a RPM, DEB and ZIP package |
+| `clean`                  | remove build artifacts                                               |
+| `dockerized-build`       | build image from source without local go environment                 |
 
 ## Features
 ### Log Filtering
