@@ -33,7 +33,7 @@ The following targets are available. Each may be run with `make <target>`.
 
 | Make Target              | Description                                                          |
 |:-------------------------|:---------------------------------------------------------------------|
-| `build`                  | build the agent on Linux, Debian, Windows with **amd64, arm64        |
+| `build`                  | build the agent on Linux, Debian, Windows with amd64, arm64          |
 | `release`                | build the agent and also packages it into a RPM, DEB and ZIP package |
 | `clean`                  | remove build artifacts                                               |
 | `dockerized-build`       | build image from source without local go environment                 |
