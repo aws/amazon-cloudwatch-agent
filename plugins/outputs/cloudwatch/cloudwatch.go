@@ -40,6 +40,7 @@ const (
 	highResolutionTagKey           = "aws:StorageResolution"
 	defaultRetryCount              = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
 	backoffRetryBase               = 200
+	MaxDimensions                  = 30
 )
 
 const (
@@ -529,11 +530,10 @@ func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.Metri
 }
 
 // Make a list of Dimensions by using a Point's tags. CloudWatch supports up to
-// 10 dimensions per metric so we only keep up to the first 10 alphabetically.
+// 30 dimensions per metric so we only keep up to the first 30 alphabetically.
 // This always includes the "host" tag if it exists.
+// See https://github.com/aws/amazon-cloudwatch-agent/issues/398
 func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
-
-	const MaxDimensions = 10
 	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
 
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
@@ -554,6 +554,7 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 
 	for _, k := range keys {
 		if len(dimensions) >= MaxDimensions {
+			log.Printf("D! max MaxDimensions %v is less than than number of dimensions %v thus only taking the max number", MaxDimensions, len(dimensions))
 			break
 		}
 

@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build integration
+// +build integration
 
 package test
 
@@ -162,6 +162,31 @@ func ValidateLogsInOrder(t *testing.T, logGroup, logStream string, logLines []st
 		actual := strings.ReplaceAll(foundLogs[i], "'", "\"")
 		assert.Equal(t, expected, actual)
 	}
+}
+
+// isLogGroupExists confirms whether the logGroupName exists or not
+func IsLogGroupExists(t *testing.T, logGroupName string) bool {
+
+	cwlClient, clientContext, err := getCloudWatchLogsClient()
+	if err != nil {
+		t.Fatalf("Error occurred while creating CloudWatch Logs SDK client: %v", err.Error())
+	}
+
+	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupNamePrefix: aws.String(logGroupName),
+	}
+
+	describeLogGroupOutput, err := cwlClient.DescribeLogGroups(*clientContext, &describeLogGroupInput)
+
+	if err != nil {
+		t.Errorf("Error getting log group data %v", err)
+	}
+	
+	if len(describeLogGroupOutput.LogGroups) > 0 {
+		return true
+	}
+
+	return false
 }
 
 // getCloudWatchLogsClient returns a singleton SDK client for interfacing with CloudWatch Logs

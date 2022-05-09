@@ -69,7 +69,7 @@ require (
 	github.com/prometheus/common v0.9.1
 	github.com/prometheus/prometheus v1.8.2-0.20200420081721-18254838fbe2
 	github.com/shirou/gopsutil v2.20.5+incompatible
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.7.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
