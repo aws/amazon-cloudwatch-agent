@@ -1,8 +1,8 @@
-## Nightly Build
+# Nightly Build
 Nightly s3 release are not production ready and should be used at own risk
 
 ### 1. Download Binaries
-#### 1.1 Linux                                                                                                               |
+#### 1.1 Linux                                                                                                        |
 | ARCH    | Binary name                      | LINK                                                                                                                         |
 | ------- |----------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | AMD64   | Amazon CWAgent                   |  https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_amd_64/amazon-cloudwatch-agent               |
@@ -25,7 +25,7 @@ Nightly s3 release are not production ready and should be used at own risk
 | AMD64 | Amazon CWAgent Config Translator | https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/config-translator.exe                     |
 | AMD64 | Start Amazon CWAgent             | https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/start-amazon-cloudwatch-agent.exe         |
 
-#### 1.3 MacOs
+#### 1.3 MacOS
 | ARCH  | Binary name                      | LINK                                                                                                                         |
 |-------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | AMD64 | Amazon CWAgent                   | https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/amazon-cloudwatch-agent.exe               |

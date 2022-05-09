@@ -23,7 +23,7 @@ Amazon CloudWatch Agent uses the open-source project [telegraf](https://github.c
 
 ## Building and running Amazon CloudWatch Agent 
 Use the following instructions to build and run Cloudwatch Agent:
-* To build Amazon CloudWatch Agent's binaries, you must [install go]((https://golang.org/doc/install)) and use `make build` to build the agent on Linux, Debian, Windows, Darwin. For more information on requirements,building and packaging binaries, please follow [this document](docs/build/build-run-package-cwagent-binaries.md)
+* To build Amazon CloudWatch Agent's binaries, you must [install go](https://golang.org/doc/install) and use `make build` to build the agent on Linux, Debian, Windows, MacOS. For more information on requirements,building and packaging binaries, please follow [this document](docs/build/build-run-package-cwagent-binaries.md)
 * To build Amazon CloudWatch Agent's Image, you can simply use `make dockerized-build` to **build image from source** or use the below command to **build image from our latest public binaries**. For more information on building image with different platforms, please follow [this document](amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile)
 ```
 docker buildx build -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/Dockerfile .
@@ -33,7 +33,7 @@ The following targets are available. Each may be run with `make <target>`.
 
 | Make Target              | Description                                                          |
 |:-------------------------|:---------------------------------------------------------------------|
-| `build`                  | build the agent on Linux, Debian, Windows with amd64, arm64          |
+| `build`                  | build the agent on Linux, Debian, Windows, MacOS with amd64, arm64   |
 | `release`                | build the agent and also packages it into a RPM, DEB and ZIP package |
 | `clean`                  | remove build artifacts                                               |
 | `dockerized-build`       | build image from source without local go environment                 |
