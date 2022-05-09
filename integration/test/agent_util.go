@@ -37,16 +37,20 @@ func CopyFile(pathIn string, pathOut string) {
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)
 }
 
-func StartAgent(configOutputPath string) {
+func StartAgent(configOutputPath string, fatalOnFailure bool) error {
 	out, err := exec.
 		Command("bash", "-c", "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:"+configOutputPath).
 		Output()
 
-	if err != nil {
+	if err != nil && fatalOnFailure {
 		log.Fatal(fmt.Sprint(err) + string(out))
+	} else if err != nil {
+		log.Printf(fmt.Sprint(err) + string(out))
+	} else {
+		log.Printf("Agent has started")
 	}
 
-	log.Printf("Agent has started")
+	return err
 }
 
 func StopAgent() {
@@ -131,4 +135,3 @@ func GetCWClient(cxt context.Context) *cloudwatch.Client {
 	}
 	return cloudwatch.NewFromConfig(defaultConfig)
 }
-
