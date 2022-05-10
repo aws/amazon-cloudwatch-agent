@@ -5,6 +5,7 @@ resource "aws_instance" "integration-test" {
   iam_instance_profile   = var.iam_instance_profile
   vpc_security_group_ids = var.vpc_security_group_ids
   get_password_data = true
+  vpc_id                 = var.vpc_id
   provisioner "remote-exec" {
     # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
     # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK

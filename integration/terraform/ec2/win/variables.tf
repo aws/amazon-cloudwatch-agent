@@ -52,3 +52,8 @@ variable "s3_bucket" {
   type = string
   default = ""
 }
+
+variable "vpc_id" {
+  type = string
+  default = ""
+}

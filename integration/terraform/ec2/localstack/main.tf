@@ -4,6 +4,7 @@ resource "aws_instance" "integration-test" {
   key_name               = var.key_name
   iam_instance_profile   = var.iam_instance_profile
   vpc_security_group_ids = var.vpc_security_group_ids
+  vpc_id                 = var.vpc_id
   provisioner "remote-exec" {
     inline = [
       "cloud-init status --wait",

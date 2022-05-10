@@ -15,6 +15,7 @@ env:
   GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
   GPG_TTY: $(tty)
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+  VPC_ID: ${{ secrets.VPC_ID }}
 
 on:
   push:
@@ -450,6 +451,7 @@ jobs:
               -var="key_name=${KEY_NAME}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="iam_instance_profile=${IAM_ROLE}" \
+              -var="vpc_id=${VPC_ID}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
@@ -514,6 +516,7 @@ jobs:
             -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
             -var="iam_instance_profile=${IAM_ROLE}" \
             -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
+            -var="vpc_id=${VPC_ID}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
