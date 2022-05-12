@@ -4,6 +4,7 @@
 package k8sclient
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -183,15 +184,16 @@ func transformFuncEndpoint(obj interface{}) (interface{}, error) {
 }
 
 func createEndpointListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
+	var ctx context.Context
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 			opts.ResourceVersion = ""
 			// Passing nil context as this was not required by old List()
-			return client.CoreV1().Endpoints(ns).List(nil, opts)
+			return client.CoreV1().Endpoints(ns).List(ctx, opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
 			// Passing nil context as this was not required by old Watch()
-			return client.CoreV1().Endpoints(ns).Watch(nil, opts)
+			return client.CoreV1().Endpoints(ns).Watch(ctx, opts)
 		},
 	}
 }
