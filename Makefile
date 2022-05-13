@@ -51,7 +51,7 @@ GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
-release: clean test build package-rpm package-deb package-win package-darwin
+release: clean test build package-rpm
 
 nightly-release: release
 

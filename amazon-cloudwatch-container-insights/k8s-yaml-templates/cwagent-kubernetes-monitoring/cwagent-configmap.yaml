@@ -5,10 +5,13 @@ data:
   # please keep the Json blob valid.
   cwagentconfig.json: |
     {
+      "agent": {
+        "debug": true
+      },
       "logs": {
         "metrics_collected": {
           "kubernetes": {
-            "cluster_name": "{{cluster_name}}",
+            "cluster_name": "seth-test-cw-agent-cluster",
             "metrics_collection_interval": 60
           }
         },
