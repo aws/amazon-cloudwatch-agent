@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 	"log"
 	"sync"
 	"time"
@@ -132,6 +134,7 @@ func (c *epClient) Init() {
 
 	lw := createEndpointListWatch(Get().ClientSet, metav1.NamespaceAll)
 	reflector := cache.NewReflector(lw, &v1.Endpoints{}, c.store, 0)
+	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(3))
 	go reflector.Run(c.stopChan)
 
 	if err := wait.Poll(50*time.Millisecond, 2*time.Second, func() (done bool, err error) {
@@ -184,15 +187,12 @@ func transformFuncEndpoint(obj interface{}) (interface{}, error) {
 }
 
 func createEndpointListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
-	var ctx context.Context
+	ctx := context.Background()
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
-			opts.ResourceVersion = ""
-			// Passing nil context as this was not required by old List()
 			return client.CoreV1().Endpoints(ns).List(ctx, opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
-			// Passing nil context as this was not required by old Watch()
 			return client.CoreV1().Endpoints(ns).Watch(ctx, opts)
 		},
 	}

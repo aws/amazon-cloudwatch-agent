@@ -21,6 +21,8 @@ package prometheus_scraper
 
 import (
 	"context"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 	"os"
 	"os/signal"
 	"runtime"
@@ -41,7 +43,6 @@ import (
 	promRuntime "github.com/prometheus/prometheus/pkg/runtime"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
-	"k8s.io/klog"
 )
 
 var (
@@ -84,9 +85,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	//stdlog.SetOutput(log.NewStdlibAdapter(logger))
 	//stdlog.Println("redirect std log")
 
-	// Above level 6, the k8s client would log bearer tokens in clear-text.
-	klog.ClampLevel(6)
-	klog.SetLogger(log.With(logger, "component", "k8s_client_runtime"))
+	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
 	level.Info(logger).Log("msg", "Starting Prometheus", "version", version.Info())
 	level.Info(logger).Log("build_context", version.BuildContext())

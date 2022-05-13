@@ -39,9 +39,6 @@ replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v
 // BurntSushi 0.4.1 do not decode .toml with '[]' into empty slice anymore which breaks confmigrate.
 replace github.com/BurntSushi/toml v0.4.1 => github.com/BurntSushi/toml v0.3.1
 
-// k8s API server plugin requires v0.1.0
-replace k8s.io/klog => github.com/simonpasquier/klog-gokit v0.1.0
-
 replace github.com/karrick/godirwalk v1.16.1 => github.com/karrick/godirwalk v1.12.0
 
 replace github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
@@ -92,7 +89,6 @@ require (
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v0.23.5
-	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.30.0
 )
 

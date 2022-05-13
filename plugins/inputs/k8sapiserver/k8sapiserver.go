@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -117,7 +117,7 @@ func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
 				Name:      lockName,
 			},
 		},
-		opts,
+			opts,
 		)
 		log.Printf("I! configMap: %v, err: %v", configMap, err)
 	}
