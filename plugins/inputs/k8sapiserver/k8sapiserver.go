@@ -99,7 +99,7 @@ func (k *K8sAPIServer) Gather(acc telegraf.Accumulator) error {
 }
 
 func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
-	var ctx context.Context
+	ctx := context.Background()
 	ctx, k.cancel = context.WithCancel(context.Background())
 
 	lockNamespace := os.Getenv("K8S_NAMESPACE")
@@ -109,17 +109,15 @@ func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
 	}
 
 	configMapInterface := k8sclient.Get().ClientSet.CoreV1().ConfigMaps(lockNamespace)
-	var opts metav1.CreateOptions
+	opts := metav1.CreateOptions{}
 	if configMap, err := configMapInterface.Get(ctx, lockName, metav1.GetOptions{}); configMap == nil || err != nil {
 		log.Printf("I! Cannot get the leader config map: %v, try to create the config map...", err)
-		configMap, err = configMapInterface.Create(ctx, &v1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: lockNamespace,
-				Name:      lockName,
-			},
+		configMap, err = configMapInterface.Create(ctx, &v1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+			Namespace: lockNamespace,
+			Name:      lockName,
 		},
-			opts,
-		)
+		},
+			opts)
 		log.Printf("I! configMap: %v, err: %v", configMap, err)
 	}
 
