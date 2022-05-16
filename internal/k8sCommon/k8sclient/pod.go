@@ -42,9 +42,11 @@ func (c *podClient) NamespaceToRunningPodNum() map[string]int {
 	if !c.inited {
 		c.Init()
 	}
-	if c.store.Refreshed() {
-		c.refresh()
-	}
+	//if c.store.Refreshed() {
+	//	log.Printf("I! store refresh %v", c.store.refreshed)
+	//	c.refresh()
+	//}
+	c.refresh()
 	c.RLock()
 	defer c.RUnlock()
 	return c.namespaceToRunningPodNumMap
@@ -56,6 +58,7 @@ func (c *podClient) refresh() {
 
 	objsList := c.store.List()
 	namespaceToRunningPodNumMapNew := make(map[string]int)
+	log.Printf("I! objs list %v", c.store.List())
 	for _, obj := range objsList {
 		pod := obj.(*podInfo)
 		if pod.phase == v1.PodRunning {
@@ -117,7 +120,7 @@ func transformFuncPod(obj interface{}) (interface{}, error) {
 }
 
 func createPodListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
-	var ctx context.Context
+	ctx := context.Background()
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 			opts.ResourceVersion = ""

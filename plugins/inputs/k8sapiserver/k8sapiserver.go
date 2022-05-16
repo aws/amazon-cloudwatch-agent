@@ -82,6 +82,7 @@ func (k *K8sAPIServer) Gather(acc telegraf.Accumulator) error {
 					containerinsightscommon.K8sNamespace: service.Namespace,
 				})
 		}
+		log.Printf("I! number of namespace to running pod num %v", client.Pod.NamespaceToRunningPodNum())
 		for namespace, podNum := range client.Pod.NamespaceToRunningPodNum() {
 			acc.AddFields("k8sapiserver",
 				map[string]interface{}{
