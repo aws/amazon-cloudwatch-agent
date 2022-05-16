@@ -161,6 +161,7 @@ func (tail *Tail) Stop() error {
 }
 
 // StopAtEOF stops tailing as soon as the end of the file is reached.
+// Blocks until tailer is dead and returns reason for death.
 func (tail *Tail) StopAtEOF() error {
 	tail.Kill(errStopAtEOF)
 	return tail.Wait()
@@ -394,7 +395,7 @@ func (tail *Tail) tailFileSync() {
 						if errReadLine == nil {
 							tail.sendLine(line, tail.curOffset)
 						} else {
-							break
+							return
 						}
 					}
 				} else if err != ErrStop {
@@ -469,7 +470,6 @@ func (tail *Tail) waitForChanges() error {
 	case <-tail.Dying():
 		return ErrStop
 	}
-
 }
 
 func (tail *Tail) openReader() {
@@ -514,8 +514,13 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 		select {
 		case tail.Lines <- &Line{line, now, nil, offset}:
 		case <-tail.Dying():
-			tail.dropCnt += len(lines) - i
-			return true
+			if tail.Err() == errStopAtEOF {
+				// Try sending, even if it blocks.
+				tail.Lines <- &Line{line, now, nil, offset}
+			} else {
+				tail.dropCnt += len(lines) - i
+				return true
+			}
 		}
 	}
 
