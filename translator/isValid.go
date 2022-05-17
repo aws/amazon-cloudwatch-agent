@@ -12,7 +12,7 @@ import (
 var ErrorMessages = []string{}
 var InfoMessages = []string{}
 
-// ValidRetentionInDays is based on what's supported by PutRetentionPolicy. See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html#CWL-PutRetentionPolicy-request-retentionInDays
+// ValidRetentionInDays is based on what's supported by PutRetentionPolicy. See https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html#CloudWatch-Agent-Configuration-File-Logssection.
 var ValidRetentionInDays = []string{"-1", "1", "3", "5", "7", "14", "30", "60", "90", "120", "150", "180", "365", "400", "545", "731", "1827", "2192", "2557", "2922", "3288", "3653"}
 
 //IsValid checks whether the mandatory config parameter is valid
