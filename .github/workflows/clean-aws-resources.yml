@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         resource: [ami, dedicated_host, ssm]
-        region: [us-west-2]
+        region: [ us-east-1, us-east-2, us-west-2, eu-west-1 ]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
