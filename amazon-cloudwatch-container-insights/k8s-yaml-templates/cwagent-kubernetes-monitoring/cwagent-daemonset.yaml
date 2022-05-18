@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: cloudwatch-agent
-          image: 504799192994.dkr.ecr.us-east-1.amazonaws.com/cw-agent:upgrade-telegraf-v1-21-4
+          image: public.ecr.aws/a3i2u7g3/cw-agent-seth:upgrade-telegraf-v1-21-4
           imagePullPolicy: Always
           #ports:
           #  - containerPort: 8125
