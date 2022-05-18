@@ -5,6 +5,7 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -92,9 +93,25 @@ func main() {
 		log.Fatalf("E! Cannot translate JSON config into TOML, ERROR is %v \n", err)
 	}
 	log.Printf("I! Config has been translated into TOML %s \n", tomlConfigPath)
+	echoTOML(tomlConfigPath)
 
 	if err := startAgent(writer); err != nil {
 		log.Printf("E! Error when starting Agent, Error is %v \n", err)
 		os.Exit(1)
 	}
+}
+
+func echoTOML(path string) {
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err = file.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	b, err := ioutil.ReadAll(file)
+	log.Printf("I! toml config %v", string(b))
 }

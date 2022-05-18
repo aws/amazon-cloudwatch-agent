@@ -6,7 +6,8 @@ data:
   cwagentconfig.json: |
     {
       "agent": {
-        "debug": true
+        "debug": true,
+        "aws_sdk_log_level": "LogDebug"
       },
       "logs": {
         "metrics_collected": {
