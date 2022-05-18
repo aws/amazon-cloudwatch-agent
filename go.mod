@@ -49,7 +49,7 @@ require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/Jeffail/gabs v1.4.0
 	github.com/Rican7/retry v0.1.1-0.20160712041035-272ad122d6e5
-	github.com/aws/aws-sdk-go v1.38.68
+	github.com/aws/aws-sdk-go v1.44.16
 	github.com/aws/aws-sdk-go-v2 v1.16.3
 	github.com/aws/aws-sdk-go-v2/config v1.15.3
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.3
@@ -71,19 +71,11 @@ require (
 	github.com/mesos/mesos-go v0.0.7-0.20180413204204-29de6ff97b48
 	github.com/oklog/run v1.1.0
 	github.com/pkg/errors v0.9.1
-<<<<<<< HEAD
-	github.com/prometheus/client_golang v1.5.1
-	github.com/prometheus/common v0.9.1
-	github.com/prometheus/prometheus v1.8.2-0.20200420081721-18254838fbe2
-	github.com/shirou/gopsutil v2.20.5+incompatible
-	github.com/stretchr/testify v1.7.0
-=======
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/common v0.33.0
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
 	github.com/shirou/gopsutil v3.21.5+incompatible
 	github.com/stretchr/testify v1.7.1
->>>>>>> e8cb41b9 (Upgrade telegraf version to aws version of 1.23.0, bump go version to 1.17, make necessary changes to fix building errors.)
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
