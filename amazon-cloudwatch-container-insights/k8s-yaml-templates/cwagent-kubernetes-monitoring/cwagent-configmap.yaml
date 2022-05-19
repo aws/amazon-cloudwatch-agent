@@ -12,7 +12,7 @@ data:
       "logs": {
         "metrics_collected": {
           "kubernetes": {
-            "cluster_name": "seth-test-cw-agent-cluster",
+            "cluster_name": "{{cluster_name}}",
             "metrics_collection_interval": 60
           }
         },
