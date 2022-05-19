@@ -58,7 +58,6 @@ func (c *podClient) refresh() {
 
 	objsList := c.store.List()
 	namespaceToRunningPodNumMapNew := make(map[string]int)
-	log.Printf("I! objs list %v", c.store.List())
 	for _, obj := range objsList {
 		pod := obj.(*podInfo)
 		if pod.phase == v1.PodRunning {
