@@ -316,6 +316,7 @@ func (t *Tagger) Init() error {
 		}
 	}
 
+	t.Log.Infof("ec2tagger: Check ec2 metadata")
 	if !t.ec2metadata.Available() {
 		msg := "ec2tagger: Unable to retrieve InstanceId. This plugin must only be used on an EC2 instance"
 		t.Log.Errorf(msg)
