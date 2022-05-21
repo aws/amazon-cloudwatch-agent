@@ -113,10 +113,10 @@ $EC2 = $false
 $CIM = $false
 
 Function StartAll() {
-    Write-Output "****** processing cwagent-otel-collector ******"
+    Write-Output "****** Processing cwagent-otel-collector ******"
     AgentStart -service_name $CWOCServiceName -service_display_name $CWOCServiceDisplayName
 
-    Write-Output "`r`n****** processing amazon-cloudwatch-agent ******"
+    Write-Output "`r`n****** Processing amazon-cloudwatch-agent ******"
     AgentStart -service_name $CWAServiceName -service_display_name $CWAServiceDisplayName
 }
 
@@ -169,10 +169,10 @@ Function AgentStart() {
 }
 
 Function StopAll() {
-    Write-Output "****** processing cwagent-otel-collector ******"
+    Write-Output "****** Processing cwagent-otel-collector ******"
     AgentStop -service_name $CWOCServiceName
 
-    Write-Output "`r`n****** processing amazon-cloudwatch-agent ******"
+    Write-Output "`r`n****** Processing amazon-cloudwatch-agent ******"
     AgentStop -service_name $CWAServiceName
 }
 
@@ -449,7 +449,7 @@ Function CWOCConfig() {
         Copy-Item "${PREDEFINED_CONFIG_DATA}" -Destination "${YAML_DIR}/default.tmp"
         Write-Output "Successfully fetched the config and saved in ${YAML_DIR}\default.tmp"
     } else {
-        & cmd /c "`"$CWAProgramFiles\config-downloader.exe`" --output-dir ${YAML_DIR} --download-source ${OtelConfigLocation} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+        & cmd /c "`"$CWAProgramFiles\config-downloader.exe`" --output-dir ${YAML_DIR} --download-source ${OtelConfigLocation} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
         CheckCMDResult
     }
 
