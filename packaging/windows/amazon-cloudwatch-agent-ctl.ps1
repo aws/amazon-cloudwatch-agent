@@ -356,27 +356,27 @@ Function CWAConfig() {
     }
 
     if ($ConfigLocation -eq $AllConfig -And $multi_config -ne 'remove') {
-        Write-Output "ignore cwa configuration `"$AllConfig`" as it is only supported by action `"remove-config`""
+        Write-Output "Ignore amazon-cloudwatch-agent's configuration ${AllConfig} as it is only supported by action `"remove-config`""
         return
     }
 
     if ($ConfigLocation -eq $AllConfig) {
         Remove-Item -Path "${JSON_DIR}\*" -Force -ErrorAction SilentlyContinue
     } else {
-        & $CWAProgramFiles\config-downloader.exe --output-dir "${JSON_DIR}" --download-source "${ConfigLocation}" --mode "${param_mode}" --config "${COMMON_CONIG}" --multi-config "${multi_config}"
+        & cmd /c "`"$CWAProgramFiles\config-downloader.exe`" --output-dir ${JSON_DIR} --download-source ${ConfigLocation} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
         CheckCMDResult
     }
 
     $jsonDirContent = Get-ChildItem "${JSON_DIR}" | Measure-Object
 
     if ($jsonDirContent.count -eq 0) {
-        Write-Output "all amazon-cloudwatch-agent configurations have been removed"
+        Write-Output "All amazon-cloudwatch-agent configurations have been removed"
         Remove-Item "${TOML}" -Force -ErrorAction SilentlyContinue
     } else {
         Write-Output "Start configuration validation..."
         & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
         CheckCMDResult
-        # Let command pass so we can check return code and give user-friendly error-message
+
         $ErrorActionPreference = "Continue"
         & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --schematest --config ${TOML} 2>&1" | Out-File $CVLogFile
         if ($LASTEXITCODE -ne 0) {
@@ -425,11 +425,11 @@ Function CWOCConfig() {
     )
 
     if (Test-Path -LiteralPath "${Env:ProgramFiles}\Amazon\AWSOTelCollector\aws-otel-collector-ctl.ps1") {
-        Write-Output "REMINDER: you are configuring `"cwagent-otel-collector`" instead of `"aws-otel-collector`"."
+        Write-Output "REMINDER: You are configuring `"cwagent-otel-collector`" instead of `"aws-otel-collector`"."
     }
 
     if ($multi_config -eq 'append') {
-        Write-Output "ignore `"-o`" as cwagent-otel-collector doesn't support append-config"
+        Write-Output "Ignore `"-o`" as cwagent-otel-collector doesn't support append-config"
         return
     }
 
@@ -439,7 +439,7 @@ Function CWOCConfig() {
     }
 
     if ($OtelConfigLocation -eq $AllConfig -And $multi_config -ne 'remove') {
-        Write-Output "ignore cwoc configuration `"$AllConfig`" as it is only supported by action `"remove-config`""
+        Write-Output "Ignore cwagent-otel-collector's configuration `"$AllConfig`" as it is only supported by action `"remove-config`""
         return
     }
 
@@ -449,15 +449,13 @@ Function CWOCConfig() {
         Copy-Item "${PREDEFINED_CONFIG_DATA}" -Destination "${YAML_DIR}/default.tmp"
         Write-Output "Successfully fetched the config and saved in ${YAML_DIR}\default.tmp"
     } else {
-        & $CWAProgramFiles\config-downloader.exe --output-dir "${YAML_DIR}" --download-source "${OtelConfigLocation}" --mode "${param_mode}" --config "${COMMON_CONIG}" --multi-config "${multi_config}"
-        if ($LASTEXITCODE -ne 0) {
-            return
-        }
+        & cmd /c "`"$CWAProgramFiles\config-downloader.exe`" --output-dir ${YAML_DIR} --download-source ${OtelConfigLocation} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
+        CheckCMDResult
     }
 
     $yamlDirContent = Get-ChildItem "${YAML_DIR}" | Measure-Object
     if ($yamlDirContent.count -eq 0) {
-        Write-Output "all cwagent-otel-collector configurations have been removed"
+        Write-Output "All cwagent-otel-collector configurations have been removed"
         Remove-Item "${YAML}" -Force -ErrorAction SilentlyContinue
     } else {
         # delete old file which are without .tmp suffix
@@ -469,7 +467,7 @@ Function CWOCConfig() {
             $destination = Join-Path -Path $_.Directory.FullName -ChildPath "${newName}"
             Move-Item $_.FullName -Destination "${destination}" -Force
             Copy-Item "${destination}" -Destination "${YAML}" -Force
-            Write-Output "cwagent-otel-collector config has been successfully fetched."
+            Write-Output "cwagent-otel-collector's configuration has been successfully fetched."
         }
     }
 
