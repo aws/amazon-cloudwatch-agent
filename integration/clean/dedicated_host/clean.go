@@ -39,7 +39,8 @@ func Clean(ctx context.Context, expirationDate time.Time) error {
 	for _, dedicatedHost := range dedicatedHosts {
 		log.Printf("dedicated host id %v experation date %v dedicated host creation date raw %v host state %v",
 			*dedicatedHost.HostId, expirationDate, *dedicatedHost.AllocationTime, dedicatedHost.State)
-		if expirationDate.After(*dedicatedHost.AllocationTime) && len(dedicatedHost.Instances) == 0 && dedicatedHost.State == types.AllocationStateAvailable {
+		isDedicatedHostAvailableOrPending := dedicatedHost.State == types.AllocationStateAvailable || dedicatedHost.State == types.AllocationStatePending
+		if expirationDate.After(*dedicatedHost.AllocationTime) && len(dedicatedHost.Instances) == 0 && isDedicatedHostAvailableOrPending {
 			log.Printf("Try to delete dedicated host %s tags %v launch-date %s", *dedicatedHost.HostId, dedicatedHost.Tags, *dedicatedHost.AllocationTime)
 			dedicatedHostIds = append(dedicatedHostIds, *dedicatedHost.HostId)
 		}
