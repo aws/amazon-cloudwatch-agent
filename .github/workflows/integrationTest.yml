@@ -575,7 +575,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
+          aws-region: us-west-2
 
       - name: Cache if success
         id: ecs-fargate-integration-test
