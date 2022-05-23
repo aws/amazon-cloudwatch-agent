@@ -64,7 +64,7 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 		case "None":
 			return question.Processor
 		default:
-			panic(whichDefaultConfig)
+			log.Panicf("Unknown default config: %s", whichDefaultConfig)
 		}
 		if config.SatisfiedWithCurrentConfig(ctx) {
 			if ctx.OsParameter == util.OsTypeWindows {

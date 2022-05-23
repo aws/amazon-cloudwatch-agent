@@ -76,6 +76,8 @@ type tailerSrc struct {
 	startTailerOnce sync.Once
 	cleanUpFns      []func()
 }
+// Verify tailerSrc implements LogSrc
+var _ logs.LogSrc = (*tailerSrc)(nil)
 
 func NewTailerSrc(
 	group, stream, destination, stateFilePath string,
@@ -119,26 +121,26 @@ func (ts *tailerSrc) SetOutput(fn func(logs.LogEvent)) {
 	ts.startTailerOnce.Do(func() { go ts.runTail() })
 }
 
-func (ts tailerSrc) Group() string {
+func (ts *tailerSrc) Group() string {
 	return ts.group
 }
 
-func (ts tailerSrc) Stream() string {
+func (ts *tailerSrc) Stream() string {
 	return ts.stream
 }
 
-func (ts tailerSrc) Description() string {
+func (ts *tailerSrc) Description() string {
 	return ts.tailer.Filename
 }
 
-func (ts tailerSrc) Destination() string {
+func (ts *tailerSrc) Destination() string {
 	return ts.destination
 }
 
-func (ts tailerSrc) Retention() int {
+func (ts *tailerSrc) Retention() int {
 	return ts.retentionInDays
 }
-func (ts tailerSrc) Done(offset fileOffset) {
+func (ts *tailerSrc) Done(offset fileOffset) {
 	// ts.offsetCh will only be blocked when the runSaveState func has exited,
 	// which only happens when the original file has been removed, thus making
 	// Keeping its offset useless
@@ -280,6 +282,7 @@ func (ts *tailerSrc) cleanUp() {
 	for _, clf := range ts.cleanUpFns {
 		clf()
 	}
+
 	if ts.outputFn != nil {
 		ts.outputFn(nil) // inform logs agent the tailer src's exit, to stop runSrcToDest
 	}
@@ -306,6 +309,13 @@ func (ts *tailerSrc) runSaveState() {
 				continue
 			}
 			lastSavedOffset = offset
+		case <-ts.tailer.FileDeletedCh:
+			log.Printf("W! [logfile] deleting state file %s", ts.stateFilePath)
+			err := os.Remove(ts.stateFilePath)
+			if err != nil {
+				log.Printf("E! [logfile] Error happened while deleting state file %s on cleanup", ts.stateFilePath)
+			}
+			return
 		case <-ts.done:
 			err := ts.saveState(offset.offset)
 			if err != nil {

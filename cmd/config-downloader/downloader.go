@@ -6,8 +6,8 @@ package main
 import (
 	"flag"
 	"io/ioutil"
+	"log"
 	"os"
-
 	"strings"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -113,7 +113,7 @@ func main() {
 
 	var region, mode, downloadLocation, outputDir, inputConfig, multiConfig string
 
-	flag.StringVar(&mode, "mode", "ec2", "The mode value, i.e. ec2 or onPrem")
+	flag.StringVar(&mode, "mode", "ec2", "Please provide the mode, i.e. ec2, onPremise, auto")
 	flag.StringVar(&downloadLocation, "download-source", "",
 		"Download source. Example: \"ssm:my-parameter-store-name\" for an EC2 SSM Parameter Store Name holding your CloudWatch Agent configuration.")
 	flag.StringVar(&outputDir, "output-dir", "", "Path of output json config directory.")
@@ -125,26 +125,24 @@ func main() {
 	if inputConfig != "" {
 		f, err := os.Open(inputConfig)
 		if err != nil {
-			fmt.Printf("E! Failed to open Common Config: %v\n", err)
-			panic(err)
+			log.Panicf("E! Failed to open Common Config: %v", err)
 		}
 
 		if err := cc.Parse(f); err != nil {
-			fmt.Printf("E! Failed to parse Common Config: %v\n", err)
-			panic(err)
+			log.Panicf("E! Failed to open Common Config: %v", err)
 		}
 	}
 	util.SetProxyEnv(cc.ProxyMap())
 	util.SetSSLEnv(cc.SSLMap())
 	var errorMessage string
 	if downloadLocation == "" || outputDir == "" {
-		executable, e := os.Executable()
-		if e == nil {
-			errorMessage = fmt.Sprintf("usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
+		executable, err := os.Executable()
+		if err == nil {
+			errorMessage = fmt.Sprintf("E! usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
 		} else {
-			errorMessage = fmt.Sprintf("usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")
+			errorMessage = fmt.Sprintf("E! usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")
 		}
-		panic(errorMessage)
+		log.Panicf(errorMessage)
 	}
 
 	mode = sdkutil.DetectAgentMode(mode)
@@ -154,12 +152,12 @@ func main() {
 	if region == "" && downloadLocation != locationDefault {
 		fmt.Println("Unable to determine aws-region.")
 		if mode == config.ModeEC2 {
-			errorMessage = fmt.Sprintf("Please check if you can access the metadata service. For exampe, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' ")
+			errorMessage = fmt.Sprintf("E! Please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' ")
 		} else {
-			errorMessage = fmt.Sprintf("Please make sure the credentials and region set correctly on your hosts.\n" +
+			errorMessage = fmt.Sprintf("E! Please make sure the credentials and region set correctly on your hosts.\n" +
 				"Refer to http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html")
 		}
-		panic(errorMessage)
+		log.Panicf(errorMessage)
 	}
 
 	// clean up output dir for tmp files before writing out new tmp file.
@@ -168,7 +166,7 @@ func main() {
 		outputDir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				fmt.Printf("Cannot access %v: %v", path, err)
+				fmt.Printf("Cannot access %v: %v \n", path, err)
 				return err
 			}
 			if info.IsDir() {
@@ -187,7 +185,7 @@ func main() {
 
 	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
 	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
-		panic(fmt.Sprintf("downloadLocation %s is malformated.\n", downloadLocation))
+		log.Panicf("E! downloadLocation %s is malformated.", downloadLocation)
 	}
 
 	var config, outputFilePath string
@@ -209,25 +207,25 @@ func main() {
 			config, err = readFromFile(locationArray[1])
 		}
 	default:
-		panic(fmt.Sprintf("location type %s is not supported.", locationArray[0]))
+		log.Panicf("E! Location type %s is not supported.", locationArray[0])
 	}
 
 	if err != nil {
-		panic(fmt.Sprintf("Fail to fetch/remove json config: %v\n", err))
+		log.Panicf("E! Fail to fetch/remove json config: %v", err)
 	}
 
 	if multiConfig != "remove" {
 		outputFilePath = filepath.Join(outputDir, outputFilePath+context.TmpFileSuffix)
 		err = ioutil.WriteFile(outputFilePath, []byte(config), 0644)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to write the json file %v: %v\n", outputFilePath, err))
+			log.Panicf("E! Failed to write the json file %v: %v", outputFilePath, err)
 		} else {
 			fmt.Printf("Successfully fetched the config and saved in %s\n", outputFilePath)
 		}
 	} else {
 		outputFilePath = filepath.Join(outputDir, outputFilePath)
 		if err := os.Remove(outputFilePath); err != nil {
-			panic(fmt.Sprintf("Failed to remove the json file %v: %v", outputFilePath, err))
+			log.Panicf("E! Failed to remove the json file %v: %v", outputFilePath, err)
 		} else {
 			fmt.Printf("Successfully removed the config file %s\n", outputFilePath)
 		}

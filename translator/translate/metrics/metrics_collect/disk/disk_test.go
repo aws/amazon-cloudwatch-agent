@@ -15,16 +15,16 @@ func TestDiskSpecificConfig(t *testing.T) {
 	d := new(Disk)
 	//Check whether override default config
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"disk":{"metrics_collection_interval":"60"}}`), &input)
-	if e == nil {
+	err := json.Unmarshal([]byte(`{"disk":{"metrics_collection_interval":"60"}}`), &input)
+	if err == nil {
 		actualReturnKey, _ := d.ApplyRule(input)
 		assert.Equal(t, "", actualReturnKey, "Expect to be equal")
 	} else {
-		panic(e)
+		panic(err)
 	}
 	//Check whether provide specific config
 	var input1 interface{}
-	err := json.Unmarshal([]byte(`{"disk":{
+	err = json.Unmarshal([]byte(`{"disk":{
 					"resources": [
 						"/", "/dev", "/sys"
 					],
@@ -52,7 +52,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 
 	//check when "drop_device" = true
 	var input2 interface{}
-	er := json.Unmarshal([]byte(`{"disk":{
+	err = json.Unmarshal([]byte(`{"disk":{
 					"resources": [
 						"/", "/dev", "/sys"
 					],
@@ -66,7 +66,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 					],
 					"drop_device": true
 					}}`), &input2)
-	if er == nil {
+	if err == nil {
 		_, actualValue := d.ApplyRule(input2)
 		expectedValue := []interface{}{map[string]interface{}{
 			"ignore_fs":    []interface{}{"sysfs", "devtmpfs"},
@@ -77,12 +77,12 @@ func TestDiskSpecificConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedValue, actualValue, "Expect to be equal")
 	} else {
-		panic(er)
+		panic(err)
 	}
 
 	//check when "drop_device" = false
 	var input3 interface{}
-	err3 := json.Unmarshal([]byte(`{"disk":{
+	err = json.Unmarshal([]byte(`{"disk":{
 					"resources": [
 						"/", "/dev", "/sys"
 					],
@@ -96,7 +96,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 					],
 					"drop_device": false
 					}}`), &input3)
-	if err3 == nil {
+	if err == nil {
 		_, actualValue := d.ApplyRule(input3)
 		expectedValue := []interface{}{map[string]interface{}{
 			"ignore_fs":    []interface{}{"sysfs", "devtmpfs"},
@@ -107,7 +107,7 @@ func TestDiskSpecificConfig(t *testing.T) {
 		}
 		assert.Equal(t, expectedValue, actualValue, "Expect to be equal")
 	} else {
-		panic(err3)
+		panic(err)
 	}
 
 }

@@ -50,7 +50,7 @@ GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
-
+LINTER = $(TOOLS_BIN_DIR)/golangci-lint
 release: clean test build package-rpm package-deb package-win package-darwin
 
 nightly-release: release
@@ -128,9 +128,12 @@ build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
+#Install from source for golangci-lint is not recommended based on https://golangci-lint.run/usage/install/#install-from-source so using binary
+#installation
 install-tools:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
 	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@latest
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.45.2
 
 fmt: install-tools
 	go fmt ./...
@@ -139,14 +142,11 @@ fmt: install-tools
 fmt-sh: install-tools
 	${SHFMT} -w -d -i 5 .
 
+lint: install-tools
+	${LINTER} run ./...
+
 test:
 	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
-
-integration-test:
-	go test ./integration/test/... -p 1 -v --tags=integration
-
-integration-cleaner:
-	go run ./integration/clean/clean_ami.go --tags=clean
 
 clean::
 	rm -rf release/ build/

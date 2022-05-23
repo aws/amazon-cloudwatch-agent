@@ -5,6 +5,7 @@ package jsonconfig
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sort"
 
@@ -54,7 +55,7 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 	}
 
 	if !translator.IsTranslateSuccess() {
-		panic("Failed to merge multiple json config files.")
+		log.Panic("Failed to merge multiple json config files.")
 	}
 
 	return resultMap, nil

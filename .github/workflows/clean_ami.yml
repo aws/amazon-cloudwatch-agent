@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Monthly Resources Cleaner
+name: AMI Monthly Resources Cleaner
 
 on:
   schedule:
@@ -9,10 +9,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  clean-resources:
+  clean-ami:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -21,5 +22,5 @@ jobs:
           aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      - name: Clean old aws resources
-        run: make integration-cleaner
+      - name: Clean old ami
+        run: go run ./integration/clean/clean_ami/clean_ami.go --tags=clean

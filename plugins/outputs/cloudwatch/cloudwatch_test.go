@@ -31,8 +31,6 @@ import (
 
 // Test that each tag becomes one dimension
 func TestBuildDimensions(t *testing.T) {
-	const MaxDimensions = 10
-
 	assert := assert.New(t)
 
 	testPoint := testutil.TestMetric(1)
@@ -96,7 +94,9 @@ func TestBuildMetricDatums(t *testing.T) {
 	}
 
 	invalidDistribution := distribution.NewDistribution()
-	invalidDistribution.AddEntry(-1, 1)
+	err := invalidDistribution.AddEntry(-1, 1)
+	expectedErrMsg := "negative value"
+	assert.EqualError(err, expectedErrMsg)
 	invalidMetrics := []telegraf.Metric{
 		testutil.TestMetric("Foo"),
 		testutil.TestMetric(invalidDistribution),

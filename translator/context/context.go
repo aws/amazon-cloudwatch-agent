@@ -4,8 +4,7 @@
 package context
 
 import (
-	"fmt"
-
+	"log"
 	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -114,7 +113,7 @@ func (ctx *Context) SetMode(mode string) {
 	case config.ModeOnPrem:
 		ctx.mode = config.ModeOnPrem
 	default:
-		panic(fmt.Sprintf("Invalid mode %s. Valid mode values are %s and %s.\n", mode, config.ModeEC2, config.ModeOnPrem))
+		log.Panicf("Invalid mode %s. Valid mode values are %s and %s.", mode, config.ModeEC2, config.ModeOnPrem)
 	}
 }
 

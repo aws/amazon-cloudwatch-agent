@@ -95,9 +95,9 @@ func SaveResultByteArrayToJsonFile(resultByteArray []byte) string {
 }
 
 func SDKRegion() (region string) {
-	ses, e := session.NewSession()
+	ses, err := session.NewSession()
 
-	if e != nil {
+	if err != nil {
 		return
 	}
 	if ses.Config != nil && ses.Config.Region != nil {
@@ -107,9 +107,9 @@ func SDKRegion() (region string) {
 }
 
 func SDKRegionWithProfile(profile string) (region string) {
-	ses, e := session.NewSessionWithOptions(session.Options{Profile: profile, SharedConfigState: session.SharedConfigEnable})
+	ses, err := session.NewSessionWithOptions(session.Options{Profile: profile, SharedConfigState: session.SharedConfigEnable})
 
-	if e != nil {
+	if err != nil {
 		return
 	}
 	if ses.Config != nil && ses.Config.Region != nil {
@@ -119,8 +119,8 @@ func SDKRegionWithProfile(profile string) (region string) {
 }
 
 func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentials) {
-	ses, e := session.NewSession()
-	if e != nil {
+	ses, err := session.NewSession()
+	if err != nil {
 		return
 	}
 	if ses.Config != nil && ses.Config.Credentials != nil {
@@ -135,20 +135,20 @@ func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentia
 
 func DefaultEC2Region() (region string) {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
-	ses, e := session.NewSession(&aws.Config{
+	ses, err := session.NewSession(&aws.Config{
 		HTTPClient: &http.Client{Timeout: 1 * time.Second},
 		MaxRetries: aws.Int(0),
 		LogLevel:   configaws.SDKLogLevel(),
 		Logger:     configaws.SDKLogger{},
 	})
-	if e != nil {
+	if err != nil {
 		return
 	}
 	md := ec2metadata.New(ses)
 	if !md.Available() {
 		return
 	}
-	if info, e := md.Region(); e == nil {
+	if info, err := md.Region(); err == nil {
 		region = info
 	}
 	return

@@ -15,8 +15,8 @@ func TestMetrics(t *testing.T) {
 	m := new(Metrics)
 	var input interface{}
 	agent.Global_Config.Region = "auto"
-	e := json.Unmarshal([]byte(`{"metrics":{}}`), &input)
-	assert.NoError(t, e)
+	err := json.Unmarshal([]byte(`{"metrics":{}}`), &input)
+	assert.NoError(t, err)
 	_, actual := m.ApplyRule(input)
 	expected := map[string]interface{}(
 		map[string]interface{}{
@@ -42,8 +42,8 @@ func TestMetrics_Internal(t *testing.T) {
 	var input interface{}
 	agent.Global_Config.Region = "auto"
 	agent.Global_Config.Internal = true
-	e := json.Unmarshal([]byte(`{"metrics":{}}`), &input)
-	assert.NoError(t, e)
+	err := json.Unmarshal([]byte(`{"metrics":{}}`), &input)
+	assert.NoError(t, err)
 	_, actual := m.ApplyRule(input)
 	expected := map[string]interface{}(
 		map[string]interface{}{
@@ -70,8 +70,8 @@ func TestMetrics_EndpointOverride(t *testing.T) {
 	m := new(Metrics)
 	var input interface{}
 	agent.Global_Config.Region = "auto"
-	e := json.Unmarshal([]byte(`{"metrics":{"endpoint_override":"https://monitoring-fips.us-east-1.amazonaws.com"}}`), &input)
-	assert.NoError(t, e)
+	err := json.Unmarshal([]byte(`{"metrics":{"endpoint_override":"https://monitoring-fips.us-east-1.amazonaws.com"}}`), &input)
+	assert.NoError(t, err)
 	_, actual := m.ApplyRule(input)
 	expected := map[string]interface{}(
 		map[string]interface{}{

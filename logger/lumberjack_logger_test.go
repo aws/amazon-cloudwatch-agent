@@ -4,7 +4,6 @@
 package logger
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -141,7 +140,7 @@ func TestWriteToFileInRotation(t *testing.T) {
 
 	files, _ = ioutil.ReadDir(tempDir)
 	for _, file := range files {
-		fmt.Printf("%v/%v, size:%v\n", tempDir, file.Name(), file.Size())
+		t.Logf("%v/%v, size:%v\n", tempDir, file.Name(), file.Size())
 	}
 
 	assert.Equal(t, 4, len(files))

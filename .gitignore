@@ -8,5 +8,6 @@ CWAGENT_VERSION
 *.iml
 .terraform.*
 terraform.*
-.terraform/*
+**/.terraform/*
 coverage.txt
+integration/generator/resources/*complete*.json

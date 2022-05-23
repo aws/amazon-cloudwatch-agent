@@ -52,7 +52,7 @@ func TestBundle(t *testing.T) {
 			test.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
 			test.CopyFile(parameter.dataInput+configJSON, configOutputPath)
 			test.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
-			test.StartAgent(configOutputPath)
+			test.StartAgent(configOutputPath, true)
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
 			test.StopAgent()

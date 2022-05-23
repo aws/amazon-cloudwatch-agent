@@ -19,19 +19,19 @@ import (
 )
 
 const (
-	bookmarkTemplate      = `<BookmarkList><Bookmark Channel="%s" RecordId="%d" IsCurrent="True"/></BookmarkList>`
-	eventLogQueryTemplate = `<QueryList><Query Id="0"><Select Path="%s">%s</Select></Query></QueryList>`
-	eventLogLevelFilter   = "Level='%s'"
-	eventIgnoreOldFilter  = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
-	emptySpaceScanLength  = 100
+	bookmarkTemplate         = `<BookmarkList><Bookmark Channel="%s" RecordId="%d" IsCurrent="True"/></BookmarkList>`
+	eventLogQueryTemplate    = `<QueryList><Query Id="0"><Select Path="%s">%s</Select></Query></QueryList>`
+	eventLogLevelFilter      = "Level='%s'"
+	eventIgnoreOldFilter     = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
+	emptySpaceScanLength     = 100
 	UnknownBytesPerCharacter = 0
 
-	CRITICAL                 = "CRITICAL"
-	ERROR                    = "ERROR"
-	WARNING                  = "WARNING"
-	INFORMATION              = "INFORMATION"
-	VERBOSE                  = "VERBOSE"
-	UNKNOWN                  = "UNKNOWN"
+	CRITICAL    = "CRITICAL"
+	ERROR       = "ERROR"
+	WARNING     = "WARNING"
+	INFORMATION = "INFORMATION"
+	VERBOSE     = "VERBOSE"
+	UNKNOWN     = "UNKNOWN"
 )
 
 var NumberOfBytesPerCharacter = UnknownBytesPerCharacter
@@ -139,10 +139,10 @@ func isTheEndOfContent(in []byte, length uint32) bool {
 	}
 	max := len(in)
 	if i+emptySpaceScanLength < max {
-		max = i+emptySpaceScanLength
+		max = i + emptySpaceScanLength
 	}
 
-	for ; i < max - 2; i += 2 {
+	for ; i < max-2; i += 2 {
 		v1 := uint16(in[i+2]) | uint16(in[i+1])<<8
 		// Stop at non-null char.
 		if v1 != 0 {

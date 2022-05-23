@@ -1,17 +1,22 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build integration
+// +build integration
 
 package test
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 )
 
 func CopyFile(pathIn string, pathOut string) {
@@ -32,16 +37,20 @@ func CopyFile(pathIn string, pathOut string) {
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)
 }
 
-func StartAgent(configOutputPath string) {
+func StartAgent(configOutputPath string, fatalOnFailure bool) error {
 	out, err := exec.
 		Command("bash", "-c", "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:"+configOutputPath).
 		Output()
 
-	if err != nil {
+	if err != nil && fatalOnFailure {
 		log.Fatal(fmt.Sprint(err) + string(out))
+	} else if err != nil {
+		log.Printf(fmt.Sprint(err) + string(out))
+	} else {
+		log.Printf("Agent has started")
 	}
 
-	log.Printf("Agent has started")
+	return err
 }
 
 func StopAgent() {
@@ -68,17 +77,29 @@ func ReadAgentOutput(d time.Duration) string {
 	return string(out)
 }
 
-func RunShellScript(path string) {
+func RunShellScript(path string, args ...string) {
 	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
 	}
 
-	out, err = exec.Command("bash", "-c", "sudo ./"+path).Output()
+	bashArgs := []string{"-c", "sudo ./" + path}
+	bashArgs = append(bashArgs, args...)
+
+	//out, err = exec.Command("bash", "-c", "sudo ./"+path, args).Output()
+	out, err = exec.Command("bash", bashArgs...).Output()
 
 	if err != nil {
-		log.Fatal(fmt.Sprint(err) + string(out))
+		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
+	}
+}
+
+func RunCommand(cmd string) {
+	out, err := exec.Command("bash", "-c", cmd).Output()
+
+	if err != nil {
+		log.Fatalf("Error occurred when executing %s: %s | %s", cmd, err.Error(), string(out))
 	}
 }
 
@@ -88,4 +109,29 @@ func ReplaceLocalStackHostName(pathIn string) {
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
+}
+
+func GetInstanceId() string {
+	ctx := context.Background()
+	c, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		// fail fast so we don't continue the test
+		log.Fatalf("Error occurred while creating SDK config: %v", err)
+	}
+
+	// TODO: this only works for EC2 based testing
+	client := imds.NewFromConfig(c)
+	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
+		log.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
+	}
+	return metadata.InstanceID
+}
+
+func GetCWClient(cxt context.Context) *cloudwatch.Client {
+	defaultConfig, err := config.LoadDefaultConfig(cxt)
+	if err != nil {
+		log.Fatalf("err occurred while creating config %v", err)
+	}
+	return cloudwatch.NewFromConfig(defaultConfig)
 }
