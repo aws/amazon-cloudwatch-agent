@@ -377,6 +377,9 @@ Function CWAConfig() {
         & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
         CheckCMDResult
 
+        # Use "Continue" to continue when having an error https://www.tutorialspoint.com/how-to-use-the-erroractionpreference-variable-in-powershell
+        # However, error will not be displayed in the console since we catch the error in the new shell with cmd /c and send more UX-friendly wordings
+        # to the customers
         $ErrorActionPreference = "Continue"
         & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --schematest --config ${TOML} 2>&1" | Out-File $CVLogFile
         if ($LASTEXITCODE -ne 0) {
