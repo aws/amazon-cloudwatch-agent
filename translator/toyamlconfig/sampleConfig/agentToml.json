@@ -1,0 +1,204 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+    "internal": true,
+    "debug": true,
+    "aws_sdk_log_level": "LogDebug",
+    "user_agent": "CUSTOM USER AGENT VALUE",
+    "credentials": {
+      "role_arn": "global_role_arn_value"
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "collectd": {
+        "service_address": "udp://127.0.0.1:25826",
+        "name_prefix": "collectd_",
+        "collectd_auth_file": "/etc/collectd/auth_file",
+        "collectd_security_level": "encrypt",
+        "collectd_typesdb": [
+          "/usr/share/collectd/types.db"
+        ],
+        "metrics_aggregation_interval": 60
+      },
+      "cpu": {
+        "resources": [
+          "*"
+        ],
+        "drop_original_metrics": ["cpu_usage_idle", "time_active"],
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_USAGE_IDLE",
+            "unit": "unit"
+          },
+          {
+            "name": "cpu_usage_nice",
+            "unit": "unit"
+          },
+          "time_active",
+          "cpu_usage_guest",
+          "usage_active"
+        ],
+        "totalcpu": false,
+        "metrics_collection_interval": 10,
+        "append_dimensions": {
+          "d1": "foo",
+          "d2": "bar"
+        }
+      },
+      "disk": {
+        "resources": [
+          "/",
+          "/dev",
+          "/sys"
+        ],
+        "measurement": [
+          {
+            "name": "free",
+            "rename": "DISK_FREE",
+            "unit": "unit"
+          },
+          "total",
+          "used"
+        ],
+        "metrics_collection_interval": 60,
+        "append_dimensions": {
+          "d3": "foo3",
+          "d4": "bar4"
+        },
+        "ignore_file_system_types": [
+          "sysfs",
+          "devtmpfs"
+        ]
+      },
+      "diskio": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "reads",
+          "writes",
+          "read_time",
+          "write_time",
+          "io_time"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "statsd": {
+        "service_address": ":8125",
+        "metrics_collection_interval": 10,
+        "metrics_aggregation_interval": 60,
+        "metric_separator": "_"
+      },
+      "swap": {
+        "measurement": [
+          "swap_used",
+          "swap_free",
+          "swap_used_percent"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          "mem_used",
+          "mem_cached",
+          "mem_total"
+        ],
+        "metrics_collection_interval": 1
+      },
+      "net": {
+        "resources": [
+          "eth0"
+        ],
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv",
+          "drop_in",
+          "drop_out"
+        ]
+      },
+      "netstat": {
+        "measurement": [
+          "tcp_established",
+          "tcp_syn_sent",
+          "tcp_close"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "processes": {
+        "measurement": [
+          "running",
+          "sleeping",
+          "dead"
+        ]
+      },
+      "procstat": [
+        {
+          "pid_file": "/var/run/example1.pid",
+          "measurement": [
+            "cpu_usage",
+            "memory_rss"
+          ]
+        }
+      ]
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions": [
+      [
+        "ImageId"
+      ],
+      [
+        "InstanceId",
+        "InstanceType"
+      ],
+      [
+        "d1"
+      ],
+      []
+    ],
+    "force_flush_interval": 60,
+    "credentials": {
+      "role_arn": "metrics_role_arn_value_test"
+    },
+    "endpoint_override": "https://monitoring-fips.us-west-2.amazonaws.com"
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": {
+        "service_address": "udp://127.0.0.1:25888"
+      }
+    },
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "timezone": "UTC",
+            "retention_in_days": 5
+          },
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "timezone": "UTC",
+            "auto_removal": true
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME",
+    "force_flush_interval": 60,
+    "credentials": {
+      "role_arn": "log_role_arn_value_test"
+    },
+    "endpoint_override": "https://logs-fips.us-west-2.amazonaws.com"
+  }
+}

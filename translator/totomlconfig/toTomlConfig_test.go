@@ -184,6 +184,7 @@ func TestTomlToTomlComparison(t *testing.T) {
 
 	err := json.Unmarshal([]byte(ReadFromFile(jsonFilePath)), &input)
 	assert.NoError(t, err)
+	log.Printf("unmarshaled input %v", input)
 	actualOutput := ToTomlConfig(input)
 	checkIfIdenticalToml(t, "./tomlConfigTemplate/agentToml.conf", actualOutput)
 }
@@ -193,6 +194,7 @@ func checkTomlTranslation(t *testing.T, jsonPath string, desiredTomlPath string,
 	translator.SetTargetPlatform(os)
 	var input interface{}
 	err := json.Unmarshal([]byte(ReadFromFile(jsonPath)), &input)
+	log.Printf("unmarshaled input %v", input)
 	assert.NoError(t, err)
 	actualOutput := ToTomlConfig(input)
 	checkIfIdenticalToml(t, desiredTomlPath, actualOutput)

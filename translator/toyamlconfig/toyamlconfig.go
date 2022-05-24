@@ -1,13 +1,12 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
-package totomlconfig
+package toyamlconfig
 
 import (
 	"bytes"
-	"log"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
+	"log"
+)
+
+import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/csm"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/globaltags"
@@ -53,17 +52,21 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-func ToTomlConfig(c interface{}) string {
+func ToYamlConfig(c interface{}) string {
 	//Process by the translator.
 	r := new(translate.Translator)
 	_, val := r.ApplyRule(c)
-	log.Printf("logging pre-toml config map: %v", val)
+	config := val.(map[string]interface{})
+	inputs := config["inputs"].(map[string]interface{})
+	for s := range inputs {
+		log.Printf(s)
+	}
+	log.Printf("logging agent map: %v",inputs)
 	buf := bytes.Buffer{}
 	enc := toml.NewEncoder(&buf)
 	err := enc.Encode(val)
 	if err != nil {
 		log.Panicf("Encode to a valid TOML config fails because of %v", err)
 	}
-	log.Printf("logging toml config: %s", buf.String())
 	return buf.String()
 }
