@@ -6,7 +6,6 @@ package toenvconfig
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -37,13 +36,13 @@ func checkIfTranslateSucceed(t *testing.T, jsonStr string, targetOs string, expe
 	err := json.Unmarshal([]byte(jsonStr), &input)
 	if err == nil {
 		envVarsBytes := ToEnvConfig(input)
-		fmt.Println(string(envVarsBytes))
+		t.Log(string(envVarsBytes))
 		var actualEnvVars = make(map[string]string)
 		err := json.Unmarshal(envVarsBytes, &actualEnvVars)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedEnvVars, actualEnvVars, "Expect to be equal")
 	} else {
-		fmt.Printf("Got error %v", err)
+		t.Logf("Got error %v", err)
 		t.Fail()
 	}
 }
