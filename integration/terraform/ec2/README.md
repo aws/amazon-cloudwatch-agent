@@ -73,7 +73,7 @@ for how to easily generate a new policy.
       "Action": [
         "cloudwatch:GetMetricData",
         "cloudwatch:PutMetricData",
-        "cloudwatch:ListMetrics"
+        "cloudwatch:ListMetrics",
         "ec2:DescribeVolumes",
         "ec2:DescribeTags",
         "logs:PutLogEvents",
@@ -112,12 +112,15 @@ require public access.
 
 The security group(s) that the integration tests use should include the following for ingress:
 
-| Protocol | Port | Source    | 
-|----------|------|-----------|
-| TCP      | 4566 | 0.0.0.0/0 |
-| HTTPS    | 443  | 0.0.0.0/0 |
-| HTTP     | 80   | 0.0.0.0/0 |
-| SSH      | 22   | 0.0.0.0/0 |
+| Protocol    | Port | Source    | 
+|-------------|------|-----------|
+| TCP         | 4566 | 0.0.0.0/0 |
+| HTTPS       | 443  | 0.0.0.0/0 |
+| HTTP        | 80   | 0.0.0.0/0 |
+| SSH         | 22   | 0.0.0.0/0 |
+| RDP         | 3389 | 0.0.0.0/0 |
+| WinRM-HTTP  | 5985 | 0.0.0.0/0 |
+| WinRM-HTTPS | 5986 | 0.0.0.0/0 |
 
 By default, egress allows all traffic. This is fine. 
 
@@ -163,18 +166,18 @@ repository secret for the GitHub actions workflow.
 Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) on configuring GitHub Actions
 secrets.
 
-| Key                               | Description                                                                                         |
-|-----------------------------------|-----------------------------------------------------------------------------------------------------|
-| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances               |
-| `TERRAFORM_AWS_ACCESS_KEY_ID`     | IAM user access key                                                                                 |
-| `TERRAFORM_AWS_SECRET_ACCESS_KEY` | IAM user secret key                                                                                 |
-| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                               |
-| `KEY_NAME`                        | EC2 key pair name                                                                                   |
+| Key                               | Description                                                                                             |
+|-----------------------------------|---------------------------------------------------------------------------------------------------------|
+| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                   |
+| `TERRAFORM_AWS_ACCESS_KEY_ID`     | IAM user access key                                                                                     |
+| `TERRAFORM_AWS_SECRET_ACCESS_KEY` | IAM user secret key                                                                                     |
+| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                   |
+| `KEY_NAME`                        | EC2 key pair name                                                                                       |
 | `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars) |
-| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                 |
-| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                |
-| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                               | 
-| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                           |
+| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                     |
+| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                    |
+| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                   | 
+| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                               |
 
 ### Run the integration test action on your fork
 
@@ -182,6 +185,13 @@ secrets.
 2. Go to `Actions`
 3. Select the `Run Integration Tests` action
 4. Select `Run workflow`, and choose the branch to execute integration tests on
+
+Note that based on the GitHub action workflow YAML configuration, merges to the main branch
+also trigger the integration tests. If for any reason you do not want integration tests to run
+on merge for your fork, you should go to `Actions`, select the `Run Integration Tests` action,
+click the `...` and then select `Disable workflow`. 
+See [GitHub docs](https://docs.github.com/en/actions/managing-workflow-runs/disabling-and-enabling-a-workflow)
+regarding how to turn workflows on and off.
 
 ## Local setup (Not recommended)
 
@@ -236,7 +246,7 @@ upload: ./terraform.tfstate to s3://***/integration-test/local-stack-terraform-s
 
 In this example, you should keep track of `ec2-35-87-254-148.us-west-2.compute.amazonaws.com`
 
-Start the linux integration tests:
+Start the linux integration tests (example):
 
 ```shell
 cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
