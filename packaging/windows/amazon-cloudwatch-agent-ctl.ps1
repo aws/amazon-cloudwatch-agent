@@ -364,7 +364,7 @@ Function CWAConfig() {
         Remove-Item -Path "${JSON_DIR}\*" -Force -ErrorAction SilentlyContinue
     } else {
         & cmd /c "`"$CWAProgramFiles\config-downloader.exe`" --output-dir ${JSON_DIR} --download-source ${ConfigLocation} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
-        CheckCMDResult
+        CheckCMDResult # Exit immediately if config-downloader outputs any error
     }
 
     $jsonDirContent = Get-ChildItem "${JSON_DIR}" | Measure-Object
@@ -375,11 +375,10 @@ Function CWAConfig() {
     } else {
         Write-Output "Start configuration validation..."
         & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
-        CheckCMDResult
+        CheckCMDResult  # Exit immediately if config-translator outputs any error
 
-        # Use "Continue" to continue when having an error https://www.tutorialspoint.com/how-to-use-the-erroractionpreference-variable-in-powershell
-        # However, error will not be displayed in the console since we catch the error in the new shell with cmd /c and send more UX-friendly wordings
-        # to the customers
+        # Set ErrorActionPreference as Continue to continue on error when schema-test on toml file fails and
+        # return a UX-friendly message
         $ErrorActionPreference = "Continue"
         & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --schematest --config ${TOML} 2>&1" | Out-File $CVLogFile
         if ($LASTEXITCODE -ne 0) {
@@ -453,7 +452,7 @@ Function CWOCConfig() {
         Write-Output "Successfully fetched the config and saved in ${YAML_DIR}\default.tmp"
     } else {
         & cmd /c "`"$CWAProgramFiles\config-downloader.exe`" --output-dir ${YAML_DIR} --download-source ${OtelConfigLocation} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
-        CheckCMDResult
+        CheckCMDResult # Exit immediately if config-downloader outputs any error
     }
 
     $yamlDirContent = Get-ChildItem "${YAML_DIR}" | Measure-Object
