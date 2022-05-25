@@ -1,14 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build clean
-// +build clean
-
-package main
+package ami
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -19,25 +15,18 @@ import (
 	smithyTime "github.com/aws/smithy-go/time"
 )
 
-const daysToKeep = 60
-const keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
+const (
+	Type = "ami"
+)
 
-func main() {
-	err := cleanAMI()
-	if err != nil {
-		log.Fatalf("errors cleaning %v", err)
-	}
-}
-
-func cleanAMI() error {
+func Clean(ctx context.Context, expirationDate time.Time) error {
 	log.Print("Begin to clean EC2 AMI")
 
-	expirationDate := time.Now().UTC().Add(keepDuration)
-	cxt := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
+	defaultConfig, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return err
 	}
+
 	ec2client := ec2.NewFromConfig(defaultConfig)
 
 	// Get list of ami
@@ -47,7 +36,7 @@ func cleanAMI() error {
 
 	//get instances to delete
 	describeImagesInput := ec2.DescribeImagesInput{Filters: []types.Filter{nameFilter}}
-	describeImagesOutput, err := ec2client.DescribeImages(cxt, &describeImagesInput)
+	describeImagesOutput, err := ec2client.DescribeImages(ctx, &describeImagesInput)
 	if err != nil {
 		return err
 	}
@@ -64,16 +53,13 @@ func cleanAMI() error {
 		if expirationDate.After(creationDate) {
 			log.Printf("Try to delete ami %s tags %v launch-date %s", *image.Name, image.Tags, *image.CreationDate)
 			deregisterImageInput := ec2.DeregisterImageInput{ImageId: image.ImageId}
-			_, err := ec2client.DeregisterImage(cxt, &deregisterImageInput)
+			_, err := ec2client.DeregisterImage(ctx, &deregisterImageInput)
 			if err != nil {
-				errList = append(errList, err)
+				return err
 			}
 		}
 	}
 
-	if len(errList) != 0 {
-		return fmt.Errorf("%v", errList)
-	}
-
+	log.Println("Finished cleaning EC2 AMI")
 	return nil
 }

@@ -1,0 +1,68 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Daily Resources Cleaner
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Run Every Day At Midnight
+  workflow_dispatch:
+    inputs:
+      daystokeep:
+        description: "days to keep a resource"
+        required: false
+        default: "30"
+
+env:
+  DAYS_TO_KEEP: 30
+
+jobs:
+  clean-opensource-resources:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        resource: [ ami, dedicated_host ]
+        region: [ us-west-2]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+
+      - name: Update days to keep
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "DAYS_TO_KEEP=${{ github.event.inputs.daystokeep }}" >> $GITHUB_ENV
+
+      - name: Clean old aws resources
+        run: go run ./integration/clean/main.go -keep $DAYS_TO_KEEP -clean ${{ matrix.resource }}
+        env:
+          AWS_SDK_LOAD_CONFIG: true
+
+  clean-internal-resources:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        resource: [ dedicated_host ]
+        region: [ us-east-1, us-east-2, us-west-2, eu-west-1 ]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.INTERNAL_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.INTERNAL_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+
+      - name: Clean old aws resources
+        run: go run ./integration/clean/main.go -keep 1 -clean ${{ matrix.resource }}
+        env:
+          AWS_SDK_LOAD_CONFIG: true
