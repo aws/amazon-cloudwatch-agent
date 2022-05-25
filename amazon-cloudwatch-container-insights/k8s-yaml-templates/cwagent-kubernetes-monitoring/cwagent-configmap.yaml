@@ -6,13 +6,12 @@ data:
   cwagentconfig.json: |
     {
       "agent": {
-        "debug": true,
-        "aws_sdk_log_level": "LogDebug"
+        "debug": true
       },
       "logs": {
         "metrics_collected": {
           "kubernetes": {
-            "cluster_name": "{{cluster_name}}",
+            "cluster_name": "seth-containerd-test-cluster",
             "metrics_collection_interval": 60
           }
         },
