@@ -21,6 +21,7 @@ package prometheus_scraper
 
 import (
 	"context"
+	"go.uber.org/atomic"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	"os"
@@ -28,6 +29,7 @@ import (
 	"runtime"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -97,21 +99,42 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), discovery.Name("scrape"))
 		scrapeManager           = scrape.NewManager(log.With(logger, "component", "scrape manager"), receiver)
+		//scraper       = &readyScrapeManager{}
+		//remoteStorage = remote.NewStorage(log.With(logger, "component", "remote"), prometheus.DefaultRegisterer, localStorage.StartTime, cfg.localStoragePath, time.Duration(cfg.RemoteFlushDeadline), scraper)
 	)
 	mth.SetScrapeManager(scrapeManager)
 
-	var reloaders = []func(cfg *config.Config) error{
-		// The Scrape and notifier managers need to reload before the Discovery manager as
-		// they need to read the most updated config when receiving the new targets list.
-		scrapeManager.ApplyConfig,
-		func(cfg *config.Config) error {
-			c := make(map[string]discovery.Configs)
-			for _, v := range cfg.ScrapeConfigs {
-				c[v.JobName] = v.ServiceDiscoveryConfigs
-			}
-			return discoveryManagerScrape.ApplyConfig(c)
+	//var reloaders = []func(cfg *config.Config) error{
+	//	// The Scrape and notifier managers need to reload before the Discovery manager as
+	//	// they need to read the most updated config when receiving the new targets list.
+	//	scrapeManager.ApplyConfig,
+	//	func(cfg *config.Config) error {
+	//		c := make(map[string]discovery.Configs)
+	//		for _, v := range cfg.ScrapeConfigs {
+	//			c[v.JobName] = v.ServiceDiscoveryConfigs
+	//		}
+	//		return discoveryManagerScrape.ApplyConfig(c)
+	//	},
+	//}
+
+	reloaders := []reloader{
+		{
+			// The Scrape and notifier managers need to reload before the Discovery manager as
+			// they need to read the most updated config when receiving the new targets list.
+			name:     "scrape",
+			reloader: scrapeManager.ApplyConfig,
+		}, {
+			name: "scrape_sd",
+			reloader: func(cfg *config.Config) error {
+				c := make(map[string]discovery.Configs)
+				for _, v := range cfg.ScrapeConfigs {
+					c[v.JobName] = v.ServiceDiscoveryConfigs
+				}
+				return discoveryManagerScrape.ApplyConfig(c)
+			},
 		},
 	}
+
 	prometheus.MustRegister(configSuccess)
 	prometheus.MustRegister(configSuccessTime)
 
@@ -266,7 +289,7 @@ const (
 	savedScrapeNameLabel     = "cwagent_saved_scrape_name" // just arbitrary name that end user won't override in relabel config
 )
 
-func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
+func reloadConfig(filename string, logger log.Logger, rls ...reloader) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
 
 	defer func() {
@@ -325,7 +348,7 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 
 	failed := false
 	for _, rl := range rls {
-		if err := rl(conf); err != nil {
+		if err := rl.reloader(conf); err != nil {
 			level.Error(logger).Log("msg", "Failed to apply configuration", "err", err)
 			failed = true
 		}
@@ -333,7 +356,59 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 	if failed {
 		return errors.Errorf("one or more errors occurred while applying the new configuration (--config.file=%q)", filename)
 	}
+	noStepSuqueryInterval := safePromQLNoStepSubqueryInterval{}
+	noStepSuqueryInterval.Set(conf.GlobalConfig.EvaluationInterval)
 
 	level.Info(logger).Log("msg", "Completed loading of configuration file", "filename", filename)
 	return nil
+}
+
+// ErrNotReady is returned if the underlying scrape manager is not ready yet.
+var ErrNotReady = errors.New("Scrape manager not ready")
+
+type safePromQLNoStepSubqueryInterval struct {
+	value atomic.Int64
+}
+
+func durationToInt64Millis(d time.Duration) int64 {
+	return int64(d / time.Millisecond)
+}
+
+func (i *safePromQLNoStepSubqueryInterval) Set(ev model.Duration) {
+	i.value.Store(durationToInt64Millis(time.Duration(ev)))
+}
+
+func (i *safePromQLNoStepSubqueryInterval) Get(int64) int64 {
+	return i.value.Load()
+}
+
+// ReadyScrapeManager allows a scrape manager to be retrieved. Even if it's set at a later point in time.
+type readyScrapeManager struct {
+	mtx sync.RWMutex
+	m   *scrape.Manager
+}
+
+// Set the scrape manager.
+func (rm *readyScrapeManager) Set(m *scrape.Manager) {
+	rm.mtx.Lock()
+	defer rm.mtx.Unlock()
+
+	rm.m = m
+}
+
+// Get the scrape manager. If is not ready, return an error.
+func (rm *readyScrapeManager) Get() (*scrape.Manager, error) {
+	rm.mtx.RLock()
+	defer rm.mtx.RUnlock()
+
+	if rm.m != nil {
+		return rm.m, nil
+	}
+
+	return nil, ErrNotReady
+}
+
+type reloader struct {
+	name     string
+	reloader func(*config.Config) error
 }
