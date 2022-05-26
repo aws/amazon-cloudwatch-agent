@@ -31,10 +31,12 @@ import (
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
+	_ "github.com/prometheus/prometheus/discovery/install"
 	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
+	"io/ioutil"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	"os"
@@ -96,8 +98,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), discovery.Name("scrape"))
 		scrapeManager           = scrape.NewManager(&scrape.Options{}, log.With(logger, "component", "scrape manager"), receiver)
-		//scraper       = &readyScrapeManager{}
-		//remoteStorage = remote.NewStorage(log.With(logger, "component", "remote"), prometheus.DefaultRegisterer, localStorage.StartTime, cfg.localStoragePath, time.Duration(cfg.RemoteFlushDeadline), scraper)
 	)
 	mth.SetScrapeManager(scrapeManager)
 
@@ -113,24 +113,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 			return discoveryManagerScrape.ApplyConfig(c)
 		},
 	}
-
-	//reloaders := []reloader{
-	//	{
-	//		// The Scrape and notifier managers need to reload before the Discovery manager as
-	//		// they need to read the most updated config when receiving the new targets list.
-	//		name:     "scrape",
-	//		reloader: scrapeManager.ApplyConfig,
-	//	}, {
-	//		name: "scrape_sd",
-	//		reloader: func(cfg *config.Config) error {
-	//			c := make(map[string]discovery.Configs)
-	//			for _, v := range cfg.ScrapeConfigs {
-	//				c[v.JobName] = v.ServiceDiscoveryConfigs
-	//			}
-	//			return discoveryManagerScrape.ApplyConfig(c)
-	//		},
-	//	},
-	//}
 
 	prometheus.MustRegister(configSuccess)
 	prometheus.MustRegister(configSuccessTime)
@@ -288,6 +270,9 @@ const (
 
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
+	content, _ := ioutil.ReadFile(filename)
+	text := string(content)
+	level.Debug(logger).Log("msg", "Prometheus configuration file", "value", text)
 
 	defer func() {
 		if err == nil {
