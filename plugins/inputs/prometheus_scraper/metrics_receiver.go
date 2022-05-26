@@ -6,13 +6,13 @@ package prometheus_scraper
 import (
 	"context"
 	"errors"
-	"github.com/prometheus/prometheus/pkg/exemplar"
+	"github.com/prometheus/prometheus/model/exemplar"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/value"
 	"log"
 	"math"
 
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/pkg/value"
 	"github.com/prometheus/prometheus/storage"
 )
 
@@ -59,7 +59,7 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 	return nil
 }
 
-func (ma *metricAppender) Append(ref uint64, ls labels.Labels, t int64, v float64) (uint64, error) {
+func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
 	metricName := ""
 
 	labelMap := make(map[string]string, len(ls))
@@ -74,7 +74,7 @@ func (ma *metricAppender) Append(ref uint64, ls labels.Labels, t int64, v float6
 	if metricName == "" {
 		// The error should never happen, print log here for debugging
 		log.Println("E! receive invalid prometheus metric, metricName is missing")
-		return uint64(0), errors.New("metricName of the times-series is missing")
+		return 0, errors.New("metricName of the times-series is missing")
 	}
 
 	pm := &PrometheusMetric{
@@ -93,7 +93,7 @@ func (ma *metricAppender) Append(ref uint64, ls labels.Labels, t int64, v float6
 
 	pm.tags = labelMap
 	ma.batch = append(ma.batch, pm)
-	return uint64(0), nil //return 0 to indicate caching is not supported
+	return 0, nil //return 0 to indicate caching is not supported
 }
 
 func (ma *metricAppender) Commit() error {
@@ -106,7 +106,7 @@ func (ma *metricAppender) Rollback() error {
 	return nil
 }
 
-func (ma *metricAppender) AppendExemplar(ref uint64, l labels.Labels, e exemplar.Exemplar) (uint64, error) {
+func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, l labels.Labels, e exemplar.Exemplar) (storage.SeriesRef, error) {
 	ma.Append(ref, l, e.Ts, e.Value)
 	return 0, nil
 }

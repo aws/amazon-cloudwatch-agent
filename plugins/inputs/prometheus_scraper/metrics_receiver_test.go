@@ -4,9 +4,10 @@
 package prometheus_scraper
 
 import (
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/storage"
 	"testing"
 
-	"github.com/prometheus/prometheus/pkg/labels"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +22,7 @@ func Test_metricAppender_Add_BadMetricName(t *testing.T) {
 	}
 
 	r, err := ma.Append(0, ls, ts, v)
-	assert.Equal(t, uint64(0), r)
+	assert.Equal(t, storage.SeriesRef(0), r)
 	assert.Equal(t, "metricName of the times-series is missing", err.Error())
 }
 
@@ -36,7 +37,7 @@ func Test_metricAppender_Add(t *testing.T) {
 	}
 
 	ref, err := ma.Append(0, ls, ts, v)
-	assert.Equal(t, ref, uint64(0))
+	assert.Equal(t, ref, storage.SeriesRef(0))
 	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)
 	assert.Equal(t, 1, len(mac.batch))
@@ -69,7 +70,7 @@ func Test_metricAppender_Rollback(t *testing.T) {
 	}
 
 	ref, err := ma.Append(0, ls, ts, v)
-	assert.Equal(t, ref, uint64(0))
+	assert.Equal(t, ref, storage.SeriesRef(0))
 	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)
 	assert.Equal(t, 1, len(mac.batch))
@@ -90,7 +91,7 @@ func Test_metricAppender_Commit(t *testing.T) {
 	}
 
 	ref, err := ma.Append(0, ls, ts, v)
-	assert.Equal(t, ref, uint64(0))
+	assert.Equal(t, ref, storage.SeriesRef(0))
 	assert.Nil(t, err)
 	mac, _ := ma.(*metricAppender)
 	assert.Equal(t, 1, len(mac.batch))
