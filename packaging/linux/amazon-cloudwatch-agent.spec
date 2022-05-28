@@ -106,8 +106,11 @@ if ! grep "^aoc:" /etc/group >/dev/null 2>&1; then
 fi
 
 if ! id aoc >/dev/null 2>&1; then
-    useradd -r -M aoc -d /home/aoc -g aoc >/dev/null 2>&1
-    echo "create user aoc, result: $?"
+     useradd -r -M aoc -d /home/aoc -g aoc -c "AWS OTel Collector" -s $(test -x /sbin/nologin && echo /sbin/nologin || (test -x /usr/sbin/nologin && echo /usr/sbin/nologin || (test -x /bin/false && echo /bin/false || echo /bin/sh))) >/dev/null 2>&1
+     echo "create user aoc, result: $?"
+else
+     usermod aoc -c "AWS OTel Collector" -s $(test -x /sbin/nologin && echo /sbin/nologin || (test -x /usr/sbin/nologin && echo /usr/sbin/nologin || (test -x /bin/false && echo /bin/false || echo /bin/sh))) >/dev/null 2>&1
+     echo "update user aoc, result: $?"
 fi
 
 %preun
