@@ -24,21 +24,21 @@ variable "github_repo" {
 }
 
 variable "ssh_key_name" {
-  type = string
+  type    = string
   default = "cwagent-integ-test-key"
 }
 
 variable "ssh_key_value" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "s3_bucket" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "test_name" {
-  type = string
+  type    = string
   default = "windows-2022"
 }

@@ -14,7 +14,7 @@ resource "tls_private_key" "ssh_key" {
 }
 
 resource "aws_key_pair" "aws_ssh_key" {
-  count     = var.ssh_key_name == "" ? 1 : 0
+  count      = var.ssh_key_name == "" ? 1 : 0
   key_name   = "ec2-key-pair-${random_id.testing_id.hex}"
   public_key = tls_private_key.ssh_key[0].public_key_openssh
 }
@@ -37,7 +37,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address = true
   get_password_data           = true
   tags = {
-    Name = "cwagent-integ-test-${var.test_name}-${random_id.testing_id.hex}"
+    Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
   }
 }
 
@@ -45,6 +45,8 @@ resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
   provisioner "remote-exec" {
     inline = [
+      # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
+      # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
       "echo clone and install agent",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
