@@ -8,11 +8,6 @@ variable "ec2_instance_type" {
   default = "t3a.xlarge"
 }
 
-variable "iam_instance_profile" {
-  type    = string
-  default = "CloudWatchAgentServerRole"
-}
-
 variable "ami" {
   type    = string
   default = "cloudwatch-agent-integration-test-win-2022*"
@@ -20,19 +15,30 @@ variable "ami" {
 
 variable "github_sha" {
   type    = string
-  default = "64b54f56d2d6eee016beb934b836b2d7ff8e1275"
+  default = "a029f69cd3b4164cb601cfa20f10b717c5f85957"
 }
 
 variable "github_repo" {
   type    = string
-  default = "https://github.com/khanhntd/amazon-cloudwatch-agent"
+  default = "https://github.com/aws/amazon-cloudwatch-agent"
 }
 
 variable "ssh_key_name" {
   type = string
+  default = "cwagent-integ-test-key"
+}
+
+variable "ssh_key_value" {
+  type = string
   default = ""
 }
 
-variable "install_package_source" {
-  default = "s3://test-bucket-2-3-4/amazon-cloudwatch-agent.msi" # Download MSI from S3
+variable "s3_bucket" {
+  type = string
+  default = ""
+}
+
+variable "test_name" {
+  type = string
+  default = "windows-2022"
 }

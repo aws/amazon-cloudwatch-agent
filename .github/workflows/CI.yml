@@ -508,13 +508,11 @@ jobs:
             cd integration/terraform/ec2/win
             terraform init
             if terraform apply --auto-approve \
-            -var="ssh_key=${PRIVATE_KEY}" -var="key_name=${KEY_NAME}" \
             -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
             -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
-            -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
-            -var="iam_instance_profile=${IAM_ROLE}" \
-            -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
-            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+            -var="test_name=${{ matrix.arrays.os }}" \
+            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then 
+              terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
