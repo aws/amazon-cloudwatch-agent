@@ -127,10 +127,11 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	metricChan, shutdownChan, aggregator := testPreparation()
 	// verify the remaining metrics can be read after shutdown
 	// the metrics should be available immediately after the shutdown even before aggregation period
-	aggregationInterval := 2 * time.Second
+	timestamp := time.Now()
+	aggregationInterval := 1 * time.Second
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: aggregationInterval.String()}
 	fields := map[string]interface{}{"value": 1}
-	timestamp := time.Now()
+	
 	m, _ := metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
 
@@ -138,7 +139,6 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	time.Sleep(time.Second * 2)
 
 	close(shutdownChan)
-	wg.Wait()
 
 	assertMetricContent(t, metricChan, 1*time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
 	assertNoMetricsInChan(t, metricChan)
@@ -148,7 +148,7 @@ func TestDurationAggregator_aggregating(t *testing.T) {
 	aggregationInterval := time.Second
 	metricChan := make(chan telegraf.Metric, metricChanBufferSize)
 	shutdownChan := make(chan struct{})
-	durationAgg := &durationAggregator{
+	durationAgg := &newDurationAggregator{
 		aggregationDuration: aggregationInterval,
 		metricChan:          metricChan,
 		shutdownChan:        shutdownChan,
@@ -183,7 +183,7 @@ func TestDurationAggregator_aggregating(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	close(shutdownChan)
-	wg.Wait()
+
 	assert.Empty(t, durationAgg.aggregationChan)
 	assert.Empty(t, durationAgg.metricMap)
 	assert.Equal(t, 4, len(durationAgg.metricChan))
