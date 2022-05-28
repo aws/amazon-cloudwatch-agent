@@ -1,9 +1,9 @@
-resource "aws_iam_instance_profile" "test_profile" {
-  name = "test_profile"
-  role = aws_iam_role.ecs_task_role.name
+resource "aws_iam_instance_profile" "cwagent_instance_profile" {
+  name = "cwagent-instance-profile-${random_id.testing_id.hex}"
+  role = aws_iam_role.cwagent_role.name
 }
 
-resource "aws_iam_role" "ecs_task_role" {
+resource "aws_iam_role" "cwagent_role" {
   name = "cwagent-integ-test-task-role-${random_id.testing_id.hex}"
 
   assume_role_policy = <<EOF
@@ -50,12 +50,12 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
   }
 }
 
-resource "aws_iam_policy" "service_discovery_policy" {
-  name   = "service_discovery_policy-${random_id.testing_id.hex}"
+resource "aws_iam_policy" "cwagent_server_policy" {
+  name   = "cwagent-server-policy-${random_id.testing_id.hex}"
   policy = data.aws_iam_policy_document.user-managed-policy-document.json
 }
 
-resource "aws_iam_role_policy_attachment" "service_discovery_task" {
-  role       = aws_iam_role.ecs_task_role.name
-  policy_arn = aws_iam_policy.service_discovery_policy.arn
+resource "aws_iam_role_policy_attachment" "cwagent_server_policy_attachment" {
+  role       = aws_iam_role.cwagent_role.name
+  policy_arn = aws_iam_policy.cwagent_server_policy.arn
 }

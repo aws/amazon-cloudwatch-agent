@@ -20,12 +20,17 @@ variable "ami" {
 
 variable "github_sha" {
   type    = string
-  default = "89d1912284dd8e60c5cd10fdddc8e12278d2eecb"
+  default = "64b54f56d2d6eee016beb934b836b2d7ff8e1275"
 }
 
 variable "github_repo" {
   type    = string
   default = "https://github.com/khanhntd/amazon-cloudwatch-agent"
+}
+
+variable "ssh_key_name" {
+  type = string
+  default = ""
 }
 
 variable "install_package_source" {

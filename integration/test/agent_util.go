@@ -95,6 +95,17 @@ func RunShellScript(path string, args ...string) {
 	}
 }
 
+func RunPowerShellScript(path string, args ...string) {
+	ps, _ := exec.LookPath("powershell.exe")
+
+	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", path}, args...)
+	out, err := exec.Command(ps, bashArgs...).Output()
+
+	if err != nil {
+		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
+	}
+}
+
 func RunCommand(cmd string) {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 
