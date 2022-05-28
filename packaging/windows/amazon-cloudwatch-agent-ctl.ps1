@@ -452,7 +452,10 @@ Function CWOCConfig() {
         Write-Output "Successfully fetched the config and saved in ${YAML_DIR}\default.tmp"
     } else {
         & cmd /c "`"$CWAProgramFiles\config-downloader.exe`" --output-dir ${YAML_DIR} --download-source ${OtelConfigLocation} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
-        CheckCMDResult # Exit immediately if config-downloader outputs any error
+        # Use return instead of exit since CWAgent and ADOT Collector should be two independent agents as much as possible
+        if ($LASTEXITCODE -ne 0) {
+           return
+        }
     }
 
     $yamlDirContent = Get-ChildItem "${YAML_DIR}" | Measure-Object
