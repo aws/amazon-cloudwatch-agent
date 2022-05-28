@@ -1,3 +1,8 @@
+resource "aws_iam_instance_profile" "test_profile" {
+  name = "test_profile"
+  role = aws_iam_role.ecs_task_role.name
+}
+
 resource "aws_iam_role" "ecs_task_role" {
   name = "cwagent-integ-test-task-role-${random_id.testing_id.hex}"
 

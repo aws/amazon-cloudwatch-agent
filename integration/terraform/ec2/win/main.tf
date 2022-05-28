@@ -14,7 +14,7 @@ resource "tls_private_key" "ssh_key" {
 
 resource "aws_key_pair" "aws_ssh_key" {
   key_name   = "ec2-key-pair-${random_id.testing_id.hex}"
-  public_key = "${tls_private_key.ssh_key.public_key_openssh}"
+  public_key = tls_private_key.ssh_key.public_key_openssh
 }
 
 #####################################################################
@@ -22,16 +22,21 @@ resource "aws_key_pair" "aws_ssh_key" {
 #####################################################################
 
 resource "aws_instance" "integration-test" {
-  ami                    = data.aws_ami.latest.id
-  instance_type          = var.ec2_instance_type
-  key_name               = aws_key_pair.aws_ssh_key.key_name
-  iam_instance_profile   = aws_iam_role.ecs_task_role.name
-  vpc_security_group_ids = [aws_security_group.ecs_security_group.id]
-  get_password_data = true
+  ami                         = data.aws_ami.latest.id
+  instance_type               = var.ec2_instance_type
+  key_name                    = aws_key_pair.aws_ssh_key.key_name
+  iam_instance_profile        = aws_iam_instance_profile.test_profile.name
+  vpc_security_group_ids      = [aws_security_group.ecs_security_group.id]
+  associate_public_ip_address = true
+  get_password_data           = true
+  tags = {
+    Name = "cwagent-integ-test-${random_id.testing_id.hex}"
+  }
+}
 
+resource "null_resource" "setup_sample_app_and_mock_server" {
+  depends_on = [aws_instance.integration-test]
   provisioner "remote-exec" {
-    # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
-    # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
     inline = [
       "echo clone and install agent",
       "git clone ${var.github_repo}",
@@ -39,23 +44,21 @@ resource "aws_instance" "integration-test" {
       "git reset --hard ${var.github_sha}",
       "aws s3 cp ${var.install_package_source} .",
       "msiexec /i amazon-cloudwatch-agent.msi",
+      "echo run tests with the tag integration, one at a time, and verbose",
+      "cd ~/amazon-cloudwatch-agent",
+      "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
     ]
 
     connection {
-      type     = "ssh"
-      user     = "Administrator"
-      private_key = aws_key_pair.aws_ssh_key.key_name
-      password = rsadecrypt(self.password_data, aws_key_pair.aws_ssh_key.key_name)
-      host     = self.public_dns
+      type            = "ssh"
+      user            = "Administrator"
+      private_key     = tls_private_key.ssh_key.private_key_pem
+      password        = rsadecrypt(aws_instance.integration-test.password_data, tls_private_key.ssh_key.private_key_pem)
+      host            = aws_instance.integration-test.public_ip
       target_platform = "windows"
     }
   }
-
-  tags = {
-    Name = "cwagent-integ-test-${random_id.testing_id.hex}"
-  }
 }
-
 
 data "aws_ami" "latest" {
   most_recent = true
