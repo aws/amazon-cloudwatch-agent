@@ -331,7 +331,7 @@ Function ConfigAll() {
     )
 
     if ($OtelConfigLocation) {
-        Write-Output "****** processing cwagent-otel-collector ******"
+        Write-Output "****** Processing cwagent-otel-collector ******"
         CWOCConfig -multi_config ${multi_config}
         Write-Output ""
     }
@@ -339,7 +339,7 @@ Function ConfigAll() {
     # cwa_config is called after cwoc_config becuase that whether applying
     # default cwa config depends on the existence of cwoc config
     if ($ConfigLocation) {
-        Write-Output "****** processing amazon-cloudwatch-agent ******"
+        Write-Output "****** Processing amazon-cloudwatch-agent ******"
         CWAConfig -multi_config ${multi_config}
     }
 }

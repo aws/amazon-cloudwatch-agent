@@ -33,7 +33,7 @@ resource "aws_instance" "cwagent" {
   instance_type               = var.ec2_instance_type
   key_name                    = local.ssh_key_name
   iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids      = [aws_security_group.ecs_security_group.id]
+  vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
   get_password_data           = true
   tags = {
@@ -52,6 +52,7 @@ resource "null_resource" "integration_test" {
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.github_sha}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
+      "msiexec /i amazon-cloudwatch-agent.msi",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
     ]

@@ -9,7 +9,7 @@ data "aws_subnets" "default" {
   }
 }
 
-resource "aws_security_group" "ecs_security_group" {
+resource "aws_security_group" "ec2_security_group" {
   name = "cwagent-sg-${random_id.testing_id.hex}"
 
   egress {

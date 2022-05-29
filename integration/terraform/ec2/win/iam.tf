@@ -13,7 +13,7 @@ resource "aws_iam_role" "cwagent_role" {
    {
      "Action": "sts:AssumeRole",
      "Principal": {
-       "Service": "ecs-tasks.amazonaws.com"
+       "Service": "ec2.amazonaws.com"
      },
      "Effect": "Allow",
      "Sid": ""
