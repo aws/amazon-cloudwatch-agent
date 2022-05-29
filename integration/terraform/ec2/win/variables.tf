@@ -25,7 +25,7 @@ variable "github_repo" {
 
 variable "ssh_key_name" {
   type    = string
-  default = "cwagent-integ-test-key"
+  default = ""
 }
 
 variable "ssh_key_value" {

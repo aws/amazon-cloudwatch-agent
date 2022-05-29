@@ -1,7 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
+//go:build (linux || windows) && integration
+// +build linux windows
 // +build integration
 
 package sanity

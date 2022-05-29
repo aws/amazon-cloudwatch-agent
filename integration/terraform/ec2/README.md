@@ -1,11 +1,9 @@
 Running integration tests
 =========================
 
-# Run tests in your AWS account
+# 1. Required setup
 
-## Required setup
-
-### Set up AWS credentials for Terraform
+### 1.1 Set up AWS credentials for Terraform
 
 This all assumes that you are creating resources in the `us-west-2` region, as that is currently the only region that
 supports the integration test AMIs.
@@ -103,12 +101,12 @@ for how to easily generate a new policy.
 }
 ```
 
-### Create a test S3 bucket
+### 1.2 Create a test S3 bucket
 
 See [docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html). The bucket does **NOT**
 require public access.
 
-### Configure security group(s)
+### 1.3 Configure security group(s)
 
 The security group(s) that the integration tests use should include the following for ingress:
 
@@ -118,13 +116,11 @@ The security group(s) that the integration tests use should include the followin
 | HTTPS       | 443  | 0.0.0.0/0 |
 | HTTP        | 80   | 0.0.0.0/0 |
 | SSH         | 22   | 0.0.0.0/0 |
-| RDP         | 3389 | 0.0.0.0/0 |
-| WinRM-HTTP  | 5985 | 0.0.0.0/0 |
-| WinRM-HTTPS | 5986 | 0.0.0.0/0 |
+| RDP         | 3389 | 0.0.0.0/0 |Ω
 
 By default, egress allows all traffic. This is fine. 
 
-### Create an EC2 key pair
+### 1.4 Create an EC2 key pair
 
 See [docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-keypairs.html)
 on creating the key pair.
@@ -133,7 +129,7 @@ on creating the key pair.
 **Reminder: the EC2 key pair must be in the same region as the instances, so this assumes that the key pair is created
 in the `us-west-2` region.**
 
-## Required parameters for Terraform to have handy
+# 2. Required parameters for Terraform to have handy
 
 1. GitHub repo (ex: https://github.com/aws/amazon-cloudwatch-agent.git)
 2. GitHub SHA: `git checkout your-branch && git rev-parse --verify HEAD`
@@ -143,7 +139,8 @@ in the `us-west-2` region.**
 6. IAM role **name**
     1. If you have a role ARN like `arn:aws:iam::12345:role/FooBarBaz`, then the value you want just `FooBarBaz`
 
-## GitHub actions on your personal fork (Preferred)
+# 3. Run Integration Test's Method
+## 3.1 GitHub actions on your personal fork (Preferred)
 
 The integration test GitHub actions workflow installs terraform, builds the agent and uploads the installable packages
 to the configured S3 bucket, so all you need to do is configure the secrets in the GitHub repo in order to allow the
@@ -193,13 +190,13 @@ click the `...` and then select `Disable workflow`.
 See [GitHub docs](https://docs.github.com/en/actions/managing-workflow-runs/disabling-and-enabling-a-workflow)
 regarding how to turn workflows on and off.
 
-## Local setup (Not recommended)
+## 3.2 Local setup (Not recommended)
 
-### Install terraform
+### 3.2.1 Install terraform
 
 Install `terraform` on your local machine ([download](https://www.terraform.io/downloads)).
 
-### Build and upload agent artifacts
+### 3.2.2 Build and upload agent artifacts
 
 1. Run `make release` to test, build, and generate agent artifacts that can be installed and tested.
     1. If targeting a specific OS, you can run a more specific make command. `make build && make package-deb` would
@@ -208,7 +205,7 @@ Install `terraform` on your local machine ([download](https://www.terraform.io/d
    bucket: `aws s3 cp ./build/bin s3://{your bucket name}/integration-test/binary/{commit SHA} --recursive`
     2. Substitute out the values wrapped in `{}` with what you have for testing
 
-### Start localstack
+### 3.2.3 Start localstack
 
 Navigate to the localstack terraform directory, initialize Terraform and apply the tf plan:
 
@@ -246,7 +243,7 @@ upload: ./terraform.tfstate to s3://***/integration-test/local-stack-terraform-s
 
 In this example, you should keep track of `ec2-35-87-254-148.us-west-2.compute.amazonaws.com`
 
-Start the linux integration tests (example):
+### 3.2.4 Start the linux integration tests (example):
 
 ```shell
 cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
@@ -295,6 +292,48 @@ aws_instance.integration-test: Creation complete after 5m35s [id=i-0f7f77a62c93d
 Apply complete! Resources: 1 added, 0 changed, 0 destroyed.   
 ```
 
+### 3.2.5 Start the Windows integration tests (example): 
+```shell
+cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
+terraform init
+terraform apply --auto-approve \
+         -var="github_repo=${GH repo you want to use. Default: https://github.com/aws/amazon-cloudwatch-agent.git}" \
+         -var="github_sha=${Commit sha you want to use. Default: a029f69cd3b4164cb601cfa20f10b717c5f85957}" \
+         -var="s3_bucket=${Name of your s3 bucket created}" \
+         -var="ami=${AMI for test you want to use. Default: cloudwatch-agent-integration-test-win-2022*}" \
+         -var="test_name=${What you want to call the ec2 instance name. Default: windows-2022}" \
+         -var="ssh_key_name=${Name of key pair your created}" \
+         -var="ssh_key_value=${Your key that you downloaded}"
+```
+
+For these parameters, you are **not required to input them**:
+* github_repo
+* github_sha
+* ssh_key_name
+* ssh_key_value
+* ami
+* test_name
+
+After running the tests, you should see the following results as a success integration test:
+```
+null_resource.integration_test: Still creating... [1m30s elapsed]
+null_resource.integration_test: Still creating... [1m40s elapsed]
+null_resource.integration_test: Still creating... [1m50s elapsed]
+null_resource.integration_test: Still creating... [2m0s elapsed]
+null_resource.integration_test (remote-exec): === RUN   TestAgentStatus
+null_resource.integration_test: Still creating... [2m10s elapsed]
+null_resource.integration_test: Still creating... [2m20s elapsed]
+null_resource.integration_test: Still creating... [2m30s elapsed]
+null_resource.integration_test: Still creating... [2m40s elapsed]
+null_resource.integration_test: Still creating... [2m50s elapsed]
+null_resource.integration_test (remote-exec): --- PASS: TestAgentStatus (44.84s)
+null_resource.integration_test (remote-exec): PASS
+null_resource.integration_test (remote-exec): ok        github.com/aws/amazon-cloudwatch-agent/integration/test/sanity  45.203s
+null_resource.integration_test: Creation complete after 2m52s [id=8591283884920986776]
+```
+
+### 3.2.6 Destroy resources created by Terraform
+
 After running tests, tear down everything with Terraform:
 
 ```shell
@@ -304,13 +343,13 @@ cd ../localstack
 terraform destroy --auto-approve
 ```
 
-# How are AMIs built?
+# 4. How are AMIs built?
 
 1. AMI builder pipeline builds the ami
 2. The pipeline installs required packages and updates ami software
 3. This process generates a new ami we can then use for testing
 
-## Instance software assumptions
+## 4.1 Instance software assumptions
 
 1. docker
     1. starts on start up
