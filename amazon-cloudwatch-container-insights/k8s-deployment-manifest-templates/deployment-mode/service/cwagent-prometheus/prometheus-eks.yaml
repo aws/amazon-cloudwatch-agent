@@ -50,8 +50,8 @@ data:
                   ]
                 },
                 {
-                  "source_labels": ["Service", "backend"],
-                  "label_matcher": ".*haproxy-ingress-.*metrics;(httpback-shared-backend|httpback-default-backend|httpsback-shared-backend|_default_backend)",
+                  "source_labels": ["Service"],
+                  "label_matcher": ".*haproxy-ingress-.*metrics",
                   "dimensions": [["Service","Namespace","ClusterName","backend","code"]],
                   "metric_selectors": [
                     "^haproxy_backend_http_responses_total$"
