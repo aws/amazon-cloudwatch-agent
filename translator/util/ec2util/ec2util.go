@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"errors"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -24,20 +25,22 @@ type ec2Util struct {
 	AccountID  string
 }
 
-const allowedRetries = 5
-
-var e *ec2Util
-var once sync.Once
+var (
+	ec2UtilInstance *ec2Util
+	once sync.Once
+)
+const allowedNetworkRetries = 5
 
 func GetEC2UtilSingleton() *ec2Util {
 	once.Do(func() {
-		e = initEC2UtilSingleton()
+		ec2UtilInstance = initEC2UtilSingleton()
 	})
-	return e
+	return ec2UtilInstance
 }
 
 func initEC2UtilSingleton() (newInstance *ec2Util) {
 	newInstance = &ec2Util{Region: "", PrivateIP: ""}
+
 	if context.CurrentContext().Mode() == config.ModeOnPrem {
 		return
 	}
@@ -46,7 +49,7 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 	// and doesn't require connectivity with the EC2 instance metadata service, while still
 	// gracefully waiting for network access on EC2 instances.
 	networkUp := false
-	for retry := 0; !networkUp && retry < allowedRetries; retry++ {
+	for retry := 0; !networkUp && retry < allowedNetworkRetries; retry++ {
 		ifs, err := net.Interfaces()
 
 		if err != nil {
@@ -67,46 +70,54 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		log.Println("W! [EC2] Sleep until network is up")
 		time.Sleep(1 * time.Second)
 	}
+
 	if !networkUp {
 		log.Println("E! [EC2] No available network interface")
 	}
+	
+	err := newInstance.getEC2MetadataFromIMDS()
 
-	ses, err := session.NewSession()
 	if err != nil {
-		log.Println("E! [EC2] getting new session info: ", err)
-		return
+		log.Println("E! [EC2] Cannot get EC2 Metadata from IMDS:", err)
 	}
+
+	return 
+}
+
+func (e *ec2Util) getEC2MetadataFromIMDS() error {
+	ses, err := session.NewSession()
+	
+	if err != nil {
+		return err
+	}
+
+	// Avoid setting smaller retry than the default retry (4) since LXC containers may need more than
+	// 4 minutes to connect to IMDSv2 even though the HopLimit is 1 based on one of own manual test.
+	// More information on the manual test: https://github.com/aws/amazon-cloudwatch-agent/issues/463
 	md := ec2metadata.New(ses)
 
 	if !md.Available() {
-		log.Println("E! ec2metadata is not available")
-		return
+		return errors.New("EC2 metadata is not available. Please ")
 	}
-
-	if info, err := md.GetMetadata("instance-id"); err == nil {
-		newInstance.InstanceID = info
+	
+	// Only need the API to scrap HostName
+	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
+	if hostname, err := md.GetMetadata("hostname"); err == nil {
+		e.Hostname = hostname
 	} else {
-		log.Println("E! getting instance-id from EC2 metadata fail: ", err)
+		log.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
 	}
 
-	if info, err := md.GetMetadata("hostname"); err == nil {
-		newInstance.Hostname = info
+	// Only need the API to scrap Region, AccountId, PrivateIp, Instance ID
+	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
+	if instanceIdentityDocument, err := md.GetInstanceIdentityDocument(); err == nil {
+		e.Region = instanceIdentityDocument.Region
+		e.AccountID = instanceIdentityDocument.AccountID
+		e.PrivateIP = instanceIdentityDocument.PrivateIP
+		e.InstanceID = instanceIdentityDocument.InstanceID
 	} else {
-		log.Println("E! getting hostname from EC2 metadata fail: ", err)
+		log.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", err)
 	}
 
-	if info, err := md.GetMetadata("local-ipv4"); err == nil {
-		newInstance.PrivateIP = info
-	} else {
-		log.Println("E! getting local-ipv4 from EC2 metadata fail: ", err)
-	}
-
-	if info, err := md.GetInstanceIdentityDocument(); err == nil {
-		newInstance.Region = info.Region
-		newInstance.AccountID = info.AccountID
-	} else {
-		log.Println("E! fetching identity document from EC2 metadata fail: ", err)
-	}
-
-	return
+	return nil
 }

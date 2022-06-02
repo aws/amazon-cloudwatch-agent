@@ -11,7 +11,7 @@ WORKDIR /go/src/github.com/aws/amazon-cloudwatch-agent/
 
 ARG GO111MODULE="on"
 ENV GO111MODULE=${GO111MODULE}
-
+ENV GOPROXY=direct
 COPY . /go/src/github.com/aws/amazon-cloudwatch-agent/
 RUN make build-for-docker-${TARGETARCH}
 

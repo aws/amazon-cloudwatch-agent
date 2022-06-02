@@ -5,12 +5,12 @@ package ec2tagger
 
 import (
 	"errors"
-	"testing"
-	"time"
-
+	"fmt"
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/influxdata/telegraf"
+	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -45,20 +45,28 @@ type mockEC2Client struct {
 }
 
 // construct the return results for the mocked DescribeTags api
-var tagKey1 = "tagKey1"
-var tagVal1 = "tagVal1"
-var tagDes1 = ec2.TagDescription{Key: &tagKey1, Value: &tagVal1}
+var (
+	tagKey1 = "tagKey1"
+	tagVal1 = "tagVal1"
+	tagDes1 = ec2.TagDescription{Key: &tagKey1, Value: &tagVal1}
+)
 
-var tagKey2 = "tagKey2"
-var tagVal2 = "tagVal2"
-var tagDes2 = ec2.TagDescription{Key: &tagKey2, Value: &tagVal2}
+var (
+	tagKey2 = "tagKey2"
+	tagVal2 = "tagVal2"
+	tagDes2 = ec2.TagDescription{Key: &tagKey2, Value: &tagVal2}
+)
 
-var tagKey3 = "aws:autoscaling:groupName"
-var tagVal3 = "ASG-1"
-var tagDes3 = ec2.TagDescription{Key: &tagKey3, Value: &tagVal3}
+var (
+	tagKey3 = "aws:autoscaling:groupName"
+	tagVal3 = "ASG-1"
+	tagDes3 = ec2.TagDescription{Key: &tagKey3, Value: &tagVal3}
+)
 
-var updatedTagVal2 = "updated-tagVal2"
-var updatedTagDes2 = ec2.TagDescription{Key: &tagKey2, Value: &updatedTagVal2}
+var (
+	updatedTagVal2 = "updated-tagVal2"
+	updatedTagDes2 = ec2.TagDescription{Key: &tagKey2, Value: &updatedTagVal2}
+)
 
 func (m *mockEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
 	//partial tags returned when the DescribeTags api are called initially
@@ -109,29 +117,35 @@ func (m *mockEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsO
 }
 
 // construct the return results for the mocked DescribeTags api
-var device1 = "/dev/xvdc"
-var volumeId1 = "vol-0303a1cc896c42d28"
-var volumeAttachment1 = ec2.VolumeAttachment{Device: &device1, VolumeId: &volumeId1}
-var availabilityZone = "us-east-1a"
-var volume1 = ec2.Volume{
-	Attachments:      []*ec2.VolumeAttachment{&volumeAttachment1},
-	AvailabilityZone: &availabilityZone,
-}
+var (
+	device1           = "/dev/xvdc"
+	volumeId1         = "vol-0303a1cc896c42d28"
+	volumeAttachment1 = ec2.VolumeAttachment{Device: &device1, VolumeId: &volumeId1}
+	availabilityZone  = "us-east-1a"
+	volume1           = ec2.Volume{
+		Attachments:      []*ec2.VolumeAttachment{&volumeAttachment1},
+		AvailabilityZone: &availabilityZone,
+	}
+)
 
-var device2 = "/dev/xvdf"
-var volumeId2 = "vol-0c241693efb58734a"
-var volumeAttachment2 = ec2.VolumeAttachment{Device: &device2, VolumeId: &volumeId2}
-var volume2 = ec2.Volume{
-	Attachments:      []*ec2.VolumeAttachment{&volumeAttachment2},
-	AvailabilityZone: &availabilityZone,
-}
+var (
+	device2           = "/dev/xvdf"
+	volumeId2         = "vol-0c241693efb58734a"
+	volumeAttachment2 = ec2.VolumeAttachment{Device: &device2, VolumeId: &volumeId2}
+	volume2           = ec2.Volume{
+		Attachments:      []*ec2.VolumeAttachment{&volumeAttachment2},
+		AvailabilityZone: &availabilityZone,
+	}
+)
 
-var volumeId2Updated = "vol-0459607897eaa8148"
-var volumeAttachment2Updated = ec2.VolumeAttachment{Device: &device2, VolumeId: &volumeId2Updated}
-var volume2Updated = ec2.Volume{
-	Attachments:      []*ec2.VolumeAttachment{&volumeAttachment2Updated},
-	AvailabilityZone: &availabilityZone,
-}
+var (
+	volumeId2Updated         = "vol-0459607897eaa8148"
+	volumeAttachment2Updated = ec2.VolumeAttachment{Device: &device2, VolumeId: &volumeId2Updated}
+	volume2Updated           = ec2.Volume{
+		Attachments:      []*ec2.VolumeAttachment{&volumeAttachment2Updated},
+		AvailabilityZone: &availabilityZone,
+	}
+)
 
 func (m *mockEC2Client) DescribeVolumes(*ec2.DescribeVolumesInput) (*ec2.DescribeVolumesOutput, error) {
 	//volume1 is the initial disk assigned to an ec2 instance when started
@@ -181,8 +195,7 @@ func (m *mockEC2Client) DescribeVolumes(*ec2.DescribeVolumesInput) (*ec2.Describ
 }
 
 type mockEC2Metadata struct {
-	ec2Metadata
-	IsAvailable              bool
+	EC2MetadataAPI
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
 }
 
@@ -191,10 +204,6 @@ var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 	Region:       "us-east-1",
 	InstanceType: "m5ad.large",
 	ImageID:      "ami-09edd32d9b0990d49",
-}
-
-func (m *mockEC2Metadata) Available() bool {
-	return m.IsAvailable
 }
 
 func (m *mockEC2Metadata) GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error) {
@@ -206,43 +215,35 @@ func (m *mockEC2Metadata) GetInstanceIdentityDocument() (ec2metadata.EC2Instance
 
 func TestInitFailWithNoMetadata(t *testing.T) {
 	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              false,
+
+	metadataClient := &mockEC2Metadata{
 		InstanceIdentityDocument: nil,
+	}
+	ec2MetadataProvider := func() EC2MetadataAPI {
+		return metadataClient
 	}
 
 	tagger := Tagger{
-		Log:         testutil.Logger{},
-		ec2metadata: mockMetadata,
+		Log:                 testutil.Logger{},
+		ec2MetadataProvider: ec2MetadataProvider,
 	}
 	err := tagger.Init()
-	assert.NotNil(err)
-	assert.Contains(err.Error(), "ec2tagger: Unable to retrieve InstanceId. This plugin must only be used on an EC2 instance")
-}
 
-func TestInitFailWithNoInstanceIdentityDocument(t *testing.T) {
-	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              true,
-		InstanceIdentityDocument: nil,
-	}
-
-	tagger := Tagger{
-		Log:         testutil.Logger{},
-		ec2metadata: mockMetadata,
-	}
-	err := tagger.Init()
 	assert.NotNil(err)
-	assert.Contains(err.Error(), "ec2tagger: Unable to retrieve InstanceId :")
+	assert.Contains(err.Error(), fmt.Sprintf(metadataCheckStrInstanceDocumentFailure, errors.New("No instance identity document")))
 }
 
 //run Init() and check all tags/volumes are retrieved and saved
 func TestInitSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              true,
+
+	metadataClient := &mockEC2Metadata{
 		InstanceIdentityDocument: mockedInstanceIdentityDoc,
 	}
+	ec2MetadataProvider := func() EC2MetadataAPI {
+		return metadataClient
+	}
+
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -263,8 +264,8 @@ func TestInitSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 		RefreshIntervalSeconds: internal.Duration{Duration: 0},
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
-		ec2metadata:            mockMetadata,
-		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+		ec2MetadataProvider:    ec2MetadataProvider,
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
 		EC2InstanceTagKeys:     []string{"tagKey1", "tagKey2", "AutoScalingGroupName"},
 		EBSDeviceKeys:          []string{"/dev/xvdc", "/dev/xvdf"},
 	}
@@ -291,9 +292,11 @@ func TestInitSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 //run Init() and check all tags/volumes are retrieved and saved and then updated
 func TestInitSuccessWithTagsVolumesUpdate(t *testing.T) {
 	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              true,
+	metadataClient := &mockEC2Metadata{
 		InstanceIdentityDocument: mockedInstanceIdentityDoc,
+	}
+	ec2MetadataProvider := func() EC2MetadataAPI {
+		return metadataClient
 	}
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
@@ -316,8 +319,8 @@ func TestInitSuccessWithTagsVolumesUpdate(t *testing.T) {
 		RefreshIntervalSeconds: internal.Duration{Duration: 20 * time.Millisecond},
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
-		ec2metadata:            mockMetadata,
-		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+		ec2MetadataProvider:    ec2MetadataProvider,
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
 		EC2InstanceTagKeys:     []string{"tagKey1", "tagKey2", "AutoScalingGroupName"},
 		EBSDeviceKeys:          []string{"/dev/xvdc", "/dev/xvdf"},
 	}
@@ -362,10 +365,14 @@ func TestInitSuccessWithTagsVolumesUpdate(t *testing.T) {
 //check there is no attempt to fetch all tags/volumes
 func TestInitSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              true,
+
+	metadataClient := &mockEC2Metadata{
 		InstanceIdentityDocument: mockedInstanceIdentityDoc,
 	}
+	ec2MetadataProvider := func() EC2MetadataAPI {
+		return metadataClient
+	}
+
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -386,8 +393,8 @@ func TestInitSuccessWithWildcardTagVolumeKey(t *testing.T) {
 		RefreshIntervalSeconds: internal.Duration{Duration: 0},
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
-		ec2metadata:            mockMetadata,
-		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+		ec2MetadataProvider:    ec2MetadataProvider,
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
 		EC2InstanceTagKeys:     []string{"*"},
 		EBSDeviceKeys:          []string{"*"},
 	}
@@ -412,10 +419,14 @@ func TestInitSuccessWithWildcardTagVolumeKey(t *testing.T) {
 //run Init() and then Apply() and check the output metrics contain expected tags
 func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              true,
+
+	metadataClient := &mockEC2Metadata{
 		InstanceIdentityDocument: mockedInstanceIdentityDoc,
 	}
+	ec2MetadataProvider := func() EC2MetadataAPI {
+		return metadataClient
+	}
+
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -437,8 +448,8 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 		RefreshIntervalSeconds: internal.Duration{Duration: 20 * time.Millisecond},
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
-		ec2metadata:            mockMetadata,
-		EC2MetadataTags:        []string{"InstanceId", "InstanceType"},
+		ec2MetadataProvider:    ec2MetadataProvider,
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyInstaneType},
 		EC2InstanceTagKeys:     []string{"tagKey1", "tagKey2", "AutoScalingGroupName"},
 		EBSDeviceKeys:          []string{"/dev/xvdc", "/dev/xvdf"},
 		DiskDeviceTagKey:       "device",
@@ -594,10 +605,14 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 // Test metrics are dropped before the initial retrieval is done
 func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              true,
+
+	metadataClient := &mockEC2Metadata{
 		InstanceIdentityDocument: mockedInstanceIdentityDoc,
 	}
+	ec2MetadataProvider := func() EC2MetadataAPI {
+		return metadataClient
+	}
+
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -618,8 +633,8 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 		RefreshIntervalSeconds: internal.Duration{Duration: 0},
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
-		ec2metadata:            mockMetadata,
-		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+		ec2MetadataProvider:    ec2MetadataProvider,
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
 		EC2InstanceTagKeys:     []string{"*"},
 		EBSDeviceKeys:          []string{"*"},
 	}
@@ -688,10 +703,14 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 // Test ec2tagger init does not block for a long time
 func TestTaggerInitDoesNotBlock(t *testing.T) {
 	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              true,
+
+	metadataClient := &mockEC2Metadata{
 		InstanceIdentityDocument: mockedInstanceIdentityDoc,
 	}
+	ec2MetadataProvider := func() EC2MetadataAPI {
+		return metadataClient
+	}
+
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -712,8 +731,8 @@ func TestTaggerInitDoesNotBlock(t *testing.T) {
 		RefreshIntervalSeconds: internal.Duration{Duration: 0},
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
-		ec2metadata:            mockMetadata,
-		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+		ec2MetadataProvider:    ec2MetadataProvider,
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
 		EC2InstanceTagKeys:     []string{"*"},
 		EBSDeviceKeys:          []string{"*"},
 	}
@@ -737,15 +756,19 @@ func TestTaggerInitDoesNotBlock(t *testing.T) {
 // Test ec2tagger init does not block for a long time
 func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 	assert := assert.New(t)
-	mockMetadata := &mockEC2Metadata{
-		IsAvailable:              true,
+
+	metadataClient := &mockEC2Metadata{
 		InstanceIdentityDocument: mockedInstanceIdentityDoc,
 	}
+	ec2MetadataProvider := func() EC2MetadataAPI {
+		return metadataClient
+	}
+
 	tagger := Tagger{
 		Log:                    testutil.Logger{},
 		RefreshIntervalSeconds: internal.Duration{Duration: 0},
-		ec2metadata:            mockMetadata,
-		EC2MetadataTags:        []string{"InstanceId", "ImageId", "InstanceType"},
+		ec2MetadataProvider:    ec2MetadataProvider,
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
 	}
 
 	deadline := time.NewTimer(1 * time.Second)

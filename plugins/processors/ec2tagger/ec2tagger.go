@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -25,7 +27,7 @@ import (
 const sampleConfig = `
   ##
   ## ec2tagger calls AWS api to fetch EC2 Metadata and Instance Tags and EBS Volumes associated with the
-  ## current EC2 Instance and attched those values as tags to the metric.
+  ## current EC2 Instance and attached those values as tags to the metric.
   ##
   ## Frequency for the plugin to refresh the EC2 Instance Tags and ebs Volumes associated with this Instance.
   ## Defaults to 0 (no refresh).
@@ -82,11 +84,30 @@ const (
 	ebsVolumeId          = "EBSVolumeId"
 )
 
+const (
+	metadataCheckStrStartInitialization         = "ec2tagger: EC2 tagger has started initialization."
+	metadataCheckStrTagNotSupported             = "ec2tagger: Unsupported EC2 Metadata key: %s"
+	metadataCheckStrInstanceDocumentFailure     = "ec2tagger: Unable to retrieve Instance Metadata Tags: %+v. This plugin must only be used on an EC2 instance"
+	EC2TagAndVolumeCheckStrInitRetrievalSuccess = "ec2tagger: Initial retrieval of tags succeeded"
+	EC2VolumeCheckStrInitRetrievalFailure       = "ec2tagger: Unable to describe ec2 volume for initial retrieval: %v"
+	EC2TagCheckStrInitRetrievalFailure          = "ec2tagger: Unable to describe ec2 tags for initial retrieval: %v"
+	EC2TagAndVolumeCheckStrStartRefresh         = "ec2tagger refreshing: EC2InstanceTags needed %v, retrieved: %v, ebs device needed %v, retrieved: %v"
+	EC2TagAndVolumeCheckStrStopRefresh          = "ec2tagger: Refresh is no longer needed, stop refreshTicker."
+	EC2TagAndVolumeCheckStrRetryFailure         = "ec2tagger: %v retry initial retrieval of tags and volumes"
+	EC2VolumeCheckStrRefreshFailure             = "ec2tagger: Error refreshing EC2 volumes, keeping old values : %+v"
+	EC2TagCheckStrRefreshFailure                = "ec2tagger: Error refreshing EC2 tags, keeping old values : %+v"
+	EC2TagAndVolumeCheckStrSuccess              = "ec2tagger: Finished initial retrieval of tags and volumes"
+)
+
 var (
 	defaultRefreshInterval = 180 * time.Second
 	// backoff retry for ec2 describe instances API call. Assuming the throttle limit is 20 per second. 10 mins allow 12000 API calls.
 	backoffSleepArray = []time.Duration{0, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
 )
+
+type EC2MetadataAPI interface {
+	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
+}
 
 type metadataLookup struct {
 	instanceId   bool
@@ -95,12 +116,7 @@ type metadataLookup struct {
 }
 
 type ec2ProviderType func(*configaws.CredentialConfig) ec2iface.EC2API
-
-type ec2Metadata interface {
-	Available() bool
-	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
-}
-
+type ec2MetadataProviderType func() EC2MetadataAPI
 type Tagger struct {
 	Log                    telegraf.Logger   `toml:"-"`
 	RefreshIntervalSeconds internal.Duration `toml:"refresh_interval_seconds"`
@@ -118,20 +134,20 @@ type Tagger struct {
 	Filename  string `toml:"shared_credential_file"`
 	Token     string `toml:"token"`
 
-	ec2TagCache    map[string]string
-	instanceId     string
-	imageId        string // aka AMI
-	instanceType   string
-	started        bool
-	region         string
-	ec2Provider    ec2ProviderType
-	ec2            ec2iface.EC2API
-	ec2metadata    ec2Metadata
-	refreshTicker  *time.Ticker
-	shutdownC      chan bool
-	tagFilters     []*ec2.Filter
-	metadataLookup metadataLookup
-	ebsVolume      *EbsVolume
+	ec2TagCache         map[string]string
+	instanceId          string
+	imageId             string // aka AMI
+	instanceType        string
+	started             bool
+	region              string
+	ec2Provider         ec2ProviderType
+	ec2                 ec2iface.EC2API
+	ec2MetadataProvider ec2MetadataProviderType
+	refreshTicker       *time.Ticker
+	shutdownC           chan bool
+	tagFilters          []*ec2.Filter
+	metadataLookup      metadataLookup
+	ebsVolume           *EbsVolume
 
 	sync.RWMutex //to protect ec2TagCache
 }
@@ -227,7 +243,7 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 	for {
 		select {
 		case <-refreshTicker.C:
-			t.Log.Debugf("ec2tagger refreshing: EC2InstanceTags needed %v, retrieved: %v, ebs device needed %v, retrieved: %v", len(t.EC2InstanceTagKeys), t.ec2TagsRetrieved(), len(t.EBSDeviceKeys), t.ebsVolumesRetrieved())
+			t.Log.Debugf(EC2TagAndVolumeCheckStrStartRefresh, len(t.EC2InstanceTagKeys), t.ec2TagsRetrieved(), len(t.EBSDeviceKeys), t.ebsVolumesRetrieved())
 			refreshTags := len(t.EC2InstanceTagKeys) > 0
 			refreshVolumes := len(t.EBSDeviceKeys) > 0
 
@@ -237,20 +253,20 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 				// need refresh volumes when it is configured and not all volumes are retrieved
 				refreshVolumes = refreshVolumes && !t.ebsVolumesRetrieved()
 				if !refreshTags && !refreshVolumes {
-					t.Log.Infof("ec2tagger: Refresh is no longer needed, stop refreshTicker.")
+					t.Log.Infof(EC2TagAndVolumeCheckStrStopRefresh)
 					return
 				}
 			}
 
 			if refreshTags {
 				if err := t.updateTags(); err != nil {
-					t.Log.Warnf("ec2tagger: Error refreshing EC2 tags, keeping old values : +%v", err.Error())
+					t.Log.Warnf(EC2TagCheckStrRefreshFailure, err.Error())
 				}
 			}
 
 			if refreshVolumes {
 				if err := t.updateVolumes(); err != nil {
-					t.Log.Warnf("ec2tagger: Error refreshing EC2 volumes, keeping old values : +%v", err.Error())
+					t.Log.Warnf(EC2VolumeCheckStrRefreshFailure, err.Error())
 				}
 			}
 
@@ -312,19 +328,14 @@ func (t *Tagger) Init() error {
 		case mdKeyInstaneType:
 			t.metadataLookup.instanceType = true
 		default:
-			t.Log.Errorf("ec2tagger: Unsupported EC2 Metadata key: %s", tag)
+			t.Log.Errorf(metadataCheckStrTagNotSupported, tag)
 		}
 	}
 
-	if !t.ec2metadata.Available() {
-		msg := "ec2tagger: Unable to retrieve InstanceId. This plugin must only be used on an EC2 instance"
-		t.Log.Errorf(msg)
-		return errors.New(msg)
-	}
-
-	doc, err := t.ec2metadata.GetInstanceIdentityDocument()
-	if nil != err {
-		msg := fmt.Sprintf("ec2tagger: Unable to retrieve InstanceId : %+v", err.Error())
+	md := t.ec2MetadataProvider()
+	doc, err := md.GetInstanceIdentityDocument()
+	if err != nil {
+		msg := fmt.Sprintf(metadataCheckStrInstanceDocumentFailure, err.Error())
 		t.Log.Errorf(msg)
 		return errors.New(msg)
 	}
@@ -377,7 +388,7 @@ func (t *Tagger) Init() error {
 			t.initialRetrievalOfTagsAndVolumes()
 			t.refreshLoopToUpdateTagsAndVolumes()
 		}()
-		t.Log.Infof("ec2tagger: EC2 tagger has started initialization.")
+		t.Log.Infof(metadataCheckStrStartInitialization)
 
 	} else {
 		t.setStarted()
@@ -454,7 +465,7 @@ func (t *Tagger) setStarted() {
 	t.Lock()
 	t.started = true
 	t.Unlock()
-	t.Log.Infof("ec2tagger: EC2 tagger has started, finished initial retrieval of tags and Volumes")
+	t.Log.Infof(EC2TagAndVolumeCheckStrSuccess)
 }
 
 // This function never return until calling updateTags() and updateVolumes() succeed or shutdown happen.
@@ -480,12 +491,12 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 		}
 
 		if retry > 0 {
-			t.Log.Infof("ec2tagger: %v retry for initial retrieval of tags and volumes", retry)
+			t.Log.Infof(EC2TagAndVolumeCheckStrRetryFailure, retry)
 		}
 
 		if !tagsRetrieved {
 			if err := t.updateTags(); err != nil {
-				t.Log.Warnf("ec2tagger: Unable to describe ec2 tags for initial retrieval: %v", err)
+				t.Log.Warnf(EC2TagCheckStrInitRetrievalFailure, err)
 			} else {
 				tagsRetrieved = true
 			}
@@ -493,14 +504,14 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 
 		if !volsRetrieved {
 			if err := t.updateVolumes(); err != nil {
-				t.Log.Errorf("ec2tagger: Unable to describe ec2 volume for initial retrieval: %v", err)
+				t.Log.Errorf(EC2VolumeCheckStrInitRetrievalFailure, err)
 			} else {
 				volsRetrieved = true
 			}
 		}
 
 		if tagsRetrieved { // volsRetrieved is not checked to keep behavior consistency
-			t.Log.Infof("ec2tagger: Initial retrieval of tags succeded")
+			t.Log.Infof(EC2TagAndVolumeCheckStrInitRetrievalSuccess)
 			t.setStarted()
 			return
 		}
@@ -529,15 +540,28 @@ func hostJitter(max time.Duration) time.Duration {
 // init adds this plugin to the framework's "processors" registry
 func init() {
 	processors.Add("ec2tagger", func() telegraf.Processor {
-		mdCredentialConfig := &configaws.CredentialConfig{}
-		mdConfigProvider := mdCredentialConfig.Credentials()
+		ec2MetadataProvider := func() EC2MetadataAPI {
+			mdCredentialConfig := &configaws.CredentialConfig{}
+			return ec2metadata.New(
+				mdCredentialConfig.Credentials(),
+				&aws.Config{
+					HTTPClient: &http.Client{Timeout: 1 * time.Second},
+					LogLevel:   configaws.SDKLogLevel(),
+					Logger:     configaws.SDKLogger{},
+					Retryer:    client.DefaultRetryer{NumMaxRetries: 2},
+				})
+		}
 		ec2Provider := func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
-			ec2ConfigProvider := ec2CredentialConfig.Credentials()
-			return ec2.New(ec2ConfigProvider)
+			return ec2.New(
+				ec2CredentialConfig.Credentials(),
+				&aws.Config{
+					LogLevel: configaws.SDKLogLevel(),
+					Logger:   configaws.SDKLogger{},
+				})
 		}
 		return &Tagger{
-			ec2metadata: ec2metadata.New(mdConfigProvider),
-			ec2Provider: ec2Provider,
+			ec2MetadataProvider: ec2MetadataProvider,
+			ec2Provider:         ec2Provider,
 		}
 	})
 }
