@@ -101,11 +101,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      - name: Check out code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: 'true'
+          ref: '33e131d72512cc8fac7a0d3ce1b7f0ff69c51314'
 
       - name: Cache go
         id: cached_go
@@ -131,12 +131,6 @@ jobs:
 
       - uses: olafurpg/setup-gpg@v3
 
-      - name: Sign packages
-        if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: |
-          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
-          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
-
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
@@ -149,7 +143,11 @@ jobs:
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: 'true'
+          ref: '33e131d72512cc8fac7a0d3ce1b7f0ff69c51314'
 
       #TODO upgrade to 1.17 after @ZhenyuTan-amz updates our go build version
       - name: Set up Go 1.x
@@ -362,7 +360,11 @@ jobs:
     outputs:
       local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: 'true'
+          ref: '33e131d72512cc8fac7a0d3ce1b7f0ff69c51314'
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -382,13 +384,9 @@ jobs:
         run: >
           echo run terraform and execute test code &&
           terraform apply --auto-approve
-          -var="ssh_key=${PRIVATE_KEY}"
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           -var="github_sha=${GITHUB_SHA}" 
-          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
-          -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}"
-          -var="key_name=${KEY_NAME}"
-          -var="iam_instance_profile=${IAM_ROLE}" &&
+          -var="s3_bucket=${S3_INTEGRATION_BUCKET}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
@@ -403,8 +401,12 @@ jobs:
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
     steps:
-      - uses: actions/checkout@v2
-
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: 'true'
+          ref: '33e131d72512cc8fac7a0d3ce1b7f0ff69c51314'
+  
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -437,8 +439,9 @@ jobs:
             cd integration/terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
               -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
@@ -446,10 +449,7 @@ jobs:
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
-              -var="key_name=${KEY_NAME}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
-              -var="iam_instance_profile=${IAM_ROLE}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
