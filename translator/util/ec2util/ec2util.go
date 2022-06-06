@@ -97,7 +97,7 @@ func (e *ec2Util) getEC2MetadataFromIMDS() error {
 	md := ec2metadata.New(ses)
 
 	if !md.Available() {
-		return errors.New("EC2 metadata is not available. Please ")
+		return errors.New("EC2 metadata is not available.")
 	}
 	
 	// Only need the API to scrap HostName

@@ -339,7 +339,7 @@ func (t *Tagger) Init() error {
 	doc, err := md.GetInstanceIdentityDocument()
 	if err != nil {
 		msg := fmt.Sprintf(metadataCheckStrInstanceDocumentFailure, err.Error())
-		t.Log.Errorf(msg)
+		t.Log.Errorf(metadataCheckStrInstanceDocumentFailure)
 		t.Log.Errorf(metadataCheckStrEC2InstanceTagger)
 		if os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE {
 			t.Log.Errorf(metadataCheckStrIncreaseHopLimit)
