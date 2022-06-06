@@ -14,6 +14,7 @@ import (
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -21,7 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 // Reminder, keep this in sync with the plugin's README.md
@@ -89,8 +89,8 @@ const (
 	metadataCheckStrStartInitialization         = "ec2tagger: EC2 tagger has started initialization."
 	metadataCheckStrTagNotSupported             = "ec2tagger: Unsupported EC2 Metadata key: %s"
 	metadataCheckStrInstanceDocumentFailure     = "ec2tagger: Unable to retrieve Instance Metadata Tags: %+v."
-	metadataCheckStrEC2InstanceTagger			= "ec2tagger: This plugin must only be used on an EC2 instance"
-	metadataCheckStrIncreaseHopLimit			= "ec2tagger: Please increase hop limit to 3. For more instructions, please follow https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances."
+	metadataCheckStrEC2InstanceTagger           = "ec2tagger: This plugin must only be used on an EC2 instance"
+	metadataCheckStrIncreaseHopLimit            = "ec2tagger: Please increase hop limit to 3. For more instructions, please follow https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances."
 	ec2TagAndVolumeCheckStrInitRetrievalSuccess = "ec2tagger: Initial retrieval of tags succeeded"
 	ec2VolumeCheckStrInitRetrievalFailure       = "ec2tagger: Unable to describe ec2 volume for initial retrieval: %v"
 	ec2TagCheckStrInitRetrievalFailure          = "ec2tagger: Unable to describe ec2 tags for initial retrieval: %v"
@@ -341,7 +341,7 @@ func (t *Tagger) Init() error {
 		msg := fmt.Sprintf(metadataCheckStrInstanceDocumentFailure, err.Error())
 		t.Log.Errorf(msg)
 		t.Log.Errorf(metadataCheckStrEC2InstanceTagger)
-		if (os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE){
+		if os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE {
 			t.Log.Errorf(metadataCheckStrIncreaseHopLimit)
 		}
 		return errors.New(msg)
