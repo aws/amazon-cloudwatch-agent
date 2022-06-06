@@ -22,6 +22,8 @@ const measurement_rename = "rename"
 const measurement_unit = "unit"
 const nvidia_smi_plugin_name = "nvidia_smi"
 const tag_exclude_key = "tagexclude"
+const smi_bin_path = "bin_path"
+const default_windows_smi_path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
 
 func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string, path string) (returnKey string, returnVal []string) {
 	inputList := inputs.([]interface{})
@@ -173,10 +175,17 @@ func GetMeasurementName(input interface{}) (measurementNames []string) {
 
 // ApplyPluginSpecificRules returns a map contains all the rules for tagpass, tagdrop, namepass, namedrop,
 //fieldpass, fielddrop, taginclude, tagexclude specifically for certain plugin.
-func ApplyPluginSpecificRules(pluginName string) (map[string][]string, bool) {
+func ApplyPluginSpecificRules(pluginName string) (map[string]interface{}, bool) {
 	switch pluginName {
 	case nvidia_smi_plugin_name:
-		return map[string][]string{tag_exclude_key: GetExcludingTags(pluginName)}, true
+		result := map[string]interface{} {tag_exclude_key: GetExcludingTags(pluginName)}
+		// if on windows, will look for smi in a windows style path
+		if translator.GetTargetPlatform() == translatorConfig.OS_TYPE_WINDOWS {
+			// default path for Nvidia_smi.exe is C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe
+			// Todo: for windows 10 the path should default to C:\\Windows\\System32\\nvidia-smi.exe will support in the future
+			result[smi_bin_path] = default_windows_smi_path
+		}
+		return result, true
 	default:
 		return nil, false
 	}
