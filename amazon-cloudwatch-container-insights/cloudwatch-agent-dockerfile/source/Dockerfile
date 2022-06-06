@@ -11,7 +11,7 @@ WORKDIR /go/src/github.com/aws/amazon-cloudwatch-agent/
 
 ARG GO111MODULE="on"
 ENV GO111MODULE=${GO111MODULE}
-ENV GOPROXY=direct
+
 COPY . /go/src/github.com/aws/amazon-cloudwatch-agent/
 RUN make build-for-docker-${TARGETARCH}
 
@@ -32,6 +32,5 @@ FROM scratch
 COPY --from=cert /tmp /tmp
 COPY --from=cert /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=cert /opt/aws/amazon-cloudwatch-agent /opt/aws/amazon-cloudwatch-agent
-
 ENV RUN_IN_CONTAINER="True"
 ENTRYPOINT ["/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent"]

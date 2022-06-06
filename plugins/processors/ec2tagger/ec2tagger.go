@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 // Reminder, keep this in sync with the plugin's README.md
@@ -87,16 +88,18 @@ const (
 const (
 	metadataCheckStrStartInitialization         = "ec2tagger: EC2 tagger has started initialization."
 	metadataCheckStrTagNotSupported             = "ec2tagger: Unsupported EC2 Metadata key: %s"
-	metadataCheckStrInstanceDocumentFailure     = "ec2tagger: Unable to retrieve Instance Metadata Tags: %+v. This plugin must only be used on an EC2 instance"
-	EC2TagAndVolumeCheckStrInitRetrievalSuccess = "ec2tagger: Initial retrieval of tags succeeded"
-	EC2VolumeCheckStrInitRetrievalFailure       = "ec2tagger: Unable to describe ec2 volume for initial retrieval: %v"
-	EC2TagCheckStrInitRetrievalFailure          = "ec2tagger: Unable to describe ec2 tags for initial retrieval: %v"
-	EC2TagAndVolumeCheckStrStartRefresh         = "ec2tagger refreshing: EC2InstanceTags needed %v, retrieved: %v, ebs device needed %v, retrieved: %v"
-	EC2TagAndVolumeCheckStrStopRefresh          = "ec2tagger: Refresh is no longer needed, stop refreshTicker."
-	EC2TagAndVolumeCheckStrRetryFailure         = "ec2tagger: %v retry initial retrieval of tags and volumes"
-	EC2VolumeCheckStrRefreshFailure             = "ec2tagger: Error refreshing EC2 volumes, keeping old values : %+v"
-	EC2TagCheckStrRefreshFailure                = "ec2tagger: Error refreshing EC2 tags, keeping old values : %+v"
-	EC2TagAndVolumeCheckStrSuccess              = "ec2tagger: Finished initial retrieval of tags and volumes"
+	metadataCheckStrInstanceDocumentFailure     = "ec2tagger: Unable to retrieve Instance Metadata Tags: %+v."
+	metadataCheckStrEC2InstanceTagger			= "ec2tagger: This plugin must only be used on an EC2 instance"
+	metadataCheckStrIncreaseHopLimit			= "ec2tagger: Please increase hop limit to 3. For more instructions, please follow https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances."
+	ec2TagAndVolumeCheckStrInitRetrievalSuccess = "ec2tagger: Initial retrieval of tags succeeded"
+	ec2VolumeCheckStrInitRetrievalFailure       = "ec2tagger: Unable to describe ec2 volume for initial retrieval: %v"
+	ec2TagCheckStrInitRetrievalFailure          = "ec2tagger: Unable to describe ec2 tags for initial retrieval: %v"
+	ec2TagAndVolumeCheckStrStartRefresh         = "ec2tagger refreshing: EC2InstanceTags needed %v, retrieved: %v, ebs device needed %v, retrieved: %v"
+	ec2TagAndVolumeCheckStrStopRefresh          = "ec2tagger: Refresh is no longer needed, stop refreshTicker."
+	ec2TagAndVolumeCheckStrRetryFailure         = "ec2tagger: %v retry initial retrieval of tags and volumes"
+	ec2VolumeCheckStrRefreshFailure             = "ec2tagger: Error refreshing EC2 volumes, keeping old values : %+v"
+	ec2TagCheckStrRefreshFailure                = "ec2tagger: Error refreshing EC2 tags, keeping old values : %+v"
+	ec2TagAndVolumeCheckStrSuccess              = "ec2tagger: Finished initial retrieval of tags and volumes"
 )
 
 var (
@@ -243,7 +246,7 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 	for {
 		select {
 		case <-refreshTicker.C:
-			t.Log.Debugf(EC2TagAndVolumeCheckStrStartRefresh, len(t.EC2InstanceTagKeys), t.ec2TagsRetrieved(), len(t.EBSDeviceKeys), t.ebsVolumesRetrieved())
+			t.Log.Debugf(ec2TagAndVolumeCheckStrStartRefresh, len(t.EC2InstanceTagKeys), t.ec2TagsRetrieved(), len(t.EBSDeviceKeys), t.ebsVolumesRetrieved())
 			refreshTags := len(t.EC2InstanceTagKeys) > 0
 			refreshVolumes := len(t.EBSDeviceKeys) > 0
 
@@ -253,20 +256,20 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 				// need refresh volumes when it is configured and not all volumes are retrieved
 				refreshVolumes = refreshVolumes && !t.ebsVolumesRetrieved()
 				if !refreshTags && !refreshVolumes {
-					t.Log.Infof(EC2TagAndVolumeCheckStrStopRefresh)
+					t.Log.Infof(ec2TagAndVolumeCheckStrStopRefresh)
 					return
 				}
 			}
 
 			if refreshTags {
 				if err := t.updateTags(); err != nil {
-					t.Log.Warnf(EC2TagCheckStrRefreshFailure, err.Error())
+					t.Log.Warnf(ec2TagCheckStrRefreshFailure, err.Error())
 				}
 			}
 
 			if refreshVolumes {
 				if err := t.updateVolumes(); err != nil {
-					t.Log.Warnf(EC2VolumeCheckStrRefreshFailure, err.Error())
+					t.Log.Warnf(ec2VolumeCheckStrRefreshFailure, err.Error())
 				}
 			}
 
@@ -337,6 +340,10 @@ func (t *Tagger) Init() error {
 	if err != nil {
 		msg := fmt.Sprintf(metadataCheckStrInstanceDocumentFailure, err.Error())
 		t.Log.Errorf(msg)
+		t.Log.Errorf(metadataCheckStrEC2InstanceTagger)
+		if (os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE){
+			t.Log.Errorf(metadataCheckStrIncreaseHopLimit)
+		}
 		return errors.New(msg)
 	}
 
@@ -465,7 +472,7 @@ func (t *Tagger) setStarted() {
 	t.Lock()
 	t.started = true
 	t.Unlock()
-	t.Log.Infof(EC2TagAndVolumeCheckStrSuccess)
+	t.Log.Infof(ec2TagAndVolumeCheckStrSuccess)
 }
 
 // This function never return until calling updateTags() and updateVolumes() succeed or shutdown happen.
@@ -491,12 +498,12 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 		}
 
 		if retry > 0 {
-			t.Log.Infof(EC2TagAndVolumeCheckStrRetryFailure, retry)
+			t.Log.Infof(ec2TagAndVolumeCheckStrRetryFailure, retry)
 		}
 
 		if !tagsRetrieved {
 			if err := t.updateTags(); err != nil {
-				t.Log.Warnf(EC2TagCheckStrInitRetrievalFailure, err)
+				t.Log.Warnf(ec2TagCheckStrInitRetrievalFailure, err)
 			} else {
 				tagsRetrieved = true
 			}
@@ -504,14 +511,14 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 
 		if !volsRetrieved {
 			if err := t.updateVolumes(); err != nil {
-				t.Log.Errorf(EC2VolumeCheckStrInitRetrievalFailure, err)
+				t.Log.Errorf(ec2VolumeCheckStrInitRetrievalFailure, err)
 			} else {
 				volsRetrieved = true
 			}
 		}
 
 		if tagsRetrieved { // volsRetrieved is not checked to keep behavior consistency
-			t.Log.Infof(EC2TagAndVolumeCheckStrInitRetrievalSuccess)
+			t.Log.Infof(ec2TagAndVolumeCheckStrInitRetrievalSuccess)
 			t.setStarted()
 			return
 		}
