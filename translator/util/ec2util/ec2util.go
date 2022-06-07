@@ -91,9 +91,6 @@ func (e *ec2Util) getEC2MetadataFromIMDS() error {
 		return err
 	}
 
-	// Avoid setting smaller retry than the default retry (4) since LXC containers may need more than
-	// 4 minutes to connect to IMDSv2 even though the HopLimit is 1 based on one of own manual test.
-	// More information on the manual test: https://github.com/aws/amazon-cloudwatch-agent/issues/463
 	md := ec2metadata.New(ses)
 
 	if !md.Available() {

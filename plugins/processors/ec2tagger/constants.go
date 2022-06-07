@@ -18,10 +18,10 @@ const (
 
 const (
 	metadataCheckStrStartInitialization         = "ec2tagger: EC2 IMDS has started initialization."
-	metadataCheckStrTagNotSupported             = "ec2tagger: Unsupported EC2 Metadata key: %s"
-	metadataCheckStrInstanceDocumentFailure     = "ec2tagger: Unable to retrieve Instance Metadata Tags: %+v."
-	metadataCheckStrEC2InstanceTagger           = "ec2tagger: This plugin must only be used on an EC2 instance"
-	metadataCheckStrIncreaseHopLimit            = "ec2tagger: Please increase hop limit to 3. For more instructions, please follow https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances."
+	metadataCheckStrTagNotSupported             = "ec2tagger: Unsupported EC2 Metadata key: %s."
+	metadataCheckStrInstanceDocumentFailure     = "ec2tagger: Unable to retrieve Instance Metadata Tags."
+	metadataCheckStrEC2InstanceTagger           = "This plugin must only be used on an EC2 instance."
+	metadataCheckStrIncreaseHopLimit            = "ec2tagger: Please increase hop limit to 3 by following this document https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances."
 	ec2TagAndVolumeCheckStrInitRetrievalSuccess = "ec2tagger: Initial retrieval of tags succeeded"
 	ec2TagAndVolumeCheckStrStartInitialization  = "ec2tagger: EC2 tagger has started initialization."
 	ec2VolumeCheckStrInitRetrievalFailure       = "ec2tagger: Unable to describe ec2 volume for initial retrieval: %v"

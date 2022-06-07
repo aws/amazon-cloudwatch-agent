@@ -5,7 +5,6 @@ package ec2tagger
 
 import (
 	"errors"
-	"fmt"
 	"hash/fnv"
 	"net/http"
 	"os"
@@ -308,13 +307,12 @@ func (t *Tagger) Init() error {
 	md := t.ec2MetadataProvider()
 	doc, err := md.GetInstanceIdentityDocument()
 	if err != nil {
-		msg := fmt.Sprintf(metadataCheckStrInstanceDocumentFailure, err.Error())
-		t.Log.Errorf(metadataCheckStrInstanceDocumentFailure)
-		t.Log.Errorf(metadataCheckStrEC2InstanceTagger)
+		
+		t.Log.Errorf(metadataCheckStrInstanceDocumentFailure + metadataCheckStrEC2InstanceTagger)
 		if os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE {
 			t.Log.Errorf(metadataCheckStrIncreaseHopLimit)
 		}
-		return errors.New(msg)
+		return errors.New(metadataCheckStrInstanceDocumentFailure + err.Error())
 	}
 
 	t.instanceId = doc.InstanceID
