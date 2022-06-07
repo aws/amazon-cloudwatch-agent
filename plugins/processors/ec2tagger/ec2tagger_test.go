@@ -5,7 +5,6 @@ package ec2tagger
 
 import (
 	"errors"
-	"fmt"
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/influxdata/telegraf"
@@ -230,7 +229,7 @@ func TestInitFailWithNoMetadata(t *testing.T) {
 	err := tagger.Init()
 
 	assert.NotNil(err)
-	assert.Contains(err.Error(), fmt.Sprintf(metadataCheckStrInstanceDocumentFailure, errors.New("No instance identity document")))
+	assert.Contains(err.Error(), errors.New("No instance identity document").Error())
 }
 
 //run Init() and check all tags/volumes are retrieved and saved
