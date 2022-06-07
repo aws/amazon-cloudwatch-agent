@@ -13,9 +13,6 @@ data:
   # cwagent json config
   cwagentconfig.json: |
     {
-      "agent": {
-        "debug": true
-      },
       "logs": {
         "metrics_collected": {
           "prometheus": {
@@ -448,7 +445,7 @@ spec:
     spec:
       containers:
         - name: cloudwatch-agent
-          image: public.ecr.aws/a3i2u7g3/cw-agent-seth:upgrade-telegraf-v1-21-4
+          image: amazon/cloudwatch-agent:1.247346.0b249609
           imagePullPolicy: Always
           resources:
             limits:

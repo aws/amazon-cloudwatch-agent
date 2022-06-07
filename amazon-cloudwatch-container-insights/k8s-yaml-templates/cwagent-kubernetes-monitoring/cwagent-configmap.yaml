@@ -4,14 +4,10 @@ data:
   # Configuration is in Json format. No matter what configure change you make,
   # please keep the Json blob valid.
   cwagentconfig.json: |
-    {
-      "agent": {
-        "debug": true
-      },
       "logs": {
         "metrics_collected": {
           "kubernetes": {
-            "cluster_name": "seth-containerd-test-cluster",
+            "cluster_name": "{{cluster_name}}",
             "metrics_collection_interval": 60
           }
         },

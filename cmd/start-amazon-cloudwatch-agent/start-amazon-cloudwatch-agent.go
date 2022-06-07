@@ -93,7 +93,7 @@ func main() {
 		log.Fatalf("E! Cannot translate JSON config into TOML, ERROR is %v \n", err)
 	}
 	log.Printf("I! Config has been translated into TOML %s \n", tomlConfigPath)
-	echoTOML(tomlConfigPath)
+	printFileContents(tomlConfigPath)
 
 	if err := startAgent(writer); err != nil {
 		log.Printf("E! Error when starting Agent, Error is %v \n", err)
@@ -101,7 +101,7 @@ func main() {
 	}
 }
 
-func echoTOML(path string) {
+func printFileContents(path string) {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -113,5 +113,5 @@ func echoTOML(path string) {
 	}()
 
 	b, err := ioutil.ReadAll(file)
-	log.Printf("I! toml config %v", string(b))
+	log.Printf("D! toml config %v", string(b))
 }
