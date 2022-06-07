@@ -47,7 +47,6 @@ import (
 const (
 	defaultEnvCfgFileName = "env-config.json"
 	LogTargetEventLog = "eventlog"
-	LogTargetLumberjack = "lumberjack"
 )
 
 var fDebug = flag.Bool("debug", false,

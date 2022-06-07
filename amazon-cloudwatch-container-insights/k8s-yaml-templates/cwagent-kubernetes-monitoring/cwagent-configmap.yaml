@@ -4,6 +4,7 @@ data:
   # Configuration is in Json format. No matter what configure change you make,
   # please keep the Json blob valid.
   cwagentconfig.json: |
+    {
       "logs": {
         "metrics_collected": {
           "kubernetes": {

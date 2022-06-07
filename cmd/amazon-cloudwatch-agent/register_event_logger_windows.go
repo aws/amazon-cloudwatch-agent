@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf/logger"
 )
 
+// RegisterEventLogger is for supporting Windows Event
 func RegisterEventLogger() error {
 	// When in service mode, register eventlog target and setup default logging to eventlog
 
