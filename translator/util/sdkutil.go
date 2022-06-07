@@ -35,7 +35,7 @@ func DetectAgentMode(configuredMode string) string {
 		fmt.Println("I! Detected from ENV instance is EC2")
 		return config.ModeEC2
 	}
-	
+
 	if defaultEC2Region() != "" {
 		fmt.Println("I! Detected the instance is EC2")
 		return config.ModeEC2
@@ -90,16 +90,16 @@ func defaultECSRegion() string {
 func detectRegion(mode string, credsConfig map[string]string) (region string) {
 	region = SDKRegionWithCredsMap(mode, credsConfig)
 
-	// try to get region from ecs metadata
-	if region == "" && mode == config.ModeEC2 {
-		fmt.Println("I! Trying to detect region from ecs")
-		region = defaultECSRegion()
-	}
-
 	// For ec2, fallback to metadata when no region info found in credential profile.
 	if region == "" && mode == config.ModeEC2 {
 		fmt.Println("I! Trying to detect region from ec2")
 		region = defaultEC2Region()
+	}
+
+	// try to get region from ecs metadata
+	if region == "" && mode == config.ModeEC2 {
+		fmt.Println("I! Trying to detect region from ecs")
+		region = defaultECSRegion()
 	}
 	
 	return

@@ -5,15 +5,15 @@ package ec2tagger
 
 import (
 	"errors"
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/internal"
-	"github.com/influxdata/telegraf"
 	"testing"
 	"time"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
@@ -229,7 +229,7 @@ func TestInitFailWithNoMetadata(t *testing.T) {
 	err := tagger.Init()
 
 	assert.NotNil(err)
-	assert.Contains(err.Error(), errors.New("No instance identity document").Error())
+	assert.Contains(err.Error(), "No instance identity document")
 }
 
 //run Init() and check all tags/volumes are retrieved and saved
@@ -264,7 +264,7 @@ func TestInitSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
 		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
 		EC2InstanceTagKeys:     []string{"tagKey1", "tagKey2", "AutoScalingGroupName"},
 		EBSDeviceKeys:          []string{"/dev/xvdc", "/dev/xvdf"},
 	}
@@ -319,7 +319,7 @@ func TestInitSuccessWithTagsVolumesUpdate(t *testing.T) {
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
 		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
 		EC2InstanceTagKeys:     []string{"tagKey1", "tagKey2", "AutoScalingGroupName"},
 		EBSDeviceKeys:          []string{"/dev/xvdc", "/dev/xvdf"},
 	}
@@ -393,7 +393,7 @@ func TestInitSuccessWithWildcardTagVolumeKey(t *testing.T) {
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
 		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
 		EC2InstanceTagKeys:     []string{"*"},
 		EBSDeviceKeys:          []string{"*"},
 	}
@@ -448,7 +448,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
 		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyInstaneType},
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyInstanceType},
 		EC2InstanceTagKeys:     []string{"tagKey1", "tagKey2", "AutoScalingGroupName"},
 		EBSDeviceKeys:          []string{"/dev/xvdc", "/dev/xvdf"},
 		DiskDeviceTagKey:       "device",
@@ -633,7 +633,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
 		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
 		EC2InstanceTagKeys:     []string{"*"},
 		EBSDeviceKeys:          []string{"*"},
 	}
@@ -731,7 +731,7 @@ func TestTaggerInitDoesNotBlock(t *testing.T) {
 		ec2Provider:            ec2Provider,
 		ec2:                    ec2Client,
 		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
 		EC2InstanceTagKeys:     []string{"*"},
 		EBSDeviceKeys:          []string{"*"},
 	}
@@ -767,7 +767,7 @@ func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 		Log:                    testutil.Logger{},
 		RefreshIntervalSeconds: internal.Duration{Duration: 0},
 		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstaneType},
+		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
 	}
 
 	deadline := time.NewTimer(1 * time.Second)

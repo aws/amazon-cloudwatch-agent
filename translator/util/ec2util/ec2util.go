@@ -4,14 +4,16 @@
 package ec2util
 
 import (
+	"errors"
 	"log"
 	"net"
 	"sync"
 	"time"
-	"errors"
-
+	
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
@@ -27,9 +29,13 @@ type ec2Util struct {
 
 var (
 	ec2UtilInstance *ec2Util
-	once sync.Once
+	once            sync.Once
 )
-const allowedNetworkRetries = 5
+
+const (
+	allowedNetworkRetries = 5
+	allowedIMDSRetries = 2 
+)
 
 func GetEC2UtilSingleton() *ec2Util {
 	once.Do(func() {
@@ -74,30 +80,33 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 	if !networkUp {
 		log.Println("E! [EC2] No available network interface")
 	}
-	
-	err := newInstance.getEC2MetadataFromIMDS()
+
+	err := newInstance.deriveEC2MetadataFromIMDS()
 
 	if err != nil {
 		log.Println("E! [EC2] Cannot get EC2 Metadata from IMDS:", err)
 	}
 
-	return 
+	return
 }
 
-func (e *ec2Util) getEC2MetadataFromIMDS() error {
+func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	ses, err := session.NewSession()
-	
+
 	if err != nil {
 		return err
 	}
 
-	md := ec2metadata.New(ses)
+	md := ec2metadata.New(ses,
+		&aws.Config{
+			Retryer: client.DefaultRetryer{NumMaxRetries: allowedIMDSRetries},
+		})
 
 	if !md.Available() {
 		return errors.New("EC2 metadata is not available.")
 	}
-	
-	// Only need the API to scrap HostName
+
+	// Only need the API to scrape HostName
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
 	if hostname, err := md.GetMetadata("hostname"); err == nil {
 		e.Hostname = hostname
@@ -105,7 +114,7 @@ func (e *ec2Util) getEC2MetadataFromIMDS() error {
 		log.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
 	}
 
-	// Only need the API to scrap Region, AccountId, PrivateIp, Instance ID
+	// Only need the API to scrape Region, AccountId, PrivateIp, Instance ID
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
 	if instanceIdentityDocument, err := md.GetInstanceIdentityDocument(); err == nil {
 		e.Region = instanceIdentityDocument.Region
