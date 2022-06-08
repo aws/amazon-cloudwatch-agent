@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	defaultMaxDatumsPerCall        = 20     // PutMetricData only supports up to 20 data metrics per call by default
+	defaultMaxDatumsPerCall        = 1000   // PutMetricData only supports up to 1000 data metrics per call by default
 	defaultMaxValuesPerDatum       = 150    // By default only these number of values can be inserted into the value list
 	bottomLinePayloadSizeToPublish = 200000 // Leave 9600B for the last datum buffer. 200KB payload size, 5:1 compression ratio estimate.
 	metricChanBufferSize           = 10000
