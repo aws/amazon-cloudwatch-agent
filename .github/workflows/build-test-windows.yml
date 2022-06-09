@@ -31,7 +31,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.17.8
 
       - name: Cache Go
         uses: actions/cache@v2
@@ -39,7 +39,7 @@ jobs:
           path: |
             %LocalAppData%\go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
       - name: Install make
         run: choco install make

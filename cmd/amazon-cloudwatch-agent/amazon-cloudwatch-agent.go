@@ -31,7 +31,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 
-	lumberjack "github.com/aws/amazon-cloudwatch-agent/logger"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
@@ -47,6 +46,7 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
+	LogTargetEventLog = "eventlog"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -273,14 +273,14 @@ func runAgent(ctx context.Context,
 		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
-	if int64(c.Agent.Interval.Duration) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %s",
-			c.Agent.Interval.Duration)
+	if int64(c.Agent.Interval) <= 0 {
+		return fmt.Errorf("Agent interval must be positive, found %v",
+			c.Agent.Interval)
 	}
 
-	if int64(c.Agent.FlushInterval.Duration) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %s",
-			c.Agent.Interval.Duration)
+	if int64(c.Agent.FlushInterval) <= 0 {
+		return fmt.Errorf("Agent flush_interval must be positive; found %v",
+			c.Agent.FlushInterval)
 	}
 
 	if *fSchemaTest {
@@ -304,6 +304,7 @@ func runAgent(ctx context.Context,
 		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
 		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
 		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+		LogWithTimezone:     "",
 	}
 
 	logger.SetupLogging(logConfig)
@@ -548,11 +549,10 @@ func main() {
 			}
 			os.Exit(0)
 		} else {
-			winlogger, err := s.Logger(nil)
-			if err == nil {
-				//When in service mode, register eventlog target and setup default logging to eventlog
-				logger.RegisterEventLogger(winlogger)
-				logger.SetupLogging(logger.LogConfig{LogTarget: lumberjack.LogTargetLumberjack})
+			// When in service mode, register eventlog target and setup default logging to eventlog
+			e := RegisterEventLogger()
+			if e != nil {
+				log.Println("E! Cannot register event log " + e.Error())
 			}
 			err = s.Run()
 

@@ -12,8 +12,6 @@ import (
 	
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
@@ -32,10 +30,7 @@ var (
 	once            sync.Once
 )
 
-const (
-	allowedNetworkRetries = 5
-	allowedIMDSRetries = 2 
-)
+const allowedRetries = 5
 
 func GetEC2UtilSingleton() *ec2Util {
 	once.Do(func() {
@@ -55,7 +50,7 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 	// and doesn't require connectivity with the EC2 instance metadata service, while still
 	// gracefully waiting for network access on EC2 instances.
 	networkUp := false
-	for retry := 0; !networkUp && retry < allowedNetworkRetries; retry++ {
+	for retry := 0; !networkUp && retry < allowedRetries; retry++ {
 		ifs, err := net.Interfaces()
 
 		if err != nil {
@@ -97,16 +92,12 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		return err
 	}
 
-	md := ec2metadata.New(ses,
-		&aws.Config{
-			Retryer: client.DefaultRetryer{NumMaxRetries: allowedIMDSRetries},
-		})
+	md := ec2metadata.New(ses)
 
 	if !md.Available() {
 		return errors.New("EC2 metadata is not available.")
 	}
 
-	// Only need the API to scrape HostName
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
 	if hostname, err := md.GetMetadata("hostname"); err == nil {
 		e.Hostname = hostname
@@ -114,7 +105,6 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		log.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
 	}
 
-	// Only need the API to scrape Region, AccountId, PrivateIp, Instance ID
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
 	if instanceIdentityDocument, err := md.GetInstanceIdentityDocument(); err == nil {
 		e.Region = instanceIdentityDocument.Region

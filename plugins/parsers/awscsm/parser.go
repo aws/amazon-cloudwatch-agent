@@ -68,11 +68,8 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 	}
 
 	tags["awscsm"] = "enabled"
-	metric, err := metric.New(p.MetricName, tags, f.Fields, time.Now().UTC())
+	metric := metric.New(p.MetricName, tags, f.Fields, time.Now().UTC())
 
-	if err != nil {
-		return nil, err
-	}
 	return append(metrics, metric), nil
 }
 

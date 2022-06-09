@@ -26,14 +26,22 @@ type EC2MetadataAPI interface {
 	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
 }
 
-type metadataLookup struct {
+type ec2MetadataLookupType struct {
 	instanceId   bool
 	imageId      bool
 	instanceType bool
 }
 
+type ec2MetadataRespondType struct {
+	instanceId   string
+	imageId      string // aka AMI
+	instanceType string
+	region       string
+}
+
 type ec2ProviderType func(*configaws.CredentialConfig) ec2iface.EC2API
 type ec2MetadataProviderType func() EC2MetadataAPI
+
 type Tagger struct {
 	Log                    telegraf.Logger   `toml:"-"`
 	RefreshIntervalSeconds internal.Duration `toml:"refresh_interval_seconds"`
@@ -52,18 +60,15 @@ type Tagger struct {
 	Token     string `toml:"token"`
 
 	ec2TagCache         map[string]string
-	instanceId          string
-	imageId             string // aka AMI
-	instanceType        string
 	started             bool
-	region              string
 	ec2Provider         ec2ProviderType
-	ec2                 ec2iface.EC2API
+	ec2API              ec2iface.EC2API
 	ec2MetadataProvider ec2MetadataProviderType
+	ec2MetadataRespond  ec2MetadataRespondType
+	ec2MetadataLookup   ec2MetadataLookupType
 	refreshTicker       *time.Ticker
 	shutdownC           chan bool
 	tagFilters          []*ec2.Filter
-	metadataLookup      metadataLookup
 	ebsVolume           *EbsVolume
 
 	sync.RWMutex //to protect ec2TagCache
@@ -78,9 +83,7 @@ func (t *Tagger) Description() string {
 }
 
 // Apply adds the configured EC2 Metadata and Instance Tags to metrics.
-//
 // This is called serially for ALL metrics (that pass the plugin's tag filters) so keep it fast.
-//
 func (t *Tagger) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// grab the pointer to the map in case it gets refreshed while we're applying this round of metrics. At least
 	// this batch then will all get the same tags.
@@ -97,14 +100,14 @@ func (t *Tagger) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				metric.AddTag(k, v)
 			}
 		}
-		if t.metadataLookup.instanceId {
-			metric.AddTag(mdKeyInstanceId, t.instanceId)
+		if t.ec2MetadataLookup.instanceId {
+			metric.AddTag(mdKeyInstanceId, t.ec2MetadataRespond.instanceId)
 		}
-		if t.metadataLookup.imageId {
-			metric.AddTag(mdKeyImageId, t.imageId)
+		if t.ec2MetadataLookup.imageId {
+			metric.AddTag(mdKeyImageId, t.ec2MetadataRespond.imageId)
 		}
-		if t.metadataLookup.instanceType {
-			metric.AddTag(mdKeyInstanceType, t.instanceType)
+		if t.ec2MetadataLookup.instanceType {
+			metric.AddTag(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
 		}
 		if t.ebsVolume != nil && metric.HasTag(t.DiskDeviceTagKey) {
 			devName := metric.Tags()[t.DiskDeviceTagKey]
@@ -125,7 +128,7 @@ func (t *Tagger) updateTags() error {
 	}
 
 	for {
-		result, err := t.ec2.DescribeTags(input)
+		result, err := t.ec2API.DescribeTags(input)
 		if err != nil {
 			return err
 		}
@@ -160,7 +163,7 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 	for {
 		select {
 		case <-refreshTicker.C:
-			t.Log.Debugf(ec2TagAndVolumeCheckStrStartRefresh, len(t.EC2InstanceTagKeys), t.ec2TagsRetrieved(), len(t.EBSDeviceKeys), t.ebsVolumesRetrieved())
+			t.Log.Debugf("ec2tagger refreshing: EC2InstanceTags needed %v, retrieved: %v, ebs device needed %v, retrieved: %v", len(t.EC2InstanceTagKeys), t.ec2TagsRetrieved(), len(t.EBSDeviceKeys), t.ebsVolumesRetrieved())
 			refreshTags := len(t.EC2InstanceTagKeys) > 0
 			refreshVolumes := len(t.EBSDeviceKeys) > 0
 
@@ -170,20 +173,20 @@ func (t *Tagger) refreshLoop(refreshInterval time.Duration, stopAfterFirstSucces
 				// need refresh volumes when it is configured and not all volumes are retrieved
 				refreshVolumes = refreshVolumes && !t.ebsVolumesRetrieved()
 				if !refreshTags && !refreshVolumes {
-					t.Log.Infof(ec2TagAndVolumeCheckStrStopRefresh)
+					t.Log.Info("ec2tagger: Refresh is no longer needed, stop refreshTicker.")
 					return
 				}
 			}
 
 			if refreshTags {
 				if err := t.updateTags(); err != nil {
-					t.Log.Warnf(ec2TagCheckStrRefreshFailure, err.Error())
+					t.Log.Warnf("ec2tagger: Error refreshing EC2 tags, keeping old values : %+v", err.Error())
 				}
 			}
 
 			if refreshVolumes {
 				if err := t.updateVolumes(); err != nil {
-					t.Log.Warnf(ec2VolumeCheckStrRefreshFailure, err.Error())
+					t.Log.Warnf("ec2tagger: Error refreshing EC2 volumes, keeping old values : %+v", err.Error())
 				}
 			}
 
@@ -236,35 +239,9 @@ func (t *Tagger) Init() error {
 	t.shutdownC = make(chan bool)
 	t.ec2TagCache = map[string]string{}
 
-	for _, tag := range t.EC2MetadataTags {
-		switch tag {
-		case mdKeyInstanceId:
-			t.metadataLookup.instanceId = true
-		case mdKeyImageId:
-			t.metadataLookup.imageId = true
-		case mdKeyInstanceType:
-			t.metadataLookup.instanceType = true
-		default:
-			t.Log.Errorf(metadataCheckStrTagNotSupported, tag)
-		}
-	}
-
-	t.Log.Infof(metadataCheckStrStartInitialization)
-
-	md := t.ec2MetadataProvider()
-	doc, err := md.GetInstanceIdentityDocument()
-	if err != nil {
-		t.Log.Errorf(metadataCheckStrInstanceDocumentFailure)
-		if context.CurrentContext().RunInContainer() {
-			t.Log.Errorf(metadataCheckStrIncreaseHopLimit)
-		}
+	if err := t.deriveEC2MetadataFromIMDS(); err != nil {
 		return err
 	}
-
-	t.instanceId = doc.InstanceID
-	t.region = doc.Region
-	t.instanceType = doc.InstanceType
-	t.imageId = doc.ImageID
 
 	t.tagFilters = []*ec2.Filter{
 		{
@@ -273,7 +250,7 @@ func (t *Tagger) Init() error {
 		},
 		{
 			Name:   aws.String("resource-id"),
-			Values: aws.StringSlice([]string{t.instanceId}),
+			Values: aws.StringSlice([]string{t.ec2MetadataRespond.instanceId}),
 		},
 	}
 
@@ -296,20 +273,20 @@ func (t *Tagger) Init() error {
 
 	if len(t.EC2InstanceTagKeys) > 0 || len(t.EBSDeviceKeys) > 0 {
 		ec2CredentialConfig := &configaws.CredentialConfig{
-			Region:    t.region,
 			AccessKey: t.AccessKey,
 			SecretKey: t.SecretKey,
 			RoleARN:   t.RoleARN,
 			Profile:   t.Profile,
 			Filename:  t.Filename,
 			Token:     t.Token,
+			Region:    t.ec2MetadataRespond.region,
 		}
-		t.ec2 = t.ec2Provider(ec2CredentialConfig)
+		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 		go func() { //Async start of initial retrieval to prevent block of agent start
 			t.initialRetrievalOfTagsAndVolumes()
 			t.refreshLoopToUpdateTagsAndVolumes()
 		}()
-		t.Log.Infof(metadataCheckStrStartInitialization)
+		t.Log.Info("ec2tagger: EC2 tagger has started initialization.")
 
 	} else {
 		t.setStarted()
@@ -359,13 +336,13 @@ func (t *Tagger) updateVolumes() error {
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("attachment.instance-id"),
-				Values: aws.StringSlice([]string{t.instanceId}),
+				Values: aws.StringSlice([]string{t.ec2MetadataRespond.instanceId}),
 			},
 		},
 	}
 
 	for {
-		result, err := t.ec2.DescribeVolumes(input)
+		result, err := t.ec2API.DescribeVolumes(input)
 		if err != nil {
 			return err
 		}
@@ -386,7 +363,50 @@ func (t *Tagger) setStarted() {
 	t.Lock()
 	t.started = true
 	t.Unlock()
-	t.Log.Infof(ec2TagAndVolumeCheckStrSuccess)
+	t.Log.Info("ec2tagger: EC2 tagger has started, finished initial retrieval of tags and Volumes")
+}
+
+/*
+	Retrieve metadata from IMDS and use these metadata to:
+	* Extract InstanceID, ImageID, InstanceType to create custom dimension for collected metrics
+	* Extract InstanceID to retrieve Instance's Volume and Tags
+	* Extract Region to create aws session with custom configuration
+	For more information on IMDS, please follow this document https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
+*/
+func (t *Tagger) deriveEC2MetadataFromIMDS() error {
+	for _, tag := range t.EC2MetadataTags {
+		switch tag {
+		case mdKeyInstanceId:
+			t.ec2MetadataLookup.instanceId = true
+		case mdKeyImageId:
+			t.ec2MetadataLookup.imageId = true
+		case mdKeyInstanceType:
+			t.ec2MetadataLookup.instanceType = true
+		default:
+			t.Log.Errorf("ec2tagger: Unsupported EC2 Metadata key: %s.", tag)
+		}
+	}
+
+	t.Log.Infof("ec2tagger: Check EC2 Metadata.")
+	doc, err := t.ec2MetadataProvider().GetInstanceIdentityDocument()
+	if err != nil {
+		t.Log.Error("ec2tagger: Unable to retrieve EC2 Metadata. This plugin must only be used on an EC2 instance.")
+		if context.CurrentContext().RunInContainer() {
+			t.Log.Warn("ec2tagger: Timeout may have occurred because hop limit is too small. Please increase hop limit to 2 by following this document https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances.")
+		}
+		return err
+	}
+
+	t.ec2MetadataRespond.region = doc.Region
+	t.ec2MetadataRespond.instanceId = doc.InstanceID
+	if t.ec2MetadataLookup.imageId {
+		t.ec2MetadataRespond.imageId = doc.ImageID
+	}
+	if t.ec2MetadataLookup.instanceType {
+		t.ec2MetadataRespond.instanceType = doc.InstanceType
+	}
+
+	return nil
 }
 
 // This function never return until calling updateTags() and updateVolumes() succeed or shutdown happen.
@@ -412,12 +432,12 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 		}
 
 		if retry > 0 {
-			t.Log.Infof(ec2TagAndVolumeCheckStrRetryFailure, retry)
+			t.Log.Infof("ec2tagger: %v retry for initial retrieval of tags and volumes", retry)
 		}
 
 		if !tagsRetrieved {
 			if err := t.updateTags(); err != nil {
-				t.Log.Warnf(ec2TagCheckStrInitRetrievalFailure, err)
+				t.Log.Warnf("ec2tagger: Unable to describe ec2 tags for initial retrieval: %v", err)
 			} else {
 				tagsRetrieved = true
 			}
@@ -425,14 +445,14 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 
 		if !volsRetrieved {
 			if err := t.updateVolumes(); err != nil {
-				t.Log.Errorf(ec2VolumeCheckStrInitRetrievalFailure, err)
+				t.Log.Errorf("ec2tagger: Unable to describe ec2 volume for initial retrieval: %v", err)
 			} else {
 				volsRetrieved = true
 			}
 		}
 
 		if tagsRetrieved { // volsRetrieved is not checked to keep behavior consistency
-			t.Log.Infof(ec2TagAndVolumeCheckStrInitRetrievalSuccess)
+			t.Log.Infof("ec2tagger: Initial retrieval of tags succeeded")
 			t.setStarted()
 			return
 		}
