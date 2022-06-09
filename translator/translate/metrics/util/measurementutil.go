@@ -178,7 +178,7 @@ func GetMeasurementName(input interface{}) (measurementNames []string) {
 func ApplyPluginSpecificRules(pluginName string) (map[string]interface{}, bool) {
 	switch pluginName {
 	case nvidia_smi_plugin_name:
-		result := map[string]interface{} {tag_exclude_key: GetExcludingTags(pluginName)}
+		result := map[string]interface{}{tag_exclude_key: GetExcludingTags(pluginName)}
 		// if on windows, will look for smi in a windows style path
 		if translator.GetTargetPlatform() == translatorConfig.OS_TYPE_WINDOWS {
 			// default path for Nvidia_smi.exe is C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe
