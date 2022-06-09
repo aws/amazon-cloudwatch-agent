@@ -29,12 +29,21 @@ locals {
 #####################################################################
 # Generate EC2 Instance and execute test commands
 #####################################################################
-resource "aws_instance" "integration-test" {
-  ami                    = data.aws_ami.latest.id
-  instance_type          = var.ec2_instance_type
-  key_name               = local.ssh_key_name
-  iam_instance_profile   = aws_iam_instance_profile.cwagent_instance_profile.name
-  vpc_security_group_ids = [aws_security_group.ec2_security_group.id]
+resource "aws_instance" "cwagent" {
+  ami                         = data.aws_ami.latest.id
+  instance_type               = var.ec2_instance_type
+  key_name                    = local.ssh_key_name
+  iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
+  vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
+  associate_public_ip_address = true
+
+  tags = {
+    Name = var.test_name
+  }
+}
+
+resource "null_resource" "integration_test" {
+  # Prepare Integration Test
   provisioner "remote-exec" {
     inline = [
       "cloud-init status --wait",
@@ -43,6 +52,7 @@ resource "aws_instance" "integration-test" {
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.github_sha}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.github_sha}/linux/${var.arc}/${var.binary_name} .",
+      "sleep 10",
       "sudo ${var.install_agent}",
       "echo get ssl pem for localstack and export local stack host name",
       "cd ~/amazon-cloudwatch-agent/integration/localstack/ls_tmp",
@@ -51,23 +61,37 @@ resource "aws_instance" "integration-test" {
       "cat original.pem snakeoil.pem > combine.pem",
       "sudo cp original.pem /opt/aws/amazon-cloudwatch-agent/original.pem",
       "sudo cp combine.pem /opt/aws/amazon-cloudwatch-agent/combine.pem",
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = var.user
+      private_key = local.private_key_content
+      host        = aws_instance.cwagent.public_ip
+    }
+  }
+
+  #Run sanity check and integration test
+  provisioner "remote-exec" {
+    inline = [
+      "echo prepare environment",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
-      "echo run tests with the tag integration, one at a time, and verbose",
+      "export PATH=$PATH:/snap/bin",
+      "echo run integration test",
       "cd ~/amazon-cloudwatch-agent",
-      "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
+      "go test ./integration/test/sanity -p 1 -v --tags=integration",
       "go test ${var.test_dir} -p 1 -v --tags=integration"
     ]
     connection {
       type        = "ssh"
       user        = var.user
       private_key = local.private_key_content
-      host        = self.public_dns
+      host        = aws_instance.cwagent.public_ip
     }
   }
-  tags = {
-    Name = var.test_name
-  }
+
+  depends_on = [aws_instance.cwagent]
 }
 
 data "aws_ami" "latest" {

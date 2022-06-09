@@ -10,11 +10,11 @@
     "binaryName": "amazon-cloudwatch-agent.deb"
   },
   {
-    "os": "debian-arm64",
+    "os": "debian-10-arm64",
     "username": "admin",
     "instanceType": "c6g.xlarge",
     "installAgentCommand": "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
-    "ami": "cloudwatch-agent-integration-test-debian-arm64*",
+    "ami": "cloudwatch-agent-integration-test-debian-10-arm64*",
     "caCertPath": "/etc/ssl/certs/ca-certificates.crt",
     "arc": "arm64",
     "binaryName": "amazon-cloudwatch-agent.deb"

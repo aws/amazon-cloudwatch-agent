@@ -4,6 +4,7 @@
 package k8sclient
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -143,13 +144,16 @@ func transformFuncReplicaSet(obj interface{}) (interface{}, error) {
 }
 
 func createReplicaSetListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
+	ctx := context.Background()
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 			opts.ResourceVersion = ""
-			return client.AppsV1().ReplicaSets(ns).List(opts)
+			// Passing empty context as this was not required by old List()
+			return client.AppsV1().ReplicaSets(ns).List(ctx, opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
-			return client.AppsV1().ReplicaSets(ns).Watch(opts)
+			// Passing empty context as this was not required by old Watch()
+			return client.AppsV1().ReplicaSets(ns).Watch(ctx, opts)
 		},
 	}
 }

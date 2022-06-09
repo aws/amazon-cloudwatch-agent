@@ -89,7 +89,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.17.8
 
       - name: Install rpm
         run: sudo apt install rpm
@@ -101,11 +101,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 0
           submodules: 'true'
-          ref: '33e131d72512cc8fac7a0d3ce1b7f0ff69c51314'
 
       - name: Cache go
         id: cached_go
@@ -129,7 +128,6 @@ jobs:
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: make build package-rpm package-deb package-win package-darwin
 
-      - uses: olafurpg/setup-gpg@v3
 
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
@@ -143,11 +141,7 @@ jobs:
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: 'true'
-          ref: '33e131d72512cc8fac7a0d3ce1b7f0ff69c51314'
+      - uses: actions/checkout@v2
 
       #TODO upgrade to 1.17 after @ZhenyuTan-amz updates our go build version
       - name: Set up Go 1.x
@@ -179,7 +173,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.17.8
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -236,7 +230,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.17.8
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -360,11 +354,7 @@ jobs:
     outputs:
       local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: 'true'
-          ref: '33e131d72512cc8fac7a0d3ce1b7f0ff69c51314'
+      - uses: actions/checkout@v2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -401,11 +391,7 @@ jobs:
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: 'true'
-          ref: '33e131d72512cc8fac7a0d3ce1b7f0ff69c51314'
+      - uses: actions/checkout@v2
   
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -419,7 +405,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+          key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} test dir ${{ matrix.arrays.test_dir }}
@@ -582,7 +568,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+          key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
 
       - name: Login ECR
         id: login-ecr

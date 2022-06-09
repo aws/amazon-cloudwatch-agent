@@ -21,12 +21,6 @@ package prometheus_scraper
 
 import (
 	"context"
-	"os"
-	"os/signal"
-	"runtime"
-	"sync"
-	"syscall"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/oklog/run"
@@ -37,12 +31,19 @@ import (
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
-	sdConfig "github.com/prometheus/prometheus/discovery/config"
-	"github.com/prometheus/prometheus/pkg/relabel"
-	promRuntime "github.com/prometheus/prometheus/pkg/runtime"
+	_ "github.com/prometheus/prometheus/discovery/install"
+	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
-	"k8s.io/klog"
+	promRuntime "github.com/prometheus/prometheus/util/runtime"
+	"io/ioutil"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
+	"os"
+	"os/signal"
+	"runtime"
+	"sync"
+	"syscall"
 )
 
 var (
@@ -85,20 +86,18 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	//stdlog.SetOutput(log.NewStdlibAdapter(logger))
 	//stdlog.Println("redirect std log")
 
-	// Above level 6, the k8s client would log bearer tokens in clear-text.
-	klog.ClampLevel(6)
-	klog.SetLogger(log.With(logger, "component", "k8s_client_runtime"))
+	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
 	level.Info(logger).Log("msg", "Starting Prometheus", "version", version.Info())
 	level.Info(logger).Log("build_context", version.BuildContext())
 	level.Info(logger).Log("host_details", promRuntime.Uname())
 	level.Info(logger).Log("fd_limits", promRuntime.FdLimits())
-	level.Info(logger).Log("vm_limits", promRuntime.VmLimits())
+	level.Info(logger).Log("vm_limits", promRuntime.VMLimits())
 
 	var (
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), discovery.Name("scrape"))
-		scrapeManager           = scrape.NewManager(log.With(logger, "component", "scrape manager"), receiver)
+		scrapeManager           = scrape.NewManager(&scrape.Options{}, log.With(logger, "component", "scrape manager"), receiver)
 	)
 	mth.SetScrapeManager(scrapeManager)
 
@@ -107,13 +106,14 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		// they need to read the most updated config when receiving the new targets list.
 		scrapeManager.ApplyConfig,
 		func(cfg *config.Config) error {
-			c := make(map[string]sdConfig.ServiceDiscoveryConfig)
+			c := make(map[string]discovery.Configs)
 			for _, v := range cfg.ScrapeConfigs {
-				c[v.JobName] = v.ServiceDiscoveryConfig
+				c[v.JobName] = v.ServiceDiscoveryConfigs
 			}
 			return discoveryManagerScrape.ApplyConfig(c)
 		},
 	}
+
 	prometheus.MustRegister(configSuccess)
 	prometheus.MustRegister(configSuccessTime)
 
@@ -270,6 +270,9 @@ const (
 
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
+	content, _ := ioutil.ReadFile(filename)
+	text := string(content)
+	level.Debug(logger).Log("msg", "Prometheus configuration file", "value", text)
 
 	defer func() {
 		if err == nil {
@@ -280,7 +283,7 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 		}
 	}()
 
-	conf, err := config.LoadFile(filename)
+	conf, err := config.LoadFile(filename, false, false, logger)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
 	}
