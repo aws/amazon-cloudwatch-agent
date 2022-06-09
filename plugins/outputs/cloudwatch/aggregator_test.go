@@ -26,7 +26,7 @@ func TestAggregator_NoAggregationKeyFound(t *testing.T) {
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value"}
 	fields := map[string]interface{}{"value": 1}
 	timestamp := time.Now()
-	m, _ := metric.New(metricName, tags, fields, timestamp)
+	m := metric.New(metricName, tags, fields, timestamp)
 
 	aggregator.AddMetric(m)
 	select {
@@ -47,7 +47,7 @@ func TestAggregator_NotDurationType(t *testing.T) {
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: "1"}
 	fields := map[string]interface{}{"value": 1}
 	timestamp := time.Now()
-	m, _ := metric.New(metricName, tags, fields, timestamp)
+	m := metric.New(metricName, tags, fields, timestamp)
 
 	aggregator.AddMetric(m)
 	select {
@@ -69,7 +69,7 @@ func TestAggregator_ProperAggregationKey(t *testing.T) {
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: aggregationInterval.String()}
 	fields := map[string]interface{}{"value": 1}
 	timestamp := time.Now()
-	m, _ := metric.New(metricName, tags, fields, timestamp)
+	m := metric.New(metricName, tags, fields, timestamp)
 
 	aggregator.AddMetric(m)
 	assertNoMetricsInChan(t, metricChan)
@@ -88,24 +88,24 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: aggregationInterval.String()}
 	fields := map[string]interface{}{"value": 1}
-	m, _ := metric.New(metricName, tags, fields, timestamp)
+	m := metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
 
 	fields = map[string]interface{}{"value": 2}
-	m, _ = metric.New(metricName, tags, fields, timestamp)
+	m = metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
 
 	fields = map[string]interface{}{"value": 3}
-	m, _ = metric.New(metricName, tags, fields, timestamp)
+	m = metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
 
 	tags = map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: (2 * aggregationInterval).String()}
 	fields = map[string]interface{}{"value": 4, "2nd value": 1}
-	m, _ = metric.New(metricName, tags, fields, timestamp)
+	m = metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
 
 	fields = map[string]interface{}{"value": 5, "2nd value": 2}
-	m, _ = metric.New(metricName, tags, fields, timestamp)
+	m = metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
 
 	assertNoMetricsInChan(t, metricChan)
@@ -131,7 +131,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: aggregationInterval.String()}
 	fields := map[string]interface{}{"value": 1}
 	timestamp := time.Now()
-	m, _ := metric.New(metricName, tags, fields, timestamp)
+	m := metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
 
 	//give some time to aggregation to do the work
@@ -162,21 +162,21 @@ func TestDurationAggregator_aggregating(t *testing.T) {
 
 	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: aggregationInterval.String()}
 	fields := map[string]interface{}{"value": 1}
-	m, _ := metric.New(metricName, tags, fields, timestamp)
+	m := metric.New(metricName, tags, fields, timestamp)
 	durationAgg.addMetric(m)
-	m, _ = metric.New(metricName, tags, fields, timestamp.Add(aggregationInterval))
+	m = metric.New(metricName, tags, fields, timestamp.Add(aggregationInterval))
 	durationAgg.addMetric(m)
 
 	fields = map[string]interface{}{"value": 2}
-	m, _ = metric.New(metricName, tags, fields, timestamp)
+	m = metric.New(metricName, tags, fields, timestamp)
 	durationAgg.addMetric(m)
-	m, _ = metric.New(metricName, tags, fields, timestamp.Add(aggregationInterval*2))
+	m = metric.New(metricName, tags, fields, timestamp.Add(aggregationInterval*2))
 	durationAgg.addMetric(m)
 
 	fields = map[string]interface{}{"value": 3}
-	m, _ = metric.New(metricName, tags, fields, timestamp)
+	m = metric.New(metricName, tags, fields, timestamp)
 	durationAgg.addMetric(m)
-	m, _ = metric.New(metricName, tags, fields, timestamp.Add(aggregationInterval*3))
+	m = metric.New(metricName, tags, fields, timestamp.Add(aggregationInterval*3))
 	durationAgg.addMetric(m)
 
 	//give some time to aggregation to do the work

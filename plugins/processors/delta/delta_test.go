@@ -32,7 +32,7 @@ func createTestMetric(reportDeltaTag string, ignoredFieldsTag string) []telegraf
 	if ignoredFieldsTag == "NULL" {
 		delete(tags, "ignored_fields_for_delta")
 	}
-	metric1, _ := metric.New("m1",
+	metric1 := metric.New("m1",
 		deepCopy(tags),
 		map[string]interface{}{
 			"value1": int64(1),
@@ -43,7 +43,7 @@ func createTestMetric(reportDeltaTag string, ignoredFieldsTag string) []telegraf
 		time.Now(),
 	)
 
-	metric2, _ := metric.New("m1",
+	metric2 := metric.New("m1",
 		deepCopy(tags),
 		map[string]interface{}{
 			"value1": int64(10),
@@ -53,7 +53,7 @@ func createTestMetric(reportDeltaTag string, ignoredFieldsTag string) []telegraf
 		},
 		time.Now(),
 	)
-	metric3, _ := metric.New("m1",
+	metric3 := metric.New("m1",
 		deepCopy(tags),
 		map[string]interface{}{
 			"value1": int64(10),
@@ -63,7 +63,7 @@ func createTestMetric(reportDeltaTag string, ignoredFieldsTag string) []telegraf
 		},
 		time.Now(),
 	)
-	metric4, _ := metric.New("m1",
+	metric4 := metric.New("m1",
 		deepCopy(tags),
 		map[string]interface{}{
 			"value1": int64(7),
@@ -73,7 +73,7 @@ func createTestMetric(reportDeltaTag string, ignoredFieldsTag string) []telegraf
 		},
 		time.Now(),
 	)
-	metric5, _ := metric.New("m1",
+	metric5 := metric.New("m1",
 		deepCopy(tags),
 		map[string]interface{}{
 			"value1": int64(8),
