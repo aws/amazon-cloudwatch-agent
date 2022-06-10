@@ -358,7 +358,7 @@ func TestWrite(t *testing.T) {
 	tags := map[string]string{"dimension_name1": "dimension_value2"}
 	ti := time.Now()
 	m := metric.New(measurement, tags, fields, ti)
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 101; i++ {
 		metrics = append(metrics, m.Copy())
 	}
 
