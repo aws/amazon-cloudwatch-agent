@@ -126,7 +126,6 @@ for how to easily generate a new policy.
         "s3:GetObjectAcl",
         "s3:GetObject",
         "s3:ListBucket",
-        "s3:PutObject",
         "ecr:GetAuthorizationToken"
       ],
       "Resource": "*"
