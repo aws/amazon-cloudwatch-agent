@@ -3,7 +3,6 @@ package tail
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 	"testing"
@@ -65,9 +64,9 @@ func TestNotTailedCompeletlyLogging(t *testing.T) {
 	readThreelines(t, tail)
 
 	// Then remove the tmpfile
-	if err := os.Remove(tmpfile.Name()); err != nil {
-		t.Fatalf("failed to remove temporary log file %v: %v", tmpfile.Name(), err)
-	}
+	err := os.Remove(tmpfile.Name())
+	assert.NoError(t, err)
+
 	// Wait until the tailer should have been terminated
 	time.Sleep(exitOnDeletionWaitDuration + exitOnDeletionCheckDuration + 1*time.Second)
 
@@ -99,7 +98,7 @@ func TestStopAtEOF(t *testing.T) {
 	assert.Equal(t, errStopAtEOF, tail.Err())
 
 	// Read to EOF
-	for i := 0; i < linesWrittenToFile - 3; i++ {
+	for i := 0; i < linesWrittenToFile-3; i++ {
 		<-tail.Lines
 	}
 
@@ -107,32 +106,29 @@ func TestStopAtEOF(t *testing.T) {
 	select {
 	case <-done:
 		t.Log("StopAtEOF() completed (as expected)")
-	case <- time.After(time.Second * 1):
+	case <-time.After(time.Second * 1):
 		t.Fatalf("StopAtEOF() has not completed")
 	}
 
 	// Then remove the tmpfile
-	if err := os.Remove(tmpfile.Name()); err != nil {
-		t.Fatalf("failed to remove temporary log file %v: %v", tmpfile.Name(), err)
-	}
+	err := os.Remove(tmpfile.Name())
+	assert.NoError(t, err)
+
 	verifyTailerExited(t, tail)
 }
 
 func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 	tmpfile, err := ioutil.TempFile("", "example")
-	if err != nil {
-		t.Fatalf("failed to create temp file: %v", err)
-	}
+	assert.NoError(t, err)
 
 	// Write the file content
 	for i := 0; i < linesWrittenToFile; i++ {
-		if _, err := fmt.Fprintf(tmpfile, "%v some log line\n", time.Now()); err != nil {
-			log.Fatal(err)
-		}
+		_, err := fmt.Fprintf(tmpfile, "%v some log line\n", time.Now())
+		assert.NoError(t, err)
 	}
-	if err := tmpfile.Close(); err != nil {
-		log.Fatal(err)
-	}
+
+	err = tmpfile.Close()
+	assert.NoError(t, err)
 
 	// Modify the exit on deletion wait to reduce test length
 	exitOnDeletionCheckDuration = 100 * time.Millisecond
@@ -140,14 +136,18 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 
 	// Setup the tail
 	var tl testLogger
-	tail, err := TailFile(tmpfile.Name(), Config{
-		Logger: &tl,
-		ReOpen: false,
-		Follow: true,
-	})
-	if err != nil {
-		t.Fatalf("failed to tail file %v: %v", tmpfile.Name(), err)
-	}
+	tailerQueue := NewTailerFifoQueue()
+	tail, err := TailFile(tmpfile.Name(), tailerQueue,
+		Config{
+			Logger: &tl,
+			ReOpen: false,
+			Follow: true,
+		})
+	assert.NoError(t, err)
+
+	//Increase the tailer in queue by 1 to later confirmed if the tailer in queue has been released yet in line 181
+	tail.TailerQueue.Enqueue()
+	assert.Equal(t, 1, tail.TailerQueue.Size())
 
 	return tmpfile, tail, &tl
 }
@@ -155,10 +155,8 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 func readThreelines(t *testing.T, tail *Tail) {
 	for i := 0; i < 3; i++ {
 		line := <-tail.Lines
-		if line.Err != nil {
-			t.Errorf("error tailing test file: %v", line.Err)
-			continue
-		}
+		assert.NoError(t, line.Err)
+
 		if !strings.HasSuffix(line.Text, "some log line") {
 			t.Errorf("wrong line from tail found: '%v'", line.Text)
 		}
@@ -179,6 +177,8 @@ func verifyTailerLogging(t *testing.T, tlog *testLogger, expectedErrorMsg string
 func verifyTailerExited(t *testing.T, tail *Tail) {
 	select {
 	case <-tail.Dead():
+		//Ensure all the tailers are released when signal dead.
+		assert.Equal(t, 0, tail.TailerQueue.Size())
 		return
 	default:
 		t.Errorf("Tailer is still alive after file removed and wait period")

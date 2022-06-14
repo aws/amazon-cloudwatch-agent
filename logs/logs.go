@@ -91,6 +91,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 	}
 
 	t := time.NewTicker(time.Second)
+
 	defer t.Stop()
 	for {
 		select {

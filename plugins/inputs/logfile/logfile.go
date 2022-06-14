@@ -35,14 +35,17 @@ type LogFile struct {
 	configs           map[*FileConfig]map[string]*tailerSrc
 	done              chan struct{}
 	removeTailerSrcCh chan *tailerSrc
+	tailerQueue       *tail.TailerEnqueue
 	started           bool
 }
 
 func NewLogFile() *LogFile {
+
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
 		removeTailerSrcCh: make(chan *tailerSrc, 100),
+		tailerQueue:       tail.NewTailerFifoQueue(),
 	}
 }
 
@@ -137,6 +140,7 @@ func (t *LogFile) Stop() {
 	// Tailer srcs are stopped by log agent after the output plugin is stopped instead of here
 	// because the tailersrc would like to record an accurate uploaded offset
 	close(t.done)
+	close(t.tailerQueue.Queue)
 }
 
 //Try to find if there is any new file needs to be added for monitoring.
@@ -188,7 +192,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				isutf16 = true
 			}
 
-			tailer, err := tail.TailFile(filename,
+			tailer, err := tail.TailFile(filename, t.tailerQueue,
 				tail.Config{
 					ReOpen:      false,
 					Follow:      true,
@@ -204,6 +208,8 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				t.Log.Errorf("Failed to tail file %v with error: %v", filename, err)
 				continue
 			}
+
+			t.tailerQueue.Enqueue()
 
 			var mlCheck func(string) bool
 			if fileconfig.MultiLineStartPattern != "" {
@@ -258,6 +264,10 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 			dests[filename] = src
 		}
 	}
+
+	
+	t.Log.Infof("Number of file descriptors used by agent / Total allowed file descriptors: %v/%v", t.tailerQueue.Size(), t.tailerQueue.Capacity())
+	
 
 	return srcs
 }

@@ -85,13 +85,14 @@ type Tail struct {
 	lk sync.Mutex
 
 	FileDeletedCh chan bool
+	TailerQueue   *TailerEnqueue
 }
 
 // TailFile begins tailing the file. Output stream is made available
 // via the `Tail.Lines` channel. To handle errors during tailing,
 // invoke the `Wait` or `Err` method after finishing reading from the
 // `Lines` channel.
-func TailFile(filename string, config Config) (*Tail, error) {
+func TailFile(filename string, tailerQueue *TailerEnqueue, config Config) (*Tail, error) {
 	if config.ReOpen && !config.Follow {
 		return nil, errors.New("cannot set ReOpen without Follow.")
 	}
@@ -101,6 +102,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 		Lines:         make(chan *Line),
 		Config:        config,
 		FileDeletedCh: make(chan bool),
+		TailerQueue:   tailerQueue,
 	}
 
 	// when Logger was not specified in config, create new one
@@ -317,6 +319,7 @@ func (tail *Tail) tailFileSync() {
 			if err != tomb.ErrDying {
 				tail.Kill(err)
 			}
+			tail.TailerQueue.Dequeue()
 			return
 		}
 	}
@@ -329,12 +332,14 @@ func (tail *Tail) tailFileSync() {
 		tail.Logger.Debugf("Seeked %s - %+v\n", tail.Filename, tail.Location)
 		if err != nil {
 			tail.Killf("Seek error on %s: %s", tail.Filename, err)
+			tail.TailerQueue.Dequeue()
 			return
 		}
 	}
 
 	if err := tail.watchChanges(); err != nil {
 		tail.Killf("Error watching for changes on %s: %s", tail.Filename, err)
+		tail.TailerQueue.Dequeue()
 		return
 	}
 
@@ -358,10 +363,12 @@ func (tail *Tail) tailFileSync() {
 				select {
 				case <-time.After(time.Second):
 				case <-tail.Dying():
+					tail.TailerQueue.Dequeue()
 					return
 				}
 				if err := tail.seekEnd(); err != nil {
 					tail.Kill(err)
+					tail.TailerQueue.Dequeue()
 					return
 				}
 			}
@@ -370,6 +377,7 @@ func (tail *Tail) tailFileSync() {
 				if line != "" {
 					tail.sendLine(line, tail.curOffset)
 				}
+				tail.TailerQueue.Dequeue()
 				return
 			}
 
@@ -379,6 +387,7 @@ func (tail *Tail) tailFileSync() {
 				err := tail.seekTo(SeekInfo{Offset: backupOffset, Whence: 0})
 				if err != nil {
 					tail.Kill(err)
+					tail.TailerQueue.Dequeue()
 					return
 				}
 			}
@@ -388,6 +397,7 @@ func (tail *Tail) tailFileSync() {
 			// implementation (inotify or polling).
 			err := tail.waitForChanges()
 			if err != nil {
+				tail.TailerQueue.Dequeue()
 				if err == ErrDeletedNotReOpen {
 					close(tail.FileDeletedCh)
 					for {
@@ -406,11 +416,13 @@ func (tail *Tail) tailFileSync() {
 		} else {
 			// non-EOF error
 			tail.Killf("Error reading %s: %s", tail.Filename, err)
+			tail.TailerQueue.Dequeue()
 			return
 		}
 
 		select {
 		case <-tail.Dying():
+			tail.TailerQueue.Dequeue()
 			if tail.Err() == errStopAtEOF {
 				continue
 			}

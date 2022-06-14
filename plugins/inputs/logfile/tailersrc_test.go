@@ -33,21 +33,18 @@ type tailerTestResources struct {
 
 func TestTailerSrc(t *testing.T) {
 	original := multilineWaitPeriod
+	tailerQueue := tail.NewTailerFifoQueue()
 	defer resetState(original)
 
 	file, err := createTempFile("", "tailsrctest-*.log")
+	assert.NoError(t, err)
 	defer os.Remove(file.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
 
 	statefile, err := ioutil.TempFile("", "tailsrctest-state-*.log")
+	assert.NoError(t, err)
 	defer os.Remove(statefile.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
 
-	tailer, err := tail.TailFile(file.Name(),
+	tailer, err := tail.TailFile(file.Name(), tailerQueue,
 		tail.Config{
 			ReOpen:      false,
 			Follow:      true,
@@ -59,10 +56,7 @@ func TestTailerSrc(t *testing.T) {
 			IsUTF16:     false,
 		})
 
-	if err != nil {
-		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
-		return
-	}
+	assert.NoError(t, err)
 
 	ts := NewTailerSrc(
 		"groupName", "streamName",
@@ -145,29 +139,26 @@ func TestTailerSrc(t *testing.T) {
 	}
 
 	// Removal of log file should stop tailersrc
-	if err := os.Remove(file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
-	}
+	err = os.Remove(file.Name())
+	assert.NoError(t, err)
+
 	<-done
 }
 
 func TestOffsetDoneCallBack(t *testing.T) {
 	original := multilineWaitPeriod
+	tailerQueue := tail.NewTailerFifoQueue()
 	defer resetState(original)
 
 	file, err := createTempFile("", "tailsrctest-*.log")
+	assert.NoError(t, err)
 	defer os.Remove(file.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
 
 	statefile, err := ioutil.TempFile("", "tailsrctest-state-*.log")
+	assert.NoError(t, err)
 	defer os.Remove(statefile.Name())
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
 
-	tailer, err := tail.TailFile(file.Name(),
+	tailer, err := tail.TailFile(file.Name(), tailerQueue,
 		tail.Config{
 			ReOpen:      false,
 			Follow:      true,
@@ -179,10 +170,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 			IsUTF16:     false,
 		})
 
-	if err != nil {
-		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
-		return
-	}
+	assert.NoError(t, err)
 
 	ts := NewTailerSrc(
 		"groupName", "streamName",
@@ -213,56 +201,30 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		if i == 10 { // Test before first truncate
 			time.Sleep(1 * time.Second)
 			b, err := ioutil.ReadFile(statefile.Name())
-			if err != nil {
-				t.Errorf("Failed to read state file: %v", err)
-			}
+			assert.NoError(t, err)
 			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
-			if err != nil {
-				t.Errorf("Failed to parse offset: %v, from '%s'", err, b)
-			}
-
-			if offset != 1010 {
-				t.Errorf("Wrong offset %v is written to state file, expecting 1010", offset)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, offset, 1010)
 		}
 
 		if i == 15 { // Test after first truncate, saved offset should decrease
 			time.Sleep(1 * time.Second)
-			log.Println(statefile.Name())
 			b, err := ioutil.ReadFile(statefile.Name())
-			log.Println(b)
-			if err != nil {
-				t.Errorf("Failed to read state file: %v", err)
-			}
+			assert.NoError(t, err)
 			file_parts := bytes.Split(b, []byte("\n"))
-			log.Println("file_parts: ", file_parts)
 			file_string := string(file_parts[0])
-			log.Println("file_string: ", file_string)
 			offset, err := strconv.Atoi(file_string)
-			log.Println(offset)
-			log.Println(err)
-			if err != nil {
-				t.Errorf("Failed to parse offset: %v, from '%s'", err, b)
-			}
-
-			if offset != 505 {
-				t.Errorf("Wrong offset %v is written to state file, after truncate and write shorter logs expecting 505", offset)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, offset, 505)
 		}
 
 		if i == 35 { // Test after 2nd truncate, the offset should be larger
 			time.Sleep(1 * time.Second)
 			b, err := ioutil.ReadFile(statefile.Name())
-			if err != nil {
-				t.Errorf("Failed to read state file: %v", err)
-			}
+			assert.NoError(t, err)
 			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
-			if err != nil {
-				t.Errorf("Failed to parse offset: %v, from '%s'", err, b)
-			}
-			if offset != 2020 {
-				t.Errorf("Wrong offset %v is written to state file, after truncate and write longer logs expecting 2020", offset)
-			}
+			assert.NoError(t, err)
+			assert.Equal(t, offset, 2020)
 		}
 
 	})
@@ -277,9 +239,9 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	// First truncate then write 50 lines (save state should record 505 bytes)
 
 	log.Println("Truncate file")
-	if err := file.Truncate(0); err != nil {
-		t.Errorf("Failed to truncate log file '%v': %v", file.Name(), err)
-	}
+	err = file.Truncate(0)
+	assert.NoError(t, err)
+
 	log.Println("Sleep before write")
 	time.Sleep(1 * time.Second)
 	file.Seek(io.SeekStart, 0)
@@ -293,9 +255,9 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	log.Println("Truncate then write 20 lines")
 
 	// Second truncate then write 20 lines (save state should record 2020 bytes)
-	if err := file.Truncate(0); err != nil {
-		t.Errorf("Failed to truncate log file '%v': %v", file.Name(), err)
-	}
+	err = file.Truncate(0)
+	assert.NoError(t, err)
+
 	time.Sleep(1 * time.Second)
 	file.Seek(io.SeekStart, 0)
 	for i := 0; i < 20; i++ {
@@ -304,9 +266,9 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Removal of log file should stop tailersrc
-	if err := os.Remove(file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
-	}
+	err = os.Remove(file.Name())
+	assert.NoError(t, err)
+
 	<-done
 	if i < 35 {
 		t.Errorf("Not enough logs have been processed, only %v are processed", i)
@@ -325,9 +287,9 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 0)
 
 	// Removal of log file should stop tailersrc
-	if err := os.Remove(resources.file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", resources.file.Name(), err)
-	}
+	err := os.Remove(resources.file.Name())
+	assert.NoError(t, err)
+
 	<-*resources.done
 	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
@@ -357,9 +319,9 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 100)
 
 	// Removal of log file should stop tailersrc
-	if err := os.Remove(resources.file.Name()); err != nil {
-		t.Errorf("failed to remove log file '%v': %v", resources.file.Name(), err)
-	}
+	err := os.Remove(resources.file.Name())
+	assert.NoError(t, err)
+
 	<-*resources.done
 	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
@@ -396,17 +358,16 @@ func logWithTimestampPrefix(s string) string {
 
 func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) tailerTestResources {
 	done := make(chan struct{})
+	tailerQueue := tail.NewTailerFifoQueue()
+
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
-	statefile, err := createTempFile("", "tailsrctest-state-*.log")
-	if err != nil {
-		t.Errorf("Failed to create temp file: %v", err)
-	}
+	assert.NoError(t, err)
 
-	tailer, err := tail.TailFile(file.Name(),
+	statefile, err := createTempFile("", "tailsrctest-state-*.log")
+	assert.NoError(t, err)
+
+	tailer, err := tail.TailFile(file.Name(), tailerQueue,
 		tail.Config{
 			ReOpen:      false,
 			Follow:      true,
@@ -418,9 +379,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 			IsUTF16:     false,
 		})
 
-	if err != nil {
-		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
-	}
+	assert.NoError(t, err)
 
 	config := &FileConfig{
 		LogGroupName:  t.Name(),
@@ -434,6 +393,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 	}
 	err = config.init()
 	assert.NoError(t, err)
+
 	ts := NewTailerSrc(
 		t.Name(),
 		t.Name(),

@@ -76,6 +76,7 @@ type tailerSrc struct {
 	startTailerOnce sync.Once
 	cleanUpFns      []func()
 }
+
 // Verify tailerSrc implements LogSrc
 var _ logs.LogSrc = (*tailerSrc)(nil)
 

@@ -429,9 +429,9 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 	}
 	t.Log("Verify every line written to the temp file is received.")
 	for i := 0; i < numLines; i++ {
-		logEvent := <- evts
+		logEvent := <-evts
 		require.Equal(t, msg, logEvent.Message())
-		if i != numLines / 2 {
+		if i != numLines/2 {
 			continue
 		}
 		// Halfway through start another goroutine to create another temp file.
