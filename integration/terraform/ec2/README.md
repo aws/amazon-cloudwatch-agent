@@ -232,7 +232,8 @@ secrets.
 3. Select the `Run Integration Tests` action
 4. Select `Run workflow`, and choose the branch to execute integration tests on
 
-> Note: The Amazon EC2 quota limit might need to be increased to run the integration test: request an increase via `All Standard (A, C, D, H, I, M, R, T, Z) Spot Instance Request`
+> Note: The Amazon EC2 quota limit might need to be increased to run the integration test (each EC2 integration test suite is tested on different EC2 instance per OS)
+> : request an increase via `All Standard (A, C, D, H, I, M, R, T, Z) Spot Instance Request`
 
 Note that based on the GitHub action workflow YAML configuration, merges to the main branch
 also trigger the integration tests. If for any reason you do not want integration tests to run
