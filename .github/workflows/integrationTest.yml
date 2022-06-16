@@ -431,7 +431,7 @@ jobs:
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3
-          timeout_minutes: 15
+          timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
             cd integration/terraform/ec2/linux
