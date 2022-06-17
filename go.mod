@@ -39,6 +39,8 @@ replace k8s.io/klog => github.com/simonpasquier/klog-gokit v0.1.0
 replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v0.0.0-20200121152719-05b03c675090
 
 require (
+	cloud.google.com/go/kms v1.4.0 // indirect
+	cloud.google.com/go/monitoring v1.5.0 // indirect
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Jeffail/gabs v1.4.0
 	github.com/aws/aws-sdk-go v1.30.15
@@ -54,30 +56,33 @@ require (
 	github.com/go-kit/kit v0.10.0
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cadvisor v0.36.0
-	github.com/google/go-cmp v0.5.7
+	github.com/google/go-cmp v0.5.8
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/influxdata/telegraf v0.0.0-00010101000000-000000000000
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/kardianos/service v1.0.0
-	github.com/kr/pretty v0.2.0
+	github.com/kr/pretty v0.3.0
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oklog/run v1.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.5.1
-	github.com/prometheus/common v0.9.1
+	github.com/prometheus/client_golang v1.12.1
+	github.com/prometheus/common v0.34.0
 	github.com/prometheus/prometheus v1.8.2-0.20200420081721-18254838fbe2
 	github.com/shirou/gopsutil v2.20.5+incompatible
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
-	golang.org/x/sys v0.0.0-20200316230553-a7d97aace0b0
-	golang.org/x/text v0.3.3
+	go.opentelemetry.io/collector v0.53.0
+	golang.org/x/net v0.0.0-20220325170049-de3da57026de
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20220328115105-d36c6a25d886
+	golang.org/x/text v0.3.7
 	gopkg.in/fsnotify.v1 v1.4.7
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.17.4
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v0.17.4

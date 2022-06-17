@@ -2,11 +2,8 @@ package toyamlconfig
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
-	"log"
-)
-
-import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/csm"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/globaltags"
@@ -48,25 +45,111 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/swap"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/rollup_dimensions"
-
-	"github.com/BurntSushi/toml"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"go.opentelemetry.io/collector/config"
+	"gopkg.in/yaml.v3"
+	"log"
+	"os"
 )
 
-func ToYamlConfig(c interface{}) string {
-	//Process by the translator.
+import (
+	"go.opentelemetry.io/collector/service"
+)
+
+const (
+	receiversKeyName = "receivers"
+	exportersKeyName = "exporters"
+	serviceKeyName   = "service"
+	pipelinesKeyName = "pipelines"
+)
+
+func ToYamlConfig(c interface{}, fileName string) string {
 	r := new(translate.Translator)
 	_, val := r.ApplyRule(c)
-	config := val.(map[string]interface{})
-	inputs := config["inputs"].(map[string]interface{})
-	for s := range inputs {
-		log.Printf(s)
+	cn := val.(map[string]interface{})
+	inputs := cn["inputs"].(map[string]interface{})
+	outputs := cn["outputs"].(map[string]interface{})
+
+	cfg := make(map[string]interface{})
+	encoder := NewEncoder()
+
+	encodeReceivers(inputs, &cfg, encoder)
+	encodeExporters(outputs, &cfg, encoder)
+	encodeService(inputs, outputs, &cfg, encoder)
+
+	var buffer bytes.Buffer
+	yamlEncoder := yaml.NewEncoder(&buffer)
+
+	if err := yamlEncoder.Encode(cfg); err != nil {
+		log.Panicf("Encode to a valid YAML config fails because of %v", err)
 	}
-	log.Printf("logging agent map: %v",inputs)
-	buf := bytes.Buffer{}
-	enc := toml.NewEncoder(&buf)
-	err := enc.Encode(val)
+	yamlFileName := fmt.Sprintf("testdir/%v.yaml", fileName)
+	err := os.WriteFile(yamlFileName, buffer.Bytes(), 0660)
 	if err != nil {
-		log.Panicf("Encode to a valid TOML config fails because of %v", err)
+		log.Fatal(err)
 	}
-	return buf.String()
+	return buffer.String()
+}
+
+func encodeReceivers(inputs map[string]interface{}, cfg *map[string]interface{}, encoder util.Encoder) {
+	receiversSection := make(map[string]interface{})
+
+	rec := inputsToReceivers(inputs)
+	receiversSection[receiversKeyName] = rec
+	if err := encoder.Encode(receiversSection, &cfg); err != nil {
+		log.Panicf("Encode to a valid yaml config fails because of %v", err)
+	}
+}
+
+func inputsToReceivers(inputs map[string]interface{}) map[config.ComponentID]config.Receiver {
+	receiverArr := make(map[config.ComponentID]config.Receiver)
+	for input := range inputs {
+		t := config.Type(input)
+		hc := config.NewReceiverSettings(config.NewComponentID(t))
+		receiverArr[config.NewComponentID(t)] = &hc
+	}
+	return receiverArr
+}
+
+func encodeExporters(outputs map[string]interface{}, cfg *map[string]interface{}, encoder util.Encoder) {
+	exportersSection := make(map[string]interface{})
+	exportersSection[exportersKeyName] = outputsToExporters(outputs)
+	if err := encoder.Encode(exportersSection, &cfg); err != nil {
+		log.Panicf("Encode to a valid yaml config fails because of %v", err)
+	}
+}
+
+func outputsToExporters(outputs map[string]interface{}) map[config.ComponentID]config.Exporter {
+	exporterArr := make(map[config.ComponentID]config.Exporter)
+	for output := range outputs {
+		t := config.Type(output)
+		exporterSettings := config.NewExporterSettings(config.NewComponentID(t))
+		exporterArr[config.NewComponentID(t)] = &exporterSettings
+	}
+	return exporterArr
+}
+
+func encodeService(inputs map[string]interface{}, outputs map[string]interface{}, cfg *map[string]interface{}, encoder util.Encoder) {
+	serviceSection := make(map[string]interface{})
+	pipelinesSection := make(map[string]interface{})
+	pipelinesSection[pipelinesKeyName] = buildPipelines(outputsToExporters(outputs), inputsToReceivers(inputs))
+	serviceSection[serviceKeyName] = pipelinesSection
+	if err := encoder.Encode(serviceSection, &cfg); err != nil {
+		log.Panicf("Encode to a valid yaml config fails because of %v", err)
+	}
+}
+
+func buildPipelines(exporters map[config.ComponentID]config.Exporter, receivers map[config.ComponentID]config.Receiver) map[config.ComponentID]*service.ConfigServicePipeline {
+	var exMap []config.ComponentID
+	for ex := range exporters {
+		exMap = append(exMap, ex)
+	}
+	var recMap []config.ComponentID
+	for rec := range receivers {
+		recMap = append(recMap, rec)
+	}
+	pipeline := service.ConfigServicePipeline{Exporters: exMap, Receivers: recMap}
+	metricsPipeline := make(map[config.ComponentID]*service.ConfigServicePipeline)
+	metricsPipeline[config.NewComponentID("metrics")] = &pipeline
+	return metricsPipeline
 }

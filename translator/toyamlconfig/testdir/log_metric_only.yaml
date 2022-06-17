@@ -1,0 +1,12 @@
+exporters:
+    cloudwatchlogs: {}
+receivers:
+    socket_listener: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatchlogs
+            processors: []
+            receivers:
+                - socket_listener

@@ -57,7 +57,6 @@ func ToTomlConfig(c interface{}) string {
 	//Process by the translator.
 	r := new(translate.Translator)
 	_, val := r.ApplyRule(c)
-	log.Printf("logging pre-toml config map: %v", val)
 	buf := bytes.Buffer{}
 	enc := toml.NewEncoder(&buf)
 	err := enc.Encode(val)

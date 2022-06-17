@@ -1,0 +1,12 @@
+exporters:
+    cloudwatchlogs: {}
+receivers:
+    prometheus_scraper: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatchlogs
+            processors: []
+            receivers:
+                - prometheus_scraper

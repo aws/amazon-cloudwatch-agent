@@ -1,0 +1,35 @@
+exporters:
+    cloudwatch: {}
+    cloudwatchlogs: {}
+receivers:
+    cpu: {}
+    disk: {}
+    diskio: {}
+    logfile: {}
+    mem: {}
+    net: {}
+    netstat: {}
+    processes: {}
+    procstat: {}
+    socket_listener: {}
+    statsd: {}
+    swap: {}
+service:
+    metrics:
+        exporters:
+            - cloudwatchlogs
+            - cloudwatch
+        processors: []
+        receivers:
+            - netstat
+            - logfile
+            - disk
+            - procstat
+            - cpu
+            - diskio
+            - processes
+            - mem
+            - statsd
+            - swap
+            - socket_listener
+            - net

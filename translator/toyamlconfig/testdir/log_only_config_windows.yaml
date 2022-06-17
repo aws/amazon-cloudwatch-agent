@@ -1,0 +1,14 @@
+exporters:
+    cloudwatchlogs: {}
+receivers:
+    logfile: {}
+    windows_event_log: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatchlogs
+            processors: []
+            receivers:
+                - logfile
+                - windows_event_log

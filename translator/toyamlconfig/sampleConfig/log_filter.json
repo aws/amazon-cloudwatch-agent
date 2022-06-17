@@ -1,0 +1,36 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "timezone": "UTC",
+            "filters": [
+              {
+                "type": "include",
+                "expression": "ERROR"
+              },
+              {
+                "type": "exclude",
+                "expression": "StatusCode 4\\d{2}"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME"
+  }
+}

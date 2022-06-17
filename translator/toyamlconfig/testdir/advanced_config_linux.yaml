@@ -1,0 +1,26 @@
+exporters:
+    cloudwatch: {}
+receivers:
+    cpu: {}
+    disk: {}
+    diskio: {}
+    ethtool: {}
+    mem: {}
+    netstat: {}
+    nvidia_smi: {}
+    swap: {}
+service:
+    pipelines:
+    metrics:
+        exporters:
+            - cloudwatch
+        processors: []
+        receivers:
+            - netstat
+            - nvidia_smi
+            - swap
+            - cpu
+            - disk
+            - diskio
+            - ethtool
+            - mem

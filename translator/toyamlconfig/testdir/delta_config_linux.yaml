@@ -1,0 +1,12 @@
+exporters:
+    cloudwatch: {}
+receivers:
+    diskio: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatch
+            processors: []
+            receivers:
+                - diskio

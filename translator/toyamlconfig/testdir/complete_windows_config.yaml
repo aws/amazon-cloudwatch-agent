@@ -1,0 +1,24 @@
+exporters:
+    cloudwatch: {}
+    cloudwatchlogs: {}
+receivers:
+    logfile: {}
+    procstat: {}
+    socket_listener: {}
+    statsd: {}
+    win_perf_counters: {}
+    windows_event_log: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatchlogs
+                - cloudwatch
+            processors: []
+            receivers:
+                - procstat
+                - statsd
+                - logfile
+                - windows_event_log
+                - socket_listener
+                - win_perf_counters
