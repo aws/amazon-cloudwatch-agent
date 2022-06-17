@@ -12,10 +12,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/semaphore"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"gopkg.in/tomb.v1"
+
 )
 
 var (
@@ -84,15 +86,15 @@ type Tail struct {
 
 	lk sync.Mutex
 
+	numUsedFds    semaphore.Semaphore
 	FileDeletedCh chan bool
-	TailerQueue   *TailerEnqueue
 }
 
 // TailFile begins tailing the file. Output stream is made available
 // via the `Tail.Lines` channel. To handle errors during tailing,
 // invoke the `Wait` or `Err` method after finishing reading from the
 // `Lines` channel.
-func TailFile(filename string, tailerQueue *TailerEnqueue, config Config) (*Tail, error) {
+func TailFile(filename string, numUsedFds semaphore.Semaphore, config Config) (*Tail, error) {
 	if config.ReOpen && !config.Follow {
 		return nil, errors.New("cannot set ReOpen without Follow.")
 	}
@@ -102,7 +104,7 @@ func TailFile(filename string, tailerQueue *TailerEnqueue, config Config) (*Tail
 		Lines:         make(chan *Line),
 		Config:        config,
 		FileDeletedCh: make(chan bool),
-		TailerQueue:   tailerQueue,
+		numUsedFds:    numUsedFds,
 	}
 
 	// when Logger was not specified in config, create new one
@@ -177,6 +179,10 @@ func (tail *Tail) close() {
 	}
 	close(tail.Lines)
 	tail.closeFile()
+
+	if tail.numUsedFds.GetLimit() != 0 {
+		tail.numUsedFds.Release()
+	}
 }
 
 func (tail *Tail) closeFile() {
@@ -311,7 +317,6 @@ func (tail *Tail) readlineUtf16() (string, error) {
 func (tail *Tail) tailFileSync() {
 	defer tail.Done()
 	defer tail.close()
-	defer tail.TailerQueue.Dequeue()
 
 	if !tail.MustExist {
 		// deferred first open.
@@ -361,7 +366,6 @@ func (tail *Tail) tailFileSync() {
 				select {
 				case <-time.After(time.Second):
 				case <-tail.Dying():
-					
 					return
 				}
 				if err := tail.seekEnd(); err != nil {

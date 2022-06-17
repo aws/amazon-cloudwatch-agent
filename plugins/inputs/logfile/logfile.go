@@ -15,7 +15,9 @@ import (
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/semaphore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/fdlimit"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/influxdata/telegraf"
@@ -35,61 +37,22 @@ type LogFile struct {
 	configs           map[*FileConfig]map[string]*tailerSrc
 	done              chan struct{}
 	removeTailerSrcCh chan *tailerSrc
-	tailerQueue       *tail.TailerEnqueue
+	numUsedFds        semaphore.Semaphore
 	started           bool
 }
 
 func NewLogFile() *LogFile {
+	fileDescriptorLimit := fdlimit.CurrentFileDescriptorLimit()
 
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
 		removeTailerSrcCh: make(chan *tailerSrc, 100),
-		tailerQueue:       tail.NewTailerFifoQueue(),
+		numUsedFds:        semaphore.NewSemaphore(fileDescriptorLimit),
 	}
 }
 
-const sampleConfig = `
-  ## log files to tail.
-  ## These accept standard unix glob matching rules, but with the addition of
-  ## ** as a "super asterisk". ie:
-  ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
-  ##   "/var/log/*/*.log" -> find all .log files with a parent dir in /var/log
-  ##   "/var/log/apache.log" -> just tail the apache log file
-  ##
-  ## See https://github.com/gobwas/glob for more examples
-  ##
-  ## Default log output destination name for all file_configs
-  ## each file_config can override its own destination if needed
-  destination = "cloudwatchlogs"
 
-  ## folder path where state of how much of a file has been transferred is stored
-  file_state_folder = "/tmp/logfile/state"
-
-  [[inputs.logs.file_config]]
-      file_path = "/tmp/logfile.log*"
-      ## Regular expression for log files to ignore
-      blacklist = "logfile.log.bak"
-      ## Publish all log files that match file_path
-      publish_multi_logs = false
-      log_group_name = "logfile.log"
-      log_stream_name = "<log_stream_name>"
-      publish_multi_logs = false
-      timestamp_regex = "^(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}).*$"
-      timestamp_layout = "02 Jan 2006 15:04:05"
-      timezone = "UTC"
-      multi_line_start_pattern = "{timestamp_regex}"
-      ## Read file from beginning.
-      from_beginning = false
-      ## Whether file is a named pipe
-      pipe = false
-      destination = "cloudwatchlogs"
-      ## Max size of each log event, defaults to 262144 (256KB)
-      max_event_size = 262144
-      ## Suffix to be added to truncated logline to indicate its truncation, defaults to "[Truncated...]"
-      truncate_suffix = "[Truncated...]"
-
-`
 
 func (t *LogFile) SampleConfig() string {
 	return sampleConfig
@@ -140,7 +103,6 @@ func (t *LogFile) Stop() {
 	// Tailer srcs are stopped by log agent after the output plugin is stopped instead of here
 	// because the tailersrc would like to record an accurate uploaded offset
 	close(t.done)
-	close(t.tailerQueue.Queue)
 }
 
 //Try to find if there is any new file needs to be added for monitoring.
@@ -192,7 +154,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				isutf16 = true
 			}
 
-			tailer, err := tail.TailFile(filename, t.tailerQueue,
+			tailer, err := tail.TailFile(filename, t.numUsedFds,
 				tail.Config{
 					ReOpen:      false,
 					Follow:      true,
@@ -209,7 +171,12 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				continue
 			}
 
-			t.tailerQueue.Enqueue()
+			if t.numUsedFds.GetLimit() != 0 {
+				if ok := t.numUsedFds.Acquire(defaultTimeoutToAcquire); !ok {
+					t.Log.Debugf("Cannot increase counter of used file descriptors")
+				}
+			}
+			 
 
 			var mlCheck func(string) bool
 			if fileconfig.MultiLineStartPattern != "" {
@@ -265,9 +232,9 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 		}
 	}
 
-	
-	t.Log.Infof("Number of file descriptors used by agent / Total allowed file descriptors: %v/%v", t.tailerQueue.Size(), t.tailerQueue.Capacity())
-	
+	if t.numUsedFds.GetLimit() != 0 {
+		t.Log.Debugf("Number of file descriptors used by agent / Total allowed file descriptors: %v/%v", t.numUsedFds.GetCount(), t.numUsedFds.GetLimit())
+	}
 
 	return srcs
 }

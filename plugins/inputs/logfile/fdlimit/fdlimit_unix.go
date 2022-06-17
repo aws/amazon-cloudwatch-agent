@@ -7,15 +7,17 @@
 package fdlimit
 
 import (
+	"log"
 	"syscall"
 )
 
-func CurrentOpenFileLimit() (int, error) {
+func CurrentFileDescriptorLimit() int {
 	var limit syscall.Rlimit
 
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
-		return 0, err
+		log.Printf("E! Failed to get file descriptor limit: %v \n", err)
+		return 0
 	}
 
-	return int(limit.Cur), nil
+	return int(limit.Cur)
 }

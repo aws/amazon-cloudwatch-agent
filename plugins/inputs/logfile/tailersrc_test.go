@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/semaphore"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/stretchr/testify/assert"
 
@@ -25,15 +26,17 @@ import (
 )
 
 type tailerTestResources struct {
-	done      *chan struct{}
-	consumed  *int32
-	file      *os.File
-	statefile *os.File
+	done       *chan struct{}
+	consumed   *int32
+	file       *os.File
+	statefile  *os.File
+	numUsedFds semaphore.Semaphore
 }
 
 func TestTailerSrc(t *testing.T) {
 	original := multilineWaitPeriod
-	tailerQueue := tail.NewTailerFifoQueue()
+	numUsedFds := semaphore.NewSemaphore(1)
+	defer numUsedFds.Done()
 	defer resetState(original)
 
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -44,7 +47,7 @@ func TestTailerSrc(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.Remove(statefile.Name())
 
-	tailer, err := tail.TailFile(file.Name(), tailerQueue,
+	tailer, err := tail.TailFile(file.Name(), numUsedFds,
 		tail.Config{
 			ReOpen:      false,
 			Follow:      true,
@@ -57,6 +60,10 @@ func TestTailerSrc(t *testing.T) {
 		})
 
 	assert.NoError(t, err)
+
+	//Increase number of monitored files by 1
+	ok := numUsedFds.Acquire(time.Second)
+	assert.True(t, ok)
 
 	ts := NewTailerSrc(
 		"groupName", "streamName",
@@ -142,12 +149,17 @@ func TestTailerSrc(t *testing.T) {
 	err = os.Remove(file.Name())
 	assert.NoError(t, err)
 
+	time.Sleep(500 * time.Millisecond)
+	assert.Equal(t, 0, numUsedFds.GetCount())
+
 	<-done
+	
 }
 
 func TestOffsetDoneCallBack(t *testing.T) {
 	original := multilineWaitPeriod
-	tailerQueue := tail.NewTailerFifoQueue()
+	numUsedFds := semaphore.NewSemaphore(1)
+	defer numUsedFds.Done()
 	defer resetState(original)
 
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -158,7 +170,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.Remove(statefile.Name())
 
-	tailer, err := tail.TailFile(file.Name(), tailerQueue,
+	tailer, err := tail.TailFile(file.Name(), numUsedFds,
 		tail.Config{
 			ReOpen:      false,
 			Follow:      true,
@@ -172,6 +184,10 @@ func TestOffsetDoneCallBack(t *testing.T) {
 
 	assert.NoError(t, err)
 
+	//Increase number of monitored files by 1
+	ok := numUsedFds.Acquire(time.Second)
+	assert.True(t, ok)
+	
 	ts := NewTailerSrc(
 		"groupName", "streamName",
 		"destination",
@@ -268,11 +284,10 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	// Removal of log file should stop tailersrc
 	err = os.Remove(file.Name())
 	assert.NoError(t, err)
-
+	
 	<-done
-	if i < 35 {
-		t.Errorf("Not enough logs have been processed, only %v are processed", i)
-	}
+	assert.Equal(t, 0, numUsedFds.GetCount())
+	assert.GreaterOrEqualf(t, i, 35, "Not enough logs have been processed, only %v are processed", i)
 }
 
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
@@ -289,9 +304,13 @@ func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
 	// Removal of log file should stop tailersrc
 	err := os.Remove(resources.file.Name())
 	assert.NoError(t, err)
-
 	<-*resources.done
+	assert.Equal(t, 0, resources.numUsedFds.GetCount())
 	assertExpectedLogsPublished(t, n, int(*resources.consumed))
+
+
+
+
 }
 
 func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
@@ -321,8 +340,9 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 	// Removal of log file should stop tailersrc
 	err := os.Remove(resources.file.Name())
 	assert.NoError(t, err)
-
+	
 	<-*resources.done
+	assert.Equal(t, 0, resources.numUsedFds.GetCount())
 	assertExpectedLogsPublished(t, n, int(*resources.consumed))
 }
 
@@ -358,7 +378,7 @@ func logWithTimestampPrefix(s string) string {
 
 func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) tailerTestResources {
 	done := make(chan struct{})
-	tailerQueue := tail.NewTailerFifoQueue()
+	numUsedFds := semaphore.NewSemaphore(1)
 
 	var consumed int32
 	file, err := createTempFile("", "tailsrctest-*.log")
@@ -367,7 +387,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 	statefile, err := createTempFile("", "tailsrctest-state-*.log")
 	assert.NoError(t, err)
 
-	tailer, err := tail.TailFile(file.Name(), tailerQueue,
+	tailer, err := tail.TailFile(file.Name(), numUsedFds,
 		tail.Config{
 			ReOpen:      false,
 			Follow:      true,
@@ -381,6 +401,9 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 
 	assert.NoError(t, err)
 
+	ok:= numUsedFds.Acquire(time.Second)
+	assert.True(t, ok)
+	
 	config := &FileConfig{
 		LogGroupName:  t.Name(),
 		LogStreamName: t.Name(),
@@ -420,10 +443,11 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 	})
 
 	return tailerTestResources{
-		done:      &done,
-		consumed:  &consumed,
-		file:      file,
-		statefile: statefile,
+		done:       &done,
+		consumed:   &consumed,
+		file:       file,
+		statefile:  statefile,
+		numUsedFds: numUsedFds,
 	}
 }
 
@@ -468,4 +492,5 @@ func resetState(originalWaitMs time.Duration) {
 func teardown(resources tailerTestResources) {
 	os.Remove(resources.file.Name())
 	os.Remove(resources.statefile.Name())
+	resources.numUsedFds.Done()
 }

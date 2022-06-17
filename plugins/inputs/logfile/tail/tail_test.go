@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-
+	"github.com/aws/amazon-cloudwatch-agent/internal/semaphore"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -91,14 +91,14 @@ func TestStopAtEOF(t *testing.T) {
 	select {
 	case <-done:
 		t.Fatalf("StopAtEOF() completed unexpectedly")
-	case <-time.After(time.Second * 1):
+	case <- time.After(time.Second * 1):
 		t.Log("timeout waiting for StopAtEOF() (as expected)")
 	}
 
 	assert.Equal(t, errStopAtEOF, tail.Err())
 
 	// Read to EOF
-	for i := 0; i < linesWrittenToFile-3; i++ {
+	for i := 0; i < linesWrittenToFile - 3; i++ {
 		<-tail.Lines
 	}
 
@@ -136,8 +136,8 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 
 	// Setup the tail
 	var tl testLogger
-	tailerQueue := NewTailerFifoQueue()
-	tail, err := TailFile(tmpfile.Name(), tailerQueue,
+	numUsedFds := semaphore.NewSemaphore(1)
+	tail, err := TailFile(tmpfile.Name(), numUsedFds,
 		Config{
 			Logger: &tl,
 			ReOpen: false,
@@ -145,10 +145,10 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 		})
 	assert.NoError(t, err)
 
-	//Increase the tailer in queue by 1 to later confirmed if the tailer in queue has been released yet in line 181
-	tail.TailerQueue.Enqueue()
-	assert.Equal(t, 1, tail.TailerQueue.Size())
-
+	//Increase the slots in semaphore by 1 to later confirmed if the slots in semaphore has been released yet in line 180
+	ok := tail.numUsedFds.Acquire(time.Second)
+	assert.True(t, ok)
+	
 	return tmpfile, tail, &tl
 }
 
@@ -178,7 +178,7 @@ func verifyTailerExited(t *testing.T, tail *Tail) {
 	select {
 	case <-tail.Dead():
 		//Ensure all the tailers are released when signal dead.
-		assert.Equal(t, 0, tail.TailerQueue.Size())
+		assert.Equal(t, 0, tail.numUsedFds.GetCount())
 		return
 	default:
 		t.Errorf("Tailer is still alive after file removed and wait period")
