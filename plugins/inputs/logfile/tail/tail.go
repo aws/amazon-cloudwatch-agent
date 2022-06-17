@@ -311,6 +311,7 @@ func (tail *Tail) readlineUtf16() (string, error) {
 func (tail *Tail) tailFileSync() {
 	defer tail.Done()
 	defer tail.close()
+	defer tail.TailerQueue.Dequeue()
 
 	if !tail.MustExist {
 		// deferred first open.
@@ -319,7 +320,6 @@ func (tail *Tail) tailFileSync() {
 			if err != tomb.ErrDying {
 				tail.Kill(err)
 			}
-			tail.TailerQueue.Dequeue()
 			return
 		}
 	}
@@ -332,14 +332,12 @@ func (tail *Tail) tailFileSync() {
 		tail.Logger.Debugf("Seeked %s - %+v\n", tail.Filename, tail.Location)
 		if err != nil {
 			tail.Killf("Seek error on %s: %s", tail.Filename, err)
-			tail.TailerQueue.Dequeue()
 			return
 		}
 	}
 
 	if err := tail.watchChanges(); err != nil {
 		tail.Killf("Error watching for changes on %s: %s", tail.Filename, err)
-		tail.TailerQueue.Dequeue()
 		return
 	}
 
@@ -363,12 +361,11 @@ func (tail *Tail) tailFileSync() {
 				select {
 				case <-time.After(time.Second):
 				case <-tail.Dying():
-					tail.TailerQueue.Dequeue()
+					
 					return
 				}
 				if err := tail.seekEnd(); err != nil {
 					tail.Kill(err)
-					tail.TailerQueue.Dequeue()
 					return
 				}
 			}
@@ -377,7 +374,6 @@ func (tail *Tail) tailFileSync() {
 				if line != "" {
 					tail.sendLine(line, tail.curOffset)
 				}
-				tail.TailerQueue.Dequeue()
 				return
 			}
 
@@ -387,7 +383,6 @@ func (tail *Tail) tailFileSync() {
 				err := tail.seekTo(SeekInfo{Offset: backupOffset, Whence: 0})
 				if err != nil {
 					tail.Kill(err)
-					tail.TailerQueue.Dequeue()
 					return
 				}
 			}
@@ -416,13 +411,11 @@ func (tail *Tail) tailFileSync() {
 		} else {
 			// non-EOF error
 			tail.Killf("Error reading %s: %s", tail.Filename, err)
-			tail.TailerQueue.Dequeue()
 			return
 		}
 
 		select {
 		case <-tail.Dying():
-			tail.TailerQueue.Dequeue()
 			if tail.Err() == errStopAtEOF {
 				continue
 			}
