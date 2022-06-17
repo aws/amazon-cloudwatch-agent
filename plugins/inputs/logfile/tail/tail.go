@@ -392,7 +392,6 @@ func (tail *Tail) tailFileSync() {
 			// implementation (inotify or polling).
 			err := tail.waitForChanges()
 			if err != nil {
-				tail.TailerQueue.Dequeue()
 				if err == ErrDeletedNotReOpen {
 					close(tail.FileDeletedCh)
 					for {
