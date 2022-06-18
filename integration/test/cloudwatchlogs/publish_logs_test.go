@@ -23,7 +23,7 @@ const (
 	logLineId1       = "foo"
 	logLineId2       = "bar"
 	logFilePath      = "/tmp/test.log"  // TODO: not sure how well this will work on Windows
-	agentRuntime     = 20 * time.Second // default flush interval is 5 seconds
+	agentRuntime     = 15 * time.Second // default flush interval is 5 seconds
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
@@ -74,6 +74,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			writeLogs(t, logFilePath, param.iterations)
 			time.Sleep(agentRuntime)
 			test.StopAgent()
+			time.sleep(agentRuntime)
 
 			// check CWL to ensure we got the expected number of logs in the log stream
 			test.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)
