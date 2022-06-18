@@ -74,7 +74,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			writeLogs(t, logFilePath, param.iterations)
 			time.Sleep(agentRuntime)
 			test.StopAgent()
-			time.sleep(agentRuntime)
+			time.Sleep(agentRuntime)
 
 			// check CWL to ensure we got the expected number of logs in the log stream
 			test.ValidateLogs(t, instanceId, instanceId, param.numExpectedLogs, start)
