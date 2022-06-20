@@ -50,5 +50,4 @@ func GetPerformanceMetrics(instanceId string, runtimeSeconds int) (error) {
 	}
 
 	return nil
-
 }

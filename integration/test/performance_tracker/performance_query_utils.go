@@ -2,7 +2,6 @@ package data_collector
 
 import (
 	"time"
-	"log"
 	"context"
 	"errors"
 
@@ -31,12 +30,11 @@ func GetMetrics(c context.Context, api CWGetMetricDataAPI, input *cloudwatch.Get
 // GenerateGetMetricInputStruct generates the struct required to make a query request to cloudwatch's GetMetrics
 func GenerateGetMetricInputStruct(ids []string, metricNames []string, instanceId string, timeDiff int) (*cloudwatch.GetMetricDataInput, error) {
 	if len(ids) != len(metricNames) {
-		log.Println("Error: Mismatching lengths of metric ids and metricNames")
 		return nil, errors.New("Mismatching lengths of metric ids and metricNames")
 	}
 	
 	if len(ids) == 0 || len(metricNames) == 0 || instanceId == "" || timeDiff == 0 {
-		log.Println("Error: Must supply metric ids, metric names, instance id, and time to collect metrics")
+		return nil, errors.New("Must supply metric ids, metric names, instance id, and time to collect metrics")
 	}
 
 	dimensionValue := instanceId

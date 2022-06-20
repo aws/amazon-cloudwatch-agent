@@ -14,7 +14,7 @@ import(
 const (
 	configPath = "resources/config.json"
 	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	agentRuntime     = 20 * time.Minute
+	agentRuntime = 20 * time.Minute
 )
 
 func PerformanceTest(t *testing.T) {
@@ -23,7 +23,7 @@ func PerformanceTest(t *testing.T) {
 	log.Println("Instance ID used for performance metrics : %s", instanceId)
 
 	test.CopyFile(configPath, configOutputPath)
-	
+
 	test.StartAgent(configOutputPath, true)
 
 	//let agent run before collecting performance metrics on it
