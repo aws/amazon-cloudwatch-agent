@@ -1,4 +1,4 @@
-module github.com/aws/amazon-cloudwatch-agent
+module github.com/aws/private-amazon-cloudwatch-agent-staging
 
 go 1.18
 
