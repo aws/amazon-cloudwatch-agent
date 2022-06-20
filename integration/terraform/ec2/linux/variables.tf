@@ -88,3 +88,11 @@ variable "test_dir" {
   type = string
   default = ""
 }
+variable "sha" {
+  type = string
+  default = ""
+}
+variable "sha_date"{
+  type = string
+  default = ""
+}
