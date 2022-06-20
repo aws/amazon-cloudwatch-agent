@@ -22,6 +22,8 @@ func PerformanceTest(t *testing.T) {
 	instanceId := test.GetInstanceId()
 	log.Println("Instance ID used for performance metrics : %s", instanceId)
 
+	test.CopyFile(configPath, configOutputPath)
+	
 	test.StartAgent(configOutputPath, true)
 
 	//let agent run before collecting performance metrics on it
