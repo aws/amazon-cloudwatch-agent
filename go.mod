@@ -39,8 +39,6 @@ replace k8s.io/klog => github.com/simonpasquier/klog-gokit v0.1.0
 replace golang.zx2c4.com/wireguard v0.0.20200121 => golang.zx2c4.com/wireguard v0.0.0-20200121152719-05b03c675090
 
 require (
-	cloud.google.com/go/kms v1.4.0 // indirect
-	cloud.google.com/go/monitoring v1.5.0 // indirect
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Jeffail/gabs v1.4.0
 	github.com/aws/aws-sdk-go v1.30.15
@@ -82,7 +80,6 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.17.4
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v0.17.4

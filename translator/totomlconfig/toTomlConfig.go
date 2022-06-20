@@ -63,6 +63,5 @@ func ToTomlConfig(c interface{}) string {
 	if err != nil {
 		log.Panicf("Encode to a valid TOML config fails because of %v", err)
 	}
-	log.Printf("logging toml config: %s", buf.String())
 	return buf.String()
 }

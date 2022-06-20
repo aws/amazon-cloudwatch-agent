@@ -47,7 +47,7 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/rollup_dimensions"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"go.opentelemetry.io/collector/config"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 	"log"
 	"os"
 )
