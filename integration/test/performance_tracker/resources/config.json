@@ -36,7 +36,7 @@
                     "exe": "cloudwatch-agent",
                     "measurement": [
                         "cpu_usage",
-						"memory_rss"
+			"memory_rss"
                     ]
                 }
             ]
