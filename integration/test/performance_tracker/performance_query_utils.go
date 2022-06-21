@@ -94,10 +94,10 @@ func GetPerformanceMetrics(instanceId string, runtimeSeconds int) ([]byte, error
 		return nil, err
 	}
 
-	//go through the config json to get to the procstat metrics
+	//go through the config json to get to the procstat metrics configured for cloudwatch agent
 	procstatList := cfgFileData["metrics"].(map[string]interface{})["metrics_collected"].(map[string]interface{})["procstat"].([]interface{})
 	
-	//within procstat metrics, find cloudwatch-agent process
+	//within procstat metrics, find cloudwatch-agent process in case more than one procstat process is configured
 	cloudwatchIndex := -1
 	for i, process := range procstatList {
 		if process.(map[string]interface{})["exe"].(string) == "cloudwatch-agent" {
@@ -114,10 +114,11 @@ func GetPerformanceMetrics(instanceId string, runtimeSeconds int) ([]byte, error
 	metricList := procstatList[cloudwatchIndex].(map[string]interface{})["measurement"].([]interface{})
 
 	//convert the resulting []interface{} to []string and create matching metric ids for each one
-	metricNames := make([]string, len(metricList))
-	ids := make([]string, len(metricList))
+	numOfMetrics := len(metricList)
+	metricNames := make([]string, numOfMetrics)
+	ids := make([]string, numOfMetrics)
 	for i, metricName := range metricList {
-		metricNames[i] = metricName.(string)
+		metricNames[i] = "procstat_" + metricName.(string)
 		ids[i] = fmt.Sprint("m", i + 1)
 	}
 
