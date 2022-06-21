@@ -31,11 +31,6 @@
 				],
 				"metrics_collection_interval": 60
 			},
-			"statsd": {
-				"metrics_aggregation_interval": 60,
-				"metrics_collection_interval": 10,
-				"service_address": ":8125"
-			},
             "procstat": [
                 {
                     "exe": "cloudwatch-agent",

@@ -20,7 +20,7 @@ const (
 func PerformanceTest(t *testing.T) {
 
 	instanceId := test.GetInstanceId()
-	log.Println("Instance ID used for performance metrics : %s", instanceId)
+	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
 	test.CopyFile(configPath, configOutputPath)
 
@@ -28,17 +28,22 @@ func PerformanceTest(t *testing.T) {
 
 	//let agent run before collecting performance metrics on it
 	time.Sleep(agentRuntime)
-	log.Printf("Agent has been running for : %s", agentRuntime.String())
+	log.Printf("Agent has been running for : %s\n", agentRuntime.String())
+	test.StopAgent()
 
 	//convert to int seconds for use in data collection
-	runtimeSeconds := int(agentRuntime / time.Second)
+	runtimeSeconds := int(agentRuntime.Seconds())
 	
 	//collect data
-	err := GetPerformanceMetrics(instanceId, runtimeSeconds)
-	if (err != nil) {
+	data, err := GetPerformanceMetrics(instanceId, runtimeSeconds)
+	if err != nil {
 		log.Println("Error: " + err)
 		t.Fatalf("Error: %v", err)
 	}
 
-	test.StopAgent()
+	//------Placeholder to put data into database------//
+	//useless code so data get used and compiler isn't mad
+	if data == nil {
+		t.Fatalf("No data")
+	}
 }
