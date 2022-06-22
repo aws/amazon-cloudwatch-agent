@@ -41,7 +41,7 @@ jobs:
         path: |
               ~/Library/Caches/go-build
               ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
     - name: Test
       run: make test
