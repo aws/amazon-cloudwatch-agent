@@ -1,4 +1,4 @@
-package data_collector
+package performancetest
 
 import (
 	"time"
@@ -19,7 +19,56 @@ const (
 	DimensionName = "InstanceId"
 	Stat = "Average"
 	Period = 30
+	configPath = "./resources/config.json"
 )
+
+/*
+ * GetConfigMetrics parses the cloudwatch agent config and returns the associated 
+ * metrics that the cloudwatch agent is measuring on itself
+*/ 
+func GetConfigMetrics() ([]string, []string, error) {
+	//get metric measurements from config file
+	file, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var cfgFileData map[string]interface{}
+	err = json.Unmarshal(file, &cfgFileData)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	//go through the config json to get to the procstat metrics
+	procstatList := cfgFileData["metrics"].(map[string]interface{})["metrics_collected"].(map[string]interface{})["procstat"].([]interface{})
+	
+	//within procstat metrics, find cloudwatch-agent process
+	cloudwatchIndex := -1
+	for i, process := range procstatList {
+		if process.(map[string]interface{})["exe"].(string) == "cloudwatch-agent" {
+			cloudwatchIndex = i
+		}
+	}
+
+	//check to see if the process was not found
+	if  cloudwatchIndex == -1 {
+		return nil, nil, errors.New("cloudwatch-agent process not found in cloudwatch agent config")
+	}
+
+	//use the index to get the rest of the path
+	metricList := procstatList[cloudwatchIndex].(map[string]interface{})["measurement"].([]interface{})
+
+	//convert the resulting []interface{} to []string and create matching metric ids for each one
+	metricNames := make([]string, len(metricList))
+	ids := make([]string, len(metricList))
+	for i, metricName := range metricList {
+		metricNames[i] = "procstat_" + metricName.(string)
+		ids[i] = fmt.Sprint("m", i + 1)
+	}
+
+	return metricNames, ids, nil
+}
+
 // GenerateGetMetricInputStruct generates the struct required to make a query request to cloudwatch's GetMetrics
 func GenerateGetMetricInputStruct(ids, metricNames []string, instanceId string, timeDiff int) (*cloudwatch.GetMetricDataInput, error) {
 	if len(ids) != len(metricNames) {
@@ -71,8 +120,7 @@ func ConstructMetricDataQuery(id, namespace, dimensionName, dimensionValue, metr
 	return query
 }
 
-func GetPerformanceMetrics(instanceId string, agentRuntime int) ([]byte, error) {
-	agentContext := context.TODO()
+func GetPerformanceMetrics(instanceId string, agentRuntime int, agentContext context.Context) ([]byte, error) {
 
 	//load default configuration
 	cfg, err := config.LoadDefaultConfig(agentContext)
@@ -82,43 +130,10 @@ func GetPerformanceMetrics(instanceId string, agentRuntime int) ([]byte, error) 
 
 	client := cloudwatch.NewFromConfig(cfg)
 
-	//get metric measurements from config file
-	file, err := os.ReadFile("./resources/config.json")
+	//fetch names of metrics to request and generate corresponding ids
+	metricNames, ids, err := GetConfigMetrics()
 	if err != nil {
 		return nil, err
-	}
-
-	var cfgFileData map[string]interface{}
-	err = json.Unmarshal(file, &cfgFileData)
-	if err != nil {
-		return nil, err
-	}
-
-	//go through the config json to get to the procstat metrics
-	procstatList := cfgFileData["metrics"].(map[string]interface{})["metrics_collected"].(map[string]interface{})["procstat"].([]interface{})
-	
-	//within procstat metrics, find cloudwatch-agent process
-	cloudwatchIndex := -1
-	for i, process := range procstatList {
-		if process.(map[string]interface{})["exe"].(string) == "cloudwatch-agent" {
-			cloudwatchIndex = i
-		}
-	}
-
-	//check to see if the process was not found
-	if  cloudwatchIndex == -1 {
-		return nil, errors.New("cloudwatch-agent process not found in cloudwatch agent config")
-	}
-
-	//use the index to get the rest of the path
-	metricList := procstatList[cloudwatchIndex].(map[string]interface{})["measurement"].([]interface{})
-
-	//convert the resulting []interface{} to []string and create matching metric ids for each one
-	metricNames := make([]string, len(metricList))
-	ids := make([]string, len(metricList))
-	for i, metricName := range metricList {
-		metricNames[i] = "procstat_" + metricName.(string)
-		ids[i] = fmt.Sprint("m", i + 1)
 	}
 
 	//make input struct
@@ -127,7 +142,7 @@ func GetPerformanceMetrics(instanceId string, agentRuntime int) ([]byte, error) 
 		return nil, err
 	}
 
-	//call to cloudwatch agent API
+	//call to CloudWatch API
 	metrics, err := client.GetMetricData(agentContext, input)
 	if err != nil {
 		return nil, err

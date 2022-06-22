@@ -1,12 +1,13 @@
 //go:build linux && integration
 // +build linux,integration
 
-package data_collector
+package performancetest
 
 import(
 	"testing"
 	"time"
 	"log"
+	"context"
 
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 )
@@ -14,11 +15,11 @@ import(
 const (
 	configPath = "resources/config.json"
 	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	agentRuntime = 20 //minutes
+	agentRuntimeMinutes = 20
 )
 
 func PerformanceTest(t *testing.T) {
-
+	agentContext := context.TODO()
 	instanceId := test.GetInstanceId()
 	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
@@ -26,13 +27,14 @@ func PerformanceTest(t *testing.T) {
 
 	test.StartAgent(configOutputPath, true)
 
+	agentRunDuration := agentRuntimeMinutes * time.Minute
 	//let agent run before collecting performance metrics on it
-	time.Sleep(agentRuntime * time.Minute)
-	log.Printf("Agent has been running for : %s\n", (agentRuntime * time.Minute).String())
+	time.Sleep(agentRunDuration)
+	log.Printf("Agent has been running for : %s\n", (agentRunDuration).String())
 	test.StopAgent()
-	
+
 	//collect data
-	data, err := GetPerformanceMetrics(instanceId, agentRuntime)
+	data, err := GetPerformanceMetrics(instanceId, agentRuntime, agentContext)
 	if err != nil {
 		log.Println("Error: " + err)
 		t.Fatalf("Error: %v", err)
