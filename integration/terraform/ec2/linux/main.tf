@@ -8,6 +8,7 @@ resource "aws_instance" "integration-test" {
     inline = [
       "cloud-init status --wait",
       "echo clone and install agent",
+      "export PATH=$PATH:/usr/local/go/bin",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.github_sha}",
