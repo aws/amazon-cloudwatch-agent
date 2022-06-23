@@ -14,7 +14,7 @@ import (
 
 	"errors"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/tls"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/tls"
 	corev1 "k8s.io/api/core/v1"
 )
 

@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
 )
 
 func TestAddSchema(t *testing.T) {

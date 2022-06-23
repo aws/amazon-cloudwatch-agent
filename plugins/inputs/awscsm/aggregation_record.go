@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/providers"
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/providers"
 )
 
 // AggregationRecords is a map of aggregation records

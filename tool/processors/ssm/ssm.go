@@ -4,13 +4,13 @@
 package ssm
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/tool/data"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 
 	"fmt"
 

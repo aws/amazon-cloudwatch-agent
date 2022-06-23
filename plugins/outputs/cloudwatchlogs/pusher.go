@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
 	"github.com/influxdata/telegraf"
 )
 

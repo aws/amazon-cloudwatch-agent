@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig"
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/defaultConfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 	"github.com/stretchr/testify/assert"
 )
 

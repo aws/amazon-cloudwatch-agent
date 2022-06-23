@@ -6,15 +6,15 @@ package metrics
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/data"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question/logs"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/migration/linux"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/migration/linux"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 
 	"github.com/stretchr/testify/assert"
 )

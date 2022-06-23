@@ -6,8 +6,8 @@ package awscsm
 import (
 	"container/list"
 
-	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane"
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
 
 	"github.com/influxdata/telegraf"
 )

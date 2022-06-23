@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
 
 	"testing"
 	"time"

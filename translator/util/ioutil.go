@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 )
 
 // get the json map from the json byte array

@@ -6,7 +6,7 @@ package tail
 import (
 	"os"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/winfile"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail/winfile"
 )
 
 func OpenFile(name string) (file *os.File, err error) {

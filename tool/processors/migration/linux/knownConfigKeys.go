@@ -8,7 +8,7 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
 
 	"strings"
 

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/structuredlogscommon"
 	"github.com/stretchr/testify/assert"
 )
 

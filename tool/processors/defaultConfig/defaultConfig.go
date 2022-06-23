@@ -10,16 +10,16 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/data"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig/advancedPlan"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig/basicPlan"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig/standardPlan"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/migration/linux"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/logs"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/defaultConfig/advancedPlan"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/defaultConfig/basicPlan"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/defaultConfig/standardPlan"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/migration/linux"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 var Processor processors.Processor = &processor{}

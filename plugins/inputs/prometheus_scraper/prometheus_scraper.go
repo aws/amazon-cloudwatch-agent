@@ -6,7 +6,7 @@ package prometheus_scraper
 import (
 	"sync"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/ecsservicediscovery"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/ecsservicediscovery"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )

@@ -9,7 +9,7 @@ package sanity
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
 )
 
 func TestAgentStatus(t *testing.T) {

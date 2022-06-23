@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/internal"
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal"
 	"github.com/influxdata/telegraf"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"

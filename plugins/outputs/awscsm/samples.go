@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/providers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/providers"
 )
 
 var crc32cTable = crc32.MakeTable(crc32.Castagnoli)

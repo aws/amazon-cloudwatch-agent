@@ -101,6 +101,6 @@ func createBasicLogConfig(filename string) logger.LogConfig {
 		Logfile:             filename,
 		LogTarget:           LogTargetLumberjack,
 		RotationMaxArchives: -1,
-		LogWithTimezone: 	 "UTC",
+		LogWithTimezone:     "UTC",
 	}
 }

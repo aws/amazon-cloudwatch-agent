@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane"
 	"github.com/aws/aws-sdk-go/aws"
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
 )
 
 func TestAdaptFrequencyMetrics(t *testing.T) {

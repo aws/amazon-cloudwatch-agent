@@ -6,11 +6,12 @@ package prometheus_scraper
 import (
 	"context"
 	"errors"
+	"log"
+	"math"
+
 	"github.com/prometheus/prometheus/model/exemplar"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/value"
-	"log"
-	"math"
 
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/storage"

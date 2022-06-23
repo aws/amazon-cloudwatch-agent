@@ -19,7 +19,7 @@ import (
 
 	"encoding/xml"
 
-	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	"golang.org/x/sys/windows"
 )
 

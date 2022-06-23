@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/providers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/providers"
 )
 
 func TestRecordConversion(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/logscommon"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )

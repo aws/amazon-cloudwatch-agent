@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -99,7 +99,7 @@ func TestStopAtEOF(t *testing.T) {
 	assert.Equal(t, errStopAtEOF, tail.Err())
 
 	// Read to EOF
-	for i := 0; i < linesWrittenToFile - 3; i++ {
+	for i := 0; i < linesWrittenToFile-3; i++ {
 		<-tail.Lines
 	}
 
@@ -107,7 +107,7 @@ func TestStopAtEOF(t *testing.T) {
 	select {
 	case <-done:
 		t.Log("StopAtEOF() completed (as expected)")
-	case <- time.After(time.Second * 1):
+	case <-time.After(time.Second * 1):
 		t.Fatalf("StopAtEOF() has not completed")
 	}
 

@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 
 	"github.com/stretchr/testify/assert"
 )

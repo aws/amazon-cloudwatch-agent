@@ -6,11 +6,11 @@ package statsd
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/data"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric/statsd"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/collectd"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric/statsd"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/collectd"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 
 	"github.com/stretchr/testify/assert"
 )

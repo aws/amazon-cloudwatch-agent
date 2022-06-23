@@ -7,7 +7,7 @@ import (
 	"log"
 	"math"
 
-	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/selfstat"
 )

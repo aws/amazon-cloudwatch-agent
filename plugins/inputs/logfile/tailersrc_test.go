@@ -17,11 +17,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
 )
 
 type tailerTestResources struct {

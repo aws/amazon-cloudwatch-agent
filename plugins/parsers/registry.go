@@ -4,8 +4,8 @@
 package parsers
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/plugins/parsers/awscsm"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/parsers/emf"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers/awscsm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers/emf"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )

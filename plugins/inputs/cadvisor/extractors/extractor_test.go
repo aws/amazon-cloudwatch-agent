@@ -6,7 +6,7 @@ package extractors
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -4,10 +4,11 @@
 package prometheus_scraper
 
 import (
-	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/model/textparse"
 	"net/url"
 	"testing"
+
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/textparse"
 
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/scrape"

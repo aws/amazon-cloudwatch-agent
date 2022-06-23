@@ -22,16 +22,16 @@ import (
 	"syscall"
 	"time"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 	"github.com/influxdata/wlog"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/migrate"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
 
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
@@ -46,7 +46,7 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
-	LogTargetEventLog = "eventlog"
+	LogTargetEventLog     = "eventlog"
 )
 
 var fDebug = flag.Bool("debug", false,

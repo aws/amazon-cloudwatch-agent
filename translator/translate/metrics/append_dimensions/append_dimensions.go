@@ -6,9 +6,9 @@ package append_dimensions
 import (
 	"sort"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
-	credsutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics"
+	credsutil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
 )
 
 type appendDimensions struct {

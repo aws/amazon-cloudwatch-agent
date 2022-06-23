@@ -7,9 +7,9 @@ import (
 	"log"
 	"reflect"
 
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
 )
 
 type dropOrigin struct {

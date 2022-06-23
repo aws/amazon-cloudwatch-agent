@@ -4,9 +4,9 @@
 package ecsservicediscovery
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
 )
 
 type Rule translator.Rule

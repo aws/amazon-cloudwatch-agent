@@ -6,7 +6,7 @@ package emfProcessor
 import (
 	"log"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/structuredlogscommon"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )

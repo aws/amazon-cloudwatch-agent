@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )

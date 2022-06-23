@@ -6,10 +6,10 @@ package providers_test
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/providers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/providers"
 )
 
 func TestMetricType(t *testing.T) {

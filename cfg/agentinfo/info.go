@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 )
 
 const (

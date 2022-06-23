@@ -6,9 +6,10 @@ package prometheus_scraper
 import (
 	"errors"
 	"fmt"
-	"github.com/prometheus/prometheus/model/textparse"
 	"log"
 	"strings"
+
+	"github.com/prometheus/prometheus/model/textparse"
 
 	"github.com/prometheus/prometheus/scrape"
 )

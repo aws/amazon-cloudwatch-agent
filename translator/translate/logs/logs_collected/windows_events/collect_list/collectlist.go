@@ -6,12 +6,12 @@ package collectlist
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events"
-	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/windows_events"
+	logUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 type Rule translator.Rule

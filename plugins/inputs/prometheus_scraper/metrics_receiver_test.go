@@ -4,9 +4,10 @@
 package prometheus_scraper
 
 import (
+	"testing"
+
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/storage"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )

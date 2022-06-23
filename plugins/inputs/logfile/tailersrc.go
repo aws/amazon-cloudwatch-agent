@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
 	"golang.org/x/text/encoding"
 )
 
@@ -76,6 +76,7 @@ type tailerSrc struct {
 	startTailerOnce sync.Once
 	cleanUpFns      []func()
 }
+
 // Verify tailerSrc implements LogSrc
 var _ logs.LogSrc = (*tailerSrc)(nil)
 

@@ -181,7 +181,7 @@ on creating the key pair.
 
 ## Required parameters for Terraform to have handy
 
-1. GitHub repo (ex: https://github.com/aws/amazon-cloudwatch-agent.git)
+1. GitHub repo (ex: https://github.com/aws/private-amazon-cloudwatch-agent-staging.git)
 2. GitHub SHA: `git checkout your-branch && git rev-parse --verify HEAD`
 3. EC2 security groups (ex: `["sg-abc123"]`)
 4. EC2 key name (the name of the `.pem` file, typically)
@@ -265,7 +265,7 @@ Navigate to the localstack terraform directory, initialize Terraform and apply t
 cd ./integration/terraform/ec2/localstack
 terraform init
 terraform apply --auto-approve \
-         -var="github_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent.git}" \
+         -var="github_repo=${gh repo you want to use ex https://github.com/aws/private-amazon-cloudwatch-agent-staging.git}" \
          -var="github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
          -var='vpc_security_group_ids=["${name of your security group}"]' \
          -var="key_name=${name of key pair your created}" \
@@ -301,7 +301,7 @@ Start the linux integration tests (example):
 cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
 terraform init
 terraform apply --auto-approve \
-         -var="github_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent.git}" \
+         -var="github_repo=${gh repo you want to use ex https://github.com/aws/private-amazon-cloudwatch-agent-staging.git}" \
          -var="github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
          -var='vpc_security_group_ids=["${name of your security group}"]' \
          -var="s3_bucket=${name of your s3 bucket created}" \
@@ -329,16 +329,16 @@ aws_instance.integration-test (remote-exec):     --- PASS: TestBundle/resource_f
 aws_instance.integration-test (remote-exec):     --- PASS: TestBundle/resource_file_location_resources/integration/ssl/with/original/bundle_find_target_true (61.06s)
 aws_instance.integration-test (remote-exec):     --- PASS: TestBundle/resource_file_location_resources/integration/ssl/without/bundle_find_target_true (61.13s)
 aws_instance.integration-test (remote-exec): PASS
-aws_instance.integration-test (remote-exec): ok  	github.com/aws/amazon-cloudwatch-agent/integration/test/ca_bundle	243.288s
+aws_instance.integration-test (remote-exec): ok  	github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test/ca_bundle	243.288s
 aws_instance.integration-test (remote-exec): === RUN   TestEmpty
 aws_instance.integration-test (remote-exec): --- PASS: TestEmpty (0.00s)
 aws_instance.integration-test (remote-exec): PASS
-aws_instance.integration-test (remote-exec): ok  	github.com/aws/amazon-cloudwatch-agent/integration/test/empty	0.002s
+aws_instance.integration-test (remote-exec): ok  	github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test/empty	0.002s
 aws_instance.integration-test (remote-exec): === RUN   TestAgentStatus
 aws_instance.integration-test: Still creating... [5m30s elapsed]
 aws_instance.integration-test (remote-exec): --- PASS: TestAgentStatus (6.54s)
 aws_instance.integration-test (remote-exec): PASS
-aws_instance.integration-test (remote-exec): ok  	github.com/aws/amazon-cloudwatch-agent/integration/test/sanity	6.541s
+aws_instance.integration-test (remote-exec): ok  	github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test/sanity	6.541s
 aws_instance.integration-test: Creation complete after 5m35s [id=i-0f7f77a62c93df010]
 
 Apply complete! Resources: 1 added, 0 changed, 0 destroyed.   

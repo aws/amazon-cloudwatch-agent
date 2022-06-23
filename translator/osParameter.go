@@ -4,7 +4,7 @@
 package translator
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
 func GetTargetPlatform() string {

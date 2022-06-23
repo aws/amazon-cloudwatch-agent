@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"time"
 
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
 	cinfo "github.com/google/cadvisor/info/v1"
 )
 

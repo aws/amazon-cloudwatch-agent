@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 
 	"os"
 

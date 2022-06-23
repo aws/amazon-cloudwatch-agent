@@ -21,6 +21,13 @@ package prometheus_scraper
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"os/signal"
+	"runtime"
+	"sync"
+	"syscall"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/oklog/run"
@@ -36,14 +43,8 @@ import (
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
-	"io/ioutil"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
-	"os"
-	"os/signal"
-	"runtime"
-	"sync"
-	"syscall"
 )
 
 var (

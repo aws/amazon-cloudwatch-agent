@@ -4,10 +4,11 @@
 package k8sclient
 
 import (
-	"gotest.tools/v3/assert"
 	"log"
 	"testing"
 	"time"
+
+	"gotest.tools/v3/assert"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"

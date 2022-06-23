@@ -12,21 +12,21 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 
 	"os"
 
-	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/stretchr/testify/assert"
 )
 

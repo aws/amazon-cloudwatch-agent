@@ -9,15 +9,15 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 
 	"os"
 
-	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/stretchr/testify/assert"
 )
 

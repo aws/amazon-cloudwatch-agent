@@ -4,7 +4,7 @@
 package append_dimensions
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 )
 
 type Creds struct {
