@@ -28,20 +28,6 @@ DARWIN_BUILD = GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFL
 IMAGE = amazon/cloudwatch-agent:$(VERSION)
 DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
 
-AOC_IMPORT_PATH=github.com/aws-observability/aws-otel-collector
-AOC_GIT_SHA = $(shell cd $(AOC_BASE_SPACE) && git rev-parse HEAD)
-AOC_LDFLAGS = -s -w -X $(AOC_IMPORT_PATH)/tools/version.GitHash=$(AOC_GIT_SHA)
-AOC_LDFLAGS += -X github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter.collectorDistribution=cwagent-otel-collector
-AOC_LDFLAGS += -X github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter.collectorDistribution=cwagent-otel-collector
-AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/tools/version.Version=$(VERSION)
-AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/tools/version.Date=$(BUILD)
-AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/userutils.defaultUser=cwagent
-AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/userutils.defaultInstallPath=/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/
-AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/logger.UnixLogPath=/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs/cwagent-otel-collector.log
-AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/logger.WindowsLogPath=C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\CWAgentOtelCollector\\Logs\\cwagent-otel-collector.log
-AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.unixExtraConfigPath=/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc/extracfg.txt
-AOC_LDFLAGS += -X $(AOC_IMPORT_PATH)/pkg/extraconfig.windowsExtraConfigPath=C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\CWAgentOtelCollector\\extracfg.txt
-
 CW_AGENT_IMPORT_PATH=https://github.com/aws/amazon-cloudwatch-agent.git
 ALL_SRC := $(shell find . -name '*.go' -type f | sort)
 TOOLS_BIN_DIR := $(abspath ./build/tools)
@@ -80,12 +66,6 @@ amazon-cloudwatch-agent: copy-version-file
 update-submodule:
 	git submodule update --init
 	echo "$(AOC_GIT_SHA)" > AOC_GIT_SHA
-
-cwagent-otel-collector: update-submodule
-	@echo Building aws-otel-collector
-	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
-	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64/cwagent-otel-collector $(AOC_IMPORT_PATH)/cmd/awscollector
-	cd $(AOC_BASE_SPACE) && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${AOC_LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64/cwagent-otel-collector.exe $(AOC_IMPORT_PATH)/cmd/awscollector
 
 config-translator: copy-version-file
 	@echo Building config-translator
