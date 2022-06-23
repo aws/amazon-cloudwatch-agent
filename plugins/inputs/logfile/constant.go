@@ -48,4 +48,4 @@ const sampleConfig = `
       truncate_suffix = "[Truncated...]"
 `
 
-const defaultTimeoutToAcquire = 100 * time.Milliseconds
+const defaultTimeoutToAcquire = 100 * time.Millisecond

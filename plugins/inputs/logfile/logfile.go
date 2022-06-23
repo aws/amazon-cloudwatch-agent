@@ -173,7 +173,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 			if t.numUsedFds.GetLimit() != 0 {
 				if ok := t.numUsedFds.Acquire(defaultTimeoutToAcquire); !ok {
-					t.Log.Debugf("Cannot increase counter of used file descriptors")
+					t.Log.Debug("Cannot increase counter of used file descriptors")
 				}
 			}
 			 

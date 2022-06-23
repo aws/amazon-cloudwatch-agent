@@ -9,10 +9,10 @@ import (
 )
 
 type Semaphore interface {
-	//Acquire a slot in the semaphore with a timeout
+	// Acquire a slot in the semaphore with a timeout. If timeout <=0, the slot would be released immediately
 	Acquire(timeout time.Duration) bool
-
-	//Release a slot in the semaphore.
+	
+	// Release a slot in the semaphore.	
 	Release()
 
 	//GetLimit returns semaphore limit.
@@ -45,9 +45,9 @@ func NewSemaphore(limit int) Semaphore {
 	return sem
 }
 
+
 func (sem *semaphore) Acquire(timeout time.Duration) bool {
 	if (timeout > 0) {
-		defer timer.Stop()
 		select {
 		case <-sem.slots:
 			return true
@@ -63,7 +63,6 @@ func (sem *semaphore) Acquire(timeout time.Duration) bool {
 	}
 }
 
-// Release the acquired semaphore.
 func (sem *semaphore) Release() {
 	select {
 	case sem.slots <- struct{}{}:
