@@ -5,7 +5,6 @@ package cloudwatch
 
 import (
 	"log"
-	"math"
 	"reflect"
 	"runtime"
 	"sort"
@@ -290,7 +289,6 @@ func getFirstPushMs(interval time.Duration) int64 {
 	if nextMs < nowMs {
 		nextMs += interval.Milliseconds()
 	}
-	log.Printf("I! cloudwatch: next - now, %v", nextMs - nowMs)
 	return nextMs
 }
 
@@ -322,6 +320,7 @@ func (c *CloudWatch) publish() {
 		nowMs := time.Now().UnixMilli()
 
 		if c.metricDatumBatchFull() {
+			log.Printf("I! cloudwatch: buffer of batches is full")
 			if !bufferFullOccurred {
 				// Set to false so this only happens once per push.
 				bufferFullOccurred = true
@@ -337,7 +336,7 @@ func (c *CloudWatch) publish() {
 		// Check if the interval has elapsed.
 		if nowMs >= nextMs {
 			shouldPublish = true
-			nextMs = nowMs + currentInterval.Milliseconds()
+			nextMs += currentInterval.Milliseconds()
 			// Restore interval if buffer did not fill up during this interval.
 			if !bufferFullOccurred {
 				log.Printf("I! cloudwatch: reset interval")
@@ -360,6 +359,7 @@ func (c *CloudWatch) metricDatumBatchFull() bool {
 }
 
 func (c *CloudWatch) pushMetricDatumBatch() {
+	log.Printf("I! cloudwatch: push batches")
 	for {
 		select {
 		case datumBatch := <-c.datumBatchChan:
@@ -371,16 +371,17 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 	}
 }
 
-// backoffSleep sleeps some amount of time based on number of retries already done.
+// backoffSleep sleeps some amount of time based on number of retries done.
 func (c *CloudWatch) backoffSleep() {
 	var backoffInMillis int64 = 60 * 1000 // 1 minute
 	if c.retries <= defaultRetryCount {
-		backoffInMillis = int64(backoffRetryBase * math.Pow(2, float64(c.retries)))
+		backoffInMillis = int64(backoffRetryBase * 1 << c.retries)
 		// Adding at most 1 second on each retry for the sake of jitter.
 		backoffInMillis += publisJitterInt(1000)
 	}
 	sleepDuration := time.Millisecond * time.Duration(backoffInMillis)
-	log.Printf("W! %v retries, going to sleep %v before retrying.", c.retries, sleepDuration)
+	log.Printf("W! %v retries, going to sleep %v before retrying.", c.retries,
+		sleepDuration)
 	c.retries++
 	time.Sleep(sleepDuration)
 }
@@ -393,7 +394,6 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	}
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
-		//log.Printf("I! cloudwatch: calling PutMetricData(), len %v", len(datums))
 		_, err = c.svc.PutMetricData(params)
 
 		if err != nil {
