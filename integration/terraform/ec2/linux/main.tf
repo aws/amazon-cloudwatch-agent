@@ -77,7 +77,7 @@ resource "null_resource" "integration_test" {
       "echo prepare environment",
       "export LOCAL_STACK_HOST_NAME=${var.local_stack_host_name}",
       "export AWS_REGION=${var.region}",
-      "export PATH=$PATH:/snap/bin",
+      "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent",
       "go test ./integration/test/sanity -p 1 -v --tags=integration",
