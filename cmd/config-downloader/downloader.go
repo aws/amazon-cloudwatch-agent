@@ -193,16 +193,19 @@ func main() {
 	switch locationArray[0] {
 	case locationDefault:
 		outputFilePath = locationDefault
+		log.Printf("Abot",outputFilePath)
 		if multiConfig != "remove" {
 			config, err = defaultJsonConfig(mode)
 		}
 	case locationSSM:
 		outputFilePath = locationSSM + "_" + EscapeFilePath(locationArray[1])
+		log.Printf("Read",outputFilePath)
 		if multiConfig != "remove" {
 			config, err = downloadFromSSM(region, locationArray[1], mode, cc.CredentialsMap())
 		}
 	case locationFile:
 		outputFilePath = locationFile + "_" + EscapeFilePath(filepath.Base(locationArray[1]))
+		log.Printf("Test",outputFilePath)
 		if multiConfig != "remove" {
 			config, err = readFromFile(locationArray[1])
 		}
