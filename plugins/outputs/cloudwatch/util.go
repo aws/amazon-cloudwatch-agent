@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
@@ -46,11 +47,25 @@ const (
 	unitOverheads = 42
 )
 
-func publishJitter(publishInterval time.Duration) (publishJitter time.Duration) {
-	r := rand.New(rand.NewSource(time.Now().Unix()))
-	jitter := r.Int63n(int64(publishInterval.Seconds()))
-	publishJitter = time.Duration(jitter) * time.Second
-	return
+// Global set once.
+var doOnce sync.Once
+var gRand *rand.Rand
+
+// publisJitterInt returns a random int64 between 0 and the given maxVal.
+func publisJitterInt(maxVal int64) int64 {
+	// Set seed once at startup
+	doOnce.Do(func() {
+		gRand = rand.New(rand.NewSource(time.Now().Unix()))
+	})
+
+	jitter := gRand.Int63n(maxVal)
+	return jitter
+}
+
+// publishJitter returns a random duration between 0 and the given publishInterval.
+func publishJitter(publishInterval time.Duration) time.Duration {
+	jitter := publisJitterInt(int64(publishInterval.Seconds()))
+	return time.Duration(jitter) * time.Second
 }
 
 func setNewDistributionFunc(maxValuesPerDatumLimit int) {

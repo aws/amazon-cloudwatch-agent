@@ -74,7 +74,6 @@ type CloudWatch struct {
 	aggregatorWaitGroup    sync.WaitGroup
 	metricChan             chan telegraf.Metric
 	datumBatchChan         chan []*cloudwatch.MetricDatum
-	datumBatchFullChan     chan bool
 	metricDatumBatch       *MetricDatumBatch
 	shutdownChan           chan struct{}
 	pushTicker             *time.Ticker
@@ -166,7 +165,6 @@ func (c *CloudWatch) Connect() error {
 func (c *CloudWatch) startRoutines() {
 	c.metricChan = make(chan telegraf.Metric, metricChanBufferSize)
 	c.datumBatchChan = make(chan []*cloudwatch.MetricDatum, datumBatchChanBufferSize)
-	c.datumBatchFullChan = make(chan bool, 1)
 	c.shutdownChan = make(chan struct{})
 	c.aggregatorShutdownChan = make(chan struct{})
 	c.aggregator = NewAggregator(c.metricChan, c.aggregatorShutdownChan, &c.aggregatorWaitGroup)
@@ -279,45 +277,86 @@ func (c *CloudWatch) timeToPublish(b *MetricDatumBatch) bool {
 	return len(b.Partition) > 0 && time.Now().Sub(b.BeginTime) >= c.ForceFlushInterval.Duration
 }
 
+// getFirstPushMs returns the time at which the first upload should occur.
+// It uses random jitter as an offset from the start of the given interval.
+func getFirstPushMs(interval time.Duration) int64 {
+	publishJitter := publishJitter(interval)
+	log.Printf("I! cloudwatch: publish with ForceFlushInterval: %v, Publish Jitter: %v",
+		interval, publishJitter)
+	nowMs := time.Now().UnixMilli()
+	// Truncate i.e. round down, then add jitter.
+	// If the rounded down time is in the past, move it forward.
+	nextMs := nowMs - (nowMs % interval.Milliseconds()) + publishJitter.Milliseconds()
+	if nextMs < nowMs {
+		nextMs += interval.Milliseconds()
+	}
+	log.Printf("I! cloudwatch: next - now, %v", nextMs - nowMs)
+	return nextMs
+}
+
+// publish will begin by sleeping for a random amount of jitter between 0 and
+// the configured forceFlushInterval. Previously, if the batch buffer filled up
+// it flushed immediately. Now it cuts the remaining interval in half,
+// and the next interval in half.
+// If the buffer continues to stay full then it will keep cutting down.
+// This avoids bursting the backend and maintains some amount of jitter.
 func (c *CloudWatch) publish() {
-	now := time.Now()
-	forceFlushInterval := c.ForceFlushInterval.Duration
-	publishJitter := publishJitter(forceFlushInterval)
-	log.Printf("I! cloudwatch: publish with ForceFlushInterval: %v, Publish Jitter: %v", forceFlushInterval, publishJitter)
-	time.Sleep(now.Truncate(forceFlushInterval).Add(publishJitter).Sub(now))
-	c.pushTicker = time.NewTicker(c.ForceFlushInterval.Duration)
-	defer c.pushTicker.Stop()
-	shouldPublish := false
+	currentInterval := c.ForceFlushInterval.Duration
+	nextMs := getFirstPushMs(currentInterval)
+	// Only allow shortening interval once per push.
+	// This avoids bursting many pushes all at once, but still allows the
+	// push frequency to increase.
+	bufferFullOccurred := false
+
 	for {
+		shouldPublish := false
 		select {
 		case <-c.shutdownChan:
-			log.Printf("D! CloudWatch: publish routine receives the shutdown signal, exiting.")
+			log.Printf("D! cloudwatch: publish routine receives the shutdown signal, exiting.")
 			return
-		case <-c.pushTicker.C:
-			shouldPublish = true
 		case <-c.aggregatorShutdownChan:
 			shouldPublish = true
-		case <-c.metricDatumBatchFull():
-			shouldPublish = true
 		default:
-			shouldPublish = false
 		}
+
+		nowMs := time.Now().UnixMilli()
+
+		if c.metricDatumBatchFull() {
+			if !bufferFullOccurred {
+				// Set to false so this only happens once per push.
+				bufferFullOccurred = true
+				// Keep interval above 1 second.
+				if currentInterval.Seconds() >=  2 {
+					currentInterval /= 2
+					nextMs = nowMs + ((nextMs - nowMs) / 2)
+					log.Printf("I! cloudwatch: cut interval to %v", currentInterval)
+				}
+			}
+		}
+
+		// Check if the interval has elapsed.
+		if nowMs >= nextMs {
+			shouldPublish = true
+			nextMs = nowMs + currentInterval.Milliseconds()
+			// Restore interval if buffer did not fill up during this interval.
+			if !bufferFullOccurred {
+				log.Printf("I! cloudwatch: reset interval")
+				currentInterval = c.ForceFlushInterval.Duration
+			}
+		}
+
 		if shouldPublish {
 			c.pushMetricDatumBatch()
-		} else {
-			time.Sleep(time.Second)
+			bufferFullOccurred = false
 		}
+		// Always sleep, so the fastest we push is every 1 second.
+		time.Sleep(time.Second)
 	}
 }
 
-func (c *CloudWatch) metricDatumBatchFull() chan bool {
-	if len(c.datumBatchChan) >= datumBatchChanBufferSize {
-		if len(c.datumBatchFullChan) == 0 {
-			c.datumBatchFullChan <- true
-		}
-		return c.datumBatchFullChan
-	}
-	return nil
+// metricDatumBatchFull returns true if the channel/buffer of batches if full.
+func (c *CloudWatch) metricDatumBatchFull() bool {
+	return len(c.datumBatchChan) >= datumBatchChanBufferSize
 }
 
 func (c *CloudWatch) pushMetricDatumBatch() {
@@ -332,11 +371,13 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 	}
 }
 
-//sleep some back off time before retries.
+// backoffSleep sleeps some amount of time based on number of retries already done.
 func (c *CloudWatch) backoffSleep() {
 	var backoffInMillis int64 = 60 * 1000 // 1 minute
 	if c.retries <= defaultRetryCount {
 		backoffInMillis = int64(backoffRetryBase * math.Pow(2, float64(c.retries)))
+		// Adding at most 1 second on each retry for the sake of jitter.
+		backoffInMillis += publisJitterInt(1000)
 	}
 	sleepDuration := time.Millisecond * time.Duration(backoffInMillis)
 	log.Printf("W! %v retries, going to sleep %v before retrying.", c.retries, sleepDuration)
@@ -352,6 +393,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	}
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
+		//log.Printf("I! cloudwatch: calling PutMetricData(), len %v", len(datums))
 		_, err = c.svc.PutMetricData(params)
 
 		if err != nil {
