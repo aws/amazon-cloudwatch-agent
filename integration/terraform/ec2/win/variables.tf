@@ -15,7 +15,7 @@ variable "ami" {
 
 variable "github_sha" {
   type    = string
-  default = "a029f69cd3b4164cb601cfa20f10b717c5f85957"
+  default = "aee2f5c9b1b0a7a840b441da37a63ede7506a343"
 }
 
 variable "github_repo" {

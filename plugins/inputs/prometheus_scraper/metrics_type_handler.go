@@ -6,10 +6,10 @@ package prometheus_scraper
 import (
 	"errors"
 	"fmt"
+	"github.com/prometheus/prometheus/model/textparse"
 	"log"
 	"strings"
 
-	"github.com/prometheus/prometheus/pkg/textparse"
 	"github.com/prometheus/prometheus/scrape"
 )
 
@@ -40,19 +40,19 @@ func normalizeMetricName(name string, suffixes []string) string {
 }
 
 func (pm *PrometheusMetric) isCounter() bool {
-	return pm.metricType == textparse.MetricTypeCounter
+	return pm.metricType == string(textparse.MetricTypeCounter)
 }
 
 func (pm *PrometheusMetric) isGauge() bool {
-	return pm.metricType == textparse.MetricTypeGauge
+	return pm.metricType == string(textparse.MetricTypeGauge)
 }
 
 func (pm *PrometheusMetric) isHistogram() bool {
-	return pm.metricType == textparse.MetricTypeHistogram
+	return pm.metricType == string(textparse.MetricTypeHistogram)
 }
 
 func (pm *PrometheusMetric) isSummary() bool {
-	return pm.metricType == textparse.MetricTypeSummary
+	return pm.metricType == string(textparse.MetricTypeSummary)
 }
 
 // Adapter to prometheus scrape.Target

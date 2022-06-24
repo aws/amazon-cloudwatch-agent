@@ -21,7 +21,7 @@ func TestNodeFull(t *testing.T) {
 		MetricName(TypeInstance, NetTotalBytes): 0, MetricName(TypeInstance, CpuReservedCapacity): 0, MetricName(TypeInstance, MemReservedCapacity): 0,
 		MetricName(TypeInstance, RunningTaskCount): 0, MetricName(TypeInstance, CpuTotal): 0,
 		MetricName(TypeInstance, CpuLimit): 0, MetricName(TypeInstance, MemWorkingset): 0, MetricName(TypeInstance, MemLimit): 0}
-	m, _ := metric.New("test", tags, fields, time.Now())
+	m := metric.New("test", tags, fields, time.Now())
 	new(ECSDecorator).tagMetricRule(m)
 	actual := m.Fields()[structuredlogscommon.MetricRuleKey].([]structuredlogscommon.MetricRule)
 	expected := []structuredlogscommon.MetricRule{}
@@ -35,7 +35,7 @@ func TestNodeLackOfCpuUtilization(t *testing.T) {
 		MetricName(TypeInstance, NetTotalBytes): 0, MetricName(TypeInstance, CpuReservedCapacity): 0, MetricName(TypeInstance, MemReservedCapacity): 0,
 		MetricName(TypeInstance, RunningTaskCount): 0, MetricName(TypeInstance, CpuTotal): 0,
 		MetricName(TypeInstance, CpuLimit): 0, MetricName(TypeInstance, MemWorkingset): 0, MetricName(TypeInstance, MemLimit): 0}
-	m, _ := metric.New("test", tags, fields, time.Now())
+	m := metric.New("test", tags, fields, time.Now())
 	new(ECSDecorator).tagMetricRule(m)
 	actual := m.Fields()[structuredlogscommon.MetricRuleKey].([]structuredlogscommon.MetricRule)
 
@@ -52,7 +52,7 @@ func TestNodeLackOfInstanceId(t *testing.T) {
 		MetricName(TypeInstance, NetTotalBytes): 0, MetricName(TypeInstance, CpuReservedCapacity): 0, MetricName(TypeInstance, MemReservedCapacity): 0,
 		MetricName(TypeInstance, RunningTaskCount): 0, MetricName(TypeInstance, CpuTotal): 0,
 		MetricName(TypeInstance, CpuLimit): 0, MetricName(TypeInstance, MemWorkingset): 0, MetricName(TypeInstance, MemLimit): 0}
-	m, _ := metric.New("test", tags, fields, time.Now())
+	m := metric.New("test", tags, fields, time.Now())
 	new(ECSDecorator).tagMetricRule(m)
 	actual := m.Fields()[structuredlogscommon.MetricRuleKey].([]structuredlogscommon.MetricRule)
 
@@ -65,7 +65,7 @@ func TestNodeLackOfInstanceId(t *testing.T) {
 func TestNodeFSFull(t *testing.T) {
 	tags := map[string]string{MetricType: TypeInstanceFS, InstanceId: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
 	fields := map[string]interface{}{MetricName(TypeInstanceFS, FSUtilization): 0}
-	m, _ := metric.New("test", tags, fields, time.Now())
+	m := metric.New("test", tags, fields, time.Now())
 	new(ECSDecorator).tagMetricRule(m)
 	actual := m.Fields()[structuredlogscommon.MetricRuleKey].([]structuredlogscommon.MetricRule)
 

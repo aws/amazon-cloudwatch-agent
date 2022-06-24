@@ -44,9 +44,9 @@ resource "aws_instance" "cwagent" {
 resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
   provisioner "remote-exec" {
+    # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
+    # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
     inline = [
-      # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
-      # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
       "echo clone and install agent",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
