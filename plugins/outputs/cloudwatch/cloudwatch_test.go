@@ -546,7 +546,7 @@ func TestBackoffRetries(t *testing.T) {
 	}
 	now := time.Now()
 	c.backoffSleep()
-	assert.Greater(2, math.Abs((time.Since(now)-time.Minute).Seconds()))
+	assert.Greater(2.0, math.Abs((time.Since(now)-time.Minute).Seconds()))
 
 	c.retries = 0
 	now = time.Now()
