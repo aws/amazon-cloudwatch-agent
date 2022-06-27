@@ -536,21 +536,22 @@ func TestBackoffRetries(t *testing.T) {
 	c := &CloudWatch{}
 	sleeps := []time.Duration{time.Millisecond * 200, time.Millisecond * 400, time.Millisecond * 800,
 		time.Millisecond * 1600, time.Millisecond * 3200, time.Millisecond * 6400}
+	assert := assert.New(t)
 	for i := 0; i <= defaultRetryCount; i++ {
 		now := time.Now()
 		c.backoffSleep()
 		// Allow up 2 seconds difference due to 1 second random jitter, and 1
 		// second for Sleep() accuracy.
-		assert.True(t, math.Abs((time.Since(now)-sleeps[i]).Seconds()) < 2)
+		assert.True(math.Abs((time.Since(now)-sleeps[i]).Seconds()) < 2)
 	}
 	now := time.Now()
 	c.backoffSleep()
-	assert.Greater(t, 2, math.Abs((time.Since(now)-time.Minute).Seconds()))
+	assert.Greater(2, math.Abs((time.Since(now)-time.Minute).Seconds()))
 
 	c.retries = 0
 	now = time.Now()
 	c.backoffSleep()
-	assert.True(t, math.Abs((time.Since(now)-sleeps[0]).Seconds()) < 2)
+	assert.True(math.Abs((time.Since(now)-sleeps[0]).Seconds()) < 2)
 }
 
 // Fill up the channel and verify it is full.
