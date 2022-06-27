@@ -377,7 +377,7 @@ func (c *CloudWatch) backoffSleep() {
 	if c.retries <= defaultRetryCount {
 		backoffInMillis = int64(backoffRetryBase * 1 << c.retries)
 		// Adding at most 1 second on each retry for the sake of jitter.
-		backoffInMillis += publisJitterInt(1000)
+		backoffInMillis += getJitter(1000)
 	}
 	sleepDuration := time.Millisecond * time.Duration(backoffInMillis)
 	log.Printf("W! %v retries, going to sleep %v before retrying.", c.retries,

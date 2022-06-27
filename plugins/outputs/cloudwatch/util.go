@@ -52,7 +52,7 @@ var doOnce sync.Once
 var gRand *rand.Rand
 
 // publisJitterInt returns a random int64 between 0 and the given maxVal.
-func publisJitterInt(maxVal int64) int64 {
+func getJitter(maxVal int64) int64 {
 	// Set seed once at startup
 	doOnce.Do(func() {
 		gRand = rand.New(rand.NewSource(time.Now().Unix()))
@@ -64,7 +64,7 @@ func publisJitterInt(maxVal int64) int64 {
 
 // publishJitter returns a random duration between 0 and the given publishInterval.
 func publishJitter(publishInterval time.Duration) time.Duration {
-	jitter := publisJitterInt(int64(publishInterval.Seconds()))
+	jitter := getJitter(int64(publishInterval.Seconds()))
 	return time.Duration(jitter) * time.Second
 }
 
