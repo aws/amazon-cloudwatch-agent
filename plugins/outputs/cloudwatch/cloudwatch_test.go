@@ -380,12 +380,12 @@ func TestWriteError(t *testing.T) {
 	metrics := makeMetrics(20)
 	cloudWatchOutput.Write(metrics)
 
-	var sum float64
+	var sum int
 	for i := 0; i < defaultRetryCount; i++ {
 		// Allow up to 1 second of random jitter and some exponential jitter.
-		sum += 1 + math.Pow(2, float64(i))
+		sum += 1 + (1 << i)
 	}
-	time.Sleep(time.Duration(backoffRetryBase*int64(sum)) * time.Millisecond)
+	time.Sleep(time.Duration(backoffRetryBase * sum) * time.Millisecond)
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 5))
 }
 
@@ -397,8 +397,8 @@ func TestPublish(t *testing.T) {
 	svc.On("PutMetricData", mock.Anything).Return(
 		&res,
 		nil)
-	interval := 60 * time.Second
-	numMetrics := 10000
+	interval := 30 * time.Second
+	numMetrics := 5000
 	expectedCalls := numMetrics / defaultMaxDatumsPerCall
 	cloudWatchOutput := newCloudWatchClient(svc, interval)
 	cloudWatchOutput.publisher, _ = publisher.NewPublisher(

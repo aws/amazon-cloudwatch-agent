@@ -292,18 +292,15 @@ func getFirstPushMs(interval time.Duration) int64 {
 	return nextMs
 }
 
-// publish will begin by sleeping for a random amount of jitter between 0 and
-// the configured forceFlushInterval. Previously, if the batch buffer filled up
-// it flushed immediately. Now it cuts the remaining interval in half,
-// and the next interval in half.
-// If the buffer continues to stay full then it will keep cutting down.
-// This avoids bursting the backend and maintains some amount of jitter.
+// publish loops forever until a shutdown occurs.
+// It periodically tries pushing batches of metrics (if there are any).
+// Previously, if the batch buffer filled up it flushed immediately.
+// Now it gradually reduces the interval to avoid bursting the backend and
+// maintain some amount of jitter.
 func (c *CloudWatch) publish() {
 	currentInterval := c.ForceFlushInterval.Duration
 	nextMs := getFirstPushMs(currentInterval)
 	// Only allow shortening interval once per push.
-	// This avoids bursting many pushes all at once, but still allows the
-	// push frequency to increase.
 	bufferFullOccurred := false
 
 	for {
@@ -320,15 +317,15 @@ func (c *CloudWatch) publish() {
 		nowMs := time.Now().UnixMilli()
 
 		if c.metricDatumBatchFull() {
-			log.Printf("I! cloudwatch: buffer of batches is full")
 			if !bufferFullOccurred {
 				// Set to false so this only happens once per push.
 				bufferFullOccurred = true
 				// Keep interval above 1 second.
 				if currentInterval.Seconds() >=  2 {
+					// Cut the next interval in half.
 					currentInterval /= 2
+					// Cut the remaining interval in half.
 					nextMs = nowMs + ((nextMs - nowMs) / 2)
-					log.Printf("I! cloudwatch: cut interval to %v", currentInterval)
 				}
 			}
 		}
@@ -336,12 +333,11 @@ func (c *CloudWatch) publish() {
 		// Check if the interval has elapsed.
 		if nowMs >= nextMs {
 			shouldPublish = true
-			nextMs += currentInterval.Milliseconds()
 			// Restore interval if buffer did not fill up during this interval.
 			if !bufferFullOccurred {
-				log.Printf("I! cloudwatch: reset interval")
 				currentInterval = c.ForceFlushInterval.Duration
 			}
+			nextMs += currentInterval.Milliseconds()
 		}
 
 		if shouldPublish {
@@ -359,7 +355,6 @@ func (c *CloudWatch) metricDatumBatchFull() bool {
 }
 
 func (c *CloudWatch) pushMetricDatumBatch() {
-	log.Printf("I! cloudwatch: push batches")
 	for {
 		select {
 		case datumBatch := <-c.datumBatchChan:
