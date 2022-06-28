@@ -397,8 +397,8 @@ func TestPublish(t *testing.T) {
 	svc.On("PutMetricData", mock.Anything).Return(
 		&res,
 		nil)
-	interval := 30 * time.Second
-	numMetrics := 5000
+	interval := 60 * time.Second
+	numMetrics := 10000
 	expectedCalls := numMetrics / defaultMaxDatumsPerCall
 	cloudWatchOutput := newCloudWatchClient(svc, interval)
 	cloudWatchOutput.publisher, _ = publisher.NewPublisher(

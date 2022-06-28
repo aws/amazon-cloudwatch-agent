@@ -39,6 +39,8 @@ func TestAggregator_NoAggregationKeyFound(t *testing.T) {
 
 	assertNoMetricsInChan(t, metricChan)
 	close(shutdownChan)
+	// Cleanup
+	wg.Wait()
 }
 
 func TestAggregator_NotDurationType(t *testing.T) {
@@ -60,6 +62,8 @@ func TestAggregator_NotDurationType(t *testing.T) {
 
 	assertNoMetricsInChan(t, metricChan)
 	close(shutdownChan)
+	// Cleanup
+	wg.Wait()
 }
 
 func TestAggregator_ProperAggregationKey(t *testing.T) {
@@ -78,6 +82,8 @@ func TestAggregator_ProperAggregationKey(t *testing.T) {
 
 	assertNoMetricsInChan(t, metricChan)
 	close(shutdownChan)
+	// Cleanup
+	wg.Wait()
 }
 
 func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
@@ -121,6 +127,8 @@ func TestAggregator_MultipleAggregationPeriods(t *testing.T) {
 
 	assertNoMetricsInChan(t, metricChan)
 	close(shutdownChan)
+	// Cleanup
+	wg.Wait()
 }
 
 func TestAggregator_ShutdownBehavior(t *testing.T) {
