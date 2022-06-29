@@ -16,37 +16,22 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/toenvconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/totomlconfig"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/registerrules"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toenvconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
 	translatorUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-
 	"github.com/xeipuuv/gojsonschema"
 )
 
 const (
-	tomlFileMode             = 0644
+	fileMode                 = 0644
 	jsonTemplateName_Linux   = "default_linux_config.json"
 	jsonTemplateName_Windows = "default_windows_config.json"
 	jsonTemplateName_Darwin  = "default_darwin_config.json"
 	defaultTomlConfigName    = "CWAgent.conf"
-	exitSuccessMessage       = "Configuration validation first phase succeeded"
 )
-
-func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConfigFilePath string) {
-	res := totomlconfig.ToTomlConfig(jsonConfigValue)
-	if translator.IsTranslateSuccess() {
-		if err := ioutil.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); err != nil {
-			log.Panicf("E! Failed to create the configuration validation file. Reason: %s", err.Error())
-		} else {
-			for _, infoMessage := range translator.InfoMessages {
-				fmt.Println(infoMessage)
-			}
-			fmt.Println(exitSuccessMessage)
-		}
-	} else {
-		log.Panic("E! Failed to generate configuration validation content.")
-	}
-}
 
 // TranslateJsonMapToEnvConfigFile populates env-config.json based on the input json config.
 func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, envConfigPath string) {
@@ -214,4 +199,31 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 	// Json Schema Validation by gojsonschema
 	checkSchema(mergedJsonConfigMap)
 	return mergedJsonConfigMap, nil
+}
+
+func TranslateJsonMapToConfig(jsonConfigValue interface{}) interface{} {
+	r := new(translate.Translator)
+	_, val := r.ApplyRule(jsonConfigValue)
+	if !translator.IsTranslateSuccess() {
+		log.Printf("E! Errors %v", translator.ErrorMessages)
+		log.Panic("E! Failed to generate configuration validation content.")
+	}
+	// Translation is valid, log info messages and continue to convert/write to toml and yaml files
+	for _, infoMessage := range translator.InfoMessages {
+		fmt.Println(infoMessage)
+	}
+	return val
+}
+
+func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) {
+	res := totomlconfig.ToTomlConfig(config)
+	err := ioutil.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
+	translatorUtil.PanicIfErr("E! Failed to create the configuration validation file. Reason:", err)
+
+}
+
+func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) {
+	res, _ := toyamlconfig.ToYamlConfig(config)
+	err := ioutil.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
+	translatorUtil.PanicIfErr("E! Failed to create the configuration validation file. Reason:", err)
 }

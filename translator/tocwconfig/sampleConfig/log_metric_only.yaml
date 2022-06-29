@@ -1,0 +1,16 @@
+exporters:
+    cloudwatchlogs: {}
+receivers:
+    cadvisor: {}
+    k8sapiserver: {}
+    socket_listener: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatchlogs
+            processors: []
+            receivers:
+                - k8sapiserver
+                - cadvisor
+                - socket_listener

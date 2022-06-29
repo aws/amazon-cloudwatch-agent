@@ -1,13 +1,7 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
-
-package totomlconfig
-
+package registerrules
+// Rules register themselves during import with their parent rules in a hierarchy up until the root translator object.
+// Because of this, when rules need to be registered and merged, this package should be imported as a whole
 import (
-	"bytes"
-	"log"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/csm"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/globaltags"
@@ -49,19 +43,4 @@ import (
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/statsd"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/swap"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/rollup_dimensions"
-
-	"github.com/BurntSushi/toml"
 )
-
-func ToTomlConfig(c interface{}) string {
-	//Process by the translator.
-	r := new(translate.Translator)
-	_, val := r.ApplyRule(c)
-	buf := bytes.Buffer{}
-	enc := toml.NewEncoder(&buf)
-	err := enc.Encode(val)
-	if err != nil {
-		log.Panicf("Encode to a valid TOML config fails because of %v", err)
-	}
-	return buf.String()
-}

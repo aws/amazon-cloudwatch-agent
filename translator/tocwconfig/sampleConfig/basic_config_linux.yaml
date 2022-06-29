@@ -1,0 +1,14 @@
+exporters:
+    cloudwatch: {}
+receivers:
+    disk: {}
+    mem: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatch
+            processors: []
+            receivers:
+                - disk
+                - mem

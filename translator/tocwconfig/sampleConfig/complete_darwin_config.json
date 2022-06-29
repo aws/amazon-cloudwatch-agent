@@ -114,8 +114,7 @@
       "processes": {
         "measurement": [
           "running",
-          "sleeping",
-          "dead"
+          "sleeping"
         ]
       },
       "procstat": [

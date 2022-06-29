@@ -1,0 +1,16 @@
+exporters:
+    cloudwatch: {}
+receivers:
+    cpu: {}
+    disk: {}
+    nvidia_smi: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatch
+            processors: []
+            receivers:
+                - cpu
+                - disk
+                - nvidia_smi

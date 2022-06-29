@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -18,9 +19,11 @@ import (
 )
 
 const (
-	exitErrorMessage  = "Configuration validation first phase failed. Agent version: %v. Verify the JSON input is only using features supported by this version.\n"
-	version           = "1.0"
-	envConfigFileName = "env-config.json"
+	exitErrorMessage   = "Configuration validation first phase failed. Agent version: %v. Verify the JSON input is only using features supported by this version.\n"
+	exitSuccessMessage = "Configuration validation first phase succeeded"
+	version            = "1.0"
+	envConfigFileName  = "env-config.json"
+	yamlConfigFileName = "amazon-cloudwatch-config.yaml"
 )
 
 func initFlags() {
@@ -105,8 +108,12 @@ func main() {
 	}
 
 	tomlConfigPath := cmdutil.GetTomlConfigPath(ctx.OutputTomlFilePath())
-	cmdutil.TranslateJsonMapToTomlFile(mergedJsonConfigMap, tomlConfigPath)
-	// Put env config into the same folder as the toml config.
+	yamlConfigPath := filepath.Join(filepath.Dir(tomlConfigPath), yamlConfigFileName)
+	config := cmdutil.TranslateJsonMapToConfig(mergedJsonConfigMap)
+	cmdutil.ConfigToTomlFile(config, tomlConfigPath)
+	cmdutil.ConfigToYamlFile(config, yamlConfigPath)
+	fmt.Println(exitSuccessMessage)
+	// Put env config into the same folder as the toml config
 	envConfigPath := filepath.Join(filepath.Dir(tomlConfigPath), envConfigFileName)
 	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJsonConfigMap, envConfigPath)
 }

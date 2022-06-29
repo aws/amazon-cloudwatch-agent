@@ -14,6 +14,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/registerrules"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 

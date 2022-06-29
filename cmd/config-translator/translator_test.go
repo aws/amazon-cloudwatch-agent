@@ -180,13 +180,13 @@ func TestInvalidLogFilterConfig(t *testing.T) {
 
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
-	if files, err := ioutil.ReadDir("../../translator/totomlconfig/sampleConfig/"); err == nil {
+	if files, err := ioutil.ReadDir("../../translator/tocwconfig/sampleConfig/"); err == nil {
 		re := regexp.MustCompile(".json")
 		for _, file := range files {
 			if re.MatchString(file.Name()) {
-				t.Logf("Validating ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
-				checkIfSchemaValidateAsExpected(t, "../../translator/totomlconfig/sampleConfig/"+file.Name(), true, map[string]int{})
-				t.Logf("Validated ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
+				t.Logf("Validating ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
+				checkIfSchemaValidateAsExpected(t, "../../translator/tocwconfig/sampleConfig/"+file.Name(), true, map[string]int{})
+				t.Logf("Validated ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
 			}
 		}
 	} else {

@@ -1,0 +1,12 @@
+exporters:
+  aws_csm: {}
+receivers:
+  awscsm_listener: {}
+service:
+  pipelines:
+    metrics:
+      exporters:
+        - aws_csm
+      processors: []
+      receivers:
+        - awscsm_listener

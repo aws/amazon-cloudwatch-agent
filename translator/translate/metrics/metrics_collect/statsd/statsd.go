@@ -9,10 +9,10 @@ import (
 )
 
 //
-// Need to import new rule package in src/translator/totomlconfig/toTomlConfig.go
+// Need to import new rule package in src/translator/tocwconfig/totomlconfig/toTomlConfig.go
 //
 
-//
+// SectionKey
 //   "statsd" : {
 //       "service_address": ":8125",
 //       "metrics_collection_interval": 10,

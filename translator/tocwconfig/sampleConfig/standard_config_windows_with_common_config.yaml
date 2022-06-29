@@ -1,0 +1,12 @@
+exporters:
+    cloudwatch: {}
+receivers:
+    win_perf_counters: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatch
+            processors: []
+            receivers:
+                - win_perf_counters

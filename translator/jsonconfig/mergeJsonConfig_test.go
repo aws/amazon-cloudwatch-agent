@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/totomlconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 
 	"github.com/stretchr/testify/assert"

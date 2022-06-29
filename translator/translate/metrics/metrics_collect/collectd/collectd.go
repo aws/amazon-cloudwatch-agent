@@ -9,7 +9,7 @@ import (
 )
 
 //
-// Need to import new rule package in src/translator/totomlconfig/toTomlConfig.go
+// Need to import new rule package in src/translator/tocwconfig/totomlconfig/toTomlConfig.go
 //
 
 //

@@ -1,0 +1,12 @@
+exporters:
+    cloudwatchlogs: {}
+receivers:
+    logfile: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatchlogs
+            processors: []
+            receivers:
+                - logfile

@@ -1,0 +1,12 @@
+exporters:
+    cloudwatch: {}
+receivers:
+    statsd: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatch
+            processors: []
+            receivers:
+                - statsd

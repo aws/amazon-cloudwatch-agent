@@ -10,10 +10,10 @@ import (
 )
 
 //
-// Need to import new rule package in src/translator/totomlconfig/toTomlConfig.go
+// Need to import new rule package in src/translator/tocwconfig/totomlconfig/toTomlConfig.go
 //
 
-//
+// SectionKey
 //   "emf" : {
 //       "service_address": "udp://127.0.0.1:25888"
 //   }

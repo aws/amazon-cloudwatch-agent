@@ -1,0 +1,26 @@
+exporters:
+    cloudwatch: {}
+    cloudwatchlogs: {}
+receivers:
+    logfile: {}
+    nvidia_smi: {}
+    procstat: {}
+    socket_listener: {}
+    statsd: {}
+    win_perf_counters: {}
+    windows_event_log: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatchlogs
+                - cloudwatch
+            processors: []
+            receivers:
+                - win_perf_counters
+                - nvidia_smi
+                - procstat
+                - statsd
+                - socket_listener
+                - logfile
+                - windows_event_log

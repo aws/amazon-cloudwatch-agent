@@ -1,0 +1,14 @@
+exporters:
+    cloudwatchlogs: {}
+receivers:
+    cadvisor: {}
+    socket_listener: {}
+service:
+    pipelines:
+        metrics:
+            exporters:
+                - cloudwatchlogs
+            processors: []
+            receivers:
+                - cadvisor
+                - socket_listener
