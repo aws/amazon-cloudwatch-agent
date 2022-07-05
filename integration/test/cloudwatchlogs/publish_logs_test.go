@@ -130,6 +130,7 @@ func writeLogs(t *testing.T, filePath string, iterations int) {
 		t.Fatalf("Error occurred creating log file for writing: %v", err)
 	}
 	defer f.Close()
+	defer os.Remove(filePath)
 
 	log.Printf("Writing %d lines to %s", iterations*len(logLineIds), filePath)
 

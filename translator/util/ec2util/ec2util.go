@@ -4,11 +4,12 @@
 package ec2util
 
 import (
+	"errors"
 	"log"
 	"net"
 	"sync"
 	"time"
-
+	
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -24,20 +25,23 @@ type ec2Util struct {
 	AccountID  string
 }
 
-const allowedRetries = 5
+var (
+	ec2UtilInstance *ec2Util
+	once            sync.Once
+)
 
-var e *ec2Util
-var once sync.Once
+const allowedRetries = 5
 
 func GetEC2UtilSingleton() *ec2Util {
 	once.Do(func() {
-		e = initEC2UtilSingleton()
+		ec2UtilInstance = initEC2UtilSingleton()
 	})
-	return e
+	return ec2UtilInstance
 }
 
 func initEC2UtilSingleton() (newInstance *ec2Util) {
 	newInstance = &ec2Util{Region: "", PrivateIP: ""}
+
 	if context.CurrentContext().Mode() == config.ModeOnPrem {
 		return
 	}
@@ -67,46 +71,49 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		log.Println("W! [EC2] Sleep until network is up")
 		time.Sleep(1 * time.Second)
 	}
+
 	if !networkUp {
 		log.Println("E! [EC2] No available network interface")
 	}
 
-	ses, err := session.NewSession()
+	err := newInstance.deriveEC2MetadataFromIMDS()
+
 	if err != nil {
-		log.Println("E! [EC2] getting new session info: ", err)
-		return
-	}
-	md := ec2metadata.New(ses)
-
-	if !md.Available() {
-		log.Println("E! ec2metadata is not available")
-		return
-	}
-
-	if info, err := md.GetMetadata("instance-id"); err == nil {
-		newInstance.InstanceID = info
-	} else {
-		log.Println("E! getting instance-id from EC2 metadata fail: ", err)
-	}
-
-	if info, err := md.GetMetadata("hostname"); err == nil {
-		newInstance.Hostname = info
-	} else {
-		log.Println("E! getting hostname from EC2 metadata fail: ", err)
-	}
-
-	if info, err := md.GetMetadata("local-ipv4"); err == nil {
-		newInstance.PrivateIP = info
-	} else {
-		log.Println("E! getting local-ipv4 from EC2 metadata fail: ", err)
-	}
-
-	if info, err := md.GetInstanceIdentityDocument(); err == nil {
-		newInstance.Region = info.Region
-		newInstance.AccountID = info.AccountID
-	} else {
-		log.Println("E! fetching identity document from EC2 metadata fail: ", err)
+		log.Println("E! [EC2] Cannot get EC2 Metadata from IMDS:", err)
 	}
 
 	return
+}
+
+func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
+	ses, err := session.NewSession()
+
+	if err != nil {
+		return err
+	}
+
+	md := ec2metadata.New(ses)
+
+	if !md.Available() {
+		return errors.New("EC2 metadata is not available.")
+	}
+
+	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
+	if hostname, err := md.GetMetadata("hostname"); err == nil {
+		e.Hostname = hostname
+	} else {
+		log.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
+	}
+
+	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
+	if instanceIdentityDocument, err := md.GetInstanceIdentityDocument(); err == nil {
+		e.Region = instanceIdentityDocument.Region
+		e.AccountID = instanceIdentityDocument.AccountID
+		e.PrivateIP = instanceIdentityDocument.PrivateIP
+		e.InstanceID = instanceIdentityDocument.InstanceID
+	} else {
+		log.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", err)
+	}
+
+	return nil
 }

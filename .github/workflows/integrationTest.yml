@@ -89,7 +89,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.17.8
+          go-version: ~1.18.3
 
       - name: Install rpm
         run: sudo apt install rpm
@@ -116,7 +116,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: v1-go-pkg-mod-${{ hashFiles('**/go.sum') }}
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
       - name: Cache binaries
         id: cached_binaries
@@ -151,11 +151,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      #TODO upgrade to 1.17 after @ZhenyuTan-amz updates our go build version
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.18.3
 
       - name: Generate matrix
         id: set-matrix
@@ -181,7 +180,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.17.8
+          go-version: ~1.18.3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -238,7 +237,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.17.8
+          go-version: ~1.18.3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -431,7 +430,7 @@ jobs:
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3
-          timeout_minutes: 15
+          timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
             cd integration/terraform/ec2/linux
