@@ -542,7 +542,7 @@ func TestBackoffRetries(t *testing.T) {
 		c.backoffSleep()
 		// Allow up 2 seconds difference due to 1 second random jitter, and 1
 		// second for Sleep() accuracy.
-		assert.True(math.Abs((time.Since(now)-sleeps[i]).Seconds()) < 2)
+		assert.Greater(2.0, math.Abs((time.Since(now)-sleeps[i]).Seconds()))
 	}
 	now := time.Now()
 	c.backoffSleep()
@@ -551,7 +551,7 @@ func TestBackoffRetries(t *testing.T) {
 	c.retries = 0
 	now = time.Now()
 	c.backoffSleep()
-	assert.True(math.Abs((time.Since(now)-sleeps[0]).Seconds()) < 2)
+	assert.Greater(2.0, math.Abs((time.Since(now)-sleeps[0]).Seconds()))
 }
 
 // Fill up the channel and verify it is full.
