@@ -38,7 +38,7 @@ const (
 	pushIntervalInSec              = 60 // 60 sec
 	highResolutionTagKey           = "aws:StorageResolution"
 	defaultRetryCount              = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
-	backoffRetryBase               = 200
+	backoffRetryBase               = 200 * time.Millisecond
 	MaxDimensions                  = 30
 )
 
@@ -294,9 +294,8 @@ func getFirstPushMs(interval time.Duration) int64 {
 
 // publish loops forever until a shutdown occurs.
 // It periodically tries pushing batches of metrics (if there are any).
-// Previously, if the batch buffer filled up it flushed immediately.
-// Now it gradually reduces the interval to avoid bursting the backend and
-// maintain some amount of jitter.
+// If thet batch buffer fills up the interval will be gradually reduced to avoid
+// bursting the backend and maintain some amount of jitter.
 func (c *CloudWatch) publish() {
 	currentInterval := c.ForceFlushInterval.Duration
 	nextMs := getFirstPushMs(currentInterval)
@@ -343,8 +342,12 @@ func (c *CloudWatch) publish() {
 			c.pushMetricDatumBatch()
 			bufferFullOccurred = false
 		}
-		// Always sleep, so the fastest we push is every 1 second.
-		time.Sleep(time.Second)
+		// Sleep 1 second, unless the nextMs is less than a second away.
+		if nextMs - nowMs > time.Second.Milliseconds() {
+			time.Sleep(time.Second)
+		} else {
+			time.Sleep(time.Duration(nextMs - nowMs) * time.Millisecond)
+		}
 	}
 }
 
@@ -367,17 +370,15 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 
 // backoffSleep sleeps some amount of time based on number of retries done.
 func (c *CloudWatch) backoffSleep() {
-	var backoffInMillis int64 = 60 * 1000 // 1 minute
+	d := 1 * time.Minute
 	if c.retries <= defaultRetryCount {
-		backoffInMillis = int64(backoffRetryBase * 1 << c.retries)
-		// Adding at most 1 second on each retry for the sake of jitter.
-		backoffInMillis += getJitter(1000)
+		d = backoffRetryBase * time.Duration(1 << c.retries)
 	}
-	sleepDuration := time.Millisecond * time.Duration(backoffInMillis)
-	log.Printf("W! cloudwatch: %v retries, going to sleep %v before retrying.", c.retries,
-		sleepDuration)
+	d = (d / 2) + publishJitter(d / 2)
+	log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
+		c.retries, d.Milliseconds())
 	c.retries++
-	time.Sleep(sleepDuration)
+	time.Sleep(d)
 }
 
 func (c *CloudWatch) WriteToCloudWatch(req interface{}) {

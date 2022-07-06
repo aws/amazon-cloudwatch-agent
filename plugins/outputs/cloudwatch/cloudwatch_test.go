@@ -5,7 +5,6 @@ package cloudwatch
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"testing"
 	"time"
@@ -380,12 +379,12 @@ func TestWriteError(t *testing.T) {
 	metrics := makeMetrics(20)
 	cloudWatchOutput.Write(metrics)
 
+	// Sum time for all retries.
 	var sum int
 	for i := 0; i < defaultRetryCount; i++ {
-		// Allow up to 1 second of random jitter and some exponential jitter.
-		sum += 1 + (1 << i)
+		sum += 1 << i
 	}
-	time.Sleep(time.Duration(backoffRetryBase * sum) * time.Millisecond)
+	time.Sleep(backoffRetryBase * time.Duration(sum))
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 5))
 }
 
@@ -538,20 +537,21 @@ func TestBackoffRetries(t *testing.T) {
 		time.Millisecond * 1600, time.Millisecond * 3200, time.Millisecond * 6400}
 	assert := assert.New(t)
 	for i := 0; i <= defaultRetryCount; i++ {
-		now := time.Now()
+		start := time.Now()
 		c.backoffSleep()
-		// Allow up 2 seconds difference due to 1 second random jitter, and 1
-		// second for Sleep() accuracy.
-		assert.Greater(2.0, math.Abs((time.Since(now)-sleeps[i]).Seconds()))
+		// Expect time since start is between sleeps[i]/2 and sleeps[i].
+		assert.Less(sleeps[i] / 2, time.Since(start))
+		assert.Greater(sleeps[i], time.Since(start))
 	}
-	now := time.Now()
+	start := time.Now()
 	c.backoffSleep()
-	assert.Greater(2.0, math.Abs((time.Since(now)-time.Minute).Seconds()))
-
+	assert.Less(30 * time.Second, time.Since(start))
+	assert.Greater(60 * time.Second, time.Since(start))
+	// reset
 	c.retries = 0
-	now = time.Now()
+	start = time.Now()
 	c.backoffSleep()
-	assert.Greater(2.0, math.Abs((time.Since(now)-sleeps[0]).Seconds()))
+	assert.Greater(200 * time.Millisecond, time.Since(start))
 }
 
 // Fill up the channel and verify it is full.
