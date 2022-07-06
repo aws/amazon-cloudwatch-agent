@@ -32,7 +32,7 @@ import (
 const (
 	defaultMaxDatumsPerCall        = 1000   // PutMetricData only supports up to 1000 data metrics per call by default
 	defaultMaxValuesPerDatum       = 150    // By default only these number of values can be inserted into the value list
-	bottomLinePayloadSizeToPublish = 200000 // Leave 9600B for the last datum buffer. 200KB payload size, 5:1 compression ratio estimate.
+	bottomLinePayloadSizeToPublish = 500000 // Leave 2400B for the last datum buffer. 500KB payload size, 5:1 compression ratio estimate.
 	metricChanBufferSize           = 10000
 	datumBatchChanBufferSize       = 50 // the number of requests we buffer
 	maxConcurrentPublisher         = 10 // the number of CloudWatch clients send request concurrently
