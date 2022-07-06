@@ -22,7 +22,7 @@ resource "aws_key_pair" "aws_ssh_key" {
 }
 
 locals {
-  ssh_key_name        = var.ssh_key != "" ? var.key_name : aws_key_pair.aws_ssh_key[0].key_name
+  ssh_key_name        = var.key_name != "" ? var.key_name : aws_key_pair.aws_ssh_key[0].key_name
   private_key_content = var.ssh_key != "" ? var.ssh_key : tls_private_key.ssh_key[0].private_key_pem
 }
 
@@ -81,6 +81,8 @@ resource "null_resource" "integration_test" {
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent",
       "go test ./integration/test/sanity -p 1 -v --tags=integration",
+      "export SHA=${var.github_sha}",
+      "export SHA_DATE=${var.sha_date}",
       "go test ${var.test_dir} -p 1 -v --tags=integration"
     ]
     connection {

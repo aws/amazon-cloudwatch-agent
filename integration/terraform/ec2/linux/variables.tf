@@ -28,16 +28,6 @@ variable "user" {
   default = ""
 }
 
-variable "github_sha" {
-  type    = string
-  default = ""
-}
-
-variable "github_repo" {
-  type    = string
-  default = ""
-}
-
 variable "install_agent" {
   description = "command of package to install ex dpkg -i -E ./amazon-cloudwatch-agent.deb"
   type        = string
@@ -76,5 +66,20 @@ variable "test_name" {
 
 variable "test_dir" {
   type    = string
+  default = ""
+}
+
+variable "github_sha" {
+  type    = string
+  default = ""
+}
+
+variable "github_repo" {
+  type    = string
+  default = ""
+}
+
+variable "github_sha_date"{
+  type = string
   default = ""
 }
