@@ -300,7 +300,6 @@ func getFirstPushMs(interval time.Duration) int64 {
 func (c *CloudWatch) publish() {
 	currentInterval := c.ForceFlushInterval.Duration
 	nextMs := getFirstPushMs(currentInterval)
-	// Only allow shortening interval once per push.
 	bufferFullOccurred := false
 
 	for {
@@ -318,7 +317,7 @@ func (c *CloudWatch) publish() {
 
 		if c.metricDatumBatchFull() {
 			if !bufferFullOccurred {
-				// Set to false so this only happens once per push.
+				// Set to true so this only happens once per push.
 				bufferFullOccurred = true
 				// Keep interval above 1 second.
 				if currentInterval.Seconds() >=  2 {
@@ -375,7 +374,7 @@ func (c *CloudWatch) backoffSleep() {
 		backoffInMillis += getJitter(1000)
 	}
 	sleepDuration := time.Millisecond * time.Duration(backoffInMillis)
-	log.Printf("W! %v retries, going to sleep %v before retrying.", c.retries,
+	log.Printf("W! cloudwatch: %v retries, going to sleep %v before retrying.", c.retries,
 		sleepDuration)
 	c.retries++
 	time.Sleep(sleepDuration)
@@ -394,13 +393,13 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 		if err != nil {
 			awsErr, ok := err.(awserr.Error)
 			if !ok {
-				log.Printf("E! Cannot cast PutMetricData error %v into awserr.Error.", err)
+				log.Printf("E! cloudwatch: Cannot cast PutMetricData error %v into awserr.Error.", err)
 				c.backoffSleep()
 				continue
 			}
 			switch awsErr.Code() {
 			case cloudwatch.ErrCodeLimitExceededFault, cloudwatch.ErrCodeInternalServiceFault:
-				log.Printf("W! cloudwatch PutMetricData, error: %s, message: %s",
+				log.Printf("W! cloudwatch: PutMetricData, error: %s, message: %s",
 					awsErr.Code(),
 					awsErr.Message())
 				c.backoffSleep()
@@ -416,7 +415,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 		break
 	}
 	if err != nil {
-		log.Println("E! WriteToCloudWatch failure, err: ", err)
+		log.Println("E! cloudwatch: WriteToCloudWatch failure, err: ", err)
 	}
 }
 
