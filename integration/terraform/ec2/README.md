@@ -35,6 +35,7 @@ for how to easily generate a new policy.
         "ec2:DescribeVpcs",
         "ec2:GetPasswordData",
         "ec2:ModifyInstanceAttribute",
+        "dynamodb:*",
         "ec2:RunInstances",
         "ec2:TerminateInstances",
         "s3:ListBucket",
