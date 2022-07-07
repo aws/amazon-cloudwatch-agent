@@ -525,25 +525,32 @@ func buildCloudWatchFromToml(contents string) (*CloudWatch, error) {
 
 func TestBackoffRetries(t *testing.T) {
 	c := &CloudWatch{}
-	sleeps := []time.Duration{time.Millisecond * 200, time.Millisecond * 400, time.Millisecond * 800,
-		time.Millisecond * 1600, time.Millisecond * 3200, time.Millisecond * 6400}
+	sleeps := []time.Duration{
+		time.Millisecond * 200,
+		time.Millisecond * 400,
+		time.Millisecond * 800,
+		time.Millisecond * 1600,
+		time.Millisecond * 3200,
+		time.Millisecond * 6400}
 	a := assert.New(t)
+	// tolerance is necessary because GitHub/MacOs does not have an accurate sleep().
+	tolerance := 200 * time.Millisecond
 	for i := 0; i <= defaultRetryCount; i++ {
 		start := time.Now()
 		c.backoffSleep()
 		a.LessOrEqual(sleeps[i] / 2, time.Since(start))
-		a.GreaterOrEqual(sleeps[i], time.Since(start))
+		a.GreaterOrEqual(sleeps[i] + tolerance, time.Since(start))
 	}
 	start := time.Now()
 	c.backoffSleep()
 	a.LessOrEqual(time.Minute / 2, time.Since(start))
-	a.GreaterOrEqual(time.Minute, time.Since(start))
+	a.GreaterOrEqual(time.Minute + tolerance, time.Since(start))
 
 	c.retries = 0
 	start = time.Now()
 	c.backoffSleep()
 	a.LessOrEqual(sleeps[0] / 2, time.Since(start))
-	a.GreaterOrEqual(sleeps[0], time.Since(start))
+	a.GreaterOrEqual(sleeps[0] + tolerance, time.Since(start))
 }
 
 func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
