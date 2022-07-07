@@ -5,7 +5,6 @@ package cloudwatch
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"testing"
 	"time"
@@ -401,14 +400,14 @@ func TestWriteError(t *testing.T) {
 	}
 	cloudWatchOutput.Write(metrics)
 
-	var sum float64
+	// Sum time for all retries.
+	var sum int
 	for i := 0; i < defaultRetryCount; i++ {
-		sum = sum + math.Pow(2, float64(i))
+		sum += 1 << i
 	}
-	time.Sleep(time.Duration(backoffRetryBase*int64(sum)) * time.Millisecond)
-
+	time.Sleep(backoffRetryBase * time.Duration(sum))
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 5))
-
+	cloudWatchOutput.Close()
 }
 
 func TestMetricConfigsRead(t *testing.T) {
@@ -528,19 +527,23 @@ func TestBackoffRetries(t *testing.T) {
 	c := &CloudWatch{}
 	sleeps := []time.Duration{time.Millisecond * 200, time.Millisecond * 400, time.Millisecond * 800,
 		time.Millisecond * 1600, time.Millisecond * 3200, time.Millisecond * 6400}
+	a := assert.New(t)
 	for i := 0; i <= defaultRetryCount; i++ {
-		now := time.Now()
+		start := time.Now()
 		c.backoffSleep()
-		assert.True(t, math.Abs((time.Now().Sub(now)-sleeps[i]).Seconds()) < 1)
+		a.LessOrEqual(sleeps[i] / 2, time.Since(start))
+		a.GreaterOrEqual(sleeps[i], time.Since(start))
 	}
-	now := time.Now()
+	start := time.Now()
 	c.backoffSleep()
-	assert.True(t, math.Abs((time.Now().Sub(now)-time.Minute).Seconds()) < 1)
+	a.LessOrEqual(time.Minute / 2, time.Since(start))
+	a.GreaterOrEqual(time.Minute, time.Since(start))
 
 	c.retries = 0
-	now = time.Now()
+	start = time.Now()
 	c.backoffSleep()
-	assert.True(t, math.Abs((time.Now().Sub(now)-sleeps[0]).Seconds()) < 1)
+	a.LessOrEqual(sleeps[0] / 2, time.Since(start))
+	a.GreaterOrEqual(sleeps[0], time.Since(start))
 }
 
 func TestCloudWatch_metricDatumBatchFull(t *testing.T) {

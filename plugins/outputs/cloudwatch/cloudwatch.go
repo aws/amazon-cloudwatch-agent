@@ -5,7 +5,6 @@ package cloudwatch
 
 import (
 	"log"
-	"math"
 	"reflect"
 	"runtime"
 	"sort"
@@ -39,7 +38,7 @@ const (
 	pushIntervalInSec              = 60 // 60 sec
 	highResolutionTagKey           = "aws:StorageResolution"
 	defaultRetryCount              = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
-	backoffRetryBase               = 200
+	backoffRetryBase               = 200 * time.Millisecond
 	MaxDimensions                  = 30
 )
 
@@ -284,7 +283,11 @@ func (c *CloudWatch) publish() {
 	forceFlushInterval := c.ForceFlushInterval.Duration
 	publishJitter := publishJitter(forceFlushInterval)
 	log.Printf("I! cloudwatch: publish with ForceFlushInterval: %v, Publish Jitter: %v", forceFlushInterval, publishJitter)
-	time.Sleep(now.Truncate(forceFlushInterval).Add(publishJitter).Sub(now))
+	sleepTime := now.Truncate(forceFlushInterval).Add(publishJitter).Sub(now)
+	if sleepTime < 0 {
+		sleepTime += c.ForceFlushInterval.Duration
+	}
+	time.Sleep(sleepTime)
 	c.pushTicker = time.NewTicker(c.ForceFlushInterval.Duration)
 	defer c.pushTicker.Stop()
 	shouldPublish := false
@@ -332,16 +335,17 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 	}
 }
 
-//sleep some back off time before retries.
+// backoffSleep sleeps some amount of time based on number of retries done.
 func (c *CloudWatch) backoffSleep() {
-	var backoffInMillis int64 = 60 * 1000 // 1 minute
+	d := 1 * time.Minute
 	if c.retries <= defaultRetryCount {
-		backoffInMillis = int64(backoffRetryBase * math.Pow(2, float64(c.retries)))
+		d = backoffRetryBase * time.Duration(1 << c.retries)
 	}
-	sleepDuration := time.Millisecond * time.Duration(backoffInMillis)
-	log.Printf("W! %v retries, going to sleep %v before retrying.", c.retries, sleepDuration)
+	d = (d / 2) + publishJitter(d / 2)
+	log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
+		c.retries, d.Milliseconds())
 	c.retries++
-	time.Sleep(sleepDuration)
+	time.Sleep(d)
 }
 
 func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
