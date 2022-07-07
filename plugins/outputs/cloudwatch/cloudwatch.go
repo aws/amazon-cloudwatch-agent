@@ -292,10 +292,10 @@ func getFirstPushMs(interval time.Duration) int64 {
 	return nextMs
 }
 
-// publish loops forever until a shutdown occurs.
+// publish loops until a shutdown occurs.
 // It periodically tries pushing batches of metrics (if there are any).
 // If thet batch buffer fills up the interval will be gradually reduced to avoid
-// bursting the backend and maintain some amount of jitter.
+// many agents bursting the backend.
 func (c *CloudWatch) publish() {
 	currentInterval := c.ForceFlushInterval.Duration
 	nextMs := getFirstPushMs(currentInterval)
@@ -318,17 +318,18 @@ func (c *CloudWatch) publish() {
 			if !bufferFullOccurred {
 				// Set to true so this only happens once per push.
 				bufferFullOccurred = true
-				// Keep interval above 1 second.
-				if currentInterval.Seconds() >=  2 {
-					// Cut the next interval in half.
+				// Keep interval above above 1 second.
+				if currentInterval.Seconds() >  1 {
 					currentInterval /= 2
+					if currentInterval.Seconds() < 1 {
+						currentInterval = 1 * time.Second
+					}
 					// Cut the remaining interval in half.
 					nextMs = nowMs + ((nextMs - nowMs) / 2)
 				}
 			}
 		}
 
-		// Check if the interval has elapsed.
 		if nowMs >= nextMs {
 			shouldPublish = true
 			// Restore interval if buffer did not fill up during this interval.
