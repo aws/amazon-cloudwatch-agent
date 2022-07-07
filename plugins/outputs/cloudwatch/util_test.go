@@ -18,10 +18,16 @@ import (
 )
 
 func TestPublishJitter(t *testing.T) {
-	publishJitter := publishJitter(time.Minute)
-	log.Printf("Got publisherJitter %v", publishJitter)
-	assert.True(t, publishJitter >= 0)
-	assert.True(t, publishJitter < time.Minute)
+	// Loop an arbitrary number of times.
+	last := time.Duration(-1)
+	for i := 0; i < 100; i++ {
+		publishJitter := publishJitter(time.Minute)
+		log.Printf("Got publisherJitter %v", publishJitter)
+		assert.GreaterOrEqual(t, publishJitter, time.Duration(0))
+		assert.Less(t, publishJitter, time.Minute)
+		assert.NotEqual(t, publishJitter, last)
+		last = publishJitter
+	}
 }
 
 func TestSetNewDistributionFunc(t *testing.T) {
