@@ -240,7 +240,9 @@ func TestProcessRollup(t *testing.T) {
 			},
 		},
 	}
-	assert.EqualValues(t, expectedDimensionList, actualDimensionList, "Unexpected dimension roll up list with duplicate roll up")
+	assert.EqualValues(t, expectedDimensionList, actualDimensionList,
+		"Unexpected dimension roll up list with duplicate roll up")
+	cloudWatchOutput.Close()
 }
 
 func TestGetUniqueRollupList(t *testing.T) {
@@ -287,6 +289,7 @@ func TestIsFlushable(t *testing.T) {
 	assert.False(cloudWatchOutput.timeToPublish(batch))
 	time.Sleep(time.Second + cloudWatchOutput.ForceFlushInterval.Duration)
 	assert.True(cloudWatchOutput.timeToPublish(batch))
+	cloudWatchOutput.Close()
 }
 
 func TestIsFull(t *testing.T) {
@@ -361,8 +364,8 @@ func TestWrite(t *testing.T) {
 	metrics := makeMetrics(30)
 	cloudWatchOutput.Write(metrics)
 	time.Sleep(time.Second + 2*cloudWatchOutput.ForceFlushInterval.Duration)
-	cloudWatchOutput.Close()
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 2))
+	cloudWatchOutput.Close()
 }
 
 func TestWriteError(t *testing.T) {
@@ -386,6 +389,7 @@ func TestWriteError(t *testing.T) {
 	}
 	time.Sleep(backoffRetryBase * time.Duration(sum))
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 5))
+	cloudWatchOutput.Close()
 }
 
 // TestPublish verifies metric batches do not get pushed immediately when
@@ -540,6 +544,7 @@ func TestBackoffRetries(t *testing.T) {
 		start := time.Now()
 		c.backoffSleep()
 		// Expect time since start is between sleeps[i]/2 and sleeps[i].
+		// Except that github automation fails on this for MacOs, so allow leniency.
 		assert.Less(sleeps[i] / 2, time.Since(start))
 		assert.Greater(sleeps[i], time.Since(start))
 	}
