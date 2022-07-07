@@ -1,3 +1,0 @@
-[submodule "aws-otel-collector"]
-	path = aws-otel-collector
-	url = ../../aws-observability/aws-otel-collector.git
