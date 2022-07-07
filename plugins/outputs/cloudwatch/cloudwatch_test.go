@@ -545,7 +545,7 @@ func TestBackoffRetries(t *testing.T) {
 	sleeps := []time.Duration{time.Millisecond * 200, time.Millisecond * 400, time.Millisecond * 800,
 		time.Millisecond * 1600, time.Millisecond * 3200, time.Millisecond * 6400}
 	assert := assert.New(t)
-	leniency := 100 * time.Millisecond
+	leniency := 200 * time.Millisecond
 	for i := 0; i <= defaultRetryCount; i++ {
 		start := time.Now()
 		c.backoffSleep()
