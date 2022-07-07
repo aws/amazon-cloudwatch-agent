@@ -110,6 +110,9 @@ func TestBuildMetricDatums(t *testing.T) {
 func TestProcessRollup(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	cloudWatchOutput := newCloudWatchClient(svc, time.Second)
+	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
+		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
+		cloudWatchOutput.WriteToCloudWatch)
 	cloudWatchOutput.RollupDimensions = [][]string{{"d1", "d2"}, {"d1"}, {}, {"d4"}}
 
 	rawDimension := []*cloudwatch.Dimension{
@@ -274,7 +277,9 @@ func TestIsFlushable(t *testing.T) {
 		&res,
 		nil)
 	cloudWatchOutput := newCloudWatchClient(svc, time.Second)
-
+	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
+		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
+		cloudWatchOutput.WriteToCloudWatch)
 	assert := assert.New(t)
 	perRequestConstSize := overallConstPerRequestSize + len("CWAgent") + namespaceOverheads
 	batch := newMetricDatumBatch(defaultMaxDatumsPerCall, perRequestConstSize)

@@ -638,7 +638,9 @@ func (c *CloudWatch) ProcessRollup(rawDimension []*cloudwatch.Dimension) [][]*cl
 		}
 
 	}
-	log.Printf("D! cloudwatch: Get Full dimensionList %v", fullDimensionsList)
+	if len(fullDimensionsList) > 0 && len(fullDimensionsList[0]) > 0 {
+		log.Printf("D! cloudwatch: Get Full dimensionList %v", fullDimensionsList)
+	}
 	return fullDimensionsList
 }
 
