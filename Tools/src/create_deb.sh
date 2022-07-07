@@ -14,9 +14,6 @@ mkdir -p ${BUILD_ROOT}/bin
 mkdir -p ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/logs
 mkdir -p ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/var
 mkdir -p ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d
-mkdir -p ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs
-mkdir -p ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var
-mkdir -p ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc/cwagent-otel-collector.d
 mkdir -p ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin
 mkdir -p ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/doc
 mkdir -p ${BUILD_ROOT}/etc/init
@@ -29,19 +26,15 @@ cp ${PREPKGPATH}/THIRD-PARTY-LICENSES ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-ag
 cp ${PREPKGPATH}/RELEASE_NOTES ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/CWAGENT_VERSION ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
-cp ${PREPKGPATH}/cwagent-otel-collector ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-ctl ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent.service ${BUILD_ROOT}/etc/systemd/system/
-cp ${PREPKGPATH}/cwagent-otel-collector.service ${BUILD_ROOT}/etc/systemd/system/
 cp ${PREPKGPATH}/config-translator ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/config-downloader ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-config-wizard ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/start-amazon-cloudwatch-agent ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/etc/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent.conf ${BUILD_ROOT}/etc/init/
-cp ${PREPKGPATH}/cwagent-otel-collector.conf ${BUILD_ROOT}/etc/init/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/doc/
-cp ${PREPKGPATH}/predefined-config-data ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var/.predefined-config-data
 
 ############################# create the symbolic links here to make them managed by dpkg
 # bin
@@ -50,15 +43,12 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ${BUIL
 # etc
 mkdir -p ${BUILD_ROOT}/etc/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/etc ${BUILD_ROOT}/etc/amazon/amazon-cloudwatch-agent
-ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc ${BUILD_ROOT}/etc/amazon/cwagent-otel-collector
 # log
 mkdir -p ${BUILD_ROOT}/var/log/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/logs ${BUILD_ROOT}/var/log/amazon/amazon-cloudwatch-agent
-ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs ${BUILD_ROOT}/var/log/amazon/cwagent-otel-collector
 # pid
 mkdir -p ${BUILD_ROOT}/var/run/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${BUILD_ROOT}/var/run/amazon/amazon-cloudwatch-agent
-ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${BUILD_ROOT}/var/run/amazon/cwagent-otel-collector
 
 cp ${BUILD_SPACE}/packaging/debian/conffiles ${BUILD_ROOT}/
 cp ${BUILD_SPACE}/packaging/debian/preinst ${BUILD_ROOT}/
@@ -67,7 +57,6 @@ cp ${BUILD_SPACE}/packaging/debian/postinst ${BUILD_ROOT}/
 cp ${BUILD_SPACE}/packaging/debian/debian-binary ${BUILD_ROOT}/
 
 chmod ug+rx ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
-chmod ug+rx ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/cwagent-otel-collector
 chmod ug+rx ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
 chmod ug+rx ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
 

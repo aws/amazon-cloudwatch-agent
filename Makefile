@@ -1,7 +1,5 @@
 export BASE_SPACE=$(shell pwd)
 export BUILD_SPACE=$(BASE_SPACE)/build
-export AOC_BASE_SPACE=$(BASE_SPACE)/aws-otel-collector
-export AOC_BUILD_SPACE=$(AOC_BASE_SPACE)/build
 
 VERSION = $(shell echo `git describe --tag --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
 VERSION := $(shell echo ${VERSION} | sed -e "s/^v//")
@@ -37,11 +35,11 @@ GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
-release: clean test build package-rpm package-deb package-win package-darwin
+release: clean  test build package-rpm package-deb package-win package-darwin
 
 nightly-release: release
 
-build: check_secrets cwagent-otel-collector amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
+build:  amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
 
 check_secrets::
 	if grep --exclude-dir=build --exclude-dir=vendor -E "(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}|(\"|')?(AWS|aws|Aws)?_?(SECRET|secret|Secret)?_?(ACCESS|access|Access)?_?(KEY|key|Key)(\"|')?\\s*(:|=>|=)\\s*(\"|')?[A-Za-z0-9/\\+=]{40}(\"|')?" -Rn .; then echo "check_secrets failed"; exit 1; fi;
@@ -61,11 +59,6 @@ amazon-cloudwatch-agent: copy-version-file
 	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 	$(WIN_BUILD)/amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 	$(DARWIN_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
-
-# Save AWS OTEL Collector GIT SHA to a file so it can be easily referenced from outside this repository.
-update-submodule:
-	git submodule update --init
-	echo "$(AOC_GIT_SHA)" > AOC_GIT_SHA
 
 config-translator: copy-version-file
 	@echo Building config-translator
@@ -147,9 +140,6 @@ package-prepare-rpm:
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.conf $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.spec $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
-	cp $(BASE_SPACE)/packaging/dependencies/cwagent-otel-collector.service $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/
-	cp $(BASE_SPACE)/packaging/linux/cwagent-otel-collector.conf $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/
-	cp $(AOC_BASE_SPACE)/config.yaml $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/predefined-config-data
 
 	# arm64 rpm
 	mkdir -p $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg
@@ -165,9 +155,6 @@ package-prepare-rpm:
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.conf $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.spec $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
-	cp $(BASE_SPACE)/packaging/dependencies/cwagent-otel-collector.service $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/
-	cp $(BASE_SPACE)/packaging/linux/cwagent-otel-collector.conf $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/
-	cp $(AOC_BASE_SPACE)/config.yaml $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/predefined-config-data
 	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 
 package-prepare-deb:
@@ -184,9 +171,6 @@ package-prepare-deb:
 	cp $(BASE_SPACE)/cfg/commonconfig/common-config.toml $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.conf $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
-	cp $(BASE_SPACE)/packaging/dependencies/cwagent-otel-collector.service $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/
-	cp $(BASE_SPACE)/packaging/linux/cwagent-otel-collector.conf $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/
-	cp $(AOC_BASE_SPACE)/config.yaml $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/predefined-config-data
 
 	# arm64 deb
 	mkdir -p $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg
@@ -201,9 +185,7 @@ package-prepare-deb:
 	cp $(BASE_SPACE)/cfg/commonconfig/common-config.toml $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.conf $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
-	cp $(BASE_SPACE)/packaging/dependencies/cwagent-otel-collector.service $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/
-	cp $(BASE_SPACE)/packaging/linux/cwagent-otel-collector.conf $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/
-	cp $(AOC_BASE_SPACE)/config.yaml $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/predefined-config-data
+
 	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 	cp -rf $(BASE_SPACE)/packaging $(BUILD_SPACE)/
 
@@ -221,7 +203,6 @@ package-prepare-win-zip:
 	cp ${BASE_SPACE}/packaging/windows/amazon-cloudwatch-agent-ctl.ps1 $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg/
 	cp ${BASE_SPACE}/packaging/windows/install.ps1 $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg/
 	cp ${BASE_SPACE}/packaging/windows/uninstall.ps1 $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg/
-	cp $(AOC_BASE_SPACE)/config.yaml $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg/predefined-config-data
 	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 
 package-prepare-darwin-tar:
