@@ -184,7 +184,7 @@ func (tail *Tail) closeFile() {
 	if tail.file != nil {
 		tail.file.Close()
 		tail.file = nil
-		OpenFileCount.Decremenet()
+		OpenFileCount.Decrement()
 	}
 }
 

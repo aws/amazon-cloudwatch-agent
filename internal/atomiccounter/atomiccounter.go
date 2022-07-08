@@ -17,7 +17,7 @@ func (ac *AtomicCounter) Increment() {
 	atomic.AddInt64(&ac.val, 1)
 }
 
-func (ac *AtomicCounter) Decremenet() {
+func (ac *AtomicCounter) Decrement() {
 	atomic.AddInt64(&ac.val, -1)
 }
 
