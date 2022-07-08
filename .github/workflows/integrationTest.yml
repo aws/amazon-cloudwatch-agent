@@ -101,8 +101,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      - name: Check out code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 0
           submodules: 'true'
@@ -385,9 +384,7 @@ jobs:
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           -var="github_sha=${GITHUB_SHA}" 
           -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
-          -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}"
-          -var="key_name=${KEY_NAME}"
-          -var="iam_instance_profile=${IAM_ROLE}" &&
+          -var="key_name=${KEY_NAME}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
@@ -403,7 +400,7 @@ jobs:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
     steps:
       - uses: actions/checkout@v2
-
+  
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -416,10 +413,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
+          key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} test dir ${{ matrix.arrays.test_dir }}
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
       - name: Verify Terraform version
         run: terraform --version
@@ -438,6 +435,7 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
               -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
@@ -445,10 +443,8 @@ jobs:
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
               -var="key_name=${KEY_NAME}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
-              -var="iam_instance_profile=${IAM_ROLE}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
@@ -640,16 +636,16 @@ jobs:
 
       - name: Echo Test Info
         run: echo run performance-tracking
+
       - name: Verify Terraform version
         run: terraform --version
-      - name: Get SHA
-        id: sha
-        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
       - name: Get git date
         id: sha_date
         run: echo "::set-output name=sha_date::$(git show -s --format=%ct ${{ steps.sha.outputs.sha_short }} )"
+
       - name: Check env
-        run: echo "SHA ${{ steps.sha.outputs.sha_short }} | Date ${{ steps.sha_date.outputs.sha_date }} "
+        run: echo "SHA ${{ GITHUB_SHA }} | Date ${{ steps.sha_date.outputs.sha_date }} "
       # nick-invision/retry@v2 starts at base dir
       - name: Terraform apply
         if: steps.performance-tracking.outputs.cache-hit != 'true'
@@ -675,8 +671,7 @@ jobs:
               -var="key_name=${KEY_NAME}" \
               -var="test_name=cw-integ-test-al2" \
               -var="iam_instance_profile=${IAM_ROLE}" \
-              -var="sha=${{ steps.sha.outputs.sha_short }}" \
-              -var="sha_date=${{ steps.sha_date.outputs.sha_date }}" \
+              -var="github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
               -var="test_dir=./integration/test/performancetest" ; then terraform destroy -auto-approve
 
             else
