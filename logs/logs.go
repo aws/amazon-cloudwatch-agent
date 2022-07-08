@@ -9,6 +9,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -92,7 +93,12 @@ func (l *LogAgent) Run(ctx context.Context) {
 
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
+	last := time.Now()
 	for {
+		if time.Since(last) >= 1 * time.Minute {
+			last = time.Now()
+			log.Printf("I! [logagent] open file count, %v", tail.OpenFileCount())
+		}
 		select {
 		case <-t.C:
 			for _, c := range l.collections {
