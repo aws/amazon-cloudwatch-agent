@@ -645,8 +645,8 @@ jobs:
         run: echo "::set-output name=sha_date::$(git show -s --format=%ct ${{ steps.sha.outputs.sha_short }} )"
 
       - name: Check env
-        run: echo "SHA ${{ GITHUB_SHA }} | Date ${{ steps.sha_date.outputs.sha_date }} "
-      # nick-invision/retry@v2 starts at base dir
+        run: echo "SHA ${GITHUB_SHA} | Date ${{ steps.sha_date.outputs.sha_date }}"
+
       - name: Terraform apply
         if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-invision/retry@v2
