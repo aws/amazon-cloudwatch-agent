@@ -4,13 +4,15 @@
 package prometheus_scraper
 
 import (
+	"context"
 	"errors"
+	"github.com/prometheus/prometheus/model/exemplar"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/value"
 	"log"
 	"math"
 
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/pkg/labels"
-	"github.com/prometheus/prometheus/pkg/value"
 	"github.com/prometheus/prometheus/storage"
 )
 
@@ -44,7 +46,7 @@ type metricAppender struct {
 	batch    PrometheusMetricBatch
 }
 
-func (mr *metricsReceiver) Appender() storage.Appender {
+func (mr *metricsReceiver) Appender(ctx context.Context) storage.Appender {
 	return &metricAppender{receiver: mr, batch: PrometheusMetricBatch{}}
 }
 
@@ -57,7 +59,7 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 	return nil
 }
 
-func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, error) {
+func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
 	metricName := ""
 
 	labelMap := make(map[string]string, len(ls))
@@ -72,7 +74,7 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 	if metricName == "" {
 		// The error should never happen, print log here for debugging
 		log.Println("E! receive invalid prometheus metric, metricName is missing")
-		return uint64(0), errors.New("metricName of the times-series is missing")
+		return 0, errors.New("metricName of the times-series is missing")
 	}
 
 	pm := &PrometheusMetric{
@@ -91,12 +93,7 @@ func (ma *metricAppender) Add(ls labels.Labels, t int64, v float64) (uint64, err
 
 	pm.tags = labelMap
 	ma.batch = append(ma.batch, pm)
-	return uint64(0), nil //return 0 to indicate caching is not supported
-}
-
-// always returns error since caching is not supported by Add() function
-func (ma *metricAppender) AddFast(_ uint64, _ int64, _ float64) error {
-	return storage.ErrNotFound
+	return 0, nil //return 0 to indicate caching is not supported
 }
 
 func (ma *metricAppender) Commit() error {
@@ -107,4 +104,9 @@ func (ma *metricAppender) Rollback() error {
 	// wipe the batch
 	ma.batch = PrometheusMetricBatch{}
 	return nil
+}
+
+func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, l labels.Labels, e exemplar.Exemplar) (storage.SeriesRef, error) {
+	ma.Append(ref, l, e.Ts, e.Value)
+	return 0, nil
 }

@@ -6,24 +6,25 @@ package parsers
 import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/parsers/awscsm"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/parsers/emf"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-func NewEMFParser(config *parsers.Config) (parsers.Parser, error) {
+func EMFParserCreator(metricName string) telegraf.Parser {
+	// Telegraf will create parser with metricName only, and initFromConfig will be called to get the tags
 	return &emf.EMFParser{
-		MetricName:  config.MetricName,
-		DefaultTags: config.DefaultTags,
-	}, nil
+		MetricName: metricName,
+	}
 }
 
-func NewCSMParser(config *parsers.Config) (parsers.Parser, error) {
+func CSMParserCreator(metricName string) telegraf.Parser {
 	parser := &awscsm.JSONParser{
 		MetricName: "awscsm",
 	}
-	return parser, nil
+	return parser
 }
 
 func init() {
-	parsers.RegisterParser("emf", NewEMFParser)
-	parsers.RegisterParser("aws_csm", NewCSMParser)
+	parsers.Add("emf", EMFParserCreator)
+	parsers.Add("aws_csm", CSMParserCreator)
 }

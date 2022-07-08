@@ -35,10 +35,48 @@ for how to easily generate a new policy.
         "ec2:DescribeVpcs",
         "ec2:GetPasswordData",
         "ec2:ModifyInstanceAttribute",
+        "dynamodb:*",
         "ec2:RunInstances",
         "ec2:TerminateInstances",
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:GetObjectAcl",
+        "s3:PutObject",
         "sts:GetCallerIdentity",
-        "s3:PutObject"
+        "ssm:PutParameter",
+        "ssm:DeleteParameter",
+        "ssm:DescribeParameters",
+        "ssm:ListTagsForResource",
+        "ssm:GetParameters",
+        "ssm:GetParameter",
+        "ssm:DeleteParameters",
+        "ecs:ListContainerInstances",
+        "ecs:ListClusters",
+        "ecs:ListServices",
+        "ecs:ListTasks",
+        "ecs:ListTaskDefinitions",
+        "ecs:DescribeClusters",
+        "ecs:DescribeServices",
+        "ecs:DescribeTasks",
+        "ecs:ListTagsForResource",
+        "ecs:CreateCluster",
+        "ecs:CreateService",
+        "ecs:CreateTaskSet",
+        "ecs:DeleteCluster",
+        "ecs:DeleteService",
+        "ecs:DeleteTaskSet",
+        "ecs:RunTask",
+        "ecs:StartTask",
+        "ecs:StopTask",
+        "ecr:GetAuthorizationToken",
+        "ecr:DescribeRepositories",
+        "ecr:ListImages",
+        "ecr:DescribeImages",
+        "ecr:ListTagsForResource",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:PutImage"
       ],
       "Resource": "*"
     }
@@ -88,7 +126,8 @@ for how to easily generate a new policy.
         "logs:PutLogEvents",
         "s3:GetObjectAcl",
         "s3:GetObject",
-        "s3:ListBucket"
+        "s3:ListBucket",
+        "ecr:GetAuthorizationToken"
       ],
       "Resource": "*"
     },
@@ -130,8 +169,16 @@ See [docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-key
 on creating the key pair.
 > Note: Store the private key in a secure location!
 
-**Reminder: the EC2 key pair must be in the same region as the instances, so this assumes that the key pair is created
-in the `us-west-2` region.**
+### Create ECR Repository
+|Field              |Value                   |
+|-------------------|------------------------|
+|Visibility settings|private                 |
+|Repository name    |cwagent-integration-test|
+|Tag immutability   |disabled                |
+|Scan on push       |enabled                 |
+|KMS encryption     |disabled                |
+
+**Reminder: All AWS resources including EC2 key pair and ECR repository must be in the same region as the instances, so this assumes that they are created in the `us-west-2` region.**
 
 ## Required parameters for Terraform to have handy
 
@@ -185,6 +232,9 @@ secrets.
 2. Go to `Actions`
 3. Select the `Run Integration Tests` action
 4. Select `Run workflow`, and choose the branch to execute integration tests on
+
+> Note: The Amazon EC2 quota limit might need to be increased to run the integration test (each EC2 integration test suite is tested on different EC2 instance per OS)
+> : request an increase via `All Standard (A, C, D, H, I, M, R, T, Z) Spot Instance Request`
 
 Note that based on the GitHub action workflow YAML configuration, merges to the main branch
 also trigger the integration tests. If for any reason you do not want integration tests to run

@@ -4,6 +4,7 @@
 package k8sclient
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -41,9 +42,11 @@ func (c *podClient) NamespaceToRunningPodNum() map[string]int {
 	if !c.inited {
 		c.Init()
 	}
-	if c.store.Refreshed() {
-		c.refresh()
-	}
+	//if c.store.Refreshed() {
+	//	log.Printf("I! store refresh %v", c.store.refreshed)
+	//	c.refresh()
+	//}
+	c.refresh()
 	c.RLock()
 	defer c.RUnlock()
 	return c.namespaceToRunningPodNumMap
@@ -116,13 +119,16 @@ func transformFuncPod(obj interface{}) (interface{}, error) {
 }
 
 func createPodListWatch(client kubernetes.Interface, ns string) cache.ListerWatcher {
+	ctx := context.Background()
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 			opts.ResourceVersion = ""
-			return client.CoreV1().Pods(ns).List(opts)
+			// Passing empty context as this was not required by old List()
+			return client.CoreV1().Pods(ns).List(ctx, opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
-			return client.CoreV1().Pods(ns).Watch(opts)
+			// Passing empty context as this was not required by old Watch()
+			return client.CoreV1().Pods(ns).Watch(ctx, opts)
 		},
 	}
 }

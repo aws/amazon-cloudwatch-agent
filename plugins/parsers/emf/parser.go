@@ -73,11 +73,7 @@ func (v *EMFParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	fields := map[string]interface{}{"value": line}
-	metric, err := metric.New(v.MetricName, v.DefaultTags,
-		fields, time.Now().UTC())
-	if err != nil {
-		return nil, err
-	}
+	metric := metric.New(v.MetricName, v.DefaultTags, fields, time.Now().UTC())
 	metric.AddTag(logscommon.LogGroupNameTag, logGroupName)
 	// if the log stream name is empty, it will use the default log stream name set by output plugin
 	if logStreamName != "" {

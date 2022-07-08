@@ -31,7 +31,7 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 	inputMap := input.(map[string]interface{})
 	// Generate allowlisted metric list, process only if Measurement_Key exist
 	if translator.IsValid(inputMap, Measurement_Key, path) {
-		// NOTE: the logic here is a bit tricky, even windows uses linux config for metric like procstat.
+		// NOTE: the logic here is a bit tricky, even windows uses linux config for metric like procstat, NvidiaGPU.
 		os := config.OS_TYPE_LINUX
 		if translator.GetTargetPlatform() == config.OS_TYPE_DARWIN {
 			os = config.OS_TYPE_DARWIN
@@ -104,7 +104,7 @@ func ProcessWindowsCommonConfig(input interface{}, pluginName string, path strin
 		}
 	}
 
-	// Add common field ObkectName
+	// Add common field ObjectName
 	objectConfig[Windows_Object_Name_Key] = pluginName
 
 	// Output the message about the missing perf counter metrics

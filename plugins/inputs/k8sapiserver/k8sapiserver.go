@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -82,6 +82,7 @@ func (k *K8sAPIServer) Gather(acc telegraf.Accumulator) error {
 					containerinsightscommon.K8sNamespace: service.Namespace,
 				})
 		}
+		log.Printf("I! number of namespace to running pod num %v", client.Pod.NamespaceToRunningPodNum())
 		for namespace, podNum := range client.Pod.NamespaceToRunningPodNum() {
 			acc.AddFields("k8sapiserver",
 				map[string]interface{}{
@@ -98,7 +99,7 @@ func (k *K8sAPIServer) Gather(acc telegraf.Accumulator) error {
 }
 
 func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
-	var ctx context.Context
+	ctx := context.Background()
 	ctx, k.cancel = context.WithCancel(context.Background())
 
 	lockNamespace := os.Getenv("K8S_NAMESPACE")
@@ -108,14 +109,15 @@ func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
 	}
 
 	configMapInterface := k8sclient.Get().ClientSet.CoreV1().ConfigMaps(lockNamespace)
-	if configMap, err := configMapInterface.Get(lockName, metav1.GetOptions{}); configMap == nil || err != nil {
+	opts := metav1.CreateOptions{}
+	if configMap, err := configMapInterface.Get(ctx, lockName, metav1.GetOptions{}); configMap == nil || err != nil {
 		log.Printf("I! Cannot get the leader config map: %v, try to create the config map...", err)
-		configMap, err = configMapInterface.Create(&v1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: lockNamespace,
-				Name:      lockName,
-			},
-		})
+		configMap, err = configMapInterface.Create(ctx, &v1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+			Namespace: lockNamespace,
+			Name:      lockName,
+		},
+		},
+			opts)
 		log.Printf("I! configMap: %v, err: %v", configMap, err)
 	}
 

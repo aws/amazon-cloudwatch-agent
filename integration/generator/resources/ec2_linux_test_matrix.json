@@ -96,5 +96,14 @@
     "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
     "arc": "amd64",
     "binaryName": "amazon-cloudwatch-agent.rpm"
+  },
+  {
+    "os": "ol8-6",
+    "username": "ec2-user",
+    "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+    "ami": "cloudwatch-agent-integration-test-ol8-6*",
+    "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+    "arc": "amd64",
+    "binaryName": "amazon-cloudwatch-agent.rpm"
   }
 ]

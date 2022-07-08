@@ -14,7 +14,7 @@ import (
 
 func TestUtils_addKubernetesInfo(t *testing.T) {
 	tags := map[string]string{ContainerNamekey: "testContainer", K8sPodNameKey: "testPod", PodIdKey: "123", K8sNamespace: "testNamespace", TypeService: "testService", NodeNameKey: "testNode"}
-	m, _ := metric.New("test", tags, map[string]interface{}{}, time.Now())
+	m := metric.New("test", tags, map[string]interface{}{}, time.Now())
 	kubernetesBlob := map[string]interface{}{}
 	AddKubernetesInfo(m, kubernetesBlob)
 	assert.Equal(t, "", m.Tags()[ContainerNamekey])

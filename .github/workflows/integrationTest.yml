@@ -89,7 +89,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.18.3
 
       - name: Install rpm
         run: sudo apt install rpm
@@ -116,7 +116,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: v1-go-pkg-mod-${{ hashFiles('**/go.sum') }}
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
       - name: Cache binaries
         id: cached_binaries
@@ -151,11 +151,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      #TODO upgrade to 1.17 after @ZhenyuTan-amz updates our go build version
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.18.3
 
       - name: Generate matrix
         id: set-matrix
@@ -181,7 +180,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.18.3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -238,7 +237,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.18.3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -417,7 +416,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+          key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} test dir ${{ matrix.arrays.test_dir }}
@@ -431,7 +430,7 @@ jobs:
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3
-          timeout_minutes: 15
+          timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
             cd integration/terraform/ec2/linux
@@ -582,7 +581,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+          key: ecs-fargate-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
 
       - name: Login ECR
         id: login-ecr
@@ -617,3 +616,79 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd integration/terraform/ecs/linux && terraform destroy --auto-approve
+
+  PerformanceTrackingTest:
+    name: "PerformanceTrackingTest"
+    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: performance-tracking
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: performance-tracking-test-${{ github.sha }}
+
+      - name: Echo Test Info
+        run: echo run performance-tracking
+      - name: Verify Terraform version
+        run: terraform --version
+      - name: Get SHA
+        id: sha
+        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+      - name: Get git date
+        id: sha_date
+        run: echo "::set-output name=sha_date::$(git show -s --format=%ct ${{ steps.sha.outputs.sha_short }} )"
+      - name: Check env
+        run: echo "SHA ${{ steps.sha.outputs.sha_short }} | Date ${{ steps.sha_date.outputs.sha_date }} "
+      # nick-invision/retry@v2 starts at base dir
+      - name: Terraform apply
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 50
+          retry_wait_seconds: 5
+          command: |
+            cd integration/terraform/ec2/linux
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              -var="github_sha=${GITHUB_SHA}" -var="install_agent=rpm -U ./amazon-cloudwatch-agent.rpm" \
+              -var="user=ec2-user" \
+              -var="ami=cloudwatch-agent-integration-test-al2*" \
+              -var="ca_cert_path=/etc/ssl/certs/ca-bundle.crt" \
+              -var="arc=amd64" \
+              -var="binary_name=amazon-cloudwatch-agent.rpm" \
+              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
+              -var="key_name=${KEY_NAME}" \
+              -var="test_name=cw-integ-test-al2" \
+              -var="iam_instance_profile=${IAM_ROLE}" \
+              -var="sha=${{ steps.sha.outputs.sha_short }}" \
+              -var="sha_date=${{ steps.sha_date.outputs.sha_date }}" \
+              -var="test_dir=./integration/test/performancetest" ; then terraform destroy -auto-approve
+
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() && steps.performance-tracking.outputs.cache-hit != 'true' }}
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
