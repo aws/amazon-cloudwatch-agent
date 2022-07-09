@@ -82,7 +82,7 @@ resource "null_resource" "integration_test" {
       "cd ~/amazon-cloudwatch-agent",
       "go test ./integration/test/sanity -p 1 -v --tags=integration",
       "export SHA=${var.github_sha}",
-      "export SHA_DATE=${var.sha_date}",
+      "export SHA_DATE=${var.github_sha_date}",
       "go test ${var.test_dir} -p 1 -v --tags=integration"
     ]
     connection {
