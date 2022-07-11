@@ -22,7 +22,7 @@ const (
 	DynamoDBDataBase         = "CWAPerformanceMetrics"
 	logOutputPath1           = "/tmp/test1.log"
 	logOutputPath2           = "/tmp/test2.log"
-	tpsMed 					 = 10
+	tpsMed 			 = 10
 )
 
 func TestPerformance(t *testing.T) {
