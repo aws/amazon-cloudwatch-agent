@@ -44,7 +44,10 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
       "logs:PutLogEvents",
       "s3:GetObjectAcl",
       "s3:GetObject",
-      "s3:ListBucket"
+      "s3:ListBucket",
+      "dynamodb:DescribeTable",
+      "dynamodb:PutItem",
+      "dynamodb:CreateTable"
     ]
     resources = ["*"]
   }

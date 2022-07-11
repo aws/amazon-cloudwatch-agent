@@ -20,7 +20,7 @@ on:
   push:
     branches:
       - master
-    
+
   workflow_dispatch:
 
 concurrency:
@@ -135,6 +135,7 @@ jobs:
         run: |
           echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
           for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
+
 
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
@@ -400,7 +401,7 @@ jobs:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
     steps:
       - uses: actions/checkout@v2
-  
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -524,11 +525,12 @@ jobs:
           retry_wait_seconds: 5
           command: cd cd integration/terraform/ec2/win && terraform destroy --auto-approve -var="ami=${{ matrix.arrays.ami }}"
 
+
   StopLocalStack:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [StartLocalStack, EC2LinuxIntegrationTest]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest ]
     defaults:
       run:
         working-directory: integration/terraform/ec2/localstack
@@ -583,7 +585,7 @@ jobs:
         id: login-ecr
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         uses: aws-actions/amazon-ecr-login@v1
-        
+
       - name: Verify Terraform version
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
         run: terraform --version
@@ -603,7 +605,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-      
+
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
@@ -667,10 +669,8 @@ jobs:
               -var="binary_name=amazon-cloudwatch-agent.rpm" \
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
               -var="key_name=${KEY_NAME}" \
               -var="test_name=cw-integ-test-al2" \
-              -var="iam_instance_profile=${IAM_ROLE}" \
               -var="github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
               -var="test_dir=./integration/test/performancetest" ; then terraform destroy -auto-approve
 
