@@ -98,12 +98,12 @@
 			  {
 				"file_path": "/tmp/test1.log",
 				"log_group_name": "{instance_id}",
-				"log_stream_name": "{instance_id}",
+				"log_stream_name": "{instance_id}/tmp1",
 				"timezone": "UTC"
 			  },
 			  {
 				"file_path": "/tmp/test2.log",
-				"log_group_name": "{instance_id}/tmp1",
+				"log_group_name": "{instance_id}",
 				"log_stream_name": "{instance_id}/tmp2",
 				"timezone": "UTC"
 			  }
