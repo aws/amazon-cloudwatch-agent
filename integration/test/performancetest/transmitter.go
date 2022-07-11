@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"time"
-	"strconv"
 	"log"
 	"math"
+	"os"
 	"sort"
+	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -21,12 +21,13 @@ import (
 
 const (
 	METRIC_PERIOD = 5 * 60 // this const is in seconds , 5 mins
-	PARTITION_KEY ="Year"
-	HASH = "Hash"
-	COMMIT_DATE= "CommitDate"
-	SHA_ENV  = "SHA"
-	SHA_DATE_ENV = "SHA_DATE"
+	PARTITION_KEY = "Year"
+	HASH          = "Hash"
+	COMMIT_DATE   = "CommitDate"
+	SHA_ENV       = "SHA"
+	SHA_DATE_ENV  = "SHA_DATE"
 )
+
 type TransmitterAPI struct {
 	dynamoDbClient *dynamodb.Client
 	DataBaseName   string // this is the name of the table when test is run
@@ -39,7 +40,7 @@ type Metric struct {
 	Max     float64
 	Min     float64
 	Period  int //in seconds
-	Std 	float64
+	Std     float64
 	Data    []float64
 }
 
@@ -59,7 +60,7 @@ Side effects: Creates a dynamodb table if it doesn't already exist
 */
 func InitializeTransmitterAPI(DataBaseName string) *TransmitterAPI {
 	//setup aws session
-	cfg, err := config.LoadDefaultConfig(context.TODO(),config.WithRegion("us-west-2"))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
 	if err != nil {
 		fmt.Printf("Error: Loading in config %s\n", err)
 	}
@@ -88,7 +89,7 @@ func InitializeTransmitterAPI(DataBaseName string) *TransmitterAPI {
 CreateTable()
 Desc: Will create a DynamoDB Table with given param. and config
 */
- //add secondary index space vs time  
+//add secondary index space vs time
 func (transmitter *TransmitterAPI) CreateTable() error {
 	_, err := transmitter.dynamoDbClient.CreateTable(
 		context.TODO(), &dynamodb.CreateTableInput{
@@ -109,7 +110,7 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 				},
 				{
 					AttributeName: aws.String("CommitDate"),
-					KeyType:	   types.KeyTypeRange,
+					KeyType:       types.KeyTypeRange,
 				},
 			},
 
@@ -125,10 +126,10 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 	}
 	//https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.CreateTable.html
 	waiter := dynamodb.NewTableExistsWaiter(transmitter.dynamoDbClient)
-		err = waiter.Wait(context.TODO(), &dynamodb.DescribeTableInput{
-			TableName: aws.String(transmitter.DataBaseName)}, 5* time.Minute)
-		if err != nil {
-			log.Printf("Wait for table exists failed. Here's why: %v\n", err)
+	err = waiter.Wait(context.TODO(), &dynamodb.DescribeTableInput{
+		TableName: aws.String(transmitter.DataBaseName)}, 5*time.Minute)
+	if err != nil {
+		log.Printf("Wait for table exists failed. Here's why: %v\n", err)
 	}
 	fmt.Println("Created the table", transmitter.DataBaseName)
 	return nil
@@ -182,7 +183,6 @@ func (transmitter *TransmitterAPI) TableExist() (bool, error) {
 	return exists, err
 }
 
-
 /*
 SendItem()
 Desc: Parses the input data and adds it to the dynamo table
@@ -206,46 +206,33 @@ func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, 
 	}
 	packet := make(map[string]interface{})
 	packet[PARTITION_KEY] = time.Now().Year()
-	packet[HASH] =  os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
+	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
 	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-	
+
 	for _, rawMetricData := range dataHolder {
-		numDataPoints := float64(len(rawMetricData.Timestamps))
-		
-		avg, min, max, p99Val, stdDev := CalcStats(rawMetricData.Values)
-		
-		//----------------
-		metric := Metric{
-			Average: avg,
-			Max:     max,
-			Min:     min,
-			P99:     p99Val,
-			Std: 	 stdDev,
-			Period:  int(METRIC_PERIOD / (numDataPoints)),
-			Data:    rawMetricData.Values}
+
+		metric := CalcStats(rawMetricData.Values)
+
 		packet[rawMetricData.Label] = metric
 	}
 	return packet, nil
 }
 
-//CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data
-func CalcStats(data []float64) (float64, float64, float64, float64, float64) {
+//CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data in a Metric struct
+func CalcStats(data []float64) Metric {
 	length := len(data)
 	if length == 0 {
-		return -1.0, -1.0, -1.0, -1.0, -1.0
-	}
-	if length < 99 {
-		log.Println("Note: less than 99 values given, p99 value will be equal the max value")
+		return Metric{}
 	}
 
 	//make a copy so we aren't modifying original
 	dataCopy := make([]float64, length)
 	copy(dataCopy, data)
 	sort.Float64s(dataCopy)
-	
+
 	min := dataCopy[0]
 	max := dataCopy[length - 1]
-	
+
 	sum := 0.0
 	for _, value := range dataCopy {
 		sum += value
@@ -253,7 +240,10 @@ func CalcStats(data []float64) (float64, float64, float64, float64, float64) {
 
 	avg := sum / float64(length)
 
-	p99Index := length - 1 - (length / 99)
+	if length < 99 {
+		log.Println("Note: less than 99 values given, p99 value will be equal the max value")
+	}
+	p99Index := int(float64(length) * .99) - 1
 	p99Val := dataCopy[p99Index]
 
 	stdDevSum := 0.0
@@ -262,5 +252,16 @@ func CalcStats(data []float64) (float64, float64, float64, float64, float64) {
 	}
 
 	stdDev := math.Sqrt(stdDevSum / float64(length))
-	return avg, min, max, p99Val, stdDev
+
+	metrics := Metric{
+		Average: avg,
+		Max:     max,
+		Min:     min,
+		P99:     p99Val,
+		Std:     stdDev,
+		Period:  int(METRIC_PERIOD / float64(length)),
+		Data:    data,
+	}
+
+	return metrics
 }
