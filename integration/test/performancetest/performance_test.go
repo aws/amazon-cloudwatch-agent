@@ -73,11 +73,11 @@ func startLogWrite(t *testing.T, filePath1, filePath2 string, agentRunDuration t
 	//start goroutines to write to log files concurrently
 	go func() {
 		defer logWaitGroup.Done()
-		writeToLogs(t, logOutputPath1, agentRunDuration, tps)
+		writeToLogs(t, filePath1, agentRunDuration, tps)
 	}()
 	go func() {
 		defer logWaitGroup.Done()
-		writeToLogs(t, logOutputPath2, agentRunDuration, tps)
+		writeToLogs(t, filePath2, agentRunDuration, tps)
 	}()
 
 	//wait until writing to logs finishes
