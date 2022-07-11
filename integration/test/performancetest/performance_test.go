@@ -96,17 +96,23 @@ func writeToLogs(t *testing.T, filePath string, durationMinutes time.Duration, t
 
 	startTime := time.Now()
 
+
+	ticker := time.Ticker(1 * time.Second)
+	defer ticker.Stop()
+
 	//loop until the test duration is reached
-	for currTime := startTime; currTime.Sub(startTime) < durationMinutes; currTime = time.Now() {
-
-		//assume this for loop runs instantly for purposes of simple throughput calculation
-		for i := 0; i < tps; i++ {
-			_, err = f.WriteString(fmt.Sprintf("%s - #%d This is a log line.\n", currTime.Format(time.StampMilli), i))
-			if err != nil {
-				t.Logf("Error occurred writing log line: %v", err)
+	for {
+		select {
+		case <-ticker.C:
+			for i := 0; i < tps; i++ {
+				_, err = f.WriteString(fmt.Sprintf("%s - #%d This is a log line.\n", currTime.Format(time.StampMilli), i))
+				if err != nil {
+					t.Logf("Error occurred writing log line: %v", err)
+				}
 			}
+		
+		case <-time.After(durationMinutes):
+			return
 		}
-
-		time.Sleep(1 * time.Second)
 	}
 }
