@@ -209,6 +209,7 @@ func (tail *Tail) reopen() error {
 		}
 		break
 	}
+	OpenFileCount.Increment()
 	return nil
 }
 
