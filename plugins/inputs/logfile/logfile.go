@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/fdlimit"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -173,6 +174,10 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 					// Stop all other tailers in favor of the newly found file
 					dst.tailer.StopAtEOF()
 				}
+			}
+
+			if (tail.OpenFileCount.Get() > int64(fdlimit.GetHardLimitForAllowedMonitorFiles())) {
+				continue
 			}
 
 			var seekFile *tail.SeekInfo
