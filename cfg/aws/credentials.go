@@ -62,12 +62,6 @@ func getRootCredentialsFromChain(c *CredentialConfig) *credentials.Credentials {
 	for _, provider := range credentialsChain {
 		creds := provider.Credentials(c)
 		if creds != nil {
-			v, e := creds.Get()
-			if e != nil {
-				log.Printf("E! Failed to retrieve credentials from provider %s: %v", provider.Name(), e)
-			} else {
-				log.Printf("I! Using credential %s from %s", v.AccessKeyID, v.ProviderName)
-			}
 			return creds
 		}
 	}
@@ -94,6 +88,12 @@ func getSession(config *aws.Config) *session.Session {
 		}
 	}
 	log.Printf("D! Successfully created credential sessions\n")
+	cred, err := ses.Config.Credentials.Get()
+	if err != nil {
+		log.Printf("E! Failed to get credential from session: %v", err)
+	} else {
+		log.Printf("D! Using credential %s from %s", cred.AccessKeyID, cred.ProviderName)
+	}
 	return ses
 }
 
