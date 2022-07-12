@@ -27,10 +27,6 @@ func (p *profiler) AddStats(key []string, value float64) {
 	p.Lock()
 	defer p.Unlock()
 	k := strings.Join(key, "_")
-
-	if _, ok := p.stats[k]; !ok {
-		p.stats[k] = 0
-	}
 	p.stats[k] += value
 }
 
