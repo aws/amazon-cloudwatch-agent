@@ -93,11 +93,10 @@ func (l *LogAgent) Run(ctx context.Context) {
 
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
-	minuteTicker := time.NewTicker(time.Minute)
-	defer minuteTicker.Stop()
 	for {
 		select {
 		case <-t.C:
+			log.Printf("D! [logagent] open file count, %v", tail.OpenFileCount.Get())
 			for _, c := range l.collections {
 				srcs := c.FindLogSrc()
 				for _, src := range srcs {
@@ -113,8 +112,6 @@ func (l *LogAgent) Run(ctx context.Context) {
 					go l.runSrcToDest(src, dest)
 				}
 			}
-		case <-minuteTicker.C:
-			log.Printf("I! [logagent] open file count, %v", tail.OpenFileCount.Get())
 		case <-ctx.Done():
 			return
 		}
