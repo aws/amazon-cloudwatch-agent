@@ -60,9 +60,15 @@ var credentialsChain = make([]RootCredentialsProvider, 0)
 
 func getRootCredentialsFromChain(c *CredentialConfig) *credentials.Credentials {
 	for _, provider := range credentialsChain {
-		credentials := provider.Credentials(c)
-		if credentials != nil {
-			return credentials
+		creds := provider.Credentials(c)
+		if creds != nil {
+			v, e := creds.Get()
+			if e != nil {
+				log.Printf("E! Failed to retrieve credentials from provider %s: %v", provider.Name(), e)
+			} else {
+				log.Printf("I! Using credential %s from %s", v.AccessKeyID, v.ProviderName)
+			}
+			return creds
 		}
 	}
 	return nil
