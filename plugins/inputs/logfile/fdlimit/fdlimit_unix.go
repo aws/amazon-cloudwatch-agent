@@ -11,7 +11,7 @@ import (
 	"syscall"
 )
 
-func currentFileDescriptorLimit() int {
+func CurrentFileDescriptorLimit() int {
 	var limit syscall.Rlimit
 
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
