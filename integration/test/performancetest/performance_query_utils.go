@@ -1,13 +1,13 @@
 package performancetest
 
 import (
-	"time"
-	"errors"
 	"context"
 	"encoding/json"
-	"os"
+	"errors"
 	"fmt"
-	
+	"os"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
@@ -19,14 +19,13 @@ const (
 	DimensionName = "InstanceId"
 	Stat = "Average"
 	Period = 10
-	configPath = "./resources/config.json"
 )
 
 /*
  * GetConfigMetrics parses the cloudwatch agent config and returns the associated 
  * metrics that the cloudwatch agent is measuring on itself
 */ 
-func GetConfigMetrics() ([]string, []string, error) {
+func GetConfigMetrics(configPath string) ([]string, []string, error) {
 	//get metric measurements from config file
 	file, err := os.ReadFile(configPath)
 	if err != nil {
@@ -120,7 +119,7 @@ func ConstructMetricDataQuery(id, namespace, dimensionName, dimensionValue, metr
 	return query
 }
 
-func GetPerformanceMetrics(instanceId string, agentRuntime int, agentContext context.Context) ([]byte, error) {
+func GetPerformanceMetrics(instanceId string, agentRuntime int, agentContext context.Context, configPath string) ([]byte, error) {
 
 	//load default configuration
 	cfg, err := config.LoadDefaultConfig(agentContext)
@@ -131,7 +130,7 @@ func GetPerformanceMetrics(instanceId string, agentRuntime int, agentContext con
 	client := cloudwatch.NewFromConfig(cfg)
 
 	//fetch names of metrics to request and generate corresponding ids
-	metricNames, ids, err := GetConfigMetrics()
+	metricNames, ids, err := GetConfigMetrics(configPath)
 	if err != nil {
 		return nil, err
 	}
