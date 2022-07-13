@@ -54,7 +54,7 @@ func TestPerformance(t *testing.T) {
 	
 				agentRunDuration := agentRuntimeMinutes * time.Minute
 	
-				StartLogWrite(t, configPath, agentRunDuration, tps)
+				StartLogWrite(t, agentRunDuration, configPath, tps)
 	
 				log.Printf("Agent has been running for : %s\n", (agentRunDuration).String())
 				test.StopAgent()
