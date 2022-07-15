@@ -316,10 +316,10 @@ func (p *pusher) send() {
 
 func retryWait(n int) time.Duration {
 	const base = 200 * time.Millisecond
-	const max = 1 * time.Minute
-	d := base * time.Duration(1<<int64(n))
-	if n > 5 {
-		d = max
+	// Max wait time is 1 minute (jittered)
+	d := 1 * time.Minute
+	if n < 5 {
+		d = base * time.Duration(1<<int64(n))
 	}
 	return time.Duration(seededRand.Int63n(int64(d/2)) + int64(d/2))
 }

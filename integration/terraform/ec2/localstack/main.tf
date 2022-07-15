@@ -1,9 +1,37 @@
+#####################################################################
+# Ensure there is unique testing_id for each test
+#####################################################################
+resource "random_id" "testing_id" {
+  byte_length = 8
+}
+
+#####################################################################
+# Generate EC2 Key Pair for log in access to EC2
+#####################################################################
+
+resource "tls_private_key" "ssh_key" {
+  count     = var.ssh_key == "" ? 1 : 0
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "aws_ssh_key" {
+  count      = var.ssh_key == "" ? 1 : 0
+  key_name   = "ec2-key-pair-${random_id.testing_id.hex}"
+  public_key = tls_private_key.ssh_key[0].public_key_openssh
+}
+
+locals {
+  ssh_key_name        = var.ssh_key != "" ? var.key_name : aws_key_pair.aws_ssh_key[0].key_name
+  private_key_content = var.ssh_key != "" ? var.ssh_key : tls_private_key.ssh_key[0].private_key_pem
+}
+
 resource "aws_instance" "integration-test" {
   ami                    = data.aws_ami.latest.id
   instance_type          = var.ec2_instance_type
-  key_name               = var.key_name
-  iam_instance_profile   = var.iam_instance_profile
-  vpc_security_group_ids = var.vpc_security_group_ids
+  key_name               = local.ssh_key_name
+  iam_instance_profile   = aws_iam_instance_profile.cwagent_instance_profile.name
+  vpc_security_group_ids = [aws_security_group.ec2_security_group.id]
   provisioner "remote-exec" {
     inline = [
       "cloud-init status --wait",
@@ -24,7 +52,7 @@ resource "aws_instance" "integration-test" {
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = var.ssh_key
+      private_key = local.private_key_content
       host        = self.public_dns
     }
   }

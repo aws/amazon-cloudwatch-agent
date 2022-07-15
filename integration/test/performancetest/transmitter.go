@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
-	"os"
-	"time"
-	"strconv"
 	"log"
+	"math"
+	"os"
+	"sort"
+	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -197,6 +198,7 @@ func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
 	sentItem, err := transmitter.AddItem(packet)
 	return sentItem, err
 }
+
 func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, error) {
 	dataHolder := collectorData{}
 	err := json.Unmarshal(data, &dataHolder)
@@ -205,44 +207,62 @@ func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, 
 	}
 	packet := make(map[string]interface{})
 	packet[PARTITION_KEY] = time.Now().Year()
-	packet[HASH] =  os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
+	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
 	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-	
+
 	for _, rawMetricData := range dataHolder {
-		numDataPoints := float64(len(rawMetricData.Timestamps))
-		var avg float64
-		max := 0.0
-		min := 10000.0
-		if numDataPoints <= 0{
-			avg = 0.0
-			max = 0.0
-			min = 0.0
-			log.Fatalf("Error there is no data points")
-		}else{
-			// @TODO:ADD GetMetricStatistics after merging with data collection code
-			sum :=0.0
-			for _,val := range rawMetricData.Values {
-				sum += val
-				if max < val{
-					max = val
-				}
-				if min > val {
-					min = val
-				}
-			}
-			
-			avg =  sum /numDataPoints
-		}
-		//----------------
-		metric := Metric{
-			Average: avg,
-			Max:     max,
-			Min:     min,
-			P99:     0.0,
-			Std: 	rand.Float64(),
-			Period:  int(METRIC_PERIOD / (numDataPoints)),
-			Data:    rawMetricData.Values}
+
+		metric := CalcStats(rawMetricData.Values)
+
 		packet[rawMetricData.Label] = metric
 	}
 	return packet, nil
+}
+
+//CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data in a Metric struct
+func CalcStats(data []float64) Metric {
+	length := len(data)
+	if length == 0 {
+		return Metric{}
+	}
+
+	//make a copy so we aren't modifying original
+	dataCopy := make([]float64, length)
+	copy(dataCopy, data)
+	sort.Float64s(dataCopy)
+
+	min := dataCopy[0]
+	max := dataCopy[length - 1]
+
+	sum := 0.0
+	for _, value := range dataCopy {
+		sum += value
+	}
+
+	avg := sum / float64(length)
+
+	if length < 99 {
+		log.Println("Note: less than 99 values given, p99 value will be equal the max value")
+	}
+	p99Index := int(float64(length) * .99) - 1
+	p99Val := dataCopy[p99Index]
+
+	stdDevSum := 0.0
+	for _, value := range dataCopy {
+		stdDevSum += math.Pow(avg - value, 2)
+	}
+
+	stdDev := math.Sqrt(stdDevSum / float64(length))
+
+	metrics := Metric{
+		Average: avg,
+		Max:     max,
+		Min:     min,
+		P99:     p99Val,
+		Std:     stdDev,
+		Period:  int(METRIC_PERIOD / float64(length)),
+		Data:    data,
+	}
+
+	return metrics
 }
