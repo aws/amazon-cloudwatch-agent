@@ -1,4 +1,20 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247354.0 (2022-07-14)
+========================================================================
+
+Enhancements:
+* Increase PutMetricData request size allowed in agent
+
+========================================================================
+Amazon CloudWatch Agent 1.247353.0 (2022-06-13)
+========================================================================
+
+Enhancements:
+* Upgrade the Telegraf dependency to v1.23.0
+* Drop support for mem_cached metrics on MacOS
+* Fix Windows filepath escaping so paths with spaces work again (#490)
+
+========================================================================
 Amazon CloudWatch Agent 1.247352.0 (2022-05-26)
 ========================================================================
 
