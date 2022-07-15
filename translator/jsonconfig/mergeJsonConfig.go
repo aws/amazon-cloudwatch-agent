@@ -4,7 +4,6 @@
 package jsonconfig
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"sort"
@@ -22,15 +21,14 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 		if os.Getenv(config.USE_DEFAULT_CONFIG) == config.USE_DEFAULT_CONFIG_TRUE {
 			// When USE_DEFAULT_CONFIG is true, ECS and EKS will be supposed to use different default config. EKS default config logic will be added when necessary
 			if ecsutil.GetECSUtilSingleton().IsECS() {
-				fmt.Println("No json config files found, use the default ecs config")
+				log.Println("No json config files found, use the default ecs config")
 				return util.GetJsonMapFromJsonBytes([]byte(config.DefaultECSJsonConfig()))
 			}
 		}
 		if multiConfig == "remove" {
-			fmt.Println("No json config files found, please provide config, exit now")
 			os.Exit(config.ERR_CODE_NOJSONFILE)
 		} else {
-			fmt.Println("No json config files found, use the default one")
+			log.Println("No json config files found, use the default one")
 		}
 		return defaultJsonConfigMap, nil
 	}

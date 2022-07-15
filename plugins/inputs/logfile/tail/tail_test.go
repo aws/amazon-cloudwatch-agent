@@ -148,7 +148,8 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 	if err != nil {
 		t.Fatalf("failed to tail file %v: %v", tmpfile.Name(), err)
 	}
-
+	// Cannot expect OpenFileCount.Get() to be 1 because the TailFile struct
+	// was not created with MustExist=true, so file may not yet be opened.
 	return tmpfile, tail, &tl
 }
 
@@ -163,6 +164,8 @@ func readThreelines(t *testing.T, tail *Tail) {
 			t.Errorf("wrong line from tail found: '%v'", line.Text)
 		}
 	}
+	// If file was readable, then expect it to exist.
+	assert.Equal(t, int64(1), OpenFileCount.Get())
 }
 
 func verifyTailerLogging(t *testing.T, tlog *testLogger, expectedErrorMsg string) {
@@ -179,6 +182,7 @@ func verifyTailerLogging(t *testing.T, tlog *testLogger, expectedErrorMsg string
 func verifyTailerExited(t *testing.T, tail *Tail) {
 	select {
 	case <-tail.Dead():
+		assert.Equal(t,  int64(0), OpenFileCount.Get())
 		return
 	default:
 		t.Errorf("Tailer is still alive after file removed and wait period")
