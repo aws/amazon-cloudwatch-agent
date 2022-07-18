@@ -48,8 +48,13 @@ type collectorData []struct { // this is the struct data collector passes in
 	Label      string    `json:Label`
 	Messages   string    `json:Messages`
 	StatusCode string    `json:StatusCode`
-	Timestamps []string  `json:Timestamps`
+	Timestamps []string   `json:Timestamps`
 	Values     []float64 `json:Values`
+}
+type initialCollectorData struct{
+	MetricList                collectorData `json:"Metrics"`
+	NumberOfLogsMonitored     int       	`json:NumberOfLogsMonitored`
+	TPS                       int           `json:TPS`
 }
 
 /*
@@ -200,7 +205,7 @@ func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
 }
 
 func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, error) {
-	dataHolder := collectorData{}
+	dataHolder := initialCollectorData{}
 	err := json.Unmarshal(data, &dataHolder)
 	if err != nil {
 		return nil, err
@@ -210,16 +215,24 @@ func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, 
 	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
 	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
 
-	for _, rawMetricData := range dataHolder {
+	packet["NumberOfLogsMonitored"] = dataHolder.NumberOfLogsMonitored
+	packet["TPS"] = dataHolder.TPS
 
-		metric := CalcStats(rawMetricData.Values)
+	for _, rawMetricData := range dataHolder.MetricList {
+		if rawMetricData.Values != nil {
+			metric := CalcStats(rawMetricData.Values)
 
-		packet[rawMetricData.Label] = metric
+			packet[rawMetricData.Label] = metric
+		}
 	}
 	return packet, nil
 }
 
-//CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data in a Metric struct
+/* CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data in a Metric struct
+* statistics are calculated this way instead of using GetMetricStatistics API because GetMetricStatistics returns a json
+* with a much different structure than the one used from GetMetricData, and only one metric can be requested at a time
+* Using this method, mulitple different formatted jsons do not need to be merged together and it does not require much extra computation
+*/
 func CalcStats(data []float64) Metric {
 	length := len(data)
 	if length == 0 {
