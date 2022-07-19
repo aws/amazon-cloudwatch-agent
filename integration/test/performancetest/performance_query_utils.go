@@ -19,7 +19,7 @@ const (
 	DimensionName = "InstanceId"
 	Stat = "Average"
 	Period = 10
-	configPath = "./resources/config.json"
+	// configPath = "./resources/config.json"
 )
 
 /*
