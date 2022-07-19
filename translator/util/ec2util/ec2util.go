@@ -5,11 +5,12 @@ package ec2util
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"sync"
 	"time"
-	
+
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -54,7 +55,7 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		ifs, err := net.Interfaces()
 
 		if err != nil {
-			log.Println("E! [EC2] An error occurred while fetching network interfaces: ", err)
+			fmt.Println("E! [EC2] An error occurred while fetching network interfaces: ", err)
 		}
 
 		for _, in := range ifs {
@@ -64,22 +65,22 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 			}
 		}
 		if networkUp {
-			log.Println("D! [EC2] Found active network interface")
+			fmt.Println("D! [EC2] Found active network interface")
 			break
 		}
 
-		log.Println("W! [EC2] Sleep until network is up")
+		fmt.Println("W! [EC2] Sleep until network is up")
 		time.Sleep(1 * time.Second)
 	}
 
 	if !networkUp {
-		log.Println("E! [EC2] No available network interface")
+		fmt.Println("E! [EC2] No available network interface")
 	}
 
 	err := newInstance.deriveEC2MetadataFromIMDS()
 
 	if err != nil {
-		log.Println("E! [EC2] Cannot get EC2 Metadata from IMDS:", err)
+		fmt.Println("E! [EC2] Cannot get EC2 Metadata from IMDS:", err)
 	}
 
 	return
