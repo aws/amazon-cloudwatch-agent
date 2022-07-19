@@ -249,6 +249,7 @@ func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
 		fmt.Println(err)
 	}
 	tempResults := make(map[string]map[string]interface{})
+	tempResults["Results"] = make(map[string]interface{})
 	for attribute,value := range item{
 		_, isPresent := packet["Results"].(map[string]map[string]Metric)[attribute]
 		if(isPresent){continue}
