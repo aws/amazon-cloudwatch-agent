@@ -24,26 +24,35 @@ const (
 	testLogNum = "PERFORMANCE_NUMBER_OF_LOGS"
 )
 
+//this struct is derived from plugins/inputs/logfile FileConfig struct
 type LogInfo struct {
-	FilePath string `json:"file_path"`
-	LogGroupName string `json:"log_group_name"`
-	LogStreamName string `json:"log_stream_name"`
-	Timezone string `json:"timezone"`
+	FilePath       string `json:"file_path"`
+	LogGroupName   string `json:"log_group_name"`
+	LogStreamName  string `json:"log_stream_name"`
+	Timezone       string `json:"timezone"`
 }
 
 func TestPerformance(t *testing.T) {
 	//get number of logs for test from github action
+	//@TODO
 	//logNum, err := strconv.Atoi(os.Getenv(testLogNum)) //requires a commit from Okan that updates the workflow file so the log tests will run concurrently
 	// if err != nil {
 	// 	t.Fatalf("Error: cannot convert test log number to integer, %v", err)
 	// }
 	logNum := 10 //THIS IS TEMPORARY SO CODE RUNS
 
-	
+	agentContext := context.TODO()
+	instanceId := test.GetInstanceId()
+	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
-	configFilePath, err := GenerateConfig(logNum)
+	configFilePath, logStreams, err := GenerateConfig(logNum)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
+	}
+
+	//defer deleting log group and streams
+	for _, logStream := range logStreams {
+		defer test.DeleteLogGroupAndStream(instanceId, logStream)
 	}
 
 	log.Printf("config generated at %s\n", configFilePath)
@@ -55,9 +64,6 @@ func TestPerformance(t *testing.T) {
 		1000,
 	}
 	
-	agentContext := context.TODO()
-	instanceId := test.GetInstanceId()
-	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
 	//data base
 	dynamoDB := InitializeTransmitterAPI(DynamoDBDataBase) //add cwa version here
@@ -83,7 +89,8 @@ func TestPerformance(t *testing.T) {
 			test.StopAgent()
 
 			//collect data
-			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, agentContext, configFilePath)
+			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, agentContext, configFilePath)
+			
 			//@TODO check if metrics are zero remove them and make sure there are non-zero metrics existing
 			if err != nil {
 				t.Fatalf("Error: %v", err)
@@ -91,12 +98,6 @@ func TestPerformance(t *testing.T) {
 
 			if data == nil {
 				t.Fatalf("No data")
-			}
-			
-			//append test metadata so we can differentiate between tests
-			data, err = AppendTestMetadata(data, logNum, tps)
-			if err != nil {
-				t.Fatalf("Error: unable to append metadata to metric data json, %v", err)
 			}
 
 			_, err = dynamoDB.SendItem(data)
@@ -113,32 +114,35 @@ func TestPerformance(t *testing.T) {
 * DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED 
 * (log being monitored will be overwritten - it is needed for json structure)
 */
-func GenerateConfig(logNum int) (string, error) {
+func GenerateConfig(logNum int) (string, []string, error) {
 	var cfgFileData map[string]interface{}
 
 	//use default config (for metrics, structure, etc)
 	file, err := os.ReadFile("./resources/config.json")
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	err = json.Unmarshal(file, &cfgFileData)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	var logFiles []LogInfo
+	var logStreams []string
 
 	for i := 0; i < logNum; i++ {
+		logStream := fmt.Sprintf("{instance_id}/tmp%d", i + 1)
+
 		logFiles = append(logFiles, LogInfo {
 			FilePath: fmt.Sprintf("/tmp/test%d.log", i + 1),
 			LogGroupName: "{instance_id}",
-			LogStreamName: fmt.Sprintf("{instance_id}/tmp%d", i + 1),
+			LogStreamName: logStream,
 			Timezone: "UTC",
 		})
-		
-	}
 
+		logStreams = append(logStreams, logStream)
+	}
 
 	log.Printf("Writing config file with %d logs to ./resources/config%d.json\n", logNum, logNum)
 
@@ -146,20 +150,20 @@ func GenerateConfig(logNum int) (string, error) {
 
 	finalConfig, err := json.MarshalIndent(cfgFileData, "", " ")
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	configFilePath := fmt.Sprintf("./resources/config%d.json", logNum)
 	f, err := os.Create(configFilePath)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	defer f.Close()
 
 	f.Write(finalConfig)
 
-	return configFilePath, nil
+	return configFilePath, logStreams, nil
 }
 
 //StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
@@ -173,21 +177,18 @@ func StartLogWrite(agentRunDuration time.Duration, configFilePath string, tps in
 		return err
 	}
 
-	var nestedErr error
-	nestedErr = nil
-
 	for _, logPath := range logPaths {
 		filePath := logPath //necessary weird golang thing
 		logWaitGroup.Add(1)
 		go func() {
 			defer logWaitGroup.Done()
-			nestedErr = WriteToLogs(filePath, agentRunDuration, tps)
+			err = WriteToLogs(filePath, agentRunDuration, tps)
 		}()
 	}
 
 	//wait until writing to logs finishes
 	logWaitGroup.Wait()
-	return nestedErr
+	return err
 }
 
 //WriteToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
@@ -242,28 +243,4 @@ func GetLogFilePaths(configPath string) ([]string, error) {
 	}
 
 	return filePaths, nil
-}
-
-//AppendTestMetadata reformats the data returned by GetPerformanceMetrics and adds metadata about the current test run
-//(logs monitored and tps to those logs)
-func AppendTestMetadata(data []byte, logNum, tps int) ([]byte, error) {
-	var cwaData []interface{}
-	err := json.Unmarshal(data, &cwaData)
-	if err != nil {
-		return nil, err
-	}
-
-	dataMap := make(map[string]interface{})
-	dataMap["Metrics"] = cwaData
-	
-
-	dataMap["NumberOfLogsMonitored"] = logNum
-	dataMap["TPS"] = tps
-
-	outputData, err := json.MarshalIndent(dataMap, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-
-	return outputData, nil
 }
