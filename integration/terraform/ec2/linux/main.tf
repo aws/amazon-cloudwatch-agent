@@ -46,6 +46,7 @@ resource "null_resource" "integration_test" {
   # Prepare Integration Test
   provisioner "remote-exec" {
     inline = [
+      "echo sha ${var.sha}",
       "cloud-init status --wait",
       "echo clone and install agent",
       "git clone ${var.github_repo}",
@@ -80,10 +81,11 @@ resource "null_resource" "integration_test" {
       "export PATH=$PATH:/snap/bin:/usr/local/go/bin",
       "echo run integration test",
       "cd ~/amazon-cloudwatch-agent",
-      "go test ./integration/test/sanity -p 1 -v --tags=integration",
-      "export SHA=${var.github_sha}",
-      "export SHA_DATE=${var.github_sha_date}",
-      "go test ${var.test_dir} -p 1 -v --tags=integration"
+      "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
+      "export SHA=${var.sha}",
+      "export SHA_DATE=${var.sha_date}",
+      "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
+      "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
     ]
     connection {
       type        = "ssh"

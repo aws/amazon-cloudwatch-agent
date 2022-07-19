@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"time"
+	"strconv"
+	"log"
+	"strings"
 	"log"
 	"math"
-	"os"
 	"sort"
-	"strconv"
-	"time"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -26,6 +27,8 @@ const (
 	COMMIT_DATE= "CommitDate"
 	SHA_ENV  = "SHA"
 	SHA_DATE_ENV = "SHA_DATE"
+	NUMBER_OF_LOGS_MONITORED = "NumberOfLogsMonitored"
+	TPS = "TPS"
 )
 type TransmitterAPI struct {
 	dynamoDbClient *dynamodb.Client
@@ -101,6 +104,10 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 					AttributeName: aws.String("CommitDate"),
 					AttributeType: types.ScalarAttributeTypeN,
 				},
+				{
+					AttributeName: aws.String("Hash"),
+					AttributeType: types.ScalarAttributeTypeS,
+				},
 			},
 			KeySchema: []types.KeySchemaElement{
 				{
@@ -112,7 +119,28 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 					KeyType:	   types.KeyTypeRange,
 				},
 			},
-
+			GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
+				{
+					IndexName: aws.String("Hash-index"),
+					KeySchema: []types.KeySchemaElement{
+						{
+							AttributeName: aws.String("Hash"),
+							KeyType:       types.KeyTypeHash,
+						},
+						{
+							AttributeName: aws.String("CommitDate"),
+							KeyType:	   types.KeyTypeRange,
+						},
+					},
+					Projection: &types.Projection{
+						ProjectionType : "ALL",
+					},
+					ProvisionedThroughput: &types.ProvisionedThroughput{
+						ReadCapacityUnits:  aws.Int64(10),
+						WriteCapacityUnits: aws.Int64(10),
+					},
+				},
+			},
 			ProvisionedThroughput: &types.ProvisionedThroughput{
 				ReadCapacityUnits:  aws.Int64(10),
 				WriteCapacityUnits: aws.Int64(10),
@@ -191,14 +219,55 @@ Param: data []byte is the data collected by data collector
 func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
 	// return nil
 	packet, err := transmitter.Parser(data)
+	var sentItem string
 	if err != nil {
 		return "", err
 	}
-	// fmt.Printf("%+v",packet)
-	sentItem, err := transmitter.AddItem(packet)
+	// check if hash exists
+	itemList,err := transmitter.Query(packet[HASH].(string))
+	
+	if err!=nil {
+		return "",err
+	}
+	fmt.Println(itemList,packet[HASH].(string))
+	if len(itemList)==0{ // if doesnt  exit addItem
+		sentItem, err = transmitter.AddItem(packet)
+		return sentItem, err
+	}
+
+	// item already exist so update
+	//temp solution VVVVVV
+	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),"10")
+	fmt.Println("The test is",testSettings)
+	item := itemList[0]["Results"].(map[string]interface{})
+	_,isPresent := item[testSettings] // check if we already had this test
+	if isPresent{ // no diff
+		return "",errors.New("Nothing to update")
+	}
+	testSettingValue, err := attributevalue.MarshalMap(packet["Results"].(map[string]map[string]Metric)[testSettings])
+	fmt.Println("test value",testSettingValue)
+	if err !=nil{
+		fmt.Println(err)
+	}
+	tempResults := make(map[string]interface{})
+	for attribute,value := range item{
+		_, isPresent := packet["Results"].(map[string]map[string]Metric)[attribute]
+		if(isPresent){continue}
+		tempResults[attribute] = value
+		
+	}
+	
+	tempResults[testSettings] = testSettingValue
+	results, _ := attributevalue.MarshalMap(tempResults)
+	newAttributes := map[string]types.AttributeValue{
+		"Results" : &types.AttributeValueMemberM{
+			Value: results,
+		},
+	}
+	
+	transmitter.UpdateItem(packet[HASH].(string),newAttributes)
 	return sentItem, err
 }
-
 func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, error) {
 	dataHolder := collectorData{}
 	err := json.Unmarshal(data, &dataHolder)
@@ -207,17 +276,96 @@ func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, 
 	}
 	packet := make(map[string]interface{})
 	packet[PARTITION_KEY] = time.Now().Year()
-	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
+	packet[HASH] =  os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
 	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-
+	packet["isRelease"] = false
+	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),"10")
+	testMetricResults := make(map[string]Metric)
 	for _, rawMetricData := range dataHolder {
 
 		metric := CalcStats(rawMetricData.Values)
-
-		packet[rawMetricData.Label] = metric
+		testMetricResults[rawMetricData.Label] = metric
 	}
+	packet["Results"] = map[string]map[string]Metric{ testSettings: testMetricResults}
 	return packet, nil
 }
+func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[string]types.AttributeValue) error{
+	var err error
+	fmt.Println("Updating:",hash)
+	item,err := transmitter.Query(hash) // O(1) bcs of global sec. idx.
+	if len(item) ==0{
+		return errors.New("ERROR: Hash is not found in dynamo")
+	}
+	commitDate := fmt.Sprintf("%d",int(item[0]["CommitDate"].(float64)))
+	year := fmt.Sprintf("%d",int(item[0]["Year"].(float64)))
+	expressionAttributeValues := make(map[string]types.AttributeValue)
+	expression := ""
+	n_expression := len(targetAttributes)
+	i :=0
+	for attribute, value := range targetAttributes{
+		expressionName := ":" +strings.ToLower(attribute)
+		expression = fmt.Sprintf("set %s = %s",attribute,expressionName)
+		expressionAttributeValues[expressionName] = value
+		if(n_expression -1 >i){
+			expression += "and"
+		}
+		i++
+	}
+	fmt.Println(expression)
+	_, err = transmitter.dynamoDbClient.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
+        TableName: aws.String(transmitter.DataBaseName),
+        Key: map[string]types.AttributeValue{
+            "Year": &types.AttributeValueMemberN{Value: year},
+			"CommitDate": &types.AttributeValueMemberN{Value: commitDate },
+        },
+        UpdateExpression: aws.String(expression),
+        ExpressionAttributeValues: expressionAttributeValues,
+    })
+
+    if err != nil {
+        panic(err)
+    }
+	return err
+}
+/*
+UpdateReleaseTag()
+Desc: This function takes in a commit hash and updates the release value to true
+Param: commit hash in terms of string 
+*/
+func (transmitter * TransmitterAPI) UpdateReleaseTag(hash string) error{
+	attributes := map[string]types.AttributeValue{
+		"isRelease":&types.AttributeValueMemberBOOL{Value: true},
+	}
+	err := transmitter.UpdateItem(hash,attributes)
+	return err
+}
+
+
+func (transmitter* TransmitterAPI) Query(hash string) ([]map[string]interface{}, error) {
+	var err error
+	var packets []map[string]interface{}
+    out, err := transmitter.dynamoDbClient.Query(context.TODO(), &dynamodb.QueryInput{
+        TableName:              aws.String(transmitter.DataBaseName),
+		IndexName:				aws.String("Hash-index"),
+        KeyConditionExpression: aws.String("#hash = :hash"),
+        ExpressionAttributeValues: map[string]types.AttributeValue{
+            ":hash": &types.AttributeValueMemberS{Value: hash},
+        },
+        ExpressionAttributeNames: map[string]string{
+            "#hash": "Hash",
+        },
+        ScanIndexForward: aws.Bool(true), // true or false to sort by "date" Sort/Range key ascending or descending
+    })
+	if err != nil {
+        panic(err)
+    }
+	// fmt.Println(out.Items)
+	attributevalue.UnmarshalListOfMaps(out.Items,&packets)
+	return packets, err
+}
+
+
+
 
 //CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data in a Metric struct
 func CalcStats(data []float64) Metric {

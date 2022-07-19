@@ -26,6 +26,9 @@ var osToTestDirMap = map[string][]string{
 		"./integration/test/metrics_number_dimension",
 	},
 	// @TODO add real tests
+	"ec2_performance":{
+		"./integration/test/performancetest",
+	},
 	"ec2_windows": {""},
 	"ec2_mac":     {},
 	"ecs_fargate": {

@@ -400,6 +400,8 @@ jobs:
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
     steps:
+      - name: TEMP TEST LOOKUP
+        run: echo "${{ matrix.arrays.test_dir}}"
       - uses: actions/checkout@v2
 
       - name: Configure AWS Credentials
@@ -687,3 +689,4 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
+

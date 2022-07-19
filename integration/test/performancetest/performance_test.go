@@ -8,6 +8,8 @@ import(
 	"time"
 	"log"
 	"context"
+	"fmt"
+	"os"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 )
 
@@ -16,7 +18,6 @@ const (
 	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentRuntimeMinutes = 5 //20min desired but 5mins for testing purposes 
 	DynamoDBDataBase = "CWAPerformanceMetrics"
-
 )
 
 func TestPerformance(t *testing.T) {
@@ -27,7 +28,7 @@ func TestPerformance(t *testing.T) {
 	test.CopyFile(configPath, configOutputPath)
 
 	test.StartAgent(configOutputPath, true)
-
+	fmt.Println("N_Logs",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"))
 	agentRunDuration := agentRuntimeMinutes * time.Minute
 	//let agent run before collecting performance metrics on it
 	time.Sleep(agentRunDuration)
@@ -54,6 +55,20 @@ func TestPerformance(t *testing.T) {
 	}
 	_, err = dynamoDB.SendItem(data)
 	if err !=nil{
-		t.Fatalf("Error: couldnt upload metric data to table")
+		t.Fatalf("Error: couldnt upload metric data to table %s",err)
 	}
+}
+func TestUpdateCommit(t*testing.T){
+	if(os.Getenv("IS_RELEASE") ==""){
+		t.Skip("")
+	}
+	fmt.Println("Updating Release Commit",os.Getenv(SHA_ENV))
+	dynamoDB := InitializeTransmitterAPI("CWAPerformanceMetrics") //add cwa version here
+	testHash := os.Getenv(SHA_ENV)
+	if dynamoDB == nil{
+		t.Fatalf("Error: generating dynamo table")
+	return
+	}
+
+	dynamoDB.UpdateReleaseTag(testHash)
 }
