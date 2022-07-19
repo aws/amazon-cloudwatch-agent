@@ -156,9 +156,7 @@ jobs:
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           -var="github_sha=${GITHUB_SHA}" 
           -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
-          -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}"
-          -var="key_name=${KEY_NAME}"
-          -var="iam_instance_profile=${IAM_ROLE}" &&
+          -var="key_name=${KEY_NAME}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
