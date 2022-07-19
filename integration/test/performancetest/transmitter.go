@@ -248,21 +248,16 @@ func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
 	if err !=nil{
 		fmt.Println(err)
 	}
-	tempResults := make(map[string]interface{})
+	tempResults := make(map[string]map[string]interface{})
 	for attribute,value := range item{
 		_, isPresent := packet["Results"].(map[string]map[string]Metric)[attribute]
 		if(isPresent){continue}
-		tempResults[attribute] = value
+		tempResults["Results"][attribute] = value
 		
 	}
 	
-	tempResults[testSettings] = testSettingValue
-	results, _ := attributevalue.MarshalMap(tempResults)
-	newAttributes := map[string]types.AttributeValue{
-		"Results" : &types.AttributeValueMemberM{
-			Value: results,
-		},
-	}
+	tempResults["Results"][testSettings] = testSettingValue
+	newAttributes, _ := attributevalue.MarshalMap(tempResults)
 	
 	transmitter.UpdateItem(packet[HASH].(string),newAttributes)
 	return sentItem, err
