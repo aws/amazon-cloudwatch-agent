@@ -12,6 +12,7 @@ import (
 	"math"
 	"log"
 	"sort"
+	"math/rand"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -28,6 +29,7 @@ const (
 	SHA_DATE_ENV = "SHA_DATE"
 	NUMBER_OF_LOGS_MONITORED = "NumberOfLogsMonitored"
 	TPS = "TPS"
+	UPDATE_DELAY_THRESHOLD = 60
 )
 type TransmitterAPI struct {
 	dynamoDbClient *dynamodb.Client
@@ -223,27 +225,43 @@ func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
 		return "", err
 	}
 	// check if hash exists
-	itemList,err := transmitter.Query(packet[HASH].(string))
-	
+	currentItemList,err := transmitter.Query(packet[HASH].(string))
 	if err!=nil {
 		return "",err
 	}
-	fmt.Println(itemList,packet[HASH].(string))
-	if len(itemList)==0{ // if doesnt  exit addItem
+	if len(currentItemList)==0{ // if doesnt  exit addItem
 		sentItem, err = transmitter.AddItem(packet)
 		return sentItem, err
 	}
-
 	// item already exist so update
-	//temp solution VVVVVV
+	for {//concurrency retry
+		newAttributes,err := transmitter.TestCasePackager(packet,currentItemList[0])
+		if(err!=nil){
+			return "",err
+		}
+		itemList,err := transmitter.Query(packet[HASH].(string))
+		if len(currentItemList[0]["Results"].(map[string]interface{})) != len(itemList[0]["Results"].(map[string]interface{})){ 
+			// 0 bcs hash values are unique, len bcs im checking if a new test case is added
+			fmt.Println("Retrying...")
+			time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Second)
+			continue
+		}
+		if transmitter.UpdateItem(packet[HASH].(string),newAttributes) ==nil{
+			fmt.Println("Update completed")
+			break
+		}
+	}
+	return sentItem, err
+}
+func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interface{}, currentPacket map[string]interface{} )(map[string]types.AttributeValue,error){
 	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),"10")
 	fmt.Println("The test is",testSettings)
-	item := itemList[0]["Results"].(map[string]interface{})
+	item := currentPacket["Results"].(map[string]interface{})
 	_,isPresent := item[testSettings] // check if we already had this test
 	if isPresent{ // no diff
-		return "",errors.New("Nothing to update")
+		return nil,errors.New("Nothing to update")
 	}
-	testSettingValue, err := attributevalue.MarshalMap(packet["Results"].(map[string]map[string]Metric)[testSettings])
+	testSettingValue, err := attributevalue.MarshalMap(currentPacket["Results"].(map[string]interface{})[testSettings])
 	fmt.Println("test value",testSettingValue)
 	if err !=nil{
 		fmt.Println(err)
@@ -251,7 +269,7 @@ func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
 	tempResults := make(map[string]map[string]interface{})
 	tempResults["Results"] = make(map[string]interface{})
 	for attribute,value := range item{
-		_, isPresent := packet["Results"].(map[string]map[string]Metric)[attribute]
+		_, isPresent := newPacket["Results"].(map[string]map[string]Metric)[attribute]
 		if(isPresent){continue}
 		tempResults["Results"][attribute] = value
 		
@@ -259,9 +277,7 @@ func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
 	
 	tempResults["Results"][testSettings] = testSettingValue
 	newAttributes, _ := attributevalue.MarshalMap(tempResults)
-	
-	transmitter.UpdateItem(packet[HASH].(string),newAttributes)
-	return sentItem, err
+	return newAttributes, nil
 }
 func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, error) {
 	dataHolder := collectorData{}
