@@ -261,7 +261,7 @@ func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interf
 	if isPresent{ // no diff
 		return nil,errors.New("Nothing to update")
 	}
-	testSettingValue, err := attributevalue.MarshalMap(currentPacket["Results"].(map[string]interface{})[testSettings])
+	testSettingValue, err := attributevalue.MarshalMap(newPacket["Results"].(map[string]map[string]Metric)[testSettings])
 	fmt.Println("test value",testSettingValue)
 	if err !=nil{
 		fmt.Println(err)
@@ -425,3 +425,4 @@ func CalcStats(data []float64) Metric {
 
 	return metrics
 }
+
