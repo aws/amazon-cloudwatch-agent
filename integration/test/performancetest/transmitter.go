@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
+
 const (
 	METRIC_PERIOD = 5 * 60 // this const is in seconds , 5 mins
 	PARTITION_KEY ="Year"
@@ -261,11 +262,8 @@ func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interf
 	if isPresent{ // no diff
 		return nil,errors.New("Nothing to update")
 	}
-	testSettingValue, err := attributevalue.MarshalMap(newPacket["Results"].(map[string]map[string]Metric)[testSettings])
+	testSettingValue:=newPacket["Results"].(map[string]map[string]Metric)[testSettings]
 	fmt.Println("test value",testSettingValue)
-	if err !=nil{
-		fmt.Println(err)
-	}
 	tempResults := make(map[string]map[string]interface{})
 	tempResults["Results"] = make(map[string]interface{})
 	for attribute,value := range item{
@@ -425,4 +423,3 @@ func CalcStats(data []float64) Metric {
 
 	return metrics
 }
-
