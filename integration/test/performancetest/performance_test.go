@@ -51,9 +51,15 @@ func TestPerformance(t *testing.T) {
 	}
 
 	//defer deleting log group and streams
+	//defer deleting log group first because golang handles defers in LIFO order
+	//and we want to delete the log group after deleting the log streams
+	defer test.DeleteLogGroup(instanceId)
+	
 	for _, logStream := range logStreams {
-		defer test.DeleteLogGroupAndStream(instanceId, logStream)
+		defer test.DeleteLogStream(instanceId, logStream)
 	}
+
+	
 
 	log.Printf("config generated at %s\n", configFilePath)
 	defer os.Remove(configFilePath)
@@ -113,6 +119,7 @@ func TestPerformance(t *testing.T) {
 * ./resources/configNUM.json where NUM is number of logs
 * DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED 
 * (log being monitored will be overwritten - it is needed for json structure)
+* returns the path of the config generated and a list of log stream names
 */
 func GenerateConfig(logNum int) (string, []string, error) {
 	var cfgFileData map[string]interface{}
