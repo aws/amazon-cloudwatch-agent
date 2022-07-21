@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	//"strconv"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -35,11 +35,10 @@ type LogInfo struct {
 func TestPerformance(t *testing.T) {
 	//get number of logs for test from github action
 	//@TODO
-	//logNum, err := strconv.Atoi(os.Getenv(testLogNum)) //requires a commit from Okan that updates the workflow file so the log tests will run concurrently
-	// if err != nil {
-	// 	t.Fatalf("Error: cannot convert test log number to integer, %v", err)
-	// }
-	logNum := 10 //THIS IS TEMPORARY SO CODE RUNS
+	logNum, err := strconv.Atoi(os.Getenv(testLogNum)) //requires a commit from Okan that updates the workflow file so the log tests will run concurrently
+	if err != nil {
+		t.Fatalf("Error: cannot convert test log number to integer, %v", err)
+	}
 
 	agentContext := context.TODO()
 	instanceId := test.GetInstanceId()
@@ -78,6 +77,7 @@ func TestPerformance(t *testing.T) {
 	}
 
 	//run tests
+	//@ASK If we should move tps values to seperate config testCases
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
 			test.CopyFile(configFilePath, configOutputPath)
