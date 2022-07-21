@@ -2,16 +2,12 @@ package performancetest
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"time"
-	"strconv"
 	"strings"
-	"math"
 	"log"
-	"sort"
 	"math/rand"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -22,39 +18,11 @@ import (
 
 
 const (
-	METRIC_PERIOD = 5 * 60 // this const is in seconds , 5 mins
-	PARTITION_KEY ="Year"
-	HASH = "Hash"
-	COMMIT_DATE= "CommitDate"
-	SHA_ENV  = "SHA"
-	SHA_DATE_ENV = "SHA_DATE"
-	NUMBER_OF_LOGS_MONITORED = "NumberOfLogsMonitored"
-	TPS = "TPS"
 	UPDATE_DELAY_THRESHOLD = 60
 )
 type TransmitterAPI struct {
 	dynamoDbClient *dynamodb.Client
 	DataBaseName   string // this is the name of the table when test is run
-}
-
-// this is the packet that will be sent converted to DynamoItem
-type Metric struct {
-	Average float64
-	P99     float64 //99% percent process
-	Max     float64
-	Min     float64
-	Period  int //in seconds
-	Std 	float64
-	Data    []float64
-}
-
-type collectorData []struct { // this is the struct data collector passes in
-	Id         string    `json:"Id"`
-	Label      string    `json:Label`
-	Messages   string    `json:Messages`
-	StatusCode string    `json:StatusCode`
-	Timestamps []string  `json:Timestamps`
-	Values     []float64 `json:Values`
 }
 
 /*
@@ -218,13 +186,9 @@ SendItem()
 Desc: Parses the input data and adds it to the dynamo table
 Param: data []byte is the data collected by data collector
 */
-func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
+func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}) (string, error) {
 	// return nil
-	packet, err := transmitter.Parser(data)
 	var sentItem string
-	if err != nil {
-		return "", err
-	}
 	// check if hash exists
 	currentItemList,err := transmitter.Query(packet[HASH].(string))
 	if err!=nil {
@@ -262,12 +226,12 @@ func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interf
 	if isPresent{ // no diff
 		return nil,errors.New("Nothing to update")
 	}
-	testSettingValue:=newPacket["Results"].(map[string]map[string]Metric)[testSettings]
+	testSettingValue:=newPacket["Results"].(map[string]map[string]Stats)[testSettings]
 	fmt.Println("test value",testSettingValue)
 	tempResults := make(map[string]map[string]interface{})
 	tempResults["Results"] = make(map[string]interface{})
 	for attribute,value := range item{
-		_, isPresent := newPacket["Results"].(map[string]map[string]Metric)[attribute]
+		_, isPresent := newPacket["Results"].(map[string]map[string]Stats)[attribute]
 		if(isPresent){continue}
 		tempResults["Results"][attribute] = value
 		
@@ -276,27 +240,6 @@ func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interf
 	tempResults["Results"][testSettings] = testSettingValue
 	newAttributes, _ := attributevalue.MarshalMap(tempResults)
 	return newAttributes, nil
-}
-func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, error) {
-	dataHolder := collectorData{}
-	err := json.Unmarshal(data, &dataHolder)
-	if err != nil {
-		return nil, err
-	}
-	packet := make(map[string]interface{})
-	packet[PARTITION_KEY] = time.Now().Year()
-	packet[HASH] =  os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
-	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-	packet["isRelease"] = false
-	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),"10")
-	testMetricResults := make(map[string]Metric)
-	for _, rawMetricData := range dataHolder {
-
-		metric := CalcStats(rawMetricData.Values)
-		testMetricResults[rawMetricData.Label] = metric
-	}
-	packet["Results"] = map[string]map[string]Metric{ testSettings: testMetricResults}
-	return packet, nil
 }
 func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[string]types.AttributeValue) error{
 	var err error
@@ -371,55 +314,4 @@ func (transmitter* TransmitterAPI) Query(hash string) ([]map[string]interface{},
 	// fmt.Println(out.Items)
 	attributevalue.UnmarshalListOfMaps(out.Items,&packets)
 	return packets, err
-}
-
-
-
-
-//CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data in a Metric struct
-func CalcStats(data []float64) Metric {
-	length := len(data)
-	if length == 0 {
-		return Metric{}
-	}
-
-	//make a copy so we aren't modifying original
-	dataCopy := make([]float64, length)
-	copy(dataCopy, data)
-	sort.Float64s(dataCopy)
-
-	min := dataCopy[0]
-	max := dataCopy[length - 1]
-
-	sum := 0.0
-	for _, value := range dataCopy {
-		sum += value
-	}
-
-	avg := sum / float64(length)
-
-	if length < 99 {
-		log.Println("Note: less than 99 values given, p99 value will be equal the max value")
-	}
-	p99Index := int(float64(length) * .99) - 1
-	p99Val := dataCopy[p99Index]
-
-	stdDevSum := 0.0
-	for _, value := range dataCopy {
-		stdDevSum += math.Pow(avg - value, 2)
-	}
-
-	stdDev := math.Sqrt(stdDevSum / float64(length))
-
-	metrics := Metric{
-		Average: avg,
-		Max:     max,
-		Min:     min,
-		P99:     p99Val,
-		Std:     stdDev,
-		Period:  int(METRIC_PERIOD / float64(length)),
-		Data:    data,
-	}
-
-	return metrics
 }
