@@ -80,7 +80,7 @@ func TestPerformance(t *testing.T) {
 	//@ASK If we should move tps values to seperate config testCases
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
-			os.Setenv("TPS",tps)
+			os.Setenv("TPS",fmt.Sprintf("%d",tps))
 			test.CopyFile(configFilePath, configOutputPath)
 
 			test.StartAgent(configOutputPath, true)

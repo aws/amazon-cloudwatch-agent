@@ -243,7 +243,7 @@ func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}) (stri
 	return sentItem, err
 }
 func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interface{}, currentPacket map[string]interface{} )(map[string]types.AttributeValue,error){
-	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),"10")
+	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),os.Getenv("TPS"))
 	fmt.Println("The test is",testSettings)
 	item := currentPacket["Results"].(map[string]interface{})
 	_,isPresent := item[testSettings] // check if we already had this test
