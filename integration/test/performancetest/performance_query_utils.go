@@ -1,17 +1,23 @@
 package performancetest
 
 import (
-	"time"
-	"errors"
 	"context"
 	"encoding/json"
-	"os"
+	"errors"
 	"fmt"
-	
+	"os"
+	"strconv"
+	"time"
+	"sort"
+	"math"
+	"log"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -19,14 +25,31 @@ const (
 	DimensionName = "InstanceId"
 	Stat = "Average"
 	Period = 10
-	// configPath = "./resources/config.json"
+	METRIC_PERIOD = 5 * 60 // this const is in seconds , 5 mins
+	PARTITION_KEY ="Year"
+	HASH = "Hash"
+	COMMIT_DATE= "CommitDate"
+	TEST_HASH ="TestHash"
+	SHA_ENV  = "SHA"
+	SHA_DATE_ENV = "SHA_DATE"
 )
+
+//struct that holds statistics on the returned data
+type Stats struct {
+	Average float64
+	P99     float64 //99% percent process
+	Max     float64
+	Min     float64
+	Period  int //in seconds
+	Std 	float64
+	Data    []float64
+}
 
 /*
  * GetConfigMetrics parses the cloudwatch agent config and returns the associated 
  * metrics that the cloudwatch agent is measuring on itself
 */ 
-func GetConfigMetrics() ([]string, []string, error) {
+func GetConfigMetrics(configPath string) ([]string, []string, error) {
 	//get metric measurements from config file
 	file, err := os.ReadFile(configPath)
 	if err != nil {
@@ -120,7 +143,7 @@ func ConstructMetricDataQuery(id, namespace, dimensionName, dimensionValue, metr
 	return query
 }
 
-func GetPerformanceMetrics(instanceId string, agentRuntime int, agentContext context.Context) ([]byte, error) {
+func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, agentContext context.Context, configPath string) (map[string]interface{}, error) {
 
 	//load default configuration
 	cfg, err := config.LoadDefaultConfig(agentContext)
@@ -131,7 +154,7 @@ func GetPerformanceMetrics(instanceId string, agentRuntime int, agentContext con
 	client := cloudwatch.NewFromConfig(cfg)
 
 	//fetch names of metrics to request and generate corresponding ids
-	metricNames, ids, err := GetConfigMetrics()
+	metricNames, ids, err := GetConfigMetrics(configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -147,12 +170,78 @@ func GetPerformanceMetrics(instanceId string, agentRuntime int, agentContext con
 	if err != nil {
 		return nil, err
 	}
+	
+	log.Println("Data successfully received from CloudWatch API")
 
-	//format data to json before passing output
-	outputData, err := json.MarshalIndent(metrics.MetricDataResults, "", "  ")
-	if err != nil {
-		return nil, err
-    }
+	//craft packet to be sent to database
+	packet := make(map[string]interface{})
+	//add information about current release/commit
+	packet[PARTITION_KEY] = time.Now().Year()
+	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
+	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
+	packet["isRelease"] = false
+	//add test metadata
+	packet[TEST_HASH] = uuid.New().String()
+	testSettings := fmt.Sprintf("%d-%d",logNum,tps)
+	testMetricResults := make(map[string]Stats)
+	
 
-	return outputData, nil
+	//add actual test data with statistics
+	for _, result := range metrics.MetricDataResults {
+		stats:= CalcStats(result.Values)
+		testMetricResults[*result.Label] = stats
+	}
+	packet["Results"] = map[string]map[string]Stats{ testSettings: testMetricResults}
+	return packet, nil
+}
+
+/* CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data in a Stats struct
+* statistics are calculated this way instead of using GetMetricStatistics API because GetMetricStatistics would require multiple
+* API calls as only one metric can be requested/processed at a time whereas all metrics can be requested in one GetMetricData request.
+*/
+func CalcStats(data []float64) Stats {
+	length := len(data)
+	if length == 0 {
+		return Stats{}
+	}
+
+	//make a copy so we aren't modifying original - keeps original data in order of the time 
+	dataCopy := make([]float64, length)
+	copy(dataCopy, data)
+	sort.Float64s(dataCopy)
+
+	min := dataCopy[0]
+	max := dataCopy[length - 1]
+
+	sum := 0.0
+	for _, value := range dataCopy {
+		sum += value
+	}
+
+	avg := sum / float64(length)
+
+	if length < 99 {
+		log.Println("Note: less than 99 values given, p99 value will be equal the max value")
+	}
+	p99Index := int(float64(length) * .99) - 1
+	p99Val := dataCopy[p99Index]
+
+	stdDevSum := 0.0
+	for _, value := range dataCopy {
+		stdDevSum += math.Pow(avg - value, 2)
+	}
+
+	stdDev := math.Sqrt(stdDevSum / float64(length))
+
+	statistics := Stats{
+		Average: avg,
+		Max:     max,
+		Min:     min,
+		P99:     p99Val,
+		Std:     stdDev,
+		Period:  int(METRIC_PERIOD / float64(length)),
+		Data:    data,
+	}
+
+	return statistics
 }

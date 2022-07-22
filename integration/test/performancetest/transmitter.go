@@ -2,56 +2,34 @@ package performancetest
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"time"
-	"strconv"
 	"strings"
-	"math"
 	"log"
-	"sort"
+	"math/rand"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+
+	"github.com/google/uuid"
 )
 
+
 const (
-	METRIC_PERIOD = 5 * 60 // this const is in seconds , 5 mins
-	PARTITION_KEY ="Year"
-	HASH = "Hash"
-	COMMIT_DATE= "CommitDate"
-	SHA_ENV  = "SHA"
-	SHA_DATE_ENV = "SHA_DATE"
-	NUMBER_OF_LOGS_MONITORED = "NumberOfLogsMonitored"
-	TPS = "TPS"
+	UPDATE_DELAY_THRESHOLD = 60 *1000// this is how long we want to wait for random sleep in milli seconds
+	/*
+	!Warning: if this value is less than 20 there is a risk of testCases being lost.
+	This will only happen if all test threads and at the same time and get the same 
+	sleep value after first attempt to add ITEM
+	*/
 )
 type TransmitterAPI struct {
 	dynamoDbClient *dynamodb.Client
 	DataBaseName   string // this is the name of the table when test is run
-}
-
-// this is the packet that will be sent converted to DynamoItem
-type Metric struct {
-	Average float64
-	P99     float64 //99% percent process
-	Max     float64
-	Min     float64
-	Period  int //in seconds
-	Std 	float64
-	Data    []float64
-}
-
-type collectorData []struct { // this is the struct data collector passes in
-	Id         string    `json:"Id"`
-	Label      string    `json:Label`
-	Messages   string    `json:Messages`
-	StatusCode string    `json:StatusCode`
-	Timestamps []string  `json:Timestamps`
-	Values     []float64 `json:Values`
 }
 
 /*
@@ -118,7 +96,7 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 					KeyType:	   types.KeyTypeRange,
 				},
 			},
-			GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
+			GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{ // this make sure we can query hashes in O(1) time
 				{
 					IndexName: aws.String("Hash-index"),
 					KeySchema: []types.KeySchemaElement{
@@ -153,7 +131,7 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 	//https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.CreateTable.html
 	waiter := dynamodb.NewTableExistsWaiter(transmitter.dynamoDbClient)
 		err = waiter.Wait(context.TODO(), &dynamodb.DescribeTableInput{
-			TableName: aws.String(transmitter.DataBaseName)}, 5* time.Minute)
+			TableName: aws.String(transmitter.DataBaseName)}, 5* time.Minute) //5 minutes is the timeout value for a table creation
 		if err != nil {
 			log.Printf("Wait for table exists failed. Here's why: %v\n", err)
 	}
@@ -171,6 +149,7 @@ Side effects:
 	Adds an item to dynamodb table
 */
 func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (string, error) {
+	var ae *types.ConditionalCheckFailedException // this exception represent the the atomic check has failed
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		panic(err)
@@ -179,8 +158,17 @@ func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (strin
 		&dynamodb.PutItemInput{
 			Item:      item,
 			TableName: aws.String(transmitter.DataBaseName),
+			ConditionExpression: aws.String("attribute_not_exists(#hash)"),
+			// ExpressionAttributeValues: map[string]types.AttributeValue{
+			// 	":testHash": &types.AttributeValueMemberS{Value: packet[TEST_HASH].(string)},
+			// },
+			ExpressionAttributeNames: map[string]string{
+				// "#testHash": TEST_HASH,
+				"#hash" : "Hash",
+			},
 		})
-	if err != nil {
+	
+	if err != nil && !errors.As(err,&ae){
 		fmt.Printf("Error adding item to table.  %v\n", err)
 	}
 	return fmt.Sprintf("%v", item), err
@@ -215,83 +203,105 @@ SendItem()
 Desc: Parses the input data and adds it to the dynamo table
 Param: data []byte is the data collected by data collector
 */
-func (transmitter *TransmitterAPI) SendItem(data []byte) (string, error) {
+func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}) (string, error) {
 	// return nil
-	packet, err := transmitter.Parser(data)
 	var sentItem string
-	if err != nil {
-		return "", err
-	}
+	var ae *types.ConditionalCheckFailedException // this exception represent the the atomic check has failed
 	// check if hash exists
-	itemList,err := transmitter.Query(packet[HASH].(string))
-	
+	currentItemList,err := transmitter.Query(packet[HASH].(string))
 	if err!=nil {
 		return "",err
 	}
-	fmt.Println(itemList,packet[HASH].(string))
-	if len(itemList)==0{ // if doesnt  exit addItem
-		sentItem, err = transmitter.AddItem(packet)
-		return sentItem, err
+	if len(currentItemList)==0{ // if an item with the same has doesn't exist add it
+		sentItem, err = transmitter.AddItem(packet) // this may be overwritten by other test threads, in that case it will return a specific error
+	
+		if !errors.As(err,&ae){ // check if our add call got overwritten by other threads
+			return sentItem,err
+		}
+		if err!=nil { //any other error dont try again
+			return "",err
+		}
+		// got overwritten now instead of adding go update the item
+		rand.Seed(time.Now().UnixNano())
+		time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Millisecond)
+		fmt.Println("Item already exist going to update",len(currentItemList))
+		
 	}
-
-	// item already exist so update
-	//temp solution VVVVVV
-	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),"10")
+	// item already exist so update the item instead
+	for {//concurrency retry
+		/*solving parallel updates using an optimistic lock and retry,
+		this may result in a livelock;
+		however, random sleeps makes this possiblity nearly impossible*/
+		currentItemList,err = transmitter.Query(packet[HASH].(string)) //get the item's most up to date version
+		newAttributes,err := transmitter.TestCasePackager(packet,currentItemList[0])
+		if(err!=nil){
+			return "",err
+		}
+		err = transmitter.UpdateItem(packet[HASH].(string),newAttributes,currentItemList[0][TEST_HASH].(string)) //try to update the item
+		//this may be overwritten by other test threads, in that case it will return a specific error
+		if errors.As(err,&ae){ //check if our call got overwritten
+			// item has changed
+			fmt.Println("Retrying...")
+			rand.Seed(time.Now().UnixNano())
+			time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Millisecond)
+			continue
+		}
+		fmt.Println("Update Completed")
+		break
+	}
+	return sentItem, err
+}
+/*
+TestCasePackager()
+Desc:
+	This function updates the currentPacket with the unique parts of newPacket and returns in dynamo format
+Params:
+	newPacket: this is the agentData collected in this test
+	currentPacket: this is the agentData stored in dynamo currently
+*/
+func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interface{}, currentPacket map[string]interface{} )(map[string]types.AttributeValue,error){
+	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),os.Getenv("TPS"))
 	fmt.Println("The test is",testSettings)
-	item := itemList[0]["Results"].(map[string]interface{})
+	item := currentPacket["Results"].(map[string]interface{})
 	_,isPresent := item[testSettings] // check if we already had this test
-	if isPresent{ // no diff
-		return "",errors.New("Nothing to update")
+	if isPresent{ 
+		// we already had this test so ignore it
+		return nil,errors.New("Nothing to update")
 	}
-	testSettingValue, err := attributevalue.MarshalMap(packet["Results"].(map[string]map[string]Metric)[testSettings])
-	fmt.Println("test value",testSettingValue)
-	if err !=nil{
-		fmt.Println(err)
-	}
-	tempResults := make(map[string]map[string]interface{})
+	testSettingValue:=newPacket["Results"].(map[string]map[string]Stats)[testSettings]
+	mergedResults := make(map[string]map[string]interface{})
+	mergedResults["Results"] = make(map[string]interface{})
 	for attribute,value := range item{
-		_, isPresent := packet["Results"].(map[string]map[string]Metric)[attribute]
+		_, isPresent := newPacket["Results"].(map[string]map[string]Stats)[attribute]
 		if(isPresent){continue}
-		tempResults["Results"][attribute] = value
+		mergedResults["Results"][attribute] = value
 		
 	}
 	
-	tempResults["Results"][testSettings] = testSettingValue
-	newAttributes, _ := attributevalue.MarshalMap(tempResults)
-	
-	transmitter.UpdateItem(packet[HASH].(string),newAttributes)
-	return sentItem, err
+	mergedResults["Results"][testSettings] = testSettingValue
+	newAttributes, _ := attributevalue.MarshalMap(mergedResults)
+	return newAttributes, nil
 }
-func (transmitter *TransmitterAPI) Parser(data []byte) (map[string]interface{}, error) {
-	dataHolder := collectorData{}
-	err := json.Unmarshal(data, &dataHolder)
-	if err != nil {
-		return nil, err
-	}
-	packet := make(map[string]interface{})
-	packet[PARTITION_KEY] = time.Now().Year()
-	packet[HASH] =  os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
-	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-	packet["isRelease"] = false
-	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),"10")
-	testMetricResults := make(map[string]Metric)
-	for _, rawMetricData := range dataHolder {
-
-		metric := CalcStats(rawMetricData.Values)
-		testMetricResults[rawMetricData.Label] = metric
-	}
-	packet["Results"] = map[string]map[string]Metric{ testSettings: testMetricResults}
-	return packet, nil
-}
-func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[string]types.AttributeValue) error{
+/*
+UpdateItem()
+Desc:
+	This function updates the item in dynamo if the atomic condition is true else it will return ConditionalCheckFailedException 
+Params:
+	hash: this is the commitHash
+	targetAttributes: this is the targetAttribute to be added to the dynamo item
+	testHash: this is the hash of the last item, used like a version check
+*/
+func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[string]types.AttributeValue, testHash string) error{
 	var err error
+	var ae *types.ConditionalCheckFailedException // this exception represent the the atomic check has failed
 	fmt.Println("Updating:",hash)
-	item,err := transmitter.Query(hash) // O(1) bcs of global sec. idx.
-	if len(item) ==0{
+	item,err := transmitter.Query(hash) // get most Up to date item from dynamo | O(1) bcs of global sec. idx.
+	if len(item) ==0{ // check if hash is in dynamo
 		return errors.New("ERROR: Hash is not found in dynamo")
 	}
 	commitDate := fmt.Sprintf("%d",int(item[0]["CommitDate"].(float64)))
 	year := fmt.Sprintf("%d",int(item[0]["Year"].(float64)))
+	//setup the update expression
 	expressionAttributeValues := make(map[string]types.AttributeValue)
 	expression := ""
 	n_expression := len(targetAttributes)
@@ -305,7 +315,9 @@ func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[
 		}
 		i++
 	}
-	fmt.Println(expression)
+	expressionAttributeValues[":testHash"] = &types.AttributeValueMemberS{Value: testHash}
+	//----
+	//call update
 	_, err = transmitter.dynamoDbClient.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
         TableName: aws.String(transmitter.DataBaseName),
         Key: map[string]types.AttributeValue{
@@ -314,23 +326,27 @@ func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[
         },
         UpdateExpression: aws.String(expression),
         ExpressionAttributeValues: expressionAttributeValues,
+		ConditionExpression: aws.String("#testHash = :testHash"),
+		ExpressionAttributeNames: map[string]string{
+			"#testHash": TEST_HASH,
+		},
     })
 
-    if err != nil {
+    if err != nil && !errors.As(err,&ae) {
         panic(err)
     }
 	return err
 }
 /*
 UpdateReleaseTag()
-Desc: This function takes in a commit hash and updates the release value to true
+Desc: This function takes in a commit hash and updates the release value to true 
 Param: commit hash in terms of string 
 */
 func (transmitter * TransmitterAPI) UpdateReleaseTag(hash string) error{
 	attributes := map[string]types.AttributeValue{
 		"isRelease":&types.AttributeValueMemberBOOL{Value: true},
 	}
-	err := transmitter.UpdateItem(hash,attributes)
+	err := transmitter.UpdateItem(hash,attributes,uuid.New().String())
 	return err
 }
 
@@ -356,55 +372,4 @@ func (transmitter* TransmitterAPI) Query(hash string) ([]map[string]interface{},
 	// fmt.Println(out.Items)
 	attributevalue.UnmarshalListOfMaps(out.Items,&packets)
 	return packets, err
-}
-
-
-
-
-//CalcStats takes in an array of data and returns the average, min, max, p99, and stdev of the data in a Metric struct
-func CalcStats(data []float64) Metric {
-	length := len(data)
-	if length == 0 {
-		return Metric{}
-	}
-
-	//make a copy so we aren't modifying original
-	dataCopy := make([]float64, length)
-	copy(dataCopy, data)
-	sort.Float64s(dataCopy)
-
-	min := dataCopy[0]
-	max := dataCopy[length - 1]
-
-	sum := 0.0
-	for _, value := range dataCopy {
-		sum += value
-	}
-
-	avg := sum / float64(length)
-
-	if length < 99 {
-		log.Println("Note: less than 99 values given, p99 value will be equal the max value")
-	}
-	p99Index := int(float64(length) * .99) - 1
-	p99Val := dataCopy[p99Index]
-
-	stdDevSum := 0.0
-	for _, value := range dataCopy {
-		stdDevSum += math.Pow(avg - value, 2)
-	}
-
-	stdDev := math.Sqrt(stdDevSum / float64(length))
-
-	metrics := Metric{
-		Average: avg,
-		Max:     max,
-		Min:     min,
-		P99:     p99Val,
-		Std:     stdDev,
-		Period:  int(METRIC_PERIOD / float64(length)),
-		Data:    data,
-	}
-
-	return metrics
 }
