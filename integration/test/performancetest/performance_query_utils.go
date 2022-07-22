@@ -29,6 +29,7 @@ const (
 	PARTITION_KEY ="Year"
 	HASH = "Hash"
 	COMMIT_DATE= "CommitDate"
+	TEST_HASH ="TestHash"
 	SHA_ENV  = "SHA"
 	SHA_DATE_ENV = "SHA_DATE"
 )
@@ -180,7 +181,7 @@ func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, age
 	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
 	packet["isRelease"] = false
 	//add test metadata
-	packet["TestHash"] = uuid.New().String()
+	packet[TEST_HASH] = uuid.New().String()
 	testSettings := fmt.Sprintf("%d-%d",logNum,tps)
 	testMetricResults := make(map[string]Stats)
 	
