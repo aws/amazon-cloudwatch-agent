@@ -104,7 +104,9 @@ jobs:
         with:
           go-version: ~1.18.3
       - name: Test the Script
-        run: go run --tags=generator integration/generator/test_case_generator.go
+        run: |
+          go run --tags=generator integration/generator/test_case_generator.go
+          echo "::set-output name=ec2_performance_matrix::$(echo $(cat integration/generator/resources/ec2_performance_complete_test_matrix.json))"
       - name: Generate matrix
         id: set-matrix
         run: |
