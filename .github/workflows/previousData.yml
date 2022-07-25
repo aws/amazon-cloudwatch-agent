@@ -113,6 +113,7 @@ jobs:
       - name: Generate matrix
         id: set-matrix
         run: |
+          export SHA_DATA=${{ steps.sha.outputs.sha_short }}
           go run --tags=generator integration/generator/test_case_generator.go
           echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/ec2_linux_complete_test_matrix.json))"
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat integration/generator/resources/ec2_performance_complete_test_matrix.json))"
