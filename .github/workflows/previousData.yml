@@ -108,7 +108,8 @@ jobs:
         run: echo "::set-output name=sha_short::$(git log --tags --simplify-by-decoration --pretty="format:%ct|%H")"
       - name: Test the Script
         run: |
-          echo ${{ steps.sha.outputs.sha_short }}
+           echo ${{ steps.sha.outputs.sha_short }}
+           echo $(git log --tags --simplify-by-decoration --pretty="format:%ct|%H")
       - name: Generate matrix
         id: set-matrix
         run: |
