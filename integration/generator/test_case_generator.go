@@ -136,7 +136,7 @@ func getReleases(startDate int ,EndDate int ) []string{
 	rawTags, _:= cmd.Output()
 	tagData := strings.Split(string(rawTags),"\n")
 	var tagList []string
-	// fmt.Println(tagData)
+	fmt.Println(tagData)
 	i :=0
 	for _,element := range tagData{
 		data := strings.Split(element,"|")
