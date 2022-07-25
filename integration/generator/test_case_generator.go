@@ -133,7 +133,7 @@ func genMatrixForReleases(targetOS string, testDirList []string) []map[string]st
 
 func getReleases(startDate int ,EndDate int ) []string{
 	rawData := os.Getenv("SHA_DATA")
-	fmt.Prinln(rawData)
+	fmt.Println(rawData)
 	tagData := strings.Split(string(rawData),"\n")
 	var tagList []string
 	fmt.Println(tagData)
