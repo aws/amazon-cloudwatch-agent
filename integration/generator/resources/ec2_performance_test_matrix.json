@@ -1,32 +1,110 @@
 [
-    {
-        "os": "al2",
-        "username": "ec2-user",
-        "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
-        "ami": "cloudwatch-agent-integration-test-al2*",
-        "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
-        "arc": "amd64",
-        "binaryName": "amazon-cloudwatch-agent.rpm",
-        "performance_number_of_logs": "10"
-      },
-      {
-        "os": "al2",
-        "username": "ec2-user",
-        "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
-        "ami": "cloudwatch-agent-integration-test-al2*",
-        "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
-        "arc": "amd64",
-        "binaryName": "amazon-cloudwatch-agent.rpm",
-        "performance_number_of_logs": "100"
-      },
-      {
-        "os": "al2",
-        "username": "ec2-user",
-        "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
-        "ami": "cloudwatch-agent-integration-test-al2*",
-        "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
-        "arc": "amd64",
-        "binaryName": "amazon-cloudwatch-agent.rpm",
-        "performance_number_of_logs": "1000"
-      }
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "ac6c4fd0c6fd562b6c614d59e26a29e02537e9a6",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "10",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ },
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "ac6c4fd0c6fd562b6c614d59e26a29e02537e9a6",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "100",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ },
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "ac6c4fd0c6fd562b6c614d59e26a29e02537e9a6",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "1000",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ },
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "65d83235be2b25451b4708afc972e135f2ae23d8",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "10",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ },
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "65d83235be2b25451b4708afc972e135f2ae23d8",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "100",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ },
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "65d83235be2b25451b4708afc972e135f2ae23d8",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "1000",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ },
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "4affa871ea7f8a9460afdc33bebfbdb99346c135",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "10",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ },
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "4affa871ea7f8a9460afdc33bebfbdb99346c135",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "100",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ },
+ {
+  "ami": "cloudwatch-agent-integration-test-al2*",
+  "arc": "amd64",
+  "binaryName": "amazon-cloudwatch-agent.rpm",
+  "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+  "commitSHA": "4affa871ea7f8a9460afdc33bebfbdb99346c135",
+  "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
+  "os": "al2",
+  "performance_number_of_logs": "1000",
+  "test_dir": "./integration/test/performancetest",
+  "username": "ec2-user"
+ }
 ]

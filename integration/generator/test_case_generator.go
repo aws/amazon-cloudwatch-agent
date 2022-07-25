@@ -10,7 +10,7 @@ import (
 	"log"
 	"os"
 
-
+	"os/exec"
 	"strings"
 	"strconv"
 )
@@ -42,12 +42,7 @@ var osToTestDirMap = map[string][]string{
 
 func main() {
 	for osType, testDir := range osToTestDirMap {
-		var testMatrix []map[string]string
-		if osType == "ec2_performance"{
-			testMatrix = genMatrixForReleases(osType, testDir)
-		}else{
-			testMatrix = genMatrix(osType, testDir)
-		}
+		testMatrix := genMatrix(osType, testDir)
 		writeTestMatrixFile(osType, testMatrix)
 	}
 }
@@ -118,25 +113,30 @@ func genMatrixForReleases(targetOS string, testDirList []string) []map[string]st
 	releases := getReleases(1627262978,1658798978)
 	var testMatrixComplete []map[string]string
 	for  _, release := range releases{
-		for _, test := range testMatrix {
-			test["commitSHA"] = release
+		for i, _ := range testMatrix {
+			testMatrix[i]["commitSHA"] = release
 			// fmt.Println(test)
 			for _, testDirectory := range testDirList {
-				testLine := copyMap(test)
+				testLine := copyMap(testMatrix[i])
 				testLine[testDir] = testDirectory
 				testMatrixComplete = append(testMatrixComplete, testLine)
 			}
 		}
 	}
+	bytes, err := json.MarshalIndent(testMatrixComplete, "", " ")
+	if err != nil {
+		log.Panicf("Can't marshal json for target os %v, err %v", targetOS, err)
+	}
+	err = ioutil.WriteFile(fmt.Sprintf("integration/generator/resources/%v_test_matrix.json", targetOS), bytes, os.ModePerm)
 	return testMatrixComplete
 }
 
 func getReleases(startDate int ,EndDate int ) []string{
-	rawData := os.Getenv("SHA_DATA")
-	fmt.Println(rawData)
-	tagData := strings.Split(string(rawData),"\n")
+	cmd := exec.Command("git", "log" ,"--tags" ,"--simplify-by-decoration" ,"--pretty=%ct|%H")
+	rawTags, _:= cmd.Output()
+	tagData := strings.Split(string(rawTags),"\n")
 	var tagList []string
-	fmt.Println(tagData)
+	// fmt.Println(tagData)
 	i :=0
 	for _,element := range tagData{
 		data := strings.Split(element,"|")
@@ -150,6 +150,6 @@ func getReleases(startDate int ,EndDate int ) []string{
 			i++
 		}
 	}
-	fmt.Println(len(tagList))
+	fmt.Println(tagList)
 	return tagList
 }
