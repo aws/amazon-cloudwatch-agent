@@ -9,6 +9,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+
+	"os/exec"
+	"strings"
+	"strconv"
 )
 
 const (
@@ -38,7 +42,12 @@ var osToTestDirMap = map[string][]string{
 
 func main() {
 	for osType, testDir := range osToTestDirMap {
-		testMatrix := genMatrix(osType, testDir)
+		var testMatrix []map[string]string
+		if osType == "ec2_performance"{
+			testMatrix = genMatrixForReleases(osType, testDir)
+		}else{
+			testMatrix = genMatrix(osType, testDir)
+		}
 		writeTestMatrixFile(osType, testMatrix)
 	}
 }
@@ -87,4 +96,60 @@ func copyMap(mapToCopy map[string]string) map[string]string {
 		testLine[key] = value
 	}
 	return testLine
+}
+
+func genMatrixForReleases(targetOS string, testDirList []string) []map[string]string {
+	openTestMatrix, err := os.Open(fmt.Sprintf("integration/generator/resources/%v_test_matrix.json", targetOS))
+	
+	if err != nil {
+		log.Panicf("can't read file %v_test_matrix.json err %v", targetOS, err)
+	}
+	
+	byteValueTestMatrix, _ := ioutil.ReadAll(openTestMatrix)
+	_ = openTestMatrix.Close()
+	
+	var testMatrix []map[string]string
+	err = json.Unmarshal(byteValueTestMatrix, &testMatrix)
+	if err != nil {
+		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", targetOS, err)
+	}
+
+	// fmt.Println(testMatrix)
+	releases := getReleases(1627262978,1658798978)
+	var testMatrixComplete []map[string]string
+	for  _, release := range releases{
+		for _, test := range testMatrix {
+			test["commitSHA"] = release
+			// fmt.Println(test)
+			for _, testDirectory := range testDirList {
+				testLine := copyMap(test)
+				testLine[testDir] = testDirectory
+				testMatrixComplete = append(testMatrixComplete, testLine)
+			}
+		}
+	}
+	return testMatrixComplete
+}
+
+func getReleases(startDate int ,EndDate int ) []string{
+	cmd := exec.Command("git", "log" ,"--tags" ,"--simplify-by-decoration" ,"--pretty=%ct|%H")
+	rawTags, _:= cmd.Output()
+	tagData := strings.Split(string(rawTags),"\n")
+	var tagList []string
+	// fmt.Println(tagData)
+	i :=0
+	for _,element := range tagData{
+		data := strings.Split(element,"|")
+		date,_ := strconv.Atoi(data[0])
+		// fmt.Println(date)
+		if i > 2{
+			break
+		}
+		if date > startDate && date < EndDate{
+			tagList = append(tagList,data[1])
+			i++
+		}
+	}
+	fmt.Println(len(tagList))
+	return tagList
 }
