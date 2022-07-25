@@ -103,6 +103,9 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ~1.18.3
+      - name: Git Data
+        id: sha
+        run: echo "::set-output name=sha_short::$(git log --tags --simplify-by-decoration --pretty=%ct|%H)"
       - name: Test the Script
         run: |
           go run --tags=generator integration/generator/test_case_generator.go
