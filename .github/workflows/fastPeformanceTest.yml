@@ -19,8 +19,8 @@ env:
 on:
   push:
     branches:
-      - newWorkflow
       - master
+      - concurrent_tests
     
   workflow_dispatch:
 
