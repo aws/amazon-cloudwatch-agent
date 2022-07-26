@@ -1,0 +1,1 @@
+git log --tags --simplify-by-decoration --pretty="%ct|%H"
