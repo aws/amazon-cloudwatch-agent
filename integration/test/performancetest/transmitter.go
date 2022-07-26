@@ -343,10 +343,31 @@ Desc: This function takes in a commit hash and updates the release value to true
 Param: commit hash in terms of string 
 */
 func (transmitter * TransmitterAPI) UpdateReleaseTag(hash string) error{
+	var err error
+	var ae *types.ConditionalCheckFailedException
 	attributes := map[string]types.AttributeValue{
 		"isRelease":&types.AttributeValueMemberBOOL{Value: true},
 	}
-	err := transmitter.UpdateItem(hash,attributes,uuid.New().String())
+	for {//concurrency retry
+		/*solving parallel updates using an optimistic lock and retry,
+		this may result in a livelock;
+		however, random sleeps makes this possiblity nearly impossible*/
+		currentItemList,err := transmitter.Query(hash) //get the item's most up to date version
+		if(err!=nil){
+			return err
+		}
+		err = transmitter.UpdateItem(hash,attributes,currentItemList[0][TEST_HASH].(string)) //try to update the item
+		//this may be overwritten by other test threads, in that case it will return a specific error
+		if errors.As(err,&ae){ //check if our call got overwritten
+			// item has changed
+			fmt.Println("Retrying...")
+			rand.Seed(time.Now().UnixNano())
+			time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Millisecond)
+			continue
+		}
+		fmt.Println("Update Completed")
+		break
+	}
 	return err
 }
 
