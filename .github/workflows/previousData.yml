@@ -63,146 +63,146 @@ jobs:
         run: |
           echo ${{ steps.set-matrix.outputs.ec2_old_performance_matrix}}
 
-  # StartLocalStack:
-  #   name: 'StartLocalStack'
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: integration/terraform/ec2/localstack
-  #   outputs:
-  #     local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
-  #   steps:
-  #     - uses: actions/checkout@v2
+  StartLocalStack:
+    name: 'StartLocalStack'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integration/terraform/ec2/localstack
+    outputs:
+      local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v1
-  #       with:
-  #         aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-west-2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
 
-  #     - name: Verify Terraform version
-  #       run: terraform --version
+      - name: Verify Terraform version
+        run: terraform --version
 
-  #     - name: Terraform init
-  #       run: terraform init
+      - name: Terraform init
+        run: terraform init
 
-  #     - name: Terraform apply
-  #       id: localstack
-  #       run: >
-  #         echo run terraform and execute test code &&
-  #         terraform apply --auto-approve
-  #         -var="ssh_key=${PRIVATE_KEY}"
-  #         -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-  #         -var="github_sha=${GITHUB_SHA}" 
-  #         -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
-  #         -var="key_name=${KEY_NAME}" &&
-  #         LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
-  #         echo $LOCAL_STACK_HOST_NAME &&
-  #         echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
-  #         aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
+      - name: Terraform apply
+        id: localstack
+        run: >
+          echo run terraform and execute test code &&
+          terraform apply --auto-approve
+          -var="ssh_key=${PRIVATE_KEY}"
+          -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          -var="github_sha=${GITHUB_SHA}" 
+          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
+          -var="key_name=${KEY_NAME}" &&
+          LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
+          echo $LOCAL_STACK_HOST_NAME &&
+          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
+          aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
-  # StopLocalStack:
-  #   name: 'StopLocalStack'
-  #   runs-on: ubuntu-latest
-  #   if: ${{ always() }}
-  #   needs: [StartLocalStack, PerformanceTrackingTest]
-  #   defaults:
-  #     run:
-  #       working-directory: integration/terraform/ec2/localstack
-  #   steps:
-  #     - uses: actions/checkout@v2
+  StopLocalStack:
+    name: 'StopLocalStack'
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [StartLocalStack, PerformanceTrackingTest]
+    defaults:
+      run:
+        working-directory: integration/terraform/ec2/localstack
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v1
-  #       with:
-  #         aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-west-2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
 
-  #     - name: Copy state
-  #       run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
+      - name: Copy state
+        run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
 
-  #     - name: Verify Terraform version
-  #       run: terraform --version
+      - name: Verify Terraform version
+        run: terraform --version
 
-  #     - name: Terraform init
-  #       run: terraform init
+      - name: Terraform init
+        run: terraform init
 
-  #     - name: Terraform destroy
-  #       run: terraform destroy --auto-approve
+      - name: Terraform destroy
+        run: terraform destroy --auto-approve
   
-  # PerformanceTrackingTest:
-  #   name: "PerformanceTrackingTest"
-  #   needs: [StartLocalStack, GenerateTestMatrix]
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_old_performance_matrix) }}
-  #   steps:
-  #     - uses: actions/checkout@v2
+  PerformanceTrackingTest:
+    name: "PerformanceTrackingTest"
+    needs: [StartLocalStack, GenerateTestMatrix]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_old_performance_matrix) }}
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - name: Configure AWS Credentials
-  #       uses: aws-actions/configure-aws-credentials@v1
-  #       with:
-  #         aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-west-2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
 
-  #     - name: Cache if success
-  #       id: performance-tracking
-  #       uses: actions/cache@v2
-  #       with:
-  #         path: go.mod
-  #         key: performance-tracking-test-${{ github.sha }}
+      - name: Cache if success
+        id: performance-tracking
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: performance-tracking-test-${{ github.sha }}
 
-  #     - name: Echo Test Info
-  #       run: echo run performance-tracking
-  #     - name: Verify Terraform version
-  #       run: terraform --version
-  #    #
-  #     - name: Terraform apply
-  #       if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
-  #       uses: nick-invision/retry@v2
-  #       with:
-  #         max_attempts: 1
-  #         timeout_minutes: 60
-  #         retry_wait_seconds: 5
-  #         command: |
-  #           cd integration/terraform/ec2/old
-  #           terraform init
-  #           if terraform apply --auto-approve \
-  #             -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
-  #             -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-  #             -var="user=${{ matrix.arrays.username }}" \
-  #             -var="ami=${{ matrix.arrays.ami }}" \
-  #             -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
-  #             -var="arc=${{ matrix.arrays.arc }}" \
-  #             -var="binary_name=${{ matrix.arrays.binaryName }}" \
-  #             -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
-  #             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-  #             -var="key_name=${KEY_NAME}" \
-  #             -var="old_sha=${{matrix.arrays.commitSHA}}" \
-  #             -var="old_sha_date=${{ matrix.arrays.commitSHADate }}" \
-  #             -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
-  #             -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
-  #             -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
-  #           else
-  #             terraform destroy -auto-approve && exit 1
-  #           fi
-  #     - name: Update as release
-  #       run: |
-  #         cd integration/test/performancetest
-  #         export IS_RELEASE=true
-  #         export SHA=${{matrix.arrays.commitSHA}}
-  #         go test -run TestUpdateCommit -p 1 -v --tags=integration
-  #     #This is here just in case workflow cancel
-  #     - name: Terraform destroy
-  #       if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
-  #       uses: nick-invision/retry@v2
-  #       with:
-  #         max_attempts: 1
-  #         timeout_minutes: 8
-  #         retry_wait_seconds: 5
-  #         command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
+      - name: Echo Test Info
+        run: echo run performance-tracking
+      - name: Verify Terraform version
+        run: terraform --version
+     #
+      - name: Terraform apply
+        if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            cd integration/terraform/ec2/old
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="key_name=${KEY_NAME}" \
+              -var="old_sha=${{matrix.arrays.commitSHA}}" \
+              -var="old_sha_date=${{ matrix.arrays.commitSHADate }}" \
+              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+              -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+      - name: Update as release
+        run: |
+          cd integration/test/performancetest
+          export IS_RELEASE=true
+          export SHA=${{matrix.arrays.commitSHA}}
+          go test -run TestUpdateCommit -p 1 -v --tags=integration
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
