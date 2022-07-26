@@ -53,7 +53,7 @@ resource "null_resource" "integration_test" {
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.old_sha}",
 
-      "echo git rev-parse HEAD"
+      "echo git rev-parse HEAD",
       "make build package-rpm package-deb package-win package-darwin",
       "git stash push -m old binary ${var.binary_name}",
 
