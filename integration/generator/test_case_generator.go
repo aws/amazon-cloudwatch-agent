@@ -41,7 +41,10 @@ var osToTestDirMap = map[string][]string{
 }
 
 func main() {
-	getReleases(1627262978,1658798978)
+	releases := getReleases(1627262978,1658798978)
+	if len(releases) ==0{
+		log.Panicf("CRASH")
+	}
 	// for osType, testDir := range osToTestDirMap {
 	// 	testMatrix := genMatrix(osType, testDir)
 	// 	writeTestMatrixFile(osType, testMatrix)
@@ -137,7 +140,7 @@ func getReleases(startDate int ,EndDate int ) []string{
 	rawTags, _:= cmd.Output()
 	tagData := strings.Split(string(rawTags),"\n")
 	var tagList []string
-	// fmt.Println(tagData)
+	fmt.Println(tagData)
 	i :=0
 	for _,element := range tagData{
 		data := strings.Split(element,"|")
