@@ -37,7 +37,10 @@ jobs:
       - name: Show Tag
         id: display
         run: |
-          git fetch --prune --unshallow && git show --tags --simplify-by-decoration --pretty=%ct|%H
+          git tag
+          git log
+          git show 
+
       
 
 
