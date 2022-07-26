@@ -41,10 +41,11 @@ var osToTestDirMap = map[string][]string{
 }
 
 func main() {
-	for osType, testDir := range osToTestDirMap {
-		testMatrix := genMatrix(osType, testDir)
-		writeTestMatrixFile(osType, testMatrix)
-	}
+	getReleases()
+	// for osType, testDir := range osToTestDirMap {
+	// 	testMatrix := genMatrix(osType, testDir)
+	// 	writeTestMatrixFile(osType, testMatrix)
+	// }
 }
 
 func genMatrix(targetOS string, testDirList []string) []map[string]string {
