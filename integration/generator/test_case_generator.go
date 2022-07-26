@@ -136,7 +136,7 @@ func genMatrixForReleases(targetOS string, testDirList []string) []map[string]st
 }
 
 func getReleases(startDate int ,EndDate int ) []string{
-	cmd := exec.Command("git", "log" ,"--tags" )
+	cmd := exec.Command("git", "show" ,"--tags" )
 	rawTags, _:= cmd.Output()
 	tagData := strings.Split(string(rawTags),"\n")
 	var tagList []string
