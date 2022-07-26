@@ -37,7 +37,7 @@ jobs:
       - name: Show Tag
         id: display
         run: |
-          git fetch --prune --unshallow && git describe --tags 
+          git fetch --prune --unshallow && git show --tags 
       
 
 
