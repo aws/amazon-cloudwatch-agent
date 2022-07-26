@@ -222,15 +222,6 @@ jobs:
         run: echo run performance-tracking
       - name: Verify Terraform version
         run: terraform --version
-      - name: Get SHA
-        id: sha
-        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      - name: Get git date
-        id: sha_date
-        run: echo "::set-output name=sha_date::$(git show -s --format=%ct ${{ steps.sha.outputs.sha_short }} )"
-      - name: Check env
-        run: echo "SHA ${{ steps.sha.outputs.sha_short }} | Date ${{ steps.sha_date.outputs.sha_date }} "
-     #
       - name: Terraform apply
         if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
         uses: nick-invision/retry@v2
