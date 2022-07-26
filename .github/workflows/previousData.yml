@@ -39,14 +39,13 @@ jobs:
         uses: jimschubert/query-tag-action@v1
         with:
           include: 'v*'
-          exclude: '*-rc*'
+          # exclude: '*-rc*'
           # if you unshallow in a separate step, use the following option:
           # skip-unshallow: 'true'
+          commit-ish: '@{ 20 days ago }'
       - name: Show Tag
         id: display
         run: |
-          git fetch --prune 
-          git describe --tags
           echo 'Output from Find Tag: ${{steps.tagger.outputs.tag}}'
       
 
