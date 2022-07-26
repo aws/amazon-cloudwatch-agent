@@ -154,7 +154,7 @@ func getReleases(startDate int ,EndDate int ) map[string]int{
 		data := strings.Split(element,"|")
 		date,_ := strconv.Atoi(data[0])
 		// fmt.Println(date)
-		if i > 2{
+		if i > 25{
 			break
 		}
 		if date > startDate && date < EndDate{

@@ -294,7 +294,7 @@ Params:
 func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[string]types.AttributeValue, testHash string) error{
 	var err error
 	var ae *types.ConditionalCheckFailedException // this exception represent the the atomic check has failed
-	fmt.Println("Updating:",hash)
+	fmt.Println("Updating:",hash,testHash)
 	item,err := transmitter.Query(hash) // get most Up to date item from dynamo | O(1) bcs of global sec. idx.
 	if len(item) ==0{ // check if hash is in dynamo
 		return errors.New("ERROR: Hash is not found in dynamo")
