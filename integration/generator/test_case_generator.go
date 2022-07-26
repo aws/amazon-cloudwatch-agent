@@ -33,6 +33,7 @@ var osToTestDirMap = map[string][]string{
 	"ec2_performance":{
 		"./integration/test/performancetest",
 	},
+	
 	"ec2_windows": {""},
 	"ec2_mac":     {},
 	"ecs_fargate": {
@@ -41,14 +42,20 @@ var osToTestDirMap = map[string][]string{
 }
 
 func main() {
-	releases := getReleases(1627262978,1658798978)
-	if len(releases) ==0{
-		log.Panicf("CRASH")
+
+	for osType, testDir := range osToTestDirMap {
+		var testMatrix []map[string]string
+		if os.Getenv("OLD")=="true" && osType =="ec2_performance"{
+			argsWithoutProg := os.Args[1:]
+			startDate,_:= strconv.Atoi(argsWithoutProg[0])
+			endDate,_ := strconv.Atoi(argsWithoutProg[1])
+			testMatrix = genMatrixForReleases(osType,testDir,startDate,endDate)
+			writeTestMatrixFile(osType, testMatrix)
+			return
+		}
+		testMatrix = genMatrix(osType, testDir)
+		writeTestMatrixFile(osType, testMatrix)
 	}
-	// for osType, testDir := range osToTestDirMap {
-	// 	testMatrix := genMatrix(osType, testDir)
-	// 	writeTestMatrixFile(osType, testMatrix)
-	// }
 }
 
 func genMatrix(targetOS string, testDirList []string) []map[string]string {
@@ -97,7 +104,7 @@ func copyMap(mapToCopy map[string]string) map[string]string {
 	return testLine
 }
 
-func genMatrixForReleases(targetOS string, testDirList []string) []map[string]string {
+func genMatrixForReleases(targetOS string, testDirList []string,startDate int, endDate int) []map[string]string {
 	openTestMatrix, err := os.Open(fmt.Sprintf("integration/generator/resources/%v_test_matrix.json", targetOS))
 	
 	if err != nil {
@@ -114,11 +121,12 @@ func genMatrixForReleases(targetOS string, testDirList []string) []map[string]st
 	}
 
 	// fmt.Println(testMatrix)
-	releases := getReleases(1627262978,1658798978)
+	releases := getReleases(startDate,endDate)
 	var testMatrixComplete []map[string]string
-	for  _, release := range releases{
+	for  release, date  := range releases{
 		for i, _ := range testMatrix {
 			testMatrix[i]["commitSHA"] = release
+			testMatrix[i]["commitSHADate"] =  strconv.Itoa(date)
 			// fmt.Println(test)
 			for _, testDirectory := range testDirList {
 				testLine := copyMap(testMatrix[i])
@@ -131,16 +139,16 @@ func genMatrixForReleases(targetOS string, testDirList []string) []map[string]st
 	if err != nil {
 		log.Panicf("Can't marshal json for target os %v, err %v", targetOS, err)
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("integration/generator/resources/%v_test_matrix.json", targetOS), bytes, os.ModePerm)
+	err = ioutil.WriteFile(fmt.Sprintf("integration/generator/resources/%v_old_test_matrix.json", targetOS), bytes, os.ModePerm)
 	return testMatrixComplete
 }
 
-func getReleases(startDate int ,EndDate int ) []string{
-	cmd := exec.Command("sh","getTags.sh")
+func getReleases(startDate int ,EndDate int ) map[string]int{
+	cmd := exec.Command("git", "log" ,"--tags" ,"--simplify-by-decoration" ,"--pretty=%ct|%H")
 	rawTags, _:= cmd.Output()
 	tagData := strings.Split(string(rawTags),"\n")
-	var tagList []string
-	fmt.Println(tagData)
+	tagList := make(map[string]int)
+	// fmt.Println(tagData)
 	i :=0
 	for _,element := range tagData{
 		data := strings.Split(element,"|")
@@ -150,10 +158,10 @@ func getReleases(startDate int ,EndDate int ) []string{
 			break
 		}
 		if date > startDate && date < EndDate{
-			tagList = append(tagList,data[1])
+			tagList[data[1]] = date
 			i++
 		}
 	}
-	fmt.Println(tagList)
+	// fmt.Println(tagList)
 	return tagList
 }
