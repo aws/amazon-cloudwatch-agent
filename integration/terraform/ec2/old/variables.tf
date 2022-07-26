@@ -79,15 +79,11 @@ variable "github_repo" {
   default = ""
 }
 
-variable "github_sha_date"{
+variable "old_sha" {
   type = string
   default = ""
 }
-variable "sha" {
-  type = string
-  default = ""
-}
-variable "sha_date"{
+variable "old_sha_date"{
   type = string
   default = ""
 }

@@ -51,14 +51,22 @@ resource "null_resource" "integration_test" {
       "echo clone and install agent",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
-      "git reset --hard ${var.github_sha}",
+      "git reset --hard ${var.old_sha}",
+
+      "echo git rev-parse HEAD"
       "make build package-rpm package-deb package-win package-darwin",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.github_sha}/linux/${var.arc}/${var.binary_name} .",
+      "git stash push -m old binary ${var.binary_name}"
+
+      "git reset --hard ${var.github_sha}"
+      "git stash pop"
+      "echo git rev-parse HEAD"
+      
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/binary/${var.old_sha}/linux/${var.arc}/${var.binary_name} .",
       "sleep 10",
       "sudo ${var.install_agent}",
       "echo get ssl pem for localstack and export local stack host name",
       "cd ~/amazon-cloudwatch-agent/integration/localstack/ls_tmp",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.github_sha} . --recursive",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/ls_tmp/${var.old_sha} . --recursive",
       "cat ${var.ca_cert_path} > original.pem",
       "cat original.pem snakeoil.pem > combine.pem",
       "sudo cp original.pem /opt/aws/amazon-cloudwatch-agent/original.pem",

@@ -174,14 +174,14 @@ jobs:
         uses: nick-invision/retry@v2
         with:
           max_attempts: 1
-          timeout_minutes: 30
+          timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
             cd integration/terraform/ec2/old
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
-              -var="github_sha=${{matrix.arrays.commitSHA}}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
@@ -190,8 +190,8 @@ jobs:
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="key_name=${KEY_NAME}" \
-              -var="sha=${{matrix.arrays.commitSHA}}" \
-              -var="sha_date=${{ matrix.arrays.commitSHADate }}" \
+              -var="old_sha=${{matrix.arrays.commitSHA}}" \
+              -var="old_sha_date=${{ matrix.arrays.commitSHADate }}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
