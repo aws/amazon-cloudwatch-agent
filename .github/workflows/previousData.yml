@@ -47,8 +47,7 @@ jobs:
 
       - name: Run Golang Config Setup
         run: |
-            sh integration/generator/getTags.sh > log.txt
-            cat log.txt
+            git
             go run --tags=generator integration/generator/test_case_generator.go
 
 
