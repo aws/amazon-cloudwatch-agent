@@ -45,7 +45,7 @@ jobs:
       - name: Show Tag
         id: display
         run: |
-          git fetch --prune --unshallow
+          git fetch --prune 
           git describe --tags
           echo 'Output from Find Tag: ${{steps.tagger.outputs.tag}}'
       
