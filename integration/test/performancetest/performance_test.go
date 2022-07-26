@@ -106,7 +106,7 @@ func TestPerformance(t *testing.T) {
 			if data == nil {
 				t.Fatalf("No data")
 			}
-			fmt.Printf("%v \n",data)
+			log.Printf("DATA:%v \n",data)
 			_, err = dynamoDB.SendItem(data)
 			if err != nil {
 				t.Fatalf("Error: couldn't upload metric data to table, %v", err)

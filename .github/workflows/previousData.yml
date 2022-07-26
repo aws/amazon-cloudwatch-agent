@@ -259,7 +259,7 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="key_name=${KEY_NAME}" \
               -var="sha=${{matrix.arrays.commitSHA}}" \
-              -var="sha_date=${{ steps.sha_date.outputs.sha_date }}" \
+              -var="sha_date=${{ matrix.arrays.commitSHADate }}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
