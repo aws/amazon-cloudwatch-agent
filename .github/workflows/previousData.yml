@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Fast Performance Test
+name: Previous Performance Test
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
@@ -30,7 +30,12 @@ concurrency:
 jobs:
   MakeBinary:
     name: 'MakeBinary'
+    needs: [StartLocalStack, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
     steps:
       # Set up building environment, patch the dev repo code on dispatch events.
       - name: Set up Go 1.x
@@ -69,7 +74,7 @@ jobs:
         id: cached_binaries
         uses: actions/cache@v2
         with:
-          key: "cached_binaries_${{ github.sha }}"
+          key: "cached_binaries_${{ matrix.arrays.commitSHA }}"
           path: go.mod
 
       - name: Build Binaries
@@ -86,7 +91,7 @@ jobs:
 
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
+        run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{  matrix.arrays.commitSHA }} --recursive
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
@@ -199,85 +204,77 @@ jobs:
       - name: Terraform destroy
         run: terraform destroy --auto-approve
   
-  PerformanceTrackingTest:
-    name: "PerformanceTrackingTest"
-    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
-    steps:
-      - uses: actions/checkout@v2
+  # PerformanceTrackingTest:
+  #   name: "PerformanceTrackingTest"
+  #   needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
+  #   steps:
+  #     - uses: actions/checkout@v2
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #         aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: us-west-2
 
-      - name: Cache if success
-        id: performance-tracking
-        uses: actions/cache@v2
-        with:
-          path: go.mod
-          key: performance-tracking-test-${{ github.sha }}
+  #     - name: Cache if success
+  #       id: performance-tracking
+  #       uses: actions/cache@v2
+  #       with:
+  #         path: go.mod
+  #         key: performance-tracking-test-${{ github.sha }}
 
-      - name: Echo Test Info
-        run: echo run performance-tracking
-      - name: Verify Terraform version
-        run: terraform --version
-      - name: Get SHA
-        id: sha
-        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      - name: Get git date
-        id: sha_date
-        run: echo "::set-output name=sha_date::$(git show -s --format=%ct ${{ steps.sha.outputs.sha_short }} )"
-      - name: Check env
-        run: echo "SHA ${{ steps.sha.outputs.sha_short }} | Date ${{ steps.sha_date.outputs.sha_date }} "
-     #
-      - name: Terraform apply
-        if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
-        uses: nick-invision/retry@v2
-        with:
-          max_attempts: 1
-          timeout_minutes: 30
-          retry_wait_seconds: 5
-          command: |
-            cd integration/terraform/ec2/linux
-            terraform init
-            if terraform apply --auto-approve \
-              -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
-              -var="github_sha=${{matrix.arrays.commitSHA}}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-              -var="user=${{ matrix.arrays.username }}" \
-              -var="ami=${{ matrix.arrays.ami }}" \
-              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
-              -var="arc=${{ matrix.arrays.arc }}" \
-              -var="binary_name=${{ matrix.arrays.binaryName }}" \
-              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="key_name=${KEY_NAME}" \
-              -var="sha=${{matrix.arrays.commitSHA}}" \
-              -var="sha_date=${{ matrix.arrays.commitSHADate }}" \
-              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
-              -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
-            else
-              terraform destroy -auto-approve && exit 1
-            fi
-      - name: Update as release
-        run: |
-          cd integration/test/performancetest
-          export IS_RELEASE=true
-          export SHA=${{matrix.arrays.commitSHA}}
-          go test -run TestUpdateCommit -p 1 -v --tags=integration
-      #This is here just in case workflow cancel
-      - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
-        uses: nick-invision/retry@v2
-        with:
-          max_attempts: 1
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
+  #     - name: Echo Test Info
+  #       run: echo run performance-tracking
+  #     - name: Verify Terraform version
+  #       run: terraform --version
+  #    #
+  #     - name: Terraform apply
+  #       if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
+  #       uses: nick-invision/retry@v2
+  #       with:
+  #         max_attempts: 1
+  #         timeout_minutes: 30
+  #         retry_wait_seconds: 5
+  #         command: |
+  #           cd integration/terraform/ec2/linux
+  #           terraform init
+  #           if terraform apply --auto-approve \
+  #             -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+  #             -var="github_sha=${{matrix.arrays.commitSHA}}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+  #             -var="user=${{ matrix.arrays.username }}" \
+  #             -var="ami=${{ matrix.arrays.ami }}" \
+  #             -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+  #             -var="arc=${{ matrix.arrays.arc }}" \
+  #             -var="binary_name=${{ matrix.arrays.binaryName }}" \
+  #             -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+  #             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+  #             -var="key_name=${KEY_NAME}" \
+  #             -var="sha=${{matrix.arrays.commitSHA}}" \
+  #             -var="sha_date=${{ matrix.arrays.commitSHADate }}" \
+  #             -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+  #             -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
+  #             -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+  #           else
+  #             terraform destroy -auto-approve && exit 1
+  #           fi
+  #     - name: Update as release
+  #       run: |
+  #         cd integration/test/performancetest
+  #         export IS_RELEASE=true
+  #         export SHA=${{matrix.arrays.commitSHA}}
+  #         go test -run TestUpdateCommit -p 1 -v --tags=integration
+  #     #This is here just in case workflow cancel
+  #     - name: Terraform destroy
+  #       if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+  #       uses: nick-invision/retry@v2
+  #       with:
+  #         max_attempts: 1
+  #         timeout_minutes: 8
+  #         retry_wait_seconds: 5
+  #         command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
