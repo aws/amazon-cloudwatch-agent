@@ -45,6 +45,7 @@ jobs:
       - name: Show Tag
         id: display
         run: |
+          git describe --tags
           echo 'Output from Find Tag: ${{steps.tagger.outputs.tag}}'
       
 
