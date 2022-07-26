@@ -141,7 +141,7 @@ jobs:
   
   PerformanceTrackingTest:
     name: "PerformanceTrackingTest"
-    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
+    needs: [StartLocalStack, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
