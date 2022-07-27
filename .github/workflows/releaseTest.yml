@@ -1,0 +1,53 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Fast Performance Test
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+  TERRAFORM_AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  VPC_SECURITY_GROUPS_IDS: ${{ secrets.VPC_SECURITY_GROUPS_IDS }}
+  IAM_ROLE: ${{ secrets.IAM_ROLE }}
+  GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+  PASSPHRASE: ${{ secrets.PASSPHRASE }}
+  GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
+  GPG_TTY: $(tty)
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+
+on:
+  release:
+      types: [created]
+    
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  UpdatePerformanceMetrics:
+    name: "UpdatePerformanceMetrics"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.18.3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: Run Golang Update Function
+        run: |
+            cd integration/test/performancetest
+            export IS_RELEASE=true
+            export SHA=$GITHUB_SHA
+            go test -run TestUpdateCommit -p 1 -v --tags=integration
+            

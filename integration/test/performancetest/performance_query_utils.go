@@ -16,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -23,11 +25,11 @@ const (
 	DimensionName = "InstanceId"
 	Stat = "Average"
 	Period = 10
-
 	METRIC_PERIOD = 5 * 60 // this const is in seconds , 5 mins
 	PARTITION_KEY ="Year"
 	HASH = "Hash"
 	COMMIT_DATE= "CommitDate"
+	TEST_HASH ="TestHash"
 	SHA_ENV  = "SHA"
 	SHA_DATE_ENV = "SHA_DATE"
 )
@@ -177,16 +179,19 @@ func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, age
 	packet[PARTITION_KEY] = time.Now().Year()
 	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
 	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-
+	packet["isRelease"] = false
 	//add test metadata
-	packet["NumberOfLogsMonitored"] = logNum
-	packet["TPS"] = tps
+	packet[TEST_HASH] = uuid.New().String()
+	testSettings := fmt.Sprintf("%d-%d",logNum,tps)
+	testMetricResults := make(map[string]Stats)
+	
 
 	//add actual test data with statistics
 	for _, result := range metrics.MetricDataResults {
-		packet[*result.Label] = CalcStats(result.Values)
+		stats:= CalcStats(result.Values)
+		testMetricResults[*result.Label] = stats
 	}
-
+	packet["Results"] = map[string]map[string]Stats{ testSettings: testMetricResults}
 	return packet, nil
 }
 
