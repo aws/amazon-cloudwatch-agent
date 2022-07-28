@@ -662,7 +662,7 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
       - name: Terraform apply
-        if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-invision/retry@v2
         with:
           max_attempts: 1
@@ -682,8 +682,8 @@ jobs:
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="key_name=${KEY_NAME}" \
-              -var="sha=${GITHUB_SHA}" \
-              -var="sha_date=${{ steps.sha_date.outputs.sha_date }}" \
+              -var="github_sha=${GITHUB_SHA}" \
+              -var="github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
