@@ -19,9 +19,10 @@ import (
 
 
 const (
-	UPDATE_DELAY_THRESHOLD = 60 *1000// this is how long we want to wait for random sleep in milli seconds
+	UPDATE_DELAY_THRESHOLD = 60// this is how long we want to wait for random sleep in seconds
+	MAX_ATTEMPTS = 5 // number of attemps before we stop retrying to update
 	/*
-	!Warning: if this value is less than 20 there is a risk of testCases being lost.
+	!Warning: if this value is less than 25 there is a risk of testCases being lost.
 	This will only happen if all test threads and at the same time and get the same 
 	sleep value after first attempt to add ITEM
 	*/
@@ -77,11 +78,11 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 					AttributeType: types.ScalarAttributeTypeN,
 				},
 				{
-					AttributeName: aws.String("CommitDate"),
+					AttributeName: aws.String(COMMIT_DATE),
 					AttributeType: types.ScalarAttributeTypeN,
 				},
 				{
-					AttributeName: aws.String("Hash"),
+					AttributeName: aws.String(HASH),
 					AttributeType: types.ScalarAttributeTypeS,
 				},
 			},
@@ -91,7 +92,7 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 					KeyType:       types.KeyTypeHash,
 				},
 				{
-					AttributeName: aws.String("CommitDate"),
+					AttributeName: aws.String(COMMIT_DATE),
 					KeyType:	   types.KeyTypeRange,
 				},
 			},
@@ -100,11 +101,11 @@ func (transmitter *TransmitterAPI) CreateTable() error {
 					IndexName: aws.String("Hash-index"),
 					KeySchema: []types.KeySchemaElement{
 						{
-							AttributeName: aws.String("Hash"),
+							AttributeName: aws.String(HASH),
 							KeyType:       types.KeyTypeHash,
 						},
 						{
-							AttributeName: aws.String("CommitDate"),
+							AttributeName: aws.String(COMMIT_DATE),
 							KeyType:	   types.KeyTypeRange,
 						},
 					},
@@ -148,7 +149,7 @@ Side effects:
 	Adds an item to dynamodb table
 */
 func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (string, error) {
-	var ae *types.ConditionalCheckFailedException // this exception represent the the atomic check has failed
+	var ae *types.ConditionalCheckFailedException // this exception represent the atomic check has failed
 	item, err := attributevalue.MarshalMap(packet)
 	if err != nil {
 		panic(err)
@@ -159,8 +160,7 @@ func (transmitter *TransmitterAPI) AddItem(packet map[string]interface{}) (strin
 			TableName: aws.String(transmitter.DataBaseName),
 			ConditionExpression: aws.String("attribute_not_exists(#hash)"),
 			ExpressionAttributeNames: map[string]string{
-				// "#testHash": TEST_HASH,
-				"#hash" : "Hash",
+				"#hash" : HASH,
 			},
 		})
 	
@@ -200,15 +200,14 @@ Desc: Parses the input data and adds it to the dynamo table
 Param: packet map[string]interface{} is the data collected by data collector
 */
 func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}) (string, error) {
-	// return nil
 	var sentItem string
-	var ae *types.ConditionalCheckFailedException // this exception represent the the atomic check has failed
+	var ae *types.ConditionalCheckFailedException // this exception represent the atomic check has failed
 	// check if hash exists
-	currentItemList,err := transmitter.Query(packet[HASH].(string))
+	currentItem,err := transmitter.Query(packet[HASH].(string))
 	if err!=nil {
 		return "",err
 	}
-	if len(currentItemList)==0{ // if an item with the same hash doesn't exist add it
+	if len(currentItem)==0{ // if an item with the same hash doesn't exist add it
 		sentItem, err = transmitter.AddItem(packet) 
 		// this may be overwritten by other test threads, in that case it will return a specific error
 	
@@ -218,46 +217,32 @@ func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}) (stri
 		if err!=nil { //any other error dont try again
 			return "",err
 		}
-		// got overwritten now instead of adding go update the item
+		// addItem failed due to a competing thread
+		// instead of adding, proceed to update the item, with the same data
 		rand.Seed(time.Now().UnixNano())
-		time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Millisecond)
-		fmt.Println("Item already exist going to update",len(currentItemList))
-		
+		time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Second)
+		fmt.Println("Item already exist going to update",len(currentItem))	
 	}
 	// item already exist so update the item instead
-	for {//concurrency retry
-		/*solving parallel updates using an optimistic lock and retry,
-		this may result in a livelock;
-		however, random sleeps makes this possiblity nearly impossible*/
-		currentItemList,err = transmitter.Query(packet[HASH].(string)) //get the item's most up to date version
-		newAttributes,err := transmitter.TestCasePackager(packet,currentItemList[0])
-		if(err!=nil){
-			return "",err
-		}
-		err = transmitter.UpdateItem(packet[HASH].(string),newAttributes) //try to update the item
-		//this may be overwritten by other test threads, in that case it will return a specific error
-		if errors.As(err,&ae){ //check if our call got overwritten
-			// item has changed
-			fmt.Println("Retrying...")
-			rand.Seed(time.Now().UnixNano())
-			time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Millisecond)
-			continue
-		}
-		fmt.Println("Update Completed")
-		break
+	err = transmitter.UpdateItem(packet) //try to update the item
+	//this may be overwritten by other test threads, in that case it will return a specific error
+	if err !=nil{
+		return err
 	}
+	fmt.Println("SendItem Completed")
 	return sentItem, err
+
 }
 /*
-TestCasePackager()
+PacketMerger()
 Desc:
 	This function updates the currentPacket with the unique parts of newPacket and returns in dynamo format
 Params:
 	newPacket: this is the agentData collected in this test
 	currentPacket: this is the agentData stored in dynamo currently
 */
-func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interface{}, currentPacket map[string]interface{}) (map[string]types.AttributeValue,error){
-	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),os.Getenv("TPS"))
+func (transmitter * TransmitterAPI) PacketMerger(newPacket map[string]interface{}, currentPacket map[string]interface{}) (map[string]types.AttributeValue,error){
+	testSettings := fmt.Sprintf("%s-%s",os.Getenv(PERFORMANCE_NUMBER_OF_LOGS),os.Getenv(TPS))
 	fmt.Println("The test is",testSettings)
 	item := currentPacket["Results"].(map[string]interface{})
 	_,isPresent := item[testSettings] // check if we already had this test
@@ -288,52 +273,65 @@ Params:
 	targetAttributes: this is the targetAttribute to be added to the dynamo item
 	testHash: this is the hash of the last item, used like a version check
 */
-func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[string]types.AttributeValue) error{
+func (transmitter * TransmitterAPI) UpdateItem(packet map[string]interface{}) error{
 	var err error
-	var ae *types.ConditionalCheckFailedException // this exception represent the the atomic check has failed
-	fmt.Println("Updating:",hash)
-	item,err := transmitter.Query(hash) // get most Up to date item from dynamo | O(1) bcs of global sec. idx.
-	if len(item) ==0{ // check if hash is in dynamo
-		return errors.New("ERROR: Hash is not found in dynamo")
-	}
-	commitDate := fmt.Sprintf("%d",int(item[0]["CommitDate"].(float64)))
-	year := fmt.Sprintf("%d",int(item[0]["Year"].(float64)))
-	testHash := item[0][TEST_HASH].(string)
-	//setup the update expression
-	expressionAttributeValues := make(map[string]types.AttributeValue)
-	expression := ""
-	n_expression := len(targetAttributes)
-	i :=0
-	for attribute, value := range targetAttributes{
-		expressionName := ":" +strings.ToLower(attribute)
-		expression = fmt.Sprintf("set %s = %s",attribute,expressionName)
-		expressionAttributeValues[expressionName] = value
-		if(n_expression -1 >i){
-			expression += "and"
+	var ae *types.ConditionalCheckFailedException // this exception represent the atomic check has failed
+	rand.Seed(time.Now().UnixNano())
+	randomSleepDuration := time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD)*time.Second)
+	hash:= packet[HASH].(string)
+	for attemptCount:=0; attemptCount< MAX_ATTEMPTS; attemptCount++{
+		fmt.Println("Updating:",hash)
+		item,err := transmitter.Query(hash) // get most Up to date item from dynamo | O(1) bcs of global sec. idx.
+		if len(item) ==0{ // check if hash is in dynamo
+			return errors.New("ERROR: Hash is not found in dynamo")
 		}
-		i++
+		commitDate := fmt.Sprintf("%d",int(item[0][COMMIT_DATE].(float64)))
+		year := fmt.Sprintf("%d",int(item[0][PARTITION_KEY].(float64)))
+		testHash := item[0][TEST_ID].(string)
+		targetAttributes := PacketMerger(packet,item[0])
+		//setup the update expression
+		expressionAttributeValues := make(map[string]types.AttributeValue)
+		expression := ""
+		n_expression := len(targetAttributes)
+		i :=0
+		for attribute, value := range targetAttributes{
+			expressionName := ":" +strings.ToLower(attribute)
+			expression += fmt.Sprintf("set %s = %s",attribute,expressionName)
+			expressionAttributeValues[expressionName] = value
+			if(n_expression -1 >i){
+				expression += "and"
+			}
+			i++
+		}
+		expressionAttributeValues[":testID"] = &types.AttributeValueMemberS{Value: testHash}
+		//call update
+		_, err = transmitter.dynamoDbClient.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
+			TableName: aws.String(transmitter.DataBaseName),
+			Key: map[string]types.AttributeValue{
+				"Year": &types.AttributeValueMemberN{Value: year},
+				"CommitDate": &types.AttributeValueMemberN{Value: commitDate },
+			},
+			UpdateExpression: aws.String(expression),
+			ExpressionAttributeValues: expressionAttributeValues,
+			ConditionExpression: aws.String("#testID = :testID"),
+			ExpressionAttributeNames: map[string]string{
+				"#testID": TEST_ID,
+			},
+		})
+		if errors.As(err,&ae){ //check if our call got overwritten
+			// item has changed
+			fmt.Println("Retrying...")
+			time.Sleep(randomSleepDuration)
+			continue
+		}
+		if err !=nil{
+			return err
+		}
+		fmt.Println("Update Completed")
+		return nil
 	}
-	expressionAttributeValues[":testHash"] = &types.AttributeValueMemberS{Value: testHash}
-	//----
-	//call update
-	_, err = transmitter.dynamoDbClient.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
-        TableName: aws.String(transmitter.DataBaseName),
-        Key: map[string]types.AttributeValue{
-            "Year": &types.AttributeValueMemberN{Value: year},
-			"CommitDate": &types.AttributeValueMemberN{Value: commitDate },
-        },
-        UpdateExpression: aws.String(expression),
-        ExpressionAttributeValues: expressionAttributeValues,
-		ConditionExpression: aws.String("#testHash = :testHash"),
-		ExpressionAttributeNames: map[string]string{
-			"#testHash": TEST_HASH,
-		},
-    })
-
-    if err != nil && !errors.As(err,&ae) {
-        panic(err)
-    }
-	return err
+	// if the code reaches here it means we have reach MAX_ATTEMPTS
+	return errors.New("ERROR: We reached max number of attempts dropping the update")
 }
 /*
 UpdateReleaseTag()
@@ -344,9 +342,9 @@ func (transmitter * TransmitterAPI) UpdateReleaseTag(hash string) error{
 	var err error
 	var ae *types.ConditionalCheckFailedException
 	attributes := map[string]types.AttributeValue{
-		"isRelease":&types.AttributeValueMemberBOOL{Value: true},
+		"IS_RELEASE":&types.AttributeValueMemberBOOL{Value: true},
 	}
-	for {//concurrency retry
+	for attemptCount:=0; attemptCount< MAX_ATTEMPTS; attemptCount++ {//concurrency retry
 		/*solving parallel updates using an optimistic lock and retry,
 		this may result in a livelock;
 		however, random sleeps makes this possiblity nearly impossible*/
@@ -356,7 +354,7 @@ func (transmitter * TransmitterAPI) UpdateReleaseTag(hash string) error{
 			// item has changed
 			fmt.Println("Retrying...")
 			rand.Seed(time.Now().UnixNano())
-			time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Millisecond)
+			time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Second)
 			continue
 		}
 		fmt.Println("Update Completed")
@@ -377,12 +375,12 @@ func (transmitter* TransmitterAPI) Query(hash string) ([]map[string]interface{},
             ":hash": &types.AttributeValueMemberS{Value: hash},
         },
         ExpressionAttributeNames: map[string]string{
-            "#hash": "Hash",
+            "#hash": HASH,
         },
         ScanIndexForward: aws.Bool(true), // true or false to sort by "date" Sort/Range key ascending or descending
     })
 	if err != nil {
-        panic(err)
+        return nil,err
     }
 	// fmt.Println(out.Items)
 	attributevalue.UnmarshalListOfMaps(out.Items,&packets)

@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Fast Performance Test
+name: Release Update 
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
@@ -14,7 +14,6 @@ env:
   PASSPHRASE: ${{ secrets.PASSPHRASE }}
   GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
   GPG_TTY: $(tty)
-  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
 
 on:
   release:
@@ -44,7 +43,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      - name: Run Golang Update Function
+      - name: Update isRelease for this release
         run: |
             cd integration/test/performancetest
             export IS_RELEASE=true

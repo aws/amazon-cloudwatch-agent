@@ -35,7 +35,7 @@ type LogInfo struct {
 func TestPerformance(t *testing.T) {
 	//get number of logs for test from github action
 	//@TODO
-	logNum, err := strconv.Atoi(os.Getenv(testLogNum)) //requires a commit from Okan that updates the workflow file so the log tests will run concurrently
+	logNum, err := strconv.Atoi(os.Getenv(testLogNum)) 
 	if err != nil {
 		t.Fatalf("Error: cannot convert test log number to integer, %v", err)
 	}
@@ -77,7 +77,6 @@ func TestPerformance(t *testing.T) {
 	}
 
 	//run tests
-	//@ASK If we should move tps values to seperate config testCases
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
 			os.Setenv("TPS",fmt.Sprintf("%d",tps))
@@ -254,10 +253,10 @@ func GetLogFilePaths(configPath string) ([]string, error) {
 }
 
 func TestUpdateCommit(t*testing.T){
-	if(os.Getenv("IS_RELEASE") ==""){
-		t.Skip("")
+	if(os.Getenv("IS_RELEASE") !="true"){
+		t.SkipNow("")
 	}
-	fmt.Println("Updating Release Commit",os.Getenv(SHA_ENV))
+	t.Log("Updating Release Commit",os.Getenv(SHA_ENV))
 	dynamoDB := InitializeTransmitterAPI("CWAPerformanceMetrics") //add cwa version here
 	testHash := os.Getenv(SHA_ENV)
 	if dynamoDB == nil{

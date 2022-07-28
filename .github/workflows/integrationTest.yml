@@ -20,7 +20,6 @@ on:
   push:
     branches:
       - master
-      - concurrent_tests
 
 
   workflow_dispatch:
@@ -407,8 +406,6 @@ jobs:
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
     steps:
-      - name: TEMP TEST LOOKUP
-        run: echo "${{ matrix.arrays.test_dir}}"
       - uses: actions/checkout@v2
 
       - name: Configure AWS Credentials
@@ -682,7 +679,6 @@ jobs:
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="key_name=${KEY_NAME}" \
-              -var="github_sha=${GITHUB_SHA}" \
               -var="github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
