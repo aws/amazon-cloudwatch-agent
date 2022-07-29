@@ -35,6 +35,7 @@ const (
 	TEST_ID ="TestID"
 	TPS = "TPS"
 	PERFORMANCE_NUMBER_OF_LOGS = "PERFORMANCE_NUMBER_OF_LOGS"
+	RESULTS = "Results"
 	/*
 	TEST_ID is used for version control, in order to make sure the
 	item has not changed between item being editted and updated.
@@ -200,7 +201,7 @@ func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, age
 		stats:= CalcStats(result.Values)
 		testMetricResults[*result.Label] = stats
 	}
-	packet["Results"] = map[string]map[string]Stats{ testSettings: testMetricResults}
+	packet[RESULTS] = map[string]map[string]Stats{ testSettings: testMetricResults}
 	return packet, nil
 }
 
