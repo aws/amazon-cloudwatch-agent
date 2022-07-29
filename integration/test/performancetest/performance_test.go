@@ -254,7 +254,7 @@ func GetLogFilePaths(configPath string) ([]string, error) {
 
 func TestUpdateCommit(t*testing.T){
 	if(os.Getenv("IS_RELEASE") !="true"){
-		t.SkipNow("")
+		t.SkipNow()
 	}
 	t.Log("Updating Release Commit",os.Getenv(SHA_ENV))
 	dynamoDB := InitializeTransmitterAPI("CWAPerformanceMetrics") //add cwa version here
