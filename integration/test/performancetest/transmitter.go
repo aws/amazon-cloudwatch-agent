@@ -342,25 +342,13 @@ Param: commit hash in terms of string
 */
 func (transmitter * TransmitterAPI) UpdateReleaseTag(hash string) error{
 	var err error
-	var ae *types.ConditionalCheckFailedException
 	packet := make(map[string]interface{})
 	packet[HASH] = hash
 	packet[IS_RELEASE] = true
-	for attemptCount:=0; attemptCount< MAX_ATTEMPTS; attemptCount++ {//concurrency retry
-		/*solving parallel updates using an optimistic lock and retry,
-		this may result in a livelock;
-		however, random sleeps makes this possiblity nearly impossible*/
-		err = transmitter.UpdateItem(packet) //try to update the item
-		//this may be overwritten by other test threads, in that case it will return a specific error
-		if errors.As(err,&ae){ //check if our call got overwritten
-			// item has changed
-			fmt.Println("Retrying...")
-			rand.Seed(time.Now().UnixNano())
-			time.Sleep(time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD))*time.Second)
-			continue
-		}
-		fmt.Println("Update Completed")
-		break
+	err = transmitter.UpdateItem(packet) //try to update the item
+	//this may be overwritten by other test threads, in that case it will return a specific error
+	if err !=nil{
+		return err
 	}
 	return err
 }
