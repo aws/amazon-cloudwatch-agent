@@ -79,7 +79,6 @@ func TestPerformance(t *testing.T) {
 	//run tests
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
-			os.Setenv("TPS",fmt.Sprintf("%d",tps))
 			test.CopyFile(configFilePath, configOutputPath)
 
 			test.StartAgent(configOutputPath, true)
@@ -105,8 +104,10 @@ func TestPerformance(t *testing.T) {
 			if data == nil {
 				t.Fatalf("No data")
 			}
-			fmt.Printf("%v \n",data)
-			_, err = dynamoDB.SendItem(data)
+			// this print shows the sendItem packet,it can be used to debug attribute issues
+			fmt.Printf("%v \n",data) 
+			
+			_, err = dynamoDB.SendItem(data,tps)
 			if err != nil {
 				t.Fatalf("Error: couldn't upload metric data to table, %v", err)
 			}

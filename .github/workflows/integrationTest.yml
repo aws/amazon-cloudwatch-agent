@@ -172,9 +172,6 @@ jobs:
           echo ${{ steps.set-matrix.outputs.ec2_performance_matrix}}
           echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
           echo ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
-      - name: Echo performance matrix
-        run: |
-          echo ${{ steps.set-matrix.outputs.ec2_performance_matrix}}
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -692,7 +689,7 @@ jobs:
         if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
         with:
-          max_attempts: 1
+          max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
