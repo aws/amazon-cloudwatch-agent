@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -52,8 +53,13 @@ func (k *Kubernetes) ApplyRule(input interface{}) (returnKey string, returnVal i
 			key, val := rule.ApplyRule(im[SectionKey])
 			if key == "cadvisor" || key == "k8sapiserver" {
 				inputs[key] = []interface{}{val}
-			} else if key == "ec2tagger" || key == "k8sdecorator" {
+			} else if key == "k8sdecorator" {
 				processors[key] = []interface{}{val}
+			} else if key == "ec2tagger" {
+				// Only enable ec2tagger if in ec2 mode
+				if context.CurrentContext().Mode() == config.ModeEC2 {
+					processors[key] = []interface{}{val}
+				}
 			} else if key != "" {
 				translator.AddErrorMessages(GetCurPath(), fmt.Sprintf("Find unexpected key %s", key))
 				return
