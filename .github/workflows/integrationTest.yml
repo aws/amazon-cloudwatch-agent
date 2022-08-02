@@ -77,15 +77,17 @@ jobs:
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}
-          build-args: BUILDMODE=copy
-          cache-from: type=registry
-          cache-to: type=inline
           platforms: linux/amd64, linux/arm64
 
   MakeBinary:
     name: 'MakeBinary'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: 'true'
+
       # Set up building environment, patch the dev repo code on dispatch events.
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -102,16 +104,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
 
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          submodules: 'true'
-
       - name: Cache go
         id: cached_go
         uses: actions/cache@v2
-        env:
-          cache-name: cached_go_modules
         with:
           path: |
             ~/go/pkg/mod
