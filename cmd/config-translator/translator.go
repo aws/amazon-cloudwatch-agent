@@ -28,7 +28,7 @@ func initFlags() {
 	var inputJsonFile = flag.String("input", "", "Please provide the path of input agent json config file")
 	var inputJsonDir = flag.String("input-dir", "", "Please provide the path of input agent json config directory.")
 	var inputTomlFile = flag.String("output", "", "Please provide the path of the output CWAgent config file")
-	var inputMode = flag.String("mode", "ec2", "Please provide the mode, i.e. ec2, onPremise, auto")
+	var inputMode = flag.String("mode", "ec2", "Please provide the mode, i.e. ec2, onPremise, onPrem, auto")
 	var inputConfig = flag.String("config", "", "Please provide the common-config file")
 	var multiConfig = flag.String("multi-config", "remove", "valid values: default, append, remove")
 	flag.Parse()
