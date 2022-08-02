@@ -1,0 +1,131 @@
+body{
+    --tableFontSize:12px;
+    --headTableFontSize: 16px;
+    --textFontSize: 12px;
+    --headTextFontSize: 16px
+}
+.table_labels{
+    display:default;
+}
+.table_labels_hidden{
+    display:none;
+}
+.table_page{
+    text-align: center;
+    justify-content: center;
+    overflow-x: hidden;
+    margin: 0px;
+}
+.table_page h2{
+    padding: 1%;
+    font-size: var(--headTextFontSize);
+}
+.table_page p{
+    text-align: justify;
+    font-size: var(--textFontSize);
+    margin: 15%;
+    margin-top: 2%;
+    margin-bottom: 2%;
+}
+.table_page  .header{
+    margin: 5%;
+    margin-top: 2%;
+    margin-bottom: 2%;
+}
+.table_group{
+    padding: 1%;
+    text-align: center;
+    padding-bottom: 5%;
+}
+.table_row{
+   text-align: center;
+   font-weight: 900;
+}
+
+.table {
+    width: 100%;
+    margin: 0px;
+    table-layout: fixed;
+    font-size: var(--tableFontSize);
+    border-spacing: 0px;
+    
+}
+.cell_text{
+    font-size: var(--tableFontSize);
+    padding: 1%;
+    padding-left: 0.5%;
+    padding-right: 0.5%;
+    width: fit-content;
+}
+.cell_text.head{
+    font-size: var(--headTableFontSize)
+}
+.cell_text > a{
+    text-decoration: none;
+    color: #000;
+}
+.cell_text > a:visited{
+    color: inherit;
+}
+.table_container{
+    margin: 0px;
+    margin-bottom: 2%;
+    padding: 3%;
+}
+.table_footer{
+    width: 100%; 
+    margin: 0%;
+    left: 0px;
+    right: 0px;
+    justify-content: center;
+}
+.table_footer td{
+    width: 73%;
+    margin: 0%;
+}
+
+.page_container{
+    display: flex;
+}
+.table_content{
+    width: 80%;
+    position: relative;
+    left: 0px;
+}
+.table_settings{
+    /* flex:20%; */
+    width: 22%;
+    border-left: 1px dashed #000;
+    margin: 0.5%;
+}
+
+
+.table_container .button_container{
+    display: flex;
+    width: 100%;
+    height: 7%;
+    margin-bottom: 1%;
+
+}
+.table_container .select_box{
+    display: inline-block;
+    width: 100%;
+    margin-left: 10%;
+    margin-right:10%;
+    margin-top: 0.5%;
+    padding: 1%;
+    background-color: #fff;
+    border:  gray solid;
+    outline: none;  
+    line-height: 50%;
+    overflow-y: hidden;
+
+}
+.select_box label{
+    text-align: left;
+    margin-left: 0%;
+}
+.select_box select{
+    margin-right: 0%;
+    margin-left: 5%;
+}
