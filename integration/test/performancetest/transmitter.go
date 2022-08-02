@@ -315,7 +315,7 @@ func (transmitter *TransmitterAPI) UpdateItem(packet map[string]interface{},tps 
 			expression += fmt.Sprintf("set %s = %s", attribute, expressionName)
 			expressionAttributeValues[expressionName] = value
 			if n_expression-1 > i {
-				expression += "and"
+				expression += " and "
 			}
 			i++
 		}
