@@ -77,7 +77,7 @@ func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("E! Fail to read request %s body: %s", req.URL.String(), err)
+		log.Printf("E! Fail to read request %s body: %s", url, err)
 		return result, err
 	}
 
