@@ -19,7 +19,7 @@ import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
 import LastPageIcon from "@mui/icons-material/LastPage";
 import "./table.css";
 import { IGNORE_ATTRIBUTES, UNITS, TEST_VARIABLES } from "../config";
-//@TODO ADD UNITS TO TABLE HEADERS
+
 const MIN_COLOUR = 0x50;
 
 function getRandomColour(idx) {
@@ -165,10 +165,6 @@ function CreateRow(props, sigfig, currentTestCase, index, rowLength) {
 }
 
 export function BasicTable(props) {
-  document.body.style.setProperty(
-    "--tablefontSize",
-    parseInt(props.config.tableFontSize).toString() + "px"
-  );
   var metricNames = [];
   var sigfig = parseInt(props.config.sigfig);
   metricNames.push(<TableCell class="cell_text head">{"Hash"}</TableCell>);
@@ -274,14 +270,24 @@ export function BasicTable(props) {
       break;
     }
 
-    let line = CreateRow(props, sigfig, currentTestCase, i, metricNames.length);
+    let line = CreateRow(
+      props,
+      sigfig,
+      currentTestCase,
+      currMetric.length - i - 1,
+      metricNames.length
+    );
 
-    if (currMetric[i].isRelease) {
+    if (currMetric[currMetric.length - i - 1].isRelease) {
       rows.push(<TableRow style={{ background: "#896799" }}>{line}</TableRow>);
     } else {
       rows.push(
         <TableRow
-          style={i % 2 ? { background: "#dddddd" } : { background: "white" }}
+          style={
+            (currMetric.length - i - 1) % 2
+              ? { background: "#dddddd" }
+              : { background: "white" }
+          }
         >
           {line}
         </TableRow>

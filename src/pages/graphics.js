@@ -7,15 +7,6 @@ import { BsFillCircleFill, BsSuitDiamondFill } from "react-icons/bs";
 //This webpage displays metrics graphs relative to the hashes
 export default class GraphicsPage extends Page {
   render() {
-    document.body.style.setProperty(
-      "--textFontSize",
-      parseInt(this.state.config.textFontSize).toString() + "px"
-    );
-    document.body.style.setProperty(
-      "--headTextFontSize",
-      (parseInt(this.state.config.textFontSize) + 4).toString() + "px"
-    );
-
     return (
       <div className="GraphicsPage">
         <Navbar />

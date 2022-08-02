@@ -8,7 +8,6 @@ export const UNITS = {
   procstat_memory_rss: "B",
 };
 export const MetricConfigs = ["thresholds"];
-//@TODO: make this auto update
 const N_METRIC = 2; //number of metrics
 const N_TIMESTAMPS = 3; // number of timestamps per metric
 export const N_STATS = 4;

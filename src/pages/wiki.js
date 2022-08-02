@@ -22,18 +22,6 @@ export const DynamicMenu = () => {
 };
 export default class WikiPage extends Page {
   render() {
-    document.body.style.setProperty(
-      "--fontSize",
-      parseInt(this.state.config.textFontSize).toString() + "px"
-    );
-    document.body.style.setProperty(
-      "--h3fontSize",
-      (parseInt(this.state.config.textFontSize) + 4).toString() + "px"
-    );
-    document.body.style.setProperty(
-      "--h2fontSize",
-      (parseInt(this.state.config.textFontSize) + 8).toString() + "px"
-    );
     return (
       <div class="wiki_page">
         <Navbar />

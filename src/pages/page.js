@@ -12,6 +12,7 @@ export default class Page extends React.Component {
       mounted: false,
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
     };
+    setGlobalCSSVars(this.state.config);
   }
   componentDidMount() {
     if (!this.state.mounted) {
@@ -29,4 +30,36 @@ export default class Page extends React.Component {
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
     });
   }
+}
+
+function setGlobalCSSVars(props) {
+  document.body.style.setProperty("--fontSize", `${props.textFontSize}px`);
+  document.body.style.setProperty(
+    "--h3fontSize",
+    `${parseInt(props.textFontSize) + 4}px`
+  );
+  document.body.style.setProperty(
+    "--h2fontSize",
+    `${parseInt(props.textFontSize) + 8}px`
+  );
+  document.body.style.setProperty(
+    "--tableFontSize",
+    `${parseInt(props.tableFontSize)}px`
+  );
+  document.body.style.setProperty(
+    "--headTableFontSize",
+    `${parseInt(props.tablefontSize) + 4}px`
+  );
+  document.body.style.setProperty(
+    "--textFontSize",
+    `${parseInt(props.textFontSize)}px`
+  );
+  document.body.style.setProperty(
+    "--headTextFontSize",
+    `${parseInt(props.textFontSize) + 4}px`
+  );
+  document.body.style.setProperty(
+    "--tablefontSize",
+    `${parseInt(props.tableFontSize)}px`
+  );
 }

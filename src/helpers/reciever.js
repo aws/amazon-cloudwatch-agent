@@ -5,10 +5,12 @@ AWS.config.update({
   secretAccessKey: process.env.REACT_APP_TERRAFORM_AWS_SECRET_ACCESS_KEY,
   accessKeyId: process.env.REACT_APP_TERRAFORM_AWS_ACCESS_KEY_ID,
 });
-// ENDS HERE
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
 const LINK = "Link";
+const HASH = "Hash";
+const RESULTS = "Results";
+const COMMIT_DATE = "CommitDate";
 const REPO_LINK = "https://github.com/aws/amazon-cloudwatch-agent";
 //This class handles the entire frontend from pulling to formatting data
 class Receiver {
@@ -18,7 +20,7 @@ class Receiver {
     this.CWAData = null;
     this.latestItem = null;
     var date = new Date();
-    this.year = date.getFullYear();
+    this.year = date.getFullYear().toString();
     let cacheLatestItem = this.cacheGetLatestItem();
     if (cacheLatestItem !== undefined) {
       this.CWAData = this.cacheGetAllData();
@@ -26,42 +28,41 @@ class Receiver {
     }
   }
 
-  //update
-  //@TODO Add interface
+  /*update()
+  Desc: This function async. updates the local storage by comparing latest 
+  item in dynamo and the latest item in local storage. If found a difference
+  it updates them by calling getBatchItem to retrieve new data from dynamo
+  Return: Updated Data stored in local storage
+  */
   async update() {
-    console.log("updating");
     // check the latest hash from cache
     try {
       let dynamoLatestItem = await this.getLatestItem();
-      let DynamoHash = dynamoLatestItem["Hash"];
+      let DynamoHash = dynamoLatestItem[HASH];
       // ask dynamo what is the lastest hash it received
-      let cacheLatestItem = this.cacheGetLatestItem(); //["Hash"].S //rename to lastest hash
+      let cacheLatestItem = this.cacheGetLatestItem(); //[HASH].S //rename to lastest hash
       let cacheLatestHash = "";
       if (cacheLatestItem === null) {
-        console.log("NO cache found", localStorage.key(0), localStorage.key(1));
         // no cache found, pull every thing and set
         this.CWAData = await this.getAllItems();
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
         return;
       } else {
-        cacheLatestHash = cacheLatestItem["Hash"];
+        cacheLatestHash = cacheLatestItem[HASH];
         this.CWAData = this.cacheGetAllData();
       }
 
       if (DynamoHash === cacheLatestHash) {
-        console.log("synced"); // synced up
       } else if (
-        parseInt(dynamoLatestItem["CommitDate"]) >=
-        parseInt(cacheLatestItem["CommitDate"])
+        parseInt(dynamoLatestItem[COMMIT_DATE]) >=
+        parseInt(cacheLatestItem[COMMIT_DATE])
       ) {
         /// if hashes dont match call getBatchItem with local hash and update local hash with new data
-        console.log("not synced");
         var newItems = await this.getBatchItem(
-          cacheLatestItem["CommitDate"],
-          dynamoLatestItem["CommitDate"]
+          cacheLatestItem[COMMIT_DATE],
+          dynamoLatestItem[COMMIT_DATE]
         );
-        console.log(this.CWAData, newItems);
         Object.keys(newItems).forEach((key) => {
           if (this.CWAData[key] === undefined) {
             // new testCase
@@ -90,8 +91,10 @@ class Receiver {
     }
   }
 
-  //get latest item
-  //@TODO Add interface
+  /*getLatestItem()
+  Desc: This pulls the item with HIGHEST CommitDate using global secondary index query
+  Return: the most recently added item
+  */
   async getLatestItem() {
     //add secondary index
     const params = {
@@ -101,23 +104,21 @@ class Receiver {
       KeyConditions: {
         Year: {
           ComparisonOperator: "EQ",
-          AttributeValueList: [{ N: "2022" }],
+          AttributeValueList: [{ N: this.year }],
         },
       },
       ScanIndexForward: false,
     };
     var retData = await this.dyanamoClient.query(params).promise();
-    if (DEBUG) {
-      console.log(
-        `getLatestItem: Item: ${retData.Items[0]["Hash"]["S"]}, Count: ${retData.Count}, ScannedCount:${retData.ScannedCount}`
-      );
-    }
     var cleanData = AWS.DynamoDB.Converter.unmarshall(retData.Items[0]);
-    cleanData["Hash"] = cleanData["Hash"].substring(0, 7);
+    cleanData[HASH] = cleanData[HASH].substring(0, 7);
     return cleanData;
   }
-  // get all
-  //@TODO Add interface
+  /*getAllItems()
+  Desc: This function pulls the entire from dynamo
+  Note: This function is called only if cache doesn't exist
+  Return: Entire Table
+  */
   async getAllItems() {
     const params = {
       // Set the projection expression, which are the attributes that you want.
@@ -125,39 +126,28 @@ class Receiver {
       KeyConditions: {
         Year: {
           ComparisonOperator: "EQ",
-          AttributeValueList: [{ N: "2022" }],
+          AttributeValueList: [{ N: this.year }],
         },
       },
     };
     var retData = await this.dyanamoClient.query(params).promise();
 
-    if (DEBUG) {
-      console.log(
-        `getAllItem: Item: ${retData.Items}, Count: ${retData.Count}, ScannedCount:${retData.ScannedCount}`
-      );
-    }
     var cleanData = this.formatData(retData.Items);
     return cleanData;
   }
-  // get a batch of items
-  /*
-  lastHash : the last hash i have cached
+  /* getBatchItem()
+  Desc: This function pulls data from dynamo in batches. The batch configurable from
+  config.js. By default it is designed to pull data with 1MB batches 
+  Return: Updated Data stored in local storage
   */
-  //@TODO Add interface
   async getBatchItem(cacheHashDate, dynamoHashDate) {
-    console.log(
-      "Getting batch item",
-      cacheHashDate,
-      dynamoHashDate,
-      cacheHashDate < dynamoHashDate
-    );
     // will use scan because getBatchItem requires me to know both hash and
     var params = {
       TableName: this.DataBaseName,
       KeyConditions: {
         Year: {
           ComparisonOperator: "EQ",
-          AttributeValueList: [{ N: "2022" }],
+          AttributeValueList: [{ N: this.year }],
         },
         CommitDate: {
           ComparisonOperator: "BETWEEN",
@@ -170,7 +160,6 @@ class Receiver {
     var cacheHashDateInt = parseInt(cacheHashDate);
     var upperBound = 0;
     var i = 1;
-    console.log(BATCH_SIZE);
     while (upperBound < dynamoHashDateInt) {
       //get data in 1mb packets
       var lowerBound = cacheHashDateInt + i * BATCH_SIZE;
@@ -180,34 +169,34 @@ class Receiver {
       params.KeyConditions.CommitDate.AttributeValueList[1].N =
         upperBound.toString();
       var packet = (await this.dyanamoClient.query(params).promise()).Items;
-      if (DEBUG) {
-        console.log(
-          `Running Batch: (${lowerBound}->${upperBound}): Size:${retData}, ${packet}`
-        );
-      }
       retData = retData.concat(packet);
       i++;
     }
     var cleanData = this.formatData(retData);
     return cleanData;
   }
-  //@TODO Add interface
+  /* formatData
+  Desc: Converts Dynamo formatted items to {...testCases:{...metrics:{...stats,...attributes}} format.
+  Param: data: Object, raw data from dynamo
+  Return: Clean Data
+  */
   formatData(data) {
     var formattedData = {};
     data.forEach((item) => {
       var cleanData = AWS.DynamoDB.Converter.unmarshall(item);
-      Object.keys(cleanData["Results"]).forEach((testCase) => {
+      Object.keys(cleanData[RESULTS]).forEach((testCase) => {
         if (formattedData[testCase] === undefined) {
           formattedData[testCase] = {};
         }
-        Object.keys(cleanData["Results"][testCase]).forEach((metric) => {
+        Object.keys(cleanData[RESULTS][testCase]).forEach((metric) => {
           if (formattedData[testCase][metric] === undefined) {
             formattedData[testCase][metric] = [];
           }
-          var newStructure = cleanData["Results"][testCase][metric];
+          var newStructure = cleanData[RESULTS][testCase][metric];
           GENERAL_ATTRIBUTES.forEach((generalAttribute) => {
-            if (generalAttribute === "Hash") {
+            if (generalAttribute === HASH) {
               if (cleanData[generalAttribute].length > 7) {
+                //@Todo: remove in the long since this is for SHA support
                 newStructure[generalAttribute] = cleanData[
                   generalAttribute
                 ].substring(0, 7);
@@ -225,7 +214,6 @@ class Receiver {
     });
     return formattedData;
   }
-  //@TODO Add interface
   cacheClear() {
     localStorage.clear();
     document.location.reload();
@@ -243,12 +231,6 @@ class Receiver {
     }
     localStorage.setItem(LATEST_ITEM, JSON.stringify(this.latestItem));
     localStorage.setItem(CWAData, JSON.stringify(this.CWAData));
-    if (DEBUG) {
-      console.log(` CACHE SAVE DATA: \n Latest: ${this.cacheGetLatestItem()}
-        \nALL: ${localStorage.getItem(CWAData).length}
-        
-        `);
-    }
   }
 }
 
