@@ -4,6 +4,7 @@ import Navbar from "../helpers/navbar";
 //This webpage provides information about the project
 export default class Home extends Page {
   render() {
+    super.render();
     return (
       <div class="homepage">
         <Navbar />

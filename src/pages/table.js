@@ -7,6 +7,7 @@ import "../helpers/table.css";
 //This the webpage that contains the metric tables.
 export default class TablePage extends Page {
   render() {
+    super.render();
     return (
       <div className="table_page">
         <Navbar />

@@ -12,7 +12,6 @@ export default class Page extends React.Component {
       mounted: false,
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
     };
-    setGlobalCSSVars(this.state.config);
   }
   componentDidMount() {
     if (!this.state.mounted) {
@@ -29,6 +28,9 @@ export default class Page extends React.Component {
     this.setState({
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
     });
+  }
+  render() {
+    setGlobalCSSVars(this.state.config);
   }
 }
 

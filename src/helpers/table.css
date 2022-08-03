@@ -1,9 +1,9 @@
-body{
+/* body{
     --tableFontSize:12px;
     --headTableFontSize: 16px;
     --textFontSize: 12px;
     --headTextFontSize: 16px
-}
+} */
 .table_labels{
     display:default;
 }

@@ -1,7 +1,12 @@
 export const DEBUG = false;
 export const GENERAL_ATTRIBUTES = ["Hash", "Year", "CommitDate", "isRelease"];
 export const TEST_VARIABLES = ["Number of Logs", "TPS"];
-export const IGNORE_ATTRIBUTES = [...GENERAL_ATTRIBUTES, "Link", "Data"];
+export const IGNORE_ATTRIBUTES = [
+  ...GENERAL_ATTRIBUTES,
+  "Link",
+  "Data",
+  "TestID",
+];
 //Metric Specific Configs
 export const UNITS = {
   procstat_cpu_usage: "%",

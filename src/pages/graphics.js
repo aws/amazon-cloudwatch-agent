@@ -7,6 +7,7 @@ import { BsFillCircleFill, BsSuitDiamondFill } from "react-icons/bs";
 //This webpage displays metrics graphs relative to the hashes
 export default class GraphicsPage extends Page {
   render() {
+    super.render();
     return (
       <div className="GraphicsPage">
         <Navbar />
