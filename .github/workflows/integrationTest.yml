@@ -215,7 +215,7 @@ jobs:
           go run integration/msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>' --tags=integration
           go run integration/msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__ --tags=integration
 
-      - uses: papeloto/action-zip@v1
+      - uses: vimtor/action-zip@v1
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         with:
           files: msi_dep/
