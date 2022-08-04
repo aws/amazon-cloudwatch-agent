@@ -11,6 +11,9 @@ on:
 jobs:
   clean-dedicated-hosts:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
