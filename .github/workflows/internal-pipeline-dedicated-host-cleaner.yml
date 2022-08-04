@@ -12,6 +12,9 @@ on:
 jobs:
   clean-dedicated-hosts:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v3
@@ -19,8 +22,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.INTERNAL_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.INTERNAL_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.INTERNAL_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Clean old dedicated host

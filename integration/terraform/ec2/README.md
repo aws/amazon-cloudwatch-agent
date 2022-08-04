@@ -10,12 +10,64 @@ Running integration tests
 This all assumes that you are creating resources in the `us-west-2` region, as that is currently the only region that
 supports the integration test AMIs.
 
-#### Terraform IAM user permissions
+#### Terraform IAM assume role permission
 
 For ease of use, here's a generated IAM policy based on resource usage that you can attach to your IAM user that
 Terraform will assume, with the required permissions. See docs
 on [Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
 for how to easily generate a new policy.
+
+#### Creating assume role
+[reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
+
+Cloud formation template. You only need to enter org and repo (ex aws amazon-cloudwatch-agent)
+```
+Parameters:
+  GitHubOrg:
+    Type: String
+  RepositoryName:
+    Type: String
+  OIDCProviderArn:
+    Description: Arn for the GitHub OIDC Provider.
+    Default: ""
+    Type: String
+
+Conditions:
+  CreateOIDCProvider: !Equals 
+    - !Ref OIDCProviderArn
+    - ""
+
+Resources:
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRoleWithWebIdentity
+            Principal:
+              Federated: !If 
+                - CreateOIDCProvider
+                - !Ref GithubOidc
+                - !Ref OIDCProviderArn
+            Condition:
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${RepositoryName}:*
+
+  GithubOidc:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: 
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+Outputs:
+  Role:
+    Value: !GetAtt Role.Arn 
+```
 
 ```json
 {
