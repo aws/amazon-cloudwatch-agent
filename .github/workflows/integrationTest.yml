@@ -224,9 +224,7 @@ jobs:
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           sudo apt install zip
-          mkdir buildMSI
-          cp -r msi_dep buildMSI
-          zip -r buildMSI.zip buildMSI
+          zip buildMSI.zip msi_dep/*
 
       - name: Upload zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
@@ -316,7 +314,7 @@ jobs:
           $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.11\bin;"
           $env:PATH = $env:PATH + $wixToolsetBinPath
           Expand-Archive buildMSI.zip -Force
-          cd buildMSI
+          cd buildMSI/msi_dep
           .\create_msi.ps1 ${{ github.sha }} ${{ secrets.S3_INTEGRATION_BUCKET }}
 
   #GH actions set up gpg only works on ubuntu as of this commit date
