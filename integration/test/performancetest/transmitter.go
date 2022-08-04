@@ -266,7 +266,7 @@ func (transmitter *TransmitterAPI) PacketMerger(newPacket map[string]interface{}
 		newAttributes[RESULTS] = mergedResults
 	}
 	if newPacket[IS_RELEASE] != nil {
-		newAttributes[IS_RELEASE] = true
+		newAttributes[IS_RELEASE] = newPacket[IS_RELEASE]
 	}
 	if newPacket[HASH] !=currentPacket[HASH]{
 		newAttributes[HASH] = newPacket[HASH]
