@@ -266,5 +266,8 @@ func TestUpdateCommit(t*testing.T){
 	return
 	}
 
-	dynamoDB.UpdateReleaseTag(releaseHash,releaseName)
+	err := dynamoDB.UpdateReleaseTag(releaseHash,releaseName)
+	if err!=nil{
+		t.Fatalf("Error: %s",err)
+	}
 }
