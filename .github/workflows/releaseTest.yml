@@ -49,5 +49,6 @@ jobs:
             cd integration/test/performancetest
             export IS_RELEASE=true
             export SHA=$GITHUB_SHA
+            export RELEASE_NAME=${{ github.event.release.tag_name }}
             go test -run TestUpdateCommit -p 1 -v --tags=integration
             

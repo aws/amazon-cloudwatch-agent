@@ -223,7 +223,7 @@ func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}, tps i
 		fmt.Println("Item already exist going to update", len(currentItem))
 	}
 	// item already exist so update the item instead
-	err = transmitter.UpdateItem(packet, tps) //try to update the item
+	err = transmitter.UpdateItem(packet[HASH].(string),packet, tps) //try to update the item
 	//this may be overwritten by other test threads, in that case it will return a specific error
 	if err != nil {
 		return "", err
@@ -268,6 +268,9 @@ func (transmitter *TransmitterAPI) PacketMerger(newPacket map[string]interface{}
 	if newPacket[IS_RELEASE] != nil {
 		newAttributes[IS_RELEASE] = true
 	}
+	if newPacket[HASH] !=currentPacket[HASH]{
+		newAttributes[HASH] = newPacket[HASH]
+	}
 	// newAttributes, _ := attributevalue.MarshalMap(mergedResults)
 	// newAttributes[IS_RELEASE] = &types.AttributeValueMemberBOOL{Value: true}
 	// return newAttributes, nil
@@ -283,11 +286,11 @@ Params:
 	targetAttributes: this is the targetAttribute to be added to the dynamo item
 	testHash: this is the hash of the last item, used like a version check
 */
-func (transmitter *TransmitterAPI) UpdateItem(packet map[string]interface{}, tps int) error {
+func (transmitter *TransmitterAPI) UpdateItem(hash string,packet map[string]interface{}, tps int) error {
 	var ae *types.ConditionalCheckFailedException // this exception represent the atomic check has failed
 	rand.Seed(time.Now().UnixNano())
 	randomSleepDuration := time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD)) * time.Second
-	hash := packet[HASH].(string)
+	// hash := packet[HASH].(string)
 	for attemptCount := 0; attemptCount < MAX_ATTEMPTS; attemptCount++ {
 		fmt.Println("Updating:", hash)
 		item, err := transmitter.Query(hash) // get most Up to date item from dynamo | O(1) bcs of global sec. idx.
@@ -355,12 +358,12 @@ UpdateReleaseTag()
 Desc: This function takes in a commit hash and updates the release value to true
 Param: commit hash in terms of string
 */
-func (transmitter *TransmitterAPI) UpdateReleaseTag(hash string) error {
+func (transmitter *TransmitterAPI) UpdateReleaseTag(hash string,tagName string) error {
 	var err error
 	packet := make(map[string]interface{})
-	packet[HASH] = hash
+	packet[HASH] = tagName
 	packet[IS_RELEASE] = true
-	err = transmitter.UpdateItem(packet, 0) //try to update the item
+	err = transmitter.UpdateItem(hash,packet, 0) //try to update the item
 	//this may be overwritten by other test threads, in that case it will return a specific error
 	if err != nil {
 		return err

@@ -30,6 +30,7 @@ const (
 	HASH = "Hash"
 	COMMIT_DATE= "CommitDate"
 	SHA_ENV  = "SHA"
+	RELEASE_NAME_ENV = "RELEASE_NAME"
 	SHA_DATE_ENV = "SHA_DATE"
 	IS_RELEASE = "isRelease"
 	TEST_ID ="TestID"
