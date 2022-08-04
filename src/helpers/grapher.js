@@ -154,7 +154,7 @@ export function Graph(props) {
             var n_variables = testVariables.length;
             for (var j = 0; j < n_variables; j++) {
               testCase += document.getElementById(
-                `testCase-${props.title}-${j}`
+                `testCase${props.title}-${j}`
               ).value;
               if (j < n_variables - 1) {
                 testCase += "-";
