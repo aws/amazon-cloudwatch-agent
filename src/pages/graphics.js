@@ -10,7 +10,7 @@ export default class GraphicsPage extends Page {
     super.render();
     return (
       <div className="GraphicsPage">
-        <Navbar />
+        <Navbar synced={this.state.synced}/>
         <div class="page_container">
           <div class="graph_content">
             <div class="header">

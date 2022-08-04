@@ -7,7 +7,7 @@ export default class Home extends Page {
     super.render();
     return (
       <div class="homepage">
-        <Navbar />
+        <Navbar synced={this.state.synced}/>
         <h2>CloudWatch Agent Performance Metrics</h2>
         <section>
           <h3>About CloudWatch Agent Performance Tracking</h3>

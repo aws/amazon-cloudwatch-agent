@@ -11,6 +11,7 @@ export default class Page extends React.Component {
       data: [], //CWAdata
       mounted: false,
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
+      synced: false,
     };
   }
   componentDidMount() {
@@ -18,8 +19,9 @@ export default class Page extends React.Component {
       if (localStorage.getItem("config") == null) {
         localStorage.setItem("config", JSON.stringify(this.state.config));
       }
-      this.state.Receiver.update().then(() => {
-        this.setState({ data: this.state.Receiver.CWAData });
+      this.state.Receiver.update().then((sync) => {
+        console.log(sync)
+        this.setState({ data: this.state.Receiver.CWAData ,synced: sync});
       });
     }
     this.setState({ mounted: true });
@@ -31,6 +33,7 @@ export default class Page extends React.Component {
   }
   render() {
     setGlobalCSSVars(this.state.config);
+    return(<div></div>)
   }
 }
 

@@ -32,7 +32,7 @@ class Receiver {
   Desc: This function async. updates the local storage by comparing latest 
   item in dynamo and the latest item in local storage. If found a difference
   it updates them by calling getBatchItem to retrieve new data from dynamo
-  Return: Updated Data stored in local storage
+  Return: if the sync is successful or not
   */
   async update() {
     // check the latest hash from cache
@@ -47,13 +47,14 @@ class Receiver {
         this.CWAData = await this.getAllItems();
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
-        return;
+        return true;
       } else {
         cacheLatestHash = cacheLatestItem[HASH];
         this.CWAData = this.cacheGetAllData();
       }
 
       if (DynamoHash === cacheLatestHash) {
+        return true // already synced
       } else if (
         parseInt(dynamoLatestItem[COMMIT_DATE]) >=
         parseInt(cacheLatestItem[COMMIT_DATE])
@@ -80,14 +81,21 @@ class Receiver {
         });
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
+        return true // now synced
       }
+      // website is ahead of dynamo
+      //clear cache and retry 
+      this.cacheClear()
+      this.update()
     } catch (err) {
       console.log(`ERROR:${err}`);
       alert(`ERROR:${err}`);
       if (this.cacheGetLatestItem === undefined) {
-        return {};
+        return false
       }
-      return this.cacheGetAllData();
+      this.CWAData = this.cacheGetAllData()
+      // return this.cacheGetAllData();
+      return false //couldnt sync
     }
   }
 

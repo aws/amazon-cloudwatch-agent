@@ -5,7 +5,7 @@ import { FaHome, FaTable, FaChartLine, FaBookOpen } from "react-icons/fa";
 import logo from "../icons/inverselogo.png";
 
 // This component handles navigation between page components.
-export default function Navbar() {
+export default function Navbar(props) {
   return (
     <div class="navbar">
       <ul>
@@ -35,6 +35,13 @@ export default function Navbar() {
             <FaBookOpen />
             Wiki
           </Link>
+        </li>
+        <li className="right">
+          <div className="sync_info">
+            <label style={{ backgroundColor: props.synced? "green":"gray"}}>
+              {props.synced ? "Synced" : "Out of Sync"}
+            </label>
+          </div>
         </li>
       </ul>
     </div>
