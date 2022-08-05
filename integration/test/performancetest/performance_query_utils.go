@@ -198,6 +198,12 @@ func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, age
 
 	//add actual test data with statistics
 	for _, result := range metrics.MetricDataResults {
+		//convert memory bytes to MB
+		if (*result.Label == "procstat_memory_rss") {
+			for i, val := range(result.Values) {
+				result.Values[i] = val / (1000000)
+			}
+		}
 		stats:= CalcStats(result.Values)
 		testMetricResults[*result.Label] = stats
 	}
