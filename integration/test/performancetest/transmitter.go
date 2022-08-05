@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/google/uuid"
 )
 
 const (
@@ -223,7 +224,7 @@ func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}, tps i
 		fmt.Println("Item already exist going to update", len(currentItem))
 	}
 	// item already exist so update the item instead
-	err = transmitter.UpdateItem(packet[HASH].(string),packet, tps) //try to update the item
+	err = transmitter.UpdateItem(packet[HASH].(string), packet, tps) //try to update the item
 	//this may be overwritten by other test threads, in that case it will return a specific error
 	if err != nil {
 		return "", err
@@ -268,7 +269,7 @@ func (transmitter *TransmitterAPI) PacketMerger(newPacket map[string]interface{}
 	if newPacket[IS_RELEASE] != nil {
 		newAttributes[IS_RELEASE] = newPacket[IS_RELEASE]
 	}
-	if newPacket[HASH] !=currentPacket[HASH]{
+	if newPacket[HASH] != currentPacket[HASH] {
 		newAttributes[HASH] = newPacket[HASH]
 	}
 	// newAttributes, _ := attributevalue.MarshalMap(mergedResults)
@@ -286,7 +287,7 @@ Params:
 	targetAttributes: this is the targetAttribute to be added to the dynamo item
 	testHash: this is the hash of the last item, used like a version check
 */
-func (transmitter *TransmitterAPI) UpdateItem(hash string,packet map[string]interface{}, tps int) error {
+func (transmitter *TransmitterAPI) UpdateItem(hash string, packet map[string]interface{}, tps int) error {
 	var ae *types.ConditionalCheckFailedException // this exception represent the atomic check has failed
 	rand.Seed(time.Now().UnixNano())
 	randomSleepDuration := time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD)) * time.Second
@@ -310,19 +311,23 @@ func (transmitter *TransmitterAPI) UpdateItem(hash string,packet map[string]inte
 		}
 		//setup the update expression
 		expressionAttributeValues := make(map[string]types.AttributeValue)
+		expressionAttributeNames := make(map[string]string)
 		expression := "set "
 		n_expression := len(targetAttributes)
 		i := 0
 		for attribute, value := range targetAttributes {
-			expressionName := ":" + strings.ToLower(attribute)
-			expression += fmt.Sprintf("%s = %s", attribute, expressionName)
-			expressionAttributeValues[expressionName] = value
+			expressionKey := ":" + strings.ToLower(attribute)
+			expressionName := "#" + strings.ToLower(attribute)
+			expression += fmt.Sprintf("%s = %s", expressionName, expressionKey)
+			expressionAttributeValues[expressionKey] = value
+			expressionAttributeNames[expressionName] = attribute
 			if n_expression-1 > i {
 				expression += ", "
 			}
 			i++
 		}
 		expressionAttributeValues[":testID"] = &types.AttributeValueMemberS{Value: testHash}
+		expressionAttributeNames["#testID"] = TEST_ID
 		//call update
 		_, err = transmitter.dynamoDbClient.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
 			TableName: aws.String(transmitter.DataBaseName),
@@ -333,9 +338,7 @@ func (transmitter *TransmitterAPI) UpdateItem(hash string,packet map[string]inte
 			UpdateExpression:          aws.String(expression),
 			ExpressionAttributeValues: expressionAttributeValues,
 			ConditionExpression:       aws.String("#testID = :testID"),
-			ExpressionAttributeNames: map[string]string{
-				"#testID": TEST_ID,
-			},
+			ExpressionAttributeNames:  expressionAttributeNames,
 		})
 		if errors.As(err, &ae) { //check if our call got overwritten
 			// item has changed
@@ -358,12 +361,13 @@ UpdateReleaseTag()
 Desc: This function takes in a commit hash and updates the release value to true
 Param: commit hash in terms of string
 */
-func (transmitter *TransmitterAPI) UpdateReleaseTag(hash string,tagName string) error {
+func (transmitter *TransmitterAPI) UpdateReleaseTag(hash string, tagName string) error {
 	var err error
 	packet := make(map[string]interface{})
 	packet[HASH] = tagName
 	packet[IS_RELEASE] = true
-	err = transmitter.UpdateItem(hash,packet, 0) //try to update the item
+	packet[TEST_ID] = uuid.New().String()
+	err = transmitter.UpdateItem(hash, packet, 0) //try to update the item
 	//this may be overwritten by other test threads, in that case it will return a specific error
 	if err != nil {
 		return err
