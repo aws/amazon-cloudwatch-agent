@@ -2,8 +2,6 @@
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'
      xmlns:util='http://schemas.microsoft.com/wix/UtilExtension'>
 
-  <?define FixPermissionScriptAction=""powershell.exe" -ExecutionPolicy Bypass -File "[INSTALLDIR]permission.ps1"?>
-
   <Product Id='*'
     Name='Amazon CloudWatch Agent'
     UpgradeCode='c537c936-91b3-4270-94d7-e128acfc3e86'
@@ -26,7 +24,13 @@
     />
 
     <MediaTemplate EmbedCab='yes' />
-
+    <Property Id="POWERSHELLEXE">
+      <RegistrySearch Id="POWERSHELLEXE"
+                      Type="raw"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell"
+                      Name="Path" />
+    </Property>
     <Feature Id='ProductFeature' Title="Amazon CloudWatch Agent" Level='1'>
       <ComponentRef Id='StarterEXE' />
       <ComponentRef Id='AgentEXE' />
@@ -200,11 +204,22 @@
             <CreateFolder />
         </Component>
     </DirectoryRef>
-
-    <CustomAction Id="UpdateConfigPermission" Directory="INSTALLDIR" ExeCommand="$(var.FixPermissionScriptAction)" Execute="deferred" Return="check" Impersonate="no" />
+     <!-- Find and use powershell to run the command, because just running "powershell.exe" did not resolve (not in ENV path) when using "WixQuietExec".-->
+    <SetProperty Id="QtExecUpdateConfigPermission" 
+        Sequence="execute"
+        Before ="QtExecUpdateConfigPermission"
+        Value='&quot;[POWERSHELLEXE]&quot;  -ExecutionPolicy Bypass -File "[INSTALLDIR]permission.ps1" ' 
+    />
+    <!-- Setup a silent execution contrainer around the command -->
+    <CustomAction Id="QtExecUpdateConfigPermission" 
+    BinaryKey="WixCA" 
+    DllEntry="WixQuietExec" 
+    Execute="deferred" 
+    Return="check" 
+    Impersonate="no" />
 
     <InstallExecuteSequence>
-        <Custom Action="UpdateConfigPermission" After="InstallFiles">NOT UPGRADINGPRODUCTCODE AND NOT (REMOVE~="ALL")</Custom>
+    <Custom Action="QtExecUpdateConfigPermission" After="InstallFiles">NOT UPGRADINGPRODUCTCODE AND NOT (REMOVE~="ALL")</Custom>
     </InstallExecuteSequence>
 
     <MajorUpgrade AllowDowngrades="yes"/>
