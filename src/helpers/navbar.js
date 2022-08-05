@@ -33,12 +33,12 @@ export default function Navbar(props) {
         <li>
           <Link to="/wiki">
             <FaBookOpen />
-            Wiki
+            Wiki&nbsp;&nbsp;&nbsp;&nbsp;
           </Link>
         </li>
         <li className="right">
           <div className="sync_info">
-            <label style={{ backgroundColor: props.synced? "green":"gray"}}>
+            <label style={{ backgroundColor: props.synced? "#259E36":"gray"}}>
               {props.synced ? "Synced" : "Out of Sync"}
             </label>
           </div>

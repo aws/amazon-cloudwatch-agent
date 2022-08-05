@@ -22,9 +22,10 @@ export const DynamicMenu = () => {
 };
 export default class WikiPage extends Page {
   render() {
+    super.render();
     return (
       <div class="wiki_page">
-        <Navbar synced={this.state.synced}/>
+        <Navbar synced={this.state.synced} />
         <h2>WikiPage</h2>
         <ScrollingProvider>
           <div class="container">
@@ -71,7 +72,13 @@ export default class WikiPage extends Page {
                     </li>
                   </ul>
                 </p>
-                <source src="" type="video/mp4"/>
+                <video width={480} height={360} controls>
+                  <source
+                    src=""
+                    type="video/mp4"
+                  />
+                  Your browser does not support the video tag.
+                </video>
                 <h4>Graph</h4>
                 <p>
                   The graph webage provides visualizations of the collected data
@@ -108,7 +115,13 @@ export default class WikiPage extends Page {
                     </li>
                   </ul>
                 </p>
-                <source src="/video/tableVideo.mp4" type="video/mp4"/>
+                <video width={480} height={360} controls>
+                  <source
+                    src=""
+                    type="video/mp4"
+                  />
+                  Your browser does not support the video tag.
+                </video>
               </Section>
               <Section id="Data Addition">
                 <h3>How to add data</h3>

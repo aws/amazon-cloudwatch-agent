@@ -5,12 +5,13 @@ import Setting, { MetricSettingsBox } from "./settings";
 import "../helpers/graph.css";
 import { BsFillCircleFill, BsSuitDiamondFill } from "react-icons/bs";
 //This webpage displays metrics graphs relative to the hashes
+const MONITOR_RESOLUTION = 2048/1152 -0.2
 export default class GraphicsPage extends Page {
   render() {
     super.render();
     return (
       <div className="GraphicsPage">
-        <Navbar synced={this.state.synced}/>
+        <Navbar synced={this.state.synced} />
         <div class="page_container">
           <div class="graph_content">
             <div class="header">
@@ -92,6 +93,12 @@ export default class GraphicsPage extends Page {
                   type="select"
                   range={[1, 6, 1, ""]}
                   page={this}
+                  onChange={(event)=>{
+                    var resolution = window.screen.availWidth/window.screen.availHeight
+                    if (resolution < MONITOR_RESOLUTION && event.target.value > 3){
+                        alert("This graph size is NOT RECOMMENDED for you resolution")
+                    }
+                  }}
                 />
                 <Setting
                   title="Number of Last Commits"

@@ -14,6 +14,11 @@ body{
     margin-top: 2%;
     text-align: left;
 }
+.wiki_page video{
+    position: relative;
+    padding-left: 30%;
+    padding-right: 30%;
+}
 .wiki_page h3 {
     padding: 2%;
     padding-left: 0%;
@@ -38,7 +43,7 @@ body{
     display: flex;
 }
 .index{
-    flex: 15%;
+    flex: 10%;
     border-right: 1px solid #000;
     justify-content: center;
     /* margin-top: 3%; */
@@ -60,7 +65,7 @@ body{
     width: 100%;
 }
 .index li:hover{
-    color: blue;
+    color: rgb(189, 1, 170);
     cursor: pointer;
 
 }

@@ -32,16 +32,21 @@ export default function Setting(props) {
       }
       var options = [];
       for (var i = props.range[0]; i < props.range[1]; i = i + props.range[2]) {
-        options.push(
-          <option
-            selected={i === defaultValue ? "selected" : ""}
-            value={i}
-          >{`${i} ${props.range[3]}`}</option>
-        );
+        if (i === defaultValue*1) {
+          options.push(
+            <option selected value={i}>{`${i} ${props.range[3]}`}</option>
+          );
+          continue;
+        }
+        options.push(<option value={i}>{`${i} ${props.range[3]}`}</option>);
       }
       inputType = (
         <select
           onChange={(event) => {
+            debugger;
+            if (props.onChange !== undefined) {
+              props.onChange(event);
+            }
             saveSetting(key, event.target.value);
             if (props.page !== undefined) {
               props.page.updateConfig();
@@ -112,9 +117,6 @@ export function MetricSettingsBox(props) {
   return (
     <div class="metric_setting_box">
       <h3>Metric Settings</h3>
-      <h2>
-        <br></br>
-      </h2>
       {metricSpecificSettings}
     </div>
   );

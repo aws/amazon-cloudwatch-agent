@@ -45,6 +45,7 @@
     width: 150px;
     height: 30px;
     right: 0px;
+    
 }
 .sync_info > label{
     position: absolute;
@@ -60,5 +61,6 @@
     text-align: center;
     justify-content: center;
     font-size: large;
+    border: solid #008008 1px
     
 }

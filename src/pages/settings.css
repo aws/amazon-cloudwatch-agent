@@ -13,8 +13,10 @@
     justify-content: center;
     width: 100%;
     /* position: fixed; */
-    /* margin: 5%; */
+    margin: 1%;
     text-align:center;
+    padding: 3%;
+
 }
 .metric_setting_box{
     display: block;
@@ -23,21 +25,25 @@
     /* position: fixed; */
     /* margin-top:25%; */
     text-align:center;
+    /* overflow-y: scroll; */
 }
 .metric_setting_box > .setting{
-    width: 85%;
+    width: 80%;
     margin-left: 10%;
     margin-right: 10%;
 }
 .setting{
     width: 80%;
-    margin-left: 10%;
-    margin-right: 10%;
+    margin-left: 5%;
+    margin-right: 5%;
     margin-top: 0%;
-    margin-bottom: 0%;
-    padding: 2%;
+    margin-bottom: 5%;
+    padding: 4%;
     /* background-color: brown; */
-    border: 1px solid gray;
+    /* border: 1px solid gray; */
+    background-color: #ffd7e6;
+    border: 1px solid palevioletred;
+    border-radius: 100px;
     font-size: large;
     justify-content: center;
     text-align: left;
@@ -45,17 +51,21 @@
 }
 .setting select{
     padding: 1%;
-    margin: 3%;
-    width: 100px;
+    margin: 4%;
+    margin-right: 5%;
+    width: auto;
     right: 0px;
     top: 0px;
     position: absolute;
+    border-radius: 25px;
 }
 .setting input{
-    padding: 1%;
+    padding: 2%;
     margin: 3%;
-    width: 100px;
+    width: 50px;
     right: 0px;
     top: 0px;
     position: absolute;
+    border-radius: 25px;
+    border: gray 1px solid;
 }

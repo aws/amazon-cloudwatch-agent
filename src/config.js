@@ -10,7 +10,7 @@ export const IGNORE_ATTRIBUTES = [
 //Metric Specific Configs
 export const UNITS = {
   procstat_cpu_usage: "%",
-  procstat_memory_rss: "B",
+  procstat_memory_rss: "MB",
 };
 export const MetricConfigs = ["thresholds"];
 const N_METRIC = 2; //number of metrics

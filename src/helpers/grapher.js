@@ -11,16 +11,13 @@ import {
   ReferenceLine,
 } from "recharts";
 import "./graph.css";
-import { IGNORE_ATTRIBUTES, TEST_VARIABLES, N_STATS } from "../config";
+import { IGNORE_ATTRIBUTES, TEST_VARIABLES, N_STATS,UNITS } from "../config";
 
 const IGNORE_ATTRIBUTES_GRAPH = IGNORE_ATTRIBUTES + ["Period", "Std"];
 const MAX_COLOUR = 0xff;
 const MIN_COLOUR = 0x11;
 const COLOUR_DIFF_CONST = Math.floor((MAX_COLOUR - MIN_COLOUR) / N_STATS);
-export const UNITS = {
-  procstat_cpu_usage: "%",
-  procstat_memory_rss: "B",
-};
+
 
 /*This function is given a seed and a index 
 and return a hex colour in string format. 
@@ -148,7 +145,7 @@ export function Graph(props) {
       <div class="select_box">
         <label>{TEST_VARIABLES[i]}</label>
         <select
-          id={`testCase${props.title}-${i}`}
+          id={`testCase-${props.title}-${i}`}
           onChange={() => {
             var testCase = "";
             var n_variables = testVariables.length;
@@ -161,6 +158,7 @@ export function Graph(props) {
               }
             }
             setCurrentTest(testCase);
+            
           }}
         >
           {options}
@@ -195,7 +193,7 @@ export function Graph(props) {
           props.data.length
         )}
         margin={{ top: 5, right: 30 }}
-        style={{ overflowY: "hidden" }}
+        style={{ overflowY: "hidden"}}
       >
         {metricLines}
         <Tooltip content={<CustomToolTip config={props.config} />} />

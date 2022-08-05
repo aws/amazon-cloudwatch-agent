@@ -47,7 +47,7 @@ export default class TablePage extends Page {
               <div class="title">
                 <h2>Settings</h2>
               </div>
-              <br></br>
+              {/* <br></br> */}
               <div class="setting_box">
                 <Setting
                   title="Significant Figure"
