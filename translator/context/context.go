@@ -113,7 +113,7 @@ func (ctx *Context) SetMode(mode string) {
 	case config.ModeOnPrem,config.ModeOnPremise:
 		ctx.mode = config.ModeOnPrem
 	default:
-		log.Panicf("Invalid mode %s. Valid mode values are %s and %s.", mode, config.ModeEC2, config.ModeOnPrem)
+		log.Panicf("Invalid mode %s. Valid mode values are %s, %s and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise)
 	}
 }
 
