@@ -1,11 +1,6 @@
 import AWS from "aws-sdk";
 import axios from "axios"
 import { DEBUG, GENERAL_ATTRIBUTES, BATCH_SIZE } from "../config";
-AWS.config.update({
-  region: "us-west-2",
-  secretAccessKey: process.env.REACT_APP_TERRAFORM_AWS_SECRET_ACCESS_KEY,
-  accessKeyId: process.env.REACT_APP_TERRAFORM_AWS_ACCESS_KEY_ID,
-});
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
 const RELEASE_LIST = "ReleaseList"
@@ -19,7 +14,6 @@ const GATEWAY_LINK = process.env.REACT_APP_GATEWAY
 //This class handles the entire frontend from pulling to formatting data
 class Receiver {
   constructor(DataBaseName) {
-    this.dyanamoClient = new AWS.DynamoDB({ apiVersion: "2012-08-10" });
     this.DataBaseName = DataBaseName;
     this.CWAData = null;
     this.ReleaseMap = {};//hash map
@@ -45,8 +39,6 @@ class Receiver {
   */
   async update() {
     // check the latest hash from cache
-    var date = new Date()
-    var start= date.getTime()
     try {
       let dynamoLatestItem = await this.getLatestItem();
       let DynamoHash = dynamoLatestItem[HASH];
@@ -58,8 +50,6 @@ class Receiver {
         this.CWAData = await this.getAllItems();
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
-        date = new Date()
-        console.log(date.getTime()-start)
         return true;
       } else {
         cacheLatestHash = cacheLatestItem[HASH];
@@ -94,7 +84,6 @@ class Receiver {
         });
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
-        // console.log(Date.getTime()-start)
         return this.updateReleases() // now synced
       }
       // website is ahead of dynamo
@@ -108,7 +97,6 @@ class Receiver {
         return false
       }
       this.CWAData = this.cacheGetAllData()
-      // return this.cacheGetAllData();
       return false //couldnt sync
     }
   }
@@ -159,8 +147,8 @@ class Receiver {
 
       ScanIndexForward: false,
     };
-    var retData = await this.dyanamoClient.query(params).promise();
-    // var cleanData = this.formatData(retData.Items);
+    var retData = await this.callGateway(params)
+    // var retData = await this.dyanamoClient.query(params).promise();
     return retData.Items
   }
   /*getLatestItem()
