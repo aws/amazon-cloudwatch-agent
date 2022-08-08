@@ -11,13 +11,12 @@ import {
   ReferenceLine,
 } from "recharts";
 import "./graph.css";
-import { IGNORE_ATTRIBUTES, TEST_VARIABLES, N_STATS,UNITS } from "../config";
+import { IGNORE_ATTRIBUTES, TEST_VARIABLES, N_STATS, UNITS } from "../config";
 
 const IGNORE_ATTRIBUTES_GRAPH = IGNORE_ATTRIBUTES + ["Period", "Std"];
 const MAX_COLOUR = 0xff;
 const MIN_COLOUR = 0x11;
 const COLOUR_DIFF_CONST = Math.floor((MAX_COLOUR - MIN_COLOUR) / N_STATS);
-
 
 /*This function is given a seed and a index 
 and return a hex colour in string format. 
@@ -151,14 +150,13 @@ export function Graph(props) {
             var n_variables = testVariables.length;
             for (var j = 0; j < n_variables; j++) {
               testCase += document.getElementById(
-                `testCase${props.title}-${j}`
+                `testCase-${props.title}-${j}`
               ).value;
               if (j < n_variables - 1) {
                 testCase += "-";
               }
             }
             setCurrentTest(testCase);
-            
           }}
         >
           {options}
@@ -193,7 +191,7 @@ export function Graph(props) {
           props.data.length
         )}
         margin={{ top: 5, right: 30 }}
-        style={{ overflowY: "hidden"}}
+        style={{ overflowY: "hidden" }}
       >
         {metricLines}
         <Tooltip content={<CustomToolTip config={props.config} />} />
