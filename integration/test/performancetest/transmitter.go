@@ -291,7 +291,6 @@ func (transmitter *TransmitterAPI) UpdateItem(hash string, packet map[string]int
 	var ae *types.ConditionalCheckFailedException // this exception represent the atomic check has failed
 	rand.Seed(time.Now().UnixNano())
 	randomSleepDuration := time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD)) * time.Second
-	// hash := packet[HASH].(string)
 	for attemptCount := 0; attemptCount < MAX_ATTEMPTS; attemptCount++ {
 		fmt.Println("Updating:", hash)
 		item, err := transmitter.Query(hash) // get most Up to date item from dynamo | O(1) bcs of global sec. idx.
