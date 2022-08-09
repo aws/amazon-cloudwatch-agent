@@ -81,7 +81,7 @@ export function ErrorHandler(props) {
   return (
     <div>
       <Snackbar open={props.error !== null && errorMsg !==""}>
-        <MuiAlert severity={errorType}>{errorType.toUpperCase()}{errorMsg}</MuiAlert>
+        <MuiAlert severity={errorType}>{errorType.toUpperCase()}: {errorMsg}</MuiAlert>
       </Snackbar>
     </div>
   );
