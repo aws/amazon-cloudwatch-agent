@@ -1,4 +1,4 @@
-import Page, {ErrorHandler} from "./page";
+import Page, { ErrorHandler } from "./page";
 import "./homepage.css";
 import Navbar from "../helpers/navbar";
 //This webpage provides information about the project
@@ -7,7 +7,7 @@ export default class Home extends Page {
     super.render();
     return (
       <div class="homepage">
-        <Navbar synced={this.state.synced}/>
+        <Navbar synced={this.state.synced} />
         <h2>CloudWatch Agent Performance Metrics</h2>
         <section>
           <h3>About CloudWatch Agent Performance Tracking</h3>
@@ -43,7 +43,7 @@ export default class Home extends Page {
         <section>
           <h3>Need Assistance?</h3>
           <p>
-            Read our FAQ below
+            Read the Troubleshooting section on our Wiki
             <div>
               <br></br>
             </div>
@@ -89,8 +89,8 @@ export default class Home extends Page {
             .
           </p>
         </section>
-        <br/>
-        <ErrorHandler error={this.state.error}/>
+        <br />
+        <ErrorHandler error={this.state.error} />
       </div>
     );
   }
