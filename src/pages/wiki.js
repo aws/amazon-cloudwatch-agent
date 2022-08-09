@@ -1,5 +1,5 @@
 import Navbar from "../helpers/navbar";
-import Page from "./page";
+import Page, {ErrorHandler} from "./page";
 import "./wiki.css";
 import {
   ScrollingProvider,
@@ -72,13 +72,6 @@ export default class WikiPage extends Page {
                     </li>
                   </ul>
                 </p>
-                <video width={480} height={360} controls>
-                  <source
-                    src=""
-                    type="video/mp4"
-                  />
-                  Your browser does not support the video tag.
-                </video>
                 <h4>Graph</h4>
                 <p>
                   The graph webage provides visualizations of the collected data
@@ -115,13 +108,6 @@ export default class WikiPage extends Page {
                     </li>
                   </ul>
                 </p>
-                <video width={480} height={360} controls>
-                  <source
-                    src=""
-                    type="video/mp4"
-                  />
-                  Your browser does not support the video tag.
-                </video>
               </Section>
               <Section id="Data Addition">
                 <h3>How to add data</h3>
@@ -163,19 +149,31 @@ export default class WikiPage extends Page {
               <Section id="Troubleshooting">
                 <h3>Troubleshooting</h3>
                 <p>
-                  <ul>
-                    <li>Refresh the page</li>
-                    <li>
-                      Click the "Clear Cache" button at the bottom of the home
-                      page in the FAQ
-                    </li>
-                    <li>Clear your browser's cache</li>
-                  </ul>
+                  Q: Graphs or Table are not updated when I refresh?
+                  <br />
+                  A: Hit this button{" "}
+                  <button
+                    title="Click"
+                    style={{ width: "15%", height: "24px" }}
+                    onClick={() => {
+                      this.state.Receiver.cacheClear();
+                    }}
+                  >
+                    Troubleshoot
+                  </button>
+                </p>
+                <p>
+                  Q: How can I update table and graph data and recieve most
+                  recent commits
+                  <br />
+                  A: Refresh the page, if it still doesn't work revert to
+                  previous FAQ.
                 </p>
               </Section>
             </div>
           </div>
         </ScrollingProvider>
+        <ErrorHandler error={this.state.error}/>
       </div>
     );
   }

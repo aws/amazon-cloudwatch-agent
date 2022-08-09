@@ -29,7 +29,3 @@ body{
     padding-top: 2%;
     font-size: var(--fontSize);
 }
-.homepage button{
-    background-color: #ffd7e6;
-    border: 1px solid palevioletred;
-}

@@ -134,6 +134,7 @@
 .select_box select{
     position: absolute;
     right: 10px;
+    top: 8px;
     margin-right: 0%;
     margin-left: 5%;
     border-radius: 25px;

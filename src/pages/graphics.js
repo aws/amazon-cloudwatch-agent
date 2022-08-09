@@ -1,11 +1,11 @@
-import Page from "./page";
+import Page, {ErrorHandler} from "./page";
 import Grapher from "../helpers/grapher";
 import Navbar from "../helpers/navbar";
 import Setting, { MetricSettingsBox } from "./settings";
 import "../helpers/graph.css";
 import { BsFillCircleFill, BsSuitDiamondFill } from "react-icons/bs";
 //This webpage displays metrics graphs relative to the hashes
-const MONITOR_RESOLUTION = 2048/1152 -0.2
+const MONITOR_RESOLUTION = 2048/1152 +0.2
 export default class GraphicsPage extends Page {
   render() {
     super.render();
@@ -96,7 +96,12 @@ export default class GraphicsPage extends Page {
                   onChange={(event)=>{
                     var resolution = window.screen.availWidth/window.screen.availHeight
                     if (resolution < MONITOR_RESOLUTION && event.target.value > 3){
-                        alert("This graph size is NOT RECOMMENDED for you resolution")
+                      this.setState(
+                        {error:[
+                          "warning",
+                          "This graph size is NOT RECOMMENDED for you resolution"
+                        ]}
+                      ) 
                     }
                   }}
                 />
@@ -113,6 +118,7 @@ export default class GraphicsPage extends Page {
             </div>
           </div>
         </div>
+        <ErrorHandler error={this.state.error}/>
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import Page from "./page";
+import Page, {ErrorHandler} from "./page";
 import "./homepage.css";
 import Navbar from "../helpers/navbar";
 //This webpage provides information about the project
@@ -89,30 +89,8 @@ export default class Home extends Page {
             .
           </p>
         </section>
-        <section style={{ "margin-bottom": "3%" }}>
-          <h3> FAQ</h3>
-          <p>
-            Q: Graphs or Table are not updated when I refresh?
-            <br />
-            A: Hit this button{" "}
-            <button
-              title="Click"
-              style={{ width: "15%", height: "24px" }}
-              onClick={() => {
-                this.state.Receiver.cacheClear();
-              }}
-            >
-              Clear Cache
-            </button>
-          </p>
-          <p>
-            Q: How can I update table and graph data and recieve most recent
-            commits
-            <br />
-            A: Refresh the page, if it still doesn't work revert to previous
-            FAQ.
-          </p>
-        </section>
+        <br/>
+        <ErrorHandler error={this.state.error}/>
       </div>
     );
   }

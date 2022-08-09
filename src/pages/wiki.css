@@ -7,17 +7,16 @@ body{
     text-align: center;
     list-style-type: circle;
 }
+.wiki_page button{
+    background-color: #ffd7e6;
+    border: 1px solid palevioletred;
+}
 .wiki_page section{
     margin: 1%;
     margin-left: 5%;
     margin-right: 5%;
     margin-top: 2%;
     text-align: left;
-}
-.wiki_page video{
-    position: relative;
-    padding-left: 30%;
-    padding-right: 30%;
 }
 .wiki_page h3 {
     padding: 2%;

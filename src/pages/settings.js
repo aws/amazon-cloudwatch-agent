@@ -43,7 +43,6 @@ export default function Setting(props) {
       inputType = (
         <select
           onChange={(event) => {
-            debugger;
             if (props.onChange !== undefined) {
               props.onChange(event);
             }

@@ -186,6 +186,13 @@ export function Graph(props) {
       <LineChart
         width={487.5 + 162.5 * size}
         height={300 + 75 * size}
+        /*
+        width & height are calculated by linear regression between
+        graph size(gs) 3 and 5.  gs 3 is desgined to fit to work laptops
+        with resolution of 1920x1080. While gs 5 is designed for amazon's 
+        monitors 
+
+        */
         data={props.data[currentTestCase][props.metric].slice(
           -props.config.nLastCommits,
           props.data.length

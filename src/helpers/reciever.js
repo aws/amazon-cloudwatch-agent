@@ -35,7 +35,7 @@ class Receiver {
   Desc: This function async. updates the local storage by comparing latest 
   item in dynamo and the latest item in local storage. If found a difference
   it updates them by calling getBatchItem to retrieve new data from dynamo
-  Return: if the sync is successful or not
+  Returns:  a list where [sync,error msg]; sync represent if cache is synced with dynamo
   */
   async update() {
     // check the latest hash from cache
@@ -50,7 +50,7 @@ class Receiver {
         this.CWAData = await this.getAllItems();
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
-        return true;
+        return [true,""];
       } else {
         cacheLatestHash = cacheLatestItem[HASH];
         this.CWAData = this.cacheGetAllData();
@@ -91,15 +91,18 @@ class Receiver {
       this.cacheClear()
       this.update()
     } catch (err) {
-      console.log(`ERROR:${err}`);
-      alert(`ERROR:${err}`);
       if (this.cacheGetLatestItem === undefined) {
-        return false
+        return [false,err]
       }
       this.CWAData = this.cacheGetAllData()
-      return false //couldnt sync
+      return [false,err] //couldnt sync
     }
   }
+  /*updateReleases()
+  Desc: This function async. queries all releases and checks
+  if they are in cache, if not updates the data and saves them to cache.
+  Returns:  a list where [sync,error msg]; sync represent if cache is synced with dynamo
+  */
   async updateReleases(){
     //release backtracking
     try{
@@ -123,11 +126,10 @@ class Receiver {
         this.ReleaseMap[item[HASH].S] = true
         this.cacheSaveData()
       })
-      return true
+      return [true,""]
     }
     catch(err){
-      alert(`ERROR:${err}`);
-      return false
+      return [false,err]
     }
     
   }
@@ -252,7 +254,6 @@ class Receiver {
       },
       data : data
     };
-    console.log(data)
     var out = axios(config)
     .then(function (response) {
       return response.data.body

@@ -1,4 +1,4 @@
-import Page from "./page";
+import Page, {ErrorHandler} from "./page";
 import Navbar from "../helpers/navbar";
 import TableGroup from "../helpers/BasicTable";
 import Setting from "./settings";
@@ -74,6 +74,7 @@ export default class TablePage extends Page {
             </div>
           </div>
         </div>
+        <ErrorHandler error={this.state.error}/>
       </div>
     );
   }
