@@ -43,7 +43,7 @@ export default class Home extends Page {
         <section>
           <h3>Need Assistance?</h3>
           <p>
-            Read the Troubleshooting section on our Wiki
+            Read the Troubleshooting section on our Wiki.
             <div>
               <br></br>
             </div>
