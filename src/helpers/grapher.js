@@ -137,6 +137,7 @@ export function Graph(props) {
   testVariables.forEach((varSet, i) => {
     var options = [];
     varSet.forEach((value) => {
+      //@TODO FIX BUG SET DEFAULT PLSZZZ
       options.push(<option>{value}</option>);
     });
 

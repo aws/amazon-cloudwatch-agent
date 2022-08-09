@@ -1,5 +1,6 @@
 import AWS from "aws-sdk";
 import axios from "axios"
+import { debug } from "util";
 import { DEBUG, GENERAL_ATTRIBUTES, BATCH_SIZE } from "../config";
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
@@ -113,10 +114,16 @@ class Receiver {
           return
         }
         //new 
-        Object.keys(item[RESULTS].M).forEach((testCase,testCaseValue)=>{
+        Object.keys(item[RESULTS].M).forEach((testCase)=>{
+          var testCaseValue = item[RESULTS].M[testCase].M
           Object.keys(testCaseValue).forEach((metric)=>{
             //update link and release tag
-            this.CWAData[testCase][metric][IS_RELEASE] = true
+            this.CWAData[testCase][metric].forEach((_,idx)=>{
+              if(this.CWAData[testCase][metric][idx][HASH]==item[HASH].S.substring(0,7)){
+                this.CWAData[testCase][metric][idx][IS_RELEASE] = true
+                
+              }
+            })
             // this.CWAData[testCase][metric][LINK] = ""
             // this.CWAData[testCase][metric][HASH] = 
             console.log("Updated",item[HASH].S)
@@ -124,8 +131,8 @@ class Receiver {
           
         })
         this.ReleaseMap[item[HASH].S] = true
-        this.cacheSaveData()
       })
+      this.cacheSaveData()
       return [true,""]
     }
     catch(err){
