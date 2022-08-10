@@ -1,7 +1,0 @@
-#!/bin/sh
-# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: MIT
-
-if [ "$1" = "remove" ]; then
-     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a preun
-fi

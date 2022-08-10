@@ -1,23 +1,22 @@
 import AWS from "aws-sdk";
-import axios from "axios"
-import { debug } from "util";
-import { DEBUG, GENERAL_ATTRIBUTES, BATCH_SIZE } from "../config";
+import axios from "axios";
+import { GENERAL_ATTRIBUTES, BATCH_SIZE } from "../config";
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
-const RELEASE_LIST = "ReleaseList"
+const RELEASE_LIST = "ReleaseList";
 const LINK = "Link";
 const HASH = "Hash";
-const IS_RELEASE = "isRelease"
+const IS_RELEASE = "isRelease";
 const RESULTS = "Results";
 const COMMIT_DATE = "CommitDate";
 const REPO_LINK = "https://github.com/aws/amazon-cloudwatch-agent";
-const GATEWAY_LINK = process.env.REACT_APP_GATEWAY
+const GATEWAY_LINK = process.env.REACT_APP_GATEWAY;
 //This class handles the entire frontend from pulling to formatting data
 class Receiver {
   constructor(DataBaseName) {
     this.DataBaseName = DataBaseName;
     this.CWAData = null;
-    this.ReleaseMap = {};//hash map
+    this.ReleaseMap = {}; //hash map
     this.latestItem = null;
     var date = new Date();
     this.year = date.getFullYear().toString();
@@ -26,9 +25,9 @@ class Receiver {
       this.CWAData = this.cacheGetAllData();
       this.latestItem = cacheLatestItem;
     }
-    var tempReleaseList = this.cacheGetReleaseList()
-    if(tempReleaseList !==null){
-      this.ReleaseMap = tempReleaseList
+    var tempReleaseList = this.cacheGetReleaseList();
+    if (tempReleaseList !== null) {
+      this.ReleaseMap = tempReleaseList;
     }
   }
 
@@ -51,14 +50,14 @@ class Receiver {
         this.CWAData = await this.getAllItems();
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
-        return [true,""];
+        return [true, ""];
       } else {
         cacheLatestHash = cacheLatestItem[HASH];
         this.CWAData = this.cacheGetAllData();
       }
 
       if (DynamoHash === cacheLatestHash) {
-        return this.updateReleases() // already synced
+        return this.updateReleases(); // already synced
       } else if (
         parseInt(dynamoLatestItem[COMMIT_DATE]) >=
         parseInt(cacheLatestItem[COMMIT_DATE])
@@ -85,18 +84,18 @@ class Receiver {
         });
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
-        return this.updateReleases() // now synced
+        return this.updateReleases(); // now synced
       }
       // website is ahead of dynamo
-      //clear cache and retry 
-      this.cacheClear()
-      this.update()
+      //clear cache and retry
+      this.cacheClear();
+      this.update();
     } catch (err) {
       if (this.cacheGetLatestItem === undefined) {
-        return [false,err]
+        return [false, err];
       }
-      this.CWAData = this.cacheGetAllData()
-      return [false,err] //couldnt sync
+      this.CWAData = this.cacheGetAllData();
+      return [false, err]; //couldnt sync
     }
   }
   /*updateReleases()
@@ -104,43 +103,42 @@ class Receiver {
   if they are in cache, if not updates the data and saves them to cache.
   Returns:  a list where [sync,error msg]; sync represent if cache is synced with dynamo
   */
-  async updateReleases(){
+  async updateReleases() {
     //release backtracking
-    try{
-      var allReleases = await this.getAllReleases()
-      allReleases.forEach((item)=>{
-        if (this.ReleaseMap[item[HASH].S]){
+    try {
+      var allReleases = await this.getAllReleases();
+      allReleases.forEach((item) => {
+        if (this.ReleaseMap[item[HASH].S]) {
           //old
-          return
+          return;
         }
-        //new 
-        Object.keys(item[RESULTS].M).forEach((testCase)=>{
-          var testCaseValue = item[RESULTS].M[testCase].M
-          Object.keys(testCaseValue).forEach((metric)=>{
+        //new
+        Object.keys(item[RESULTS].M).forEach((testCase) => {
+          var testCaseValue = item[RESULTS].M[testCase].M;
+          Object.keys(testCaseValue).forEach((metric) => {
             //update link and release tag
-            this.CWAData[testCase][metric].forEach((_,idx)=>{
-              if(this.CWAData[testCase][metric][idx][HASH]==item[HASH].S.substring(0,7)){
-                this.CWAData[testCase][metric][idx][IS_RELEASE] = true
-                
+            this.CWAData[testCase][metric].forEach((_, idx) => {
+              if (
+                this.CWAData[testCase][metric][idx][HASH] ===
+                item[HASH].S.substring(0, 7)
+              ) {
+                this.CWAData[testCase][metric][idx][IS_RELEASE] = true;
               }
-            })
+            });
             // this.CWAData[testCase][metric][LINK] = ""
-            // this.CWAData[testCase][metric][HASH] = 
-            console.log("Updated",item[HASH].S)
-          })
-          
-        })
-        this.ReleaseMap[item[HASH].S] = true
-      })
-      this.cacheSaveData()
-      return [true,""]
+            // this.CWAData[testCase][metric][HASH] =
+            console.log("Updated", item[HASH].S);
+          });
+        });
+        this.ReleaseMap[item[HASH].S] = true;
+      });
+      this.cacheSaveData();
+      return [true, ""];
+    } catch (err) {
+      return [false, err];
     }
-    catch(err){
-      return [false,err]
-    }
-    
   }
-  async getAllReleases(){
+  async getAllReleases() {
     const params = {
       // Set the projection expression, which are the attributes that you want.
       TableName: this.DataBaseName,
@@ -151,14 +149,14 @@ class Receiver {
         },
       },
       FilterExpression: "#isRelease = :value",
-      ExpressionAttributeNames:{ "#isRelease":"isRelease"},
-      ExpressionAttributeValues:{":value": {BOOL: true}},
+      ExpressionAttributeNames: { "#isRelease": "isRelease" },
+      ExpressionAttributeValues: { ":value": { BOOL: true } },
 
       ScanIndexForward: false,
     };
-    var retData = await this.callGateway(params)
+    var retData = await this.callGateway(params);
     // var retData = await this.dyanamoClient.query(params).promise();
-    return retData.Items
+    return retData.Items;
   }
   /*getLatestItem()
   Desc: This pulls the item with HIGHEST CommitDate using global secondary index query
@@ -180,7 +178,7 @@ class Receiver {
     };
     // var data  = await this.callGateway("LATEST_ITEM",params)
     // console.log(data)
-    var retData = await this.callGateway(params)//await this.dyanamoClient.query(params).promise();
+    var retData = await this.callGateway(params); //await this.dyanamoClient.query(params).promise();
     var cleanData = AWS.DynamoDB.Converter.unmarshall(retData.Items[0]);
     cleanData[HASH] = cleanData[HASH].substring(0, 7);
     return cleanData;
@@ -201,7 +199,7 @@ class Receiver {
         },
       },
     };
-    var retData = await  this.callGateway(params)//await this.dyanamoClient.query(params).promise();
+    var retData = await this.callGateway(params); //await this.dyanamoClient.query(params).promise();
     var cleanData = this.formatData(retData.Items);
     return cleanData;
   }
@@ -245,31 +243,31 @@ class Receiver {
     var cleanData = this.formatData(retData);
     return cleanData;
   }
-  async callGateway(param){
+  async callGateway(param) {
     var data = JSON.stringify({
-      "Params" : param
-    })
+      Params: param,
+    });
     var config = {
-      method: 'POST',
+      method: "POST",
       url: GATEWAY_LINK,
-      headers: { 
+      headers: {
         "x-api-key": process.env.REACT_APP_GATEWAY_API_KEY,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         // "Access-Control-Allow-Headers": "Content-Type",
         // "Access-Control-Allow-Origin": "*",
         // "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
       },
-      data : data
+      data: data,
     };
     var out = axios(config)
-    .then(function (response) {
-      return response.data.body
-    })
-    .catch(function (error) {
-      console.log(error);
-      return "error"
-    });
-    return out
+      .then(function (response) {
+        return response.data.body;
+      })
+      .catch(function (error) {
+        console.log(error);
+        return "error";
+      });
+    return out;
   }
   /* formatData
   Desc: Converts Dynamo formatted items to {...testCases:{...metrics:{...stats,...attributes}} format.
@@ -321,7 +319,7 @@ class Receiver {
   cacheGetLatestItem() {
     return JSON.parse(localStorage.getItem(LATEST_ITEM));
   }
-  cacheGetReleaseList(){
+  cacheGetReleaseList() {
     return JSON.parse(localStorage.getItem(RELEASE_LIST));
   }
   cacheSaveData() {
@@ -331,7 +329,7 @@ class Receiver {
     }
     localStorage.setItem(LATEST_ITEM, JSON.stringify(this.latestItem));
     localStorage.setItem(CWAData, JSON.stringify(this.CWAData));
-    localStorage.setItem(RELEASE_LIST, JSON.stringify(this.ReleaseMap))
+    localStorage.setItem(RELEASE_LIST, JSON.stringify(this.ReleaseMap));
   }
 }
 

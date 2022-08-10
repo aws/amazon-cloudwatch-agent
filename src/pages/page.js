@@ -1,6 +1,6 @@
 import React from "react";
 import Snackbar from "@mui/material/Snackbar";
-import MuiAlert, { AlertProps } from '@mui/material/Alert';
+import MuiAlert from "@mui/material/Alert";
 import Receiver from "../helpers/reciever";
 import { DEFAULT_CONFIG } from "../config";
 import "../helpers/graph.css";
@@ -14,7 +14,7 @@ export default class Page extends React.Component {
       mounted: false,
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
       synced: false,
-      error: ["error",""], //"errorType":["error,"warning,"info","success"],"errormsg"
+      error: ["error", ""], //"errorType":["error,"warning,"info","success"],"errormsg"
     };
   }
   componentDidMount() {

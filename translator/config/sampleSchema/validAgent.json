@@ -1,9 +1,0 @@
-{
-  "agent": {
-    "metrics_collection_interval": 60,
-    "logfile": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
-    "region": "us-east-1",
-    "debug": false,
-    "aws_sdk_log_level": "LogDebug"
-  }
-}
