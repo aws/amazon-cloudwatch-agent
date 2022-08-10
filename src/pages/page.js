@@ -1,6 +1,6 @@
 import React from "react";
 import Snackbar from "@mui/material/Snackbar";
-import MuiAlert, { AlertProps } from '@mui/material/Alert';
+import MuiAlert from "@mui/material/Alert";
 import Receiver from "../helpers/reciever";
 import { DEFAULT_CONFIG } from "../config";
 import "../helpers/graph.css";
@@ -14,7 +14,7 @@ export default class Page extends React.Component {
       mounted: false,
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
       synced: false,
-      error: ["error",""], //"errorType":["error,"warning,"info","success"],"errormsg"
+      error: ["error", ""], //"errorType":["error,"warning,"info","success"],"errormsg"
     };
   }
   componentDidMount() {
@@ -23,11 +23,11 @@ export default class Page extends React.Component {
         localStorage.setItem("config", JSON.stringify(this.state.config));
       }
       this.state.Receiver.update().then((updateState) => {
-        this.setState({ 
+        this.setState({
           data: this.state.Receiver.CWAData,
           synced: updateState[0],
-          error: ["error",updateState[1]],
-         });
+          error: ["error", updateState[1]],
+        });
       });
     }
     this.setState({ mounted: true });
@@ -76,12 +76,14 @@ function setGlobalCSSVars(props) {
 }
 // This component creates a snack bar alert if errorMsg is not ""
 export function ErrorHandler(props) {
-  var errorType = props.error[0]
-  var errorMsg = props.error[1]
+  var errorType = props.error[0];
+  var errorMsg = props.error[1];
   return (
     <div>
-      <Snackbar open={props.error !== null && errorMsg !==""}>
-        <MuiAlert severity={errorType}>{errorType.toUpperCase()}: {errorMsg}</MuiAlert>
+      <Snackbar open={props.error !== null && errorMsg !== ""}>
+        <MuiAlert severity={errorType}>
+          {errorType.toUpperCase()}: {errorMsg}
+        </MuiAlert>
       </Snackbar>
     </div>
   );
