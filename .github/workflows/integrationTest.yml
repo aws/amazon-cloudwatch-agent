@@ -19,8 +19,6 @@ on:
   push:
     branches:
       - master
-      - concurrent_tests
-
 
   workflow_dispatch:
 
@@ -416,8 +414,6 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - name: TEMP TEST LOOKUP
-        run: echo "${{ matrix.arrays.test_dir}}"
       - uses: actions/checkout@v2
 
       - name: Configure AWS Credentials
