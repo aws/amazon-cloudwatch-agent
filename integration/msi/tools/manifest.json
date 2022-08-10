@@ -1,6 +1,0 @@
-{
-  "name": "AmazonCloudWatchAgent",
-  "platform": "windows",
-  "architecture": "amd64",
-  "version": "__VERSION__"
-}

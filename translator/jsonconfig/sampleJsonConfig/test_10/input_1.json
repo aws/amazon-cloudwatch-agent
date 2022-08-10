@@ -1,9 +1,0 @@
-{
-  "logs": {
-    "metrics_collected": {
-      "kubernetes": {
-      }
-    },
-    "force_flush_interval": 5
-  }
-}

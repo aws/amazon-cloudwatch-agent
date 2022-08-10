@@ -1,9 +1,0 @@
-{
-  "agent" : {
-    "region": "us-west-2"
-  },
-  "csm": {
-    "service_addresses": ["udp4://127.0.0.1:4000"],
-    "memory_limit_in_mb": 50
-  }
-}
