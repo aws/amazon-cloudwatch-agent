@@ -83,14 +83,6 @@ variable "github_sha_date"{
   type = string
   default = ""
 }
-variable "sha" {
-  type = string
-  default = ""
-}
-variable "sha_date"{
-  type = string
-  default = ""
-}
 variable "performance_number_of_logs"{
   type = string
   default = ""

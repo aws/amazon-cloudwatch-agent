@@ -10,12 +10,64 @@ Running integration tests
 This all assumes that you are creating resources in the `us-west-2` region, as that is currently the only region that
 supports the integration test AMIs.
 
-#### Terraform IAM user permissions
+#### Terraform IAM assume role permission
 
 For ease of use, here's a generated IAM policy based on resource usage that you can attach to your IAM user that
 Terraform will assume, with the required permissions. See docs
 on [Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
 for how to easily generate a new policy.
+
+#### Creating assume role
+[reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
+
+Cloud formation template. You only need to enter org and repo (ex aws amazon-cloudwatch-agent)
+```
+Parameters:
+  GitHubOrg:
+    Type: String
+  RepositoryName:
+    Type: String
+  OIDCProviderArn:
+    Description: Arn for the GitHub OIDC Provider.
+    Default: ""
+    Type: String
+
+Conditions:
+  CreateOIDCProvider: !Equals 
+    - !Ref OIDCProviderArn
+    - ""
+
+Resources:
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRoleWithWebIdentity
+            Principal:
+              Federated: !If 
+                - CreateOIDCProvider
+                - !Ref GithubOidc
+                - !Ref OIDCProviderArn
+            Condition:
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${RepositoryName}:*
+
+  GithubOidc:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: 
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+Outputs:
+  Role:
+    Value: !GetAtt Role.Arn 
+```
 
 ```json
 {
@@ -216,18 +268,17 @@ repository secret for the GitHub actions workflow.
 Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) on configuring GitHub Actions
 secrets.
 
-| Key                               | Description                                                                                             |
-|-----------------------------------|---------------------------------------------------------------------------------------------------------|
-| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                   |
-| `TERRAFORM_AWS_ACCESS_KEY_ID`     | IAM user access key                                                                                     |
-| `TERRAFORM_AWS_SECRET_ACCESS_KEY` | IAM user secret key                                                                                     |
-| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                   |
-| `KEY_NAME`                        | EC2 key pair name                                                                                       |
-| `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars) |
-| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                     |
-| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                    |
-| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                   | 
-| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                               |
+| Key                               | Description                                                                                              |
+|-----------------------------------|----------------------------------------------------------------------------------------------------------|
+| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                    |
+| `TERRAFORM_AWS_ASSUME_ROLE`       | IAM role to assume                                                                                       |
+| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                    |
+| `KEY_NAME`                        | EC2 key pair name                                                                                        |
+| `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars)  |
+| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                      |
+| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                     |
+| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                    | 
+| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                                |
 
 ### Run the integration test action on your fork
 

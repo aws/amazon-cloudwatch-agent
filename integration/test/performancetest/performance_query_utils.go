@@ -29,9 +29,19 @@ const (
 	PARTITION_KEY ="Year"
 	HASH = "Hash"
 	COMMIT_DATE= "CommitDate"
-	TEST_HASH ="TestHash"
 	SHA_ENV  = "SHA"
 	SHA_DATE_ENV = "SHA_DATE"
+	IS_RELEASE = "isRelease"
+	TEST_ID ="TestID"
+	TPS = "TPS"
+	PERFORMANCE_NUMBER_OF_LOGS = "PERFORMANCE_NUMBER_OF_LOGS"
+	RESULTS = "Results"
+	/*
+	TEST_ID is used for version control, in order to make sure the
+	item has not changed between item being editted and updated.
+	TEST_ID is checked atomicaly.
+	 TEST_ID uses UIUD to give unique id to each packet.
+	*/
 )
 
 //struct that holds statistics on the returned data
@@ -179,19 +189,25 @@ func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, age
 	packet[PARTITION_KEY] = time.Now().Year()
 	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
 	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-	packet["isRelease"] = false
+	packet[IS_RELEASE] = false
 	//add test metadata
-	packet[TEST_HASH] = uuid.New().String()
+	packet[TEST_ID] = uuid.New().String()
 	testSettings := fmt.Sprintf("%d-%d",logNum,tps)
 	testMetricResults := make(map[string]Stats)
 	
 
 	//add actual test data with statistics
 	for _, result := range metrics.MetricDataResults {
+		//convert memory bytes to MB
+		if (*result.Label == "procstat_memory_rss") {
+			for i, val := range(result.Values) {
+				result.Values[i] = val / (1000000)
+			}
+		}
 		stats:= CalcStats(result.Values)
 		testMetricResults[*result.Label] = stats
 	}
-	packet["Results"] = map[string]map[string]Stats{ testSettings: testMetricResults}
+	packet[RESULTS] = map[string]map[string]Stats{ testSettings: testMetricResults}
 	return packet, nil
 }
 

@@ -344,7 +344,7 @@ func makeMetrics(count int) []telegraf.Metric {
 	metrics := make([]telegraf.Metric, 0, count)
 	measurement := "Test_namespace"
 	fields := map[string]interface{}{
-		"usage_user":       100,
+		"usage_user": 100,
 	}
 
 	tags := map[string]string{}
@@ -366,7 +366,7 @@ func TestWrite(t *testing.T) {
 	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
 		cloudWatchOutput.WriteToCloudWatch)
-	metrics := makeMetrics(30)
+	metrics := makeMetrics(1500)
 	cloudWatchOutput.Write(metrics)
 	time.Sleep(time.Second + 2*cloudWatchOutput.ForceFlushInterval.Duration)
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 2))
@@ -406,7 +406,8 @@ func TestPublish(t *testing.T) {
 		&res,
 		nil)
 	interval := 60 * time.Second
-	numMetrics := 10000
+	// The buffer holds 50 batches of 1,000 metrics. So choose 5x.
+	numMetrics := 5 * datumBatchChanBufferSize * defaultMaxDatumsPerCall
 	expectedCalls := numMetrics / defaultMaxDatumsPerCall
 	cloudWatchOutput := newCloudWatchClient(svc, interval)
 	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
@@ -415,9 +416,10 @@ func TestPublish(t *testing.T) {
 		2*time.Second,
 		cloudWatchOutput.WriteToCloudWatch)
 	metrics := makeMetrics(numMetrics)
-	cloudWatchOutput.Write(metrics)
+	// Use goroutine since Write() could block if len(metrics) >metricChanBufferSize.
+	go cloudWatchOutput.Write(metrics)
 	// Expect some, but not all API calls after half the original interval.
-	time.Sleep(interval / 2 + 2 * time.Second)
+	time.Sleep(interval/2 + 2*time.Second)
 	assert.Less(t, 0, len(svc.Calls))
 	assert.Less(t, len(svc.Calls), expectedCalls)
 	// Expect all API calls after 1.5x the interval.
@@ -551,25 +553,25 @@ func TestBackoffRetries(t *testing.T) {
 		c.backoffSleep()
 		// Expect time since start is between sleeps[i]/2 and sleeps[i].
 		// Except that github automation fails on this for MacOs, so allow leniency.
-		assert.Less(sleeps[i] / 2, time.Since(start))
-		assert.Greater(sleeps[i] + leniency, time.Since(start))
+		assert.Less(sleeps[i]/2, time.Since(start))
+		assert.Greater(sleeps[i]+leniency, time.Since(start))
 	}
 	start := time.Now()
 	c.backoffSleep()
-	assert.Less(30 * time.Second, time.Since(start))
-	assert.Greater(60 * time.Second, time.Since(start))
+	assert.Less(30*time.Second, time.Since(start))
+	assert.Greater(60*time.Second, time.Since(start))
 	// reset
 	c.retries = 0
 	start = time.Now()
 	c.backoffSleep()
-	assert.Greater(200 * time.Millisecond + leniency, time.Since(start))
+	assert.Greater(200*time.Millisecond+leniency, time.Since(start))
 }
 
 // Fill up the channel and verify it is full.
 // Take 1 item out of the channel and verify it is no longer full.
 func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 	c := &CloudWatch{
-		datumBatchChan:     make(chan []*cloudwatch.MetricDatum, datumBatchChanBufferSize),
+		datumBatchChan: make(chan []*cloudwatch.MetricDatum, datumBatchChanBufferSize),
 	}
 	assert.False(t, c.metricDatumBatchFull())
 	for i := 0; i < datumBatchChanBufferSize; i++ {
@@ -582,7 +584,7 @@ func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 
 func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
 	c := &CloudWatch{
-		datumBatchChan:     make(chan []*cloudwatch.MetricDatum, 0),
+		datumBatchChan: make(chan []*cloudwatch.MetricDatum, 0),
 	}
 	input := testutil.MustMetric(
 		"cpu",

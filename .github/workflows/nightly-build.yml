@@ -10,6 +10,9 @@ jobs:
   build:
     name: Upload Nightly Binaries
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
 
       - name: Set up Go 1.x
@@ -17,6 +20,12 @@ jobs:
         with:
           go-version: ~1.18.3
         id: go
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.S3_AWS_ASSUME_ROLE }}
+          aws-region: us-east-1
 
       #Need to install rpm so ubuntu can make rpm by default ubuntu can make deb
       - name: Install rpm
@@ -31,14 +40,5 @@ jobs:
       - name: Release
         run: make nightly-release
 
-      - name: Upload binaries to latest
-        uses: jakejarvis/s3-sync-action@master
-        with:
-          args: --acl public-read
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY}}
-          AWS_REGION: 'us-east-1'
-          AWS_S3_BUCKET: 'amazoncloudwatch-agent'
-          SOURCE_DIR: 'build/bin'
-          DEST_DIR: 'nightly-build/latest'
+      - name: Upload to S3
+        run: aws s3 cp build/bin s3://amazoncloudwatch-agent/nightly-build/latest/ --recursive --acl public-read --source-region us-east-1

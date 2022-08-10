@@ -35,7 +35,7 @@ type LogInfo struct {
 func TestPerformance(t *testing.T) {
 	//get number of logs for test from github action
 	//@TODO
-	logNum, err := strconv.Atoi(os.Getenv(testLogNum)) //requires a commit from Okan that updates the workflow file so the log tests will run concurrently
+	logNum, err := strconv.Atoi(os.Getenv(testLogNum)) 
 	if err != nil {
 		t.Fatalf("Error: cannot convert test log number to integer, %v", err)
 	}
@@ -77,10 +77,8 @@ func TestPerformance(t *testing.T) {
 	}
 
 	//run tests
-	//@ASK If we should move tps values to seperate config testCases
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
-			os.Setenv("TPS",fmt.Sprintf("%d",tps))
 			test.CopyFile(configFilePath, configOutputPath)
 
 			test.StartAgent(configOutputPath, true)
@@ -106,8 +104,10 @@ func TestPerformance(t *testing.T) {
 			if data == nil {
 				t.Fatalf("No data")
 			}
-			log.Printf("DATA:%v \n",data)
-			_, err = dynamoDB.SendItem(data)
+			// this print shows the sendItem packet,it can be used to debug attribute issues
+			fmt.Printf("%v \n",data) 
+			
+			_, err = dynamoDB.SendItem(data,tps)
 			if err != nil {
 				t.Fatalf("Error: couldn't upload metric data to table, %v", err)
 			}
@@ -254,10 +254,10 @@ func GetLogFilePaths(configPath string) ([]string, error) {
 }
 
 func TestUpdateCommit(t*testing.T){
-	if(os.Getenv("IS_RELEASE") ==""){
-		t.Skip("")
+	if(os.Getenv("IS_RELEASE") !="true"){
+		t.SkipNow()
 	}
-	fmt.Println("Updating Release Commit",os.Getenv(SHA_ENV))
+	t.Log("Updating Release Commit",os.Getenv(SHA_ENV))
 	dynamoDB := InitializeTransmitterAPI("CWAPerformanceMetrics") //add cwa version here
 	testHash := os.Getenv(SHA_ENV)
 	if dynamoDB == nil{
@@ -265,9 +265,5 @@ func TestUpdateCommit(t*testing.T){
 	return
 	}
 
-	err:=dynamoDB.UpdateReleaseTag(testHash)
-	
-	if err != nil{
-		t.Fatalf("Error: %s",err)
-	}
+	dynamoDB.UpdateReleaseTag(testHash)
 }
