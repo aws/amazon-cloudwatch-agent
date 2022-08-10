@@ -37,6 +37,11 @@ export default class Page extends React.Component {
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
     });
   }
+  clearError(){
+    this.setState(
+      {error:["error",""]}
+    )
+  }
   render() {
     setGlobalCSSVars(this.state.config);
     return <div></div>;
@@ -80,7 +85,10 @@ export function ErrorHandler(props) {
   var errorMsg = props.error[1]
   return (
     <div>
-      <Snackbar open={props.error !== null && errorMsg !==""}>
+      <Snackbar open={props.error !== null && errorMsg !==""}
+      autoHideDuration={6000}
+      onClose={()=>{props.page.clearError()}}
+      >
         <MuiAlert severity={errorType}>{errorType.toUpperCase()}: {errorMsg}</MuiAlert>
       </Snackbar>
     </div>

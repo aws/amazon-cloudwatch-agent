@@ -118,7 +118,7 @@ export default class GraphicsPage extends Page {
             </div>
           </div>
         </div>
-        <ErrorHandler error={this.state.error}/>
+        <ErrorHandler error={this.state.error}  page={this}/>
       </div>
     );
   }

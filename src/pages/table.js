@@ -74,7 +74,7 @@ export default class TablePage extends Page {
             </div>
           </div>
         </div>
-        <ErrorHandler error={this.state.error}/>
+        <ErrorHandler error={this.state.error}  page={this}/>
       </div>
     );
   }
