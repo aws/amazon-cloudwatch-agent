@@ -90,7 +90,7 @@ export default class Home extends Page {
           </p>
         </section>
         <br />
-        <ErrorHandler error={this.state.error} />
+        <ErrorHandler error={this.state.error}  page={this}/>
       </div>
     );
   }
