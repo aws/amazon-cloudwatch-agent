@@ -87,6 +87,10 @@ variable "old_sha_date"{
   type = string
   default = ""
 }
+variable "old_release_name"{
+  type= string
+  default = ""
+}
 variable "performance_number_of_logs"{
   type = string
   default = ""

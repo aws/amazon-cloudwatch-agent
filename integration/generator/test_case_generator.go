@@ -122,10 +122,11 @@ func genMatrixForReleases(targetOS string, testDirList []string,startDate int, e
 	// fmt.Println(testMatrix)
 	releases := getReleases(startDate,endDate)
 	var testMatrixComplete []map[string]string
-	for  release, date  := range releases{
+	for  _, release  := range releases{
 		for i, _ := range testMatrix {
-			testMatrix[i]["commitSHA"] = release
-			testMatrix[i]["commitSHADate"] =  strconv.Itoa(date)
+			testMatrix[i]["commitSHA"] = release.sha
+			testMatrix[i]["commitSHADate"] =  strconv.Itoa(release.date)
+			testMatrix[i]["releaseName"] = release.name
 			// fmt.Println(test)
 			for _, testDirectory := range testDirList {
 				testLine := copyMap(testMatrix[i])
@@ -141,26 +142,38 @@ func genMatrixForReleases(targetOS string, testDirList []string,startDate int, e
 	err = ioutil.WriteFile(fmt.Sprintf("integration/generator/resources/%v_old_test_matrix.json", targetOS), bytes, os.ModePerm)
 	return testMatrixComplete
 }
-
-func getReleases(startDate int ,EndDate int ) map[string]int{
-	cmd := exec.Command("git", "log" ,"--tags" ,"--simplify-by-decoration" ,"--pretty=%ct|%H")
+type Release struct{
+	sha string
+	date int
+	name string
+}
+func getReleases(startDate int ,EndDate int ) []Release{
+	cmd := exec.Command("git", "log" ,"--tags" ,"--simplify-by-decoration" ,"--pretty=%ct|%H|%S")
 	rawTags, _:= cmd.Output()
 	tagData := strings.Split(string(rawTags),"\n")
-	tagList := make(map[string]int)
-	// fmt.Println(tagData)
+	var releaseObj Release
+	tagList := []Release{}
+	fmt.Println(tagData)
 	i :=0
 	for _,element := range tagData{
 		data := strings.Split(element,"|")
 		date,_ := strconv.Atoi(data[0])
+
 		// fmt.Println(date)
 		if i > 25{
 			break
 		}
 		if date > startDate && date < EndDate{
-			tagList[data[1]] = date
+			// tagList[data[1]] = date
+			releaseObj = Release{
+				sha: data[1],
+				date: date,
+				name: data[2],
+			}
+			tagList = append(tagList,releaseObj)
 			i++
 		}
 	}
-	// fmt.Println(tagList)
+	fmt.Println(tagList)
 	return tagList
 }

@@ -85,6 +85,7 @@ resource "null_resource" "integration_test" {
       "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
       "export SHA=${var.old_sha}",
       "export SHA_DATE=${var.old_sha_date}",
+      "export RELEASE_NAME=${var.old_release_name}"
       "export PERFORMANCE_NUMBER_OF_LOGS=${var.performance_number_of_logs}",
       "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
     ]
