@@ -1,0 +1,212 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Previous Performance Test
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  VPC_SECURITY_GROUPS_IDS: ${{ secrets.VPC_SECURITY_GROUPS_IDS }}
+  IAM_ROLE: ${{ secrets.IAM_ROLE }}
+  GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+  PASSPHRASE: ${{ secrets.PASSPHRASE }}
+  GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
+  GPG_TTY: $(tty)
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+on:
+  push:
+    branches:
+      - previousReleases
+    
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  GenerateTestMatrix:
+    name: 'GenerateTestMatrix'
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_old_performance_matrix: ${{steps.set-matrix.outputs.ec2_old_performance_matrix}}
+      ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+      ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.18.3
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          export SHA_DATA=${{ steps.sha.outputs.sha_short }}
+          go run --tags=generator integration/generator/test_case_generator.go
+          echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/ec2_linux_complete_test_matrix.json))"
+          echo "::set-output name=ec2_old_performance_matrix::$(echo $(cat integration/generator/resources/ec2_performance_old_test_matrix.json))"
+          echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/ec2_windows_complete_test_matrix.json))"
+          echo "::set-output name=ecs_fargate_matrix::$(echo $(cat integration/generator/resources/ecs_fargate_complete_test_matrix.json))"
+
+      - name: Echo test plan matrix
+        run: |
+          echo ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+          echo ${{ steps.set-matrix.outputs.ec2_old_performance_matrix}}
+          echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+          echo ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+      - name: Echo performance matrix
+        run: |
+          echo ${{ steps.set-matrix.outputs.ec2_old_performance_matrix}}
+
+  StartLocalStack:
+      name: 'StartLocalStack'
+      runs-on: ubuntu-latest
+      defaults:
+        run:
+          working-directory: integration/terraform/ec2/localstack
+      outputs:
+        local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - uses: actions/checkout@v2
+
+        - name: Configure AWS Credentials
+          uses: aws-actions/configure-aws-credentials@v1
+          with:
+            role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+            aws-region: us-west-2
+
+        - name: Verify Terraform version
+          run: terraform --version
+
+        - name: Terraform init
+          run: terraform init
+
+        - name: Terraform apply
+          id: localstack
+          run: >
+            echo run terraform and execute test code &&
+            terraform apply --auto-approve
+            -var="ssh_key=${PRIVATE_KEY}"
+            -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+            -var="github_sha=${GITHUB_SHA}" 
+            -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
+            -var="key_name=${KEY_NAME}" &&
+            LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
+            echo $LOCAL_STACK_HOST_NAME &&
+            echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
+            aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
+
+  StopLocalStack:
+    name: 'StopLocalStack'
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [ StartLocalStack,PerformanceTrackingTest ]
+    defaults:
+      run:
+        working-directory: integration/terraform/ec2/localstack
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Copy state
+        run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform destroy
+        run: terraform destroy --auto-approve
+
+  PerformanceTrackingTest:
+    name: "PerformanceTrackingTest"
+    needs: [StartLocalStack, GenerateTestMatrix]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_old_performance_matrix) }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: performance-tracking
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: performance-tracking-test-${{ github.sha }}
+
+      - name: Echo Test Info
+        run: echo run performance-tracking
+      - name: Verify Terraform version
+        run: terraform --version
+     #
+      - name: Terraform apply
+        if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            cd integration/terraform/ec2/old
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="key_name=${KEY_NAME}" \
+              -var="old_sha=${{matrix.arrays.commitSHA}}" \
+              -var="old_sha_date=${{ matrix.arrays.commitSHADate }}" \
+              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+              -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+      - name: Update as release
+        run: |
+          cd integration/test/performancetest
+          export IS_RELEASE=true
+          export SHA=${{matrix.arrays.commitSHA}}
+          go test -run TestUpdateCommit -p 1 -v --tags=integration
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve

@@ -9,6 +9,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+
+	"os/exec"
+	"strings"
+	"strconv"
 )
 
 const (
@@ -37,8 +41,18 @@ var osToTestDirMap = map[string][]string{
 }
 
 func main() {
+
 	for osType, testDir := range osToTestDirMap {
-		testMatrix := genMatrix(osType, testDir)
+		var testMatrix []map[string]string
+		if os.Getenv("OLD")=="true" && osType =="ec2_performance"{
+			argsWithoutProg := os.Args[1:]
+			startDate,_:= strconv.Atoi(argsWithoutProg[0])
+			endDate,_ := strconv.Atoi(argsWithoutProg[1])
+			testMatrix = genMatrixForReleases(osType,testDir,startDate,endDate)
+			writeTestMatrixFile(osType, testMatrix)
+			return
+		}
+		testMatrix = genMatrix(osType, testDir)
 		writeTestMatrixFile(osType, testMatrix)
 	}
 }
@@ -87,4 +101,66 @@ func copyMap(mapToCopy map[string]string) map[string]string {
 		testLine[key] = value
 	}
 	return testLine
+}
+
+func genMatrixForReleases(targetOS string, testDirList []string,startDate int, endDate int) []map[string]string {
+	openTestMatrix, err := os.Open(fmt.Sprintf("integration/generator/resources/%v_test_matrix.json", targetOS))
+	
+	if err != nil {
+		log.Panicf("can't read file %v_test_matrix.json err %v", targetOS, err)
+	}
+	
+	byteValueTestMatrix, _ := ioutil.ReadAll(openTestMatrix)
+	_ = openTestMatrix.Close()
+	
+	var testMatrix []map[string]string
+	err = json.Unmarshal(byteValueTestMatrix, &testMatrix)
+	if err != nil {
+		log.Panicf("can't unmarshall file %v_test_matrix.json err %v", targetOS, err)
+	}
+
+	// fmt.Println(testMatrix)
+	releases := getReleases(startDate,endDate)
+	var testMatrixComplete []map[string]string
+	for  release, date  := range releases{
+		for i, _ := range testMatrix {
+			testMatrix[i]["commitSHA"] = release
+			testMatrix[i]["commitSHADate"] =  strconv.Itoa(date)
+			// fmt.Println(test)
+			for _, testDirectory := range testDirList {
+				testLine := copyMap(testMatrix[i])
+				testLine[testDir] = testDirectory
+				testMatrixComplete = append(testMatrixComplete, testLine)
+			}
+		}
+	}
+	bytes, err := json.MarshalIndent(testMatrixComplete, "", " ")
+	if err != nil {
+		log.Panicf("Can't marshal json for target os %v, err %v", targetOS, err)
+	}
+	err = ioutil.WriteFile(fmt.Sprintf("integration/generator/resources/%v_old_test_matrix.json", targetOS), bytes, os.ModePerm)
+	return testMatrixComplete
+}
+
+func getReleases(startDate int ,EndDate int ) map[string]int{
+	cmd := exec.Command("git", "log" ,"--tags" ,"--simplify-by-decoration" ,"--pretty=%ct|%H")
+	rawTags, _:= cmd.Output()
+	tagData := strings.Split(string(rawTags),"\n")
+	tagList := make(map[string]int)
+	// fmt.Println(tagData)
+	i :=0
+	for _,element := range tagData{
+		data := strings.Split(element,"|")
+		date,_ := strconv.Atoi(data[0])
+		// fmt.Println(date)
+		if i > 25{
+			break
+		}
+		if date > startDate && date < EndDate{
+			tagList[data[1]] = date
+			i++
+		}
+	}
+	// fmt.Println(tagList)
+	return tagList
 }
