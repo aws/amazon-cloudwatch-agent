@@ -40,7 +40,6 @@ class Receiver {
   async update() {
     // check the latest hash from cache
     try {
-      throw "TESTING"
       let dynamoLatestItem = await this.getLatestItem();
       let DynamoHash = dynamoLatestItem[HASH];
       // ask dynamo what is the lastest hash it received

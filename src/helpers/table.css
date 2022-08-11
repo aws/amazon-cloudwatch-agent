@@ -64,6 +64,10 @@
     text-decoration: none;
     color: #000;
 }
+.cell_text svg{
+    width: 10px;
+    height: 10px;
+}
 .cell_text > a:visited{
     color: inherit;
 }
@@ -95,9 +99,10 @@
 .table_settings{
     /* flex:20%; */
     width: 22%;
-    border-left: 1px dashed #000;
+    border-left: 1px solid #000;
     margin: 0.5%;
 }
+
 
 
 .table_container .button_container{

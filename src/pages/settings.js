@@ -1,5 +1,6 @@
 import "./settings.css";
 import { MetricConfigs } from "../config";
+import { useState } from "react";
 const CONFIG = "config";
 const METRIC_CONFIG_KEY = "metricConfig";
 
@@ -32,7 +33,7 @@ export default function Setting(props) {
       }
       var options = [];
       for (var i = props.range[0]; i < props.range[1]; i = i + props.range[2]) {
-        if (i === defaultValue*1) {
+        if (i === defaultValue * 1) {
           options.push(
             <option selected value={i}>{`${i} ${props.range[3]}`}</option>
           );
@@ -118,5 +119,22 @@ export function MetricSettingsBox(props) {
       <h3>Metric Settings</h3>
       {metricSpecificSettings}
     </div>
+  );
+}
+
+export function SettingsToggle(props) {
+  // debugger
+  const [isMinimized, setMinimized] = useState(false);
+  return (
+    <button class="settings_toggle"
+      onClick={() => {
+        document.getElementById(props.PageColumn).classList.toggle("min");
+        document.getElementById(props.Settings).classList.toggle("hide");
+        document.getElementById(props.Content).classList.toggle("full");
+        setMinimized(!isMinimized);
+      }}
+    >
+      {isMinimized ? "<" : ">"}
+    </button>
   );
 }

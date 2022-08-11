@@ -1,7 +1,7 @@
 import Page, {ErrorHandler} from "./page";
 import Navbar from "../helpers/navbar";
 import TableGroup from "../helpers/BasicTable";
-import Setting from "./settings";
+import Setting,{SettingsToggle} from "./settings";
 import "../helpers/table.css";
 
 //This the webpage that contains the metric tables.
@@ -12,7 +12,7 @@ export default class TablePage extends Page {
       <div className="table_page">
         <Navbar synced={this.state.synced}/>
         <div class="page_container">
-          <div class="table_content">
+          <div id="content"class="table_content">
             <div class="header">
               <h2>Table Page</h2>
               <p>
@@ -42,8 +42,12 @@ export default class TablePage extends Page {
             </div>
             <TableGroup data={this.state.data} config={this.state.config} />
           </div>
-          <div class="table_settings">
-            <div class="settings_page">
+          <div id ="table_settings"class="table_settings">
+            <SettingsToggle 
+            PageColumn="table_settings"
+            Settings="settings"
+            Content="content"/>
+            <div id="settings"class="settings_page">
               <div class="title">
                 <h2>Settings</h2>
               </div>

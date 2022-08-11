@@ -4,6 +4,7 @@
     position:fixed;
     width: inherit;
 }
+
 .title{
     padding: 0.5%;
     margin: 1%
@@ -68,4 +69,18 @@
     position: absolute;
     border-radius: 25px;
     border: gray 1px solid;
+}
+.settings_toggle{
+    position: static;
+    top: 50%
+
+}
+.hide{
+    display: none;
+}
+.min{
+    width: 3% !important;
+}
+.full{
+    width: 97% !important;
 }
