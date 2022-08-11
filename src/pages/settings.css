@@ -71,9 +71,11 @@
     border: gray 1px solid;
 }
 .settings_toggle{
-    position: static;
-    top: 50%
-
+    /* position: fixed; */
+    right: 20%;
+    top:50%;
+    background-color: #ffd7e6;
+    border: 1px solid palevioletred;
 }
 .hide{
     display: none;
@@ -83,4 +85,7 @@
 }
 .full{
     width: 97% !important;
+}
+.right{
+    right: 1%;
 }

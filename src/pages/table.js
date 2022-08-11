@@ -44,9 +44,9 @@ export default class TablePage extends Page {
           </div>
           <div id ="table_settings"class="table_settings">
             <SettingsToggle 
-            PageColumn="table_settings"
-            Settings="settings"
-            Content="content"/>
+              PageColumn="table_settings"
+              Settings="settings"
+              Content="content"/>
             <div id="settings"class="settings_page">
               <div class="title">
                 <h2>Settings</h2>

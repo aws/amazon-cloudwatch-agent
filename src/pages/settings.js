@@ -126,12 +126,14 @@ export function SettingsToggle(props) {
   // debugger
   const [isMinimized, setMinimized] = useState(false);
   return (
-    <button class="settings_toggle"
+    <button class="settings_toggle" id="settings_toggle"
       onClick={() => {
         document.getElementById(props.PageColumn).classList.toggle("min");
         document.getElementById(props.Settings).classList.toggle("hide");
         document.getElementById(props.Content).classList.toggle("full");
+        // document.getElementById("settings_toggle").classList.toggle("right")
         setMinimized(!isMinimized);
+        
       }}
     >
       {isMinimized ? "<" : ">"}
