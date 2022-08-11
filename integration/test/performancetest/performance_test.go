@@ -257,7 +257,7 @@ func TestUpdateCommit(t*testing.T){
 	if(os.Getenv("IS_RELEASE") !="true"){
 		t.SkipNow()
 	}
-	t.Log("Updating Release Commit",os.Getenv(SHA_ENV))
+	t.Log("Updating Release Commit",os.Getenv(SHA_ENV),os.Getenv(RELEASE_NAME_ENV))
 	dynamoDB := InitializeTransmitterAPI("CWAPerformanceMetrics") //add cwa version here
 	releaseHash := os.Getenv(SHA_ENV)
 	releaseName := os.Getenv(RELEASE_NAME_ENV)
