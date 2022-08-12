@@ -61,6 +61,7 @@
     text-align: center;
     justify-content: center;
     font-size: large;
-    border: solid #008008 1px
+    border: solid #008008 1px;
+    cursor: pointer;
     
 }

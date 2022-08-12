@@ -25,7 +25,7 @@ const METRIC_SIZE = 0.154; //KB per metric with no timestamps
 const PACKET_SIZE =
   BASE_PACKET_SIZE + N_METRIC * (METRIC_SIZE + N_TIMESTAMPS * TIMESTAMP_SIZE);
 export const BATCH_SIZE = parseInt(ONE_MB / PACKET_SIZE);
-
+export const UPDATE_FREQUENCY = 45*60// in seconds
 export const DEFAULT_CONFIG = {
   sigfig: "3",
   textFontSize: "20",

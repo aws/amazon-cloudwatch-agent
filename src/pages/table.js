@@ -10,7 +10,7 @@ export default class TablePage extends Page {
     super.render();
     return (
       <div className="table_page">
-        <Navbar synced={this.state.synced}/>
+        <Navbar synced={this.state.synced}  page={this}/>
         <div class="page_container">
           <div id="content"class="table_content">
             <div class="header">

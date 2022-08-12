@@ -1,5 +1,6 @@
 import Navbar from "../helpers/navbar";
 import Page, {ErrorHandler} from "./page";
+import {UPDATE_FREQUENCY} from "../config"
 import "./wiki.css";
 import {
   ScrollingProvider,
@@ -25,7 +26,7 @@ export default class WikiPage extends Page {
     super.render();
     return (
       <div class="wiki_page">
-        <Navbar synced={this.state.synced} />
+        <Navbar synced={this.state.synced}  page={this}/>
         <h2>WikiPage</h2>
         <ScrollingProvider>
           <div class="container">
@@ -156,6 +157,10 @@ export default class WikiPage extends Page {
                     title="Click"
                     style={{ width: "15%", height: "24px" }}
                     onClick={() => {
+                      let timeSinceLastUpdate= (Date.now()- this.getLastUpdate())/1000
+                      if (timeSinceLastUpdate < UPDATE_FREQUENCY){
+                        return
+                      }
                       this.state.Receiver.cacheClear();
                     }}
                   >
