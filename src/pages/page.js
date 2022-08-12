@@ -48,7 +48,7 @@ export default class Page extends React.Component {
         (UPDATE_FREQUENCY -
           (Date.now() - this.state.Receiver.getLastUpdate()) / 1000) /
           60
-      )}} minutes`
+      )} minutes`
     );
   }
   clearError() {
