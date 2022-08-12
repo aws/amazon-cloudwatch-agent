@@ -174,6 +174,7 @@ export function BasicTable(props) {
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
   var testCases = Object.keys(props.data);
+  testCases.sort(); //ensures default test case data is shown when page loads first time
   var testVariables = Array(testCases[0].split("-").length);
 
   testCases.forEach((test) => {
