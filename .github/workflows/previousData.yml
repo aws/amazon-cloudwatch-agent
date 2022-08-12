@@ -189,7 +189,7 @@ jobs:
               -var="key_name=${KEY_NAME}" \
               -var="old_sha=${{matrix.arrays.commitSHA}}" \
               -var="old_sha_date=${{ matrix.arrays.commitSHADate }}" \
-              -var="old_release_name=${{matrix.arrays.releaseName}}"
+              -var="old_release_name=${{matrix.arrays.releaseName}}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
