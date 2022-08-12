@@ -81,8 +81,8 @@ function setGlobalCSSVars(props) {
 }
 // This component creates a snack bar alert if errorMsg is not ""
 export function ErrorHandler(props) {
-  var errorType = props.error[0]
-  var errorMsg = props.error[1]
+  var errorType = props.error[0];
+  var errorMsg = props.error[1];
   return (
     <div>
       <Snackbar open={props.error !== null && errorMsg !==""}
