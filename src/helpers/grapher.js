@@ -83,6 +83,7 @@ export function Graph(props) {
       }
     });
   });
+  testCases.sort();
   const [currentTestCase, setCurrentTest] = useState(testCases[0]);
   var buttons = [];
   var metricLines = []; // list of react components
@@ -134,13 +135,17 @@ export function Graph(props) {
       />
     ); //Add a threshold line
   }
+  var n_variables = testVariables.length;
   testVariables.forEach((varSet, i) => {
     var options = [];
+    let seperatedTestCase = currentTestCase.split("-");
+    console.log(seperatedTestCase);
     varSet.forEach((value) => {
       //@TODO FIX BUG SET DEFAULT PLSZZZ
-      options.push(<option>{value}</option>);
+      options.push(
+        <option selected={value === seperatedTestCase[i]}>{value}</option>
+      );
     });
-
     buttons.push(
       <div class="select_box">
         <label>{TEST_VARIABLES[i]}</label>
@@ -148,7 +153,6 @@ export function Graph(props) {
           id={`testCase-${props.title}-${i}`}
           onChange={() => {
             var testCase = "";
-            var n_variables = testVariables.length;
             for (var j = 0; j < n_variables; j++) {
               testCase += document.getElementById(
                 `testCase-${props.title}-${j}`

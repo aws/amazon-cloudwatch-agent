@@ -1,7 +1,7 @@
 import Page, {ErrorHandler} from "./page";
 import Grapher from "../helpers/grapher";
 import Navbar from "../helpers/navbar";
-import Setting, { MetricSettingsBox } from "./settings";
+import Setting, { MetricSettingsBox,SettingsToggle } from "./settings";
 import "../helpers/graph.css";
 import { BsFillCircleFill, BsSuitDiamondFill } from "react-icons/bs";
 //This webpage displays metrics graphs relative to the hashes
@@ -13,7 +13,7 @@ export default class GraphicsPage extends Page {
       <div className="GraphicsPage">
         <Navbar synced={this.state.synced} />
         <div class="page_container">
-          <div class="graph_content">
+          <div id="content"class="graph_content">
             <div class="header">
               <h2>Graphs</h2>
               <p>
@@ -59,8 +59,12 @@ export default class GraphicsPage extends Page {
             </div>
             <Grapher data={this.state.data} config={this.state.config} />
           </div>
-          <div class="graph_settings">
-            <div class="settings_page">
+          <div id="graph_settings" class="graph_settings">
+          <SettingsToggle 
+              PageColumn="graph_settings"
+              Settings="settings"
+              Content="content"/>
+            <div id="settings"class="settings_page">
               <div class="title">
                 <h2>Settings</h2>
               </div>
@@ -118,7 +122,7 @@ export default class GraphicsPage extends Page {
             </div>
           </div>
         </div>
-        <ErrorHandler error={this.state.error}/>
+        <ErrorHandler error={this.state.error}  page={this}/>
       </div>
     );
   }

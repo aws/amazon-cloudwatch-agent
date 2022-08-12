@@ -23,11 +23,11 @@ export default class Page extends React.Component {
         localStorage.setItem("config", JSON.stringify(this.state.config));
       }
       this.state.Receiver.update().then((updateState) => {
-        this.setState({
+        this.setState({ 
           data: this.state.Receiver.CWAData,
           synced: updateState[0],
-          error: ["error", updateState[1]],
-        });
+          error: ["error",updateState[1]],
+         });
       });
     }
     this.setState({ mounted: true });
@@ -36,6 +36,11 @@ export default class Page extends React.Component {
     this.setState({
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
     });
+  }
+  clearError(){
+    this.setState(
+      {error:["error",""]}
+    )
   }
   render() {
     setGlobalCSSVars(this.state.config);
@@ -80,10 +85,11 @@ export function ErrorHandler(props) {
   var errorMsg = props.error[1];
   return (
     <div>
-      <Snackbar open={props.error !== null && errorMsg !== ""}>
-        <MuiAlert severity={errorType}>
-          {errorType.toUpperCase()}: {errorMsg}
-        </MuiAlert>
+      <Snackbar open={props.error !== null && errorMsg !==""}
+      autoHideDuration={6000}
+      onClose={()=>{props.page.clearError()}}
+      >
+        <MuiAlert severity={errorType}>{errorType.toUpperCase()}: {errorMsg}</MuiAlert>
       </Snackbar>
     </div>
   );

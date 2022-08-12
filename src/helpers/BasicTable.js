@@ -17,6 +17,7 @@ import FirstPageIcon from "@mui/icons-material/FirstPage";
 import KeyboardArrowLeft from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRight from "@mui/icons-material/KeyboardArrowRight";
 import LastPageIcon from "@mui/icons-material/LastPage";
+import { FaLink } from "react-icons/fa";
 import "./table.css";
 import { IGNORE_ATTRIBUTES, UNITS, TEST_VARIABLES } from "../config";
 
@@ -116,6 +117,7 @@ function CreateRow(props, sigfig, currentTestCase, index, rowLength) {
     <TableCell class="cell_text">
       <a href={currEntry["Link"]} target="_blank" rel="noreferrer">
         {currEntry["Hash"]}
+        <FaLink />
       </a>
     </TableCell>
   );
@@ -126,6 +128,7 @@ function CreateRow(props, sigfig, currentTestCase, index, rowLength) {
   if (currentTestCase.split("-")[1] === "all") {
     let testCaseList = Object.keys(props.data);
     let selectedLogNum = currentTestCase.split("-")[0];
+    testCaseList.sort(); //ensure low/med/high are in order
     for (let i = 0; i < testCaseList.length; i++) {
       let testCaseOption = testCaseList[i].split("-");
       if (testCaseOption[0] === selectedLogNum) {
@@ -165,17 +168,13 @@ function CreateRow(props, sigfig, currentTestCase, index, rowLength) {
 }
 
 export function BasicTable(props) {
-  var metricNames = [];
   var sigfig = parseInt(props.config.sigfig);
-  metricNames.push(<TableCell class="cell_text head">{"Hash"}</TableCell>);
-  metricNames.push(
-    <TableCell class="cell_text head">{"CommitDate"}</TableCell>
-  );
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
   var testCases = Object.keys(props.data);
+  testCases.sort(); //ensures default test case data is shown when page loads first time
   var testVariables = Array(testCases[0].split("-").length);
 
   testCases.forEach((test) => {
@@ -192,6 +191,17 @@ export function BasicTable(props) {
   });
   var buttons = [];
   const [currentTestCase, setCurrentTest] = React.useState(testCases[0]);
+
+  var metricNames = [];
+  metricNames.push(<TableCell class="cell_text head">{"Hash"}</TableCell>);
+
+  if (currentTestCase.split("-")[1] === "all") {
+    metricNames.push(<TableCell class="cell_text head">{"Date"}</TableCell>);
+  } else {
+    metricNames.push(
+      <TableCell class="cell_text head">{"CommitDate"}</TableCell>
+    );
+  }
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -303,16 +313,32 @@ export function BasicTable(props) {
         <Table aria-label="data table" class="table">
           <TableHead>
             <TableRow class={labelHeaderClass}>
-              <TableCell align="center" colSpan={2}>
+              <TableCell
+                align="center"
+                colSpan={2}
+                style={{ backgroundColor: "#ffd7e6" }}
+              >
                 Agent Info
               </TableCell>
-              <TableCell align="center" colSpan={5}>
+              <TableCell
+                align="center"
+                colSpan={5}
+                style={{ backgroundColor: "#98ff98" }}
+              >
                 Low
               </TableCell>
-              <TableCell align="center" colSpan={5}>
+              <TableCell
+                align="center"
+                colSpan={5}
+                style={{ backgroundColor: "#FFF55F" }}
+              >
                 Medium
               </TableCell>
-              <TableCell align="center" colSpan={5}>
+              <TableCell
+                align="center"
+                colSpan={5}
+                style={{ backgroundColor: "#FF7070" }}
+              >
                 High
               </TableCell>
             </TableRow>
