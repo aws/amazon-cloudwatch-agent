@@ -203,7 +203,7 @@ jobs:
           cd integration/test/performancetest
           export IS_RELEASE=true
           export SHA=${{matrix.arrays.commitSHA}}
-          export RELEASE_NAME=${{matrix.arrays.releaseName}}"
+          export RELEASE_NAME=${{matrix.arrays.releaseName}}
           go test -run TestUpdateCommit -p 1 -v --tags=integration
       #This is here just in case workflow cancel
       - name: Terraform destroy
