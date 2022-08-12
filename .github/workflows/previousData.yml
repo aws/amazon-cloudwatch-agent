@@ -165,6 +165,8 @@ jobs:
         run: echo run performance-tracking
       - name: Verify Terraform version
         run: terraform --version
+      - name: ReleaseTag
+        run: echo ${{ matrix.arrays.releaseName }}
      #
       - name: Terraform apply
         if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
