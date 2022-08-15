@@ -4,7 +4,7 @@ import { GENERAL_ATTRIBUTES, BATCH_SIZE, UPDATE_FREQUENCY } from "../config";
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
 const RELEASE_LIST = "ReleaseList";
-const LAST_UPDATE = "LastUpdate"
+const LAST_UPDATE = "LastUpdate";
 const LINK = "Link";
 const HASH = "Hash";
 const IS_RELEASE = "isRelease";
@@ -41,9 +41,9 @@ class Receiver {
   async update() {
     // check the latest hash from cache
     try {
-      let timeSinceLastUpdate= (Date.now()- this.getLastUpdate())/1000// in  seconds
-      if (timeSinceLastUpdate < UPDATE_FREQUENCY){
-        return [true,""]
+      let timeSinceLastUpdate = (Date.now() - this.getLastUpdate()) / 1000; // in  seconds
+      if (timeSinceLastUpdate < UPDATE_FREQUENCY) {
+        return [true, ""];
       }
       let dynamoLatestItem = await this.getLatestItem();
       let DynamoHash = dynamoLatestItem[HASH];
@@ -132,7 +132,6 @@ class Receiver {
             });
             // this.CWAData[testCase][metric][LINK] = ""
             // this.CWAData[testCase][metric][HASH] =
-            //console.log("Updated", item[HASH].S);
           });
         });
         this.ReleaseMap[item[HASH].S] = true;
@@ -335,10 +334,10 @@ class Receiver {
     localStorage.setItem(LATEST_ITEM, JSON.stringify(this.latestItem));
     localStorage.setItem(CWAData, JSON.stringify(this.CWAData));
     localStorage.setItem(RELEASE_LIST, JSON.stringify(this.ReleaseMap));
-    localStorage.setItem(LAST_UPDATE,JSON.stringify(Date.now()))
+    localStorage.setItem(LAST_UPDATE, JSON.stringify(Date.now()));
   }
-  getLastUpdate(){
-    return JSON.parse(localStorage.getItem(LAST_UPDATE))
+  getLastUpdate() {
+    return JSON.parse(localStorage.getItem(LAST_UPDATE));
   }
 }
 
