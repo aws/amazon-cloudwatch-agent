@@ -211,7 +211,7 @@ jobs:
 
   UpdateReleases:
       name: "Update Releases"
-      needs: [PerformanceTrackingTest]
+      needs: [GenerateTestMatrix,PerformanceTrackingTest]
       runs-on: ubuntu-latest
       permissions:
         id-token: write
