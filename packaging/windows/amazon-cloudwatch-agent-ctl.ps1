@@ -303,8 +303,8 @@ Function CWAConfig() {
     if ($ConfigLocation -eq $AllConfig) {
         Remove-Item -Path "${JSON_DIR}\*" -Force -ErrorAction SilentlyContinue
     } else {
-        & cmd /c "`"$CWAProgramFiles\config-downloader.exe`" --output-dir ${JSON_DIR} --download-source ${ConfigLocation} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
-        CheckCMDResult # Exit immediately if config-downloader outputs any error
+        & $CWAProgramFiles\config-downloader.exe --output-dir "${JSON_DIR}" --download-source "${ConfigLocation}" --mode "${param_mode}" --config "${COMMON_CONIG}" --multi-config "${multi_config}"
+        CheckCMDResult
     }
 
     $jsonDirContent = Get-ChildItem "${JSON_DIR}" | Measure-Object
@@ -315,10 +315,8 @@ Function CWAConfig() {
     } else {
         Write-Output "Start configuration validation..."
         & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
-        CheckCMDResult  # Exit immediately if config-translator outputs any error
-
-        # Set ErrorActionPreference as Continue to continue on error when schema-test on toml file fails and
-        # return a UX-friendly message
+        CheckCMDResult
+        # Let command pass so we can check return code and give user-friendly error-message
         $ErrorActionPreference = "Continue"
         & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --schematest --config ${TOML} 2>&1" | Out-File $CVLogFile
         if ($LASTEXITCODE -ne 0) {

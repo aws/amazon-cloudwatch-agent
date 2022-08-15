@@ -1,4 +1,49 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247354.0 (2022-07-14)
+========================================================================
+
+Enhancements:
+* Increase PutMetricData request size allowed in agent
+* Fix Windows ctl issues on Windows 2012R2
+
+========================================================================
+Amazon CloudWatch Agent 1.247353.0 (2022-06-13)
+========================================================================
+
+Enhancements:
+* Upgrade the Telegraf dependency to v1.23.0
+* Drop support for mem_cached metrics on MacOS
+* Fix Windows filepath escaping so paths with spaces work again (#490)
+
+========================================================================
+Amazon CloudWatch Agent 1.247352.0 (2022-05-26)
+========================================================================
+
+New features:
+* Support log group retention in CloudWatch Logs for 6,7,8,9 years (#469)
+* Add scraping ECS_CONTAINER_METADATA_URI_V4 for ECS (#453)
+* Allow account ID as placeholder value for log configuration (#400)
+* Restart agent on RPM upgrade to fix SSM feature to auto update CWAgent (#387)
+* Increase dimension's maximum to 30 for each metrics (#361)
+* Creates a system user, "aoc", for the AWS Distro for OpenTelemetry collector
+  without a shell, or updates an existing "aoc" user on the host so that the existing
+  "aoc" user has no shell.
+
+Bug fixes:
+* Avoid Windows Server 2022 and PowerShell ISE exit on stderr (#473)
+* Enhance config validation for bad regex in CWAgent (#459)
+* Delete log's state file when tailer terminates due to an error (#457)
+* Auto_removal sends all remain logs before deleting the files (#452)
+* Include metric name in warning message when value is negative (#445)
+* Add writing to CWAgent's log before a panic (#421)
+* Move conflicting log retention check to translator (#418)
+* Fix race condition when creating log groups and log streams (ResourceAlreadyExists) (#416)
+* Retry on network failure for detecting EC2 (#397)
+* ECS Service Discovery: Fix implicit network mode (#385)
+* Fix Windows event log messages truncated on Windows Server 2022 (#379)
+* Make CloudWatch Logs's pusher to wait for the final flush to complete before returning (#350)
+
+========================================================================
 Amazon CloudWatch Agent 1.247350.0 (2022-01-19)
 ========================================================================
 

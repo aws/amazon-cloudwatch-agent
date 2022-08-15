@@ -126,7 +126,7 @@ agent_stop() {
      fi
 
      if [ "${SYSTEMD}" = 'true' ]; then
-          service "${agent_name}" stop || return
+          systemctl stop "${agent_name}.service" || return
      else
           stop "${agent_name}" || return
      fi
@@ -263,9 +263,8 @@ cwa_config() {
      if [ "${cwa_config_location}" = "${ALL_CONFIG}" ]; then
           rm -rf "${JSON_DIR}"/*
      else
-          runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${cwa_config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
-          echo "${runDownloaderCommand}"
-          ${runDownloaderCommand} || return
+          runDownloaderCommand=`"${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${cwa_config_location}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}`
+          echo ${runDownloaderCommand} || return
      fi
 
      if [ ! "$(ls ${JSON_DIR})" ]; then
@@ -273,9 +272,8 @@ cwa_config() {
           rm -f "${TOML}"
      else
           echo "Start configuration validation..."
-          runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
-          echo "${runTranslatorCommand}"
-          ${runTranslatorCommand} || return
+          runTranslatorCommand=`"${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}`
+          echo "${runTranslatorCommand}" || return
 
           runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
           echo "${runAgentSchemaTestCommand}"
@@ -323,7 +321,6 @@ cwa_config() {
      fi
 }
 
-
 set_log_level_all() {
      log_level="${1:-}"
      case "${log_level}" in
@@ -343,9 +340,8 @@ set_log_level_all() {
           ;;
      esac
 
-     runEnvConfigCommand="${CMDDIR}/amazon-cloudwatch-agent -setenv CWAGENT_LOG_LEVEL=${log_level} -envconfig ${ENV_CONFIG}"
-     echo "${runEnvConfigCommand}"
-     ${runEnvConfigCommand} || return
+     runEnvConfigCommand=`"${CMDDIR}/amazon-cloudwatch-agent" -setenv CWAGENT_LOG_LEVEL=${log_level} -envconfig "${ENV_CONFIG}"`
+     echo "${runEnvConfigCommand}" || return
      echo "Set CWAGENT_LOG_LEVEL to ${log_level}"
 }
 

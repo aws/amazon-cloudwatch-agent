@@ -8,16 +8,6 @@ variable "key_name" {
   default = "cwagent-integ-test-key"
 }
 
-variable "iam_instance_profile" {
-  type = string
-  default = "CloudWatchAgentServerRole"
-}
-
-variable "vpc_security_group_ids" {
-  type = list(string)
-  default = ["sg-013585129c1f92bf0"]
-}
-
 variable "region" {
   type = string
   default = "us-west-2"

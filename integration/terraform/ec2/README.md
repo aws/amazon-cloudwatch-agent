@@ -10,12 +10,64 @@ Running integration tests
 This all assumes that you are creating resources in the `us-west-2` region, as that is currently the only region that
 supports the integration test AMIs.
 
-#### Terraform IAM user permissions
+#### Terraform IAM assume role permission
 
 For ease of use, here's a generated IAM policy based on resource usage that you can attach to your IAM user that
 Terraform will assume, with the required permissions. See docs
 on [Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
 for how to easily generate a new policy.
+
+#### Creating assume role
+[reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
+
+Cloud formation template. You only need to enter org and repo (ex aws amazon-cloudwatch-agent)
+```
+Parameters:
+  GitHubOrg:
+    Type: String
+  RepositoryName:
+    Type: String
+  OIDCProviderArn:
+    Description: Arn for the GitHub OIDC Provider.
+    Default: ""
+    Type: String
+
+Conditions:
+  CreateOIDCProvider: !Equals 
+    - !Ref OIDCProviderArn
+    - ""
+
+Resources:
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRoleWithWebIdentity
+            Principal:
+              Federated: !If 
+                - CreateOIDCProvider
+                - !Ref GithubOidc
+                - !Ref OIDCProviderArn
+            Condition:
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${RepositoryName}:*
+
+  GithubOidc:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: 
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+Outputs:
+  Role:
+    Value: !GetAtt Role.Arn 
+```
 
 ```json
 {
@@ -35,10 +87,48 @@ for how to easily generate a new policy.
         "ec2:DescribeVpcs",
         "ec2:GetPasswordData",
         "ec2:ModifyInstanceAttribute",
+        "dynamodb:*",
         "ec2:RunInstances",
         "ec2:TerminateInstances",
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:GetObjectAcl",
+        "s3:PutObject",
         "sts:GetCallerIdentity",
-        "s3:PutObject"
+        "ssm:PutParameter",
+        "ssm:DeleteParameter",
+        "ssm:DescribeParameters",
+        "ssm:ListTagsForResource",
+        "ssm:GetParameters",
+        "ssm:GetParameter",
+        "ssm:DeleteParameters",
+        "ecs:ListContainerInstances",
+        "ecs:ListClusters",
+        "ecs:ListServices",
+        "ecs:ListTasks",
+        "ecs:ListTaskDefinitions",
+        "ecs:DescribeClusters",
+        "ecs:DescribeServices",
+        "ecs:DescribeTasks",
+        "ecs:ListTagsForResource",
+        "ecs:CreateCluster",
+        "ecs:CreateService",
+        "ecs:CreateTaskSet",
+        "ecs:DeleteCluster",
+        "ecs:DeleteService",
+        "ecs:DeleteTaskSet",
+        "ecs:RunTask",
+        "ecs:StartTask",
+        "ecs:StopTask",
+        "ecr:GetAuthorizationToken",
+        "ecr:DescribeRepositories",
+        "ecr:ListImages",
+        "ecr:DescribeImages",
+        "ecr:ListTagsForResource",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:PutImage"
       ],
       "Resource": "*"
     }
@@ -71,24 +161,28 @@ for how to easily generate a new policy.
     {
       "Effect": "Allow",
       "Action": [
-        "cloudwatch:GetMetricData",
-        "cloudwatch:PutMetricData",
-        "cloudwatch:ListMetrics",
-        "ec2:DescribeVolumes",
-        "ec2:DescribeTags",
-        "logs:PutLogEvents",
-        "logs:DescribeLogStreams",
-        "logs:DescribeLogGroups",
-        "logs:CreateLogStream",
-        "logs:CreateLogGroup",
-        "logs:DeleteLogGroup",
-        "logs:DeleteLogStream",
-        "logs:PutRetentionPolicy",
-        "logs:GetLogEvents",
-        "logs:PutLogEvents",
-        "s3:GetObjectAcl",
-        "s3:GetObject",
-        "s3:ListBucket"
+         "cloudwatch:GetMetricData",
+         "cloudwatch:PutMetricData",
+         "cloudwatch:ListMetrics",
+         "ec2:DescribeVolumes",
+         "ec2:DescribeTags",
+         "logs:PutLogEvents",
+         "logs:DescribeLogStreams",
+         "logs:DescribeLogGroups",
+         "logs:CreateLogStream",
+         "logs:CreateLogGroup",
+         "logs:DeleteLogGroup",
+         "logs:DeleteLogStream",
+         "logs:PutRetentionPolicy",
+         "logs:GetLogEvents",
+         "logs:PutLogEvents",
+         "s3:GetObjectAcl",
+         "s3:GetObject",
+         "s3:ListBucket", 
+         "ecr:GetAuthorizationToken", 
+         "dynamodb:DescribeTable",
+         "dynamodb:PutItem",
+         "dynamodb:CreateTable"
       ],
       "Resource": "*"
     },
@@ -130,8 +224,16 @@ See [docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-key
 on creating the key pair.
 > Note: Store the private key in a secure location!
 
-**Reminder: the EC2 key pair must be in the same region as the instances, so this assumes that the key pair is created
-in the `us-west-2` region.**
+### Create ECR Repository
+|Field              |Value                   |
+|-------------------|------------------------|
+|Visibility settings|private                 |
+|Repository name    |cwagent-integration-test|
+|Tag immutability   |disabled                |
+|Scan on push       |enabled                 |
+|KMS encryption     |disabled                |
+
+**Reminder: All AWS resources including EC2 key pair and ECR repository must be in the same region as the instances, so this assumes that they are created in the `us-west-2` region.**
 
 ## Required parameters for Terraform to have handy
 
@@ -166,18 +268,17 @@ repository secret for the GitHub actions workflow.
 Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) on configuring GitHub Actions
 secrets.
 
-| Key                               | Description                                                                                             |
-|-----------------------------------|---------------------------------------------------------------------------------------------------------|
-| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                   |
-| `TERRAFORM_AWS_ACCESS_KEY_ID`     | IAM user access key                                                                                     |
-| `TERRAFORM_AWS_SECRET_ACCESS_KEY` | IAM user secret key                                                                                     |
-| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                   |
-| `KEY_NAME`                        | EC2 key pair name                                                                                       |
-| `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars) |
-| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                     |
-| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                    |
-| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                   | 
-| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                               |
+| Key                               | Description                                                                                              |
+|-----------------------------------|----------------------------------------------------------------------------------------------------------|
+| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                    |
+| `TERRAFORM_AWS_ASSUME_ROLE`       | IAM role to assume                                                                                       |
+| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                    |
+| `KEY_NAME`                        | EC2 key pair name                                                                                        |
+| `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars)  |
+| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                      |
+| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                     |
+| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                    | 
+| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                                |
 
 ### Run the integration test action on your fork
 
@@ -185,6 +286,9 @@ secrets.
 2. Go to `Actions`
 3. Select the `Run Integration Tests` action
 4. Select `Run workflow`, and choose the branch to execute integration tests on
+
+> Note: The Amazon EC2 quota limit might need to be increased to run the integration test (each EC2 integration test suite is tested on different EC2 instance per OS)
+> : request an increase via `All Standard (A, C, D, H, I, M, R, T, Z) Spot Instance Request`
 
 Note that based on the GitHub action workflow YAML configuration, merges to the main branch
 also trigger the integration tests. If for any reason you do not want integration tests to run

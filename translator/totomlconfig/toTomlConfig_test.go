@@ -50,6 +50,18 @@ func TestLogMetricOnly(t *testing.T) {
 	os.Unsetenv(config.HOST_IP)
 }
 
+func TestLogMetricOnPrem(t *testing.T) {
+	resetContext()
+	context.CurrentContext().SetRunInContainer(true)
+	os.Setenv(config.HOST_NAME, "host_name_from_env")
+	os.Setenv(config.HOST_IP, "127.0.0.1")
+	context.CurrentContext().SetMode(config.ModeOnPrem)
+	checkTomlTranslation(t, "./sampleConfig/log_metric_only.json", "./sampleConfig/log_metric_only_on_prem.conf", "linux")
+	checkTomlTranslation(t, "./sampleConfig/log_metric_only.json", "./sampleConfig/log_metric_only_on_prem.conf", "darwin")
+	os.Unsetenv(config.HOST_NAME)
+	os.Unsetenv(config.HOST_IP)
+}
+
 func TestLogMetricAndLog(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)
@@ -57,6 +69,18 @@ func TestLogMetricAndLog(t *testing.T) {
 	os.Setenv(config.HOST_IP, "127.0.0.1")
 	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log.conf", "linux")
 	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log.conf", "darwin")
+	os.Unsetenv(config.HOST_NAME)
+	os.Unsetenv(config.HOST_IP)
+}
+
+func TestLogMetricAndLogOnPrem(t *testing.T) {
+	resetContext()
+	context.CurrentContext().SetRunInContainer(true)
+	os.Setenv(config.HOST_NAME, "host_name_from_env")
+	os.Setenv(config.HOST_IP, "127.0.0.1")
+	context.CurrentContext().SetMode(config.ModeOnPrem)
+	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "linux")
+	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "darwin")
 	os.Unsetenv(config.HOST_NAME)
 	os.Unsetenv(config.HOST_IP)
 }
@@ -195,6 +219,7 @@ func checkTomlTranslation(t *testing.T, jsonPath string, desiredTomlPath string,
 	err := json.Unmarshal([]byte(ReadFromFile(jsonPath)), &input)
 	assert.NoError(t, err)
 	actualOutput := ToTomlConfig(input)
+	log.Printf("output is %v", actualOutput)
 	checkIfIdenticalToml(t, desiredTomlPath, actualOutput)
 }
 
