@@ -53,7 +53,6 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${BUILD_ROOT}/var/run/amazon/amazo
 cp ${BUILD_SPACE}/packaging/debian/conffiles ${BUILD_ROOT}/
 cp ${BUILD_SPACE}/packaging/debian/preinst ${BUILD_ROOT}/
 cp ${BUILD_SPACE}/packaging/debian/prerm ${BUILD_ROOT}/
-cp ${BUILD_SPACE}/packaging/debian/postinst ${BUILD_ROOT}/
 cp ${BUILD_SPACE}/packaging/debian/debian-binary ${BUILD_ROOT}/
 
 chmod ug+rx ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
@@ -79,7 +78,7 @@ cd ${BUILD_ROOT}
 tar czf data.tar.gz opt etc usr var --owner=0 --group=0
 cd ~-
 cd ${BUILD_ROOT}
-tar czf control.tar.gz control conffiles preinst prerm postinst --owner=0 --group=0
+tar czf control.tar.gz control conffiles preinst prerm --owner=0 --group=0
 cd ~-
 
 echo "Creating the debian package"
