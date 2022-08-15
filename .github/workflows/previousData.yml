@@ -198,13 +198,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-      - name: Update as release
-        run: |
-          cd integration/test/performancetest
-          export IS_RELEASE=true
-          export SHA=${{matrix.arrays.commitSHA}}
-          export RELEASE_NAME=${{matrix.arrays.releaseName}}
-          go test -run TestUpdateCommit -p 1 -v --tags=integration
+      
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
@@ -214,3 +208,47 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
+
+  UpdateReleases:
+      name: "Update Releases"
+      needs: [PerformanceTrackingTest]
+      runs-on: ubuntu-latest
+      permissions:
+        id-token: write
+        contents: read
+      strategy:
+        fail-fast: false
+        matrix:
+          arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_old_performance_matrix) }}
+      steps:
+        - uses: actions/checkout@v2
+
+        - name: Configure AWS Credentials
+          uses: aws-actions/configure-aws-credentials@v1
+          with:
+            role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+            aws-region: us-west-2
+
+        - name: Cache if success
+          id: performance-tracking
+          uses: actions/cache@v2
+          with:
+            path: go.mod
+            key: performance-tracking-test-${{ github.sha }}
+
+        - name: Echo Test Info
+          run: echo run performance-tracking
+        - name: Verify Terraform version
+          run: terraform --version
+        - name: ReleaseTag
+          run: echo ${{ matrix.arrays.releaseName }}
+
+        - name: Update as release
+          run: |
+            cd integration/test/performancetest
+            export IS_RELEASE=true
+            export SHA=${{matrix.arrays.commitSHA}}
+            export RELEASE_NAME=${{matrix.arrays.releaseName}}
+            go test -run TestUpdateCommit -p 1 -v --tags=integration
+
+
