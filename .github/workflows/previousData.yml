@@ -165,6 +165,8 @@ jobs:
         run: echo run performance-tracking
       - name: Verify Terraform version
         run: terraform --version
+      - name: ReleaseTag
+        run: echo ${{ matrix.arrays.releaseName }}
      #
       - name: Terraform apply
         if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
@@ -189,6 +191,7 @@ jobs:
               -var="key_name=${KEY_NAME}" \
               -var="old_sha=${{matrix.arrays.commitSHA}}" \
               -var="old_sha_date=${{ matrix.arrays.commitSHADate }}" \
+              -var="old_release_name=${{ matrix.arrays.releaseName }}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
@@ -200,6 +203,7 @@ jobs:
           cd integration/test/performancetest
           export IS_RELEASE=true
           export SHA=${{matrix.arrays.commitSHA}}
+          export RELEASE_NAME=${{matrix.arrays.releaseName}}
           go test -run TestUpdateCommit -p 1 -v --tags=integration
       #This is here just in case workflow cancel
       - name: Terraform destroy

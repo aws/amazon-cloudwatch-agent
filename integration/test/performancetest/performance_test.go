@@ -257,13 +257,17 @@ func TestUpdateCommit(t*testing.T){
 	if(os.Getenv("IS_RELEASE") !="true"){
 		t.SkipNow()
 	}
-	t.Log("Updating Release Commit",os.Getenv(SHA_ENV))
+	t.Logf("Updating Release Commit hash: %s| name: %s |",os.Getenv(SHA_ENV),os.Getenv(RELEASE_NAME_ENV))
 	dynamoDB := InitializeTransmitterAPI("CWAPerformanceMetrics") //add cwa version here
-	testHash := os.Getenv(SHA_ENV)
+	releaseHash := os.Getenv(SHA_ENV)
+	releaseName := os.Getenv(RELEASE_NAME_ENV)
 	if dynamoDB == nil{
 		t.Fatalf("Error: generating dynamo table")
 	return
 	}
 
-	dynamoDB.UpdateReleaseTag(testHash)
+	err := dynamoDB.UpdateReleaseTag(releaseHash,releaseName)
+	if err!=nil{
+		t.Fatalf("Error: %s",err)
+	}
 }
