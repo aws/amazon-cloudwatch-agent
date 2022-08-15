@@ -56,6 +56,7 @@ type LogAgent struct {
 	backends    map[string]LogBackend
 	destNames   map[LogDest]string
 	collections []LogCollection
+	retentionAlreadySet map[string]bool
 }
 
 func NewLogAgent(c *config.Config) *LogAgent {
@@ -63,6 +64,7 @@ func NewLogAgent(c *config.Config) *LogAgent {
 		Config:    c,
 		backends:  make(map[string]LogBackend),
 		destNames: make(map[LogDest]string),
+		retentionAlreadySet: make(map[string]bool),
 	}
 }
 
@@ -106,7 +108,15 @@ func (l *LogAgent) Run(ctx context.Context) {
 						log.Printf("E! [logagent] Failed to find destination %v for log source %v/%v(%v) ", dname, src.Group(), src.Stream(), src.Description())
 						continue
 					}
-					dest := backend.CreateDest(src.Group(), src.Stream(), src.Retention())
+					retention := src.Retention()
+					if retention > 0 && l.retentionAlreadySet[src.Group()] == true {
+						log.Printf("D! [logagent] Retention already set for log group %v/%v retention:%v) ", src.Group(), src.Stream(), src.Retention())
+						retention = -1
+					} else if retention > 0 {
+						log.Printf("I! First time setting retention for log group %v/%v, update map to avoid setting twice) ", src.Group(), src.Stream())
+						l.retentionAlreadySet[src.Group()] = true
+					}
+					dest := backend.CreateDest(src.Group(), src.Stream(), retention)
 					l.destNames[dest] = dname
 					log.Printf("I! [logagent] piping log from %v/%v(%v) to %v with retention %v", src.Group(), src.Stream(), src.Description(), dname, src.Retention())
 					go l.runSrcToDest(src, dest)

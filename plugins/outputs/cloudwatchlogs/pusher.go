@@ -383,7 +383,7 @@ func (p *pusher) putRetentionPolicy() {
 				p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
 			}
 		} else {
-			p.Log.Debugf("successfully updated log retention policy for log group %v", p.Group)
+			p.Log.Debugf("successfully updated log retention policy for log group %v with log stream %v", p.Group, p.Stream)
 		}
 	}
 }
