@@ -52,18 +52,18 @@ type LogDest interface {
 
 // LogAgent is the agent handles pure log pipelines
 type LogAgent struct {
-	Config      *config.Config
-	backends    map[string]LogBackend
-	destNames   map[LogDest]string
-	collections []LogCollection
+	Config              *config.Config
+	backends            map[string]LogBackend
+	destNames           map[LogDest]string
+	collections         []LogCollection
 	retentionAlreadySet map[string]bool
 }
 
 func NewLogAgent(c *config.Config) *LogAgent {
 	return &LogAgent{
-		Config:    c,
-		backends:  make(map[string]LogBackend),
-		destNames: make(map[LogDest]string),
+		Config:              c,
+		backends:            make(map[string]LogBackend),
+		destNames:           make(map[LogDest]string),
 		retentionAlreadySet: make(map[string]bool),
 	}
 }
@@ -109,7 +109,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 						continue
 					}
 					retention := src.Retention()
-					if retention > 0 && l.retentionAlreadySet[src.Group()] == true {
+					if retention > 0 && l.retentionAlreadySet[src.Group()] {
 						log.Printf("D! [logagent] Retention already set for log group %v/%v retention:%v) ", src.Group(), src.Stream(), src.Retention())
 						retention = -1
 					} else if retention > 0 {
