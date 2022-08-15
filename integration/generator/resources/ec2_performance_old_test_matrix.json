@@ -32,6 +32,7 @@
   "arc": "amd64",
   "binaryName": "amazon-cloudwatch-agent.rpm",
   "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+
   "commitSHA": "a029f69cd3b4164cb601cfa20f10b717c5f85957",
   "commitSHADate": "1653708392",
   "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",
@@ -158,6 +159,7 @@
   "arc": "amd64",
   "binaryName": "amazon-cloudwatch-agent.rpm",
   "caCertPath": "/etc/ssl/certs/ca-bundle.crt",
+
   "commitSHA": "5936078f6f803fe7e8b2ec7ece34c600f9fc7dc6",
   "commitSHADate": "1643665788",
   "installAgentCommand": "rpm -U ./amazon-cloudwatch-agent.rpm",

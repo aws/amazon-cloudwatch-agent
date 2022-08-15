@@ -158,7 +158,6 @@ func getReleases(startDate int ,EndDate int ) []Release{
 	for _,element := range tagData{
 		data := strings.Split(element,"|")
 		date,_ := strconv.Atoi(data[0])
-
 		// fmt.Println(date)
 		if i > 25{
 			break
