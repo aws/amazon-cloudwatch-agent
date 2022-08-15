@@ -139,7 +139,6 @@ export function Graph(props) {
   testVariables.forEach((varSet, i) => {
     var options = [];
     let seperatedTestCase = currentTestCase.split("-");
-    console.log(seperatedTestCase);
     varSet.forEach((value) => {
       //@TODO FIX BUG SET DEFAULT PLSZZZ
       options.push(
