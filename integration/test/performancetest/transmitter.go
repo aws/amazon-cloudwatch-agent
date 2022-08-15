@@ -9,9 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
-	"strings"
-	"log"
-	"math/rand"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -19,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
 )
-
 
 const (
 	UPDATE_DELAY_THRESHOLD = 60 // this is how long we want to wait for random sleep in seconds
@@ -236,86 +233,6 @@ func (transmitter *TransmitterAPI) SendItem(packet map[string]interface{}, tps i
 	return sentItem, err
 
 }
-/*
-TestCasePackager()
-Desc:
-	This function updates the currentPacket with the unique parts of newPacket and returns in dynamo format
-Params:
-	newPacket: this is the agentData collected in this test
-	currentPacket: this is the agentData stored in dynamo currently
-*/
-func (transmitter * TransmitterAPI) TestCasePackager(newPacket map[string]interface{}, currentPacket map[string]interface{} )(map[string]types.AttributeValue,error){
-	testSettings := fmt.Sprintf("%s-%s",os.Getenv("PERFORMANCE_NUMBER_OF_LOGS"),os.Getenv("TPS"))
-	fmt.Println("The test is",testSettings)
-	item := currentPacket["Results"].(map[string]interface{})
-	_,isPresent := item[testSettings] // check if we already had this test
-	if isPresent{ 
-		// we already had this test so ignore it
-		return nil,errors.New("Nothing to update")
-	}
-	testSettingValue:=newPacket["Results"].(map[string]map[string]Stats)[testSettings]
-	mergedResults := make(map[string]map[string]interface{})
-	mergedResults["Results"] = make(map[string]interface{})
-	for attribute,value := range item{
-		_, isPresent := newPacket["Results"].(map[string]map[string]Stats)[attribute]
-		if(isPresent){continue}
-		mergedResults["Results"][attribute] = value
-		
-	}
-	
-	mergedResults["Results"][testSettings] = testSettingValue
-	newAttributes, _ := attributevalue.MarshalMap(mergedResults)
-	return newAttributes, nil
-}
-/*
-UpdateItem()
-Desc:
-	This function updates the item in dynamo if the atomic condition is true else it will return ConditionalCheckFailedException 
-Params:
-	hash: this is the commitHash
-	targetAttributes: this is the targetAttribute to be added to the dynamo item
-	testHash: this is the hash of the last item, used like a version check
-*/
-func (transmitter * TransmitterAPI) UpdateItem(hash string,targetAttributes map[string]types.AttributeValue, testHash string) error{
-	var err error
-	var ae *types.ConditionalCheckFailedException // this exception represent the the atomic check has failed
-	fmt.Println("Updating:",hash,testHash)
-	item,err := transmitter.Query(hash) // get most Up to date item from dynamo | O(1) bcs of global sec. idx.
-	if len(item) ==0{ // check if hash is in dynamo
-		return errors.New("ERROR: Hash is not found in dynamo")
-	}
-	commitDate := fmt.Sprintf("%d",int(item[0]["CommitDate"].(float64)))
-	year := fmt.Sprintf("%d",int(item[0]["Year"].(float64)))
-	//setup the update expression
-	expressionAttributeValues := make(map[string]types.AttributeValue)
-	expression := ""
-	n_expression := len(targetAttributes)
-	i :=0
-	for attribute, value := range targetAttributes{
-		expressionName := ":" +strings.ToLower(attribute)
-		expression = fmt.Sprintf("set %s = %s",attribute,expressionName)
-		expressionAttributeValues[expressionName] = value
-		if(n_expression -1 >i){
-			expression += "and"
-		}
-		i++
-	}
-	expressionAttributeValues[":testHash"] = &types.AttributeValueMemberS{Value: testHash}
-	//----
-	//call update
-	_, err = transmitter.dynamoDbClient.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
-        TableName: aws.String(transmitter.DataBaseName),
-        Key: map[string]types.AttributeValue{
-            "Year": &types.AttributeValueMemberN{Value: year},
-			"CommitDate": &types.AttributeValueMemberN{Value: commitDate },
-        },
-        UpdateExpression: aws.String(expression),
-        ExpressionAttributeValues: expressionAttributeValues,
-		ConditionExpression: aws.String("#testHash = :testHash"),
-		ExpressionAttributeNames: map[string]string{
-			"#testHash": TEST_HASH,
-		},
-    })
 
 /*
 PacketMerger()
