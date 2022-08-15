@@ -83,7 +83,7 @@ export function Graph(props) {
       }
     });
   });
-  testCases.sort()
+  testCases.sort();
   const [currentTestCase, setCurrentTest] = useState(testCases[0]);
   var buttons = [];
   var metricLines = []; // list of react components
@@ -138,12 +138,12 @@ export function Graph(props) {
   var n_variables = testVariables.length;
   testVariables.forEach((varSet, i) => {
     var options = [];
-    let seperatedTestCase = (currentTestCase.split("-"))
-    console.log(seperatedTestCase)
+    let seperatedTestCase = currentTestCase.split("-");
+    //console.log(seperatedTestCase);
     varSet.forEach((value) => {
       //@TODO FIX BUG SET DEFAULT PLSZZZ
       options.push(
-        <option selected={value == seperatedTestCase[i]}>{value}</option>
+        <option selected={value === seperatedTestCase[i]}>{value}</option>
       );
     });
     buttons.push(

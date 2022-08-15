@@ -1,6 +1,6 @@
 import Navbar from "../helpers/navbar";
-import Page, {ErrorHandler} from "./page";
-import {UPDATE_FREQUENCY} from "../config"
+import Page, { ErrorHandler } from "./page";
+import { UPDATE_FREQUENCY } from "../config";
 import "./wiki.css";
 import {
   ScrollingProvider,
@@ -26,7 +26,7 @@ export default class WikiPage extends Page {
     super.render();
     return (
       <div class="wiki_page">
-        <Navbar synced={this.state.synced}  page={this}/>
+        <Navbar synced={this.state.synced} page={this} />
         <h2>WikiPage</h2>
         <ScrollingProvider>
           <div class="container">
@@ -128,12 +128,12 @@ export default class WikiPage extends Page {
                 <ul></ul>
                 <p></p>
               </Section>
-              <Section id="Test Enviorment">
+              <Section id="Test Environment">
                 <h3>Test Environment</h3>
                 <p>
-                  The performance test is run on an AL2 EC2 instance and the
-                  agent resources are monitored via the procstat plugin for
-                  CloudWatch Agent. When the agent is installed on the EC2
+                  The performance test is run on a t3a.xlarge AL2 EC2 instance
+                  and the agent resources are monitored via the procstat plugin
+                  for CloudWatch Agent. When the agent is installed on the EC2
                   instance, a config file is generated for the agent to use. The
                   config file contains an entry for procstat that the agent uses
                   to gather metrics on itself. The config also contains a
@@ -174,7 +174,7 @@ export default class WikiPage extends Page {
             </div>
           </div>
         </ScrollingProvider>
-        <ErrorHandler error={this.state.error}/>
+        <ErrorHandler error={this.state.error} />
       </div>
     );
   }

@@ -132,7 +132,7 @@ class Receiver {
             });
             // this.CWAData[testCase][metric][LINK] = ""
             // this.CWAData[testCase][metric][HASH] =
-            console.log("Updated", item[HASH].S);
+            //console.log("Updated", item[HASH].S);
           });
         });
         this.ReleaseMap[item[HASH].S] = true;
@@ -269,7 +269,7 @@ class Receiver {
         return response.data.body;
       })
       .catch(function (error) {
-        console.log(error);
+        //console.log(error);
         return "error";
       });
     return out;

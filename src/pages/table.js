@@ -1,7 +1,7 @@
-import Page, {ErrorHandler} from "./page";
+import Page, { ErrorHandler } from "./page";
 import Navbar from "../helpers/navbar";
 import TableGroup from "../helpers/BasicTable";
-import Setting,{SettingsToggle} from "./settings";
+import Setting, { SettingsToggle } from "./settings";
 import "../helpers/table.css";
 
 //This the webpage that contains the metric tables.
@@ -10,18 +10,20 @@ export default class TablePage extends Page {
     super.render();
     return (
       <div className="table_page">
-        <Navbar synced={this.state.synced}  page={this}/>
+        <Navbar synced={this.state.synced} page={this} />
         <div class="page_container">
-          <div id="content"class="table_content">
+          <div id="content" class="table_content">
             <div class="header">
               <h2>Table Page</h2>
               <p>
                 In here you can see metrics and their statistics in a table
-                format. Official agent releases are highlighted by coloring the
-                release commit row purple. In this webpage we have multiple
-                settings that can be configured. These settings can be
-                configured from the right hand-side. Supported settings are as
-                following:
+                format. Official agent releases are highlighted by coloring{" "}
+                <strong style={{ color: "#8B008B" }}>
+                  the release commit row purple.{" "}
+                </strong>{" "}
+                In this webpage we have multiple settings that can be
+                configured. These settings can be configured from the right
+                hand-side. Supported settings are as following:
                 <br />
                 <br />
                 <ul>
@@ -42,12 +44,13 @@ export default class TablePage extends Page {
             </div>
             <TableGroup data={this.state.data} config={this.state.config} />
           </div>
-          <div id ="table_settings"class="table_settings">
-            <SettingsToggle 
+          <div id="table_settings" class="table_settings">
+            <SettingsToggle
               PageColumn="table_settings"
               Settings="settings"
-              Content="content"/>
-            <div id="settings"class="settings_page">
+              Content="content"
+            />
+            <div id="settings" class="settings_page">
               <div class="title">
                 <h2>Settings</h2>
               </div>
@@ -78,7 +81,7 @@ export default class TablePage extends Page {
             </div>
           </div>
         </div>
-        <ErrorHandler error={this.state.error}  page={this}/>
+        <ErrorHandler error={this.state.error} page={this} />
       </div>
     );
   }
