@@ -18,6 +18,7 @@ export default class Page extends React.Component {
       error: ["error", ""], //"errorType":["error,"warning,"info","success"],"errormsg"
     };
   }
+
   componentDidMount() {
     if (!this.state.mounted) {
       if (localStorage.getItem("config") == null) {
@@ -33,14 +34,17 @@ export default class Page extends React.Component {
     }
     this.setState({ mounted: true });
   }
+
   updateConfig() {
     this.setState({
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
     });
   }
+
   updateError(errorType, errorMsg) {
     this.setState({ error: [errorType, errorMsg] });
   }
+
   updateFreqWarning() {
     this.updateError(
       "warning",
@@ -51,9 +55,11 @@ export default class Page extends React.Component {
       )} minutes`
     );
   }
+
   clearError() {
     this.setState({ error: ["", ""] });
   }
+
   render() {
     setGlobalCSSVars(this.state.config);
     return <div></div>;
@@ -91,6 +97,7 @@ function setGlobalCSSVars(props) {
     `${parseInt(props.tableFontSize)}px`
   );
 }
+
 // This component creates a snack bar alert if errorMsg is not ""
 export function ErrorHandler(props) {
   var errorType = props.error[0];

@@ -29,7 +29,7 @@ export default class Home extends Page {
             <div>
               <br></br>
             </div>
-            To obtain this benchmarking data, a t3a.xlarge EC2 instance is
+            To obtain this benchmarking data, a t3a.xlarge AL2 EC2 instance is
             started and CloudWatch Agent is installed on the host. A
             configuration file is generated for the agent to use with a
             specified number of logs monitored. When the test begins, the agent
