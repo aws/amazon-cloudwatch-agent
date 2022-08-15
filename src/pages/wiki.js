@@ -157,10 +157,6 @@ export default class WikiPage extends Page {
                     title="Click"
                     style={{ width: "15%", height: "24px" }}
                     onClick={() => {
-                      let timeSinceLastUpdate= (Date.now()- this.getLastUpdate())/1000
-                      if (timeSinceLastUpdate < UPDATE_FREQUENCY){
-                        return
-                      }
                       this.state.Receiver.cacheClear();
                     }}
                   >
