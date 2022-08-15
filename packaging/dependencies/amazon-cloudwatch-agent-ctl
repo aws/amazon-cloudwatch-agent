@@ -233,9 +233,9 @@ runstatus() {
 
 config_all() {
      cwa_config_location="${1:-}"
-     restart="${3:-}"
-     mode="${4:-}"
-     multi_config="${5:-}"
+     restart="${2:-}"
+     mode="${3:-}"
+     multi_config="${4:-}"
 
      if [ -z "${cwa_config_location}" ]; then
           cwa_config_location='default'
