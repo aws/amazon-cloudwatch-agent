@@ -7,7 +7,7 @@ export default class Home extends Page {
     super.render();
     return (
       <div class="homepage">
-        <Navbar synced={this.state.synced} />
+        <Navbar synced={this.state.synced} page={this} />
         <h2>CloudWatch Agent Performance Metrics</h2>
         <section>
           <h3>About CloudWatch Agent Performance Tracking</h3>
@@ -29,15 +29,16 @@ export default class Home extends Page {
             <div>
               <br></br>
             </div>
-            To obtain this benchmarking data, an EC2 instance is started and
-            CloudWatch Agent is installed on the host. A configuration file is
-            generated for the agent to use with a specified number of logs
-            monitored. When the test begins, the agent is started and lines are
-            written to each log file monitored in the config. The lines are
-            written at a specified rate for the given test. While the agent is
-            running, it is also monitoring it's own resource usage so it can
-            report this data. These metrics are pulled from CloudWatch and saved
-            as the benchmarking data used on this website.
+            To obtain this benchmarking data, a t3a.xlarge AL2 EC2 instance is
+            started and CloudWatch Agent is installed on the host. A
+            configuration file is generated for the agent to use with a
+            specified number of logs monitored. When the test begins, the agent
+            is started and lines are written to each log file monitored in the
+            config. The lines are written at a specified rate for the given
+            test. While the agent is running, it is also monitoring it's own
+            resource usage so it can report this data. These metrics are pulled
+            from CloudWatch and saved as the benchmarking data used on this
+            website.
           </p>
         </section>
         <section>
@@ -90,7 +91,7 @@ export default class Home extends Page {
           </p>
         </section>
         <br />
-        <ErrorHandler error={this.state.error}  page={this}/>
+        <ErrorHandler error={this.state.error} page={this} />
       </div>
     );
   }

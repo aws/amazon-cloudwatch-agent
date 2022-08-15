@@ -1,9 +1,10 @@
 import AWS from "aws-sdk";
 import axios from "axios";
-import { GENERAL_ATTRIBUTES, BATCH_SIZE } from "../config";
+import { GENERAL_ATTRIBUTES, BATCH_SIZE, UPDATE_FREQUENCY } from "../config";
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
 const RELEASE_LIST = "ReleaseList";
+const LAST_UPDATE = "LastUpdate"
 const LINK = "Link";
 const HASH = "Hash";
 const IS_RELEASE = "isRelease";
@@ -40,6 +41,10 @@ class Receiver {
   async update() {
     // check the latest hash from cache
     try {
+      let timeSinceLastUpdate= (Date.now()- this.getLastUpdate())/1000// in  seconds
+      if (timeSinceLastUpdate < UPDATE_FREQUENCY){
+        return [true,""]
+      }
       let dynamoLatestItem = await this.getLatestItem();
       let DynamoHash = dynamoLatestItem[HASH];
       // ask dynamo what is the lastest hash it received
@@ -330,6 +335,10 @@ class Receiver {
     localStorage.setItem(LATEST_ITEM, JSON.stringify(this.latestItem));
     localStorage.setItem(CWAData, JSON.stringify(this.CWAData));
     localStorage.setItem(RELEASE_LIST, JSON.stringify(this.ReleaseMap));
+    localStorage.setItem(LAST_UPDATE,JSON.stringify(Date.now()))
+  }
+  getLastUpdate(){
+    return JSON.parse(localStorage.getItem(LAST_UPDATE))
   }
 }
 

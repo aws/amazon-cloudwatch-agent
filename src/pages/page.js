@@ -3,6 +3,7 @@ import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import Receiver from "../helpers/reciever";
 import { DEFAULT_CONFIG } from "../config";
+import { UPDATE_FREQUENCY } from "../config";
 import "../helpers/graph.css";
 //This is the base website page, all website components inherit this page.
 export default class Page extends React.Component {
@@ -17,31 +18,48 @@ export default class Page extends React.Component {
       error: ["error", ""], //"errorType":["error,"warning,"info","success"],"errormsg"
     };
   }
+
   componentDidMount() {
     if (!this.state.mounted) {
       if (localStorage.getItem("config") == null) {
         localStorage.setItem("config", JSON.stringify(this.state.config));
       }
       this.state.Receiver.update().then((updateState) => {
-        this.setState({ 
+        this.setState({
           data: this.state.Receiver.CWAData,
           synced: updateState[0],
-          error: ["error",updateState[1]],
-         });
+          error: ["error", updateState[1]],
+        });
       });
     }
     this.setState({ mounted: true });
   }
+
   updateConfig() {
     this.setState({
       config: JSON.parse(localStorage.getItem("config")) || DEFAULT_CONFIG,
     });
   }
-  clearError(){
-    this.setState(
-      {error:["error",""]}
-    )
+
+  updateError(errorType, errorMsg) {
+    this.setState({ error: [errorType, errorMsg] });
   }
+
+  updateFreqWarning() {
+    this.updateError(
+      "warning",
+      `Next update coming in ${Math.floor(
+        (UPDATE_FREQUENCY -
+          (Date.now() - this.state.Receiver.getLastUpdate()) / 1000) /
+          60
+      )} minutes`
+    );
+  }
+
+  clearError() {
+    this.setState({ error: ["", ""] });
+  }
+
   render() {
     setGlobalCSSVars(this.state.config);
     return <div></div>;
@@ -79,17 +97,26 @@ function setGlobalCSSVars(props) {
     `${parseInt(props.tableFontSize)}px`
   );
 }
+
 // This component creates a snack bar alert if errorMsg is not ""
 export function ErrorHandler(props) {
   var errorType = props.error[0];
+  if (errorType === "") {
+    return;
+  }
   var errorMsg = props.error[1];
   return (
     <div>
-      <Snackbar open={props.error !== null && errorMsg !==""}
-      autoHideDuration={6000}
-      onClose={()=>{props.page.clearError()}}
+      <Snackbar
+        open={props.error !== null && errorMsg !== ""}
+        autoHideDuration={6000}
+        onClose={() => {
+          props.page.clearError();
+        }}
       >
-        <MuiAlert severity={errorType}>{errorType.toUpperCase()}: {errorMsg}</MuiAlert>
+        <MuiAlert severity={errorType}>
+          {errorType.toUpperCase()}: {errorMsg}
+        </MuiAlert>
       </Snackbar>
     </div>
   );
