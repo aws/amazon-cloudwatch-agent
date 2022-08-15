@@ -193,7 +193,7 @@ func TestConflictingRetention(t *testing.T) {
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
-			"retention_in_days": -1,
+			"retention_in_days": 1,
 		},
 	}
 
