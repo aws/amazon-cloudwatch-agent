@@ -697,7 +697,7 @@ func TestDuplicateRetention(t *testing.T) {
 		"file_path":         "path1",
 		"log_group_name":    "test1",
 		"pipe":              false,
-		"retention_in_days": -1,
+		"retention_in_days": 3,
 		"from_beginning":    true,
 	}}
 	assert.Equal(t, expectVal, val)
