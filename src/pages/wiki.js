@@ -1,6 +1,5 @@
 import Navbar from "../helpers/navbar";
 import Page, { ErrorHandler } from "./page";
-import { UPDATE_FREQUENCY } from "../config";
 import "./wiki.css";
 import {
   ScrollingProvider,
