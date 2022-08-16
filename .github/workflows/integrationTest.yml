@@ -34,6 +34,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       # Set up building environment, patch the dev repo code on dispatch events.
       - name: Set up Go 1.x
