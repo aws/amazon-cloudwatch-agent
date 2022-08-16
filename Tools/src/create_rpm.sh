@@ -6,7 +6,7 @@ set -e
 
 SPEC_FILE="${PREPKGPATH}/amazon-cloudwatch-agent.spec"
 BUILD_ROOT="${BUILD_SPACE}/private/linux_${ARCH}/rpm-build"
-AGENT_VERSION_WITHOUT_SED=$(cat ${PREPKGPATH}/CWAGENT_VERSION)
+AGENT_VERSION_WITHOUT_SED=$(cat ${BUILD_SPACE}/bin/CWAGENT_VERSION)
 AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g")
 
 echo "BUILD_SPACE: ${BUILD_SPACE}  agent: ${AGENT_VERSION_WITHOUT_SED}  agent_version: ${AGENT_VERSION}  pre-package location:${PREPKGPATH}"
