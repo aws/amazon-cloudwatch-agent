@@ -68,7 +68,7 @@ func NewLogAgent(c *config.Config) *LogAgent {
 	}
 }
 
-// LogAgent will scan all input and output plugins for LogCollection and LogBackend.
+// Run LogAgent will scan all input and output plugins for LogCollection and LogBackend.
 // And connect all the LogSrc from the LogCollection found to the respective LogDest
 // based on the configured "destination", and "name"
 func (l *LogAgent) Run(ctx context.Context) {
@@ -103,22 +103,26 @@ func (l *LogAgent) Run(ctx context.Context) {
 				srcs := c.FindLogSrc()
 				for _, src := range srcs {
 					dname := src.Destination()
+					logGroup := src.Group()
+					logStream := src.Stream()
+					description := src.Description()
+					retention := src.Retention()
 					backend, ok := l.backends[dname]
 					if !ok {
-						log.Printf("E! [logagent] Failed to find destination %v for log source %v/%v(%v) ", dname, src.Group(), src.Stream(), src.Description())
+						log.Printf("E! [logagent] Failed to find destination %s for log source %s/%s(%s) ", dname, logGroup, logStream, description)
 						continue
 					}
-					retention := src.Retention()
-					if retention > 0 && l.retentionAlreadySet[src.Group()] {
-						log.Printf("D! [logagent] Retention already set for log group %v/%v retention:%v) ", src.Group(), src.Stream(), src.Retention())
+
+					if retention > 0 && l.retentionAlreadySet[logGroup] {
+						log.Printf("D! [logagent] Retention already set for log group %s, current retention %d", logGroup, retention)
 						retention = -1
 					} else if retention > 0 {
-						log.Printf("I! First time setting retention for log group %v/%v, update map to avoid setting twice) ", src.Group(), src.Stream())
-						l.retentionAlreadySet[src.Group()] = true
+						log.Printf("I! First time setting retention for log group %s, update map to avoid setting twice", logGroup)
+						l.retentionAlreadySet[logGroup] = true
 					}
-					dest := backend.CreateDest(src.Group(), src.Stream(), retention)
+					dest := backend.CreateDest(logGroup, logStream, retention)
 					l.destNames[dest] = dname
-					log.Printf("I! [logagent] piping log from %v/%v(%v) to %v with retention %v", src.Group(), src.Stream(), src.Description(), dname, src.Retention())
+					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
 					go l.runSrcToDest(src, dest)
 				}
 			}
