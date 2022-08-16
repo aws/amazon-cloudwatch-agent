@@ -106,7 +106,7 @@ jobs:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ StartLocalStack,UpdateReleases ]
+    needs: [ StartLocalStack,PerformanceTrackingTest ]
     defaults:
       run:
         working-directory: integration/terraform/ec2/localstack
