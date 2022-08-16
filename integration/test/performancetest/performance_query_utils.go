@@ -188,9 +188,9 @@ func GetPerformanceMetrics(instanceId string, agentRuntime, logNum, tps int, age
 	packet := make(map[string]interface{})
 	//add information about current release/commit
 	packet[PARTITION_KEY] = time.Now().Year()
-	packet[HASH] = os.Getenv(SHA_ENV) //fmt.Sprintf("%d", time.Now().UnixNano())
+	packet[HASH] = os.Getenv(RELEASE_NAME_ENV)//fmt.Sprintf("%d", time.Now().UnixNano())
 	packet[COMMIT_DATE],_ = strconv.Atoi(os.Getenv(SHA_DATE_ENV))
-	packet[IS_RELEASE] = false
+	packet[IS_RELEASE] = true
 	//add test metadata
 	packet[TEST_ID] = uuid.New().String()
 	testSettings := fmt.Sprintf("%d-%d",logNum,tps)
