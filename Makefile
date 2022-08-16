@@ -35,11 +35,11 @@ GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
-release: clean  build package-rpm package-deb package-win package-darwin
+release: clean test build package-rpm package-deb package-win package-darwin
 
 nightly-release: release
 
-build:   amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
+build: check_secrets amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
 
 check_secrets::
 	if grep --exclude-dir=build --exclude-dir=vendor -exclude=integration/msi/tools/amazon-cloudwatch-agent.wxs -E "(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}|(\"|')?(AWS|aws|Aws)?_?(SECRET|secret|Secret)?_?(ACCESS|access|Access)?_?(KEY|key|Key)(\"|')?\\s*(:|=>|=)\\s*(\"|')?[A-Za-z0-9/\\+=]{40}(\"|')?" -Rn .; then echo "check_secrets failed"; exit 1; fi;

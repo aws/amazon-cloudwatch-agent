@@ -4,8 +4,7 @@
 name: Run Integration Tests
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
-  TERRAFORM_AWS_ACCESS_KEY_ID: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-  TERRAFORM_AWS_SECRET_ACCESS_KEY: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
   S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   VPC_SECURITY_GROUPS_IDS: ${{ secrets.VPC_SECURITY_GROUPS_IDS }}
@@ -49,8 +48,7 @@ jobs:
         if: steps.build-docker-image.outputs.cache-hit != 'true'
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Login ECR
@@ -104,8 +102,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache go
@@ -128,7 +125,13 @@ jobs:
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: make build package-rpm package-deb package-win package-darwin
 
+      - uses: olafurpg/setup-gpg@v3
 
+      - name: Sign packages
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: |
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
+          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
@@ -156,14 +159,12 @@ jobs:
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat integration/generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/ec2_windows_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat integration/generator/resources/ecs_fargate_complete_test_matrix.json))"
-
       - name: Echo test plan matrix
         run: |
           echo ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
           echo ${{ steps.set-matrix.outputs.ec2_performance_matrix}}
           echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
           echo ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
-
   MakeMSIZip:
     name: 'MakeMSIZip'
     runs-on: ubuntu-latest
@@ -182,8 +183,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache win zip
@@ -197,13 +197,11 @@ jobs:
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} . --recursive
-
       - name: Unzip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           sudo apt install unzip
-          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent  
-
+          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
       - name: Create msi dep folder and copy deps
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
@@ -214,13 +212,11 @@ jobs:
           cp -r windows-agent/amazon-cloudwatch-agent/. msi_dep/
           go run integration/msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>' --tags=integration
           go run integration/msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__ --tags=integration
-
       - name: Zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           sudo apt install zip
           zip buildMSI.zip msi_dep/*
-
       - name: Upload zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: aws s3 cp buildMSI.zip s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/buildMSI.zip
@@ -243,8 +239,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache pkg
@@ -258,7 +253,6 @@ jobs:
         if: steps.cached_pkg.outputs.cache-hit != 'true'
         run: |
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} . --recursive
-
       - name: Create pkg dep folder and copy deps
         if: steps.cached_pkg.outputs.cache-hit != 'true'
         run: |
@@ -266,14 +260,12 @@ jobs:
           cp CWAGENT_VERSION /tmp/CWAGENT_VERSION
           cp -r integration/pkg/tools/. /tmp/
           cp -r darwin/amd64/. /tmp/
-
       - name: Build And Upload PKG
         if: steps.cached_pkg.outputs.cache-hit != 'true'
         working-directory: /tmp/
         run : |
           chmod +x create_pkg.sh
           ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }} ${{ github.sha }}
-
   BuildMSI:
     name: 'BuildMSI'
     runs-on: windows-latest
@@ -287,8 +279,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache msi
@@ -313,7 +304,6 @@ jobs:
           Expand-Archive buildMSI.zip -Force
           cd buildMSI/msi_dep
           .\create_msi.ps1 ${{ github.sha }} ${{ secrets.S3_INTEGRATION_BUCKET }}
-
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:
     name: 'SignMacAndWindowsPackage'
@@ -329,8 +319,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache sig
@@ -346,19 +335,16 @@ jobs:
           mkdir packages
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.pkg ./packages/amazon-cloudwatch-agent.pkg
-
       - name: Sign packages
         if: steps.cached_sig.outputs.cache-hit != 'true'
         run: |
           echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
           for f in $(find packages/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
-
       - name: Upload to s3
         if: steps.cached_sig.outputs.cache-hit != 'true'
         run: |
           aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi.sig
           aws s3 cp packages/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.pkg.sig
-
   StartLocalStack:
     name: 'StartLocalStack'
     runs-on: ubuntu-latest
@@ -376,8 +362,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Verify Terraform version
@@ -400,7 +385,6 @@ jobs:
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
-
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'EC2LinuxIntegrationTest'
@@ -418,8 +402,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache if success
@@ -463,7 +446,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
@@ -491,8 +473,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache if success
@@ -530,7 +511,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-win-integration-test.outputs.cache-hit != 'true' }}
@@ -559,8 +539,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Copy state
@@ -592,8 +571,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache if success
@@ -627,7 +605,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
@@ -654,8 +631,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.TERRAFORM_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.TERRAFORM_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache if success
@@ -705,7 +681,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
