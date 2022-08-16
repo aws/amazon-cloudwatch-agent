@@ -130,7 +130,9 @@ class Receiver {
                 this.CWAData[testCase][metric][idx][IS_RELEASE] = true;
               }
             });
-            // this.CWAData[testCase][metric][LINK] = ""
+            this.CWAData[testCase][metric][
+              LINK
+            ] = `${REPO_LINK}/releases/tag/${item[HASH].S}`;
             // this.CWAData[testCase][metric][HASH] =
           });
         });
@@ -295,12 +297,12 @@ class Receiver {
             if (generalAttribute === HASH) {
               if (cleanData[generalAttribute].length > 7) {
                 //@Todo: remove in the long since this is for SHA support
-                newStructure[generalAttribute] = cleanData[
-                  generalAttribute
-                ].substring(0, 7);
-                newStructure[
-                  LINK
-                ] = `${REPO_LINK}/commit/${cleanData[generalAttribute]}`;
+                newStructure[generalAttribute] = !cleanData[IS_RELEASE]
+                  ? cleanData[generalAttribute].substring(0, 7)
+                  : cleanData[generalAttribute];
+                newStructure[LINK] = cleanData[IS_RELEASE]
+                  ? `${REPO_LINK}/releases/tag/${item[HASH].S}`
+                  : `${REPO_LINK}/commit/${cleanData[generalAttribute]}`;
                 return;
               }
             }
