@@ -141,7 +141,6 @@ jobs:
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat integration/generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/ec2_windows_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat integration/generator/resources/ecs_fargate_complete_test_matrix.json))"
-
       - name: Echo test plan matrix
         run: |
           echo ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
@@ -186,7 +185,7 @@ jobs:
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           sudo apt install unzip
-          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent  
+          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
 
       - name: Create msi dep folder and copy deps
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
@@ -442,7 +441,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
@@ -602,7 +600,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
+            
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
@@ -679,7 +677,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
