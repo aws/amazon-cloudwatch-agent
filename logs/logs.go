@@ -52,19 +52,19 @@ type LogDest interface {
 
 // LogAgent is the agent handles pure log pipelines
 type LogAgent struct {
-	Config              *config.Config
-	backends            map[string]LogBackend
-	destNames           map[LogDest]string
-	collections         []LogCollection
-	retentionAlreadySet map[string]bool
+	Config                    *config.Config
+	backends                  map[string]LogBackend
+	destNames                 map[LogDest]string
+	collections               []LogCollection
+	retentionAlreadyAttempted map[string]bool
 }
 
 func NewLogAgent(c *config.Config) *LogAgent {
 	return &LogAgent{
-		Config:              c,
-		backends:            make(map[string]LogBackend),
-		destNames:           make(map[LogDest]string),
-		retentionAlreadySet: make(map[string]bool),
+		Config:                    c,
+		backends:                  make(map[string]LogBackend),
+		destNames:                 make(map[LogDest]string),
+		retentionAlreadyAttempted: make(map[string]bool),
 	}
 }
 
@@ -112,14 +112,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 						log.Printf("E! [logagent] Failed to find destination %s for log source %s/%s(%s) ", dname, logGroup, logStream, description)
 						continue
 					}
-
-					if retention > 0 && l.retentionAlreadySet[logGroup] {
-						log.Printf("D! [logagent] Retention already set for log group %s, current retention %d", logGroup, retention)
-						retention = -1
-					} else if retention > 0 {
-						log.Printf("I! First time setting retention for log group %s, update map to avoid setting twice", logGroup)
-						l.retentionAlreadySet[logGroup] = true
-					}
+					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
 					dest := backend.CreateDest(logGroup, logStream, retention)
 					l.destNames[dest] = dname
 					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
@@ -156,4 +149,15 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 			return
 		}
 	}
+}
+
+func (l *LogAgent) checkRetentionAlreadyAttempted(retention int, logGroup string) int {
+	if retention > 0 && l.retentionAlreadyAttempted[logGroup] {
+		log.Printf("D! [logagent] Retention already set for log group %s, current retention %d", logGroup, retention)
+		retention = -1
+	} else if retention > 0 {
+		log.Printf("I! First time setting retention for log group %s, update map to avoid setting twice", logGroup)
+		l.retentionAlreadyAttempted[logGroup] = true
+	}
+	return retention
 }
