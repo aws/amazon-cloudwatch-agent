@@ -76,6 +76,7 @@ type tailerSrc struct {
 	startTailerOnce sync.Once
 	cleanUpFns      []func()
 }
+
 // Verify tailerSrc implements LogSrc
 var _ logs.LogSrc = (*tailerSrc)(nil)
 
@@ -313,7 +314,7 @@ func (ts *tailerSrc) runSaveState() {
 			log.Printf("W! [logfile] deleting state file %s", ts.stateFilePath)
 			err := os.Remove(ts.stateFilePath)
 			if err != nil {
-				log.Printf("E! [logfile] Error happened while deleting state file %s on cleanup", ts.stateFilePath)
+				log.Printf("W! [logfile] Error happened while deleting state file %s on cleanup: %v", ts.stateFilePath, err)
 			}
 			return
 		case <-ts.done:
