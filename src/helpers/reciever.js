@@ -326,7 +326,6 @@ class Receiver {
   }
   //CACHE FUNCTIONS
   cacheClear() {
-    debugger;
     localStorage.clear();
     document.location.reload();
   }
