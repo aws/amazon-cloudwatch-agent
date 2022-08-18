@@ -278,6 +278,7 @@ class Receiver {
         if(error.code === "ERR_BAD_REQUEST"){
           console.log("clearing cache");
           localStorage.clear();
+          alert("Incorrect Password. This for internal use only please contact CloudWatch Agent team for access")
           return "error"
         }
         return "error";
