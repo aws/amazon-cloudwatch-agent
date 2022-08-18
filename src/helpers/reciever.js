@@ -20,7 +20,7 @@ class Receiver {
     this.CWAData = null;
     this.ReleaseMap = {}; //hash map
     this.latestItem = null;
-    this.gateway = ""
+    this.gateway = "";
     var date = new Date();
     this.year = date.getFullYear().toString();
     let cacheLatestItem = this.cacheGetLatestItem();
@@ -47,7 +47,7 @@ class Receiver {
       if (timeSinceLastUpdate < UPDATE_FREQUENCY) {
         return [true, ""];
       }
-      this.gateway= this.auth()
+      this.gateway = this.auth();
       let dynamoLatestItem = await this.getLatestItem();
       let DynamoHash = dynamoLatestItem[HASH];
       // ask dynamo what is the lastest hash it received
@@ -58,7 +58,7 @@ class Receiver {
         this.CWAData = await this.getAllItems();
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
-        this.gateway = ""
+        this.gateway = "";
         return [true, ""];
       } else {
         cacheLatestHash = cacheLatestItem[HASH];
@@ -100,7 +100,7 @@ class Receiver {
       this.cacheClear();
       this.update();
     } catch (err) {
-      this.gateway = ""
+      this.gateway = "";
       if (this.cacheGetLatestItem === undefined) {
         return [false, err];
       }
@@ -144,10 +144,10 @@ class Receiver {
         this.ReleaseMap[item[HASH].S] = true;
       });
       this.cacheSaveData();
-      this.gateway = ""
+      this.gateway = "";
       return [true, ""];
     } catch (err) {
-      this.gateway = ""
+      this.gateway = "";
       return [false, err];
     }
   }
@@ -264,7 +264,7 @@ class Receiver {
       method: "POST",
       url: GATEWAY_LINK,
       headers: {
-        "x-api-key": this.gateway,//process.env.REACT_APP_GATEWAY_API_KEY
+        "x-api-key": this.gateway, //process.env.REACT_APP_GATEWAY_API_KEY
         "Content-Type": "application/json",
       },
       data: data,
@@ -274,12 +274,12 @@ class Receiver {
         return response.data.body;
       })
       .catch(function (error) {
-        
-        if(error.code === "ERR_BAD_REQUEST"){
-          console.log("clearing cache");
+        if (error.code === "ERR_BAD_REQUEST") {
           localStorage.clear();
-          alert("Incorrect Password. This for internal use only please contact CloudWatch Agent team for access")
-          return "error"
+          alert(
+            "Incorrect Password. This for internal use only. Please contact CloudWatch Agent team for access."
+          );
+          return "error";
         }
         return "error";
       });
@@ -326,7 +326,7 @@ class Receiver {
   }
   //CACHE FUNCTIONS
   cacheClear() {
-    debugger
+    debugger;
     localStorage.clear();
     document.location.reload();
   }
@@ -352,13 +352,12 @@ class Receiver {
   getLastUpdate() {
     return JSON.parse(localStorage.getItem(LAST_UPDATE));
   }
-  auth(){
-    let input = prompt("Please type in your beta testing password")
-    const salt = "LCnF&$^66VtWQxG#2wTk"
-    const bitArray = sjcl.hash.sha256.hash(input+salt);
+  auth() {
+    let input = prompt("Please enter your beta testing password");
+    const salt = "LCnF&$^66VtWQxG#2wTk";
+    const bitArray = sjcl.hash.sha256.hash(input + salt);
     const hash = sjcl.codec.hex.fromBits(bitArray);
-    console.log(hash)
-    return  hash
+    return hash;
   }
 }
 
