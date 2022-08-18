@@ -1,6 +1,6 @@
 import AWS from "aws-sdk";
 import axios from "axios";
-import sjcl from "sjcl";
+import sjcl from "sjcl"; //Stanford Javascript Crypto Library
 import { GENERAL_ATTRIBUTES, BATCH_SIZE, UPDATE_FREQUENCY } from "../config";
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
