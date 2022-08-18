@@ -19,16 +19,11 @@ import (
 type PrometheusMetricBatch []*PrometheusMetric
 
 type PrometheusMetric struct {
-	tags       map[string]string
-	metricName string
-	// We use this name to look up metric type because user can relabel __name___.
-	// See https://github.com/aws/amazon-cloudwatch-agent/issues/190
-	metricNameBeforeRelabel string
-	jobBeforeRelabel        string
-	instanceBeforeRelabel   string
-	metricValue             float64
-	metricType              string
-	timeInMS                int64 // Unix time in milli-seconds
+	tags        map[string]string
+	metricName  string
+	metricValue float64
+	metricType  string
+	timeInMS    int64 // Unix time in milli-seconds
 }
 
 func (pm *PrometheusMetric) isValueValid() bool {
@@ -42,12 +37,13 @@ type metricsReceiver struct {
 }
 
 type metricAppender struct {
+	ctx      context.Context
 	receiver *metricsReceiver
 	batch    PrometheusMetricBatch
 }
 
 func (mr *metricsReceiver) Appender(ctx context.Context) storage.Appender {
-	return &metricAppender{receiver: mr, batch: PrometheusMetricBatch{}}
+	return &metricAppender{ctx: ctx, receiver: mr, batch: PrometheusMetricBatch{}}
 }
 
 func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
@@ -78,16 +74,11 @@ func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int6
 	}
 
 	pm := &PrometheusMetric{
-		metricName:              metricName,
-		metricNameBeforeRelabel: ls.Get(savedScrapeNameLabel),
-		jobBeforeRelabel:        ls.Get(savedScrapeJobLabel),
-		instanceBeforeRelabel:   ls.Get(savedScrapeInstanceLabel),
-		metricValue:             v,
-		timeInMS:                t,
+		metricName:  metricName,
+		metricValue: v,
+		timeInMS:    t,
 	}
 
-	// Remove magic labels
-	delete(labelMap, savedScrapeNameLabel)
 	delete(labelMap, savedScrapeJobLabel)
 	delete(labelMap, savedScrapeInstanceLabel)
 

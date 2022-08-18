@@ -97,7 +97,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	var (
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), discovery.Name("scrape"))
-		scrapeManager           = scrape.NewManager(&scrape.Options{}, log.With(logger, "component", "scrape manager"), receiver)
+		scrapeManager           = scrape.NewManager(&scrape.Options{PassMetadataInContext: true}, log.With(logger, "component", "scrape manager"), receiver)
 	)
 	mth.SetScrapeManager(scrapeManager)
 
@@ -265,7 +265,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 const (
 	savedScrapeJobLabel      = "cwagent_saved_scrape_job"
 	savedScrapeInstanceLabel = "cwagent_saved_scrape_instance"
-	savedScrapeNameLabel     = "cwagent_saved_scrape_name" // just arbitrary name that end user won't override in relabel config
 )
 
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
@@ -311,17 +310,6 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 			},
 		}
 
-		// We only got __name__ after scrape, so it's in metric_relabel_configs instead of relabel_configs.
-		metricRelabelConfigs := []*relabel.Config{
-			// __name__
-			{
-				Action:       relabel.Replace,
-				Regex:        relabel.MustNewRegexp("(.*)"),
-				Replacement:  "$1",
-				TargetLabel:  savedScrapeNameLabel,
-				SourceLabels: model.LabelNames{"__name__"},
-			},
-		}
 		level.Info(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
 		// prepend so our relabel rule comes first
 		scrapeConfig.RelabelConfigs = append(relabelConfigs, scrapeConfig.RelabelConfigs...)
