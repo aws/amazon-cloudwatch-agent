@@ -79,9 +79,6 @@ func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int6
 		timeInMS:    t,
 	}
 
-	delete(labelMap, savedScrapeJobLabel)
-	delete(labelMap, savedScrapeInstanceLabel)
-
 	pm.tags = labelMap
 	ma.batch = append(ma.batch, pm)
 	return 0, nil //return 0 to indicate caching is not supported

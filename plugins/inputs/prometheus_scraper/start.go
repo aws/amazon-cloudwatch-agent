@@ -26,13 +26,11 @@ import (
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	_ "github.com/prometheus/prometheus/discovery/install"
-	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
@@ -262,11 +260,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	wg.Done()
 }
 
-const (
-	savedScrapeJobLabel      = "cwagent_saved_scrape_job"
-	savedScrapeInstanceLabel = "cwagent_saved_scrape_instance"
-)
-
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
 	content, _ := ioutil.ReadFile(filename)
@@ -285,35 +278,6 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 	conf, err := config.LoadFile(filename, false, false, logger)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
-	}
-
-	// For saving name before relabel
-	// - __name__ https://github.com/aws/amazon-cloudwatch-agent/issues/190
-	// - job and instance https://github.com/aws/amazon-cloudwatch-agent/issues/193
-	for _, scrapeConfig := range conf.ScrapeConfigs {
-		relabelConfigs := []*relabel.Config{
-			// job
-			{
-				Action:       relabel.Replace,
-				Regex:        relabel.MustNewRegexp(".*"), // __address__ is always there, so we will find a match for every job
-				Replacement:  scrapeConfig.JobName,        // value is hard coded job name
-				SourceLabels: model.LabelNames{"__address__"},
-				TargetLabel:  savedScrapeJobLabel, // creates a new magic label
-			},
-			// instance
-			{
-				Action:       relabel.Replace,
-				Regex:        relabel.MustNewRegexp("(.*)"),
-				Replacement:  "$1", // value is actual __address__, i.e. instance if you don't relabel it.
-				SourceLabels: model.LabelNames{"__address__"},
-				TargetLabel:  savedScrapeInstanceLabel, // creates a new magic label
-			},
-		}
-
-		level.Info(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
-		// prepend so our relabel rule comes first
-		scrapeConfig.RelabelConfigs = append(relabelConfigs, scrapeConfig.RelabelConfigs...)
-		scrapeConfig.MetricRelabelConfigs = append(metricRelabelConfigs, scrapeConfig.MetricRelabelConfigs...)
 	}
 
 	failed := false
