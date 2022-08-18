@@ -16,7 +16,8 @@ jobs:
 
       - name: Install and Build
         run: |
-          npm install -f 
+          npm config set legacy-peer-deps true
+          npm install
           npm run build
         env:
           REACT_APP_GATEWAY: ${{ secrets.REACT_APP_GATEWAY }}
