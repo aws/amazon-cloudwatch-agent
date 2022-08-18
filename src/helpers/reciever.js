@@ -1,5 +1,6 @@
 import AWS from "aws-sdk";
 import axios from "axios";
+import sjcl from "sjcl";
 import { GENERAL_ATTRIBUTES, BATCH_SIZE, UPDATE_FREQUENCY } from "../config";
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
@@ -19,6 +20,7 @@ class Receiver {
     this.CWAData = null;
     this.ReleaseMap = {}; //hash map
     this.latestItem = null;
+    this.gateway = ""
     var date = new Date();
     this.year = date.getFullYear().toString();
     let cacheLatestItem = this.cacheGetLatestItem();
@@ -45,6 +47,7 @@ class Receiver {
       if (timeSinceLastUpdate < UPDATE_FREQUENCY) {
         return [true, ""];
       }
+      this.gateway= this.auth()
       let dynamoLatestItem = await this.getLatestItem();
       let DynamoHash = dynamoLatestItem[HASH];
       // ask dynamo what is the lastest hash it received
@@ -55,6 +58,7 @@ class Receiver {
         this.CWAData = await this.getAllItems();
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
+        this.gateway = ""
         return [true, ""];
       } else {
         cacheLatestHash = cacheLatestItem[HASH];
@@ -96,6 +100,7 @@ class Receiver {
       this.cacheClear();
       this.update();
     } catch (err) {
+      this.gateway = ""
       if (this.cacheGetLatestItem === undefined) {
         return [false, err];
       }
@@ -139,8 +144,10 @@ class Receiver {
         this.ReleaseMap[item[HASH].S] = true;
       });
       this.cacheSaveData();
+      this.gateway = ""
       return [true, ""];
     } catch (err) {
+      this.gateway = ""
       return [false, err];
     }
   }
@@ -257,11 +264,8 @@ class Receiver {
       method: "POST",
       url: GATEWAY_LINK,
       headers: {
-        "x-api-key": process.env.REACT_APP_GATEWAY_API_KEY,
+        "x-api-key": this.gateway,//process.env.REACT_APP_GATEWAY_API_KEY
         "Content-Type": "application/json",
-        // "Access-Control-Allow-Headers": "Content-Type",
-        // "Access-Control-Allow-Origin": "*",
-        // "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
       },
       data: data,
     };
@@ -270,7 +274,12 @@ class Receiver {
         return response.data.body;
       })
       .catch(function (error) {
-        //console.log(error);
+        
+        if(error.code === "ERR_BAD_REQUEST"){
+          console.log("clearing cache");
+          localStorage.clear();
+          return "error"
+        }
         return "error";
       });
     return out;
@@ -316,6 +325,7 @@ class Receiver {
   }
   //CACHE FUNCTIONS
   cacheClear() {
+    debugger
     localStorage.clear();
     document.location.reload();
   }
@@ -340,6 +350,14 @@ class Receiver {
   }
   getLastUpdate() {
     return JSON.parse(localStorage.getItem(LAST_UPDATE));
+  }
+  auth(){
+    let input = prompt("Please type in your beta testing password")
+    const salt = "LCnF&$^66VtWQxG#2wTk"
+    const bitArray = sjcl.hash.sha256.hash(input+salt);
+    const hash = sjcl.codec.hex.fromBits(bitArray);
+    console.log(hash)
+    return  hash
   }
 }
 
