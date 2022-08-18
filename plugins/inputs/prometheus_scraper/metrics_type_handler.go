@@ -4,6 +4,7 @@
 package prometheus_scraper
 
 import (
+	"context"
 	"errors"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/textparse"
@@ -85,7 +86,7 @@ func (m *mCache) Metadata(metricName string) (scrape.MetricMetadata, bool) {
 
 // Adapter to ScrapeManager to retrieve the cache by job and instance
 type metadataService interface {
-	Get(job string) (metadataCache, error)
+	Get(ctx context.Context) (metadataCache, error)
 }
 
 type metadataServiceImpl struct {
@@ -93,7 +94,7 @@ type metadataServiceImpl struct {
 }
 
 // job and instance MUST be using value before relabel
-func (t *metadataServiceImpl) Get(job string) (metadataCache, error) {
+func (t *metadataServiceImpl) Get(ctx context.Context) (metadataCache, error) {
 
 	target, ok := scrape.TargetFromContext(ctx)
 	if !ok {
