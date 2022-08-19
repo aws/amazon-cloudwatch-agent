@@ -40,6 +40,7 @@ type metricAppender struct {
 	ctx      context.Context
 	receiver *metricsReceiver
 	batch    PrometheusMetricBatch
+	mc       MetadataCache
 }
 
 func (mr *metricsReceiver) Appender(ctx context.Context) storage.Appender {
@@ -56,30 +57,22 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 }
 
 func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
-	metricName := ""
-
-	labelMap := make(map[string]string, len(ls))
-	for _, l := range ls {
-		if l.Name == model.MetricNameLabel {
-			metricName = l.Value
-			continue
-		}
-		labelMap[l.Name] = l.Value
+	select {
+	case <-ma.ctx.Done():
+		return 0, errors.New("Abort appending metrics to batch")
+	default:
 	}
-
-	if metricName == "" {
-		// The error should never happen, print log here for debugging
-		log.Println("E! receive invalid prometheus metric, metricName is missing")
-		return 0, errors.New("metricName of the times-series is missing")
-	}
+	metricName := ls.Get(model.MetricNameLabel)
+	metricTags := ls.WithoutLabels(model.MetricNameLabel).Map()
 
 	pm := &PrometheusMetric{
 		metricName:  metricName,
 		metricValue: v,
 		timeInMS:    t,
+		tags:        metricTags,
 	}
+	metadataCache, err := getMetadataCache(ma.ctx)
 
-	pm.tags = labelMap
 	ma.batch = append(ma.batch, pm)
 	return 0, nil //return 0 to indicate caching is not supported
 }

@@ -35,7 +35,6 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
 	"io/ioutil"
-	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	"os"
 	"os/signal"
@@ -60,29 +59,27 @@ func init() {
 }
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
-	infoLevel := &promlog.AllowedLevel{}
-	_ = infoLevel.Set("info")
+	logLevel := &promlog.AllowedLevel{}
+	logLevel.Set("info")
 
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
 		runtime.SetMutexProfileFraction(20)
-		_ = infoLevel.Set("debug")
+		logLevel.Set("debug")
 	}
 	logFormat := &promlog.AllowedFormat{}
-	_ = logFormat.Set("logfmt")
+	logFormat.Set("logfmt")
 
 	cfg := struct {
 		configFile    string
 		promlogConfig promlog.Config
 	}{
-		promlogConfig: promlog.Config{Level: infoLevel, Format: logFormat},
+		promlogConfig: promlog.Config{Level: logLevel, Format: logFormat},
 	}
 
 	cfg.configFile = configFilePath
 
 	logger := promlog.New(&cfg.promlogConfig)
-	//stdlog.SetOutput(log.NewStdlibAdapter(logger))
-	//stdlog.Println("redirect std log")
 
 	klog.SetLogger(klogr.New().WithName("k8s_client_runtime").V(6))
 
@@ -97,7 +94,6 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), discovery.Name("scrape"))
 		scrapeManager           = scrape.NewManager(&scrape.Options{PassMetadataInContext: true}, log.With(logger, "component", "scrape manager"), receiver)
 	)
-	mth.SetScrapeManager(scrapeManager)
 
 	var reloaders = []func(cfg *config.Config) error{
 		// The Scrape and notifier managers need to reload before the Discovery manager as

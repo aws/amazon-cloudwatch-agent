@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type mockMetricMetadataStore struct {
@@ -89,9 +88,8 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 		"xyz": []string{"ooo"},
 	}
 	labels2 := labels.FromMap(map[string]string{
-		model.JobLabel:           "job2_replaced",
-		model.InstanceLabel:      "instance2",
-		savedScrapeInstanceLabel: "instance2",
+		model.JobLabel:      "job2_replaced",
+		model.InstanceLabel: "instance2",
 	})
 	target2 := scrape.NewTarget(labels2, labels2, params2)
 	mStore2 := &mockMetricMetadataStore{
@@ -104,61 +102,6 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 	targetMap["job2"] = []*scrape.Target{target2}
 
 	return targetMap
-}
-
-func TestMetadataServiceImpl_GetWithUnknownJobnameInstance(t *testing.T) {
-	metricsTypeHandler := NewMetricsTypeHandler()
-	metricsTypeHandler.SetScrapeManager(&mockScrapeManager{})
-	mCache, err := metricsTypeHandler.ms.Get("job_unknown", "instance_unknown")
-	assert.Equal(t, mCache, nil)
-	assert.EqualError(t, err, "unable to find a target group with job=job_unknown")
-
-	mCache, err = metricsTypeHandler.ms.Get("job1", "instance_unknown")
-	assert.Equal(t, mCache, nil)
-	assert.EqualError(t, err, "unable to find a target with job=job1, and instance=instance_unknown")
-
-	mCache, err = metricsTypeHandler.ms.Get("job2_replaced", "instance_unknown")
-	assert.Equal(t, mCache, nil)
-	// NOTE: since https://github.com/aws/amazon-cloudwatch-agent/issues/193
-	// we no longer do the look up for relabeled job in metadataServiceImpl
-	assert.EqualError(t, err, "unable to find a target group with job=job2_replaced")
-}
-
-func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
-	metricsTypeHandler := NewMetricsTypeHandler()
-	metricsTypeHandler.SetScrapeManager(&mockScrapeManager{})
-	mCache, err := metricsTypeHandler.ms.Get("job_unknown", "instance_unknown")
-	assert.Equal(t, mCache, nil)
-	assert.EqualError(t, err, "unable to find a target group with job=job_unknown")
-
-	mCache, err = metricsTypeHandler.ms.Get("job1", "instance1")
-	require.NoError(t, err)
-	expectedMetricMetadata := scrape.MetricMetadata{
-		Metric: "m1",
-		Type:   textparse.MetricTypeCounter,
-		Help:   "",
-		Unit:   "",
-	}
-	metricMetadata, ok := mCache.Metadata("m1")
-	assert.Equal(t, ok, true)
-	assert.Equal(t, expectedMetricMetadata, metricMetadata)
-
-	expectedMetricMetadata = scrape.MetricMetadata{
-		Metric: "m2",
-		Type:   textparse.MetricTypeCounter,
-		Help:   "",
-		Unit:   "",
-	}
-	metricMetadata, ok = mCache.Metadata("m2")
-	assert.Equal(t, ok, true)
-	assert.Equal(t, expectedMetricMetadata, metricMetadata)
-
-	metricMetadata, ok = mCache.Metadata("m3")
-	assert.Equal(t, ok, false)
-}
-
-func TestMetadataServiceImpl_GetWithReplacedJobname(t *testing.T) {
-	t.Skip("will always use original job name since https://github.com/aws/amazon-cloudwatch-agent/issues/193")
 }
 
 func TestNewMetricsTypeHandler_HandleWithUnknownTarget(t *testing.T) {
