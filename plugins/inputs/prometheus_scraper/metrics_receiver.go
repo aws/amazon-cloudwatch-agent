@@ -13,6 +13,7 @@ import (
 	"math"
 
 	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/textparse"
 	"github.com/prometheus/prometheus/storage"
 )
 
@@ -93,6 +94,10 @@ func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v flo
 	metricMetadata := metadataForMetric(metricName, metadataCache)
 	metricType := string(metricMetadata.Type)
 	metricTags[prometheusMetricTypeKey] = metricType
+
+	if metricType == textparse.MetricTypeUnknown && !isInternalMetric(metricName) {
+		return errors.Errorf("Unknown metric type for metric %s", metricName)
+	}
 
 	pm := &PrometheusMetric{
 		metricName:  metricName,

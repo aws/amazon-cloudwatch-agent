@@ -42,7 +42,6 @@ func (mh *metricsHandler) start(shutDownChan chan interface{}, wg *sync.WaitGrou
 }
 
 func (mh *metricsHandler) handle(pmb PrometheusMetricBatch) {
-
 	// Filter out Histogram and untyped Metrics and adding logging
 	pmb = mh.filter.Filter(pmb)
 

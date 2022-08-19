@@ -74,3 +74,11 @@ func normalizeMetricName(name string) string {
 	}
 	return name
 }
+
+func isInternalMetric(metricName string) bool {
+	//For each endpoint, Prometheus produces a set of internal metrics. See https://prometheus.io/docs/concepts/jobs_instances/
+	if metricName == "up" || strings.HasPrefix(metricName, "scrape_") {
+		return true
+	}
+	return false
+}
