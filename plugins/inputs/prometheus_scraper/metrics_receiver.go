@@ -64,7 +64,6 @@ func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int6
 	default:
 	}
 
-	ma.batch = append(ma.batch, pm)
 	return 0, ma.BuildPrometheusMetric(ls, t, v) //return 0 to indicate caching is not supported
 }
 
