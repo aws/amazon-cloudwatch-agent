@@ -58,7 +58,7 @@ func init() {
 	prometheus.MustRegister(version.NewCollector("prometheus"))
 }
 
-func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
+func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup) {
 	logLevel := &promlog.AllowedLevel{}
 	logLevel.Set("info")
 

@@ -6,6 +6,7 @@ package prometheus_scraper
 import (
 	"context"
 	"errors"
+	"github.com/prometheus/prometheus/model/textparse"
 	"github.com/prometheus/prometheus/scrape"
 	"strings"
 )
@@ -27,55 +28,38 @@ type MetadataCache interface {
 }
 
 type mCache struct {
-	metadataStore scrape.MetricMetadataStore
+	metadata scrape.MetricMetadataStore
 }
 
 func (m *mCache) Metadata(metricName string) (scrape.MetricMetadata, bool) {
-	return m.metadataStore.GetMetadata(metricName)
+	return m.metadata.GetMetadata(metricName)
 }
 
 func getMetadataCache(ctx context.Context) (MetadataCache, error) {
-	target, ok := scrape.TargetFromContext(ctx)
-	if !ok {
-		return nil, errors.New("unable to find target in context")
-	}
 	metaStore, ok := scrape.MetricMetadataStoreFromContext(ctx)
 	if !ok {
-		return nil, errors.New("unable to find MetricMetadataStore in context")
+		return nil, errors.New("Unable to find MetricMetadataStore in context")
 	}
 
 	return &mCache{
-		target:   target,
 		metadata: metaStore,
 	}, nil
 }
 
-func metadataForMetric(metricName string, mc MetadataCache) (*scrape.MetricMetadata, string) {
+func metadataForMetric(metricName string, mc MetadataCache) *scrape.MetricMetadata {
 	if metadata, ok := mc.Metadata(metricName); ok {
-		return &metadata, metricName
+		return &metadata
 	}
-	// If we didn't find metadata with the original name,
-	// try with suffixes trimmed, in-case it is a "merged" metric type.
+	// If we didn't find metadata with the original name, try with suffix trimmed
 	normalizedName := normalizeMetricName(metricName)
 	if metadata, ok := mc.Metadata(normalizedName); ok {
-		if metadata.Type == textparse.MetricTypeCounter {
-			return &metadata, metricName
-		}
-		return &metadata, normalizedName
+		return &metadata
 	}
-	// Otherwise, the metric is unknown
+
 	return &scrape.MetricMetadata{
 		Metric: metricName,
 		Type:   textparse.MetricTypeUnknown,
-	}, metricName
-}
-
-func isInternalMetric(metricName string) bool {
-	// For each endpoint, Prometheus produces a set of internal metrics. See https://prometheus.io/docs/concepts/jobs_instances/
-	if metricName == "up" || strings.HasPrefix(metricName, "scrape_") {
-		return true
 	}
-	return false
 }
 
 // Get the metric name in the TYPE comments for Summary and Histogram

@@ -62,19 +62,9 @@ func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int6
 		return 0, errors.New("Abort appending metrics to batch")
 	default:
 	}
-	metricName := ls.Get(model.MetricNameLabel)
-	metricTags := ls.WithoutLabels(model.MetricNameLabel).Map()
-
-	pm := &PrometheusMetric{
-		metricName:  metricName,
-		metricValue: v,
-		timeInMS:    t,
-		tags:        metricTags,
-	}
-	metadataCache, err := getMetadataCache(ma.ctx)
 
 	ma.batch = append(ma.batch, pm)
-	return 0, nil //return 0 to indicate caching is not supported
+	return 0, ma.BuildPrometheusMetric(ls, t, v) //return 0 to indicate caching is not supported
 }
 
 func (ma *metricAppender) Commit() error {
@@ -87,7 +77,31 @@ func (ma *metricAppender) Rollback() error {
 	return nil
 }
 
-func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, l labels.Labels, e exemplar.Exemplar) (storage.SeriesRef, error) {
-	ma.Append(ref, l, e.Ts, e.Value)
+func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, ls labels.Labels, e exemplar.Exemplar) (storage.SeriesRef, error) {
+	ma.Append(ref, ls, e.Ts, e.Value)
 	return 0, nil
+}
+
+func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v float64) (err error) {
+	metadataCache, err := getMetadataCache(ma.ctx)
+	if err != nil {
+		return err
+	}
+
+	metricName := ls.Get(model.MetricNameLabel)
+	metricTags := ls.WithoutLabels(model.MetricNameLabel).Map()
+	metricMetadata := metadataForMetric(metricName, metadataCache)
+	metricType := string(metricMetadata.Type)
+	metricTags[prometheusMetricTypeKey] = metricType
+
+	pm := &PrometheusMetric{
+		metricName:  metricName,
+		metricType:  metricType,
+		metricValue: v,
+		timeInMS:    t,
+		tags:        metricTags,
+	}
+
+	ma.batch = append(ma.batch, pm)
+	return nil
 }

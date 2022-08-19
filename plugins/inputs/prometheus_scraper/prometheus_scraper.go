@@ -60,14 +60,12 @@ func (p *PrometheusScraper) Gather(_ telegraf.Accumulator) error {
 }
 
 func (p *PrometheusScraper) Start(accIn telegraf.Accumulator) error {
-	mth := NewMetricsTypeHandler()
 	receiver := &metricsReceiver{pmbCh: p.mbCh}
 	handler := &metricsHandler{mbCh: p.mbCh,
 		acc:         accIn,
 		calculator:  NewCalculator(),
 		filter:      NewMetricsFilter(),
 		clusterName: p.ClusterName,
-		mtHandler:   mth,
 	}
 
 	ecssd := &ecsservicediscovery.ServiceDiscovery{Config: p.ECSSDConfig}
@@ -78,7 +76,7 @@ func (p *PrometheusScraper) Start(accIn telegraf.Accumulator) error {
 
 	// start metric collecting
 	p.wg.Add(1)
-	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg, mth)
+	go Start(p.PrometheusConfigPath, receiver, p.shutDownChan, &p.wg)
 
 	// start metric handling
 	p.wg.Add(1)
