@@ -22,6 +22,7 @@ jobs:
         env:
           REACT_APP_GATEWAY: ${{ secrets.REACT_APP_GATEWAY }}
           REACT_APP_GATEWAY_API_KEY: ${{ secrets.REACT_APP_GATEWAY_API_KEY }}
+          REACT_APP_SALT: ${{ secrets.REACT_APP_SALT }}
 
 
       - name: Deploy

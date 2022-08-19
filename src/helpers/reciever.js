@@ -276,9 +276,7 @@ class Receiver {
       .catch(function (error) {
         if (error.code === "ERR_BAD_REQUEST") {
           localStorage.clear();
-          alert(
-            "Incorrect Password. This for internal use only. Please contact CloudWatch Agent team for access."
-          );
+          alert("Incorrect Password.");
           return "error";
         }
         return "error";
@@ -351,10 +349,15 @@ class Receiver {
   getLastUpdate() {
     return JSON.parse(localStorage.getItem(LAST_UPDATE));
   }
+  /*
+    Desc: Prompts user for a password input, returns a SHA256 salted hash of the password provided.
+    Param: None
+    Returns: SHA256 salted hash of the password provided
+  */
   auth() {
-    let input = prompt("Please enter your beta testing password");
-    const salt = "LCnF&$^66VtWQxG#2wTk";
-    const bitArray = sjcl.hash.sha256.hash(input + salt);
+    let input = prompt("Please enter the password");
+    const salt = process.env.REACT_APP_SALT;
+    const bitArray = sjcl.hash.sha256.hash(salt + input);
     const hash = sjcl.codec.hex.fromBits(bitArray);
     return hash;
   }
