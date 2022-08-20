@@ -35,8 +35,7 @@ func (c *Calculator) Calculate(pmb PrometheusMetricBatch) (result PrometheusMetr
 			}
 		} else if pm.isSummary() {
 			// calculate the delta for <basename>_count and <basename>_sum metrics as well
-			if strings.HasSuffix(pm.metricName, histogramSummaryCountSuffix) ||
-				strings.HasSuffix(pm.metricName, histogramSummarySumSuffix) {
+			if strings.HasSuffix(pm.metricName, metricsSuffixCount) || strings.HasSuffix(pm.metricName, metricsSuffixSum) {
 				if calculatedMetric := c.deltaCalculator.calculate(pm); calculatedMetric != nil {
 					summaries = append(summaries, calculatedMetric)
 				}

@@ -35,6 +35,7 @@ import (
 	"github.com/prometheus/prometheus/storage"
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
 	"io/ioutil"
+	klog "k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	"os"
 	"os/signal"
@@ -60,12 +61,11 @@ func init() {
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup) {
 	logLevel := &promlog.AllowedLevel{}
-	logLevel.Set("info")
+	_ = logLevel.Set("debug")
 
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
 		runtime.SetMutexProfileFraction(20)
-		logLevel.Set("debug")
 	}
 	logFormat := &promlog.AllowedFormat{}
 	logFormat.Set("logfmt")

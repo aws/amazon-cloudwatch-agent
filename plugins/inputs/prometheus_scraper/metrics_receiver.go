@@ -6,6 +6,7 @@ package prometheus_scraper
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/prometheus/prometheus/model/exemplar"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/value"
@@ -38,14 +39,15 @@ type metricsReceiver struct {
 }
 
 type metricAppender struct {
-	ctx      context.Context
-	receiver *metricsReceiver
-	batch    PrometheusMetricBatch
-	mc       MetadataCache
+	ctx        context.Context
+	receiver   *metricsReceiver
+	batch      PrometheusMetricBatch
+	mc         MetadataCache
+	isNewBatch bool
 }
 
 func (mr *metricsReceiver) Appender(ctx context.Context) storage.Appender {
-	return &metricAppender{ctx: ctx, receiver: mr, batch: PrometheusMetricBatch{}}
+	return &metricAppender{ctx: ctx, receiver: mr, batch: PrometheusMetricBatch{}, isNewBatch: true}
 }
 
 func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
@@ -83,20 +85,30 @@ func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, ls labels.Labels
 }
 
 func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v float64) (err error) {
-	metadataCache, err := getMetadataCache(ma.ctx)
-	if err != nil {
-		return err
+	if ma.isNewBatch {
+		metadataCache, err := getMetadataCache(ma.ctx)
+		if err != nil {
+			return err
+		}
+		ma.isNewBatch = false
+		ma.mc = metadataCache
 	}
 
 	metricName := ls.Get(model.MetricNameLabel)
+
+	if metricName == "" {
+		return errors.New("metricName of the times-series is missing")
+	}
+
 	metricTags := ls.WithoutLabels(model.MetricNameLabel).Map()
-	metricMetadata := metadataForMetric(metricName, metadataCache)
+	metricMetadata := metadataForMetric(metricName, ma.mc)
+
+	if metricMetadata.Type == textparse.MetricTypeUnknown && !isInternalMetric(metricName) {
+		return fmt.Errorf("Unknown metric type for metric %s", metricName)
+	}
+
 	metricType := string(metricMetadata.Type)
 	metricTags[prometheusMetricTypeKey] = metricType
-
-	if metricType == textparse.MetricTypeUnknown && !isInternalMetric(metricName) {
-		return errors.Errorf("Unknown metric type for metric %s", metricName)
-	}
 
 	pm := &PrometheusMetric{
 		metricName:  metricName,
