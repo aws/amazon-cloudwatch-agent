@@ -63,11 +63,12 @@ func init() {
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup) {
 	logLevel := &promlog.AllowedLevel{}
-	_ = logLevel.Set("debug")
+	logLevel.Set("info")
 
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
 		runtime.SetMutexProfileFraction(20)
+		logLevel.Set("debug")
 	}
 	logFormat := &promlog.AllowedFormat{}
 	logFormat.Set("logfmt")
