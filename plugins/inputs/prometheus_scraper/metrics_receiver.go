@@ -9,29 +9,15 @@ import (
 	"fmt"
 	"github.com/prometheus/prometheus/model/exemplar"
 	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/model/value"
+
 	"log"
-	"math"
 
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/textparse"
 	"github.com/prometheus/prometheus/storage"
 )
 
-type PrometheusMetricBatch []*PrometheusMetric
-
-type PrometheusMetric struct {
-	tags        map[string]string
-	metricName  string
-	metricValue float64
-	metricType  string
-	timeInMS    int64 // Unix time in milli-seconds
-}
-
-func (pm *PrometheusMetric) isValueValid() bool {
-	//treat NaN and +/-Inf values as invalid as emf log doesn't support them
-	return !value.IsStaleNaN(pm.metricValue) && !math.IsNaN(pm.metricValue) && !math.IsInf(pm.metricValue, 0)
-}
+const prometheusMetricTypeKey = "prom_metric_type"
 
 // metricsReceiver implement interface Appender for prometheus scarper to append metrics
 type metricsReceiver struct {
@@ -85,6 +71,7 @@ func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, ls labels.Labels
 }
 
 func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v float64) (err error) {
+	// For each scrape, Prometheus will add metadata to the context
 	if ma.isNewBatch {
 		metadataCache, err := getMetadataCache(ma.ctx)
 		if err != nil {
