@@ -10,17 +10,6 @@ import (
 	"strings"
 )
 
-const (
-	metricsSuffixCount  = "_count"
-	metricsSuffixBucket = "_bucket"
-	metricsSuffixSum    = "_sum"
-	metricSuffixTotal   = "_total"
-)
-
-var (
-	trimmableSuffixes = []string{metricsSuffixCount, metricsSuffixBucket, metricsSuffixSum, metricSuffixTotal}
-)
-
 func getTagsKey(pm *PrometheusMetric) *bytes.Buffer {
 	b := new(bytes.Buffer)
 	keys := make([]string, 0, len(pm.tags))
@@ -69,19 +58,6 @@ func mergePrometheusMetrics(mm *metricMaterial, pm *PrometheusMetric) *metricMat
 
 	mm.fields[pm.metricName] = pm.metricValue
 	return mm
-}
-
-// Get the metric name in the TYPE comments for Summary and Histogram
-// e.g # TYPE nginx_ingress_controller_request_duration_seconds histogram
-//     # TYPE nginx_ingress_controller_ingress_upstream_latency_seconds summary
-
-func normalizeMetricName(name string) string {
-	for _, s := range trimmableSuffixes {
-		if strings.HasSuffix(name, s) && name != s {
-			return strings.TrimSuffix(name, s)
-		}
-	}
-	return name
 }
 
 func isInternalMetric(metricName string) bool {

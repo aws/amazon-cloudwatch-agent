@@ -71,7 +71,8 @@ func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, ls labels.Labels
 }
 
 func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v float64) (err error) {
-	// For each scrape, Prometheus will add metadata to the context
+	// Each new scrape will create a context hold metadataStore. Therefore, the same context will be used
+	// by all metrics in the same batch. So we only need to fetch the metadataStore once
 	if ma.isNewBatch {
 		metadataCache, err := getMetadataCache(ma.ctx)
 		if err != nil {
@@ -81,21 +82,10 @@ func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v flo
 		ma.mc = metadataCache
 	}
 
-	metricName := ls.Get(model.MetricNameLabel)
-
-	if metricName == "" {
-		return errors.New("metricName of the times-series is missing")
+	metricName, metricType, metricTags, err := ma.GetMetricNameTypeAndTags(ls)
+	if (err != nil) {
+		return err
 	}
-
-	metricTags := ls.WithoutLabels(model.MetricNameLabel).Map()
-	metricMetadata := metadataForMetric(metricName, ma.mc)
-
-	if metricMetadata.Type == textparse.MetricTypeUnknown && !isInternalMetric(metricName) {
-		return fmt.Errorf("Unknown metric type for metric %s", metricName)
-	}
-
-	metricType := string(metricMetadata.Type)
-	metricTags[prometheusMetricTypeKey] = metricType
 
 	pm := &PrometheusMetric{
 		metricName:  metricName,
@@ -107,4 +97,24 @@ func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v flo
 
 	ma.batch = append(ma.batch, pm)
 	return nil
+}
+
+func (ma *metricAppender) GetMetricNameTypeAndTags(ls labels.Labels) (string, string, map[string]string, error){
+	metricName := ls.Get(magicScrapeNameLabel)
+	if metricName == "" {
+		if metricName = ls.Get(model.MetricNameLabel); metricName == "" {
+			return "","",nil, errors.New("metricName of the times-series is missing")
+		}
+	}
+
+	metricTags := ls.WithoutLabels(model.MetricNameLabel).Map()
+	metricMetadata := metadataForMetric(metricName, ma.mc)
+
+	if metricMetadata.Type == textparse.MetricTypeUnknown && !isInternalMetric(metricName) {
+		return "", "", nil, fmt.Errorf("unknown metric type for metric %s", metricName)
+	}
+
+	metricType := string(metricMetadata.Type)
+	metricTags[prometheusMetricTypeKey] = metricType
+	return metricName, metricType, metricTags, nil
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/prometheus/config"
@@ -33,6 +34,7 @@ import (
 	_ "github.com/prometheus/prometheus/discovery/install"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
+	"github.com/prometheus/prometheus/model/relabel"
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
 	"io/ioutil"
 	klog "k8s.io/klog/v2"
@@ -256,6 +258,10 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 	wg.Done()
 }
 
+const (
+	magicScrapeNameLabel = "magic_cwagent_scrape_name"
+)
+
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
 	content, _ := ioutil.ReadFile(filename)
@@ -274,6 +280,31 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 	conf, err := config.LoadFile(filename, false, false, logger)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't load configuration (--config.file=%q)", filename)
+	}
+
+	for _, sc := range conf.ScrapeConfigs {
+		// Add metric relabel to preserve the original name as label and prioritize this metric relabel
+		// before any others metric relabel
+		relabelMetricName := false
+		for _, rc := range sc.MetricRelabelConfigs {
+			if rc.TargetLabel == "__name__" {
+				relabelMetricName = true
+			}
+		}
+
+		if relabelMetricName {
+			metricRelabelConfigs := []*relabel.Config{
+				{
+					Action:       relabel.Replace,
+					Regex:        relabel.MustNewRegexp("(.*)"),
+					Replacement:  "$1",
+					TargetLabel:  magicScrapeNameLabel,
+					SourceLabels: model.LabelNames{"__name__"},
+				},
+			}
+			level.Info(logger).Log("msg", "Add extra metric_relabel_configs", "configs", metricRelabelConfigs)
+			sc.MetricRelabelConfigs = append(metricRelabelConfigs, sc.MetricRelabelConfigs...)
+		}
 	}
 
 	failed := false
