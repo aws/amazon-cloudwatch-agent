@@ -4,16 +4,16 @@
 package prometheus_scraper
 
 import (
-	"log"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/exemplar"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/textparse"
-	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/storage"
 	"github.com/prometheus/prometheus/scrape"
+	"github.com/prometheus/prometheus/storage"
+	"log"
 )
 
 const prometheusMetricTypeKey = "prom_metric_type"
@@ -82,7 +82,7 @@ func (ma *metricAppender) AppendMetricToBatch(ls labels.Labels, metricCreateTime
 	}
 
 	pm, err := ma.BuildPrometheusMetric(ls, metricCreateTime, metricValue)
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 
@@ -90,18 +90,18 @@ func (ma *metricAppender) AppendMetricToBatch(ls labels.Labels, metricCreateTime
 	return nil
 }
 
-func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, metricCreateTime int64, metricValue float64) (*PrometheusMetric, error){
+func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, metricCreateTime int64, metricValue float64) (*PrometheusMetric, error) {
 	metricName := ls.Get(model.MetricNameLabel)
 
 	if metricName == "" {
-			return nil, errors.New("metric name of the times-series is missing")
+		return nil, errors.New("metric name of the times-series is missing")
 	}
-	
+
 	var metricTags map[string]string
 	var metricMetadata *scrape.MetricMetadata
-	
+
 	if metricNameBeforeRelabel := ls.Get(magicScrapeNameLabel); metricNameBeforeRelabel != "" {
-		metricTags = ls.WithoutLabels(model.MetricNameLabel,magicScrapeNameLabel).Map()
+		metricTags = ls.WithoutLabels(model.MetricNameLabel, magicScrapeNameLabel).Map()
 		metricMetadata = metadataForMetric(metricName, ma.mc)
 	} else {
 		metricTags = ls.WithoutLabels(model.MetricNameLabel).Map()
@@ -114,7 +114,7 @@ func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, metricCreateTi
 
 	metricType := string(metricMetadata.Type)
 	metricTags[prometheusMetricTypeKey] = metricType
-	
+
 	return &PrometheusMetric{
 		metricName:  metricName,
 		metricType:  metricType,

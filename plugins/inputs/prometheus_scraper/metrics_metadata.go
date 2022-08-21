@@ -6,9 +6,9 @@ package prometheus_scraper
 import (
 	"context"
 	"errors"
-	"strings"
 	"github.com/prometheus/prometheus/model/textparse"
 	"github.com/prometheus/prometheus/scrape"
+	"strings"
 )
 
 const (
