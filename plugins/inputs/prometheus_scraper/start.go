@@ -260,7 +260,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 }
 
 const (
-	savedScrapeNameLabel     = "cwagent_saved_scrape_name"
+	savedScrapeNameLabel = "cwagent_saved_scrape_name"
 )
 
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
