@@ -94,13 +94,13 @@ func TestBuildPrometheusMetric(t *testing.T) {
 			{Name: "job", Value: "test"},
 			{Name: "__name__", Value: "hist_test"}},
 		)
-		
+
 		metricValue := 1.0
 		metricCreateTime := time.Now().Unix() * 1000
 		metricTags := labels.WithoutLabels(model.MetricNameLabel).Map()
 		metricType := string(textparse.MetricTypeHistogram)
 		metricTags[prometheusMetricTypeKey] = metricType
-		
+
 		mr := &metricsReceiver{pmbCh: make(chan PrometheusMetricBatch, 1)}
 		ma := &metricAppender{ctx: context.Background(), receiver: mr, batch: PrometheusMetricBatch{}, isNewBatch: false, mc: newMockMetadataCache(testMetadata)}
 
@@ -120,15 +120,15 @@ func TestBuildPrometheusMetric(t *testing.T) {
 			{Name: "job", Value: "test"},
 			{Name: "__name__", Value: ""}},
 		)
-		
+
 		mr := &metricsReceiver{pmbCh: make(chan PrometheusMetricBatch, 1)}
 		ma := &metricAppender{ctx: context.Background(), receiver: mr, batch: PrometheusMetricBatch{}, isNewBatch: false, mc: newMockMetadataCache(testMetadata)}
 
 		metricValue := 1.0
 		metricCreateTime := time.Now().Unix() * 1000
-		
+
 		_, err := ma.BuildPrometheusMetric(labels, metricCreateTime, metricValue)
-		assert.EqualError(err,"metric name of the times-series is missing")
+		assert.EqualError(err, "metric name of the times-series is missing")
 	})
 
 	t.Run("non-internal metric with unknown metric type", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestBuildPrometheusMetric(t *testing.T) {
 		metricCreateTime := time.Now().Unix() * 1000
 
 		_, err := ma.BuildPrometheusMetric(labels, metricCreateTime, metricValue)
-		assert.Contains(err.Error(),"unknown metric type for metric")
+		assert.Contains(err.Error(), "unknown metric type for metric")
 	})
 
 	t.Run("internal metric with unknown metric type", func(t *testing.T) {
