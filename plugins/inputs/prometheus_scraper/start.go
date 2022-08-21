@@ -260,7 +260,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 }
 
 const (
-	magicScrapeNameLabel = "magic_cwagent_scrape_name"
+	savedScrapeNameLabel     = "cwagent_saved_scrape_name"
 )
 
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
@@ -299,7 +299,7 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 					Action:       relabel.Replace,
 					Regex:        relabel.MustNewRegexp("(.*)"),
 					Replacement:  "$1",
-					TargetLabel:  magicScrapeNameLabel,
+					TargetLabel:  savedScrapeNameLabel,
 					SourceLabels: model.LabelNames{"__name__"},
 				},
 			}

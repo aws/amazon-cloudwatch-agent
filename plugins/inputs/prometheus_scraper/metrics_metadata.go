@@ -35,13 +35,13 @@ func (m *mCache) Metadata(metricName string) (scrape.MetricMetadata, bool) {
 }
 
 func getMetadataCache(ctx context.Context) (MetadataCache, error) {
-	metaStore, ok := scrape.MetricMetadataStoreFromContext(ctx)
+	metadata, ok := scrape.MetricMetadataStoreFromContext(ctx)
 	if !ok {
 		return nil, errors.New("Unable to find MetricMetadataStore in context")
 	}
 
 	return &mCache{
-		metadata: metaStore,
+		metadata: metadata,
 	}, nil
 }
 

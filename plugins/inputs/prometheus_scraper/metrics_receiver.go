@@ -100,9 +100,9 @@ func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, metricCreateTi
 	var metricTags map[string]string
 	var metricMetadata *scrape.MetricMetadata
 
-	if metricNameBeforeRelabel := ls.Get(magicScrapeNameLabel); metricNameBeforeRelabel != "" {
-		metricTags = ls.WithoutLabels(model.MetricNameLabel, magicScrapeNameLabel).Map()
-		metricMetadata = metadataForMetric(metricName, ma.mc)
+	if metricNameBeforeRelabel := ls.Get(savedScrapeNameLabel); metricNameBeforeRelabel != "" {
+		metricTags = ls.WithoutLabels(model.MetricNameLabel, savedScrapeNameLabel).Map()
+		metricMetadata = metadataForMetric(metricNameBeforeRelabel, ma.mc)
 	} else {
 		metricTags = ls.WithoutLabels(model.MetricNameLabel).Map()
 		metricMetadata = metadataForMetric(metricName, ma.mc)
