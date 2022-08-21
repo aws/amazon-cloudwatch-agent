@@ -85,7 +85,14 @@ func (ma *metricAppender) AppendMetricToBatch(ls labels.Labels, metricCreateTime
 	if err != nil {
 		return err
 	}
-
+	
+	// The internal metrics sometimes will return with type unknown and we would not consider it as valid metric (only support Gauge, Counter, Summary)
+	// https://github.com/khanhntd/amazon-cloudwatch-agent/blob/master/plugins/inputs/prometheus_scraper/metrics_filter.go#L21-L48
+	
+	if pm == nil {
+		return nil
+	}
+	
 	ma.batch = append(ma.batch, pm)
 	return nil
 }
@@ -108,7 +115,10 @@ func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, metricCreateTi
 		metricMetadata = metadataForMetric(metricName, ma.mc)
 	}
 
-	if metricMetadata.Type == textparse.MetricTypeUnknown && !isInternalMetric(metricName) {
+	if metricMetadata.Type == textparse.MetricTypeUnknown {
+		if isInternalMetric(metricName) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("unknown metric type for metric %s", metricName)
 	}
 
