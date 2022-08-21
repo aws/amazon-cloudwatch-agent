@@ -4,17 +4,16 @@
 package prometheus_scraper
 
 import (
+	"log"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/prometheus/prometheus/model/exemplar"
 	"github.com/prometheus/prometheus/model/labels"
-
-	"log"
-
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/textparse"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/storage"
+	"github.com/prometheus/prometheus/scrape"
 )
 
 const prometheusMetricTypeKey = "prom_metric_type"
@@ -52,7 +51,7 @@ func (ma *metricAppender) Append(ref storage.SeriesRef, ls labels.Labels, t int6
 	default:
 	}
 
-	return 0, ma.BuildPrometheusMetric(ls, t, v) //return 0 to indicate caching is not supported
+	return 0, ma.AppendMetricToBatch(ls, t, v) //return 0 to indicate caching is not supported
 }
 
 func (ma *metricAppender) Commit() error {
@@ -70,7 +69,7 @@ func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, ls labels.Labels
 	return 0, nil
 }
 
-func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v float64) (err error) {
+func (ma *metricAppender) AppendMetricToBatch(ls labels.Labels, metricCreateTime int64, metricValue float64) (err error) {
 	// Each new scrape will create a context hold metadataStore. Therefore, the same context will be used
 	// by all metrics in the same batch. So we only need to fetch the metadataStore once
 	if ma.isNewBatch {
@@ -82,39 +81,45 @@ func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, t int64, v flo
 		ma.mc = metadataCache
 	}
 
-	metricName, metricType, metricTags, err := ma.GetMetricNameTypeAndTags(ls)
+	pm, err := ma.BuildPrometheusMetric(ls, metricCreateTime, metricValue)
 	if (err != nil) {
 		return err
-	}
-
-	pm := &PrometheusMetric{
-		metricName:  metricName,
-		metricType:  metricType,
-		metricValue: v,
-		timeInMS:    t,
-		tags:        metricTags,
 	}
 
 	ma.batch = append(ma.batch, pm)
 	return nil
 }
 
-func (ma *metricAppender) GetMetricNameTypeAndTags(ls labels.Labels) (string, string, map[string]string, error){
-	metricName := ls.Get(magicScrapeNameLabel)
+func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, metricCreateTime int64, metricValue float64) (*PrometheusMetric, error){
+	metricName := ls.Get(model.MetricNameLabel)
+
 	if metricName == "" {
-		if metricName = ls.Get(model.MetricNameLabel); metricName == "" {
-			return "","",nil, errors.New("metricName of the times-series is missing")
-		}
+			return nil, errors.New("metric name of the times-series is missing")
+	}
+	
+	var metricTags map[string]string
+	var metricMetadata *scrape.MetricMetadata
+	
+	if metricNameBeforeRelabel := ls.Get(magicScrapeNameLabel); metricNameBeforeRelabel != "" {
+		metricTags = ls.WithoutLabels(model.MetricNameLabel,magicScrapeNameLabel).Map()
+		metricMetadata = metadataForMetric(metricName, ma.mc)
+	} else {
+		metricTags = ls.WithoutLabels(model.MetricNameLabel).Map()
+		metricMetadata = metadataForMetric(metricName, ma.mc)
 	}
 
-	metricTags := ls.WithoutLabels(model.MetricNameLabel).Map()
-	metricMetadata := metadataForMetric(metricName, ma.mc)
-
 	if metricMetadata.Type == textparse.MetricTypeUnknown && !isInternalMetric(metricName) {
-		return "", "", nil, fmt.Errorf("unknown metric type for metric %s", metricName)
+		return nil, fmt.Errorf("unknown metric type for metric %s", metricName)
 	}
 
 	metricType := string(metricMetadata.Type)
 	metricTags[prometheusMetricTypeKey] = metricType
-	return metricName, metricType, metricTags, nil
+	
+	return &PrometheusMetric{
+		metricName:  metricName,
+		metricType:  metricType,
+		metricValue: metricValue,
+		timeInMS:    metricCreateTime,
+		tags:        metricTags,
+	}, nil
 }
