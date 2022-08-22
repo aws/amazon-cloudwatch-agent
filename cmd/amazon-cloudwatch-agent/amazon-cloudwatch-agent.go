@@ -9,6 +9,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -40,6 +45,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
+
+	otelservice "go.opentelemetry.io/collector/service"
 
 	"github.com/kardianos/service"
 )
@@ -335,6 +342,20 @@ func runAgent(ctx context.Context,
 	agentinfo.InputPlugins = c.InputNames()
 	agentinfo.OutputPlugins = c.OutputNames()
 
+	// inject OTel
+	factories, err := NewFactories(c)
+	if err != nil {
+		return err
+	}
+	params := otelservice.CollectorSettings{
+		Factories: factories,
+	}
+	col, err := otelservice.New(params)
+	if err != nil {
+		return err
+	}
+	go col.Run(ctx)
+
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -355,6 +376,30 @@ func runAgent(ctx context.Context,
 	logAgent := logs.NewLogAgent(c)
 	go logAgent.Run(ctx)
 	return ag.Run(ctx)
+}
+
+func NewFactories(c *config.Config) (component.Factories, error) {
+	factories := component.Factories{}
+	// TODO: for Container Insights testing.
+	receivers, err := component.MakeReceiverFactoryMap(awscontainerinsightreceiver.NewFactory())
+	if err != nil {
+		return factories, err
+	}
+	factories.Receivers = receivers
+
+	processors, err := component.MakeProcessorFactoryMap(batchprocessor.NewFactory())
+	if err != nil {
+		return factories, err
+	}
+	factories.Processors = processors
+
+	exporters, err := component.MakeExporterFactoryMap(awsemfexporter.NewFactory(), loggingexporter.NewFactory())
+	if err != nil {
+		return factories, err
+	}
+	factories.Exporters = exporters
+
+	return factories, nil
 }
 
 type program struct {
