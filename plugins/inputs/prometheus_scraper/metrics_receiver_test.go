@@ -155,22 +155,18 @@ func TestBuildPrometheusMetric(t *testing.T) {
 			{Name: "__name__", Value: "up"}},
 		)
 
-		mr := &metricsReceiver{pmbCh: make(chan PrometheusMetricBatch, 1)}
-		ma := &metricAppender{ctx: context.Background(), receiver: mr, batch: PrometheusMetricBatch{}, isNewBatch: false, mc: newMockMetadataCache(testMetadata)}
-
 		metricValue := 1.0
 		metricCreateTime := time.Now().Unix() * 1000
 		metricTags := labels.WithoutLabels(model.MetricNameLabel).Map()
 		metricType := string(textparse.MetricTypeUnknown)
 		metricTags[prometheusMetricTypeKey] = metricType
+		
+		mr := &metricsReceiver{pmbCh: make(chan PrometheusMetricBatch, 1)}
+		ma := &metricAppender{ctx: context.Background(), receiver: mr, batch: PrometheusMetricBatch{}, isNewBatch: false, mc: newMockMetadataCache(testMetadata)}
 
 		pm, err := ma.BuildPrometheusMetric(labels, metricCreateTime, metricValue)
 
 		assert.NoError(err)
-		assert.Equal(pm.metricName, labels.Get(model.MetricNameLabel))
-		assert.Equal(pm.metricType, metricType)
-		assert.Equal(pm.metricValue, metricValue)
-		assert.Equal(pm.timeInMS, metricCreateTime)
-		assert.Equal(pm.tags, metricTags)
+		assert.Nil(pm)
 	})
 }
