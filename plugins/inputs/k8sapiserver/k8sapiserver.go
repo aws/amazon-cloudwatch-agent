@@ -122,7 +122,7 @@ func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
 	}
 
 	lock, err := resourcelock.New(
-		resourcelock.ConfigMapsResourceLock,
+		resourcelock.ConfigMapsLeasesResourceLock,
 		lockNamespace, lockName,
 		k8sclient.Get().ClientSet.CoreV1(),
 		k8sclient.Get().ClientSet.CoordinationV1(),

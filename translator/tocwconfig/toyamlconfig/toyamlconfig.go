@@ -9,12 +9,9 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder/mapstructure"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/service"
 	"gopkg.in/yaml.v3"
 	"log"
-)
-
-import (
-	"go.opentelemetry.io/collector/service"
 )
 
 const (

@@ -32,7 +32,6 @@ var endpointsArray = []interface{}{
 			Labels: map[string]string{
 				"app": "guestbook",
 			},
-			ClusterName: "",
 		},
 		Subsets: []v1.EndpointSubset{
 			{
@@ -102,7 +101,6 @@ var endpointsArray = []interface{}{
 			CreationTimestamp: metav1.Time{
 				Time: time.Now(),
 			},
-			ClusterName: "",
 		},
 		Subsets: []v1.EndpointSubset{
 			{
@@ -142,7 +140,6 @@ var endpointsArray = []interface{}{
 				"app":  "redis",
 				"role": "master",
 			},
-			ClusterName: "",
 		},
 		Subsets: []v1.EndpointSubset{
 			{
@@ -188,7 +185,6 @@ var endpointsArray = []interface{}{
 				"app":  "redis",
 				"role": "slave",
 			},
-			ClusterName: "",
 		},
 		Subsets: []v1.EndpointSubset{
 			{
@@ -247,7 +243,6 @@ var endpointsArray = []interface{}{
 			Annotations: map[string]string{
 				"control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"ip-10-0-189-120.eu-west-1.compute.internal_89407f85-57e1-11e9-b6ea-02eb484bead6\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2019-04-05T20:34:54Z\",\"renewTime\":\"2019-05-06T20:04:02Z\",\"leaderTransitions\":1}",
 			},
-			ClusterName: "",
 		},
 	},
 	&v1.Endpoints{
@@ -268,7 +263,6 @@ var endpointsArray = []interface{}{
 				"kubernetes.io/cluster-service": "true",
 				"kubernetes.io/name":            "CoreDNS",
 			},
-			ClusterName: "",
 		},
 		Subsets: []v1.EndpointSubset{
 			{
@@ -332,7 +326,6 @@ var endpointsArray = []interface{}{
 			Annotations: map[string]string{
 				"control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"ip-10-0-189-120.eu-west-1.compute.internal_949a4400-57e1-11e9-a7bb-02eb484bead6\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2019-04-05T20:34:57Z\",\"renewTime\":\"2019-05-06T20:04:02Z\",\"leaderTransitions\":1}",
 			},
-			ClusterName: "",
 		},
 	},
 }
