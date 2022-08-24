@@ -4,7 +4,7 @@
 //go:build integration
 // +build integration
 
-package test
+package utils
 
 import (
 	"context"
@@ -126,12 +126,4 @@ func GetInstanceId() string {
 		log.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
 	}
 	return metadata.InstanceID
-}
-
-func GetCWClient(cxt context.Context) *cloudwatch.Client {
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
-	if err != nil {
-		log.Fatalf("err occurred while creating config %v", err)
-	}
-	return cloudwatch.NewFromConfig(defaultConfig)
 }
