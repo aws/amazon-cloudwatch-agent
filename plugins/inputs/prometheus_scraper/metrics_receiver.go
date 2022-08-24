@@ -113,7 +113,7 @@ func (ma *metricAppender) BuildPrometheusMetric(ls labels.Labels, metricCreateTi
 
 	if metricMetadata.Type == textparse.MetricTypeUnknown {
 		// The internal metrics sometimes will return with type unknown and we would not consider it as valid metric (only support Gauge, Counter, Summary)
-		// https://github.com/khanhntd/amazon-cloudwatch-agent/blob/master/plugins/inputs/prometheus_scraper/metrics_filter.go#L21-L48
+		// https://github.com/aws/amazon-cloudwatch-agent/blob/59cfe656152e31ca27e7983fac4682d0c33d3316/plugins/inputs/prometheus_scraper/metrics_filter.go#L20-L48
 		// However, we don't want to block the append by return error. Therefore, dropping the internal metric with type unknown
 		if isInternalMetric(metricName) {
 			return nil, nil

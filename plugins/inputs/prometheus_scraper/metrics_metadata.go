@@ -48,7 +48,7 @@ func getMetadataCache(ctx context.Context) (MetadataCache, error) {
 func metadataForMetric(metricName string, mc MetadataCache) *scrape.MetricMetadata {
 	// Two ways to get metric type through metadataStore:
 	// * Use instance and job to get metadataStore. If customer relabel job or instance, it will fail
-	// * Use Context that holds metadataStore which is created within each scrape loop https://github.com/prometheus/prometheus/blob/main/scrape/scrape.go#L1154-L1161
+	// * Use Context that holds metadataStore which is created within each scrape loop https://github.com/prometheus/prometheus/blob/8b863c42dd956d35d18a7a0b39c89c86adf7cebf/scrape/scrape.go#L1154-L1161
 	// The former is being restricted by relabel job and relabel instance, but that does not apply to the latter
 	if metadata, ok := mc.Metadata(metricName); ok {
 		return &metadata
