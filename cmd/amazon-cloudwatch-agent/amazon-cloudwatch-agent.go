@@ -361,7 +361,7 @@ func runAgent(ctx context.Context,
 	}
 	configParams := otelservice.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
-			URIs:      []string{"/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-config.yaml"},
+			URIs:      []string{"/tmp/consolidated-agent-container-insights.yml"},
 			Providers: mapProviders,
 		},
 	}
