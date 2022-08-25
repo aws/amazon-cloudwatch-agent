@@ -54,7 +54,7 @@ func getCloudWatchMetricsClient() (*cloudwatch.Client, *context.Context, error) 
 			return nil, nil, err
 		}
 
-		cwm = cloudwatchlogs.NewFromConfig(c)
+		cwm = cloudwatch.NewFromConfig(c)
 	}
 	return cwm, &metricsCtx, nil
 }

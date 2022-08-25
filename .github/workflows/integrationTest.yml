@@ -159,11 +159,11 @@ jobs:
 
       - name: Echo test plan matrix
         run: |
-          echo ${{ steps.set-matrix.outputs.ec2_linux_advance_matrix }}
-          echo ${{ steps.set-matrix.outputs.ec2_linux_basic_matrix }}
-          echo ${{ steps.set-matrix.outputs.ec2_performance_matrix}}
-          echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
-          echo ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+          echo "ec2_linux_advance_matrix: ${{ steps.set-matrix.outputs.ec2_linux_advance_matrix }}"
+          echo "ec2_linux_basic_matrix: ${{ steps.set-matrix.outputs.ec2_linux_basic_matrix }}"
+          echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
+          echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
+          echo "ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
 
   MakeMSIZip:
     name: 'MakeMSIZip'
