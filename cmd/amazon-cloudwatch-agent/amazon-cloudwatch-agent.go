@@ -12,6 +12,10 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/provider/envprovider"
+	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
+	"go.opentelemetry.io/collector/confmap/provider/yamlprovider"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"io/ioutil"
@@ -346,17 +350,35 @@ func runAgent(ctx context.Context,
 	log.Println("creating otel sidecar")
 	factories, err := NewFactories(c)
 	if err != nil {
+		log.Println("failed to create OTel factories")
+		return err
+	}
+	providers := []confmap.Provider{fileprovider.New(), envprovider.New(), yamlprovider.New()}
+
+	mapProviders := make(map[string]confmap.Provider, len(providers))
+	for _, provider := range providers {
+		mapProviders[provider.Scheme()] = provider
+	}
+	configParams := otelservice.ConfigProviderSettings{
+		ResolverSettings: confmap.ResolverSettings{
+			Providers: mapProviders,
+		},
+	}
+	otelProvider, err := otelservice.NewConfigProvider(configParams)
+	if err != nil {
+		log.Println("failed to create OTel config provider")
 		return err
 	}
 	params := otelservice.CollectorSettings{
-		Factories: factories,
+		Factories:      factories,
+		ConfigProvider: otelProvider,
 	}
 	col, err := otelservice.New(params)
 	if err != nil {
 		log.Println("failed to create new otel agent", err)
 		return err
 	}
-	go col.Run(context.Background())
+	go col.Run(ctx)
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
