@@ -343,6 +343,7 @@ func runAgent(ctx context.Context,
 	agentinfo.OutputPlugins = c.OutputNames()
 
 	// inject OTel
+	log.Println("creating otel sidecar")
 	factories, err := NewFactories(c)
 	if err != nil {
 		return err
@@ -352,6 +353,7 @@ func runAgent(ctx context.Context,
 	}
 	col, err := otelservice.New(params)
 	if err != nil {
+		log.Println("failed to create new otel agent", err)
 		return err
 	}
 	go col.Run(context.Background())
@@ -373,8 +375,10 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
+	log.Println("creating new logs agent")
 	logAgent := logs.NewLogAgent(c)
 	go logAgent.Run(ctx)
+	log.Println("running telegraf agent")
 	return ag.Run(ctx)
 }
 
