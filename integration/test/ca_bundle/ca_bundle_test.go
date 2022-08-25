@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/utils"
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/util"
 )
 
 const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
@@ -49,14 +49,14 @@ func TestBundle(t *testing.T) {
 		//before test run
 		log.Printf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget), func(t *testing.T) {
-			utils.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
-			utils.CopyFile(parameter.dataInput+configJSON, configOutputPath)
-			utils.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
-			utils.StartAgent(configOutputPath, true)
+			util.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
+			util.CopyFile(parameter.dataInput+configJSON, configOutputPath)
+			util.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
+			util.StartAgent(configOutputPath, true)
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
-			utils.StopAgent()
-			output := utils.ReadAgentOutput(agentRuntime)
+			util.StopAgent()
+			output := util.ReadAgentOutput(agentRuntime)
 			containsTarget := outputLogContainsTarget(output)
 			if (parameter.findTarget && !containsTarget) || (!parameter.findTarget && containsTarget) {
 				t.Errorf("Find target is %t contains target is %t", parameter.findTarget, containsTarget)

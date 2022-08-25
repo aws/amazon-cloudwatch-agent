@@ -9,9 +9,9 @@ package sanity
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/utils"
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/util"
 )
 
 func TestAgentStatus(t *testing.T) {
-	utils.RunShellScript("resources/verifyLinuxCtlScript.sh")
+	util.RunShellScript("resources/verifyLinuxCtlScript.sh")
 }

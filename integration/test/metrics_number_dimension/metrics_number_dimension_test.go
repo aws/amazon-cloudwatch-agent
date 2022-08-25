@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/utils"
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/util"
 	cwPlugin "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
@@ -72,8 +72,8 @@ func TestNumberMetricDimension(t *testing.T) {
 			parameter.resourcePath, parameter.failToStart, parameter.numberDimensionsInCW, parameter.metricName)
 
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.resourcePath, parameter.failToStart), func(t *testing.T) {
-			utils.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
-			err := utils.StartAgent(configOutputPath, false)
+			util.CopyFile(parameter.resourcePath+configJSON, configOutputPath)
+			err := util.StartAgent(configOutputPath, false)
 
 			// for append dimension we auto fail over 30 for custom metrics (statsd we collect remove dimension and continue)
 			// Go output starts at the time of failure so the failure message gets chopped off. Thus have to use if there is an error and just assume reason.
@@ -86,12 +86,12 @@ func TestNumberMetricDimension(t *testing.T) {
 
 			time.Sleep(agentRuntime)
 			log.Printf("Agent has been running for : %s", agentRuntime.String())
-			utils.StopAgent()
+			util.StopAgent()
 
 			// test for cloud watch metrics
 			cxt := context.Background()
 			dimensionFilter := buildDimensionFilterList(parameter.numberDimensionsInCW)
-			client := utils.GetCWClient(cxt)
+			client := util.GetCWClient(cxt)
 			listMetricsInput := cloudwatch.ListMetricsInput{
 				MetricName: aws.String(parameter.metricName),
 				Namespace:  aws.String(namespace),
@@ -120,7 +120,7 @@ func buildDimensionFilterList(appendDimension int) []types.DimensionFilter {
 	// we append dimension from 0 to max number - 2
 	// then we add dimension instance id
 	// thus for max dimension 10, 0 to 8 + instance id = 10 dimension
-	ec2InstanceId := utils.GetInstanceId()
+	ec2InstanceId := util.GetInstanceId()
 	dimensionFilter := make([]types.DimensionFilter, appendDimension)
 	for i := 0; i < appendDimension-1; i++ {
 		dimensionFilter[i] = types.DimensionFilter{

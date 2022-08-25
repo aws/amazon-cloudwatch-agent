@@ -4,7 +4,7 @@
 //go:build integration
 // +build integration
 
-package utils
+package util
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	ctx context.Context
+	logsCtx context.Context
 	cwl *cloudwatchlogs.Client
 )
 
@@ -211,13 +211,13 @@ func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 // getCloudWatchLogsClient returns a singleton SDK client for interfacing with CloudWatch Logs
 func getCloudWatchLogsClient() (*cloudwatchlogs.Client, *context.Context, error) {
 	if cwl == nil {
-		ctx = context.Background()
-		c, err := config.LoadDefaultConfig(ctx)
+		logsCtx = context.Background()
+		c, err := config.LoadDefaultConfig(logsCtx)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		cwl = cloudwatchlogs.NewFromConfig(c)
 	}
-	return cwl, &ctx, nil
+	return cwl, &logsCtx, nil
 }

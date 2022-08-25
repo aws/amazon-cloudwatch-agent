@@ -10,7 +10,7 @@ import (
 	"log"
 	"testing"
 	"time"
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/utils"
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/util"
 )
 
 const (
@@ -26,13 +26,13 @@ const (
 func TestSimpleMetricsLogs(t *testing.T) {
 	t.Run("Basic configuration testing for both metrics and logs", func(t *testing.T) {
 		start := time.Now()
-		utils.CopyFile(configJSON, configOutputPath)
-		err := utils.StartAgent(configOutputPath, false)
+		util.CopyFile(configJSON, configOutputPath)
+		err := util.StartAgent(configOutputPath, false)
 
-		utils.WriteLogs(t, logFilePath, param.iterations)
+		util.WriteLogs(t, logFilePath, param.iterations)
 		time.Sleep(agentRuntime)
 		log.Printf("Agent has been running for : %s", agentRuntime.String())
-		utils.StopAgent()
+		util.StopAgent()
 
 		// check CWL to ensure we got the expected number of logs in the log stream
 		test.ValidateLogs(t, instanceId, instanceId, numberExpectLogs, start)

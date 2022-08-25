@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/utils"
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/util"
 )
 
 const (
@@ -41,7 +41,7 @@ func TestPerformance(t *testing.T) {
 	}
 
 	agentContext := context.TODO()
-	instanceId := utils.GetInstanceId()
+	instanceId := util.GetInstanceId()
 	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
 
 	configFilePath, logStreams, err := GenerateConfig(logNum)
@@ -52,10 +52,10 @@ func TestPerformance(t *testing.T) {
 	//defer deleting log group and streams
 	//defer deleting log group first because golang handles defers in LIFO order
 	//and we want to delete the log group after deleting the log streams
-	defer utils.DeleteLogGroup(instanceId)
+	defer util.DeleteLogGroup(instanceId)
 	
 	for _, logStream := range logStreams {
-		defer utils.DeleteLogStream(instanceId, logStream)
+		defer util.DeleteLogStream(instanceId, logStream)
 	}
 
 	
@@ -79,9 +79,9 @@ func TestPerformance(t *testing.T) {
 	//run tests
 	for _, tps := range tpsVals {
 		t.Run(fmt.Sprintf("TPS run: %d", tps), func(t *testing.T) {
-			utils.CopyFile(configFilePath, configOutputPath)
+			util.CopyFile(configFilePath, configOutputPath)
 
-			utils.StartAgent(configOutputPath, true)
+			util.StartAgent(configOutputPath, true)
 
 			agentRunDuration := agentRuntimeMinutes * time.Minute
 
@@ -91,7 +91,7 @@ func TestPerformance(t *testing.T) {
 			}
 
 			log.Printf("Agent has been running for : %s\n", (agentRunDuration).String())
-			utils.StopAgent()
+			util.StopAgent()
 
 			//collect data
 			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, agentContext, configFilePath)
