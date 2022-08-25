@@ -354,7 +354,7 @@ func runAgent(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	go col.Run(ctx)
+	go col.Run(context.Background())
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
