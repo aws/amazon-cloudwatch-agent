@@ -7,31 +7,31 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
-	"fmt"
 )
 
 const (
-	logLineId1       = "foo"
-	logLineId2       = "bar"
+	logLineId1 = "foo"
+	logLineId2 = "bar"
 )
 
 var logLineIds = []string{logLineId1, logLineId2}
 
 func WriteLogs(t *testing.T, filePath string, iterations int) {
 	f, err := os.Create(filePath)
-	
+
 	if err != nil {
 		t.Fatalf("Error occurred creating log file for writing: %v", err)
 	}
-	
+
 	defer f.Close()
 	defer os.Remove(filePath)
-	
+
 	t.Logf("Writing %d lines to %s", iterations*len(logLineIds), filePath)
-	
+
 	for i := 0; i < iterations; i++ {
 		ts := time.Now()
 		for _, id := range logLineIds {

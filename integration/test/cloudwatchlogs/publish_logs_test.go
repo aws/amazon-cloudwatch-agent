@@ -8,8 +8,6 @@ package cloudwatchlogs
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/util"
@@ -56,7 +54,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 	// this uses the {instance_id} placeholder in the agent configuration,
 	// so we need to determine the host's instance ID for validation
 	instanceId := util.GetInstanceId()
-	log.Printf("Found instance id %s", instanceId)
+	t.Logf("Found instance id %s", instanceId)
 
 	defer util.DeleteLogGroupAndStream(instanceId, instanceId)
 
@@ -71,7 +69,7 @@ func TestWriteLogsToCloudWatch(t *testing.T) {
 			// ensure that there is enough time from the "start" time and the first log line,
 			// so we don't miss it in the GetLogEvents call
 			time.Sleep(agentRuntime)
-			writeLogs(t, logFilePath, param.iterations)
+			util.WriteLogs(t, logFilePath, param.iterations)
 			time.Sleep(agentRuntime)
 			util.StopAgent()
 
@@ -91,7 +89,7 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	cfgFilePath := "resources/config_log_rotated.json"
 
 	instanceId := util.GetInstanceId()
-	log.Printf("Found instance id %s", instanceId)
+	t.Logf("Found instance id %s", instanceId)
 	logGroup := instanceId
 	logStream := instanceId + "Rotated"
 
@@ -124,26 +122,3 @@ func TestRotatingLogsDoesNotSkipLines(t *testing.T) {
 	util.ValidateLogsInOrder(t, logGroup, logStream, lines, start)
 }
 
-func writeLogs(t *testing.T, filePath string, iterations int) {
-	f, err := os.Create(filePath)
-	if err != nil {
-		t.Fatalf("Error occurred creating log file for writing: %v", err)
-	}
-	defer f.Close()
-	defer os.Remove(filePath)
-
-	log.Printf("Writing %d lines to %s", iterations*len(logLineIds), filePath)
-
-	for i := 0; i < iterations; i++ {
-		ts := time.Now()
-		for _, id := range logLineIds {
-			_, err = f.WriteString(fmt.Sprintf("%s - [%s] #%d This is a log line.\n", ts.Format(time.StampMilli), id, i))
-			if err != nil {
-				// don't need to fatal error here. if a log line doesn't get written, the count
-				// when validating the log stream should be incorrect and fail there.
-				t.Logf("Error occurred writing log line: %v", err)
-			}
-		}
-		time.Sleep(1 * time.Millisecond)
-	}
-}

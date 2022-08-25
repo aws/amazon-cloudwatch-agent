@@ -1,11 +1,10 @@
 {
 	"agent": {
-		"metrics_collection_interval": 60,
-		"run_as_user": "root",
-		"debug": true
+		"run_as_user": "root"
 	},
+
 	"metrics": {
-		"namespace": "MetricLogsSimpleTesting",
+		"namespace": "MetricLogsTest",
 		"append_dimensions": {
 			"InstanceId": "${aws:InstanceId}"
 		},
@@ -14,22 +13,22 @@
 				"measurement": [
 					"mem_used_percent"
 				],
-				"metrics_collection_interval": 60,
+				"metrics_collection_interval": 60
 			}
 		}
 	},
 	"logs": {
 		"logs_collected": {
-		  "files": {
-			"collect_list": [
-			  {
-				"file_path": "/tmp/test1.log",
-				"log_group_name": "{instance_id}",
-				"log_stream_name": "{instance_id}/tmp1",
-				"timezone": "UTC"
-			  }
-			]
-		  }
+			"files": {
+				"collect_list": [
+					{
+						"file_path": "/tmp/test.log",
+						"log_group_name": "{instance_id}",
+						"log_stream_name": "{instance_id}",
+						"timezone": "UTC"
+					}
+				]
+			}
 		}
 	}
 }

@@ -42,7 +42,7 @@ func TestPerformance(t *testing.T) {
 
 	agentContext := context.TODO()
 	instanceId := util.GetInstanceId()
-	log.Printf("Instance ID used for performance metrics : %s\n", instanceId)
+	t.Logf("Instance ID used for performance metrics : %s\n", instanceId)
 
 	configFilePath, logStreams, err := GenerateConfig(logNum)
 	if err != nil {
@@ -58,9 +58,9 @@ func TestPerformance(t *testing.T) {
 		defer util.DeleteLogStream(instanceId, logStream)
 	}
 
-	
 
-	log.Printf("config generated at %s\n", configFilePath)
+
+	t.Logf("config generated at %s\n", configFilePath)
 	defer os.Remove(configFilePath)
 
 	tpsVals := []int {
@@ -90,7 +90,7 @@ func TestPerformance(t *testing.T) {
 				t.Fatalf("Error: %v", err)
 			}
 
-			log.Printf("Agent has been running for : %s\n", (agentRunDuration).String())
+			t.Logf("Agent has been running for : %s\n", (agentRunDuration).String())
 			util.StopAgent()
 
 			//collect data

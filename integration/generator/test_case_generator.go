@@ -21,14 +21,12 @@ const (
 //you can't have a const map in golang
 var osToTestDirMap = map[string][]string{
 	"ec2_linux_advance":{
-		"./integration/test/ca_bundle",
 		"./integration/test/cloudwatchlogs",
-		"./integration/test/metrics_number_dimension",
 		"./integration/test/metrics_number_dimension",
 	},
-	"ec2_linux_simple": {
-		"./integration/test/cloudwatchlogs",
-		"./integration/test/metrics_number_dimension",
+	"ec2_linux_basic": {
+		"./integration/test/ca_bundle",
+		"./integration/test/simple_metrics_logs",
 	},
 	"ec2_performance":{
 		"./integration/test/performancetest",

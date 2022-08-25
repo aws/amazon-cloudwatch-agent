@@ -16,7 +16,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 )
 
 func CopyFile(pathIn string, pathOut string) {

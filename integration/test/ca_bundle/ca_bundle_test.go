@@ -8,7 +8,6 @@ package ca_bundle
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"testing"
 	"time"
@@ -47,17 +46,17 @@ func TestBundle(t *testing.T) {
 
 	for _, parameter := range parameters {
 		//before test run
-		log.Printf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
+		t.Logf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget)
 		t.Run(fmt.Sprintf("resource file location %s find target %t", parameter.dataInput, parameter.findTarget), func(t *testing.T) {
 			util.ReplaceLocalStackHostName(parameter.dataInput + configJSON)
 			util.CopyFile(parameter.dataInput+configJSON, configOutputPath)
 			util.CopyFile(parameter.dataInput+commonConfigTOML, commonConfigOutputPath)
 			util.StartAgent(configOutputPath, true)
 			time.Sleep(agentRuntime)
-			log.Printf("Agent has been running for : %s", agentRuntime.String())
+			t.Logf("Agent has been running for : %s", agentRuntime.String())
 			util.StopAgent()
 			output := util.ReadAgentOutput(agentRuntime)
-			containsTarget := outputLogContainsTarget(output)
+			containsTarget := outputLogContainsTarget(t, output)
 			if (parameter.findTarget && !containsTarget) || (!parameter.findTarget && containsTarget) {
 				t.Errorf("Find target is %t contains target is %t", parameter.findTarget, containsTarget)
 			}
@@ -65,9 +64,9 @@ func TestBundle(t *testing.T) {
 	}
 }
 
-func outputLogContainsTarget(output string) bool {
-	log.Printf("Log file %s", output)
+func outputLogContainsTarget(t *testing.T, output string) bool {
+	t.Logf("Log file %s", output)
 	contains := strings.Contains(output, targetString)
-	log.Printf("Log file contains target string %t", contains)
+	t.Logf("Log file contains target string %t", contains)
 	return contains
 }

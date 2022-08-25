@@ -23,7 +23,7 @@ import (
 
 var (
 	logsCtx context.Context
-	cwl *cloudwatchlogs.Client
+	cwl     *cloudwatchlogs.Client
 )
 
 // ValidateLogs takes a log group and log stream, and fetches the log events via the GetLogEvents
@@ -200,7 +200,7 @@ func IsLogGroupExists(t *testing.T, logGroupName string) bool {
 	if err != nil {
 		t.Errorf("Error getting log group data %v", err)
 	}
-	
+
 	if len(describeLogGroupOutput.LogGroups) > 0 {
 		return true
 	}

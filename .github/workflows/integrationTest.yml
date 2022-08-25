@@ -126,6 +126,15 @@ jobs:
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: make build package-rpm package-deb package-win package-darwin
 
+      - uses: olafurpg/setup-gpg@v3
+
+      - name: Sign packages
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: |
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
+          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
+
+
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
@@ -397,15 +406,15 @@ jobs:
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
-  # Advance configuration for single AL2 OS
-  EC2LinuxAdvanceIntegrationTest:
+  # Basic configuration for different subset of OS under Linux
+  EC2BasicLinuxIntegrationTest:
     needs: [ MakeBinary, StartLocalStack, GenerateTestMatrix ]
-    name: 'EC2LinuxAdvanceIntegrationTest'
+    name: 'EC2BasicLinuxIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_advance_matrix) }}
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_basic_matrix) }}
     permissions:
       id-token: write
       contents: read
@@ -470,15 +479,15 @@ jobs:
           retry_wait_seconds: 5
           command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
 
-  # Basic configuration for different subset of OS under Linux
-  EC2BasicLinuxIntegrationTest:
-    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
-    name: 'EC2BasicLinuxIntegrationTest'
+  # Advance configuration for single AL2 OS
+  EC2LinuxAdvanceIntegrationTest:
+    needs: [ MakeBinary, StartLocalStack, GenerateTestMatrix ]
+    name: 'EC2LinuxAdvanceIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_basic_matrix) }}
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_advance_matrix) }}
     permissions:
       id-token: write
       contents: read
