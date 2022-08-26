@@ -18,7 +18,6 @@ import (
 	"go.opentelemetry.io/collector/confmap/provider/yamlprovider"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
-	"go.uber.org/multierr"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -29,7 +28,6 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -236,7 +234,7 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	wg := sync.WaitGroup{} // for running both telegraf and otel agents at the same time
+	//wg := sync.WaitGroup{} // for running both telegraf and otel agents at the same time
 
 	envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig)
 	if err != nil {
@@ -369,6 +367,7 @@ func runAgent(ctx context.Context,
 	for _, provider := range providers {
 		mapProviders[provider.Scheme()] = provider
 	}
+	// TODO: this uses a hard coded path to some other expected OTEL pipeline config.
 	configParams := otelservice.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
 			URIs:      []string{"/tmp/consolidated-agent-container-insights.yml"},
@@ -386,15 +385,15 @@ func runAgent(ctx context.Context,
 		ConfigProvider: otelProvider,
 	}
 	otelCommand := otelservice.NewCommand(params)
-	wg.Add(1)
-	var otelRunErr error
-	go func() {
-		otelRunErr = otelCommand.Execute()
-		if otelRunErr != nil {
-			log.Println("otel agent exited", otelRunErr)
-		}
-		wg.Done()
-	}()
+	//wg.Add(1)
+	//var otelRunErr error
+	//go func() {
+	//	otelRunErr = otelCommand.Execute()
+	//	if otelRunErr != nil {
+	//		log.Println("otel agent exited", otelRunErr)
+	//	}
+	//	wg.Done()
+	//}()
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -416,20 +415,23 @@ func runAgent(ctx context.Context,
 	log.Println("creating new logs agent")
 	logAgent := logs.NewLogAgent(c)
 	go logAgent.Run(ctx)
-	log.Println("running telegraf agent")
-	var telegrafRunErr error
-	wg.Add(1)
-	go func() {
-		telegrafRunErr = ag.Run(ctx)
-		if telegrafRunErr != nil {
-			log.Println("telegraf agent exited", telegrafRunErr)
-		}
-		wg.Done()
-	}()
+	//log.Println("running telegraf agent")
+	//var telegrafRunErr error
+	//wg.Add(1)
+	//go func() {
+	//	telegrafRunErr = ag.Run(ctx)
+	//	if telegrafRunErr != nil {
+	//		log.Println("telegraf agent exited", telegrafRunErr)
+	//	}
+	//	wg.Done()
+	//}()
+	//
+	//wg.Wait()
+	//err = multierr.Append(otelRunErr, telegrafRunErr)
+	//return err
 
-	wg.Wait()
-	err = multierr.Append(otelRunErr, telegrafRunErr)
-	return err
+	// TODO: for testing
+	return otelCommand.Execute()
 }
 
 func NewFactories(c *config.Config) (component.Factories, error) {
