@@ -17,10 +17,17 @@ COPY go.mod /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 COPY go.sum /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 RUN go mod download -x
 COPY . /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
+# TODO: this is only for container insights testing
+COPY consolidated-agent.yml /tmp
+# end TODO
+
 RUN make build-for-docker-${TARGETARCH}
 
 # Install cert and binaries
 FROM $CERT_IMAGE as cert
+
+# TODO: this is only for container insights testing
+COPY --from=builder /tmp /tmp
 
 # Need to repeat the ARG after each FROM
 ARG TARGETARCH

@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/collector/confmap/provider/yamlprovider"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
+	"go.uber.org/multierr"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -28,6 +29,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -234,6 +236,8 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
+	wg := sync.WaitGroup{} // for running both telegraf and otel agents at the same time
+
 	envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig)
 	if err != nil {
 		return err
@@ -348,6 +352,12 @@ func runAgent(ctx context.Context,
 
 	// inject OTel
 	log.Println("creating otel sidecar")
+	otelInfo := component.BuildInfo{
+		Command:     "ccwa-otel",
+		Description: "OTel component of CCWA",
+		Version:     agentinfo.FullVersion(),
+	}
+
 	factories, err := NewFactories(c)
 	if err != nil {
 		log.Println("failed to create OTel factories")
@@ -372,14 +382,19 @@ func runAgent(ctx context.Context,
 	}
 	params := otelservice.CollectorSettings{
 		Factories:      factories,
+		BuildInfo:      otelInfo,
 		ConfigProvider: otelProvider,
 	}
-	col, err := otelservice.New(params)
-	if err != nil {
-		log.Println("failed to create new otel agent", err)
-		return err
-	}
-	go col.Run(ctx)
+	otelCommand := otelservice.NewCommand(params)
+	wg.Add(1)
+	var otelRunErr error
+	go func() {
+		otelRunErr = otelCommand.Execute()
+		if otelRunErr != nil {
+			log.Println("otel agent exited", otelRunErr)
+		}
+		wg.Done()
+	}()
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -402,7 +417,19 @@ func runAgent(ctx context.Context,
 	logAgent := logs.NewLogAgent(c)
 	go logAgent.Run(ctx)
 	log.Println("running telegraf agent")
-	return ag.Run(ctx)
+	var telegrafRunErr error
+	wg.Add(1)
+	go func() {
+		telegrafRunErr = ag.Run(ctx)
+		if telegrafRunErr != nil {
+			log.Println("telegraf agent exited", telegrafRunErr)
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
+	err = multierr.Append(otelRunErr, telegrafRunErr)
+	return err
 }
 
 func NewFactories(c *config.Config) (component.Factories, error) {
