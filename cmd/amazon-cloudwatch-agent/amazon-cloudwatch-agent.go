@@ -507,7 +507,7 @@ func main() {
 		}
 		return
 	}
-
+	fmt.Printf("test only: %v",inputFilters)
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		programFiles := os.Getenv("ProgramFiles")
 		if programFiles == "" { // Should never happen
@@ -583,4 +583,11 @@ func windowsRunAsService() bool {
 	}
 
 	return !service.Interactive()
+}
+
+
+
+func checkPermissionForBinariesFileWithInputPlugins(inputFilters []string) {
+	
+
 }

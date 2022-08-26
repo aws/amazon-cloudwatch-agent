@@ -18,7 +18,13 @@
           "power_draw",
           "temperature_gpu"
         ],
-        "metrics_collection_interval": 60
+        "metrics_collection_interval": 1
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ],
+        "metrics_collection_interval": 1
       }
     }
   }

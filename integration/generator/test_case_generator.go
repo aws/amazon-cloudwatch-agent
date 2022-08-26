@@ -24,6 +24,7 @@ var osToTestDirMap = map[string][]string{
 		"./integration/test/ca_bundle",
 		"./integration/test/cloudwatchlogs",
 		"./integration/test/metrics_number_dimension",
+		"./integration/test/nvidia_gpu",
 	},
 	"ec2_performance":{
 		"./integration/test/performancetest",
