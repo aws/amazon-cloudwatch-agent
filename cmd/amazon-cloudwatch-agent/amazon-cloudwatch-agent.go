@@ -358,7 +358,7 @@ func runAgent(ctx context.Context,
 
 	factories, err := NewFactories(c)
 	if err != nil {
-		log.Println("failed to create OTel factories")
+		log.Println("failed to create OTel factories", err)
 		return err
 	}
 	providers := []confmap.Provider{fileprovider.New(), envprovider.New(), yamlprovider.New()}
@@ -376,7 +376,7 @@ func runAgent(ctx context.Context,
 	}
 	otelProvider, err := otelservice.NewConfigProvider(configParams)
 	if err != nil {
-		log.Println("failed to create OTel config provider")
+		log.Println("failed to create OTel config provider", err)
 		return err
 	}
 	params := otelservice.CollectorSettings{
@@ -384,7 +384,12 @@ func runAgent(ctx context.Context,
 		BuildInfo:      otelInfo,
 		ConfigProvider: otelProvider,
 	}
-	otelCommand := otelservice.NewCommand(params)
+	log.Println("creating otel service")
+	col, err := otelservice.New(params)
+	if err != nil {
+		log.Println("failed to create otel service", err)
+		return err
+	}
 	//wg.Add(1)
 	//var otelRunErr error
 	//go func() {
@@ -431,7 +436,7 @@ func runAgent(ctx context.Context,
 	//return err
 
 	// TODO: for testing
-	return otelCommand.Execute()
+	return col.Run(ctx)
 }
 
 func NewFactories(c *config.Config) (component.Factories, error) {
