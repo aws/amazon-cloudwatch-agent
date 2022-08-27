@@ -236,58 +236,16 @@ func runAgent(ctx context.Context,
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
 
-	isOld, err := migrate.IsOldConfig(*fConfig)
+	err = loadTomlConfigIntoAgent(c)
+
 	if err != nil {
-		log.Printf("W! Failed to detect if config file is old format: %v", err)
+		return err
 	}
 
-	if isOld {
-		migratedConfFile, err := migrate.MigrateFile(*fConfig)
-		if err != nil {
-			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
-		}
+	err = validateAgentFinalConfigAndPlugins(c)
 
-		err = c.LoadConfig(migratedConfFile)
-		if err != nil {
-			return err
-		}
-
-		agentinfo.BuildStr += "_M"
-	} else {
-		err = c.LoadConfig(*fConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	if *fConfigDirectory != "" {
-		err = c.LoadDirectory(*fConfigDirectory)
-		if err != nil {
-			return err
-		}
-	}
-	if !*fTest && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
-	}
-	if len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
-	}
-
-	if int64(c.Agent.Interval) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %v",
-			c.Agent.Interval)
-	}
-
-	if int64(c.Agent.FlushInterval) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %v",
-			c.Agent.FlushInterval)
-	}
-
-	if *fSchemaTest {
-		//up to this point, the given config file must be valid
-		fmt.Println(agentinfo.FullVersion())
-		fmt.Printf("The given config: %v is valid\n", *fConfig)
-		os.Exit(0)
+	if err != nil {
+		return err
 	}
 
 	ag, err := agent.NewAgent(c)
@@ -507,7 +465,7 @@ func main() {
 		}
 		return
 	}
-	fmt.Printf("test only: %v",inputFilters)
+		log.Printf("test only: %v",inputFilters)
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		programFiles := os.Getenv("ProgramFiles")
 		if programFiles == "" { // Should never happen
@@ -585,9 +543,80 @@ func windowsRunAsService() bool {
 	return !service.Interactive()
 }
 
+func loadTomlConfigIntoAgent(c *config.Config) error{
+	isOld, err := migrate.IsOldConfig(*fConfig)
+	if err != nil {
+		log.Printf("W! Failed to detect if config file is old format: %v", err)
+	}
 
+	if isOld {
+		migratedConfFile, err := migrate.MigrateFile(*fConfig)
+		if err != nil {
+			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
+		}
 
-func checkPermissionForBinariesFileWithInputPlugins(inputFilters []string) {
-	
+		err = c.LoadConfig(migratedConfFile)
+		if err != nil {
+			return err
+		}
+
+		agentinfo.BuildStr += "_M"
+	} else {
+		err = c.LoadConfig(*fConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	if *fConfigDirectory != "" {
+		err = c.LoadDirectory(*fConfigDirectory)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateAgentFinalConfigAndPlugins(c *config.Config) error{
+	if !*fTest && len(c.Outputs) == 0 {
+		return errors.New("Error: no outputs found, did you provide a valid config file?")
+	}
+	if len(c.Inputs) == 0 {
+		return errors.New("Error: no inputs found, did you provide a valid config file?")
+	}
+
+	if int64(c.Agent.Interval) <= 0 {
+		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
+	}
+
+	if int64(c.Agent.FlushInterval) <= 0 {
+		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.FlushInterval)
+	}
+
+	if checkPermissionForBinariesFileWithInputPlugins(c.) {
+
+	}
+
+	if *fSchemaTest {
+		//up to this point, the given config file must be valid
+		fmt.Println(agentinfo.FullVersion())
+		fmt.Printf("The given config: %v is valid\n", *fConfig)
+		os.Exit(0)
+	}
+
+	return nil
+}
+
+func checkPermissionForBinariesFileWithInputPlugins(inputPlugins []string) {
+	for _, inputPlugin := range inputPlugins {
+		if inputPlugin == "nvidia_smi" && runtime.GOOS == "windows"{
+			
+		}
+
+		if inputPlugin == "nvidia_smi" && runtime.GOOS == "linux"{
+
+		}
+	}
 
 }
