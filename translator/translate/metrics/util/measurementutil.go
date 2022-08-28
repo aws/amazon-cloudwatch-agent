@@ -14,16 +14,22 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 )
 
-const field_pass_key = "fieldpass"
-const windows_measurement_key = "Counters"
-const measurement_name = "name"
-const measurement_category = "category"
-const measurement_rename = "rename"
-const measurement_unit = "unit"
-const nvidia_smi_plugin_name = "nvidia_smi"
-const tag_exclude_key = "tagexclude"
-const smi_bin_path = "bin_path"
-const default_windows_smi_path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
+const (
+	tag_exclude_key         = "tagexclude"
+	field_pass_key          = "fieldpass"
+	windows_measurement_key = "Counters"
+	measurement_name        = "name"
+	measurement_category    = "category"
+	measurement_rename      = "rename"
+	measurement_unit        = "unit"
+)
+
+const (
+	smi_bin_path             = "bin_path"
+	nvidia_smi_plugin_name   = "nvidia_smi"
+	default_unix_smi_path    = "/usr/bin/nvidia-smi"
+	default_windows_smi_path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
+)
 
 func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string, path string) (returnKey string, returnVal []string) {
 	inputList := inputs.([]interface{})
@@ -148,13 +154,15 @@ func isDecorationAvail(observationMap map[string]interface{}) bool {
 	return false
 }
 
-//        "measurement": [
-//          {"name": "cpu_usage_idle", "rename": "CPU_USAGE_IDLE", "unit": "unit"},
-//          {"name": "cpu_usage_nice", "unit": "unit"},
-//          "cpu_usage_guest",
-//          "time_active",
-//          "usage_active"
-//        ]
+// "measurement": [
+//
+//	{"name": "cpu_usage_idle", "rename": "CPU_USAGE_IDLE", "unit": "unit"},
+//	{"name": "cpu_usage_nice", "unit": "unit"},
+//	"cpu_usage_guest",
+//	"time_active",
+//	"usage_active"
+//
+// ]
 func GetMeasurementName(input interface{}) (measurementNames []string) {
 	m := input.(map[string]interface{})
 	if metricList, ok := m["measurement"]; ok {
@@ -174,7 +182,7 @@ func GetMeasurementName(input interface{}) (measurementNames []string) {
 }
 
 // ApplyPluginSpecificRules returns a map contains all the rules for tagpass, tagdrop, namepass, namedrop,
-//fieldpass, fielddrop, taginclude, tagexclude specifically for certain plugin.
+// fieldpass, fielddrop, taginclude, tagexclude specifically for certain plugin.
 func ApplyPluginSpecificRules(pluginName string) (map[string]interface{}, bool) {
 	switch pluginName {
 	case nvidia_smi_plugin_name:

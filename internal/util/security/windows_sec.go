@@ -1,4 +1,7 @@
-package utils
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package security
 
 import (
 	"syscall"
@@ -13,29 +16,33 @@ const (
 	SE_FILE_OBJECT
 )
 
+// https://github.com/mhammond/pywin32/blob/70ddf693927fa1635f15e9ef41eb1aea37fdf32a/win32/Lib/ntsecuritycon.py
 const (
 	ACCESS_ALLOWED_ACE_TYPE = 0
 	ACCESS_DENIED_ACE_TYPE  = 1
+	FILE_ALL_ACCESS         = (windows.STANDARD_RIGHTS_ALL | 0x1FF)
 )
 
 const (
-	AclSizeInformationEnum     = 2
-	DACL_SECURITY_INFORMATION  = 0x00004
+	AclSizeInformationEnum    = 2
+	DACL_SECURITY_INFORMATION = 0x00004
 )
 
 var (
-	advapi32 = syscall.NewLazyDLL("advapi32.dll")
+	advapi32                 = syscall.NewLazyDLL("advapi32.dll")
 	procGetAclInformation    = advapi32.NewProc("GetAclInformation")
 	procGetNamedSecurityInfo = advapi32.NewProc("GetNamedSecurityInfoW")
 	procGetAce               = advapi32.NewProc("GetAce")
 )
 
+// https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-acl_size_information
 type AclSizeInformation struct {
 	AceCount      uint32
 	AclBytesInUse uint32
 	AclBytesFree  uint32
 }
 
+// https://docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-acl
 type Acl struct {
 	AclRevision uint8
 	Sbz1        uint8
@@ -44,6 +51,7 @@ type Acl struct {
 	Sbz2        uint16
 }
 
+// https://docs.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_access_allowed_ace
 type AccessAllowedAce struct {
 	AceType    uint8
 	AceFlags   uint8

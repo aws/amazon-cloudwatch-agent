@@ -30,12 +30,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
-
+	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
-
 	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
@@ -594,8 +594,8 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error{
 		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.FlushInterval)
 	}
 
-	if checkPermissionForBinariesFileWithInputPlugins(c.) {
-
+	if inputPlugin, err := checkRightForBinariesFileWithInputPlugins(c.InputNames()); err != nil {
+		return fmt.Errorf("Input plugins %s is not secured", inputPlugin)
 	}
 
 	if *fSchemaTest {
@@ -608,15 +608,12 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error{
 	return nil
 }
 
-func checkPermissionForBinariesFileWithInputPlugins(inputPlugins []string) {
+func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, error) {
 	for _, inputPlugin := range inputPlugins {
-		if inputPlugin == "nvidia_smi" && runtime.GOOS == "windows"{
-			
-		}
-
-		if inputPlugin == "nvidia_smi" && runtime.GOOS == "linux"{
-
+		if inputPlugin == "nvidia_smi" {
+			if err := internal.CheckNvidiaSMIBinaryRights(); err != nil {
+				return "nvidia_smi", err
+			}
 		}
 	}
-
 }
