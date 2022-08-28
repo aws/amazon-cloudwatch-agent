@@ -616,4 +616,6 @@ func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, e
 			}
 		}
 	}
+	
+	return "", nil
 }

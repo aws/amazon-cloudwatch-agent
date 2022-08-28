@@ -27,8 +27,8 @@ const (
 const (
 	smi_bin_path             = "bin_path"
 	nvidia_smi_plugin_name   = "nvidia_smi"
-	default_unix_smi_path    = "/usr/bin/nvidia-smi"
-	default_windows_smi_path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
+	Default_Unix_Smi_Path    = "/usr/bin/nvidia-smi"
+	Default_Windows_Smi_Path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
 )
 
 func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string, path string) (returnKey string, returnVal []string) {
@@ -191,7 +191,7 @@ func ApplyPluginSpecificRules(pluginName string) (map[string]interface{}, bool) 
 		if translator.GetTargetPlatform() == translatorConfig.OS_TYPE_WINDOWS {
 			// default path for Nvidia_smi.exe is C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe
 			// Todo: for windows 10 the path should default to C:\\Windows\\System32\\nvidia-smi.exe will support in the future
-			result[smi_bin_path] = default_windows_smi_path
+			result[smi_bin_path] = Default_Windows_Smi_Path
 		}
 		return result, true
 	default:

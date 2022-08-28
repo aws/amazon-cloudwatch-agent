@@ -12,7 +12,7 @@ import (
 )
 
 func CheckNvidiaSMIBinaryRights() error {
-	if err := security.CheckFileRights(util.default_unix_smi_path); err != nil{
+	if err := security.CheckFileRights(util.Default_Windows_Smi_Path); err != nil{
 		return err
 	}
 	return nil
