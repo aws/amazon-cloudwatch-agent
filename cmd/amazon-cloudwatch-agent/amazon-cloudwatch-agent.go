@@ -595,7 +595,7 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error{
 	}
 
 	if inputPlugin, err := checkRightForBinariesFileWithInputPlugins(c.InputNames()); err != nil {
-		return fmt.Errorf("Input plugins %s is not secured", inputPlugin)
+		return fmt.Errorf("Validate input plugin %s failed because of %v", inputPlugin, err)
 	}
 
 	if *fSchemaTest {

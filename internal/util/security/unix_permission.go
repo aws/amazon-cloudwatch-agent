@@ -20,12 +20,12 @@ func CheckFileRights(filePath string) error {
 	}
 
 	// Check the owner of binary has read, write, exec. 
-	if (stat.Mode&(syscall.S_IXUSR) != 0 && stat.Mode&(syscall.S_IRUSR) != 0 && stat.Mode&(syscall.S_IWUSR) != 0) {
+	if !(stat.Mode&(syscall.S_IXUSR) == 0 || stat.Mode&(syscall.S_IRUSR) == 0 || stat.Mode&(syscall.S_IWUSR) == 0) {
 		return nil
 	}
 	
 	// Check the owner of file has read, write
-	if (stat.Mode&(syscall.S_IRUSR) == 0 && stat.Mode&(syscall.S_IWUSR) == 0) {
+	if !(stat.Mode&(syscall.S_IRUSR) == 0 || stat.Mode&(syscall.S_IWUSR) == 0) {
 		return nil
 	}
 	

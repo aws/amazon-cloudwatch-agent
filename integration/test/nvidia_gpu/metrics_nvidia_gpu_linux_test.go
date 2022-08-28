@@ -11,14 +11,18 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"testing"
 	"time"
+	"os/user"
+	"syscall"
+	"fmt"
 )
 
 const (
-	configJSON               = "resources/configLinux.json"
+	configJSON               = "resources/config_linux.json"
 	namespace                = "NvidiaGPUTest"
 	configOutputPath         = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentLogPath 			 = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	agentRuntime             = 2 * time.Minute
+	agentPermission          = "root"
 	numberofAppendDimensions = 1
 )
 
@@ -37,8 +41,27 @@ func TestNvidiaGPU(t *testing.T) {
 		}
 
 		if err := security.CheckFileRights(configOutputPath); err != nil{
-			t.Fatalf("CloudWatchAgent's log does does not have privellege to write and read.")
+			t.Fatalf("CloudWatchAgent does does not have privellege to write and read CWA's log: %v",err)
+		}
+
+		if err := CheckFileOwnerRights(configOutputPath); err != nil{
+			t.Fatalf("CloudWatchAgent does does not have right to CWA's log: %v",err)
 		}
 
 	})
+}
+
+func CheckFileOwnerRights(filePath string) error {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(filePath, &stat); err != nil {
+		return fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
+	}
+
+	if owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid)); err != nil{
+		return fmt.Errorf("Cannot look up file owner's name %s: %v", filePath, err)
+	} else if owner.Name != agentPermission {
+		return fmt.Errorf("Agent does not have permission to protect file %s", filePath)
+	}
+
+	return nil
 }
