@@ -18,7 +18,8 @@ COPY go.sum /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 RUN go mod download -x
 COPY . /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 # TODO: this is only for container insights testing
-COPY consolidated-agent.yml /tmp
+RUN mkdir -p /tmp
+COPY consolidated-agent.yml /tmp/consolidated-agent-container-insights.yml
 # end TODO
 
 RUN make build-for-docker-${TARGETARCH}

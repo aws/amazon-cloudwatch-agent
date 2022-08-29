@@ -374,6 +374,7 @@ func runAgent(ctx context.Context,
 			Providers: mapProviders,
 		},
 	}
+	log.Println("creating otel config provider")
 	otelProvider, err := otelservice.NewConfigProvider(configParams)
 	if err != nil {
 		log.Println("failed to create OTel config provider", err)
