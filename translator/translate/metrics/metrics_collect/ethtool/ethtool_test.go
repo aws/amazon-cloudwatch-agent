@@ -15,18 +15,14 @@ func TestDefaultConfig(t *testing.T) {
 	var input interface{}
 	err := json.Unmarshal([]byte(`{"ethtool": {
 					}}`), &input)
-	if err == nil {
-		_, actual := d.ApplyRule(input)
+	assert.NoError(t, err)
+	_, actual := d.ApplyRule(input)
 
-		d := []interface{}{map[string]interface{}{
-			"interface_include": []string{"*"},
-			"fieldpass":         []string{},
-		},
-		}
-		assert.Equal(t, d, actual, "Expected to be equal")
-	} else {
-		panic(err)
+	expected := []interface{}{map[string]interface{}{
+		"interface_include": []string{"*"},
+		"fieldpass":         []string{}},
 	}
+	assert.Equal(t, expected, actual, "Expected to be equal")
 }
 
 func TestFullConfig(t *testing.T) {
@@ -43,31 +39,24 @@ func TestFullConfig(t *testing.T) {
 						"bw_in_allowance_exceeded"
 					]
 					}}`), &input)
-	if err == nil {
-		_, actual := d.ApplyRule(input)
+	assert.NoError(t, err)
+	_, actual := d.ApplyRule(input)
 
-		expected := []interface{}{map[string]interface{}{
-			"interface_include": []string{"eth0"},
-			"interface_exclude": []string{"eth1"},
-			"fieldpass":         []string{"bw_in_allowance_exceeded"},
-		},
-		}
-
-		// compare marshalled values since unmarshalled values have type conflicts
-		// the actual uses interface instead of expected string type
-		// interface will be converted to string on marshall
-		// this is going to be marshalled into toml not pogo
-		marshalActual, err := json.Marshal(actual)
-		if err != nil {
-			return
-		}
-		marshalExpected, err := json.Marshal(expected)
-		if err != nil {
-			return
-		}
-
-		assert.Equal(t, string(marshalExpected), string(marshalActual), "Expected to be equal")
-	} else {
-		panic(err)
+	expected := []interface{}{map[string]interface{}{
+		"interface_include": []string{"eth0"},
+		"interface_exclude": []string{"eth1"},
+		"fieldpass":         []string{"bw_in_allowance_exceeded"},
+	},
 	}
+
+	// compare marshalled values since unmarshalled values have type conflicts
+	// the actual uses interface instead of expected string type
+	// interface will be converted to string on marshall
+	// this is going to be marshalled into toml not pogo
+	marshalActual, err := json.Marshal(actual)
+	assert.NoError(t, err)
+	marshalExpected, err := json.Marshal(expected)
+	assert.NoError(t, err)
+	assert.Equal(t, string(marshalExpected), string(marshalActual), "Expected to be equal")
+
 }

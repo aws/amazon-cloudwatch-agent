@@ -61,7 +61,7 @@ resource "null_resource" "integration_test" {
       type            = "ssh"
       user            = "Administrator"
       private_key     = local.private_key_content
-      password        = rsadecrypt(aws_instance.cwagent.password_data, tls_private_key.ssh_key[0].private_key_pem)
+      password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
       host            = aws_instance.cwagent.public_ip
       target_platform = "windows"
     }
