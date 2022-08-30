@@ -92,7 +92,7 @@ func RunShellScript(path string, args ...string) error{
 	out, err = exec.Command("bash", bashArgs...).Output()
 
 	if err != nil {
-		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
+		log.Printf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
 		return err
 	}
 	

@@ -30,40 +30,35 @@ var expectedMetrics = []string{"mem_used_percent","nvidia_smi_utilization_gpu","
 
 func TestNvidiaGPUWindows(t *testing.T) {
 	t.Run("Run CloudWatchAgent with Nvidia-smi on Windows", func(t *testing.T) {
-		test.CopyFile(configJSON, configOutputPath)
-		test.StartAgent(configOutputPath, true)
+		err := test.CopyFile(configJSON, configOutputPath)
+		
+		if err != nil {
+			t.Fatalf(Cerr)
+		}
+		
+		err = test.StartAgent(configOutputPath, true)
 
+		if err != nil {
+			t.Fatal(err)
+		}
+		
 		time.Sleep(agentRuntime)
 		t.Logf("Agent has been running for : %s", agentRuntime.String())
-		test.StopAgent()
+		err = test.StopAgent()
 
+		if err != nil {
+			t.Fatal("CloudWatchAgent stops failed: %v",err)
+		}
+		
 		dimensionFilter := test.BuildDimensionFilterList(numberofAppendDimensions)
 		for _, metricName := range expectedMetrics {
 			test.ValidateMetrics(t, metricName, namespace, dimensionFilter)
 		}
 
-		if err := security.CheckFileRights(configOutputPath); err != nil{
-			t.Fatalf("CloudWatchAgent does does not have privellege to write and read CWA's log: %v",err)
-		}
-
-		if err := CheckFileOwnerRights(configOutputPath); err != nil{
-			t.Fatalf("CloudWatchAgent does does not have right to CWA's log: %v",err)
+		err = security.CheckFileRights(configOutputPath);
+		if err != nil {
+			t.Fatalf("CloudWatchAgent's log does not have protection from local system and admin: %v", err)
 		}
 
 	})
-}
-
-func CheckFileOwnerRights(filePath string) error {
-	var stat syscall.Stat_t
-	if err := syscall.Stat(filePath, &stat); err != nil {
-		return fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
-	}
-
-	if owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid)); err != nil{
-		return fmt.Errorf("Cannot look up file owner's name %s: %v", filePath, err)
-	} else if owner.Name != agentPermission {
-		return fmt.Errorf("Agent does not have permission to protect file %s", filePath)
-	}
-
-	return nil
 }
