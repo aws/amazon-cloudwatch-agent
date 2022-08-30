@@ -26,6 +26,8 @@ const (
 	numberofAppendDimensions = 1
 )
 
+var expectedMetrics = []string{"mem_used_percent","nvidia_smi_utilization_gpu","nvidia_smi_utilization_memory","nvidia_smi_power_draw","nvidia_smi_temperature_gpu"}
+
 func TestNvidiaGPU(t *testing.T) {
 	t.Run("Basic configuration testing for both metrics and logs", func(t *testing.T) {
 		test.CopyFile(configJSON, configOutputPath)
@@ -36,7 +38,7 @@ func TestNvidiaGPU(t *testing.T) {
 		test.StopAgent()
 
 		dimensionFilter := test.BuildDimensionFilterList(numberofAppendDimensions)
-		for _, metricName := range []string{"mem_used_percent", "utilization_gpu","utilization_memory","temperature_gpu","power_draw"} {
+		for _, metricName := range expectedMetrics {
 			test.ValidateMetrics(t, metricName, namespace, dimensionFilter)
 		}
 

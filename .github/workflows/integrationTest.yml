@@ -135,7 +135,7 @@ jobs:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
-      ec2_linux_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_linux_gpu_matrix }}
+      ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
@@ -152,7 +152,7 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator integration/generator/test_case_generator.go
-          echo "::set-output name=ec2_linux_gpu_matrix::$(echo $(cat integration/generator/resources/ec2_linux_gpu_complete_test_matrix.json))"
+          echo "::set-output name=ec2_gpu_matrix::$(echo $(cat integration/generator/resources/ec2_gpu_complete_test_matrix.json))"
           echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/ec2_linux_complete_test_matrix.json))"
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat integration/generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ec2_windows_matrix::$(echo $(cat integration/generator/resources/ec2_windows_complete_test_matrix.json))"
@@ -160,11 +160,11 @@ jobs:
 
       - name: Echo test plan matrix
         run: |
-          echo ${{ steps.set-matrix.outputs.ec2_linux_gpu_matrix }}
-          echo ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
-          echo ${{ steps.set-matrix.outputs.ec2_performance_matrix}}
-          echo ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
-          echo ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+          echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
+          echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
+          echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
+          echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -398,14 +398,14 @@ jobs:
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
-  EC2LinuxGPUIntegrationTest:
+  EC2NvidiaGPUIntegrationTest:
     needs: [ MakeBinary, StartLocalStack, GenerateTestMatrix ]
-    name: 'EC2LinuxIntegrationTest'
+    name: 'EC2NVIDIAGPUIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_gpu_matrix) }}
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_gpu_matrix) }}
     permissions:
       id-token: write
       contents: read
@@ -423,7 +423,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ec2-linux-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+          key: ec2-nvidia-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
@@ -433,7 +433,7 @@ jobs:
 
       # nick-invision/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
+        if: ${{ matrix.arrays.family == "linux" && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3
@@ -460,15 +460,43 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: Terraform apply
+        if: ${{ matrix.arrays.family == "window" && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |
+            cd integration/terraform/ec2/win
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key=${PRIVATE_KEY}" -var="key_name=${KEY_NAME}" \
+              -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
+              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+              -var="iam_instance_profile=${IAM_ROLE}" \
+              -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+            
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
+          command: |
+            if "${{ matrix.arrays.os }}" == window 
+              cd integration/terraform/ec2/win
+            else
+              cd integration/terraform/ec2/linux
+            fi
+            terraform destroy --auto-approve
           
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
@@ -606,7 +634,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd cd integration/terraform/ec2/win && terraform destroy --auto-approve -var="ami=${{ matrix.arrays.ami }}"
+          command: cd integration/terraform/ec2/win && terraform destroy --auto-approve -var="ami=${{ matrix.arrays.ami }}"
 
 
   StopLocalStack:
