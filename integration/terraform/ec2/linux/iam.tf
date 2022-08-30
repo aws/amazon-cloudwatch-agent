@@ -47,7 +47,9 @@ data "aws_iam_policy_document" "user-managed-policy-document" {
       "s3:ListBucket",
       "dynamodb:DescribeTable",
       "dynamodb:PutItem",
-      "dynamodb:CreateTable"
+      "dynamodb:CreateTable",
+      "dynamodb:Query",
+      "dynamodb:UpdateItem"
     ]
     resources = ["*"]
   }

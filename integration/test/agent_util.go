@@ -81,6 +81,7 @@ func RunShellScript(path string, args ...string) error{
 	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
 
 	if err != nil {
+		log.Printf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
 		return err
 	}
 
@@ -91,6 +92,7 @@ func RunShellScript(path string, args ...string) error{
 	out, err = exec.Command("bash", bashArgs...).Output()
 
 	if err != nil {
+		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
 		return err
 	}
 	
@@ -108,6 +110,7 @@ func RunPowerShellScript(path string, args ...string) error{
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
+		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
 		return err
 	}
 

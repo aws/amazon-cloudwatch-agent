@@ -158,7 +158,7 @@ agent_stop() {
      fi
 
      if [ "${SYSTEMD}" = 'true' ]; then
-          service "${agent_name}" stop || return
+          systemctl stop "${agent_name}.service" || return
      else
           stop "${agent_name}" || return
      fi

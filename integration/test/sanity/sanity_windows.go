@@ -14,6 +14,6 @@ import (
 func SanityCheck(t *testing.T) {
 	err := test.RunPowerShellScript("resources/verifyWindowsCtlScript.ps1")
 	if err != nil {
-		t.Fatalf("Running sanity check failed: %v", err)
+		t.Fatalf("Running sanity check failed")
 	}
 }

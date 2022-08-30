@@ -29,17 +29,17 @@ import (
 )
 
 const (
-	defaultMaxDatumsPerCall        = 20     // PutMetricData only supports up to 20 data metrics per call by default
-	defaultMaxValuesPerDatum       = 150    // By default only these number of values can be inserted into the value list
-	bottomLinePayloadSizeToPublish = 200000 // Leave 9600B for the last datum buffer. 200KB payload size, 5:1 compression ratio estimate.
-	metricChanBufferSize           = 10000
-	datumBatchChanBufferSize       = 50 // the number of requests we buffer
-	maxConcurrentPublisher         = 10 // the number of CloudWatch clients send request concurrently
-	pushIntervalInSec              = 60 // 60 sec
-	highResolutionTagKey           = "aws:StorageResolution"
-	defaultRetryCount              = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
-	backoffRetryBase               = 200 * time.Millisecond
-	MaxDimensions                  = 30
+	defaultMaxDatumsPerCall               = 1000   // PutMetricData only supports up to 1000 data metrics per call by default
+	defaultMaxValuesPerDatum              = 150    // By default only these number of values can be inserted into the value list
+	bottomLinePayloadSizeInBytesToPublish = 999000 // 1MB payload size. Leave 1kb for the last datum buffer before applying compression ratio.
+	metricChanBufferSize                  = 10000
+	datumBatchChanBufferSize              = 50 // the number of requests we buffer
+	maxConcurrentPublisher                = 10 // the number of CloudWatch clients send request concurrently
+	pushIntervalInSec                     = 60 // 60 sec
+	highResolutionTagKey                  = "aws:StorageResolution"
+	defaultRetryCount                     = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
+	backoffRetryBase                      = 200 * time.Millisecond
+	MaxDimensions                         = 30
 )
 
 const (
@@ -269,7 +269,7 @@ func (b *MetricDatumBatch) clear() {
 }
 
 func (b *MetricDatumBatch) isFull() bool {
-	return len(b.Partition) >= b.MaxDatumsPerCall || b.Size >= bottomLinePayloadSizeToPublish
+	return len(b.Partition) >= b.MaxDatumsPerCall || b.Size >= bottomLinePayloadSizeInBytesToPublish
 }
 
 func (c *CloudWatch) timeToPublish(b *MetricDatumBatch) bool {
@@ -319,7 +319,7 @@ func (c *CloudWatch) publish() {
 				// Set to true so this only happens once per push.
 				bufferFullOccurred = true
 				// Keep interval above above 1 second.
-				if currentInterval.Seconds() >  1 {
+				if currentInterval.Seconds() > 1 {
 					currentInterval /= 2
 					if currentInterval.Seconds() < 1 {
 						currentInterval = 1 * time.Second
@@ -344,10 +344,10 @@ func (c *CloudWatch) publish() {
 			bufferFullOccurred = false
 		}
 		// Sleep 1 second, unless the nextMs is less than a second away.
-		if nextMs - nowMs > time.Second.Milliseconds() {
+		if nextMs-nowMs > time.Second.Milliseconds() {
 			time.Sleep(time.Second)
 		} else {
-			time.Sleep(time.Duration(nextMs - nowMs) * time.Millisecond)
+			time.Sleep(time.Duration(nextMs-nowMs) * time.Millisecond)
 		}
 	}
 }
@@ -373,9 +373,9 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 func (c *CloudWatch) backoffSleep() {
 	d := 1 * time.Minute
 	if c.retries <= defaultRetryCount {
-		d = backoffRetryBase * time.Duration(1 << c.retries)
+		d = backoffRetryBase * time.Duration(1<<c.retries)
 	}
-	d = (d / 2) + publishJitter(d / 2)
+	d = (d / 2) + publishJitter(d/2)
 	log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
 		c.retries, d.Milliseconds())
 	c.retries++
