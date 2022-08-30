@@ -8,12 +8,8 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os/exec"
-	"path/filepath"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 )
 
@@ -32,12 +28,4 @@ func GetInstanceId() string {
 		log.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
 	}
 	return metadata.InstanceID
-}
-
-func GetCWClient(cxt context.Context) *cloudwatch.Client {
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
-	if err != nil {
-		log.Fatalf("err occurred while creating config %v", err)
-	}
-	return cloudwatch.NewFromConfig(defaultConfig)
 }
