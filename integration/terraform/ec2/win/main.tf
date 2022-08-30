@@ -55,6 +55,7 @@ resource "null_resource" "integration_test" {
       "msiexec /i amazon-cloudwatch-agent.msi",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
+      "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
     ]
 
     connection {

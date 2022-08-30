@@ -42,3 +42,8 @@ variable "test_name" {
   type    = string
   default = "windows-2022"
 }
+
+variable "test_dir" {
+  type    = string
+  default = ""
+}
