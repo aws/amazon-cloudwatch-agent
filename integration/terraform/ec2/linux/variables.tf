@@ -8,7 +8,7 @@ variable "ec2_instance_type" {
   default = "t3a.xlarge"
 }
 
-variable "key_name" {
+variable "ssh_key_name" {
   type    = string
   default = "cwagent-integ-test-key"
 }
@@ -18,7 +18,7 @@ variable "ami" {
   default = "cloudwatch-agent-integration-test-ubuntu*"
 }
 
-variable "ssh_key" {
+variable "ssh_key_value" {
   type    = string
   default = ""
 }

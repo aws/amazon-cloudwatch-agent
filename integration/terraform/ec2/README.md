@@ -320,10 +320,10 @@ terraform apply --auto-approve \
          -var="github_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent.git}" \
          -var="github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
          -var='vpc_security_group_ids=["${name of your security group}"]' \
-         -var="key_name=${name of key pair your created}" \
+         -var="ssh_key_name=${name of key pair your created}" \
          -var="s3_bucket=${name of your s3 bucket created}" \
          -var="iam_instance_profile=${name of your iam role created}" \
-         -var="ssh_key=${your key that you downloaded}"
+         -var="ssh_key_value=${your key that you downloaded}"
 ```
 
 > See the list of parameters or table of GitHub secret params as reference
@@ -358,7 +358,7 @@ terraform apply --auto-approve \
          -var='vpc_security_group_ids=["${name of your security group}"]' \
          -var="s3_bucket=${name of your s3 bucket created}" \
          -var="iam_instance_profile=${name of your iam role created}" \
-         -var="key_name=${name of key pair your created}" \
+         -var="ssh_key_name=${name of key pair your created}" \
          -var="ami=${ami for test you want to use ex cloudwatch-agent-integration-test-ubuntu*}" \
          -var="user=${log in for the ec2 instance ex ubuntu}" \
          -var="install_agent=${command to install agent ex dpkg -i -E ./amazon-cloudwatch-agent.deb}" \
@@ -367,7 +367,7 @@ terraform apply --auto-approve \
          -var="binary_name=${binary to install ex amazon-cloudwatch-agent.deb}" \
          -var="local_stack_host_name=${dns value you got from the local stack terraform apply step}" \
          -var="test_name=${what you want to call the ec2 instance name}" \
-         -var="ssh_key=${your key that you downloaded}"
+         -var="ssh_key_value=${your key that you downloaded}"
 ```
 
 > See the list of parameters or table of GitHub secret params as reference

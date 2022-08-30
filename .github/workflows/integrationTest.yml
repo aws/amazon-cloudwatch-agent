@@ -75,13 +75,6 @@ jobs:
 
       - uses: olafurpg/setup-gpg@v3
 
-      - name: Sign packages
-        if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: |
-          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
-          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
-
-
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
@@ -373,11 +366,11 @@ jobs:
         run: >
           echo run terraform and execute test code &&
           terraform apply --auto-approve
-          -var="ssh_key=${PRIVATE_KEY}"
+          -var="ssh_key_value=${PRIVATE_KEY}"
           -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           -var="github_sha=${GITHUB_SHA}" 
           -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
-          -var="key_name=${KEY_NAME}" &&
+          -var="ssh_key_name=${KEY_NAME}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
@@ -428,7 +421,7 @@ jobs:
             cd integration/terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
               -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
@@ -438,7 +431,7 @@ jobs:
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="key_name=${KEY_NAME}" \
+              -var="ssh_key_name=${KEY_NAME}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
@@ -500,7 +493,7 @@ jobs:
             cd integration/terraform/ec2/win
             terraform init
             if terraform apply --auto-approve \
-            -var="ssh_key=${PRIVATE_KEY}" -var="key_name=${KEY_NAME}" \
+            -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
             -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
             -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
             -var="test_name=${{ matrix.arrays.os }}" \
@@ -664,7 +657,7 @@ jobs:
             cd integration/terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
               -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
@@ -673,7 +666,7 @@ jobs:
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="key_name=${KEY_NAME}" \
+              -var="ssh_key_name=${KEY_NAME}" \
               -var="github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
