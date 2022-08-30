@@ -10,13 +10,13 @@ resource "random_id" "testing_id" {
 #####################################################################
 
 resource "tls_private_key" "ssh_key" {
-  count     = var.ssh_key == "" ? 1 : 0
+  count     = var.ssh_key_name == "" ? 1 : 0
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
 resource "aws_key_pair" "aws_ssh_key" {
-  count      = var.ssh_key == "" ? 1 : 0
+  count      = var.ssh_key_name == "" ? 1 : 0
   key_name   = "ec2-key-pair-${random_id.testing_id.hex}"
   public_key = tls_private_key.ssh_key[0].public_key_openssh
 }
