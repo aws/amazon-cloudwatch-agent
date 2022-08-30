@@ -1,5 +1,9 @@
 {
   "metrics": {
+    "namespace": "NvidiaGPUWindowsTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
     "metrics_collected": {
       "Memory": {
         "measurement": [
