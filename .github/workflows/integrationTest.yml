@@ -410,7 +410,7 @@ jobs:
 
       # nick-invision/retry@v2 starts at base dir
       - name: Terraform apply
-        if: ${{ matrix.arrays.family == "linux" && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ matrix.arrays.family == 'linux' && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3
@@ -438,7 +438,7 @@ jobs:
             fi
 
       - name: Terraform apply
-        if: ${{ matrix.arrays.family == "window" && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ matrix.arrays.family == 'window' && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-invision/retry@v2
         with:
           max_attempts: 3
