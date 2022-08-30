@@ -19,7 +19,6 @@ on:
   push:
     branches:
       - master
-
   workflow_dispatch:
 
 concurrency:
@@ -440,7 +439,7 @@ jobs:
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="key_name=${KEY_NAME}" \
-              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
@@ -504,10 +503,9 @@ jobs:
             -var="ssh_key=${PRIVATE_KEY}" -var="key_name=${KEY_NAME}" \
             -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
             -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
-            -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
-            -var="iam_instance_profile=${IAM_ROLE}" \
-            -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
-            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+            -var="test_name=${{ matrix.arrays.os }}" \
+            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then 
+              terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
@@ -677,7 +675,7 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="key_name=${KEY_NAME}" \
               -var="github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
-              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else

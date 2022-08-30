@@ -1,9 +1,7 @@
 Running integration tests
 =========================
 
-# Run tests in your AWS account
-
-## Required setup
+# Required setup
 
 ### Set up AWS credentials for Terraform
 
@@ -213,8 +211,6 @@ The security group(s) that the integration tests use should include the followin
 | HTTP        | 80   | 0.0.0.0/0 |
 | SSH         | 22   | 0.0.0.0/0 |
 | RDP         | 3389 | 0.0.0.0/0 |
-| WinRM-HTTP  | 5985 | 0.0.0.0/0 |
-| WinRM-HTTPS | 5986 | 0.0.0.0/0 |
 
 By default, egress allows all traffic. This is fine. 
 
@@ -235,7 +231,7 @@ on creating the key pair.
 
 **Reminder: All AWS resources including EC2 key pair and ECR repository must be in the same region as the instances, so this assumes that they are created in the `us-west-2` region.**
 
-## Required parameters for Terraform to have handy
+# Required parameters for Terraform to have handy
 
 1. GitHub repo (ex: https://github.com/aws/amazon-cloudwatch-agent.git)
 2. GitHub SHA: `git checkout your-branch && git rev-parse --verify HEAD`
@@ -245,6 +241,7 @@ on creating the key pair.
 6. IAM role **name**
     1. If you have a role ARN like `arn:aws:iam::12345:role/FooBarBaz`, then the value you want just `FooBarBaz`
 
+# Run Integration Test's Method
 ## GitHub actions on your personal fork (Preferred)
 
 The integration test GitHub actions workflow installs terraform, builds the agent and uploads the installable packages
@@ -350,7 +347,7 @@ upload: ./terraform.tfstate to s3://***/integration-test/local-stack-terraform-s
 
 In this example, you should keep track of `ec2-35-87-254-148.us-west-2.compute.amazonaws.com`
 
-Start the linux integration tests (example):
+### Start the linux integration tests (example):
 
 ```shell
 cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
@@ -398,6 +395,48 @@ aws_instance.integration-test: Creation complete after 5m35s [id=i-0f7f77a62c93d
 
 Apply complete! Resources: 1 added, 0 changed, 0 destroyed.   
 ```
+
+### Start the Windows integration tests (example): 
+```shell
+cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
+terraform init
+terraform apply --auto-approve \
+         -var="github_repo=${GH repo you want to use. Default: https://github.com/aws/amazon-cloudwatch-agent.git}" \
+         -var="github_sha=${Commit sha you want to use. Default: a029f69cd3b4164cb601cfa20f10b717c5f85957}" \
+         -var="s3_bucket=${Name of your s3 bucket created}" \
+         -var="ami=${AMI for test you want to use. Default: cloudwatch-agent-integration-test-win-2022*}" \
+         -var="test_name=${What you want to call the ec2 instance name. Default: windows-2022}" \
+         -var="ssh_key_name=${Name of key pair your created}" \
+         -var="ssh_key_value=${Your key that you downloaded}"
+```
+
+For these parameters, you are **not required to input them**:
+* github_repo
+* github_sha
+* ssh_key_name
+* ssh_key_value
+* ami
+* test_name
+
+After running the tests, you should see the following results as a success integration test:
+```
+null_resource.integration_test: Still creating... [1m30s elapsed]
+null_resource.integration_test: Still creating... [1m40s elapsed]
+null_resource.integration_test: Still creating... [1m50s elapsed]
+null_resource.integration_test: Still creating... [2m0s elapsed]
+null_resource.integration_test (remote-exec): === RUN   TestAgentStatus
+null_resource.integration_test: Still creating... [2m10s elapsed]
+null_resource.integration_test: Still creating... [2m20s elapsed]
+null_resource.integration_test: Still creating... [2m30s elapsed]
+null_resource.integration_test: Still creating... [2m40s elapsed]
+null_resource.integration_test: Still creating... [2m50s elapsed]
+null_resource.integration_test (remote-exec): --- PASS: TestAgentStatus (44.84s)
+null_resource.integration_test (remote-exec): PASS
+null_resource.integration_test (remote-exec): ok        github.com/aws/amazon-cloudwatch-agent/integration/test/sanity  45.203s
+null_resource.integration_test: Creation complete after 2m52s [id=8591283884920986776]
+```
+
+### Destroy resources created by Terraform
 
 After running tests, tear down everything with Terraform:
 
