@@ -77,11 +77,12 @@ func ReadAgentOutput(d time.Duration) string {
 	return string(out)
 }
 
-func RunShellScript(path string, args ...string) {
+func RunShellScript(path string, args ...string) error{
 	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
 
 	if err != nil {
-		log.Fatalf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
+		log.Printf("Error occurred when attempting to chmod %s: %s | %s", path, err.Error(), string(out))
+		return err
 	}
 
 	bashArgs := []string{"-c", "sudo ./" + path}
@@ -92,7 +93,28 @@ func RunShellScript(path string, args ...string) {
 
 	if err != nil {
 		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
+		return err
 	}
+	
+	return nil
+}
+
+func RunPowerShellScript(path string, args ...string) error{
+	ps, err := exec.LookPath("powershell.exe")
+
+	if err != nil {
+		return err
+	}
+
+	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", path}, args...)
+	out, err := exec.Command(ps, bashArgs...).Output()
+
+	if err != nil {
+		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
+		return err
+	}
+
+	return nil
 }
 
 func RunCommand(cmd string) {

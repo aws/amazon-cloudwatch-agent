@@ -38,7 +38,7 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address = true
 
   tags = {
-    Name = var.test_name
+    Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
   }
 }
 

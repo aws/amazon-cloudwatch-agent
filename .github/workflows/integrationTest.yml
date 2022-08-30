@@ -19,7 +19,6 @@ on:
   push:
     branches:
       - master
-
   workflow_dispatch:
 
 concurrency:
@@ -27,58 +26,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  MakeDockerImage:
-    name: 'MakeDockerImage'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Cache if success
-        id: build-docker-image
-        uses: actions/cache@v2
-        with:
-          path: |
-            RELEASE_NOTES
-          key: build-docker-image-${{ github.run_id }}
-
-      - name: Configure AWS Credentials
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-
-      - name: Login ECR
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Set up Docker Buildx
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        uses: docker/setup-buildx-action@v1
-
-      - name: Set up QEMU
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        uses: docker/setup-qemu-action@v1
-
-        #Build the cloudwatch agent image for two primary reasons:
-        #-Using the cloudwatch agent image to do the integration test (can be used for internal)
-        #-Export it for the future use in CD release pipeline
-        #Documentation: https://github.com/docker/build-push-action
-      - name: Build Cloudwatch Agent Image
-        uses: docker/build-push-action@v2
-        if: steps.build-docker-image.outputs.cache-hit != 'true'
-        with:
-          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
-          context: .
-          push: true
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}
-          platforms: linux/amd64, linux/arm64
-
   MakeBinary:
     name: 'MakeBinary'
     runs-on: ubuntu-latest
@@ -130,6 +77,40 @@ jobs:
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
+
+      - name: Login ECR
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set up QEMU
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        uses: docker/setup-qemu-action@v1
+
+      # build dir is ignored in our .dockerignore thus need to copy to another dir
+      - name: Copy Binary For Agent Image Build
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: cp -r build/bin/linux/* .
+
+        #Build the cloudwatch agent image for two primary reasons:
+        #-Using the cloudwatch agent image to do the integration test (can be used for internal)
+        #-Export it for the future use in CD release pipeline
+        #Documentation: https://github.com/docker/build-push-action
+      - name: Build Cloudwatch Agent Image
+        uses: docker/build-push-action@v2
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        with:
+          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localdeb/Dockerfile
+          context: .
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}
+          platforms: linux/amd64, linux/arm64
+
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
@@ -554,7 +535,7 @@ jobs:
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="key_name=${KEY_NAME}" \
-              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
@@ -618,10 +599,9 @@ jobs:
             -var="ssh_key=${PRIVATE_KEY}" -var="key_name=${KEY_NAME}" \
             -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
             -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
-            -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
-            -var="iam_instance_profile=${IAM_ROLE}" \
-            -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
-            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+            -var="test_name=${{ matrix.arrays.os }}" \
+            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then 
+              terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
@@ -672,7 +652,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [MakeDockerImage, GenerateTestMatrix]
+    needs: [MakeBinary, GenerateTestMatrix]
     strategy:
       fail-fast: false
       matrix:
@@ -791,7 +771,7 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="key_name=${KEY_NAME}" \
               -var="github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
-              -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else

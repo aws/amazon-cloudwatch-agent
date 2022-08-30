@@ -43,11 +43,14 @@ replace github.com/karrick/godirwalk v1.16.1 => github.com/karrick/godirwalk v1.
 
 replace github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
 
-replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.0
+replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.4
 
 // Prometheis messed up their library naming convention. v0.35.1 matches 2.35.1 prometheus version
 // Go says this is a downgrade, but this is the latest release as of 05/25/2022
 replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v0.35.1-0.20220503184552-2381d7be5731
+
+// go-kit has the fix for nats-io/jwt/v2 merged but not released yet. Replacing this version for now until next release.
+replace github.com/go-kit/kit => github.com/go-kit/kit v0.12.1-0.20220808180842-62c81a0f3047
 
 require (
 	github.com/BurntSushi/toml v0.4.1
@@ -233,7 +236,7 @@ require (
 	github.com/rogpeppe/go-internal v1.6.2 // indirect
 	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1 // indirect
 	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.9 // indirect
-	github.com/seccomp/libseccomp-golang v0.9.2-0.20210429002308-3879420cc921 // indirect
+	github.com/seccomp/libseccomp-golang v0.9.2-0.20220502022130-f33da4d89646 // indirect
 	github.com/shirou/gopsutil v3.21.5+incompatible // indirect
 	github.com/signalfx/com_signalfx_metrics_protobuf v0.0.3 // indirect
 	github.com/signalfx/sapm-proto v0.9.0 // indirect
@@ -263,7 +266,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/goleak v1.1.12 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
-	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
+	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
