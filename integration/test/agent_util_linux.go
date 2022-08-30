@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
+//go:build linux && integration
+// +build linux,integration
 
 package test
 
@@ -96,24 +96,6 @@ func RunShellScript(path string, args ...string) error{
 		return err
 	}
 	
-	return nil
-}
-
-func RunPowerShellScript(path string, args ...string) error{
-	ps, err := exec.LookPath("powershell.exe")
-
-	if err != nil {
-		return err
-	}
-
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", path}, args...)
-	out, err := exec.Command(ps, bashArgs...).Output()
-
-	if err != nil {
-		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
-		return err
-	}
-
 	return nil
 }
 
