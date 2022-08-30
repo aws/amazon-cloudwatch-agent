@@ -277,14 +277,25 @@ func verifyToTomlTranslation(t *testing.T, config interface{}, desiredTomlPath s
 }
 
 func verifyToYamlTranslation(t *testing.T, config interface{}, expectedYamlFilePath string) {
+	t.Helper()
 	_, actual := toyamlconfig.ToYamlConfig(config)
 	bs, err := ioutil.ReadFile(expectedYamlFilePath)
 	assert.NoError(t, err)
 	bf := bytes.NewReader(bs)
 	decoder := yaml.NewDecoder(bf)
 	var expect interface{}
-	err1 := decoder.Decode(&expect)
-	assert.NoError(t, err1)
+	err = decoder.Decode(&expect)
+	assert.NoError(t, err)
+
+	// TODO: output for testing verification
+	expectB, err := yaml.Marshal(expect)
+	assert.NoError(t, err)
+	t.Log("Expected:\n", string(expectB))
+
+	actualB, err := yaml.Marshal(actual)
+	assert.NoError(t, err)
+	t.Log("Actual:\n", string(actualB))
+
 	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 		return pretty.Sprint(x) < pretty.Sprint(y)
 	})
