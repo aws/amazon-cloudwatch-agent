@@ -13,9 +13,9 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	d := new(Ethtool)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"ethtool": {
+	err := json.Unmarshal([]byte(`{"ethtool": {
 					}}`), &input)
-	if e == nil {
+	if err == nil {
 		_, actual := d.ApplyRule(input)
 
 		d := []interface{}{map[string]interface{}{
@@ -24,13 +24,15 @@ func TestDefaultConfig(t *testing.T) {
 		},
 		}
 		assert.Equal(t, d, actual, "Expected to be equal")
+	} else {
+		panic(err)
 	}
 }
 
 func TestFullConfig(t *testing.T) {
 	d := new(Ethtool)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"ethtool": {
+	err := json.Unmarshal([]byte(`{"ethtool": {
 					"interface_include": [
 						"eth0"
 					],
@@ -38,19 +40,34 @@ func TestFullConfig(t *testing.T) {
 						"eth1"
 					],
 					"metrics_include": [
-						"bw_in_allowance_exceeded",
-					],
+						"bw_in_allowance_exceeded"
+					]
 					}}`), &input)
-	if e == nil {
+	if err == nil {
 		_, actual := d.ApplyRule(input)
 
-		d := []interface{}{map[string]interface{}{
+		expected := []interface{}{map[string]interface{}{
 			"interface_include": []string{"eth0"},
 			"interface_exclude": []string{"eth1"},
 			"fieldpass":         []string{"bw_in_allowance_exceeded"},
 		},
 		}
 
-		assert.Equal(t, d, actual, "Expected to be equal")
+		// compare marshalled values since unmarshalled values have type conflicts
+		// the actual uses interface instead of expected string type
+		// interface will be converted to string on marshall
+		// this is going to be marshalled into toml not pogo
+		marshalActual, err := json.Marshal(actual)
+		if err != nil {
+			return
+		}
+		marshalExpected, err := json.Marshal(expected)
+		if err != nil {
+			return
+		}
+
+		assert.Equal(t, string(marshalExpected), string(marshalActual), "Expected to be equal")
+	} else {
+		panic(err)
 	}
 }
