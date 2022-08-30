@@ -15,12 +15,12 @@ variable "ami" {
 
 variable "github_sha" {
   type    = string
-  default = "3612edefcfded5c31b4f94371bbb4e9ebaee4284"
+  default = "aee2f5c9b1b0a7a840b441da37a63ede7506a343"
 }
 
 variable "github_repo" {
   type    = string
-  default = "https://github.com/khanhntd/amazon-cloudwatch-agent.git"
+  default = "https://github.com/aws/amazon-cloudwatch-agent"
 }
 
 variable "ssh_key_name" {
@@ -35,7 +35,7 @@ variable "ssh_key_value" {
 
 variable "s3_bucket" {
   type    = string
-  default = "integration-test-cwagent"
+  default = ""
 }
 
 variable "test_name" {

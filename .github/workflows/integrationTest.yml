@@ -125,10 +125,18 @@ jobs:
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: make build package-rpm package-deb package-win package-darwin
 
+      - uses: olafurpg/setup-gpg@v3
+
+      - name: Sign packages
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: |
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
+          for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
+
+
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
-        
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
