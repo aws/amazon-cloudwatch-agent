@@ -158,7 +158,7 @@ The security group(s) that the integration tests use should include the followin
 | HTTPS       | 443  | 0.0.0.0/0 |
 | HTTP        | 80   | 0.0.0.0/0 |
 | SSH         | 22   | 0.0.0.0/0 |
-| RDP         | 3389 | 0.0.0.0/0 |Ω
+| RDP         | 3389 | 0.0.0.0/0 |
 
 By default, egress allows all traffic. This is fine. 
 

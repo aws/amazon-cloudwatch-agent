@@ -7,9 +7,13 @@
 package sanity
 
 import (
+	"testing"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 )
 
-func SanityCheck() {
-	test.RunShellScript("resources/verifyLinuxCtlScript.sh")
+func SanityCheck(t *testing.T) {
+	err := test.RunShellScript("resources/verifyLinuxCtlScript.sh")
+	if err != nil {
+		t.Fatalf("Running sanity check failed: %v", err)
+	}
 }

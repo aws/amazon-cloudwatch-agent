@@ -11,5 +11,5 @@ import (
 )
 
 func TestAgentStatus(t *testing.T) {
-	SanityCheck()
+	SanityCheck(t)
 }
