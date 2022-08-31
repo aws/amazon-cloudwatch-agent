@@ -13,23 +13,23 @@ import (
 	"path/filepath"
 )
 
-func CopyFile(pathIn string, pathOut string) error{
+func CopyFile(pathIn string, pathOut string) {
 	log.Printf("Copy File %s to %s", pathIn, pathOut)
 	pathInAbs, err := filepath.Abs(pathIn)
 
 	if err != nil {
-		return err
+		log.Fatalf(err)
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
 	out, err := exec.Command("cp "+pathInAbs+" "+pathOut).Output()
 
 	if err != nil {
-		return fmt.Errorf("Copy file failed: %v; the output is: %s",err, string(out))
+		log.Fatalf("Copy file failed: %v; the output is: %s",err, string(out))
 	}
 
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)
-	return nil
+	
 }
 
 func StartAgent(configOutputPath string, fatalOnFailure bool) error {

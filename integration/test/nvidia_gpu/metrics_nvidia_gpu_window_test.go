@@ -7,11 +7,8 @@
 package metrics_nvidia_gpu
 
 import (
-	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
-	"os/user"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -32,7 +29,7 @@ func TestNvidiaGPUWindows(t *testing.T) {
 		err := test.CopyFile(configWindowsJSON, configWindowsOutputPath)
 
 		if err != nil {
-			t.Fatalf(Cerr)
+			t.Fatalf(err)
 		}
 
 		err = test.StartAgent(configWindowsOutputPath, true)
@@ -42,7 +39,7 @@ func TestNvidiaGPUWindows(t *testing.T) {
 		}
 
 		time.Sleep(agentWindowsRuntime)
-		t.Logf("Agent has been running for : %s", agentRuntime.String())
+		t.Logf("Agent has been running for : %s", agentWindowsRuntime.String())
 		err = test.StopAgent()
 
 		if err != nil {
@@ -50,7 +47,7 @@ func TestNvidiaGPUWindows(t *testing.T) {
 		}
 
 		dimensionFilter := test.BuildDimensionFilterList(numberofWindowsAppendDimensions)
-		for _, metricName := range expectedMetrics {
+		for _, metricName := range expectedNvidiaGPUWindowsMetrics {
 			test.ValidateMetrics(t, metricName, metricWindowsnamespace, dimensionFilter)
 		}
 

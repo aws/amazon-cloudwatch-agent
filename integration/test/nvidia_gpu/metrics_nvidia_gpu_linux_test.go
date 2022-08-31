@@ -34,7 +34,7 @@ func TestNvidiaGPU(t *testing.T) {
 		test.StartAgent(configLinuxOutputPath, true)
 
 		time.Sleep(agentLinuxRuntime)
-		t.Logf("Agent has been running for : %s", agentRuntime.String())
+		t.Logf("Agent has been running for : %s", agentLinuxRuntime.String())
 		test.StopAgent()
 
 		dimensionFilter := test.BuildDimensionFilterList(numberofLinuxAppendDimensions)
