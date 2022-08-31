@@ -13,7 +13,7 @@
   {
     "os": "win-2019",
     "instanceType":"g4dn.xlarge",
-    "ami": "cloudwatch-agent-integration-test-nvidia-gpu-win-2019*",
+    "ami": "ami-0a66179d154ff4f5f",
     "family": "window"
   }
 ]

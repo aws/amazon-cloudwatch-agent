@@ -596,6 +596,7 @@ jobs:
             -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
             -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
             -var="test_name=${{ matrix.arrays.os }}" \
+            -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then 
               terraform destroy -auto-approve
             else

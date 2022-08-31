@@ -71,10 +71,11 @@ resource "null_resource" "integration_test" {
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "506463145083"]
+  // @Todo: Add back when nvidia_gpu pipeline has been able to produced the AMI
+  // owners      = ["self", "506463145083"]
 
   filter {
-    name   = "name"
+    name   = "image-id"
     values = [var.ami]
   }
 }
