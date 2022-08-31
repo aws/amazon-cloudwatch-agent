@@ -10,7 +10,7 @@ variable "ec2_instance_type" {
 
 variable "ami" {
   type    = string
-  default = "cloudwatch-agent-integration-test-win-2022*"
+  default = "Windows_Server-2019-English-Deep-Learning*"
 }
 
 variable "github_sha" {
