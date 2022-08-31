@@ -1,12 +1,12 @@
 exporters:
-    cloudwatch: {}
+    telegraf_cloudwatch: {}
 receivers:
-    diskio: {}
+    telegraf_diskio: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatch
+                - telegraf_cloudwatch
             processors: []
             receivers:
-                - diskio
+                - telegraf_diskio

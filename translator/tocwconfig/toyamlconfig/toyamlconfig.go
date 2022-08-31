@@ -23,6 +23,7 @@ const (
 	serviceKeyName   = "service"
 	pipelinesKeyName = "pipelines"
 	metricsKeyName   = "metrics"
+	telegrafPrefix   = "telegraf_"
 )
 
 func ToYamlConfig(val interface{}) (string, interface{}) {
@@ -55,7 +56,7 @@ func encodeReceivers(inputs map[string]interface{}, cfg *map[string]interface{},
 func inputsToReceivers(inputs map[string]interface{}) map[config.ComponentID]config.Receiver {
 	receiverMap := make(map[config.ComponentID]config.Receiver)
 	for input := range inputs {
-		t := config.Type(input)
+		t := config.Type(telegrafPrefix + input)
 		hc := config.NewReceiverSettings(config.NewComponentID(t))
 		receiverMap[config.NewComponentID(t)] = &hc
 	}
@@ -75,7 +76,7 @@ func encodeExporters(outputs map[string]interface{}, cfg *map[string]interface{}
 func outputsToExporters(outputs map[string]interface{}) map[config.ComponentID]config.Exporter {
 	exporterMap := make(map[config.ComponentID]config.Exporter)
 	for output := range outputs {
-		t := config.Type(output)
+		t := config.Type(telegrafPrefix + output)
 		exporterSettings := config.NewExporterSettings(config.NewComponentID(t))
 		exporterMap[config.NewComponentID(t)] = &exporterSettings
 	}
@@ -107,12 +108,12 @@ func buildPipelines(receivers map[config.ComponentID]config.Receiver, exporters 
 }
 
 func getInputsAndOutputs(val interface{}) (map[string]interface{}, map[string]interface{}) {
-	config := val.(map[string]interface{})
-	inputs, ok := config["inputs"].(map[string]interface{})
+	cfg := val.(map[string]interface{})
+	inputs, ok := cfg["inputs"].(map[string]interface{})
 	if !ok {
 		log.Panicf("E! could not extract inputs during yaml translation")
 	}
-	outputs, ok := config["outputs"].(map[string]interface{})
+	outputs, ok := cfg["outputs"].(map[string]interface{})
 	if !ok {
 		log.Panicf("E! could not extract outputs during yaml translation")
 	}

@@ -1,14 +1,14 @@
 exporters:
-    cloudwatchlogs: {}
+    telegraf_cloudwatchlogs: {}
 receivers:
-    cadvisor: {}
-    socket_listener: {}
+    telegraf_cadvisor: {}
+    telegraf_socket_listener: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatchlogs
+                - telegraf_cloudwatchlogs
             processors: []
             receivers:
-                - cadvisor
-                - socket_listener
+                - telegraf_cadvisor
+                - telegraf_socket_listener

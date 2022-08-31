@@ -1,20 +1,20 @@
 exporters:
-    cloudwatch: {}
+    telegraf_cloudwatch: {}
 receivers:
-    cpu: {}
-    disk: {}
-    diskio: {}
-    mem: {}
-    swap: {}
+    telegraf_cpu: {}
+    telegraf_disk: {}
+    telegraf_diskio: {}
+    telegraf_mem: {}
+    telegraf_swap: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatch
+                - telegraf_cloudwatch
             processors: []
             receivers:
-                - cpu
-                - disk
-                - diskio
-                - mem
-                - swap
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_diskio
+                - telegraf_mem
+                - telegraf_swap

@@ -1,26 +1,26 @@
 exporters:
-    cloudwatch: {}
+    telegraf_cloudwatch: {}
 receivers:
-    cpu: {}
-    disk: {}
-    diskio: {}
-    ethtool: {}
-    mem: {}
-    netstat: {}
-    nvidia_smi: {}
-    swap: {}
+    telegraf_cpu: {}
+    telegraf_disk: {}
+    telegraf_diskio: {}
+    telegraf_ethtool: {}
+    telegraf_mem: {}
+    telegraf_netstat: {}
+    telegraf_nvidia_smi: {}
+    telegraf_swap: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatch
+                - telegraf_cloudwatch
             processors: []
             receivers:
-                - ethtool
-                - mem
-                - netstat
-                - nvidia_smi
-                - swap
-                - cpu
-                - disk
-                - diskio
+                - telegraf_ethtool
+                - telegraf_mem
+                - telegraf_netstat
+                - telegraf_nvidia_smi
+                - telegraf_swap
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_diskio
