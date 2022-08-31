@@ -1,12 +1,12 @@
 exporters:
-    cloudwatchlogs: {}
+    telegraf_cloudwatchlogs: {}
 receivers:
-    windows_event_log: {}
+    telegraf_windows_event_log: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatchlogs
+                - telegraf_cloudwatchlogs
             processors: []
             receivers:
-                - windows_event_log
+                - telegraf_windows_event_log

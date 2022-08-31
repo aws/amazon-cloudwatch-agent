@@ -1,14 +1,14 @@
 exporters:
-    cloudwatch: {}
+    telegraf_cloudwatch: {}
 receivers:
-    disk: {}
-    mem: {}
+    telegraf_disk: {}
+    telegraf_mem: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatch
+                - telegraf_cloudwatch
             processors: []
             receivers:
-                - disk
-                - mem
+                - telegraf_disk
+                - telegraf_mem

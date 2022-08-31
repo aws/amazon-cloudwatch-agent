@@ -1,12 +1,12 @@
 exporters:
-    cloudwatch: {}
+    telegraf_cloudwatch: {}
 receivers:
-    win_perf_counters: {}
+    telegraf_win_perf_counters: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatch
+                - telegraf_cloudwatch
             processors: []
             receivers:
-                - win_perf_counters
+                - telegraf_win_perf_counters
