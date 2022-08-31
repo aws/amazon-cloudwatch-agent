@@ -47,6 +47,7 @@ resource "null_resource" "integration_test" {
     # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
     # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
     inline = [
+      "set AWS_REGION=${var.region}",
       "echo clone and install agent",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
@@ -55,13 +56,14 @@ resource "null_resource" "integration_test" {
       "msiexec /i amazon-cloudwatch-agent.msi",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
-      "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
+      "cd ./integration/test/nvidia_gpu",
+      "go test . -p 1 -timeout 30m -v --tags=integration "
     ]
 
     connection {
       type            = "ssh"
+      port            = "22"
       user            = "Administrator"
-      private_key     = local.private_key_content
       password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
       host            = aws_instance.cwagent.public_ip
       target_platform = "windows"

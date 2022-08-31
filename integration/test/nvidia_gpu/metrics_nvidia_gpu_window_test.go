@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build linux && integration
-// +build linux,integration
+//go:build windows && integration
+// +build windows,integration
 
 package metrics_nvidia_gpu
 
@@ -22,20 +22,20 @@ const (
 	numberofWindowsAppendDimensions = 1
 )
 
-var expectedNvidiaGPUWindowsMetrics = []string{"mem_used_percent", "nvidia_smi_utilization_gpu", "nvidia_smi_utilization_memory", "nvidia_smi_power_draw", "nvidia_smi_temperature_gpu"}
+var expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi_utilization_gpu", "nvidia_smi_utilization_memory", "nvidia_smi_power_draw", "nvidia_smi_temperature_gpu"}
 
 func TestNvidiaGPUWindows(t *testing.T) {
 	t.Run("Run CloudWatchAgent with Nvidia-smi on Windows", func(t *testing.T) {
 		err := test.CopyFile(configWindowsJSON, configWindowsOutputPath)
 
 		if err != nil {
-			t.Fatalf(err)
+			t.Fatalf(err.Error())
 		}
 
 		err = test.StartAgent(configWindowsOutputPath, true)
 
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf(err.Error())
 		}
 
 		time.Sleep(agentWindowsRuntime)
@@ -43,7 +43,7 @@ func TestNvidiaGPUWindows(t *testing.T) {
 		err = test.StopAgent()
 
 		if err != nil {
-			t.Fatal("CloudWatchAgent stops failed: %v", err)
+			t.Fatalf(err.Error())
 		}
 
 		dimensionFilter := test.BuildDimensionFilterList(numberofWindowsAppendDimensions)

@@ -5,22 +5,22 @@ variable "region" {
 
 variable "ec2_instance_type" {
   type    = string
-  default = "t3a.xlarge"
+  default = "g4dn.xlarge"
 }
 
 variable "ami" {
   type    = string
-  default = "Windows_Server-2019-English-Deep-Learning*"
+  default = "DCV-Windows-2020-2-9662-NVIDIA-452-57*"
 }
 
 variable "github_sha" {
   type    = string
-  default = "aee2f5c9b1b0a7a840b441da37a63ede7506a343"
+  default = "8200377b50ffeb34fd37471bdfb49b58722bfcdd"
 }
 
 variable "github_repo" {
   type    = string
-  default = "https://github.com/aws/amazon-cloudwatch-agent"
+  default = "https://github.com/khanhntd/amazon-cloudwatch-agent.git"
 }
 
 variable "ssh_key_name" {
@@ -35,7 +35,7 @@ variable "ssh_key_value" {
 
 variable "s3_bucket" {
   type    = string
-  default = ""
+  default = "integration-test-cwagent"
 }
 
 variable "test_name" {

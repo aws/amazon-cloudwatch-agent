@@ -18,7 +18,7 @@ import (
 
 const (
 	configLinuxJSON               = "resources/config_linux.json"
-	metricLinuxNamespace          = "NvidiaGPUTest"
+	metricLinuxNamespace          = "NvidiaGPULinuxTest"
 	configLinuxOutputPath         = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentLinuxLogPath             = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	agentLinuxRuntime             = 2 * time.Minute

@@ -13,22 +13,31 @@ import (
 	"path/filepath"
 )
 
-func CopyFile(pathIn string, pathOut string) {
+func CopyFile(pathIn string, pathOut string) error{
+	ps, err := exec.LookPath("powershell.exe")
+	
+	if err != nil {
+		return err
+	}
+	
 	log.Printf("Copy File %s to %s", pathIn, pathOut)
 	pathInAbs, err := filepath.Abs(pathIn)
 
 	if err != nil {
-		log.Fatalf(err)
+		return err
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	out, err := exec.Command("cp "+pathInAbs+" "+pathOut).Output()
+	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", "cp "+pathInAbs+" "+pathOut})
+	out, err := exec.Command(ps, bashArgs...).Output() 
 
 	if err != nil {
-		log.Fatalf("Copy file failed: %v; the output is: %s",err, string(out))
+		log.Printf("Copy file failed: %v; the output is: %s",err, string(out))
+		return err
 	}
 
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)
+	return nil
 	
 }
 
@@ -43,7 +52,8 @@ func StartAgent(configOutputPath string, fatalOnFailure bool) error {
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil && fatalOnFailure {
-		return fmt.Errorf("Start agent failed: %v; the output is: %s",err, string(out))
+		log.Printf("Start agent failed: %v; the output is: %s",err, string(out))
+		return err
 	} else if err != nil {
 		log.Printf(fmt.Sprint(err) + string(out))
 	} else {
@@ -64,6 +74,7 @@ func StopAgent() error{
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
+		log.Printf("Stop agent failed: %v; the output is: %s",err, string(out))
 		return err
 	}
 
