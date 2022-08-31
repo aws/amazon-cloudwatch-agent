@@ -7,47 +7,47 @@
 package metrics_nvidia_gpu
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
+	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
-	"testing"
-	"time"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
 	"os/user"
 	"syscall"
-	"fmt"
+	"testing"
+	"time"
 )
 
 const (
-	configJSON               = "resources/config_linux.json"
-	namespace                = "NvidiaGPUTest"
-	configOutputPath         = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	agentLogPath 			 = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
-	agentRuntime             = 2 * time.Minute
-	agentPermission          = "root"
-	numberofAppendDimensions = 1
+	configLinuxJSON               = "resources/config_linux.json"
+	metricLinuxNamespace          = "NvidiaGPUTest"
+	configLinuxOutputPath         = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	agentLinuxLogPath             = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+	agentLinuxRuntime             = 2 * time.Minute
+	agentLinuxPermission          = "root"
+	numberofLinuxAppendDimensions = 1
 )
 
-var expectedMetrics = []string{"mem_used_percent","nvidia_smi_utilization_gpu","nvidia_smi_utilization_memory","nvidia_smi_power_draw","nvidia_smi_temperature_gpu"}
+var expectedNvidiaGPULinuxMetrics = []string{"mem_used_percent", "nvidia_smi_utilization_gpu", "nvidia_smi_utilization_memory", "nvidia_smi_power_draw", "nvidia_smi_temperature_gpu"}
 
 func TestNvidiaGPU(t *testing.T) {
 	t.Run("Basic configuration testing for both metrics and logs", func(t *testing.T) {
-		test.CopyFile(configJSON, configOutputPath)
-		test.StartAgent(configOutputPath, true)
+		test.CopyFile(configLinuxJSON, configLinuxOutputPath)
+		test.StartAgent(configLinuxOutputPath, true)
 
-		time.Sleep(agentRuntime)
+		time.Sleep(agentLinuxRuntime)
 		t.Logf("Agent has been running for : %s", agentRuntime.String())
 		test.StopAgent()
 
-		dimensionFilter := test.BuildDimensionFilterList(numberofAppendDimensions)
-		for _, metricName := range expectedMetrics {
-			test.ValidateMetrics(t, metricName, namespace, dimensionFilter)
+		dimensionFilter := test.BuildDimensionFilterList(numberofLinuxAppendDimensions)
+		for _, metricName := range expectedNvidiaGPULinuxMetrics {
+			test.ValidateMetrics(t, metricName, metricLinuxNamespace, dimensionFilter)
 		}
 
-		if err := security.CheckFileRights(configOutputPath); err != nil{
-			t.Fatalf("CloudWatchAgent does not have privellege to write and read CWA's log: %v",err)
+		if err := security.CheckFileRights(agentLinuxLogPath); err != nil {
+			t.Fatalf("CloudWatchAgent does not have privellege to write and read CWA's log: %v", err)
 		}
 
-		if err := CheckFileOwnerRights(configOutputPath); err != nil{
-			t.Fatalf("CloudWatchAgent does not have right to CWA's log: %v",err)
+		if err := CheckFileOwnerRights(agentLinuxLogPath); err != nil {
+			t.Fatalf("CloudWatchAgent does not have right to CWA's log: %v", err)
 		}
 
 	})
@@ -59,9 +59,9 @@ func CheckFileOwnerRights(filePath string) error {
 		return fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
 	}
 
-	if owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid)); err != nil{
+	if owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid)); err != nil {
 		return fmt.Errorf("Cannot look up file owner's name %s: %v", filePath, err)
-	} else if owner.Name != agentPermission {
+	} else if owner.Name != agentLinuxPermission {
 		return fmt.Errorf("Agent does not have permission to protect file %s", filePath)
 	}
 

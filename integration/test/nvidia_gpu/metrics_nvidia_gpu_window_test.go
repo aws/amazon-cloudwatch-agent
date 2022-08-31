@@ -7,55 +7,54 @@
 package metrics_nvidia_gpu
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
+	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
-	"testing"
-	"time"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
 	"os/user"
 	"syscall"
-	"fmt"
+	"testing"
+	"time"
 )
 
 const (
-	configJSON               = "resources/config_linux.json"
-	namespace                = "NvidiaGPUTest"
-	configOutputPath         = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-	agentLogPath 			 = "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
-	agentRuntime             = 2 * time.Minute
-	agentPermission          = "root"
-	numberofAppendDimensions = 1
+	configWindowsJSON               = "resources/config_windows.json"
+	metricWindowsnamespace          = "NvidiaGPUTest"
+	configWindowsOutputPath         = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\config.json"
+	agentWindowsLogPath             = "C:\\ProgramData\\\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+	agentWindowsRuntime             = 2 * time.Minute
+	numberofWindowsAppendDimensions = 1
 )
 
-var expectedMetrics = []string{"mem_used_percent","nvidia_smi_utilization_gpu","nvidia_smi_utilization_memory","nvidia_smi_power_draw","nvidia_smi_temperature_gpu"}
+var expectedNvidiaGPUWindowsMetrics = []string{"mem_used_percent", "nvidia_smi_utilization_gpu", "nvidia_smi_utilization_memory", "nvidia_smi_power_draw", "nvidia_smi_temperature_gpu"}
 
 func TestNvidiaGPUWindows(t *testing.T) {
 	t.Run("Run CloudWatchAgent with Nvidia-smi on Windows", func(t *testing.T) {
-		err := test.CopyFile(configJSON, configOutputPath)
-		
+		err := test.CopyFile(configWindowsJSON, configWindowsOutputPath)
+
 		if err != nil {
 			t.Fatalf(Cerr)
 		}
-		
-		err = test.StartAgent(configOutputPath, true)
+
+		err = test.StartAgent(configWindowsOutputPath, true)
 
 		if err != nil {
 			t.Fatal(err)
 		}
-		
-		time.Sleep(agentRuntime)
+
+		time.Sleep(agentWindowsRuntime)
 		t.Logf("Agent has been running for : %s", agentRuntime.String())
 		err = test.StopAgent()
 
 		if err != nil {
-			t.Fatal("CloudWatchAgent stops failed: %v",err)
-		}
-		
-		dimensionFilter := test.BuildDimensionFilterList(numberofAppendDimensions)
-		for _, metricName := range expectedMetrics {
-			test.ValidateMetrics(t, metricName, namespace, dimensionFilter)
+			t.Fatal("CloudWatchAgent stops failed: %v", err)
 		}
 
-		err = security.CheckFileRights(configOutputPath);
+		dimensionFilter := test.BuildDimensionFilterList(numberofWindowsAppendDimensions)
+		for _, metricName := range expectedMetrics {
+			test.ValidateMetrics(t, metricName, metricWindowsnamespace, dimensionFilter)
+		}
+
+		err = security.CheckFileRights(agentWindowsLogPath)
 		if err != nil {
 			t.Fatalf("CloudWatchAgent's log does not have protection from local system and admin: %v", err)
 		}
