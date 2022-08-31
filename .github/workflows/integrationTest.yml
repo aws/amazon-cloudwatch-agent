@@ -453,6 +453,7 @@ jobs:
               -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
               -var="test_name=cw-integ-test-${{ matrix.arrays.os }}" \
               -var="iam_instance_profile=${IAM_ROLE}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="vpc_security_group_ids=${VPC_SECURITY_GROUPS_IDS}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
             else

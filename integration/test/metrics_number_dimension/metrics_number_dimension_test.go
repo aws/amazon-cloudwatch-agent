@@ -7,7 +7,6 @@
 package metrics_number_dimension
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"testing"
@@ -16,7 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	cwPlugin "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
