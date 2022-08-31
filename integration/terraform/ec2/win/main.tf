@@ -75,7 +75,7 @@ data "aws_ami" "latest" {
   // owners      = ["self", "506463145083"]
 
   filter {
-    name   = "image-id"
+    name   = "image_id"
     values = [var.ami]
   }
 }
