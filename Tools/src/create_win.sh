@@ -20,7 +20,6 @@ cp ${PREPKGPATH}/THIRD-PARTY-LICENSES ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/RELEASE_NOTES ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/CWAGENT_VERSION ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent.exe ${BUILD_ROOT}/amazon-cloudwatch-agent/
-cp ${PREPKGPATH}/cwagent-otel-collector.exe ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-ctl.ps1 ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/install.ps1 ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/uninstall.ps1 ${BUILD_ROOT}/amazon-cloudwatch-agent/
@@ -30,7 +29,6 @@ cp ${PREPKGPATH}/amazon-cloudwatch-agent-config-wizard.exe ${BUILD_ROOT}/amazon-
 cp ${PREPKGPATH}/start-amazon-cloudwatch-agent.exe ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}/amazon-cloudwatch-agent/
-cp ${PREPKGPATH}/predefined-config-data ${BUILD_ROOT}/amazon-cloudwatch-agent/
 
 echo "Constructing the zip package"
 

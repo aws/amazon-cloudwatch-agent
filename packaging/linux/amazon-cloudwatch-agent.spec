@@ -30,15 +30,12 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl ${RPM_
 # etc
 mkdir -p ${RPM_BUILD_ROOT}/etc/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/etc ${RPM_BUILD_ROOT}/etc/amazon/amazon-cloudwatch-agent
-ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc ${RPM_BUILD_ROOT}/etc/amazon/cwagent-otel-collector
 # log
 mkdir -p ${RPM_BUILD_ROOT}/var/log/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/logs ${RPM_BUILD_ROOT}/var/log/amazon/amazon-cloudwatch-agent
-ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs ${RPM_BUILD_ROOT}/var/log/amazon/cwagent-otel-collector
 # pid
 mkdir -p ${RPM_BUILD_ROOT}/var/run/amazon
 ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/amazon-cloudwatch-agent
-ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${RPM_BUILD_ROOT}/var/run/amazon/cwagent-otel-collector
 
 %files
 %dir /opt/aws/amazon-cloudwatch-agent
@@ -48,10 +45,6 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${RPM_BUILD
 %dir /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d
 %dir /opt/aws/amazon-cloudwatch-agent/logs
 %dir /opt/aws/amazon-cloudwatch-agent/var
-%dir /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc
-%dir /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/etc/cwagent-otel-collector.d
-%dir %attr(-, cwagent, cwagent) /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs
-%dir %attr(-, cwagent, cwagent) /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
 /opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION
@@ -59,10 +52,8 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${RPM_BUILD
 /opt/aws/amazon-cloudwatch-agent/bin/config-downloader
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-config-wizard
 /opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
-/opt/aws/amazon-cloudwatch-agent/bin/cwagent-otel-collector
 /opt/aws/amazon-cloudwatch-agent/doc/amazon-cloudwatch-agent-schema.json
 %config(noreplace) /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml
-/opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var/.predefined-config-data
 /opt/aws/amazon-cloudwatch-agent/LICENSE
 /opt/aws/amazon-cloudwatch-agent/NOTICE
 
@@ -70,16 +61,11 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var ${RPM_BUILD
 /opt/aws/amazon-cloudwatch-agent/RELEASE_NOTES
 /etc/init/amazon-cloudwatch-agent.conf
 /etc/systemd/system/amazon-cloudwatch-agent.service
-/etc/init/cwagent-otel-collector.conf
-/etc/systemd/system/cwagent-otel-collector.service
 
 /usr/bin/amazon-cloudwatch-agent-ctl
 /etc/amazon/amazon-cloudwatch-agent
 /var/log/amazon/amazon-cloudwatch-agent
 /var/run/amazon/amazon-cloudwatch-agent
-/etc/amazon/cwagent-otel-collector
-/var/log/amazon/cwagent-otel-collector
-/var/run/amazon/cwagent-otel-collector
 
 %pre
 # Stop the agent before upgrades.
@@ -100,17 +86,14 @@ if ! id cwagent >/dev/null 2>&1; then
     echo "create user cwagent, result: $?"
 fi
 
-if ! grep "^aoc:" /etc/group >/dev/null 2>&1; then
-    groupadd -r aoc >/dev/null 2>&1
-    echo "create group aoc, result: $?"
+if id aoc >/dev/null 2>&1; then
+     userdel -r aoc >/dev/null 2>&1
+     echo "delete user aoc, result: $?"
 fi
 
-if ! id aoc >/dev/null 2>&1; then
-     useradd -r -M aoc -d /home/aoc -g aoc -c "AWS OTel Collector" -s $(test -x /sbin/nologin && echo /sbin/nologin || (test -x /usr/sbin/nologin && echo /usr/sbin/nologin || (test -x /bin/false && echo /bin/false || echo /bin/sh))) >/dev/null 2>&1
-     echo "create user aoc, result: $?"
-else
-     usermod aoc -c "AWS OTel Collector" -s $(test -x /sbin/nologin && echo /sbin/nologin || (test -x /usr/sbin/nologin && echo /usr/sbin/nologin || (test -x /bin/false && echo /bin/false || echo /bin/sh))) >/dev/null 2>&1
-     echo "update user aoc, result: $?"
+if grep "^aoc:" /etc/group >/dev/null 2>&1; then
+    groupdel -r aoc >/dev/null 2>&1
+    echo "delete group aoc, result: $?"
 fi
 
 %preun

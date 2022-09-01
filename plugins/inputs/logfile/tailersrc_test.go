@@ -46,7 +46,7 @@ func TestTailerSrc(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create temp file: %v", err)
 	}
-
+	beforeCount := tail.OpenFileCount.Get()
 	tailer, err := tail.TailFile(file.Name(),
 		tail.Config{
 			ReOpen:      false,
@@ -63,7 +63,7 @@ func TestTailerSrc(t *testing.T) {
 		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
 		return
 	}
-
+	assert.Equal(t, beforeCount + 1, tail.OpenFileCount.Get())
 	ts := NewTailerSrc(
 		"groupName", "streamName",
 		"destination",
@@ -144,11 +144,15 @@ func TestTailerSrc(t *testing.T) {
 		fmt.Fprintln(file, l)
 	}
 
-	// Removal of log file should stop tailersrc
+	// Removal of log file should stop tailerSrc and Tail.
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
 	}
 	<-done
+	// Most test functions do not wait for the Tail to close the file.
+	// They rely on Tail to detect file deletion and close the file.
+	// So the count might be nonzero due to previous test cases.
+	assert.LessOrEqual(t, tail.OpenFileCount.Get(), beforeCount)
 }
 
 func TestOffsetDoneCallBack(t *testing.T) {

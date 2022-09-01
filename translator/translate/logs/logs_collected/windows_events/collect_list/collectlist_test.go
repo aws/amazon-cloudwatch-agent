@@ -125,7 +125,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
-			"retention_in_days": -1,
+			"retention_in_days": 3,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -133,7 +133,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
-			"retention_in_days": -1,
+			"retention_in_days": 3,
 		},
 	}
 
@@ -193,7 +193,7 @@ func TestConflictingRetention(t *testing.T) {
 			"event_format":      "xml",
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
-			"retention_in_days": -1,
+			"retention_in_days": 1,
 		},
 	}
 

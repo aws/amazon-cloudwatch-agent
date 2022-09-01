@@ -1,0 +1,45 @@
+{
+	"agent": {
+		"metrics_collection_interval": 1,
+		"run_as_user": "root"
+	},
+	"metrics": {
+		"aggregation_dimensions": [
+			[
+				"InstanceId"
+			]
+		],
+		"append_dimensions": {
+			"AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+			"ImageId": "${aws:ImageId}",
+			"InstanceId": "${aws:InstanceId}",
+			"InstanceType": "${aws:InstanceType}"
+		},
+		"metrics_collected": {
+			"procstat": [
+                		{
+                    			"exe": "cloudwatch-agent",
+                    			"measurement": [
+                        			"cpu_usage",
+						"memory_rss"
+                    			],
+					"metrics_collection_interval": 10
+                		}
+            		]
+		}
+	},
+	"logs": {
+		"logs_collected": {
+		  "files": {
+			"collect_list": [
+			  {
+				"file_path": "/tmp/test1.log",
+				"log_group_name": "{instance_id}",
+				"log_stream_name": "{instance_id}/tmp1",
+				"timezone": "UTC"
+			  }
+			]
+		  }
+		}
+	}
+}
