@@ -36,7 +36,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          submodules: 'true'
 
       # Set up building environment, patch the dev repo code on dispatch events.
       - name: Set up Go 1.x
@@ -80,6 +79,7 @@ jobs:
         run: |
           echo "${GPG_PRIVATE_KEY}" | gpg --batch --import -
           for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && echo "${PASSPHRASE}" | gpg --detach-sign  --passphrase-fd 0 --batch --default-key "${GPG_KEY_NAME}" $f ; fi ; done
+
 
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
