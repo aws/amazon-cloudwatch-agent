@@ -14,28 +14,28 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/integration/test"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
 )
 
 const (
-	configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	configOutputPath    = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
 	agentRuntimeMinutes = 5 //20 mins desired but 5 mins for testing purposes
-	DynamoDBDataBase = "CWAPerformanceMetrics"
-	testLogNum = "PERFORMANCE_NUMBER_OF_LOGS"
+	DynamoDBDataBase    = "CWAPerformanceMetrics"
+	testLogNum          = "PERFORMANCE_NUMBER_OF_LOGS"
 )
 
 //this struct is derived from plugins/inputs/logfile FileConfig struct
 type LogInfo struct {
-	FilePath       string `json:"file_path"`
-	LogGroupName   string `json:"log_group_name"`
-	LogStreamName  string `json:"log_stream_name"`
-	Timezone       string `json:"timezone"`
+	FilePath      string `json:"file_path"`
+	LogGroupName  string `json:"log_group_name"`
+	LogStreamName string `json:"log_stream_name"`
+	Timezone      string `json:"timezone"`
 }
 
 func TestPerformance(t *testing.T) {
 	//get number of logs for test from github action
 	//@TODO
-	logNum, err := strconv.Atoi(os.Getenv(testLogNum)) 
+	logNum, err := strconv.Atoi(os.Getenv(testLogNum))
 	if err != nil {
 		t.Fatalf("Error: cannot convert test log number to integer, %v", err)
 	}
@@ -53,22 +53,19 @@ func TestPerformance(t *testing.T) {
 	//defer deleting log group first because golang handles defers in LIFO order
 	//and we want to delete the log group after deleting the log streams
 	defer test.DeleteLogGroup(instanceId)
-	
+
 	for _, logStream := range logStreams {
 		defer test.DeleteLogStream(instanceId, logStream)
 	}
 
-	
-
 	log.Printf("config generated at %s\n", configFilePath)
 	defer os.Remove(configFilePath)
 
-	tpsVals := []int {
+	tpsVals := []int{
 		10,
 		100,
 		1000,
 	}
-	
 
 	//data base
 	dynamoDB := InitializeTransmitterAPI(DynamoDBDataBase) //add cwa version here
@@ -95,7 +92,7 @@ func TestPerformance(t *testing.T) {
 
 			//collect data
 			data, err := GetPerformanceMetrics(instanceId, agentRuntimeMinutes, logNum, tps, agentContext, configFilePath)
-			
+
 			//@TODO check if metrics are zero remove them and make sure there are non-zero metrics existing
 			if err != nil {
 				t.Fatalf("Error: %v", err)
@@ -105,9 +102,9 @@ func TestPerformance(t *testing.T) {
 				t.Fatalf("No data")
 			}
 			// this print shows the sendItem packet,it can be used to debug attribute issues
-			fmt.Printf("%v \n",data) 
-			
-			_, err = dynamoDB.SendItem(data,tps)
+			fmt.Printf("%v \n", data)
+
+			_, err = dynamoDB.SendItem(data, tps)
 			if err != nil {
 				t.Fatalf("Error: couldn't upload metric data to table, %v", err)
 			}
@@ -118,10 +115,10 @@ func TestPerformance(t *testing.T) {
 /* GenerateConfig takes the number of logs to be monitored and applies it to a default config (at ./resources/config.json)
 * it writes logs to be monitored of the form /tmp/testNUM.log where NUM is from 1 to number of logs requested to
 * ./resources/configNUM.json where NUM is number of logs
-* DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED 
+* DEFAULT CONFIG MUST BE SUPPLIED WITH AT LEAST ONE LOG BEING MONITORED
 * (log being monitored will be overwritten - it is needed for json structure)
 * returns the path of the config generated and a list of log stream names
-*/
+ */
 func GenerateConfig(logNum int) (string, []string, error) {
 	var cfgFileData map[string]interface{}
 
@@ -140,13 +137,13 @@ func GenerateConfig(logNum int) (string, []string, error) {
 	var logStreams []string
 
 	for i := 0; i < logNum; i++ {
-		logStream := fmt.Sprintf("{instance_id}/tmp%d", i + 1)
+		logStream := fmt.Sprintf("{instance_id}/tmp%d", i+1)
 
-		logFiles = append(logFiles, LogInfo {
-			FilePath: fmt.Sprintf("/tmp/test%d.log", i + 1),
-			LogGroupName: "{instance_id}",
+		logFiles = append(logFiles, LogInfo{
+			FilePath:      fmt.Sprintf("/tmp/test%d.log", i+1),
+			LogGroupName:  "{instance_id}",
 			LogStreamName: logStream,
-			Timezone: "UTC",
+			Timezone:      "UTC",
 		})
 
 		logStreams = append(logStreams, logStream)
@@ -176,7 +173,7 @@ func GenerateConfig(logNum int) (string, []string, error) {
 
 //StartLogWrite starts go routines to write logs to each of the logs that are monitored by CW Agent according to
 //the config provided
-func StartLogWrite(agentRunDuration time.Duration, configFilePath string, tps int) (error) {
+func StartLogWrite(agentRunDuration time.Duration, configFilePath string, tps int) error {
 	//create wait group so main test thread waits for log writing to finish before stopping agent and collecting data
 	var logWaitGroup sync.WaitGroup
 
@@ -201,7 +198,7 @@ func StartLogWrite(agentRunDuration time.Duration, configFilePath string, tps in
 
 //WriteToLogs opens a file at the specified file path and writes the specified number of lines per second (tps)
 //for the specified duration
-func WriteToLogs(filePath string, durationMinutes time.Duration, tps int) (error) {
+func WriteToLogs(filePath string, durationMinutes time.Duration, tps int) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -223,14 +220,14 @@ func WriteToLogs(filePath string, durationMinutes time.Duration, tps int) (error
 					return err
 				}
 			}
-		
+
 		case <-endTimeout:
 			return nil
 		}
 	}
 }
 
-//GetLogFilePaths parses the cloudwatch agent config at the specified path and returns a list of the log files that the 
+//GetLogFilePaths parses the cloudwatch agent config at the specified path and returns a list of the log files that the
 //agent will monitor when using that config file
 func GetLogFilePaths(configPath string) ([]string, error) {
 	file, err := os.ReadFile(configPath)
@@ -253,21 +250,21 @@ func GetLogFilePaths(configPath string) ([]string, error) {
 	return filePaths, nil
 }
 
-func TestUpdateCommit(t*testing.T){
-	if(os.Getenv("IS_RELEASE") !="true"){
+func TestUpdateCommit(t *testing.T) {
+	if os.Getenv("IS_RELEASE") != "true" {
 		t.SkipNow()
 	}
-	t.Log("Updating Release Commit",os.Getenv(SHA_ENV))
+	t.Log("Updating Release Commit", os.Getenv(SHA_ENV))
 	dynamoDB := InitializeTransmitterAPI("CWAPerformanceMetrics") //add cwa version here
 	releaseHash := os.Getenv(SHA_ENV)
 	releaseName := os.Getenv(RELEASE_NAME_ENV)
-	if dynamoDB == nil{
+	if dynamoDB == nil {
 		t.Fatalf("Error: generating dynamo table")
-	return
+		return
 	}
 
-	err := dynamoDB.UpdateReleaseTag(releaseHash,releaseName)
-	if err!=nil{
-		t.Fatalf("Error: %s",err)
+	err := dynamoDB.UpdateReleaseTag(releaseHash, releaseName)
+	if err != nil {
+		t.Fatalf("Error: %s", err)
 	}
 }

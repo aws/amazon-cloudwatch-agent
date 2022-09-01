@@ -9,7 +9,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
 	"github.com/influxdata/telegraf/config"
 )
 
