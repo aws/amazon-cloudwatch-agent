@@ -1,15 +1,15 @@
 exporters:
-    cloudwatchlogs: {}
+    telegraf_cloudwatchlogs: {}
 processors:
-    emfProcessor: {}
+    telegraf_emfProcessor: {}
 receivers:
-    prometheus_scraper: {}
+    telegraf_prometheus_scraper: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatchlogs
+                - telegraf_cloudwatchlogs
             processors:
-                - emfProcessor
+                - telegraf_emfProcessor
             receivers:
-                - prometheus_scraper
+                - telegraf_prometheus_scraper

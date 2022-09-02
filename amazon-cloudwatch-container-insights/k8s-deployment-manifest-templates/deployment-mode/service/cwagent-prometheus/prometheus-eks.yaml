@@ -47,7 +47,7 @@ data:
                   ]
                 },
                 {
-                  "source_labels": ["Service"],
+                  "source_labels": ["Service", "backend"],
                   "label_matcher": ".*haproxy-ingress-.*metrics",
                   "dimensions": [["Service","Namespace","ClusterName","backend","code"]],
                   "metric_selectors": [

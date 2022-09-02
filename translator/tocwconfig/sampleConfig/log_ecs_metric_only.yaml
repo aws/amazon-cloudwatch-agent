@@ -31,30 +31,30 @@ exporters:
     parse_json_encoded_attr_values: [ Sources ]
     resource_to_telemetry_conversion:
       enabled: true
-  cloudwatchlogs: {}
+  telegraf_cloudwatchlogs: {}
 
 processors:
   batch/containerinsights:
     timeout: 30s
-  ec2tagger: {}
-  ecsdecorator: {}
+  telegraf_ec2tagger: {}
+  telegraf_ecsdecorator: {}
 receivers:
   awscontainerinsightreceiver/containerinsights:
     collection_interval: 30s
     container_orchestrator: ecs
-  cadvisor: {}
-  socket_listener: {}
+  telegraf_cadvisor: {}
+  telegraf_socket_listener: {}
 service:
   pipelines:
     metrics:
       exporters:
-        - cloudwatchlogs
+        - telegraf_cloudwatchlogs
         - awsemf/containerinsights
       processors:
         - batch/containerinsights
-        - ecsdecorator
-        - ec2tagger
+        - telegraf_ecsdecorator
+        - telegraf_ec2tagger
       receivers:
         - awscontainerinsightreceiver/containerinsights
-        - cadvisor
-        - socket_listener
+        - telegraf_cadvisor
+        - telegraf_socket_listener

@@ -1,25 +1,25 @@
 exporters:
-    cloudwatch: {}
+    telegraf_cloudwatch: {}
 processors:
-    delta: {}
-    ec2tagger: {}
+    telegraf_delta: {}
+    telegraf_ec2tagger: {}
 receivers:
-    cpu: {}
-    disk: {}
-    diskio: {}
-    mem: {}
-    swap: {}
+    telegraf_cpu: {}
+    telegraf_disk: {}
+    telegraf_diskio: {}
+    telegraf_mem: {}
+    telegraf_swap: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatch
+                - telegraf_cloudwatch
             processors:
-                - ec2tagger
-                - delta
+                - telegraf_ec2tagger
+                - telegraf_delta
             receivers:
-                - swap
-                - cpu
-                - disk
-                - diskio
-                - mem
+                - telegraf_swap
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_diskio
+                - telegraf_mem

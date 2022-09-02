@@ -1,21 +1,21 @@
 exporters:
-    cloudwatchlogs: {}
+    telegraf_cloudwatchlogs: {}
 processors:
-    ec2tagger: {}
-    k8sdecorator: {}
+    telegraf_ec2tagger: {}
+    telegraf_k8sdecorator: {}
 receivers:
-    cadvisor: {}
-    k8sapiserver: {}
-    socket_listener: {}
+    telegraf_cadvisor: {}
+    telegraf_k8sapiserver: {}
+    telegraf_socket_listener: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatchlogs
+                - telegraf_cloudwatchlogs
             processors:
-                - k8sdecorator
-                - ec2tagger
+                - telegraf_k8sdecorator
+                - telegraf_ec2tagger
             receivers:
-                - k8sapiserver
-                - cadvisor
-                - socket_listener
+                - telegraf_k8sapiserver
+                - telegraf_cadvisor
+                - telegraf_socket_listener

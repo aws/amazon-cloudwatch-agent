@@ -33,7 +33,7 @@ type (
 		Cpu               []cpuConfig
 		Disk              []diskConfig
 		DiskIo            []diskioConfig
-		Eththool          []ethtoolConfig
+		Ethtool           []ethtoolConfig
 		K8sapiserver      []k8sApiServerConfig
 		Logfile           []logFileConfig
 		Mem               []memConfig

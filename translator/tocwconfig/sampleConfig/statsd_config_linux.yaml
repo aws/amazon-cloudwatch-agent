@@ -1,13 +1,13 @@
 exporters:
-    cloudwatch: {}
+    telegraf_cloudwatch: {}
 processors: {}
 receivers:
-    statsd: {}
+    telegraf_statsd: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatch
+                - telegraf_cloudwatch
             processors: []
             receivers:
-                - statsd
+                - telegraf_statsd

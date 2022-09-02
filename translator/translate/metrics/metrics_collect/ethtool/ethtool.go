@@ -10,16 +10,14 @@ import (
 
 var ChildRule = map[string]translator.Rule{}
 
-//
-//   "ethtool" : {
-//       "interface_include": "*",
-//       "interface_exclude": "",
-//       "metrics_include": [
-//           "bw_in_allowance_exceeded",
-//           "bw_out_allowance_exceeded"
-//       ]
-//   }
-//
+//	"ethtool" : {
+//	    "interface_include": "*",
+//	    "interface_exclude": "",
+//	    "metrics_include": [
+//	        "bw_in_allowance_exceeded",
+//	        "bw_out_allowance_exceeded"
+//	    ]
+//	}
 const SectionKey_Ethtool = "ethtool"
 
 func GetCurPath() string {

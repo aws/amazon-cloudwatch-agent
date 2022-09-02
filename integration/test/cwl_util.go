@@ -79,6 +79,12 @@ func ValidateLogs(t *testing.T, logGroup, logStream string, numExpectedLogs int,
 // DeleteLogGroupAndStream cleans up a log group and stream by name. This gracefully handles
 // ResourceNotFoundException errors from calling the APIs
 func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
+	DeleteLogStream(logGroupName, logStreamName)
+	DeleteLogGroup(logGroupName)
+}
+
+// DeleteLogStream cleans up log stream by name
+func DeleteLogStream(logGroupName, logStreamName string) {
 	cwlClient, clientContext, err := getCloudWatchLogsClient()
 	if err != nil {
 		log.Printf("Error occurred while creating CloudWatch Logs SDK client: %v", err)
@@ -96,6 +102,19 @@ func DeleteLogGroupAndStream(logGroupName, logStreamName string) {
 	if err != nil && !errors.As(err, &rnf) {
 		log.Printf("Error occurred while deleting log stream %s: %v", logStreamName, err)
 	}
+}
+
+// DeleteLogGroup cleans up log group by name
+func DeleteLogGroup(logGroupName string) {
+	cwlClient, clientContext, err := getCloudWatchLogsClient()
+	if err != nil {
+		log.Printf("Error occurred while creating CloudWatch Logs SDK client: %v", err)
+		return // terminate gracefully so this alone doesn't cause integration test failures
+	}
+
+	// catch ResourceNotFoundException when deleting the log group and log stream, as these
+	// are not useful exceptions to log errors on during cleanup
+	var rnf *types.ResourceNotFoundException
 
 	_, err = cwlClient.DeleteLogGroup(*clientContext, &cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: aws.String(logGroupName),

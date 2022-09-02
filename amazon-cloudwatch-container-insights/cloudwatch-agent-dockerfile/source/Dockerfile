@@ -16,6 +16,7 @@ ENV GO111MODULE=${GO111MODULE}
 COPY go.mod /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 COPY go.sum /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 RUN go mod download -x
+
 COPY . /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 # TODO: this is only for container insights testing
 RUN mkdir -p /tmp

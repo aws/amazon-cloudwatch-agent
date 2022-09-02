@@ -4,6 +4,7 @@
 package config
 
 const (
-	ModeEC2    = "ec2"
-	ModeOnPrem = "onPremise"
+	ModeEC2       = "ec2"
+	ModeOnPrem    = "onPrem"
+        ModeOnPremise = "onPremise"
 )

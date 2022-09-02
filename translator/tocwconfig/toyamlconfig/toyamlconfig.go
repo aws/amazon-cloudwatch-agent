@@ -25,6 +25,7 @@ const (
 	metricsKeyName    = "metrics"
 	inputsKeyName     = "inputs"
 	outputsKeyName    = "outputs"
+	telegrafPrefix    = "telegraf_"
 )
 
 var (
@@ -82,7 +83,7 @@ func encodeReceivers(inputs, nativeInputs map[string]interface{}, cfg *map[strin
 func inputsToReceivers(inputs, nativeInputs map[string]interface{}) map[config.ComponentID]interface{} {
 	receiverMap := make(map[config.ComponentID]interface{})
 	for key := range inputs {
-		t := config.Type(key)
+		t := config.Type(telegrafPrefix + key)
 		receiverMap[config.NewComponentID(t)] = struct{}{}
 	}
 	for key, val := range nativeInputs {
@@ -104,7 +105,7 @@ func encodeProcessors(processors, nativeProcessors map[string]interface{}, cfg *
 func procToProcessors(processors, nativeProcessors map[string]interface{}) map[config.ComponentID]interface{} {
 	processorMap := make(map[config.ComponentID]interface{})
 	for key := range processors {
-		t := config.Type(key)
+		t := config.Type(telegrafPrefix + key)
 		processorMap[config.NewComponentID(t)] = struct{}{}
 	}
 	for key, val := range nativeProcessors {
@@ -127,7 +128,7 @@ func encodeExporters(outputs, nativeOutputs map[string]interface{}, cfg *map[str
 func outputsToExporters(outputs, nativeOutputs map[string]interface{}) map[config.ComponentID]interface{} {
 	exporterMap := make(map[config.ComponentID]interface{})
 	for key := range outputs {
-		t := config.Type(key)
+		t := config.Type(telegrafPrefix + key)
 		exporterMap[config.NewComponentID(t)] = struct{}{}
 	}
 	for key, val := range nativeOutputs {

@@ -1,19 +1,19 @@
 exporters:
-    cloudwatch: {}
+    telegraf_cloudwatch: {}
 processors:
-    ec2tagger: {}
+    telegraf_ec2tagger: {}
 receivers:
-    cpu: {}
-    disk: {}
-    nvidia_smi: {}
+    telegraf_cpu: {}
+    telegraf_disk: {}
+    telegraf_nvidia_smi: {}
 service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatch
+                - telegraf_cloudwatch
             processors:
-                - ec2tagger
+                - telegraf_ec2tagger
             receivers:
-                - nvidia_smi
-                - cpu
-                - disk
+                - telegraf_nvidia_smi
+                - telegraf_cpu
+                - telegraf_disk

@@ -46,11 +46,13 @@ const (
 	unitOverheads = 42
 )
 
-func publishJitter(publishInterval time.Duration) (publishJitter time.Duration) {
-	r := rand.New(rand.NewSource(time.Now().Unix()))
-	jitter := r.Int63n(int64(publishInterval.Seconds()))
-	publishJitter = time.Duration(jitter) * time.Second
-	return
+// Set seed once.
+var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+// publishJitter returns a random duration between 0 and the given publishInterval.
+func publishJitter(publishInterval time.Duration) time.Duration {
+	jitter := seededRand.Int63n(int64(publishInterval))
+	return time.Duration(jitter)
 }
 
 func setNewDistributionFunc(maxValuesPerDatumLimit int) {
