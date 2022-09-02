@@ -15,7 +15,7 @@ variable "ami" {
 
 variable "github_sha" {
   type    = string
-  default = "8200377b50ffeb34fd37471bdfb49b58722bfcdd"
+  default = "39df853675e9d07d76b6389cc34d09d608231d6e"
 }
 
 variable "github_repo" {
@@ -38,12 +38,7 @@ variable "s3_bucket" {
   default = "integration-test-cwagent"
 }
 
-variable "test_name" {
-  type    = string
-  default = "windows-2022"
-}
-
 variable "test_dir" {
   type    = string
-  default = ""
+  default = "./integration/test/nvidia_gpu"
 }

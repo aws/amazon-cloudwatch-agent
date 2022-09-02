@@ -15,7 +15,7 @@ import (
 
 const (
 	configWindowsJSON               = "resources/config_windows.json"
-	metricWindowsnamespace          = "NvidiaGPUTest"
+	metricWindowsnamespace          = "NvidiaGPUWindowsTest"
 	configWindowsOutputPath         = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\config.json"
 	agentWindowsLogPath             = "C:\\ProgramData\\\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
 	agentWindowsRuntime             = 2 * time.Minute

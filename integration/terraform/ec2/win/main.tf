@@ -48,15 +48,16 @@ Set-Service -Name sshd -StartupType 'Automatic'
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
-choco install git --confirm
-choco install go --confirm
+start /wait choco install git --confirm
+start /wait choco install go --confirm
+start /wait msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
 
-msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
+[Environment]::SetEnvironmentVariable("PATH", "C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\Go\bin;C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0\", [System.EnvironmentVariableTarget]::Machine)
 </powershell>
 EOF
 
   tags = {
-    Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
+    Name = "cwagent-integ-test-ec2-windows-${element(split(":", var.test_dir),3)}-${random_id.testing_id.hex}"
   }
 }
 
@@ -65,18 +66,17 @@ resource "null_resource" "integration_test" {
   # Install software
   provisioner "remote-exec" {
     inline = [
-      "set PATH=%ALLUSERSPROFILE%\\chocolatey\\bin;%ProgramFiles%\\Git\\cmd;%ProgramFiles%\\Amazon\\AWSCLIV2\\;%ProgramFiles%\\Go\\bin;C:\\Windows\\system32",
+      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables
       "set AWS_REGION=${var.region}",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
       "echo clone and install agent",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.github_sha}",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
-      "msiexec /i amazon-cloudwatch-agent.msi",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
-      "cd ./integration/test/nvidia_gpu",
-      "go test . -p 1 -timeout 30m -v --tags=integration "
+      "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
     ]
 
     connection {
@@ -93,7 +93,7 @@ resource "null_resource" "integration_test" {
 data "aws_ami" "latest" {
   most_recent = true
   // @Todo: Add back when nvidia_gpu pipeline has been able to produced the AMI
-  #owners      = ["self", "506463145083","aws-marketplace"]
+  #owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"
