@@ -65,6 +65,7 @@ resource "null_resource" "integration_test" {
   # Install software
   provisioner "remote-exec" {
     inline = [
+      "set PATH=%PATH%;%ALLUSERSPROFILE%\\chocolatey\\bin,%ProgramFiles%\\Git\\bin",
       "refreshenv",
       "set AWS_REGION=${var.region}",
       "echo clone and install agent",
