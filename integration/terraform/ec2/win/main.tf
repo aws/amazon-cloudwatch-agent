@@ -37,18 +37,20 @@ resource "aws_instance" "cwagent" {
   associate_public_ip_address = true
   get_password_data           = true
   user_data                   = <<EOF
-      "set AWS_REGION=${var.region}",
-      "echo clone and install agent",
-      "git clone ${var.github_repo}",
-      "cd amazon-cloudwatch-agent",
-      "git reset --hard ${var.github_sha}",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
-      "msiexec /i amazon-cloudwatch-agent.msi",
-      "echo run tests with the tag integration, one at a time, and verbose",
-      "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
-      "cd ./integration/test/nvidia_gpu",
-      "go test . -p 1 -timeout 30m -v --tags=integration "
+<powershell>
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+Start-Service sshd
+Set-Service -Name sshd -StartupType 'Automatic'
+if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled)) {
+    Write-Output "Firewall Rule 'OpenSSH-Server-In-TCP' does not exist, creating it..."
+    New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+} else {
+    Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
+}
+</powershell>
 EOF
+
   tags = {
     Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
   }
@@ -74,7 +76,7 @@ resource "null_resource" "integration_test" {
     ]
 
     connection {
-      type            = "winrm"
+      type            = "ssh"
       user            = "Administrator"
       password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
       host            = aws_instance.cwagent.public_ip
@@ -86,7 +88,7 @@ resource "null_resource" "integration_test" {
 data "aws_ami" "latest" {
   most_recent = true
   // @Todo: Add back when nvidia_gpu pipeline has been able to produced the AMI
-  // owners      = ["self", "506463145083"]
+  #owners      = ["self", "506463145083","aws-marketplace"]
 
   filter {
     name   = "name"

@@ -10,7 +10,7 @@ variable "ec2_instance_type" {
 
 variable "ami" {
   type    = string
-  default = "DCV-Windows-2020-2-9662-NVIDIA-452-57*"
+  default = "Windows_Server-2019-English-Deep-Learning-2022.07.13*"
 }
 
 variable "github_sha" {
