@@ -528,9 +528,9 @@ main() {
      case "${action}" in
      stop) stop_all ;;
      start) start_all "${mode}" ;;
-     fetch-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'default' ;;
-     append-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'append' ;;
-     remove-config) config_all "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'remove' ;;
+     fetch-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'default' ;;
+     append-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'append' ;;
+     remove-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'remove' ;;
      status) status_all ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install
