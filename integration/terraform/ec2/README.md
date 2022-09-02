@@ -1,21 +1,71 @@
 Running integration tests
 =========================
 
-# Run tests in your AWS account
-
-## Required setup
+# Required setup
 
 ### Set up AWS credentials for Terraform
 
 This all assumes that you are creating resources in the `us-west-2` region, as that is currently the only region that
 supports the integration test AMIs.
 
-#### Terraform IAM user permissions
+#### Terraform IAM assume role permission
 
 For ease of use, here's a generated IAM policy based on resource usage that you can attach to your IAM user that
 Terraform will assume, with the required permissions. See docs
 on [Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
 for how to easily generate a new policy.
+
+#### Creating assume role
+[reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
+
+Cloud formation template. You only need to enter org and repo (ex aws amazon-cloudwatch-agent)
+```
+Parameters:
+  GitHubOrg:
+    Type: String
+  RepositoryName:
+    Type: String
+  OIDCProviderArn:
+    Description: Arn for the GitHub OIDC Provider.
+    Default: ""
+    Type: String
+
+Conditions:
+  CreateOIDCProvider: !Equals 
+    - !Ref OIDCProviderArn
+    - ""
+
+Resources:
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRoleWithWebIdentity
+            Principal:
+              Federated: !If 
+                - CreateOIDCProvider
+                - !Ref GithubOidc
+                - !Ref OIDCProviderArn
+            Condition:
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${RepositoryName}:*
+
+  GithubOidc:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: 
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+Outputs:
+  Role:
+    Value: !GetAtt Role.Arn 
+```
 
 ```json
 {
@@ -35,6 +85,7 @@ for how to easily generate a new policy.
         "ec2:DescribeVpcs",
         "ec2:GetPasswordData",
         "ec2:ModifyInstanceAttribute",
+        "dynamodb:*",
         "ec2:RunInstances",
         "ec2:TerminateInstances",
         "s3:ListBucket",
@@ -108,25 +159,28 @@ for how to easily generate a new policy.
     {
       "Effect": "Allow",
       "Action": [
-        "cloudwatch:GetMetricData",
-        "cloudwatch:PutMetricData",
-        "cloudwatch:ListMetrics",
-        "ec2:DescribeVolumes",
-        "ec2:DescribeTags",
-        "logs:PutLogEvents",
-        "logs:DescribeLogStreams",
-        "logs:DescribeLogGroups",
-        "logs:CreateLogStream",
-        "logs:CreateLogGroup",
-        "logs:DeleteLogGroup",
-        "logs:DeleteLogStream",
-        "logs:PutRetentionPolicy",
-        "logs:GetLogEvents",
-        "logs:PutLogEvents",
-        "s3:GetObjectAcl",
-        "s3:GetObject",
-        "s3:ListBucket",
-        "ecr:GetAuthorizationToken"
+         "cloudwatch:GetMetricData",
+         "cloudwatch:PutMetricData",
+         "cloudwatch:ListMetrics",
+         "ec2:DescribeVolumes",
+         "ec2:DescribeTags",
+         "logs:PutLogEvents",
+         "logs:DescribeLogStreams",
+         "logs:DescribeLogGroups",
+         "logs:CreateLogStream",
+         "logs:CreateLogGroup",
+         "logs:DeleteLogGroup",
+         "logs:DeleteLogStream",
+         "logs:PutRetentionPolicy",
+         "logs:GetLogEvents",
+         "logs:PutLogEvents",
+         "s3:GetObjectAcl",
+         "s3:GetObject",
+         "s3:ListBucket", 
+         "ecr:GetAuthorizationToken", 
+         "dynamodb:DescribeTable",
+         "dynamodb:PutItem",
+         "dynamodb:CreateTable"
       ],
       "Resource": "*"
     },
@@ -157,8 +211,6 @@ The security group(s) that the integration tests use should include the followin
 | HTTP        | 80   | 0.0.0.0/0 |
 | SSH         | 22   | 0.0.0.0/0 |
 | RDP         | 3389 | 0.0.0.0/0 |
-| WinRM-HTTP  | 5985 | 0.0.0.0/0 |
-| WinRM-HTTPS | 5986 | 0.0.0.0/0 |
 
 By default, egress allows all traffic. This is fine. 
 
@@ -179,7 +231,7 @@ on creating the key pair.
 
 **Reminder: All AWS resources including EC2 key pair and ECR repository must be in the same region as the instances, so this assumes that they are created in the `us-west-2` region.**
 
-## Required parameters for Terraform to have handy
+# Required parameters for Terraform to have handy
 
 1. GitHub repo (ex: https://github.com/aws/private-amazon-cloudwatch-agent-staging.git)
 2. GitHub SHA: `git checkout your-branch && git rev-parse --verify HEAD`
@@ -189,6 +241,7 @@ on creating the key pair.
 6. IAM role **name**
     1. If you have a role ARN like `arn:aws:iam::12345:role/FooBarBaz`, then the value you want just `FooBarBaz`
 
+# Run Integration Test's Method
 ## GitHub actions on your personal fork (Preferred)
 
 The integration test GitHub actions workflow installs terraform, builds the agent and uploads the installable packages
@@ -212,18 +265,17 @@ repository secret for the GitHub actions workflow.
 Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) on configuring GitHub Actions
 secrets.
 
-| Key                               | Description                                                                                             |
-|-----------------------------------|---------------------------------------------------------------------------------------------------------|
-| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                   |
-| `TERRAFORM_AWS_ACCESS_KEY_ID`     | IAM user access key                                                                                     |
-| `TERRAFORM_AWS_SECRET_ACCESS_KEY` | IAM user secret key                                                                                     |
-| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                   |
-| `KEY_NAME`                        | EC2 key pair name                                                                                       |
-| `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars) |
-| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                     |
-| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                    |
-| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                   | 
-| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                               |
+| Key                               | Description                                                                                              |
+|-----------------------------------|----------------------------------------------------------------------------------------------------------|
+| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                    |
+| `TERRAFORM_AWS_ASSUME_ROLE`       | IAM role to assume                                                                                       |
+| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                    |
+| `KEY_NAME`                        | EC2 key pair name                                                                                        |
+| `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars)  |
+| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                      |
+| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                     |
+| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                    | 
+| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                                |
 
 ### Run the integration test action on your fork
 
@@ -268,10 +320,10 @@ terraform apply --auto-approve \
          -var="github_repo=${gh repo you want to use ex https://github.com/aws/private-amazon-cloudwatch-agent-staging.git}" \
          -var="github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
          -var='vpc_security_group_ids=["${name of your security group}"]' \
-         -var="key_name=${name of key pair your created}" \
+         -var="ssh_key_name=${name of key pair your created}" \
          -var="s3_bucket=${name of your s3 bucket created}" \
          -var="iam_instance_profile=${name of your iam role created}" \
-         -var="ssh_key=${your key that you downloaded}"
+         -var="ssh_key_value=${your key that you downloaded}"
 ```
 
 > See the list of parameters or table of GitHub secret params as reference
@@ -295,7 +347,7 @@ upload: ./terraform.tfstate to s3://***/integration-test/local-stack-terraform-s
 
 In this example, you should keep track of `ec2-35-87-254-148.us-west-2.compute.amazonaws.com`
 
-Start the linux integration tests (example):
+### Start the linux integration tests (example):
 
 ```shell
 cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
@@ -306,7 +358,7 @@ terraform apply --auto-approve \
          -var='vpc_security_group_ids=["${name of your security group}"]' \
          -var="s3_bucket=${name of your s3 bucket created}" \
          -var="iam_instance_profile=${name of your iam role created}" \
-         -var="key_name=${name of key pair your created}" \
+         -var="ssh_key_name=${name of key pair your created}" \
          -var="ami=${ami for test you want to use ex cloudwatch-agent-integration-test-ubuntu*}" \
          -var="user=${log in for the ec2 instance ex ubuntu}" \
          -var="install_agent=${command to install agent ex dpkg -i -E ./amazon-cloudwatch-agent.deb}" \
@@ -315,7 +367,7 @@ terraform apply --auto-approve \
          -var="binary_name=${binary to install ex amazon-cloudwatch-agent.deb}" \
          -var="local_stack_host_name=${dns value you got from the local stack terraform apply step}" \
          -var="test_name=${what you want to call the ec2 instance name}" \
-         -var="ssh_key=${your key that you downloaded}"
+         -var="ssh_key_value=${your key that you downloaded}"
 ```
 
 > See the list of parameters or table of GitHub secret params as reference
@@ -343,6 +395,48 @@ aws_instance.integration-test: Creation complete after 5m35s [id=i-0f7f77a62c93d
 
 Apply complete! Resources: 1 added, 0 changed, 0 destroyed.   
 ```
+
+### Start the Windows integration tests (example): 
+```shell
+cd ../linux # assuming you are still in the ./integration/terraform/ec2/localstack directory
+terraform init
+terraform apply --auto-approve \
+         -var="github_repo=${GH repo you want to use. Default: https://github.com/aws/amazon-cloudwatch-agent.git}" \
+         -var="github_sha=${Commit sha you want to use. Default: a029f69cd3b4164cb601cfa20f10b717c5f85957}" \
+         -var="s3_bucket=${Name of your s3 bucket created}" \
+         -var="ami=${AMI for test you want to use. Default: cloudwatch-agent-integration-test-win-2022*}" \
+         -var="test_name=${What you want to call the ec2 instance name. Default: windows-2022}" \
+         -var="ssh_key_name=${Name of key pair your created}" \
+         -var="ssh_key_value=${Your key that you downloaded}"
+```
+
+For these parameters, you are **not required to input them**:
+* github_repo
+* github_sha
+* ssh_key_name
+* ssh_key_value
+* ami
+* test_name
+
+After running the tests, you should see the following results as a success integration test:
+```
+null_resource.integration_test: Still creating... [1m30s elapsed]
+null_resource.integration_test: Still creating... [1m40s elapsed]
+null_resource.integration_test: Still creating... [1m50s elapsed]
+null_resource.integration_test: Still creating... [2m0s elapsed]
+null_resource.integration_test (remote-exec): === RUN   TestAgentStatus
+null_resource.integration_test: Still creating... [2m10s elapsed]
+null_resource.integration_test: Still creating... [2m20s elapsed]
+null_resource.integration_test: Still creating... [2m30s elapsed]
+null_resource.integration_test: Still creating... [2m40s elapsed]
+null_resource.integration_test: Still creating... [2m50s elapsed]
+null_resource.integration_test (remote-exec): --- PASS: TestAgentStatus (44.84s)
+null_resource.integration_test (remote-exec): PASS
+null_resource.integration_test (remote-exec): ok        github.com/aws/amazon-cloudwatch-agent/integration/test/sanity  45.203s
+null_resource.integration_test: Creation complete after 2m52s [id=8591283884920986776]
+```
+
+### Destroy resources created by Terraform
 
 After running tests, tear down everything with Terraform:
 

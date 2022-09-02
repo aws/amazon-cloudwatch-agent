@@ -2,8 +2,6 @@
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'
      xmlns:util='http://schemas.microsoft.com/wix/UtilExtension'>
 
-  <?define FixPermissionScriptAction=""powershell.exe" -ExecutionPolicy Bypass -File "[INSTALLDIR]permission.ps1"?>
-
   <Product Id='*'
     Name='Amazon CloudWatch Agent'
     UpgradeCode='c537c936-91b3-4270-94d7-e128acfc3e86'
@@ -26,7 +24,13 @@
     />
 
     <MediaTemplate EmbedCab='yes' />
-
+    <Property Id="POWERSHELLEXE">
+      <RegistrySearch Id="POWERSHELLEXE"
+                      Type="raw"
+                      Root="HKLM"
+                      Key="SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell"
+                      Name="Path" />
+    </Property>
     <Feature Id='ProductFeature' Title="Amazon CloudWatch Agent" Level='1'>
       <ComponentRef Id='StarterEXE' />
       <ComponentRef Id='AgentEXE' />
@@ -43,10 +47,6 @@
       <ComponentRef Id='CommonConfigTOML' />
       <ComponentRef Id='CreateLogsFolder' />
       <ComponentRef Id='CreateConfigsFolder' />
-      <ComponentRef Id='CreateCWOCConfigsFolder' />
-      <ComponentRef Id='CreateCWOCLogsFolder' />
-      <ComponentRef Id='CWOCEXE' />
-      <ComponentRef Id='PredefinedConfigData' />
       <ComponentRef Id='FIX_PERMISSION' />
     </Feature>
 
@@ -63,10 +63,6 @@
           <Directory Id='Config' Name='AmazonCloudWatchAgent'>
             <Directory Id="Configs" Name="Configs"/>
             <Directory Id='Logs' Name='Logs'/>
-            <Directory Id='CWOCConfig' Name='CWAgentOtelCollector'>
-              <Directory Id='CWOCConfigs' Name='Configs'/>
-              <Directory Id='CWOCLogs' Name='Logs'/>
-            </Directory>
           </Directory>
         </Directory>
       </Directory>
@@ -97,33 +93,6 @@
                 Stop="both"
                 Remove="uninstall"
                 Name="AmazonCloudWatchAgent"
-                Wait="yes"
-            />
-        </Component>
-        <Component Id='CWOCEXE' Guid='3afd22e7-3f83-413f-9861-e1ac923a15c4' Win64='yes'>
-            <File Source='cwagent-otel-collector.exe' KeyPath='yes' Checksum='yes'/>
-            <ServiceInstall
-                Id="CWOCServiceInstaller"
-                Type="ownProcess"
-                Name="CWAgentOtelCollector"
-                DisplayName="CWAgent Otel Collector"
-                Description="CWAgent Otel Collector"
-                Start="demand"
-                Account="LocalSystem"
-                Interactive="no"
-                ErrorControl="normal"
-                Arguments=" --config=&quot;[CWOCConfig]cwagent-otel-collector.yaml&quot;"
-                Vital="yes"
-            >
-                <ServiceDependency Id="LanmanServer"/>
-                <ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart" ThirdFailureActionType="restart" ResetPeriodInDays="1" RestartServiceDelayInSeconds="2" xmlns="http://schemas.microsoft.com/wix/UtilExtension"/>
-                <ServiceConfig OnInstall="yes" OnReinstall="yes" FailureActionsWhen="failedToStopOrReturnedError"/>
-            </ServiceInstall>
-            <ServiceControl
-                Id="CWOCStartService"
-                Stop="both"
-                Remove="uninstall"
-                Name="CWAgentOtelCollector"
                 Wait="yes"
             />
         </Component>
@@ -177,34 +146,27 @@
         </Component>
     </DirectoryRef>
 
-    <DirectoryRef Id="CWOCConfig">
-        <Component Id='PredefinedConfigData' Guid='b0543a32-51e2-4f89-8375-4924e46095f4' Win64='yes' NeverOverwrite='yes' Permanent='yes'>
-            <File Source='predefined-config-data' KeyPath='yes'/>
-        </Component>
-    </DirectoryRef>
-
-    <DirectoryRef Id="CWOCConfigs">
-        <Component Id='CreateCWOCConfigsFolder' Guid='8c7cb53c-9b56-47b7-8a06-7c164a0b574a' Win64='yes'>
-            <CreateFolder />
-        </Component>
-    </DirectoryRef>
-
-    <DirectoryRef Id="CWOCLogs">
-        <Component Id='CreateCWOCLogsFolder' Guid='bfbfaece-1a9a-489b-bf1c-1039a7f70803' Win64='yes'>
-            <CreateFolder />
-        </Component>
-    </DirectoryRef>
-
     <DirectoryRef Id="Logs">
         <Component Id='CreateLogsFolder' Guid='fe9042cb-a4fa-4b8e-9852-685a342338b5' Win64='yes'>
             <CreateFolder />
         </Component>
     </DirectoryRef>
-
-    <CustomAction Id="UpdateConfigPermission" Directory="INSTALLDIR" ExeCommand="$(var.FixPermissionScriptAction)" Execute="deferred" Return="check" Impersonate="no" />
+     <!-- Find and use powershell to run the command, because just running "powershell.exe" did not resolve (not in ENV path) when using "WixQuietExec".-->
+    <SetProperty Id="QtExecUpdateConfigPermission" 
+        Sequence="execute"
+        Before ="QtExecUpdateConfigPermission"
+        Value='&quot;[POWERSHELLEXE]&quot;  -ExecutionPolicy Bypass -File "[INSTALLDIR]permission.ps1" ' 
+    />
+    <!-- Setup a silent execution contrainer around the command -->
+    <CustomAction Id="QtExecUpdateConfigPermission" 
+    BinaryKey="WixCA" 
+    DllEntry="WixQuietExec" 
+    Execute="deferred" 
+    Return="check" 
+    Impersonate="no" />
 
     <InstallExecuteSequence>
-        <Custom Action="UpdateConfigPermission" After="InstallFiles">NOT UPGRADINGPRODUCTCODE AND NOT (REMOVE~="ALL")</Custom>
+    <Custom Action="QtExecUpdateConfigPermission" After="InstallFiles">NOT UPGRADINGPRODUCTCODE AND NOT (REMOVE~="ALL")</Custom>
     </InstallExecuteSequence>
 
     <MajorUpgrade AllowDowngrades="yes"/>

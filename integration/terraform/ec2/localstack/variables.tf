@@ -3,19 +3,9 @@ variable "ec2_instance_type" {
   default = "t3a.xlarge"
 }
 
-variable "key_name" {
+variable "ssh_key_name" {
   type = string
   default = "cwagent-integ-test-key"
-}
-
-variable "iam_instance_profile" {
-  type = string
-  default = "CloudWatchAgentServerRole"
-}
-
-variable "vpc_security_group_ids" {
-  type = list(string)
-  default = ["sg-013585129c1f92bf0"]
 }
 
 variable "region" {
@@ -23,7 +13,7 @@ variable "region" {
   default = "us-west-2"
 }
 
-variable "ssh_key" {
+variable "ssh_key_value" {
   type = string
   default = ""
 }

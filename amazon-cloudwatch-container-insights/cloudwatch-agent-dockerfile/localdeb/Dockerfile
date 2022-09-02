@@ -1,11 +1,13 @@
 ARG BUILD_IMAGE=ubuntu:latest
 FROM $BUILD_IMAGE as build
 
+ARG TARGETARCH
+
 RUN apt-get update &&  \
     apt-get install -y ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-COPY amazon-cloudwatch-agent.deb /tmp/amazon-cloudwatch-agent.deb
+COPY ${TARGETARCH}/amazon-cloudwatch-agent.deb /tmp/amazon-cloudwatch-agent.deb
 
 RUN dpkg -i -E /tmp/amazon-cloudwatch-agent.deb && \
     rm -rf /tmp/* && \

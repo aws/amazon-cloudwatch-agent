@@ -16,6 +16,7 @@ ENV GO111MODULE=${GO111MODULE}
 COPY go.mod /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 COPY go.sum /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 RUN go mod download -x
+
 COPY . /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 RUN make build-for-docker-${TARGETARCH}
 
