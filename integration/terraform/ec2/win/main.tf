@@ -9,7 +9,8 @@ resource "random_id" "testing_id" {
 
 resource "tls_private_key" "ssh_key" {
   count     = var.ssh_key_name == "" ? 1 : 0
-  algorithm = "ED25519"
+  algorithm = "RSA"
+  rsa_bits  = 4096
 }
 
 resource "aws_key_pair" "aws_ssh_key" {
@@ -34,18 +35,23 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
+  get_password_data           = true
   user_data                   = <<EOF
 <powershell>
+Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
 Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
 Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+
 Start-Service sshd
 Set-Service -Name sshd -StartupType 'Automatic'
-if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled)) {
-    Write-Output "Firewall Rule 'OpenSSH-Server-In-TCP' does not exist, creating it..."
-    New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
-} else {
-    Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
-}
+
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+choco install git --confirm
+choco install go --confirm
+
+msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
 </powershell>
 EOF
 
@@ -56,16 +62,20 @@ EOF
 
 resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
+  # Install software
   provisioner "remote-exec" {
     # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
     # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
     inline = [
       "set AWS_REGION=${var.region}",
       "echo clone and install agent",
+      "set PATH=C:/ProgramData/chocolatey/bin",
+      "choco refreshenv",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
-      "git reset --hard ${var.github_sha}",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
+      "powershell git reset --hard ${var.github_sha}",
+      "C:\\Program^ Files\\Amazon\\AWSCLIV2\\bin\\aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
+
       "msiexec /i amazon-cloudwatch-agent.msi",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
@@ -76,9 +86,10 @@ resource "null_resource" "integration_test" {
     connection {
       type            = "ssh"
       user            = "Administrator"
-      private_key     = local.private_key_content
+      password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
       host            = aws_instance.cwagent.public_ip
       target_platform = "windows"
+      timeout         = "6m"
     }
   }
 }
