@@ -64,18 +64,14 @@ resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
   # Install software
   provisioner "remote-exec" {
-    # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
-    # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
     inline = [
+      "refreshenv",
       "set AWS_REGION=${var.region}",
       "echo clone and install agent",
-      "set PATH=C:/ProgramData/chocolatey/bin",
-      "choco refreshenv",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
-      "powershell git reset --hard ${var.github_sha}",
-      "C:\\Program^ Files\\Amazon\\AWSCLIV2\\bin\\aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
-
+      "git reset --hard ${var.github_sha}",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
       "msiexec /i amazon-cloudwatch-agent.msi",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
