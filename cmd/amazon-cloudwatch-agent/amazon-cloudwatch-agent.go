@@ -70,6 +70,7 @@ var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print th
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
 var fConfig = flag.String("config", "", "configuration file to load")
+var fOtelConfig = flag.String("otelconfig", "", "YAML configuration file to run OTel pipeline")
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -349,6 +350,9 @@ func runAgent(ctx context.Context,
 	agentinfo.OutputPlugins = c.OutputNames()
 
 	// inject OTel
+	if *fOtelConfig != "" {
+		log.Println("no YAML config provided for agent")
+	}
 	log.Println("creating otel sidecar")
 	otelInfo := component.BuildInfo{
 		Command:     "ccwa-otel",
@@ -370,7 +374,7 @@ func runAgent(ctx context.Context,
 	// TODO: this uses a hard coded path to some other expected OTEL pipeline config.
 	configParams := otelservice.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
-			URIs:      []string{"/tmp/consolidated-agent-container-insights.yml"},
+			URIs:      []string{*fOtelConfig},
 			Providers: mapProviders,
 		},
 	}
