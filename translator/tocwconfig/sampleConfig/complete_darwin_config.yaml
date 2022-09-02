@@ -1,6 +1,9 @@
 exporters:
     cloudwatch: {}
     cloudwatchlogs: {}
+processors:
+    delta: {}
+    ec2tagger: {}
 receivers:
     cpu: {}
     disk: {}
@@ -18,9 +21,11 @@ service:
     pipelines:
         metrics:
             exporters:
-                - cloudwatchlogs
                 - cloudwatch
-            processors: []
+                - cloudwatchlogs
+            processors:
+                - ec2tagger
+                - delta
             receivers:
                 - cpu
                 - socket_listener

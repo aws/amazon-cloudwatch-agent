@@ -1,5 +1,6 @@
 exporters:
     cloudwatch: {}
+processors: {}
 receivers:
     statsd: {}
 service:

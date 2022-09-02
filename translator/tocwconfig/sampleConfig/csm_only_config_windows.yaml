@@ -1,5 +1,6 @@
 exporters:
     aws_csm: {}
+processors: {}
 receivers:
     awscsm_listener: {}
 service:

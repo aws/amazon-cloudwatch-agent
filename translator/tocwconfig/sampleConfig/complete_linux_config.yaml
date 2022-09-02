@@ -1,6 +1,9 @@
 exporters:
     cloudwatch: {}
     cloudwatchlogs: {}
+processors:
+    delta: {}
+    ec2tagger: {}
 receivers:
     cpu: {}
     disk: {}
@@ -20,7 +23,9 @@ service:
             exporters:
                 - cloudwatchlogs
                 - cloudwatch
-            processors: []
+            processors:
+                - ec2tagger
+                - delta
             receivers:
                 - processes
                 - swap

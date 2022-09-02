@@ -1,5 +1,7 @@
 exporters:
     cloudwatch: {}
+processors:
+    ec2tagger: {}
 receivers:
     cpu: {}
     disk: {}
@@ -9,8 +11,9 @@ service:
         metrics:
             exporters:
                 - cloudwatch
-            processors: []
+            processors:
+                - ec2tagger
             receivers:
+                - nvidia_smi
                 - cpu
                 - disk
-                - nvidia_smi

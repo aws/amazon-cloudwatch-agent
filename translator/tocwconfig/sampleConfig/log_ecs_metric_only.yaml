@@ -31,25 +31,19 @@ exporters:
     parse_json_encoded_attr_values: [ Sources ]
     resource_to_telemetry_conversion:
       enabled: true
-  cloudwatchlogs:
-      - endpoint_override: https://fake_endpoint
-        force_flush_interval: 5s
-        log_stream_name: fake-host-name
-        region: us-west-2
-        tagexclude:
-          - metricPath
-        tagpass:
-          metricPath:
-            - logs
-            - logs_socket_listener
+  cloudwatchlogs: {}
 
 processors:
   batch/containerinsights:
     timeout: 30s
+  ec2tagger: {}
+  ecsdecorator: {}
 receivers:
   awscontainerinsightreceiver/containerinsights:
     collection_interval: 30s
     container_orchestrator: ecs
+  cadvisor: {}
+  socket_listener: {}
 service:
   pipelines:
     metrics:
@@ -58,5 +52,9 @@ service:
         - awsemf/containerinsights
       processors:
         - batch/containerinsights
+        - ecsdecorator
+        - ec2tagger
       receivers:
         - awscontainerinsightreceiver/containerinsights
+        - cadvisor
+        - socket_listener

@@ -1,5 +1,6 @@
 exporters:
     cloudwatchlogs: {}
+processors: {}
 receivers:
     logfile: {}
 service:

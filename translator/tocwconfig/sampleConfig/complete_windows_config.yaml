@@ -1,6 +1,8 @@
 exporters:
     cloudwatch: {}
     cloudwatchlogs: {}
+processors:
+    ec2tagger: {}
 receivers:
     logfile: {}
     nvidia_smi: {}
@@ -15,7 +17,8 @@ service:
             exporters:
                 - cloudwatchlogs
                 - cloudwatch
-            processors: []
+            processors:
+                - ec2tagger
             receivers:
                 - win_perf_counters
                 - nvidia_smi

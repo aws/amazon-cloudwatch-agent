@@ -1,5 +1,7 @@
 exporters:
     cloudwatch: {}
+processors:
+    ec2tagger: {}
 receivers:
     disk: {}
     mem: {}
@@ -8,7 +10,8 @@ service:
         metrics:
             exporters:
                 - cloudwatch
-            processors: []
+            processors:
+                - ec2tagger
             receivers:
                 - disk
                 - mem

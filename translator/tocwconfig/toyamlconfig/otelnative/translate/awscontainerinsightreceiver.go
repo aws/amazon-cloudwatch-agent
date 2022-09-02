@@ -10,6 +10,8 @@ import "fmt"
 //go:embed emf_config.yml
 var awsemfConfig string
 
+var ecsPluginIndicators = []string{"ecsdecorator"}
+
 // AwsContainerInsightReceiver Translating ECS to telegraf plugins converts the logs.metrics_collected.ecs
 // configuration into a combination of inputs and processors:
 // inputs = [cadvisor, socket_listener], processors = [ec2tagger, ecsdecorator]
@@ -37,60 +39,55 @@ func (rec AwsContainerInsightReceiver) Replaces() map[string][]string {
 	}
 }
 
+func (rec AwsContainerInsightReceiver) RequiresTranslation(in, proc, out map[string]interface{}) bool {
+	return usesECSConfig(in, proc, out)
+}
+
 func (rec AwsContainerInsightReceiver) Receivers(in, proc, out map[string]interface{}) map[string]interface{} {
-	m := make(map[string]interface{})
+	result := make(map[string]interface{})
+	receiverMap := make(map[string]interface{})
 	cadvisorPlugin, ok := in["cadvisor"]
 	if !ok {
-		return m
+		return receiverMap
 	}
 	plugin, ok := cadvisorPlugin.([]interface{})
 	if !ok {
-		return m
+		return receiverMap
 	}
 	if len(plugin) < 1 {
-		return m
+		return receiverMap
 	}
 	pluginMap, ok := plugin[0].(map[string]interface{})
 	if !ok {
-		return m
+		return receiverMap
 	}
-	m["collection_interval"] = pluginMap["interval"]
-	m["container_orchestrator"] = pluginMap["container_orchestrator"]
+	receiverMap["collection_interval"] = pluginMap["interval"]
+	receiverMap["container_orchestrator"] = pluginMap["container_orchestrator"]
 
-	// replace input plugins
-	for _, p := range rec.Replaces()[otelnative.InputsKey] {
-		delete(in, p)
-	}
-	in[fmt.Sprintf("awscontainerinsightreceiver/%s", rec.Name())] = m
-	return in
+	result[fmt.Sprintf("awscontainerinsightreceiver/%s", rec.Name())] = receiverMap
+	return result
 }
 
 func (rec AwsContainerInsightReceiver) Processors(in, proc, out map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
 	m := make(map[string]interface{})
 	interval := extractCollectionInterval(in)
 	if interval != "" {
 		m["timeout"] = interval
 	}
-	// replace processor plugins
-	for _, p := range rec.Replaces()[otelnative.ProcessorsKey] {
-		delete(proc, p)
-	}
-	proc[fmt.Sprintf("batch/%s", rec.Name())] = m
-	return proc
+
+	result[fmt.Sprintf("batch/%s", rec.Name())] = m
+	return result
 }
 
 func (rec AwsContainerInsightReceiver) Exporters(in, proc, out map[string]interface{}) map[string]interface{} {
-	// replace processor plugins
-	for _, p := range rec.Replaces()[otelnative.OutputsKey] {
-		delete(out, p)
-	}
-
+	result := make(map[string]interface{})
 	m, err := getDefaultEmfExporterConfig()
 	if err != nil {
 		return map[string]interface{}{}
 	}
-	out[fmt.Sprintf("awsemf/%s", rec.Name())] = m
-	return out
+	result[fmt.Sprintf("awsemf/%s", rec.Name())] = m
+	return result
 }
 
 func getDefaultEmfExporterConfig() (map[string]interface{}, error) {
@@ -136,4 +133,17 @@ func extractCollectionInterval(inputs map[string]interface{}) string {
 		return ""
 	}
 	return intervalStr
+}
+
+func usesECSConfig(plugins ...map[string]interface{}) bool {
+	for _, component := range plugins {
+		for key := range component {
+			for _, translatable := range ecsPluginIndicators {
+				if key == translatable {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

@@ -1,5 +1,8 @@
 exporters:
     cloudwatchlogs: {}
+processors:
+    ec2tagger: {}
+    k8sdecorator: {}
 receivers:
     cadvisor: {}
     k8sapiserver: {}
@@ -9,7 +12,9 @@ service:
         metrics:
             exporters:
                 - cloudwatchlogs
-            processors: []
+            processors:
+                - k8sdecorator
+                - ec2tagger
             receivers:
                 - k8sapiserver
                 - cadvisor

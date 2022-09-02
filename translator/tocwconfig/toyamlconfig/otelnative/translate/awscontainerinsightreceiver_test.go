@@ -158,20 +158,14 @@ func validateExpectedPlugins(
 	removed, ok := translator.Replaces()[section]
 	assert.True(t, ok)
 
-	cnt := 0
 	for key := range pluginMap {
-		for _, e := range introduced {
-			if key == e+"/"+translator.Name() {
-				cnt++
-			}
-		}
 		for _, e := range removed {
 			if key == e {
 				t.Errorf("Expected %s to be removed, but it still exists", e)
 			}
 		}
 	}
-	assert.Equal(t, len(introduced), cnt)
+	assert.Equal(t, len(introduced), len(pluginMap))
 }
 
 func validateEmfExporterPlugin(t *testing.T, emfPlugin map[string]interface{}) {

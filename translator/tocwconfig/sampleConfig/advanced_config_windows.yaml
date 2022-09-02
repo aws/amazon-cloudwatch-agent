@@ -1,5 +1,7 @@
 exporters:
     cloudwatch: {}
+processors:
+    ec2tagger: {}
 receivers:
     win_perf_counters: {}
 service:
@@ -7,6 +9,7 @@ service:
         metrics:
             exporters:
                 - cloudwatch
-            processors: []
+            processors:
+                - ec2tagger
             receivers:
                 - win_perf_counters

@@ -5,9 +5,10 @@ package toyamlconfig
 
 import (
 	"bytes"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/ecs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder/mapstructure"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative/translate"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/service"
@@ -26,27 +27,37 @@ const (
 	outputsKeyName    = "outputs"
 )
 
+var (
+	otelNativeTranslators = []otelnative.Translator{
+		translate.AwsContainerInsightReceiver{},
+	}
+)
+
 func ToYamlConfig(val interface{}) (string, interface{}) {
 	inputs := extractFromConfig(val, inputsKeyName)
 	procs := extractFromConfig(val, processorsKeyName)
 	outputs := extractFromConfig(val, outputsKeyName)
 
-	if ecs.UsesECSConfig(inputs, procs, outputs) {
-		log.Println("Config uses ECS. Include container insights configurations")
-		newInputs := ecs.TranslateReceivers(copyMap(inputs), copyMap(procs), copyMap(outputs))
-		newProcs := ecs.TranslateProcessors(copyMap(inputs), copyMap(procs), copyMap(outputs))
-		newOutputs := ecs.TranslateExporters(copyMap(inputs), copyMap(procs), copyMap(outputs))
+	nativeReceivers := make(map[string]interface{})
+	nativeProcessors := make(map[string]interface{})
+	nativeExporters := make(map[string]interface{})
+	for _, t := range otelNativeTranslators {
+		if t.RequiresTranslation(inputs, procs, outputs) {
+			receivers := t.Receivers(util.CopyMap(inputs), util.CopyMap(procs), util.CopyMap(outputs))
+			processors := t.Processors(util.CopyMap(inputs), util.CopyMap(procs), util.CopyMap(outputs))
+			exporters := t.Exporters(util.CopyMap(inputs), util.CopyMap(procs), util.CopyMap(outputs))
 
-		inputs = newInputs
-		procs = newProcs
-		outputs = newOutputs
+			nativeReceivers = util.MergeMaps(nativeReceivers, receivers)
+			nativeProcessors = util.MergeMaps(nativeProcessors, processors)
+			nativeExporters = util.MergeMaps(nativeExporters, exporters)
+		}
 	}
 
 	cfg := make(map[string]interface{})
 	enc := mapstructure.NewEncoder()
-	rec := encodeReceivers(inputs, &cfg, enc)
-	proc := encodeProcessors(procs, &cfg, enc)
-	ex := encodeExporters(outputs, &cfg, enc)
+	rec := encodeReceivers(inputs, nativeReceivers, &cfg, enc)
+	proc := encodeProcessors(procs, nativeProcessors, &cfg, enc)
+	ex := encodeExporters(outputs, nativeExporters, &cfg, enc)
 	encodeService(rec, proc, ex, &cfg, enc)
 
 	var buffer bytes.Buffer
@@ -58,46 +69,54 @@ func ToYamlConfig(val interface{}) (string, interface{}) {
 	return buffer.String(), cfg
 }
 
-func encodeReceivers(inputs map[string]interface{}, cfg *map[string]interface{}, encoder encoder.Encoder) map[config.ComponentID]interface{} {
+func encodeReceivers(inputs, nativeInputs map[string]interface{}, cfg *map[string]interface{}, encoder encoder.Encoder) map[config.ComponentID]interface{} {
 	receiversSection := make(map[string]interface{})
 
-	receivers := inputsToReceivers(inputs)
+	receivers := inputsToReceivers(inputs, nativeInputs)
 	receiversSection[receiversKeyName] = receivers
 	err := encoder.Encode(receiversSection, &cfg)
 	util.PanicIfErr("Encode to a valid yaml config fails because of", err)
 	return receivers
 }
 
-func inputsToReceivers(inputs map[string]interface{}) map[config.ComponentID]interface{} {
+func inputsToReceivers(inputs, nativeInputs map[string]interface{}) map[config.ComponentID]interface{} {
 	receiverMap := make(map[config.ComponentID]interface{})
-	for key, val := range inputs {
+	for key := range inputs {
+		t := config.Type(key)
+		receiverMap[config.NewComponentID(t)] = struct{}{}
+	}
+	for key, val := range nativeInputs {
 		t := config.Type(key)
 		receiverMap[config.NewComponentID(t)] = val
 	}
 	return receiverMap
 }
 
-func encodeProcessors(processors map[string]interface{}, cfg *map[string]interface{}, encoder encoder.Encoder) map[config.ComponentID]interface{} {
+func encodeProcessors(processors, nativeProcessors map[string]interface{}, cfg *map[string]interface{}, encoder encoder.Encoder) map[config.ComponentID]interface{} {
 	processorsSection := make(map[string]interface{})
-	p := procToProcessors(processors)
+	p := procToProcessors(processors, nativeProcessors)
 	processorsSection[processorsKeyName] = p
 	err := encoder.Encode(processorsSection, &cfg)
 	util.PanicIfErr("Encode to a valid yaml config fails because of", err)
 	return p
 }
 
-func procToProcessors(processors map[string]interface{}) map[config.ComponentID]interface{} {
+func procToProcessors(processors, nativeProcessors map[string]interface{}) map[config.ComponentID]interface{} {
 	processorMap := make(map[config.ComponentID]interface{})
-	for key, val := range processors {
+	for key := range processors {
+		t := config.Type(key)
+		processorMap[config.NewComponentID(t)] = struct{}{}
+	}
+	for key, val := range nativeProcessors {
 		t := config.Type(key)
 		processorMap[config.NewComponentID(t)] = val
 	}
 	return processorMap
 }
 
-func encodeExporters(outputs map[string]interface{}, cfg *map[string]interface{}, encoder encoder.Encoder) map[config.ComponentID]interface{} {
+func encodeExporters(outputs, nativeOutputs map[string]interface{}, cfg *map[string]interface{}, encoder encoder.Encoder) map[config.ComponentID]interface{} {
 	exportersSection := make(map[string]interface{})
-	exporters := outputsToExporters(outputs)
+	exporters := outputsToExporters(outputs, nativeOutputs)
 	exportersSection[exportersKeyName] = exporters
 	err := encoder.Encode(exportersSection, &cfg)
 	util.PanicIfErr("Encode to a valid yaml config fails because of", err)
@@ -105,9 +124,13 @@ func encodeExporters(outputs map[string]interface{}, cfg *map[string]interface{}
 	return exporters
 }
 
-func outputsToExporters(outputs map[string]interface{}) map[config.ComponentID]interface{} {
+func outputsToExporters(outputs, nativeOutputs map[string]interface{}) map[config.ComponentID]interface{} {
 	exporterMap := make(map[config.ComponentID]interface{})
-	for key, val := range outputs {
+	for key := range outputs {
+		t := config.Type(key)
+		exporterMap[config.NewComponentID(t)] = struct{}{}
+	}
+	for key, val := range nativeOutputs {
 		t := config.Type(key)
 		exporterMap[config.NewComponentID(t)] = val
 	}
@@ -150,15 +173,8 @@ func extractFromConfig(cfg interface{}, key string) map[string]interface{} {
 
 	section, ok := c[key].(map[string]interface{})
 	if !ok {
-		log.Panicf("E! failed to extract %s from config during yaml translation", key)
+		log.Printf("E! failed to extract %s from config during yaml translation", key)
+		return map[string]interface{}{}
 	}
 	return section
-}
-
-func copyMap(m map[string]interface{}) map[string]interface{} {
-	dupe := make(map[string]interface{})
-	for k, v := range m {
-		dupe[k] = v
-	}
-	return dupe
 }

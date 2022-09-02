@@ -1,5 +1,8 @@
 exporters:
     cloudwatch: {}
+processors:
+    delta: {}
+    ec2tagger: {}
 receivers:
     cpu: {}
     disk: {}
@@ -11,10 +14,12 @@ service:
         metrics:
             exporters:
                 - cloudwatch
-            processors: []
+            processors:
+                - ec2tagger
+                - delta
             receivers:
+                - diskio
                 - mem
                 - swap
                 - cpu
                 - disk
-                - diskio
