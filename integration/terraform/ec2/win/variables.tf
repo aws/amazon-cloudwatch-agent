@@ -10,7 +10,7 @@ variable "ec2_instance_type" {
 
 variable "ami" {
   type    = string
-  default = "Windows_Server-2019-English-Deep-Learning-2022.07.13*"
+  default = "Windows_Server-2019-English-Deep-Learning*"
 }
 
 variable "github_sha" {

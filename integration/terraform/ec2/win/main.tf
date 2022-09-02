@@ -9,8 +9,7 @@ resource "random_id" "testing_id" {
 
 resource "tls_private_key" "ssh_key" {
   count     = var.ssh_key_name == "" ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 4096
+  algorithm = "ED25519"
 }
 
 resource "aws_key_pair" "aws_ssh_key" {
@@ -35,7 +34,6 @@ resource "aws_instance" "cwagent" {
   iam_instance_profile        = aws_iam_instance_profile.cwagent_instance_profile.name
   vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
-  get_password_data           = true
   user_data                   = <<EOF
 <powershell>
 Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
@@ -78,7 +76,7 @@ resource "null_resource" "integration_test" {
     connection {
       type            = "ssh"
       user            = "Administrator"
-      password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
+      private_key     = local.private_key_content
       host            = aws_instance.cwagent.public_ip
       target_platform = "windows"
     }

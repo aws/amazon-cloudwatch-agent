@@ -1,35 +1,35 @@
 variable "ec2_instance_type" {
-  type = string
+  type    = string
   default = "t3a.xlarge"
 }
 
 variable "ssh_key_name" {
-  type = string
+  type    = string
   default = "cwagent-integ-test-key"
 }
 
 variable "region" {
-  type = string
+  type    = string
   default = "us-west-2"
 }
 
 variable "ssh_key_value" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "github_sha" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "github_repo" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "s3_bucket" {
-  type = string
+  type    = string
   default = ""
 }
 
