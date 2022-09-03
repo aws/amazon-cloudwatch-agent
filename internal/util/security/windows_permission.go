@@ -94,7 +94,7 @@ func CheckFileRights(filePath string) error {
 			if compareIsLocalSystem {
 				hasFileAllAccessLocalSystem = true
 			}
-			if compareIsLocalSystem {
+			if compareIsAdministrators {
 				hasFileAllAccessAdministrators = true
 			}
 		}

@@ -465,7 +465,7 @@ func main() {
 		}
 		return
 	}
-		log.Printf("test only: %v",inputFilters)
+		
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		programFiles := os.Getenv("ProgramFiles")
 		if programFiles == "" { // Should never happen

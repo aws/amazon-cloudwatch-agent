@@ -9,9 +9,10 @@ package security
 import (
 	"fmt"
 	"syscall"
+	"os/user"
 )
 
-// CheckFileRights check that the given filename has been protected by the owner.
+// CheckFileRights check that the given file path has been protected by the owner.
 // If the owner is changed, they need at least the sudo permission to override the owner.
 func CheckFileRights(filePath string) error {
 	var stat syscall.Stat_t
@@ -30,4 +31,21 @@ func CheckFileRights(filePath string) error {
 	}
 	
 	return fmt.Errorf("File's owner does not have enough permission at path %s", filePath)
+}
+
+
+// CheckFileOwnerRights check that the given owner is the same owner of the given filepath
+func CheckFileOwnerRights(filePath, requiredOwner string) error {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(filePath, &stat); err != nil {
+		return fmt.Errorf("Cannot get file's stat %s: %v", filePath, err)
+	}
+
+	if owner, err := user.LookupId(fmt.Sprintf("%d", stat.Uid)); err != nil {
+		return fmt.Errorf("Cannot look up file owner's name %s: %v", filePath, err)
+	} else if owner.Name != requiredOwner {
+		return fmt.Errorf("Agent does not have permission to protect file %s", filePath)
+	}
+
+	return nil
 }

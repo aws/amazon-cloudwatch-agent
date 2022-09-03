@@ -1,7 +1,7 @@
 Running ECS Fargate Integration Tests
 =========================
 ## Prerequisite
-* ECR Repository with the docker image
+* [ECR Repository with the docker image](https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-console.html)
 
 ## How ECS Fargate are set up?
 **Step 1:** Create a Fargate ECS Cluster with the default VPC Network.   
