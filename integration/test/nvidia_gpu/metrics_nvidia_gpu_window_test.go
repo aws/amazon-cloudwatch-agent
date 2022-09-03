@@ -22,7 +22,7 @@ const (
 	numberofWindowsAppendDimensions = 1
 )
 
-var expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi_utilization_gpu", "nvidia_smi_utilization_memory", "nvidia_smi_power_draw", "nvidia_smi_temperature_gpu"}
+var expectedNvidiaGPUWindowsMetrics = []string{"Memory % Committed Bytes In Use", "nvidia_smi utilization_gpu", "nvidia_smi utilization_memory", "nvidia_smi power_draw", "nvidia_smitemperature_gpu"}
 
 func TestNvidiaGPUWindows(t *testing.T) {
 	t.Run("Run CloudWatchAgent with Nvidia-smi on Windows", func(t *testing.T) {
