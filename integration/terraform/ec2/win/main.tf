@@ -57,7 +57,7 @@ msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
 EOF
 
   tags = {
-    Name = "cwagent-integ-test-ec2-windows-${element(split(":", var.test_dir),3)}-${random_id.testing_id.hex}"
+    Name = "cwagent-integ-test-ec2-windows-${element(split("/", var.test_dir),3)}-${random_id.testing_id.hex}"
   }
 }
 
@@ -66,8 +66,8 @@ resource "null_resource" "integration_test" {
   # Install software
   provisioner "remote-exec" {
     inline = [
-      "start /wait timeout 120",
-      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables
+      "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
+      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
       "set AWS_REGION=${var.region}",
       "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
       "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
