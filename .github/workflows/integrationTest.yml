@@ -447,13 +447,16 @@ jobs:
           command: |
             cd integration/terraform/ec2/win
             terraform init
-            terraform apply --auto-approve \
+            if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
               -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
               -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
             
       #This is here just in case workflow cancel
       - name: Terraform destroy
