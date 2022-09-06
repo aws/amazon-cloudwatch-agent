@@ -9,15 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/confmap/provider/envprovider"
-	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
-	"go.opentelemetry.io/collector/confmap/provider/yamlprovider"
-	"go.opentelemetry.io/collector/exporter/loggingexporter"
-	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -49,8 +40,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
-
-	otelservice "go.opentelemetry.io/collector/service"
 
 	"github.com/kardianos/service"
 )
@@ -349,62 +338,6 @@ func runAgent(ctx context.Context,
 	agentinfo.InputPlugins = c.InputNames()
 	agentinfo.OutputPlugins = c.OutputNames()
 
-	// inject OTel
-	if *fOtelConfig != "" {
-		log.Println("no YAML config provided for agent")
-	}
-	log.Println("creating otel sidecar")
-	otelInfo := component.BuildInfo{
-		Command:     "ccwa-otel",
-		Description: "OTel component of CCWA",
-		Version:     agentinfo.FullVersion(),
-	}
-
-	factories, err := NewFactories(c)
-	if err != nil {
-		log.Println("failed to create OTel factories", err)
-		return err
-	}
-	providers := []confmap.Provider{fileprovider.New(), envprovider.New(), yamlprovider.New()}
-
-	mapProviders := make(map[string]confmap.Provider, len(providers))
-	for _, provider := range providers {
-		mapProviders[provider.Scheme()] = provider
-	}
-	// TODO: this uses a hard coded path to some other expected OTEL pipeline config.
-	configParams := otelservice.ConfigProviderSettings{
-		ResolverSettings: confmap.ResolverSettings{
-			URIs:      []string{*fOtelConfig},
-			Providers: mapProviders,
-		},
-	}
-	log.Println("creating otel config provider")
-	otelProvider, err := otelservice.NewConfigProvider(configParams)
-	if err != nil {
-		log.Println("failed to create OTel config provider", err)
-		return err
-	}
-	params := otelservice.CollectorSettings{
-		Factories:      factories,
-		BuildInfo:      otelInfo,
-		ConfigProvider: otelProvider,
-	}
-	log.Println("creating otel service")
-	col, err := otelservice.New(params)
-	if err != nil {
-		log.Println("failed to create otel service", err)
-		return err
-	}
-	//wg.Add(1)
-	//var otelRunErr error
-	//go func() {
-	//	otelRunErr = otelCommand.Execute()
-	//	if otelRunErr != nil {
-	//		log.Println("otel agent exited", otelRunErr)
-	//	}
-	//	wg.Done()
-	//}()
-
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -425,47 +358,7 @@ func runAgent(ctx context.Context,
 	log.Println("creating new logs agent")
 	logAgent := logs.NewLogAgent(c)
 	go logAgent.Run(ctx)
-	//log.Println("running telegraf agent")
-	//var telegrafRunErr error
-	//wg.Add(1)
-	//go func() {
-	//	telegrafRunErr = ag.Run(ctx)
-	//	if telegrafRunErr != nil {
-	//		log.Println("telegraf agent exited", telegrafRunErr)
-	//	}
-	//	wg.Done()
-	//}()
-	//
-	//wg.Wait()
-	//err = multierr.Append(otelRunErr, telegrafRunErr)
-	//return err
-
-	// TODO: for testing
-	return col.Run(ctx)
-}
-
-func NewFactories(c *config.Config) (component.Factories, error) {
-	factories := component.Factories{}
-	// TODO: for Container Insights testing.
-	receivers, err := component.MakeReceiverFactoryMap(awscontainerinsightreceiver.NewFactory())
-	if err != nil {
-		return factories, err
-	}
-	factories.Receivers = receivers
-
-	processors, err := component.MakeProcessorFactoryMap(batchprocessor.NewFactory())
-	if err != nil {
-		return factories, err
-	}
-	factories.Processors = processors
-
-	exporters, err := component.MakeExporterFactoryMap(awsemfexporter.NewFactory(), loggingexporter.NewFactory())
-	if err != nil {
-		return factories, err
-	}
-	factories.Exporters = exporters
-
-	return factories, nil
+	return ag.Run(ctx)
 }
 
 type program struct {

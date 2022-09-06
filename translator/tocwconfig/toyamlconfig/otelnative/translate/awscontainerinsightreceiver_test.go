@@ -101,6 +101,24 @@ func TestPopulateDefaultEmfExporter(t *testing.T) {
 	validateEmfExporterPlugin(t, plugin)
 }
 
+func TestUsesECSConfigDetectsUsage(t *testing.T) {
+	translator := AwsContainerInsightReceiver{}
+	inputs := setUpInputs(t)
+	processors := setUpProcessors(t)
+	outputs := setUpOutputs(t)
+
+	assert.True(t, translator.RequiresTranslation(inputs, processors, outputs))
+}
+
+func TestUsesECSConfigDoesNotDetectUsage(t *testing.T) {
+	m := setUpOutputs(t) // does not include the expected telegraf plugin name
+	for _, plugin := range ecsPluginIndicators {
+		_, ok := m[plugin]
+		assert.False(t, ok)
+	}
+	assert.False(t, usesECSConfig(m))
+}
+
 func setUpInputs(t *testing.T) map[string]interface{} {
 	t.Helper()
 	m := make(map[string]interface{})

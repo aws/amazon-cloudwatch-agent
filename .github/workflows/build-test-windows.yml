@@ -25,9 +25,6 @@ jobs:
       matrix:
         os: [ windows-2019, windows-latest ]
     steps:
-      - name: Support longpaths
-        run: git config --system core.longpaths true
-
       - name: Checkout Repo
         uses: actions/checkout@v2
 

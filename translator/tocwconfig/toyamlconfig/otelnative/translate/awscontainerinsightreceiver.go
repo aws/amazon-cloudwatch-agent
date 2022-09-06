@@ -43,7 +43,7 @@ func (rec AwsContainerInsightReceiver) RequiresTranslation(in, proc, out map[str
 	return usesECSConfig(in, proc, out)
 }
 
-func (rec AwsContainerInsightReceiver) Receivers(in, proc, out map[string]interface{}) map[string]interface{} {
+func (rec AwsContainerInsightReceiver) Receivers(in, _, _ map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	receiverMap := make(map[string]interface{})
 	cadvisorPlugin, ok := in["cadvisor"]
@@ -68,7 +68,7 @@ func (rec AwsContainerInsightReceiver) Receivers(in, proc, out map[string]interf
 	return result
 }
 
-func (rec AwsContainerInsightReceiver) Processors(in, proc, out map[string]interface{}) map[string]interface{} {
+func (rec AwsContainerInsightReceiver) Processors(in, _, _ map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	m := make(map[string]interface{})
 	interval := extractCollectionInterval(in)
@@ -80,7 +80,7 @@ func (rec AwsContainerInsightReceiver) Processors(in, proc, out map[string]inter
 	return result
 }
 
-func (rec AwsContainerInsightReceiver) Exporters(in, proc, out map[string]interface{}) map[string]interface{} {
+func (rec AwsContainerInsightReceiver) Exporters(_, _, _ map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	m, err := getDefaultEmfExporterConfig()
 	if err != nil {
