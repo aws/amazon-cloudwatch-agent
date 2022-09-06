@@ -7,7 +7,6 @@
 package metrics_nvidia_gpu
 
 import (
-	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
 	"testing"

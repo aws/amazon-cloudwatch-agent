@@ -75,6 +75,7 @@ jobs:
 
       - uses: olafurpg/setup-gpg@v3
 
+
       - name: Upload to s3
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} --recursive
@@ -326,7 +327,6 @@ jobs:
           mkdir packages
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.pkg ./packages/amazon-cloudwatch-agent.pkg
-
 
       - name: Upload to s3
         if: steps.cached_sig.outputs.cache-hit != 'true'
