@@ -287,15 +287,6 @@ func verifyToYamlTranslation(t *testing.T, config interface{}, expectedYamlFileP
 	err = decoder.Decode(&expect)
 	assert.NoError(t, err)
 
-	// TODO: output for testing verification
-	expectB, err := yaml.Marshal(expect)
-	assert.NoError(t, err)
-	t.Log("Expected:\n", string(expectB))
-
-	actualB, err := yaml.Marshal(actual)
-	assert.NoError(t, err)
-	t.Log("Actual:\n", string(actualB))
-
 	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 		return pretty.Sprint(x) < pretty.Sprint(y)
 	})
