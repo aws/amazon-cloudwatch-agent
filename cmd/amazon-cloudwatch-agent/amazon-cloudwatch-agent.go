@@ -224,8 +224,6 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	//wg := sync.WaitGroup{} // for running both telegraf and otel agents at the same time
-
 	envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig)
 	if err != nil {
 		return err
