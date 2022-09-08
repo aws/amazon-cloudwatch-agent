@@ -20,6 +20,9 @@ const (
 
 //you can't have a const map in golang
 var osToTestDirMap = map[string][]string{
+	"ec2_gpu": {
+		"./integration/test/nvidia_gpu",
+	},
 	"ec2_linux": {
 		"./integration/test/ca_bundle",
 		"./integration/test/cloudwatchlogs",

@@ -1,7 +1,9 @@
 Running ECS Fargate Integration Tests
 =========================
+## Prerequisite
+* [ECR Repository with the docker image](https://docs.aws.amazon.com/AmazonECR/latest/userguide/getting-started-console.html)
 
-## 1. How ECS Fargate are set up?
+## How ECS Fargate are set up?
 **Step 1:** Create a Fargate ECS Cluster with the default VPC Network.   
 **Step 2:** Create a security group to assign to the service in step 5 which allows all inbound 
 traffics and outbound traffics    
@@ -12,7 +14,7 @@ to decide which containers serve a specific task   and assign the IAM roles in s
 **Step 5:** Create a [service](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_services.html) which configure 
 how many tasks are running in parallel and ensure availability of the task. 
 
-## 2. Setup resources
+## Setup resources
 By running `terraform apply -auto-approve -lock=false`, 
 you agree to setup the following resources:
 * 1 IAM Task Role and 1 Execution Task Role (similar to [these IAM Roles](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/deploy_servicelens_CloudWatch_agent_deploy_ECS.html))
@@ -52,7 +54,7 @@ To be more specifically,
 * **CloudWatchAgent Parameter Store:** Store CloudWatchAgent's configuration and CloudWatchAgent will pull the config from there. [Example configuration](default_resources/default_amazon_cloudwatch_agent.json)
 * **Prometheus Parameter Store:** Store Prometheus's configuration and CloudWatchAgent will pull the config from there. [Example configuration](default_resources/default_ecs_prometheus.tpl)
 
-## 3. Run tests in your AWS account
+## Run tests in your AWS account
 ````
 cd integration/terraform/ecs && terraform init && terraform apply -auto-approve \
     -var="test_dir={{your test case folder name}} \

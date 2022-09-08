@@ -198,7 +198,7 @@ func ProcessMetricsAggregationInterval(input interface{}, defaultValue, pluginNa
 	return
 }
 
-//check if desiredVal exist in inputs list
+// check if desiredVal exist in inputs list
 func ListContains(inputs []string, desiredVal string) bool {
 	for _, val := range inputs {
 		if val == desiredVal {

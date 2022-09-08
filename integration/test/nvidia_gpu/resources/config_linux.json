@@ -1,0 +1,30 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true
+  },
+  "metrics": {
+    "namespace": "NvidiaGPULinuxTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "nvidia_gpu": {
+        "measurement": [
+          "utilization_gpu",
+          "utilization_memory",
+          "power_draw",
+          "temperature_gpu"
+        ],
+        "metrics_collection_interval": 1
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ],
+        "metrics_collection_interval": 1
+      }
+    }
+  }
+}
