@@ -1,5 +1,6 @@
 exporters:
     telegraf_cloudwatch: {}
+processors: {}
 receivers:
     telegraf_socket_listener: {}
 service:

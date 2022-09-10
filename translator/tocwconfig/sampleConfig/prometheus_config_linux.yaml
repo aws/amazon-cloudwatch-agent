@@ -1,5 +1,7 @@
 exporters:
     telegraf_cloudwatchlogs: {}
+processors:
+    telegraf_emfProcessor: {}
 receivers:
     telegraf_prometheus_scraper: {}
 service:
@@ -7,6 +9,7 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatchlogs
-            processors: []
+            processors:
+                - telegraf_emfProcessor
             receivers:
                 - telegraf_prometheus_scraper

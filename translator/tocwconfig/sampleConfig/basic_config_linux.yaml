@@ -1,5 +1,7 @@
 exporters:
     telegraf_cloudwatch: {}
+processors:
+    telegraf_ec2tagger: {}
 receivers:
     telegraf_disk: {}
     telegraf_mem: {}
@@ -8,7 +10,8 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatch
-            processors: []
+            processors:
+                - telegraf_ec2tagger
             receivers:
                 - telegraf_disk
                 - telegraf_mem

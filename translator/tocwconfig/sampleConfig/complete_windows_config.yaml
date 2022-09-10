@@ -1,6 +1,8 @@
 exporters:
     telegraf_cloudwatch: {}
     telegraf_cloudwatchlogs: {}
+processors:
+    telegraf_ec2tagger: {}
 receivers:
     telegraf_logfile: {}
     telegraf_nvidia_smi: {}
@@ -15,7 +17,8 @@ service:
             exporters:
                 - telegraf_cloudwatchlogs
                 - telegraf_cloudwatch
-            processors: []
+            processors:
+                - telegraf_ec2tagger
             receivers:
                 - telegraf_win_perf_counters
                 - telegraf_nvidia_smi

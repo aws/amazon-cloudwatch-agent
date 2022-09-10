@@ -18,6 +18,7 @@ COPY go.sum /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
 RUN go mod download -x
 
 COPY . /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
+
 RUN make build-for-docker-${TARGETARCH}
 
 # Install cert and binaries

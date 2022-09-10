@@ -1,6 +1,9 @@
 exporters:
     telegraf_cloudwatch: {}
     telegraf_cloudwatchlogs: {}
+processors:
+    telegraf_delta: {}
+    telegraf_ec2tagger: {}
 receivers:
     telegraf_cpu: {}
     telegraf_disk: {}
@@ -18,9 +21,11 @@ service:
     pipelines:
         metrics:
             exporters:
-                - telegraf_cloudwatchlogs
                 - telegraf_cloudwatch
-            processors: []
+                - telegraf_cloudwatchlogs
+            processors:
+                - telegraf_ec2tagger
+                - telegraf_delta
             receivers:
                 - telegraf_cpu
                 - telegraf_socket_listener

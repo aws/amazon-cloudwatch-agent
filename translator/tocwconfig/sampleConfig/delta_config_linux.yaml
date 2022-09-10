@@ -1,5 +1,8 @@
 exporters:
     telegraf_cloudwatch: {}
+processors:
+    telegraf_delta: {}
+    telegraf_ec2tagger: {}
 receivers:
     telegraf_diskio: {}
 service:
@@ -7,6 +10,8 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatch
-            processors: []
+            processors:
+                - telegraf_ec2tagger
+                - telegraf_delta
             receivers:
                 - telegraf_diskio

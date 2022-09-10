@@ -1,5 +1,6 @@
 exporters:
     telegraf_cloudwatchlogs: {}
+processors: {}
 receivers:
     telegraf_windows_event_log: {}
 service:

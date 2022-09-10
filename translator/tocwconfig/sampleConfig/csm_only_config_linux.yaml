@@ -1,5 +1,6 @@
 exporters:
   telegraf_aws_csm: {}
+processors: {}
 receivers:
   telegraf_awscsm_listener: {}
 service:

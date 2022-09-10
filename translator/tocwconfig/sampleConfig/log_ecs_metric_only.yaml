@@ -1,14 +1,60 @@
 exporters:
-    telegraf_cloudwatchlogs: {}
+  awsemf/containerinsights:
+    dimension_rollup_option: NoDimensionRollup
+    log_group_name: '/aws/ecs/containerinsights/{ClusterName}/performance'
+    log_stream_name: 'instanceTelemetry/{ContainerInstanceId}'
+    metric_declarations:
+      # instance metrics
+      - dimensions: [ [ ContainerInstanceId, InstanceId, ClusterName ] ]
+        metric_name_selectors:
+          - instance_cpu_reserved_capacity
+          - instance_cpu_utilization
+          - instance_filesystem_utilization
+          - instance_memory_reserved_capacity
+          - instance_memory_utilization
+          - instance_network_total_bytes
+          - instance_number_of_running_tasks
+      - dimensions: [ [ ClusterName ] ]
+        metric_name_selectors:
+          - instance_cpu_limit
+          - instance_cpu_reserved_capacity
+          - instance_cpu_usage_total
+          - instance_cpu_utilization
+          - instance_filesystem_utilization
+          - instance_memory_limit
+          - instance_memory_reserved_capacity
+          - instance_memory_utilization
+          - instance_memory_working_set
+          - instance_network_total_bytes
+          - instance_number_of_running_tasks
+    namespace: ECS/ContainerInsights
+    parse_json_encoded_attr_values: [ Sources ]
+    resource_to_telemetry_conversion:
+      enabled: true
+  telegraf_cloudwatchlogs: {}
+
+processors:
+  batch/containerinsights:
+    timeout: 30s
+  telegraf_ec2tagger: {}
+  telegraf_ecsdecorator: {}
 receivers:
-    telegraf_cadvisor: {}
-    telegraf_socket_listener: {}
+  awscontainerinsightreceiver/containerinsights:
+    collection_interval: 30s
+    container_orchestrator: ecs
+  telegraf_cadvisor: {}
+  telegraf_socket_listener: {}
 service:
-    pipelines:
-        metrics:
-            exporters:
-                - telegraf_cloudwatchlogs
-            processors: []
-            receivers:
-                - telegraf_cadvisor
-                - telegraf_socket_listener
+  pipelines:
+    metrics:
+      exporters:
+        - telegraf_cloudwatchlogs
+        - awsemf/containerinsights
+      processors:
+        - batch/containerinsights
+        - telegraf_ecsdecorator
+        - telegraf_ec2tagger
+      receivers:
+        - awscontainerinsightreceiver/containerinsights
+        - telegraf_cadvisor
+        - telegraf_socket_listener

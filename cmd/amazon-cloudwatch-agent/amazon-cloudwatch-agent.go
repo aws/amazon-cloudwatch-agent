@@ -59,6 +59,7 @@ var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print th
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
 var fConfig = flag.String("config", "", "configuration file to load")
+var fOtelConfig = flag.String("otelconfig", "", "YAML configuration file to run OTel pipeline")
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -352,6 +353,7 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
+	log.Println("creating new logs agent")
 	logAgent := logs.NewLogAgent(c)
 	go logAgent.Run(ctx)
 	return ag.Run(ctx)
