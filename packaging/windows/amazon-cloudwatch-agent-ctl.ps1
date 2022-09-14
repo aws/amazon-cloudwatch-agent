@@ -259,22 +259,12 @@ Function StatusAll() {
         $cwa_config_status = 'not configured'
     }
 
-    $cwoc_status = Runstatus -service_name ${CWOCServiceName}
-    $cwoc_starttime = GetStarttime -service_name ${CWOCServiceName}
-    $cwoc_config_status = 'configured'
-    if (!(Test-Path -LiteralPath "${YAML}")) {
-        $cwoc_config_status = 'not configured'
-    }
-
     $version = ([IO.File]::ReadAllText("${VersionFile}")).Trim()
 
     Write-Output "{"
     Write-Output "  `"status`": `"${cwa_status}`","
     Write-Output "  `"starttime`": `"${cwa_starttime}`","
     Write-Output "  `"configstatus`": `"${cwa_config_status}`","
-    Write-Output "  `"cwoc_status`": `"${cwoc_status}`","
-    Write-Output "  `"cwoc_starttime`": `"${cwoc_starttime}`","
-    Write-Output "  `"cwoc_configstatus`": `"${cwoc_config_status}`","
     Write-Output "  `"version`": `"${version}`""
     Write-Output "}"
 }

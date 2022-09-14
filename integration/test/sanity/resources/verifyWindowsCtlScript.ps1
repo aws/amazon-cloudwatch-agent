@@ -23,9 +23,7 @@ Function assertAgentsStatus(){
     )
 
     assertStatus -KeyToCheck "status" -ExpectedStatus "$CWAgentRunningExpectedStatus"
-    assertStatus -KeyToCheck "cwoc_status" -ExpectedStatus "$ADOTRunningExpectedStatus"
     assertStatus -KeyToCheck "configstatus" -ExpectedStatus "$CWAgentConfiguredExpectedStatus"
-    assertStatus -KeyToCheck "cwoc_configstatus" -ExpectedStatus "$ADOTConfiguredExpectedStatus"
 }
 
 Function assertStatus() {
@@ -36,7 +34,7 @@ Function assertStatus() {
         [string]$ExpectedStatus
     )
 
-    $KeysToCheck = @("status","configstatus","cwoc_status","cwoc_configstatus")
+    $KeysToCheck = @("status","configstatus")
     if (-Not ($KeysToCheck -contains $KeyToCheck)){
         Write-Output "Invalid KeyToCheck: $KeyToCheck, only supports $KeysToCheck"
         Exit 1

@@ -232,20 +232,12 @@ status_all() {
           cwa_config_status='not configured'
      fi
 
-     cwoc_config_status='configured'
-     if [ ! -f "${YAML}" ]; then
-          cwoc_config_status='not configured'
-     fi
-
      version="$(cat ${VERSION_FILE})"
 
      echo "{"
      echo "  \"status\": \"$(runstatus ${CWA_NAME})\","
      echo "  \"starttime\": \"$(get_starttime_fmt ${CWA_NAME})\","
      echo "  \"configstatus\": \"${cwa_config_status}\","
-     echo "  \"cwoc_status\": \"$(runstatus ${CWOC_NAME})\","
-     echo "  \"cwoc_starttime\": \"$(get_starttime_fmt ${CWOC_NAME})\","
-     echo "  \"cwoc_configstatus\": \"${cwoc_config_status}\","
      echo "  \"version\": \"${version}\""
      echo "}"
 }
