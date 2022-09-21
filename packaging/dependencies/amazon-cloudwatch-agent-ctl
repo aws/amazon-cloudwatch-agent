@@ -32,6 +32,7 @@ UsageString="
                 stop|start|status|fetch-config|append-config|remove-config|set-log-level
                 [-m ec2|onPremise|auto]
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
+                [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
 
@@ -47,9 +48,9 @@ UsageString="
             stop:                                   stop the agent process.
             start:                                  start the agent process.
             status:                                 get the status of the agent process.
-            fetch-config:                           use this json config as the agent's only configuration.
-            append-config:                          append json config with the existing json configs if any.
-            remove-config:                          remove json config based on the location (ssm parameter store name, file name)
+            fetch-config:                           apply config for agent, followed by -c or -o or both. Target config can be based on location (ssm parameter store name, file name), or 'default'.
+            append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
+            remove-config:                          remove config for agent, followed by -c or -o or both. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
             set-log-level:                          sets the log level, followed by -l to provide the level in all caps.
 
         -m: mode
@@ -63,7 +64,6 @@ UsageString="
             file:<file-path>:                       file path on the host.
             all:                                    all existing configs. Only apply to remove-config action.
 
-
         -s: optionally restart after configuring the agent configuration
             this parameter is used for 'fetch-config', 'append-config', 'remove-config' action only.
 
@@ -72,9 +72,10 @@ UsageString="
 
 "
 
-cwa_start() {
+start_all() {
      mode="${1:-}"
 
+     echo ""
      echo "****** processing amazon-cloudwatch-agent ******"
      agent_start "${CWA_NAME}" "${mode}"
 }
@@ -89,12 +90,7 @@ agent_start() {
      fi
 
      if [ "${agent_name}" = "${CWA_NAME}" ] && [ ! -f "${TOML}" ]; then
-          if [ -f "${YAML}" ]; then
-               # If cwagent-otel-collector config exists, amazon-cloudwatch-agent default config will be suppressed
-               echo "${CWA_NAME} will not be started as it has not been configured yet."
-               return 0
-          fi
-          echo "Both ${CWA_NAME} is not configured. Applying amazon-cloudwatch-agent default configuration."
+          echo "${CWA_NAME} is not configured. Applying amazon-cloudwatch-agent default configuration."
           cwa_config 'default' 'false' "${mode}" 'default'
      fi
 
@@ -108,7 +104,9 @@ agent_start() {
      fi
 }
 
-cwa_stop() {
+stop_all() {
+
+     echo ""
      echo "****** processing amazon-cloudwatch-agent ******"
      agent_stop_and_disable "${CWA_NAME}"
 }
@@ -117,7 +115,6 @@ agent_stop_and_disable() {
      agent_name="${1:-}"
 
      agent_stop "${agent_name}"
-     agent_disable "${agent_name}"
 }
 
 agent_stop() {
@@ -135,17 +132,9 @@ agent_stop() {
      fi
 }
 
-# amazon-cloudwatch-agent will not be disabled for now (TBD)
-agent_disable() {
-     agent_name="${1:-}"
-     if [ "${SYSTEMD}" = 'true' ] && [ "${agent_name}" = "${CWOC_NAME}" ]; then
-          systemctl disable "${agent_name}.service"
-     fi
-}
-
 # support for restart during upgrade via SSM packages
-cwa_prep_restart() {
-       agent_prep_restart "${CWA_NAME}" "${CWA_RESTART_FILE}"
+prep_restart_all() {
+     agent_prep_restart "${CWA_NAME}" "${CWA_RESTART_FILE}"
 }
 
 agent_prep_restart() {
@@ -157,7 +146,7 @@ agent_prep_restart() {
 }
 
 # support for restart during upgrade via SSM packages
-cwa_cond_restart() {
+cond_restart_all() {
      agent_cond_restart "${CWA_NAME}" "${CWA_RESTART_FILE}"
 }
 
@@ -170,7 +159,7 @@ agent_cond_restart() {
      fi
 }
 
-cwa_preun() {
+preun_all() {
      agent_preun "${CWA_NAME}"
 }
 
@@ -184,7 +173,7 @@ agent_preun() {
      fi
 }
 
-cwa_status() {
+status_all() {
      cwa_config_status='configured'
      if [ ! -f "${TOML}" ]; then
           cwa_config_status='not configured'
@@ -242,28 +231,18 @@ runstatus() {
      fi
 }
 
-cwa_config() {
+config_all() {
      cwa_config_location="${1:-}"
      restart="${2:-}"
      mode="${3:-}"
      multi_config="${4:-}"
 
-     if [ -z "${cwa_config_location}" ] && [ -z "${cwoc_config_location}" ]; then
+     if [ -z "${cwa_config_location}" ]; then
           cwa_config_location='default'
      fi
 
      mkdir -p "${CONFDIR}"
 
-     if [ -n "${cwoc_config_location}" ]; then
-          echo "****** processing cwagent-otel-collector ******"
-          set +e
-          cwoc_config "${cwoc_config_location}" "${restart}" "${mode}" "${multi_config}"
-          set -e
-          echo ""
-     fi
-
-     # cwa_config is called after cwoc_config becuase that whether applying
-     # default cwa config depends on the existence of cwoc config
      if [ -n "${cwa_config_location}" ]; then
           echo "****** processing amazon-cloudwatch-agent ******"
           cwa_config "${cwa_config_location}" "${restart}" "${mode}" "${multi_config}"
@@ -342,7 +321,6 @@ cwa_config() {
      fi
 }
 
-
 set_log_level_all() {
      log_level="${1:-}"
      case "${log_level}" in
@@ -387,7 +365,7 @@ main() {
      fi
 
      OPTIND=1
-     while getopts ":hsa:c:m:l:" opt; do
+     while getopts ":hsa:c:o:m:l:" opt; do
           case "${opt}" in
           h)
                echo "${UsageString}"
@@ -420,18 +398,18 @@ main() {
      esac
 
      case "${action}" in
-     stop) cwa_stop ;;
-     start) cwa_start "${mode}" ;;
-     fetch-config) cwa_config "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'default' ;;
-     append-config) cwa_config "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'append' ;;
-     remove-config) cwa_config "${cwa_config_location}" "${cwoc_config_location}" "${restart}" "${mode}" 'remove' ;;
-     status) cwa_status ;;
+     stop) stop_all ;;
+     start) start_all "${mode}" ;;
+     fetch-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'default' ;;
+     append-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'append' ;;
+     remove-config) config_all "${cwa_config_location}"  "${restart}" "${mode}" 'remove' ;;
+     status) status_all ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install
-     prep-restart) cwa_prep_restart ;;
-     cond-restart) cwa_cond_restart ;;
+     prep-restart) prep_restart_all ;;
+     cond-restart) cond_restart_all ;;
           # helper for rpm+deb uninstallation hooks, not expected to be called manually
-     preun) cwa_preun ;;
+     preun) preun_all ;;
      set-log-level) set_log_level_all "${log_level}" ;;
      *)
           echo "Invalid action: ${action} ${UsageString}" >&2
