@@ -95,7 +95,7 @@ $step=9
 assertAgentsStatus -CWAgentRunningExpectedStatus "running" `
                         -CWAgentConfiguredExpectedStatus "not configured"
 
-$step=12
+$step=10
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a stop
 assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" `
                         -CWAgentConfiguredExpectedStatus "not configured"
