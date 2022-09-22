@@ -364,7 +364,7 @@ main() {
      fi
 
      OPTIND=1
-     while getopts ":hsa:c:o:m:l:" opt; do
+     while getopts ":hsa:c:m:l:" opt; do
           case "${opt}" in
           h)
                echo "${UsageString}"
