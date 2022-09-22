@@ -28,7 +28,6 @@ $UsageString = @"
                 stop|start|status|fetch-config|append-config|remove-config|set-log-level
                 [-m ec2|onPremise|auto]
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
-                [-o default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
 
@@ -44,9 +43,9 @@ $UsageString = @"
             stop:                                   stop amazon-cloudwatch-agent if running.
             start:                                  start amazon-cloudwatch-agent if configuration is available.
             status:                                 get the status of both agent processes.
-            fetch-config:                           apply config for agent, followed by -c or -o or both. Target config can be based on location (ssm parameter store name, file name), or 'default'.
+            fetch-config:                           apply config for agent, followed by -c. Target config can be based on location (ssm parameter store name, file name), or 'default'.
             append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
-            remove-config:                          remove config for agent, followed by -c or -o or both. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
+            remove-config:                          remove config for agent, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
             set-log-level:                          sets the log level, followed by -l to provide the level in all caps.
 
         -m: mode
@@ -112,6 +111,10 @@ Function AgentStart() {
     )
 
     if (${service_name} -eq $CWAServiceName -And !(Test-Path -LiteralPath "${TOML}")) {
+        if (Test-Path -LiteralPath "${YAML}") {
+            Write-Output "amazon-cloudwatch-agent will not be started as it has not been configured yet."
+            return
+        }
         Write-Output "amazon-cloudwatch-agent is not configured. Applying amazon-cloudwatch-agent default configuration."
         $ConfigLocation = 'default'
         CWAConfig -multi_config 'default'
@@ -120,7 +123,6 @@ Function AgentStart() {
     $svc = Get-Service -Name "${service_name}" -ErrorAction SilentlyContinue
     if (!$svc) {
         $startCommand = "`"${CWAProgramFiles}\start-amazon-cloudwatch-agent.exe`""
-
         New-Service -Name "${service_name}" -DisplayName "${service_display_name}" -Description "${service_display_name}" -DependsOn LanmanServer -BinaryPathName "${startCommand}" | Out-Null
         # object returned by New-Service gives errors so retrieve it again
         $svc = Get-Service -Name "${service_name}"
@@ -131,7 +133,6 @@ Function AgentStart() {
             & sc.exe failureflag "${service_name}" 1 | Out-Null
         }
     }
-
     $svc | Start-Service
     Write-Output "$service_name has been started"
 }
@@ -149,7 +150,7 @@ Function AgentStop() {
     $svc = Get-Service -Name "${service_name}" -ErrorAction SilentlyContinue
 
     if ($svc) {
-       $svc | Stop-Service
+        $svc | Stop-Service
     }
     Write-Output "$service_name has been stopped"
 }
@@ -226,7 +227,6 @@ Function StatusAll() {
     Write-Output "  `"version`": `"${version}`""
     Write-Output "}"
 }
-
 
 Function GetStarttime() {
     Param (

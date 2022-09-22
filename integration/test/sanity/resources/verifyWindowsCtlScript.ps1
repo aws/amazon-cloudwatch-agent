@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 ###########################################################
-# This script is used for Sanity Checking for both CWAgent
-# and ADOT Collector before running integration test
+# This script is used for Sanity Checking the CWAgent
 # https://github.com/aws/amazon-cloudwatch-agent/pull/478
 ##########################################################
 
