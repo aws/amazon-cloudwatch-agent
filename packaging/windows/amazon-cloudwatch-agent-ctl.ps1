@@ -111,10 +111,6 @@ Function AgentStart() {
     )
 
     if (${service_name} -eq $CWAServiceName -And !(Test-Path -LiteralPath "${TOML}")) {
-        if (Test-Path -LiteralPath "${YAML}") {
-            Write-Output "amazon-cloudwatch-agent will not be started as it has not been configured yet."
-            return
-        }
         Write-Output "amazon-cloudwatch-agent is not configured. Applying amazon-cloudwatch-agent default configuration."
         $ConfigLocation = 'default'
         CWAConfig -multi_config 'default'
