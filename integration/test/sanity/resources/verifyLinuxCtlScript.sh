@@ -48,41 +48,36 @@ assertStatus "cwa_config_status" "configured"
 
 step=3
 /usr/bin/amazon-cloudwatch-agent-ctl -a remove-config -c default -s
-assertStatus "cwa_running_status" "stopped"
-assertStatus "cwa_config_status" "not configured"
-
-step=4
-/usr/bin/amazon-cloudwatch-agent-ctl -a fetch-config -c default -s
 assertStatus "cwa_running_status" "running"
 assertStatus "cwa_config_status" "configured"
 
-step=5
+step=4
 /usr/bin/amazon-cloudwatch-agent-ctl -a prep-restart
 /usr/bin/amazon-cloudwatch-agent-ctl -a stop
 assertStatus "cwa_running_status" "stopped"
 assertStatus "cwa_config_status" "configured"
 
-step=6
+step=5
 /usr/bin/amazon-cloudwatch-agent-ctl -a cond-restart
 assertStatus "cwa_running_status" "running"
 assertStatus "cwa_config_status" "configured"
 
-step=7
-/usr/bin/amazon-cloudwatch-agent-ctl -a remove-config -c default -s
-assertStatus "cwa_running_status" "stopped"
-assertStatus "cwa_config_status" "not configured"
-
-step=8
+step=6
 /usr/bin/amazon-cloudwatch-agent-ctl -a append-config -c default -s
 assertStatus "cwa_running_status" "running"
 assertStatus "cwa_config_status" "configured"
 
-step=9
+step=7
 /usr/bin/amazon-cloudwatch-agent-ctl -a remove-config -c all
 assertStatus "cwa_running_status" "running"
 assertStatus "cwa_config_status" "not configured"
 
-step=10
+step=8
+/usr/bin/amazon-cloudwatch-agent-ctl -a fetch-config -s
+assertStatus "cwa_running_status" "running"
+assertStatus "cwa_config_status" "configured"
+
+step=9
 /usr/bin/amazon-cloudwatch-agent-ctl -a stop
 assertStatus "cwa_running_status" "stopped"
 assertStatus "cwa_config_status" "not configured"

@@ -119,11 +119,11 @@ You can download the official release from S3, refer to [link](https://docs.aws.
 Nightly s3 release are not production ready and should be used at own risk
 1. Download Binaries
     1. Linux
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/amazon-cloudwatch-agent
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/amazon-cloudwatch-agent-config-wizard
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/config-downloader
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/config-translator
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/start-amazon-cloudwatch-agent
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/amazon-cloudwatch-agent
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/amazon-cloudwatch-agent-config-wizard
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/config-downloader
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/config-translator
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/start-amazon-cloudwatch-agent
     1. Windows
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/amazon-cloudwatch-agent-config-wizard.exe
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/amazon-cloudwatch-agent.exe
@@ -138,11 +138,11 @@ Nightly s3 release are not production ready and should be used at own risk
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/start-amazon-cloudwatch-agent
 2. Download Packages
     1. Linux
-       * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux/{amd64/arm64}/amazon-cloudwatch-agent.{deb/rpm}
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux/{amd64/arm64}/amazon-cloudwatch-agent.{deb/rpm}
     2. Windows
-       * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows/amd64/amazon-cloudwatch-agent.zip
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows/amd64/amazon-cloudwatch-agent.zip
     3. Mac
-       * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin/amd64/amazon-cloudwatch-agent.tar.gz
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin/amd64/amazon-cloudwatch-agent.tar.gz
 
 ## Security disclosures
 If you think you’ve found a potential security issue, please do not post it in the Issues.  Instead, please follow the instructions [here](https://aws.amazon.com/security/vulnerability-reporting/) or [email AWS security directly](mailto:aws-security@amazon.com).
@@ -159,4 +159,3 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN  NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
