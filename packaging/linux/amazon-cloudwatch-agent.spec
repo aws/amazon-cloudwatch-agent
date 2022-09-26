@@ -86,6 +86,16 @@ if ! id cwagent >/dev/null 2>&1; then
     echo "create user cwagent, result: $?"
 fi
 
+if id aoc >/dev/null 2>&1; then
+     userdel -r aoc >/dev/null 2>&1
+     echo "delete user aoc, result: $?"
+fi
+
+if grep "^aoc:" /etc/group >/dev/null 2>&1; then
+    groupdel -r aoc >/dev/null 2>&1
+    echo "delete group aoc, result: $?"
+fi
+
 %preun
 # Stop the agent after uninstall
 if [ $1 -eq 0 ] ; then

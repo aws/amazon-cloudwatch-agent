@@ -78,6 +78,7 @@ assertStatus "cwa_running_status" "running"
 assertStatus "cwa_config_status" "configured"
 
 step=9
+/usr/bin/amazon-cloudwatch-agent-ctl -a remove-config -c all
 /usr/bin/amazon-cloudwatch-agent-ctl -a stop
 assertStatus "cwa_running_status" "stopped"
 assertStatus "cwa_config_status" "not configured"
