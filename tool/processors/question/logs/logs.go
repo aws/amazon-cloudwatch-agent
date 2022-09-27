@@ -51,7 +51,7 @@ func monitorLogs(ctx *runtime.Context, config *data.Config) {
 		logGroupNameHint := strings.Replace(filepath.Base(logFilePath), " ", "_", -1)
 		logGroupName := util.AskWithDefault("Log group name:", logGroupNameHint)
 		logStreamNameHint := "{instance_id}"
-		if ctx.IsOnPrem {
+		if ctx.IsOnPrem || ctx.IsOnPremise {
 			logStreamNameHint = "{hostname}"
 		}
 		logStreamName := util.AskWithDefault("Log stream name:", logStreamNameHint)

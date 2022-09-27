@@ -70,7 +70,7 @@ func monitorEvents(ctx *runtime.Context, config *data.Config) {
 		logGroupName := util.AskWithDefault("Log group name:", eventName)
 
 		logStreamNameHint := "{instance_id}"
-		if ctx.IsOnPrem {
+		if ctx.IsOnPrem || ctx.IsOnPremise {
 			logStreamNameHint = "{hostname}"
 		}
 

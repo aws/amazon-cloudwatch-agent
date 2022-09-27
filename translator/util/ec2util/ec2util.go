@@ -42,7 +42,7 @@ func GetEC2UtilSingleton() *ec2Util {
 func initEC2UtilSingleton() (newInstance *ec2Util) {
 	newInstance = &ec2Util{Region: "", PrivateIP: ""}
 
-	if context.CurrentContext().Mode() == config.ModeOnPrem {
+	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise){
 		return
 	}
 
