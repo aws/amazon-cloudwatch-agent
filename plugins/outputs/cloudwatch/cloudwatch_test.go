@@ -41,7 +41,6 @@ func TestBuildDimensions(t *testing.T) {
 	// empty
 	dims = BuildDimensions(make(map[string]string))
 	assert.Equal(0, len(dims))
-
 	// Always expect "host". Expect no more than 30.
 	for i := 1; i < 40; i++ {
 		tags := make(map[string]string, i)
@@ -50,13 +49,16 @@ func TestBuildDimensions(t *testing.T) {
 			val := "val" + strconv.Itoa(j)
 			tags[key] = val
 		}
-		tags["host"] = "valhost"
-		dims = BuildDimensions(tags)
-		expectedLen := i + 1
+		expectedLen := i
+		// Test with and without host
+		if i%2 == 0 {
+			tags["host"] = "valhost"
+			expectedLen++
+		}
 		if expectedLen > 30 {
 			expectedLen = 30
 		}
-
+		dims = BuildDimensions(tags)
 		hostCount := 0
 		keyCount := 0
 		valCount := 0
@@ -71,9 +73,16 @@ func TestBuildDimensions(t *testing.T) {
 				valCount++
 			}
 		}
-		assert.Equal(1, hostCount)
-		assert.Equal(expectedLen-1, keyCount)
+
 		assert.Equal(expectedLen, valCount)
+		if i%2 == 0 {
+			assert.Equal(1, hostCount)
+			assert.Equal(expectedLen-1, keyCount)
+		} else {
+			assert.Equal(0, hostCount)
+			assert.Equal(expectedLen, keyCount)
+		}
+
 	}
 }
 

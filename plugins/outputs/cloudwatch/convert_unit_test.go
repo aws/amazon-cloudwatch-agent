@@ -15,6 +15,8 @@ func TestConvertUnit(t *testing.T) {
 		{"B/s", "Bytes/Second"},
 		{"By/s", "Bytes/Second"},
 		{"Bi/s", "Bits/Second"},
+		{"banana", "banana"},
+		{"KBi", "Kilobits"},
 	}
 
 	for _, c := range cases {
