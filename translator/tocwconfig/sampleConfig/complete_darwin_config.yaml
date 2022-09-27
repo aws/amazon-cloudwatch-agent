@@ -1,7 +1,34 @@
 exporters:
+    awscloudwatchexporter/ace:
+        endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
+        force_flush_interval: 60s
+        max_datums_per_call: 1000
+        max_values_per_datum: 5000
+        metric_decoration:
+            - category: cpu
+              name: usage_idle
+              rename: CPU_USAGE_IDLE
+              unit: unit
+            - category: cpu
+              name: usage_nice
+              unit: unit
+            - category: disk
+              name: free
+              rename: DISK_FREE
+              unit: unit
+        namespace: CWAgent
+        region: us-west-2
+        role_arn: metrics_role_arn_value_test
+        rollup_dimensions:
+            - - ImageId
+            - - InstanceId
+              - InstanceType
+            - - d1
+            - []
     telegraf_cloudwatch: {}
     telegraf_cloudwatchlogs: {}
 processors:
+    cumulativetodeltaprocessor/ace: {}
     telegraf_delta: {}
     telegraf_ec2tagger: {}
 receivers:
@@ -21,21 +48,23 @@ service:
     pipelines:
         metrics:
             exporters:
-                - telegraf_cloudwatch
                 - telegraf_cloudwatchlogs
+                - telegraf_cloudwatch
+                - awscloudwatchexporter/ace
             processors:
                 - telegraf_ec2tagger
                 - telegraf_delta
+                - cumulativetodeltaprocessor/ace
             receivers:
                 - telegraf_cpu
+                - telegraf_mem
+                - telegraf_netstat
+                - telegraf_processes
                 - telegraf_socket_listener
                 - telegraf_disk
-                - telegraf_statsd
-                - telegraf_netstat
-                - telegraf_logfile
-                - telegraf_processes
-                - telegraf_diskio
-                - telegraf_mem
                 - telegraf_swap
-                - telegraf_net
+                - telegraf_statsd
+                - telegraf_logfile
                 - telegraf_procstat
+                - telegraf_diskio
+                - telegraf_net

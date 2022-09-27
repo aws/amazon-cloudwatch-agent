@@ -1,7 +1,33 @@
 exporters:
+    awscloudwatchexporter/ace:
+        endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
+        force_flush_interval: 60s
+        max_datums_per_call: 1000
+        max_values_per_datum: 5000
+        metric_decoration:
+            - category: LogicalDisk
+              name: '% Idle Time'
+              unit: PERCENT
+            - category: LogicalDisk
+              name: '% Disk Read Time'
+              rename: DISK_READ
+            - category: Processor
+              name: '% Idle Time'
+              rename: CPU_IDLE
+              unit: PERCENT
+        namespace: CWAgent
+        region: us-west-2
+        role_arn: metrics_role_arn_value_test
+        rollup_dimensions:
+            - - ImageId
+            - - InstanceId
+              - InstanceType
+            - - d1
+            - []
     telegraf_cloudwatch: {}
     telegraf_cloudwatchlogs: {}
 processors:
+    cumulativetodeltaprocessor/ace: {}
     telegraf_ec2tagger: {}
 receivers:
     telegraf_logfile: {}
@@ -15,15 +41,17 @@ service:
     pipelines:
         metrics:
             exporters:
-                - telegraf_cloudwatchlogs
                 - telegraf_cloudwatch
+                - awscloudwatchexporter/ace
+                - telegraf_cloudwatchlogs
             processors:
                 - telegraf_ec2tagger
+                - cumulativetodeltaprocessor/ace
             receivers:
+                - telegraf_logfile
+                - telegraf_socket_listener
                 - telegraf_win_perf_counters
                 - telegraf_nvidia_smi
                 - telegraf_procstat
                 - telegraf_statsd
-                - telegraf_socket_listener
-                - telegraf_logfile
                 - telegraf_windows_event_log

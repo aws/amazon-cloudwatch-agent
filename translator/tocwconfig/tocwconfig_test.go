@@ -290,7 +290,8 @@ func verifyToYamlTranslation(t *testing.T, config interface{}, expectedYamlFileP
 	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 		return pretty.Sprint(x) < pretty.Sprint(y)
 	})
-	assert.True(t, cmp.Equal(expect, actual, opt))
+	assert.True(t, cmp.Equal(expect, actual, opt),
+		fmt.Sprintf("\nexpected:\n%v\n\nactual:\n%v\n", expect, actual))
 }
 
 func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, expectedEnvVars map[string]string) {

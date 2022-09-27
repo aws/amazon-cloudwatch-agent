@@ -1,6 +1,11 @@
 exporters:
+    awscloudwatchexporter/ace:
+        force_flush_interval: 60s
+        namespace: CWAgent
+        region: us-west-2
     telegraf_cloudwatch: {}
 processors:
+    cumulativetodeltaprocessor/ace: {}
     telegraf_delta: {}
     telegraf_ec2tagger: {}
 receivers:
@@ -14,12 +19,14 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatch
+                - awscloudwatchexporter/ace
             processors:
+                - cumulativetodeltaprocessor/ace
                 - telegraf_ec2tagger
                 - telegraf_delta
             receivers:
-                - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
                 - telegraf_diskio
                 - telegraf_mem
+                - telegraf_swap

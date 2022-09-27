@@ -110,8 +110,10 @@ func main() {
 	tomlConfigPath := cmdutil.GetTomlConfigPath(ctx.OutputTomlFilePath())
 	yamlConfigPath := filepath.Join(filepath.Dir(tomlConfigPath), yamlConfigFileName)
 	config := cmdutil.TranslateJsonMapToConfig(mergedJsonConfigMap)
-	cmdutil.ConfigToTomlFile(config, tomlConfigPath)
+	// Call ConfigToYamlFile() first so exporters can be removed before writing TOML.
+	// Config translation will be improved later.
 	cmdutil.ConfigToYamlFile(config, yamlConfigPath)
+	cmdutil.ConfigToTomlFile(config, tomlConfigPath)
 	fmt.Println(exitSuccessMessage)
 	// Put env config into the same folder as the toml config
 	envConfigPath := filepath.Join(filepath.Dir(tomlConfigPath), envConfigFileName)

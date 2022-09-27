@@ -10,17 +10,41 @@ import (
 )
 
 type MetricDecorationConfig struct {
-	Category string `toml:"category"`
-	Metric   string `toml:"name"`
-	Rename   string `toml:"rename"`
-	Unit     string `toml:"unit"`
+	Category string `mapstructure:"category"`
+	Metric   string `mapstructure:"name"`
+	Rename   string `mapstructure:"rename"`
+	Unit     string `mapstructure:"unit"`
 }
 
-var supportedUnits = []string{"Seconds", "Microseconds", "Milliseconds", "Bytes", "Kilobytes", "Megabytes",
-	"Gigabytes", "Terabytes", "Bits", "Kilobits", "Megabits", "Gigabits", "Terabits",
-	"Percent", "Count", "Bytes/Second", "Kilobytes/Second", "Megabytes/Second",
-	"Gigabytes/Second", "Terabytes/Second", "Bits/Second", "Kilobits/Second",
-	"Megabits/Second", "Gigabits/Second", "Terabits/Second", "Count/Second", "None"}
+var supportedUnits = map[string]struct{}{
+	"Seconds":          {},
+	"Microseconds":     {},
+	"Milliseconds":     {},
+	"Bytes":            {},
+	"Kilobytes":        {},
+	"Megabytes":        {},
+	"Gigabytes":        {},
+	"Terabytes":        {},
+	"Bits":             {},
+	"Kilobits":         {},
+	"Megabits":         {},
+	"Gigabits":         {},
+	"Terabits":         {},
+	"Percent":          {},
+	"Count":            {},
+	"Bytes/Second":     {},
+	"Kilobytes/Second": {},
+	"Megabytes/Second": {},
+	"Gigabytes/Second": {},
+	"Terabytes/Second": {},
+	"Bits/Second":      {},
+	"Kilobits/Second":  {},
+	"Megabits/Second":  {},
+	"Gigabits/Second":  {},
+	"Terabits/Second":  {},
+	"Count/Second":     {},
+	"None":             {},
+}
 
 func NewMetricDecorations(metricConfigs []MetricDecorationConfig) (*MetricDecorations, error) {
 	result := &MetricDecorations{
@@ -72,12 +96,8 @@ func isUnitInvalid(unit string) bool {
 	if unit == "" {
 		return false
 	}
-	for _, v := range supportedUnits {
-		if v == unit {
-			return false
-		}
-	}
-	return true
+	_, ok := supportedUnits[unit]
+	return !ok
 }
 
 func (m *MetricDecorations) addDecorations(category string, name string, rename string, unit string) error {
