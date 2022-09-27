@@ -3,7 +3,7 @@
 
 // Package cloudwatch provides a metric exporter for the OpenTelemetry collector.
 // todo: Once the private and public repositories are merged it would be good
-// to move this package to .../exporter/awscloudwatchexporter and rename it.
+// to move this package to .../exporter/awscloudwatch and rename it.
 package cloudwatch
 
 import (
@@ -16,13 +16,13 @@ import (
 )
 
 const (
-	typeStr   config.Type = "awscloudwatch"
+	TypeStr   config.Type = "awscloudwatch"
 	stability             = component.StabilityLevelAlpha
 )
 
 func NewFactory() component.ExporterFactory {
 	return component.NewExporterFactory(
-		typeStr,
+		TypeStr,
 		createDefaultConfig,
 		component.WithMetricsExporter(createMetricsExporter, stability),
 	)
@@ -30,7 +30,7 @@ func NewFactory() component.ExporterFactory {
 
 func createDefaultConfig() config.Exporter {
 	return &Config{
-		ExporterSettings:   config.NewExporterSettings(config.NewComponentID(typeStr)),
+		ExporterSettings:   config.NewExporterSettings(config.NewComponentID(TypeStr)),
 		Namespace:          "CWAgent",
 		MaxDatumsPerCall:   defaultMaxDatumsPerCall,
 		MaxValuesPerDatum:  defaultMaxValuesPerDatum,

@@ -1,5 +1,5 @@
 exporters:
-    awscloudwatchexporter/ace:
+    awscloudwatch/ace:
         drop_original_metrics:
             cpu:
                 - cpu_usage_idle
@@ -20,7 +20,7 @@ exporters:
         region: us-west-2
     telegraf_cloudwatch: {}
 processors:
-    cumulativetodeltaprocessor/ace: {}
+    cumulativetodelta/ace: {}
     telegraf_ec2tagger: {}
 receivers:
     telegraf_cpu: {}
@@ -31,10 +31,10 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatch
-                - awscloudwatchexporter/ace
+                - awscloudwatch/ace
             processors:
                 - telegraf_ec2tagger
-                - cumulativetodeltaprocessor/ace
+                - cumulativetodelta/ace
             receivers:
                 - telegraf_nvidia_smi
                 - telegraf_cpu

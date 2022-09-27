@@ -1,5 +1,5 @@
 exporters:
-    awscloudwatchexporter/ace:
+    awscloudwatch/ace:
         endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
         force_flush_interval: 60s
         max_datums_per_call: 1000
@@ -28,7 +28,7 @@ exporters:
     telegraf_cloudwatch: {}
     telegraf_cloudwatchlogs: {}
 processors:
-    cumulativetodeltaprocessor/ace: {}
+    cumulativetodelta/ace: {}
     telegraf_delta: {}
     telegraf_ec2tagger: {}
 receivers:
@@ -50,11 +50,11 @@ service:
             exporters:
                 - telegraf_cloudwatchlogs
                 - telegraf_cloudwatch
-                - awscloudwatchexporter/ace
+                - awscloudwatch/ace
             processors:
                 - telegraf_ec2tagger
                 - telegraf_delta
-                - cumulativetodeltaprocessor/ace
+                - cumulativetodelta/ace
             receivers:
                 - telegraf_cpu
                 - telegraf_mem

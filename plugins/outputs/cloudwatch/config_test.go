@@ -19,7 +19,7 @@ func TestConfig(t *testing.T) {
 	factories, err := componenttest.NopFactories()
 	assert.NoError(t, err)
 	factory := NewFactory()
-	factories.Exporters[typeStr] = factory
+	factories.Exporters[TypeStr] = factory
 
 	// Test missing region. (valid)
 	fp := filepath.Join("testdata", "missing_region.yaml")
@@ -44,7 +44,7 @@ func TestConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	assert.Equal(t, 1, len(c.Exporters))
-	c2 := c.Exporters[config.NewComponentID(typeStr)].(*Config)
+	c2 := c.Exporters[config.NewComponentID(TypeStr)].(*Config)
 	assert.Equal(t, "val1", c2.Namespace)
 	assert.Equal(t, "val2", c2.Region)
 	assert.Equal(t, "val3", c2.EndpointOverride)

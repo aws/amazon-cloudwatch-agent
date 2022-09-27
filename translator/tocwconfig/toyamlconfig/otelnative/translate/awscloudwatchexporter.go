@@ -7,13 +7,14 @@ import (
 	_ "embed"
 	"fmt"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative"
 )
 
-var (
+const (
 	pluginName    = "cloudwatch"
-	exporterName  = "awscloudwatchexporter"
-	processorName = "cumulativetodeltaprocessor"
+	exporterName  = string(cloudwatch.TypeStr)
+	processorName = "cumulativetodelta"
 )
 
 // Verify interface implemented

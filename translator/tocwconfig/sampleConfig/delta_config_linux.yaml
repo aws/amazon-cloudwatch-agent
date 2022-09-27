@@ -1,5 +1,5 @@
 exporters:
-    awscloudwatchexporter/ace:
+    awscloudwatch/ace:
         force_flush_interval: 60s
         metric_decoration:
             - category: diskio
@@ -18,7 +18,7 @@ exporters:
         region: us-east-1
     telegraf_cloudwatch: {}
 processors:
-    cumulativetodeltaprocessor/ace: {}
+    cumulativetodelta/ace: {}
     telegraf_delta: {}
     telegraf_ec2tagger: {}
 receivers:
@@ -28,10 +28,10 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatch
-                - awscloudwatchexporter/ace
+                - awscloudwatch/ace
             processors:
                 - telegraf_ec2tagger
                 - telegraf_delta
-                - cumulativetodeltaprocessor/ace
+                - cumulativetodelta/ace
             receivers:
                 - telegraf_diskio

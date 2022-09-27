@@ -1,5 +1,5 @@
 exporters:
-    awscloudwatchexporter/ace:
+    awscloudwatch/ace:
         force_flush_interval: 60s
         namespace: CWAgent
         profile: AmazonCloudWatchAgent
@@ -7,7 +7,7 @@ exporters:
         shared_credential_file: fake-path
     telegraf_cloudwatch: {}
 processors:
-    cumulativetodeltaprocessor/ace: {}
+    cumulativetodelta/ace: {}
     telegraf_delta: {}
     telegraf_ec2tagger: {}
 receivers:
@@ -21,10 +21,10 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatch
-                - awscloudwatchexporter/ace
+                - awscloudwatch/ace
             processors:
                 - telegraf_delta
-                - cumulativetodeltaprocessor/ace
+                - cumulativetodelta/ace
                 - telegraf_ec2tagger
             receivers:
                 - telegraf_disk
