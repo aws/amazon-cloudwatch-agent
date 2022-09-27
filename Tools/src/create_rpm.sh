@@ -47,6 +47,9 @@ chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/amazon-clo
 chmod ug+rx ${BUILD_ROOT}/SOURCES/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
 tar -zcvf ${BUILD_ROOT}/SOURCES/amazon-cloudwatch-agent.tar.gz -C ${BUILD_ROOT}/SOURCES opt etc
 
+echo "Saving the tar file for Amazon Linux and RHEL ${ARCH}"
+cp ${BUILD_ROOT}/SOURCES/amazon-cloudwatch-agent.tar.gz ${BUILD_SPACE}/bin/linux/${ARCH}/amazon-cloudwatch-agent.tar.gz
+
 rm -rf ${BUILD_ROOT}/SOURCES/opt ${BUILD_ROOT}/SOURCES/etc
 
 echo "Creating the rpm package"
@@ -57,3 +60,4 @@ echo "Copying rpm files to bin"
 
 mv ${BUILD_ROOT}/RPMS/${TARGET_SUPPORTED_ARCH}/amazon-cloudwatch-agent-${AGENT_VERSION}-1.${TARGET_SUPPORTED_ARCH}.rpm ${BUILD_SPACE}/bin/linux/${ARCH}/amazon-cloudwatch-agent.rpm
 ls -ltr ${BUILD_SPACE}/bin/linux/${ARCH}/*.rpm
+ls -ltr ${BUILD_SPACE}/bin/linux/${ARCH}/amazon-cloudwatch-agent.tar.gz
