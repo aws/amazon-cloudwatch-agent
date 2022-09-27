@@ -10,7 +10,7 @@ variable "ec2_instance_type" {
 
 variable "ssh_key_name" {
   type    = string
-  default = "cwagent-integ-test-key"
+  default = ""
 }
 
 variable "ami" {

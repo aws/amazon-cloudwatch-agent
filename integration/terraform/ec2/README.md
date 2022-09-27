@@ -10,7 +10,7 @@ supports the integration test AMIs.
 
 #### Terraform IAM assume role permission
 
-For ease of use, here's a generated IAM policy based on resource usage that you can attach to your IAM user that
+For ease of use, here's a generated IAM policy based on resource usage that you can attach to your IAM role that
 Terraform will assume, with the required permissions. See docs
 on [Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
 for how to easily generate a new policy.
@@ -267,12 +267,8 @@ secrets.
 
 | Key                               | Description                                                                                              |
 |-----------------------------------|----------------------------------------------------------------------------------------------------------|
-| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                    |
 | `TERRAFORM_AWS_ASSUME_ROLE`       | IAM role to assume                                                                                       |
 | `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                    |
-| `KEY_NAME`                        | EC2 key pair name                                                                                        |
-| `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars)  |
-| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                      |
 | `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                     |
 | `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                    | 
 | `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                                |
@@ -319,11 +315,7 @@ terraform init
 terraform apply --auto-approve \
          -var="github_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent.git}" \
          -var="github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
-         -var='vpc_security_group_ids=["${name of your security group}"]' \
-         -var="ssh_key_name=${name of key pair your created}" \
          -var="s3_bucket=${name of your s3 bucket created}" \
-         -var="iam_instance_profile=${name of your iam role created}" \
-         -var="ssh_key_value=${your key that you downloaded}"
 ```
 
 > See the list of parameters or table of GitHub secret params as reference
@@ -355,10 +347,7 @@ terraform init
 terraform apply --auto-approve \
          -var="github_repo=${gh repo you want to use ex https://github.com/aws/amazon-cloudwatch-agent.git}" \
          -var="github_sha=${commit sha you want to use ex fb9229b9eaabb42461a4c049d235567f9c0439f8}" \
-         -var='vpc_security_group_ids=["${name of your security group}"]' \
          -var="s3_bucket=${name of your s3 bucket created}" \
-         -var="iam_instance_profile=${name of your iam role created}" \
-         -var="ssh_key_name=${name of key pair your created}" \
          -var="ami=${ami for test you want to use ex cloudwatch-agent-integration-test-ubuntu*}" \
          -var="user=${log in for the ec2 instance ex ubuntu}" \
          -var="install_agent=${command to install agent ex dpkg -i -E ./amazon-cloudwatch-agent.deb}" \
@@ -367,7 +356,6 @@ terraform apply --auto-approve \
          -var="binary_name=${binary to install ex amazon-cloudwatch-agent.deb}" \
          -var="local_stack_host_name=${dns value you got from the local stack terraform apply step}" \
          -var="test_name=${what you want to call the ec2 instance name}" \
-         -var="ssh_key_value=${your key that you downloaded}"
 ```
 
 > See the list of parameters or table of GitHub secret params as reference
