@@ -24,10 +24,10 @@ chmod +x /tmp/AmazonAgentScripts/postinstall
 rm -rf artifact
 mkdir artifact
 sudo pkgbuild --root /tmp/AmazonCWAgentPackage/ --install-location "/" --scripts /tmp/AmazonAgentScripts --identifier com.amazon.cloudwatch.agent --version=$AGENT_VERSION artifact/amazon-cloudwatch-agent.pkg
-aws s3 cp ./artifact/amazon-cloudwatch-agent.pkg "s3://$1/integration-test/packaging/$2/amazon-cloudwatch-agent.pkg"
+aws s3 cp ./artifact/amazon-cloudwatch-agent.pkg "s3://$1/integration-test/packaging/$2/$3/amazon-cloudwatch-agent.pkg"
 
 #TODO uncomment for mac specific signing gpg is supported
-## create a package.tar.gz for the uploding it to signing bucket
+## create a package.tar.gz for the uploading it to signing bucket
 #tar -cvzf artifact.gz -C artifact .
 #tar -cvzf  package.tar.gz manifest.yaml artifact.gz
 #

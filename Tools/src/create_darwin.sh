@@ -4,7 +4,7 @@ set -u
 set -x
 set -o pipefail
 echo "****************************************"
-echo "Creating tar file for Mac OS X amd64    "
+echo "Creating tar file for Mac OS X ${ARCH}  "
 echo "****************************************"
 
 AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g")
