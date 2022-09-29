@@ -26,7 +26,7 @@ $UsageString = @"
 
         usage:  amazon-cloudwatch-agent-ctl.ps1 -a
                 stop|start|status|fetch-config|append-config|remove-config|set-log-level
-                [-m ec2|onPremise|auto]
+                [-m ec2|onPremise|onPrem|auto]
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
@@ -50,7 +50,7 @@ $UsageString = @"
 
         -m: mode
             ec2:                                    indicate this is on ec2 host.
-            onPremise:                              indicate this is on onPremise host.
+            onPremise, onPrem:                      indicate this is on onPremise host.
             auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
 
         -c: amazon-cloudwatch-agent configuration
@@ -421,6 +421,7 @@ Function main() {
     switch -exact ($Mode) {
         ec2 { $EC2 = $true }
         onPremise { $EC2 = $false }
+        onPrem { $EC2 = $false }
         auto { $EC2 = CWATestEC2 }
         default {
            Write-Output "Invalid mode: ${Mode}`n${UsageString}"
