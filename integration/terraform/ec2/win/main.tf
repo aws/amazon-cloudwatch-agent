@@ -36,41 +36,65 @@ resource "aws_instance" "cwagent" {
   vpc_security_group_ids      = [aws_security_group.ec2_security_group.id]
   associate_public_ip_address = true
   get_password_data           = true
+  user_data                   = <<EOF
+<powershell>
+Write-Output "Install OpenSSH and Firewalls which allows port 22 for connection"
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+
+Start-Service sshd
+Set-Service -Name sshd -StartupType 'Automatic'
+
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+choco install git --confirm
+choco install go --confirm
+msiexec /i https://awscli.amazonaws.com/AWSCLIV2.msi  /norestart /qb-
+
+[Environment]::SetEnvironmentVariable("PATH", "C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files\Amazon\AWSCLIV2\;C:\Program Files\Go\bin;C:\Windows\System32;C:\Windows\System32\WindowsPowerShell\v1.0\", [System.EnvironmentVariableTarget]::Machine)
+</powershell>
+EOF
+
   tags = {
-    Name = "cwagent-integ-test-ec2-${var.test_name}-${random_id.testing_id.hex}"
+    Name = "cwagent-integ-test-ec2-windows-${element(split("/", var.test_dir),3)}-${random_id.testing_id.hex}"
   }
 }
 
 resource "null_resource" "integration_test" {
   depends_on = [aws_instance.cwagent]
+  # Install software
   provisioner "remote-exec" {
-    # @TODO when @ZhenyuTan-amz adds windows tests add "make integration-test"
-    # @TODO add export for AWS region from tf vars to make sure runner can use AWS SDK
     inline = [
+      "start /wait timeout 120", //Wait some time to ensure all binaries have been downloaded
+      "call %ProgramData%\\chocolatey\\bin\\RefreshEnv.cmd", //Reload the environment variables to pull the latest one instead of restarting cmd
+      "set AWS_REGION=${var.region}",
+      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
+      "start /wait msiexec /i amazon-cloudwatch-agent.msi /norestart /qb-",
       "echo clone and install agent",
       "git clone ${var.github_repo}",
       "cd amazon-cloudwatch-agent",
       "git reset --hard ${var.github_sha}",
-      "aws s3 cp s3://${var.s3_bucket}/integration-test/packaging/${var.github_sha}/amazon-cloudwatch-agent.msi .",
-      "msiexec /i amazon-cloudwatch-agent.msi",
       "echo run tests with the tag integration, one at a time, and verbose",
       "echo run sanity test && go test ./integration/test/sanity -p 1 -v --tags=integration",
+      "go test ${var.test_dir} -p 1 -timeout 30m -v --tags=integration "
     ]
 
     connection {
       type            = "ssh"
       user            = "Administrator"
-      private_key     = local.private_key_content
       password        = rsadecrypt(aws_instance.cwagent.password_data, local.private_key_content)
       host            = aws_instance.cwagent.public_ip
       target_platform = "windows"
+      timeout         = "6m"
     }
   }
 }
 
 data "aws_ami" "latest" {
   most_recent = true
-  owners      = ["self", "506463145083"]
+  // @Todo: Add back when nvidia_gpu pipeline has been able to produced the AMI
+  #owners      = ["self", "506463145083"]
 
   filter {
     name   = "name"

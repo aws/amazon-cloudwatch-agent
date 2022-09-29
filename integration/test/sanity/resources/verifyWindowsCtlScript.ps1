@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 ###########################################################
-# This script is used for Sanity Checking for both CWAgent
-# and ADOT Collector before running integration test
+# This script is used for Sanity Checking the CWAgent
 # https://github.com/aws/amazon-cloudwatch-agent/pull/478
 ##########################################################
 
@@ -15,17 +14,11 @@ Function assertAgentsStatus(){
         [Parameter(Mandatory = $true)]
         [string]$CWAgentRunningExpectedStatus,
         [Parameter(Mandatory = $true)]
-        [string]$ADOTRunningExpectedStatus,
-        [Parameter(Mandatory = $true)]
-        [string]$CWAgentConfiguredExpectedStatus,
-        [Parameter(Mandatory = $true)]
-        [string]$ADOTConfiguredExpectedStatus
+        [string]$CWAgentConfiguredExpectedStatus
     )
 
     assertStatus -KeyToCheck "status" -ExpectedStatus "$CWAgentRunningExpectedStatus"
-    assertStatus -KeyToCheck "cwoc_status" -ExpectedStatus "$ADOTRunningExpectedStatus"
     assertStatus -KeyToCheck "configstatus" -ExpectedStatus "$CWAgentConfiguredExpectedStatus"
-    assertStatus -KeyToCheck "cwoc_configstatus" -ExpectedStatus "$ADOTConfiguredExpectedStatus"
 }
 
 Function assertStatus() {
@@ -36,7 +29,7 @@ Function assertStatus() {
         [string]$ExpectedStatus
     )
 
-    $KeysToCheck = @("status","configstatus","cwoc_status","cwoc_configstatus")
+    $KeysToCheck = @("status","configstatus")
     if (-Not ($KeysToCheck -contains $KeyToCheck)){
         Write-Output "Invalid KeyToCheck: $KeyToCheck, only supports $KeysToCheck"
         Exit 1
@@ -51,68 +44,54 @@ Function assertStatus() {
 	Write-Output "In step ${step}, ${KeyToCheck} is expected"
 }
 
-# Initial all setup for ADOT and CWAgent by removing all existing configuration
+# Initial all setup for CWAgent by removing all existing configuration
 $step=0
-& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a remove-config -c all -o all
+& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a remove-config -c all
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a stop
 
 $step=1
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a status
-assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" -ADOTRunningExpectedStatus "stopped" `
-                        -CWAgentConfiguredExpectedStatus "not configured" -ADOTConfiguredExpectedStatus "not configured"
+assertAgentsStatus -CWAgentRunningExpectedStatus "stopped"  `
+                        -CWAgentConfiguredExpectedStatus "not configured"
 
 $step=2
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a start
-assertAgentsStatus -CWAgentRunningExpectedStatus "running" -ADOTRunningExpectedStatus "stopped" `
-                        -CWAgentConfiguredExpectedStatus "configured" -ADOTConfiguredExpectedStatus "not configured"
+assertAgentsStatus -CWAgentRunningExpectedStatus "running" `
+                        -CWAgentConfiguredExpectedStatus "configured"
 
 $step=3
-& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a fetch-config -o default -s
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a remove-config -c default -s
-assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" -ADOTRunningExpectedStatus "running" `
-                        -CWAgentConfiguredExpectedStatus "not configured" -ADOTConfiguredExpectedStatus "configured"
+assertAgentsStatus -CWAgentRunningExpectedStatus "running" `
+                        -CWAgentConfiguredExpectedStatus "configured"
 
 $step=4
-& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a fetch-config -c default -o invalid -s
-assertAgentsStatus -CWAgentRunningExpectedStatus "running" -ADOTRunningExpectedStatus "running" `
-                        -CWAgentConfiguredExpectedStatus "configured" -ADOTConfiguredExpectedStatus "configured"
-
-$step=5
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a prep-restart
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a stop
-assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" -ADOTRunningExpectedStatus "stopped" `
-                        -CWAgentConfiguredExpectedStatus "configured" -ADOTConfiguredExpectedStatus "configured"
-$step=6
+assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" `
+                        -CWAgentConfiguredExpectedStatus "configured"
+
+$step=5
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a cond-restart
-assertAgentsStatus -CWAgentRunningExpectedStatus "running" -ADOTRunningExpectedStatus "running" `
-                        -CWAgentConfiguredExpectedStatus "configured" -ADOTConfiguredExpectedStatus "configured"
+assertAgentsStatus -CWAgentRunningExpectedStatus "running"  `
+                        -CWAgentConfiguredExpectedStatus "configured"
+
+$step=6
+& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a append-config -c default -s
+assertAgentsStatus -CWAgentRunningExpectedStatus "running" `
+                        -CWAgentConfiguredExpectedStatus "configured"
 
 $step=7
-& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a remove-config -c default -s
-assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" -ADOTRunningExpectedStatus "running" `
-                        -CWAgentConfiguredExpectedStatus "not configured" -ADOTConfiguredExpectedStatus "configured"
+& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a remove-config -c all
+assertAgentsStatus -CWAgentRunningExpectedStatus "running" `
+                        -CWAgentConfiguredExpectedStatus "not configured"
 
 $step=8
-& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a remove-config -o default -s
-assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" -ADOTRunningExpectedStatus "stopped" `
-                        -CWAgentConfiguredExpectedStatus "not configured" -ADOTConfiguredExpectedStatus "not configured"
+& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a fetch-config -s
+assertAgentsStatus -CWAgentRunningExpectedStatus "running" `
+                        -CWAgentConfiguredExpectedStatus "configured"
 
 $step=9
-& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a append-config -c default -o default -s
-assertAgentsStatus -CWAgentRunningExpectedStatus "running" -ADOTRunningExpectedStatus "stopped" `
-                        -CWAgentConfiguredExpectedStatus "configured" -ADOTConfiguredExpectedStatus "not configured"
-
-$step=10
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a remove-config -c all
-assertAgentsStatus -CWAgentRunningExpectedStatus "running" -ADOTRunningExpectedStatus "stopped" `
-                        -CWAgentConfiguredExpectedStatus "not configured" -ADOTConfiguredExpectedStatus "not configured"
-
-$step=11
-& "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a fetch-config -o default -s
-assertAgentsStatus -CWAgentRunningExpectedStatus "running" -ADOTRunningExpectedStatus "running" `
-                        -CWAgentConfiguredExpectedStatus "not configured" -ADOTConfiguredExpectedStatus "configured"
-
-$step=12
 & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a stop
-assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" -ADOTRunningExpectedStatus "stopped" `
-                        -CWAgentConfiguredExpectedStatus "not configured" -ADOTConfiguredExpectedStatus "configured"
+assertAgentsStatus -CWAgentRunningExpectedStatus "stopped" `
+                        -CWAgentConfiguredExpectedStatus "not configured"

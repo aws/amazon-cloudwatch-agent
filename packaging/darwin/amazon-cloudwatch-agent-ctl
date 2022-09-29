@@ -37,7 +37,7 @@ readonly ALL_CONFIG='all'
 UsageString="
 
 
-        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s]
+        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|onPrem|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -57,7 +57,7 @@ UsageString="
 
         -m: mode
             ec2:                                    indicate this is on ec2 host.
-            onPremise:                              indicate this is on onPremise host.
+            onPremise, onPrem:                      indicate this is on onPremise host.
             auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
 
         -c: configuration
@@ -267,6 +267,7 @@ main() {
      case "${mode}" in
      ec2) ;;
      onPremise) ;;
+     onPrem) ;;
      auto) ;;
      *)
           echo "Invalid mode: ${mode} ${UsageString}" >&2
