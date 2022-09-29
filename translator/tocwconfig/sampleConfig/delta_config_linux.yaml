@@ -1,6 +1,24 @@
 exporters:
+    awscloudwatch/ace:
+        force_flush_interval: 60s
+        metric_decoration:
+            - category: diskio
+              name: iops_in_progress
+              rename: DRIVER_DISKIO_IOPS_IN_PROGRESS
+              unit: Count
+            - category: diskio
+              name: read_time
+              rename: DRIVER_DISKIO_READ_TIME
+              unit: Milliseconds
+            - category: diskio
+              name: write_time
+              rename: DRIVER_DISKIO_WRITE_TIME
+              unit: Milliseconds
+        namespace: CWAgent
+        region: us-east-1
     telegraf_cloudwatch: {}
 processors:
+    cumulativetodelta/ace: {}
     telegraf_delta: {}
     telegraf_ec2tagger: {}
 receivers:
@@ -10,8 +28,10 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatch
+                - awscloudwatch/ace
             processors:
                 - telegraf_ec2tagger
                 - telegraf_delta
+                - cumulativetodelta/ace
             receivers:
                 - telegraf_diskio

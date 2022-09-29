@@ -5,8 +5,9 @@ package totomlconfig
 
 import (
 	"bytes"
-	"github.com/BurntSushi/toml"
 	"log"
+
+	"github.com/BurntSushi/toml"
 )
 
 func ToTomlConfig(val interface{}) string {

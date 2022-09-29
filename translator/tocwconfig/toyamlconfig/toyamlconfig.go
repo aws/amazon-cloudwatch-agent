@@ -5,6 +5,8 @@ package toyamlconfig
 
 import (
 	"bytes"
+	"log"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder/mapstructure"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative"
@@ -13,7 +15,6 @@ import (
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/service"
 	"gopkg.in/yaml.v3"
-	"log"
 )
 
 const (
@@ -31,6 +32,7 @@ const (
 var (
 	otelNativeTranslators = []otelnative.Translator{
 		translate.AwsContainerInsightReceiver{},
+		translate.AwsCloudWatchExporterTranslator{},
 	}
 )
 
@@ -66,7 +68,13 @@ func ToYamlConfig(val interface{}) (string, interface{}) {
 
 	err := yamlEncoder.Encode(cfg)
 	util.PanicIfErr("Encode to a valid YAML config fails because of", err)
-
+	// Delete cloudwatch output plugin section from config.
+	log.Printf("I! delete cloudwatch from config")
+	//delete(outputs, "cloudwatch")
+	_, ok := outputs["cloudwatch"]
+	if ok {
+		outputs["cloudwatch"] = []struct{}{{}}
+	}
 	return buffer.String(), cfg
 }
 

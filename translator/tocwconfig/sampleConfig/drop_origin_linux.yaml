@@ -1,6 +1,26 @@
 exporters:
+    awscloudwatch/ace:
+        drop_original_metrics:
+            cpu:
+                - cpu_usage_idle
+                - time_active
+            nvidia_smi:
+                - temperature_gpu
+                - utilization_gpu
+        force_flush_interval: 60s
+        metric_decoration:
+            - category: cpu
+              name: usage_idle
+              rename: CPU_USAGE_IDLE
+              unit: unit
+            - category: cpu
+              name: usage_nice
+              unit: unit
+        namespace: CWAgent
+        region: us-west-2
     telegraf_cloudwatch: {}
 processors:
+    cumulativetodelta/ace: {}
     telegraf_ec2tagger: {}
 receivers:
     telegraf_cpu: {}
@@ -11,8 +31,10 @@ service:
         metrics:
             exporters:
                 - telegraf_cloudwatch
+                - awscloudwatch/ace
             processors:
                 - telegraf_ec2tagger
+                - cumulativetodelta/ace
             receivers:
                 - telegraf_nvidia_smi
                 - telegraf_cpu

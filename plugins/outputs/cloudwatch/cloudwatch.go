@@ -4,16 +4,19 @@
 package cloudwatch
 
 import (
+	"context"
 	"log"
 	"reflect"
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -22,10 +25,10 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	handlers "github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
-	"github.com/influxdata/telegraf"
+
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/consumer"
 )
 
 const (
@@ -35,7 +38,7 @@ const (
 	metricChanBufferSize                  = 10000
 	datumBatchChanBufferSize              = 50 // the number of requests we buffer
 	maxConcurrentPublisher                = 10 // the number of CloudWatch clients send request concurrently
-	pushIntervalInSec                     = 60 // 60 sec
+	defaultForceFlushInterval             = 60 * time.Second
 	highResolutionTagKey                  = "aws:StorageResolution"
 	defaultRetryCount                     = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
 	backoffRetryBase                      = 200 * time.Millisecond
@@ -49,112 +52,66 @@ const (
 )
 
 type CloudWatch struct {
-	Region             string                   `toml:"region"`
-	EndpointOverride   string                   `toml:"endpoint_override"`
-	AccessKey          string                   `toml:"access_key"`
-	SecretKey          string                   `toml:"secret_key"`
-	RoleARN            string                   `toml:"role_arn"`
-	Profile            string                   `toml:"profile"`
-	Filename           string                   `toml:"shared_credential_file"`
-	Token              string                   `toml:"token"`
-	ForceFlushInterval internal.Duration        `toml:"force_flush_interval"` // unit is second
-	MaxDatumsPerCall   int                      `toml:"max_datums_per_call"`
-	MaxValuesPerDatum  int                      `toml:"max_values_per_datum"`
-	MetricConfigs      []MetricDecorationConfig `toml:"metric_decoration"`
-	RollupDimensions   [][]string               `toml:"rollup_dimensions"`
-	DropOriginConfigs  map[string][]string      `toml:"drop_original_metrics"`
-	Namespace          string                   `toml:"namespace"` // CloudWatch Metrics Namespace
-
-	Log telegraf.Logger `toml:"-"`
-
-	svc                    cloudwatchiface.CloudWatchAPI
-	aggregator             Aggregator
-	aggregatorShutdownChan chan struct{}
-	aggregatorWaitGroup    sync.WaitGroup
-	metricChan             chan telegraf.Metric
-	datumBatchChan         chan []*cloudwatch.MetricDatum
-	metricDatumBatch       *MetricDatumBatch
-	shutdownChan           chan struct{}
-	pushTicker             *time.Ticker
-	metricDecorations      *MetricDecorations
-	retries                int
-	publisher              *publisher.Publisher
-	retryer                *retryer.LogThrottleRetryer
-	droppingOriginMetrics  map[string]map[string]struct{}
+	config *Config
+	svc    cloudwatchiface.CloudWatchAPI
+	// todo: may want to increase the size of the chan since the type changed.
+	// 1 telegraf Metric could have many Fields.
+	// Each field corresponds to a MetricDatum.
+	metricChan            chan *cloudwatch.MetricDatum
+	datumBatchChan        chan []*cloudwatch.MetricDatum
+	metricDatumBatch      *MetricDatumBatch
+	shutdownChan          chan struct{}
+	metricDecorations     *MetricDecorations
+	retries               int
+	publisher             *publisher.Publisher
+	retryer               *retryer.LogThrottleRetryer
+	droppingOriginMetrics map[string]map[string]struct{}
 }
 
-var sampleConfig = `
-  ## Amazon REGION
-  region = "us-east-1"
+// Compile time interface check.
+var _ component.MetricsExporter = (*CloudWatch)(nil)
 
-  ## Amazon Credentials
-  ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
-  ## 2) explicit credentials from 'access_key' and 'secret_key'
-  ## 3) shared profile from 'profile'
-  ## 4) environment variables
-  ## 5) shared credentials file
-  ## 6) EC2 Instance Profile
-  #access_key = ""
-  #secret_key = ""
-  #token = ""
-  #role_arn = ""
-  #profile = ""
-  #shared_credential_file = ""
-
-  ## Namespace for the CloudWatch MetricDatums
-  namespace = "InfluxData/Telegraf"
-
-  ## RollupDimensions
-  # RollupDimensions = [["host"],["host", "ImageId"],[]]
-`
-
-func (c *CloudWatch) SampleConfig() string {
-	return sampleConfig
+func (c *CloudWatch) Capabilities() consumer.Capabilities {
+	return consumer.Capabilities{MutatesData: false}
 }
 
-func (c *CloudWatch) Description() string {
-	return "Configuration for AWS CloudWatch output."
-}
-
-func (c *CloudWatch) Connect() error {
+func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	var err error
-	c.publisher, _ = publisher.NewPublisher(publisher.NewNonBlockingFifoQueue(metricChanBufferSize), maxConcurrentPublisher, 2*time.Second, c.WriteToCloudWatch)
-
-	if c.metricDecorations, err = NewMetricDecorations(c.MetricConfigs); err != nil {
+	c.publisher, _ = publisher.NewPublisher(
+		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
+		maxConcurrentPublisher,
+		2*time.Second,
+		c.WriteToCloudWatch)
+	c.metricDecorations, err = NewMetricDecorations(c.config.MetricDecorations)
+	if err != nil {
 		return err
 	}
-
 	credentialConfig := &configaws.CredentialConfig{
-		Region:    c.Region,
-		AccessKey: c.AccessKey,
-		SecretKey: c.SecretKey,
-		RoleARN:   c.RoleARN,
-		Profile:   c.Profile,
-		Filename:  c.Filename,
-		Token:     c.Token,
+		Region:    c.config.Region,
+		AccessKey: c.config.AccessKey,
+		SecretKey: c.config.SecretKey,
+		RoleARN:   c.config.RoleARN,
+		Profile:   c.config.Profile,
+		Filename:  c.config.SharedCredentialFilename,
+		Token:     c.config.Token,
 	}
 	configProvider := credentialConfig.Credentials()
-
-	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
+	logger := models.NewLogger("outputs", "cloudwatch", "")
+	logThrottleRetryer := retryer.NewLogThrottleRetryer(logger)
 	svc := cloudwatch.New(
 		configProvider,
 		&aws.Config{
-			Endpoint: aws.String(c.EndpointOverride),
+			Endpoint: aws.String(c.config.EndpointOverride),
 			Retryer:  logThrottleRetryer,
 			LogLevel: configaws.SDKLogLevel(),
 			Logger:   configaws.SDKLogger{},
 		})
-
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
 	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent("")))
-
 	//Format unique roll up list
-	c.RollupDimensions = GetUniqueRollupList(c.RollupDimensions)
-
+	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	//Construct map for metrics that dropping origin
-	c.droppingOriginMetrics = GetDroppingDimensionMap(c.DropOriginConfigs)
-
+	c.droppingOriginMetrics = GetDroppingDimensionMap(c.config.DropOriginConfigs)
 	c.svc = svc
 	c.retryer = logThrottleRetryer
 	c.startRoutines()
@@ -162,31 +119,18 @@ func (c *CloudWatch) Connect() error {
 }
 
 func (c *CloudWatch) startRoutines() {
-	c.metricChan = make(chan telegraf.Metric, metricChanBufferSize)
+	c.metricChan = make(chan *cloudwatch.MetricDatum, metricChanBufferSize)
 	c.datumBatchChan = make(chan []*cloudwatch.MetricDatum, datumBatchChanBufferSize)
 	c.shutdownChan = make(chan struct{})
-	c.aggregatorShutdownChan = make(chan struct{})
-	c.aggregator = NewAggregator(c.metricChan, c.aggregatorShutdownChan, &c.aggregatorWaitGroup)
-	if c.ForceFlushInterval.Duration == 0 {
-		c.ForceFlushInterval.Duration = pushIntervalInSec * time.Second
-	}
-	if c.MaxDatumsPerCall == 0 {
-		c.MaxDatumsPerCall = defaultMaxDatumsPerCall
-	}
-	if c.MaxValuesPerDatum == 0 {
-		c.MaxValuesPerDatum = defaultMaxValuesPerDatum
-	}
-	setNewDistributionFunc(c.MaxValuesPerDatum)
-	perRequestConstSize := overallConstPerRequestSize + len(c.Namespace) + namespaceOverheads
-	c.metricDatumBatch = newMetricDatumBatch(c.MaxDatumsPerCall, perRequestConstSize)
+	setNewDistributionFunc(c.config.MaxValuesPerDatum)
+	perRequestConstSize := overallConstPerRequestSize + len(c.config.Namespace) + namespaceOverheads
+	c.metricDatumBatch = newMetricDatumBatch(c.config.MaxDatumsPerCall, perRequestConstSize)
 	go c.pushMetricDatum()
 	go c.publish()
 }
 
-func (c *CloudWatch) Close() error {
+func (c *CloudWatch) Shutdown(ctx context.Context) error {
 	log.Println("D! Stopping the CloudWatch output plugin")
-	close(c.aggregatorShutdownChan)
-	c.aggregatorWaitGroup.Wait()
 	for i := 0; i < 5; i++ {
 		if len(c.metricChan) == 0 && len(c.datumBatchChan) == 0 {
 			break
@@ -205,32 +149,32 @@ func (c *CloudWatch) Close() error {
 	return nil
 }
 
-func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
-	for _, m := range metrics {
-		c.aggregator.AddMetric(m)
+// ConsumeMetrics queues metrics to be published to CW.
+// The actual publishing will occur in a long running goroutine.
+// This method can block when publishing is backed up.
+func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
+	datums := c.ConvertOtelMetrics(metrics)
+	for _, d := range datums {
+		c.metricChan <- d
 	}
 	return nil
 }
 
-// Write data for a single point. A point can have many fields and one field
-// is equal to one MetricDatum. There is a limit on how many MetricDatums a
-// request can have so we process one Point at a time.
+// pushMetricDatum groups datums into batches for efficient API calls.
+// When a batch is full it is queued up for sending.
+// Even if the batch is not full it will still get sent after the flush interval.
 func (c *CloudWatch) pushMetricDatum() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
 		select {
-		case point := <-c.metricChan:
-			datums := c.BuildMetricDatum(point)
-			numberOfPartitions := len(datums)
-			for i := 0; i < numberOfPartitions; i++ {
-				c.metricDatumBatch.Partition = append(c.metricDatumBatch.Partition, datums[i])
-				c.metricDatumBatch.Size += payload(datums[i])
-				if c.metricDatumBatch.isFull() {
-					// if batch is full
-					c.datumBatchChan <- c.metricDatumBatch.Partition
-					c.metricDatumBatch.clear()
-				}
+		case datum := <-c.metricChan:
+			c.metricDatumBatch.Partition = append(c.metricDatumBatch.Partition,
+				datum)
+			c.metricDatumBatch.Size += payload(datum)
+			if c.metricDatumBatch.isFull() {
+				c.datumBatchChan <- c.metricDatumBatch.Partition
+				c.metricDatumBatch.clear()
 			}
 		case <-ticker.C:
 			if c.timeToPublish(c.metricDatumBatch) {
@@ -273,7 +217,7 @@ func (b *MetricDatumBatch) isFull() bool {
 }
 
 func (c *CloudWatch) timeToPublish(b *MetricDatumBatch) bool {
-	return len(b.Partition) > 0 && time.Now().Sub(b.BeginTime) >= c.ForceFlushInterval.Duration
+	return len(b.Partition) > 0 && time.Now().Sub(b.BeginTime) >= c.config.ForceFlushInterval
 }
 
 // getFirstPushMs returns the time at which the first upload should occur.
@@ -297,7 +241,7 @@ func getFirstPushMs(interval time.Duration) int64 {
 // If thet batch buffer fills up the interval will be gradually reduced to avoid
 // many agents bursting the backend.
 func (c *CloudWatch) publish() {
-	currentInterval := c.ForceFlushInterval.Duration
+	currentInterval := c.config.ForceFlushInterval
 	nextMs := getFirstPushMs(currentInterval)
 	bufferFullOccurred := false
 
@@ -307,8 +251,6 @@ func (c *CloudWatch) publish() {
 		case <-c.shutdownChan:
 			log.Printf("D! cloudwatch: publish routine receives the shutdown signal, exiting.")
 			return
-		case <-c.aggregatorShutdownChan:
-			shouldPublish = true
 		default:
 		}
 
@@ -334,7 +276,7 @@ func (c *CloudWatch) publish() {
 			shouldPublish = true
 			// Restore interval if buffer did not fill up during this interval.
 			if !bufferFullOccurred {
-				currentInterval = c.ForceFlushInterval.Duration
+				currentInterval = c.config.ForceFlushInterval
 			}
 			nextMs += currentInterval.Milliseconds()
 		}
@@ -357,6 +299,8 @@ func (c *CloudWatch) metricDatumBatchFull() bool {
 	return len(c.datumBatchChan) >= datumBatchChanBufferSize
 }
 
+// pushMetricDatumBatch will try receiving on the channel, and if successful,
+// then it publishes the received batch.
 func (c *CloudWatch) pushMetricDatumBatch() {
 	for {
 		select {
@@ -386,12 +330,11 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	datums := req.([]*cloudwatch.MetricDatum)
 	params := &cloudwatch.PutMetricDataInput{
 		MetricData: datums,
-		Namespace:  aws.String(c.Namespace),
+		Namespace:  aws.String(c.config.Namespace),
 	}
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
 		_, err = c.svc.PutMetricData(params)
-
 		if err != nil {
 			awsErr, ok := err.(awserr.Error)
 			if !ok {
@@ -446,180 +389,64 @@ func (c *CloudWatch) decorateMetricUnit(category string, name string) (decorated
 	return
 }
 
-// Create MetricDatums according to metric roll up requirement for each field in a Point. Only fields with values that can be
-// converted to float64 are supported. Non-supported fields are skipped.
-func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
-	//high resolution logic
-	isHighResolution := false
-	highResolutionValue, ok := point.Tags()[highResolutionTagKey]
-	if ok && strings.EqualFold(highResolutionValue, "true") {
-		isHighResolution = true
-		point.RemoveTag(highResolutionTagKey)
+// sortedTagKeys returns a sorted list of keys in the map.
+// Necessary for comparing a metric-name and its dimensions to determine
+// if 2 metrics are actually the same.
+func sortedTagKeys(tagMap map[string]string) []string {
+	// Allocate slice with proper size and avoid append.
+	keys := make([]string, 0, len(tagMap))
+	for k := range tagMap {
+		keys = append(keys, k)
 	}
-
-	rawDimensions := BuildDimensions(point.Tags())
-	dimensionsList := c.ProcessRollup(rawDimensions)
-	//https://pratheekadidela.in/2016/02/11/is-append-in-go-efficient/
-	//https://www.ardanlabs.com/blog/2013/08/understanding-slices-in-go-programming.html
-	var datums []*cloudwatch.MetricDatum
-	for k, v := range point.Fields() {
-		var unit string
-		var value float64
-		var distList []distribution.Distribution
-
-		switch t := v.(type) {
-		case uint:
-			value = float64(t)
-		case uint8:
-			value = float64(t)
-		case uint16:
-			value = float64(t)
-		case uint32:
-			value = float64(t)
-		case uint64:
-			value = float64(t)
-		case int:
-			value = float64(t)
-		case int8:
-			value = float64(t)
-		case int16:
-			value = float64(t)
-		case int32:
-			value = float64(t)
-		case int64:
-			value = float64(t)
-		case float32:
-			value = float64(t)
-		case float64:
-			value = t
-		case bool:
-			if t {
-				value = 1
-			} else {
-				value = 0
-			}
-		case time.Time:
-			value = float64(t.Unix())
-		case distribution.Distribution:
-			if t.Size() == 0 {
-				// the distribution does not have a value
-				continue
-			}
-			distList = resize(t, c.MaxValuesPerDatum)
-			unit = t.Unit()
-		default:
-			// Skip unsupported type.
-			continue
-		}
-
-		metricName := aws.String(c.decorateMetricName(point.Name(), k))
-		if unit == "" {
-			unit = c.decorateMetricUnit(point.Name(), k)
-		}
-
-		for index, dimensions := range dimensionsList {
-			//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
-			//metric datum
-			if index == 0 && c.IsDropping(point.Name(), k) {
-				continue
-			}
-			if len(distList) == 0 {
-				datum := &cloudwatch.MetricDatum{
-					MetricName: metricName,
-					Dimensions: dimensions,
-					Timestamp:  aws.Time(point.Time()),
-					Value:      aws.Float64(value),
-				}
-				if unit != "" {
-					datum.SetUnit(unit)
-				}
-				if isHighResolution {
-					datum.SetStorageResolution(1)
-				}
-				datums = append(datums, datum)
-			} else {
-				for _, dist := range distList {
-					datum := &cloudwatch.MetricDatum{
-						MetricName: metricName,
-						Dimensions: dimensions,
-						Timestamp:  aws.Time(point.Time()),
-					}
-					values, counts := dist.ValuesAndCounts()
-					datum.SetValues(aws.Float64Slice(values))
-					datum.SetCounts(aws.Float64Slice(counts))
-					datum.SetStatisticValues(&cloudwatch.StatisticSet{
-						Maximum:     aws.Float64(dist.Maximum()),
-						Minimum:     aws.Float64(dist.Minimum()),
-						SampleCount: aws.Float64(dist.SampleCount()),
-						Sum:         aws.Float64(dist.Sum()),
-					})
-					if unit != "" {
-						datum.SetUnit(unit)
-					}
-					if isHighResolution {
-						datum.SetStorageResolution(1)
-					}
-					datums = append(datums, datum)
-				}
-			}
-		}
-	}
-	return datums
+	sort.Strings(keys)
+	return keys
 }
 
-// Make a list of Dimensions by using a Point's tags. CloudWatch supports up to
-// 30 dimensions per metric so we only keep up to the first 30 alphabetically.
+// BuildDimensions converts the given map of strings to a list of dimensions.
+// CloudWatch supports up to 30 dimensions per metric.
+// So keep up to the first 30 alphabetically.
 // This always includes the "host" tag if it exists.
 // See https://github.com/aws/amazon-cloudwatch-agent/issues/398
-func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
+func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
+	if len(tagMap) > MaxDimensions {
+		log.Printf("D! cloudwatch: dropping dimensions, max %v, count %v",
+			MaxDimensions, len(tagMap))
+	}
 	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
-
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
-	if host, ok := mTags["host"]; ok && host != "" {
+	if host, ok := tagMap["host"]; ok && host != "" {
 		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String("host"),
 			Value: aws.String(host),
 		})
 	}
-
-	var keys []string
-	for k := range mTags {
-		if k != "host" {
-			keys = append(keys, k)
-		}
-	}
-	sort.Strings(keys)
-
-	for _, k := range keys {
+	sortedKeys := sortedTagKeys(tagMap)
+	for _, k := range sortedKeys {
 		if len(dimensions) >= MaxDimensions {
-			log.Printf("D! max MaxDimensions %v is less than than number of dimensions %v thus only taking the max number", MaxDimensions, len(dimensions))
 			break
 		}
-
-		value := mTags[k]
+		if k == "host" {
+			continue
+		}
+		value := tagMap[k]
 		if value == "" {
 			continue
 		}
-
 		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String(k),
-			Value: aws.String(mTags[k]),
+			Value: aws.String(tagMap[k]),
 		})
 	}
-
 	return dimensions
 }
 
 func (c *CloudWatch) ProcessRollup(rawDimension []*cloudwatch.Dimension) [][]*cloudwatch.Dimension {
 	rawDimensionMap := map[string]string{}
 	for _, v := range rawDimension {
-		log.Printf("D! rawDimension: name: %s, values: %s\n", *v.Name, *v.Value)
 		rawDimensionMap[*v.Name] = *v.Value
 	}
-
-	targetDimensionsList := c.RollupDimensions
+	targetDimensionsList := c.config.RollupDimensions
 	fullDimensionsList := [][]*cloudwatch.Dimension{rawDimension}
-
 	for _, targetDimensions := range targetDimensionsList {
 		i := 0
 		extraDimensions := make([]*cloudwatch.Dimension, len(targetDimensions))
@@ -637,10 +464,6 @@ func (c *CloudWatch) ProcessRollup(rawDimension []*cloudwatch.Dimension) [][]*cl
 		if i == len(targetDimensions) && !reflect.DeepEqual(rawDimension, extraDimensions) {
 			fullDimensionsList = append(fullDimensionsList, extraDimensions)
 		}
-
-	}
-	if len(fullDimensionsList) > 0 && len(fullDimensionsList[0]) > 0 {
-		log.Printf("D! cloudwatch: Get Full dimensionList %v", fullDimensionsList)
 	}
 	return fullDimensionsList
 }
@@ -686,6 +509,26 @@ func GetDroppingDimensionMap(input map[string][]string) map[string]map[string]st
 		}
 	}
 	return result
+}
+
+func (c *CloudWatch) SampleConfig() string {
+	return ""
+}
+
+func (c *CloudWatch) Description() string {
+	return "Configuration for AWS CloudWatch output."
+}
+
+func (c *CloudWatch) Connect() error {
+	return nil
+}
+
+func (c *CloudWatch) Close() error {
+	return nil
+}
+
+func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
+	return nil
 }
 
 func init() {
