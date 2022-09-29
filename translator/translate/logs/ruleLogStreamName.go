@@ -36,7 +36,7 @@ func (l *LogStreamName) ApplyRule(input interface{}) (returnKey string, returnVa
 		}
 	} else {
 		var err error
-		if ctx.Mode() == config.ModeOnPrem {
+		if (ctx.Mode() == config.ModeOnPrem) || (ctx.Mode() == config.ModeOnPremise) {
 			if _, inputVal := translator.DefaultCase("log_stream_name", "", input); inputVal == "" {
 				if defaultVal, err = os.Hostname(); err != nil {
 					translator.AddErrorMessages(GetCurPath(), "Failed to get hostName for log_stream_name field, please specify value for log_stream_name field")

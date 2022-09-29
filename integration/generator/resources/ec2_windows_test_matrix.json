@@ -1,6 +1,7 @@
 [
   {
-    "os": "win-2022",
-    "ami": "cloudwatch-agent-integration-test-win-2022*"
+    "os": "win-2019",
+    "instanceType":"g4dn.xlarge",
+    "ami": "Windows_Server-2019-English-Deep-Learning*"
   }
 ]

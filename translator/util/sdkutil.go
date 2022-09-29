@@ -46,7 +46,7 @@ func DetectAgentMode(configuredMode string) string {
 		return config.ModeEC2
 	}
 	fmt.Println("I! Detected the instance is OnPremise")
-	return config.ModeOnPrem
+	return configuredMode
 }
 
 func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) (region string) {
@@ -157,9 +157,8 @@ func GetCredentials(mode string, credsConfig map[string]string) (result map[stri
 	profile, hasProfile := credsConfig[commonconfig.CredentialProfile]
 	if hasProfile {
 		result[commonconfig.CredentialProfile] = profile
-	} else if mode == config.ModeOnPrem {
+	} else if (mode == config.ModeOnPrem) || (mode == config.ModeOnPremise) {
 		result[commonconfig.CredentialProfile] = DEFAULT_PROFILE
-
 	}
 	return
 }

@@ -7,14 +7,12 @@
 package metrics_number_dimension
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
 	cwPlugin "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
@@ -89,29 +87,8 @@ func TestNumberMetricDimension(t *testing.T) {
 			test.StopAgent()
 
 			// test for cloud watch metrics
-			cxt := context.Background()
 			dimensionFilter := buildDimensionFilterList(parameter.numberDimensionsInCW)
-			client := test.GetCWClient(cxt)
-			listMetricsInput := cloudwatch.ListMetricsInput{
-				MetricName: aws.String(parameter.metricName),
-				Namespace:  aws.String(namespace),
-				Dimensions: dimensionFilter,
-			}
-			data, err := client.ListMetrics(cxt, &listMetricsInput)
-			if err != nil {
-				t.Errorf("Error getting metric data %v", err)
-			}
-			if len(data.Metrics) == 0 {
-				metrics := make([]metric, len(dimensionFilter))
-				for i, filter := range dimensionFilter {
-					metrics[i] = metric{
-						name:  *filter.Name,
-						value: *filter.Value,
-					}
-				}
-				t.Errorf("No metrics found for dimension %v metric name %v namespace %v",
-					metrics, parameter.metricName, namespace)
-			}
+			test.ValidateMetrics(t, parameter.metricName, namespace, dimensionFilter)
 		})
 	}
 }

@@ -43,8 +43,6 @@ replace github.com/karrick/godirwalk v1.16.1 => github.com/karrick/godirwalk v1.
 
 replace github.com/docker/distribution => github.com/docker/distribution v2.8.1+incompatible
 
-replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.4
-
 // Prometheis messed up their library naming convention. v0.35.1 matches 2.35.1 prometheus version
 // Go says this is a downgrade, but this is the latest release as of 05/25/2022
 replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v0.37.0
@@ -84,12 +82,12 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/common v0.37.0
-	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2
-	github.com/shirou/gopsutil/v3 v3.22.7
+	github.com/prometheus/prometheus v1.99.0
+	github.com/shirou/gopsutil/v3 v3.22.8
 	github.com/stretchr/testify v1.8.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	go.opentelemetry.io/collector v0.59.0
-	go.opentelemetry.io/collector/pdata v0.59.0
+	go.opentelemetry.io/collector v0.60.0
+	go.opentelemetry.io/collector/pdata v0.60.0
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664
@@ -240,10 +238,10 @@ require (
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.0.2 // indirect
-	github.com/opencontainers/runc v1.1.3 // indirect
+	github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799 // indirect
+	github.com/opencontainers/runc v1.1.4 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
-	github.com/opencontainers/selinux v1.10.0 // indirect
+	github.com/opencontainers/selinux v1.10.1 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -279,7 +277,7 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	go.opentelemetry.io/collector/semconv v0.59.0 // indirect
+	go.opentelemetry.io/collector/semconv v0.60.0 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.9.0 // indirect
 	go.opentelemetry.io/otel v1.9.0 // indirect
 	go.opentelemetry.io/otel/exporters/prometheus v0.31.0 // indirect

@@ -1,22 +1,17 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-//go:build integration
-// +build integration
+//go:build linux && integration
+// +build linux,integration
 
 package test
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os/exec"
 	"path/filepath"
 	"time"
-
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 )
 
 func CopyFile(pathIn string, pathOut string) {
@@ -92,28 +87,10 @@ func RunShellScript(path string, args ...string) error{
 	out, err = exec.Command("bash", bashArgs...).Output()
 
 	if err != nil {
-		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
+		log.Printf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
 		return err
 	}
 	
-	return nil
-}
-
-func RunPowerShellScript(path string, args ...string) error{
-	ps, err := exec.LookPath("powershell.exe")
-
-	if err != nil {
-		return err
-	}
-
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", path}, args...)
-	out, err := exec.Command(ps, bashArgs...).Output()
-
-	if err != nil {
-		log.Fatalf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
-		return err
-	}
-
 	return nil
 }
 
@@ -131,29 +108,4 @@ func ReplaceLocalStackHostName(pathIn string) {
 	if err != nil {
 		log.Fatal(fmt.Sprint(err) + string(out))
 	}
-}
-
-func GetInstanceId() string {
-	ctx := context.Background()
-	c, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		// fail fast so we don't continue the test
-		log.Fatalf("Error occurred while creating SDK config: %v", err)
-	}
-
-	// TODO: this only works for EC2 based testing
-	client := imds.NewFromConfig(c)
-	metadata, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
-	if err != nil {
-		log.Fatalf("Error occurred while retrieving EC2 instance ID: %v", err)
-	}
-	return metadata.InstanceID
-}
-
-func GetCWClient(cxt context.Context) *cloudwatch.Client {
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
-	if err != nil {
-		log.Fatalf("err occurred while creating config %v", err)
-	}
-	return cloudwatch.NewFromConfig(defaultConfig)
 }
