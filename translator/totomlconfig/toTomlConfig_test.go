@@ -128,14 +128,14 @@ func TestStatsDConfig(t *testing.T) {
 	checkTomlTranslation(t, "./sampleConfig/statsd_config.json", "./sampleConfig/statsd_config_windows.conf", "windows")
 }
 
-//Linux only for CollectD
+// Linux only for CollectD
 func TestCollectDConfig(t *testing.T) {
 	resetContext()
 	checkTomlTranslation(t, "./sampleConfig/collectd_config_linux.json", "./sampleConfig/collectd_config_linux.conf", "linux")
 	checkTomlTranslation(t, "./sampleConfig/collectd_config_linux.json", "./sampleConfig/collectd_config_linux.conf", "darwin")
 }
 
-//prometheus
+// prometheus
 func TestPrometheusConfig(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)
