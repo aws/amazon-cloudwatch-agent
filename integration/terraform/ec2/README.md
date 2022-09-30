@@ -1,24 +1,83 @@
 Running integration tests
 =========================
+# Running Integration Tests against your private fork (Initial setup time: <20 min)
+After setting this up, you will be able to make code changes, push to your CWA fork whenever you want, let Github run all the tests against the change automatically.
 
-# Required setup
+The integration test GitHub actions workflow installs terraform, builds the agent and uploads the installable packages
+to the configured S3 bucket, so all you need to do is configure the secrets in the GitHub repo in order to allow the
+actions to run.
 
-### Set up AWS credentials for Terraform
+## 0. vCPU limit
+Newer accounts have lowered default vCPU limits which constrains workflow (eg. running CWAgent GitHub actions on personal forks).  
+If you haven't for the choice of your AWS account, do
+1. log into your AWS account on a browser
+2. go to [here](https://support.console.aws.amazon.com/support/home?#/case/create?issueType=service-limit-increase&limitType=service-code-ec2-instances&serviceLimitIncreaseType=ec2-instances&type=service_limit_increase) 
+3. Select Oregon for both request1 & 2
+4. For request 1, select All Standard (A, C, D, H, I, M, R, T, Z) instances - new limit 512
+5. For request 2, select All G and VT instances - new limit value 64
 
-This all assumes that you are creating resources in the `us-west-2` region, as that is currently the only region that
-supports the integration test AMIs.
+![](readme_resources/vCPU-limit-increase.png)
 
-#### Terraform IAM assume role permission
+### Notes
+- Integ tests run in parallel and will go over 32 vCPU total limit that is given to you by default. To run everything successfully, your increase limit request needs to be approved.
+- If you got approved for 300 instead of 512, that is ok.
+- 16 instead of 64 for G and VT instances are ok too. Windows test depend on it.
 
-For ease of use, here's a generated IAM policy based on resource usage that you can attach to your IAM user that
-Terraform will assume, with the required permissions. See docs
-on [Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
-for how to easily generate a new policy.
+## 1. Create ECR Repository 
+In your account, navigate to us-west-2 and create a ECR repository with the following settings.
 
-#### Creating assume role
-[reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
+|Field              |Value                   |
+|-------------------|------------------------|
+|Visibility settings|private                 |
+|Repository name    |cwagent-integration-test|
+|Tag immutability   |disabled                |
+|Scan on push       |enabled                 |
+|KMS encryption     |disabled                |
 
-Cloud formation template. You only need to enter org and repo (ex aws amazon-cloudwatch-agent)
+## 1. Setup Github personal fork
+- Fork amazon-cloudwatch-agent repo
+- `git tag <any number>`. e.g. v0 
+  - if you use any string, building CWA image will fail during integ test steps with error `'Version' field value 'leechena-1': version number does not start with digit`
+- `git push origin --tags` 
+  - this is used to create CWAGENT_VERSION which is used by integ test workflow when it builds artifacts. Workflow fails without this.
+
+
+## 2. Add GPG_KEY_NAME
+1. Follow GitHub's [guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key) to create a new gpg key
+2. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add GPG_KEY_NAME as GitHub repository secret. Name is `GPG_KEY_NAME` and Secret is the `userId` you supplied while creating your gpg key.
+
+
+### Notes
+Build artifacts get signed before being pushed out to S3. This is part of the GitHub actions workflow, so it's not
+required for testing locally but is required for testing on your personal fork.
+
+> Note: Store the signing key in a secure location!
+
+## 3. Add PASSPHRASE
+1. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add PASSPHRASE as GitHub repository secret. Name is `PASSPHRASE` and Secret is the `passphrase` you supplied while creating your gpg key above.
+
+
+## 4. Add GPG_PRIVATE_KEY
+1. `gpg --list-secret-keys --keyid-format=long`
+2. An output line should look like `sec <some string>/<key id>`
+3. `gpg --export-secret-keys -a <key id> > private.key`  
+4. `cat private.key`  
+5. copy the entire output including the `----` lines
+6. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add GPG_PRIVATE_KEY as GitHub repository secret. Name is `GPG_PRIVATE_KEY` and Secret is the private key you just copied to clipboard.
+
+
+## 5. Add S3_INTEGRATION_BUCKET
+1. open your aws console, and navigate into us-west-2 region
+2. create bucket
+3. bucket name: <bucket-name-of-your-choice>. e.g. terraform-integ-test
+4. Don't change any other default s3 bucket configuration. Just create with the bucket name.
+5. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add S3_INTEGRATION_BUCKET as GitHub repository secret. Name is `S3_INTEGRATION_BUCKET` and Secret is the `<bucket-name-of-your-choice>`
+
+
+## 6. Add TERRAFORM_AWS_ASSUME_ROLE
+1. Navigate to CloudFormation from aws console
+2. Choose file upload.
+3. Upload the following as a file
 ```
 Parameters:
   GitHubOrg:
@@ -66,6 +125,14 @@ Outputs:
   Role:
     Value: !GetAtt Role.Arn 
 ```
+
+4. the UI should ask you for inputs for the parameters. In `GitHubOrg`, type in your github username. In `RepositoryName`, type in your fork repo's name. e.g. amazon-cloudwatch-agent
+5. Choose a stackname. Anything. e.g. Terraform-IntegTest-Role
+6. After creating the stack, navigate to IAM console
+7. Search for an IAM role with the stack name you chose above. e.g. Terraform-IntegTest-Role...
+8. Click add permission
+9. Click attach policy, and then click create policy.
+10. Click JSON tab and copy and paste the following
 
 ```json
 {
@@ -126,158 +193,60 @@ Outputs:
         "ecr:InitiateLayerUpload",
         "ecr:UploadLayerPart",
         "ecr:CompleteLayerUpload",
-        "ecr:PutImage"
+        "ecr:PutImage",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ec2:DescribeVpcAttribute",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeRouteTables",
+        "ec2:CreateSecurityGroup",
+        "ec2:ImportKeyPair",
+        "ec2:CreateTags",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeKeyPairs",
+        "ec2:RevokeSecurityGroupEgress",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:DeleteSecurityGroup",
+        "ec2:AuthorizeSecurityGroupEgress",
+        "logs:CreateLogGroup",
+        "logs:DescribeLogGroups",
+        "logs:ListTagsLogGroup",
+        "iam:CreateRole",
+        "iam:CreatePolicy",
+        "iam:GetRole",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:CreateInstanceProfile",
+        "iam:AttachRolePolicy",
+        "iam:GetInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:PassRole",
+        "ec2:RunInstances",
+        "ec2:DescribeInstanceTypes",
+        "iam:DetachRolePolicy",
+        "iam:RemoveRoleFromInstanceProfile",
+        "ec2:DeleteKeyPair",
+        "iam:ListPolicyVersions",
+        "iam:DeleteInstanceProfile"
       ],
       "Resource": "*"
     }
   ]
 }
 ```
+11. Once creation is done, go back to the IAM role and attach the policy you just created by searching for the policy name.
+12. Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) to add TERRAFORM_AWS_ASSUME_ROLE as GitHub repository secret. Name is `TERRAFORM_AWS_ASSUME_ROLE` and Secret is the IAM role name. 
 
-> Note: Store the IAM user key credentials in a secure location!
 
-#### EC2 instance IAM role permissions
 
-Refer
-to [public docs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html)
-on configuring an IAM role/policy that is required for the CloudWatch agent to function.
 
-The EC2 instance also requires any permissions that are needed to run integration tests.
+### Notes
+[reference of how to create role](https://github.com/aws-actions/configure-aws-credentials)
 
-For example, if an integration test requires access to `cloudwatchlogs:GetLogEvents`, then the IAM role configured for
-integration testing that gets attached to the EC2 instances must also have that permission in the policy.
-
-For ease of use, here's a generated IAM policy based on resource usage that you can attach to your IAM role that will be
-attached to the integration test EC2 instances. See docs
-on [Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
-for how to easily generate a new policy.
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-         "cloudwatch:GetMetricData",
-         "cloudwatch:PutMetricData",
-         "cloudwatch:ListMetrics",
-         "ec2:DescribeVolumes",
-         "ec2:DescribeTags",
-         "logs:PutLogEvents",
-         "logs:DescribeLogStreams",
-         "logs:DescribeLogGroups",
-         "logs:CreateLogStream",
-         "logs:CreateLogGroup",
-         "logs:DeleteLogGroup",
-         "logs:DeleteLogStream",
-         "logs:PutRetentionPolicy",
-         "logs:GetLogEvents",
-         "logs:PutLogEvents",
-         "s3:GetObjectAcl",
-         "s3:GetObject",
-         "s3:ListBucket", 
-         "ecr:GetAuthorizationToken", 
-         "dynamodb:DescribeTable",
-         "dynamodb:PutItem",
-         "dynamodb:CreateTable"
-      ],
-      "Resource": "*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ssm:GetParameter"
-      ],
-      "Resource": "arn:aws:ssm:*:*:parameter/AmazonCloudWatch-*"
-    }
-  ]
-}
-```
-
-### Create a test S3 bucket
-
-See [docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html). The bucket does **NOT**
-require public access.
-
-### Configure security group(s)
-
-The security group(s) that the integration tests use should include the following for ingress:
-
-| Protocol    | Port | Source    | 
-|-------------|------|-----------|
-| TCP         | 4566 | 0.0.0.0/0 |
-| HTTPS       | 443  | 0.0.0.0/0 |
-| HTTP        | 80   | 0.0.0.0/0 |
-| SSH         | 22   | 0.0.0.0/0 |
-| RDP         | 3389 | 0.0.0.0/0 |
-
-By default, egress allows all traffic. This is fine. 
-
-### Create an EC2 key pair
-
-See [docs](https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-keypairs.html)
-on creating the key pair.
-> Note: Store the private key in a secure location!
-
-### Create ECR Repository
-|Field              |Value                   |
-|-------------------|------------------------|
-|Visibility settings|private                 |
-|Repository name    |cwagent-integration-test|
-|Tag immutability   |disabled                |
-|Scan on push       |enabled                 |
-|KMS encryption     |disabled                |
-
-**Reminder: All AWS resources including EC2 key pair and ECR repository must be in the same region as the instances, so this assumes that they are created in the `us-west-2` region.**
-
-# Required parameters for Terraform to have handy
-
-1. GitHub repo (ex: https://github.com/aws/amazon-cloudwatch-agent.git)
-2. GitHub SHA: `git checkout your-branch && git rev-parse --verify HEAD`
-3. EC2 security groups (ex: `["sg-abc123"]`)
-4. EC2 key name (the name of the `.pem` file, typically)
-5. EC2 private key (the contents of the private key file)
-6. IAM role **name**
-    1. If you have a role ARN like `arn:aws:iam::12345:role/FooBarBaz`, then the value you want just `FooBarBaz`
-
-# Run Integration Test's Method
-## GitHub actions on your personal fork (Preferred)
-
-The integration test GitHub actions workflow installs terraform, builds the agent and uploads the installable packages
-to the configured S3 bucket, so all you need to do is configure the secrets in the GitHub repo in order to allow the
-actions to run.
-
-### Create a GPG signing key
-
-Build artifacts get signed before being pushed out to S3. This is part of the GitHub actions workflow, so it's not
-required for testing locally but is required for testing on your personal fork.
-
-GitHub has a
-good [guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key)
-on how to generate a new GPG key. It is good practice to create a signing key with a passphrase, and it's an expected
-repository secret for the GitHub actions workflow.
-
-> Note: Store the signing key in a secure location!
-
-### Set up secrets on GitHub Actions
-
-Follow [docs](https://docs.github.com/en/actions/security-guides/encrypted-secrets) on configuring GitHub Actions
-secrets.
-
-| Key                               | Description                                                                                              |
-|-----------------------------------|----------------------------------------------------------------------------------------------------------|
-| `AWS_PRIVATE_KEY`                 | The contents of the `.pem` file (EC2 key pair) that is used to SSH onto EC2 instances                    |
-| `TERRAFORM_AWS_ASSUME_ROLE`       | IAM role to assume                                                                                       |
-| `S3_INTEGRATION_BUCKET`           | S3 bucket for dumping build artifacts                                                                    |
-| `KEY_NAME`                        | EC2 key pair name                                                                                        |
-| `VPC_SECURITY_GROUPS_IDS`         | Security groups for the integration test EC2 instances, in the form of `["sg-abc123"]` (note `"` chars)  |
-| `IAM_ROLE`                        | Name of the IAM role to attach to the EC2 instances                                                      |
-| `GPG_PRIVATE_KEY`                 | The contents of your GPG private key                                                                     |
-| `PASSPHRASE`                      | The passphrase to use for GPG signing                                                                    | 
-| `GPG_KEY_NAME`                    | The name of your GPG key, used as the default signing key                                                |
-
-### Run the integration test action on your fork
+## 7. Run the integration test action on your fork
 
 1. Navigate to your fork
 2. Go to `Actions`
@@ -294,7 +263,7 @@ click the `...` and then select `Disable workflow`.
 See [GitHub docs](https://docs.github.com/en/actions/managing-workflow-runs/disabling-and-enabling-a-workflow)
 regarding how to turn workflows on and off.
 
-## Local setup (Not recommended)
+# Local setup (Not recommended)
 
 ### Install terraform
 
