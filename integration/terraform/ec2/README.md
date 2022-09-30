@@ -8,8 +8,17 @@ to the configured S3 bucket, so all you need to do is configure the secrets in t
 actions to run.
 
 ## 0. vCPU limit
-If you haven't for the choice of your AWS account, follow [wiki](https://w.amazon.com/bin/view/CloudWatch/OrangeZest/Onboarding#:~:text=Request%20increase%20for%20vCPU%20limits) to increase vCPU limit for Oregon region.
+Newer accounts have lowered default vCPU limits which constrains workflow (eg. running CWAgent GitHub actions on personal forks).  
+If you haven't for the choice of your AWS account, do
+1. log into your AWS account on a browser
+2. go to [here](https://support.console.aws.amazon.com/support/home?#/case/create?issueType=service-limit-increase&limitType=service-code-ec2-instances&serviceLimitIncreaseType=ec2-instances&type=service_limit_increase) 
+3. Select Oregon for both request1 & 2
+4. For request 1, select All Standard (A, C, D, H, I, M, R, T, Z) instances - new limit 512
+5. For request 2, select All G and VT instances - new limit value 64
+
 ![](readme_resources/vCPU-limit-increase.png)
+
+### Notes
 - Integ tests run in parallel and will go over 32 vCPU total limit that is given to you by default. To run everything successfully, your increase limit request needs to be approved.
 - If you got approved for 300 instead of 512, that is ok.
 - 16 instead of 64 for G and VT instances are ok too. Windows test depend on it.
