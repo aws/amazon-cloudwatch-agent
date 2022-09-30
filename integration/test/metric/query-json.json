@@ -1,0 +1,23 @@
+[
+  {
+    "Id": "m1",
+    "MetricStat": {
+      "Metric": {
+        "Namespace": "MetricValueBenchmarkTest",
+        "MetricName": "cpu_usage_active",
+        "Dimensions": [
+          {
+            "Name": "InstanceId",
+            "Value": "i-095d623fa10a192e3"
+          },
+          {
+            "Name": "cpu",
+            "Value": "cpu-total"
+          }
+        ]
+      },
+      "Period": 60,
+      "Stat": "Average"
+    }
+  }
+]
