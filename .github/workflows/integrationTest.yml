@@ -126,7 +126,6 @@ jobs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
-#     ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
     steps:
       - uses: actions/checkout@v2
@@ -143,7 +142,6 @@ jobs:
           echo "::set-output name=ec2_gpu_matrix::$(echo $(cat integration/generator/resources/ec2_gpu_complete_test_matrix.json))"
           echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/ec2_linux_complete_test_matrix.json))"
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat integration/generator/resources/ec2_performance_complete_test_matrix.json))"
-#         echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat integration/generator/resources/ecs_fargate_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
