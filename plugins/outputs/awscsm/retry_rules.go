@@ -5,6 +5,7 @@ package awscsm
 
 import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
 )
 

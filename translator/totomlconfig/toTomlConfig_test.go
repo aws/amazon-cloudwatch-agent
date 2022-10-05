@@ -6,32 +6,28 @@ package totomlconfig
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/totomlconfig"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
+	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-
-	"os"
-
-	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/stretchr/testify/assert"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 func ReadFromFile(filename string) string {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -250,7 +246,7 @@ func checkTomlTranslation(t *testing.T, jsonPath string, desiredTomlPath string,
 func readCommonConfig() {
 	ctx := context.CurrentContext()
 	config := commonconfig.New()
-	data, _ := ioutil.ReadFile("./sampleConfig/commonConfigTest.toml")
+	data, _ := os.ReadFile("./sampleConfig/commonConfigTest.toml")
 	config.Parse(bytes.NewReader(data))
 	ctx.SetCredentials(config.CredentialsMap())
 	ctx.SetProxy(config.ProxyMap())

@@ -1,4 +1,5 @@
 package registerrules
+
 // Rules register themselves during import with their parent rules in a hierarchy up until the root translator object.
 // Because of this, when rules need to be registered and merged, this package should be imported as a whole
 import (

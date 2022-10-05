@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/mapWithExpiry"
-
-	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/k8sCommon/k8sclient"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
+
+	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/k8sCommon/k8sclient"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/mapWithExpiry"
 )
 
 func getBaseTestPodInfo() *corev1.Pod {

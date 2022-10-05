@@ -6,7 +6,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 )
@@ -28,7 +28,7 @@ var osToTestDirMap = map[string][]string{
 		"./integration/test/cloudwatchlogs",
 		"./integration/test/metrics_number_dimension",
 	},
-	"ec2_performance":{
+	"ec2_performance": {
 		"./integration/test/performancetest",
 	},
 	// @TODO add real tests
@@ -53,7 +53,7 @@ func genMatrix(targetOS string, testDirList []string) []map[string]string {
 		log.Panicf("can't read file %v_test_matrix.json err %v", targetOS, err)
 	}
 
-	byteValueTestMatrix, _ := ioutil.ReadAll(openTestMatrix)
+	byteValueTestMatrix, _ := io.ReadAll(openTestMatrix)
 	_ = openTestMatrix.Close()
 
 	var testMatrix []map[string]string
@@ -78,7 +78,7 @@ func writeTestMatrixFile(targetOS string, testMatrix []map[string]string) {
 	if err != nil {
 		log.Panicf("Can't marshal json for target os %v, err %v", targetOS, err)
 	}
-	err = ioutil.WriteFile(fmt.Sprintf("integration/generator/resources/%v_complete_test_matrix.json", targetOS), bytes, os.ModePerm)
+	err = os.WriteFile(fmt.Sprintf("integration/generator/resources/%v_complete_test_matrix.json", targetOS), bytes, os.ModePerm)
 	if err != nil {
 		log.Panicf("Can't write json to file for target os %v, err %v", targetOS, err)
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/awstesting/unit"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
 )
 

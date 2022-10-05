@@ -7,9 +7,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestWithAgentConfig(t *testing.T) {

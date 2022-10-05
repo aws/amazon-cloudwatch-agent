@@ -12,7 +12,6 @@ import (
 
 	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
-
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/providers"
 )
 

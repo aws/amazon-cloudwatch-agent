@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/defaultConfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNextProcessor(t *testing.T) {

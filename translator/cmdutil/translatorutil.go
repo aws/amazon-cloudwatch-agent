@@ -5,12 +5,13 @@ package cmdutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
@@ -22,7 +23,6 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
 	translatorUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-	"github.com/xeipuuv/gojsonschema"
 )
 
 const (
@@ -39,7 +39,7 @@ func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, env
 		return
 	}
 	bytes := toenvconfig.ToEnvConfig(jsonConfigValue)
-	if err := ioutil.WriteFile(envConfigPath, bytes, 0644); err != nil {
+	if err := os.WriteFile(envConfigPath, bytes, 0644); err != nil {
 		log.Panicf("E! Failed to create env config. Reason: %s", err.Error())
 	}
 }
@@ -217,13 +217,13 @@ func TranslateJsonMapToConfig(jsonConfigValue interface{}) interface{} {
 
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) {
 	res := totomlconfig.ToTomlConfig(config)
-	err := ioutil.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
+	err := os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
 	translatorUtil.PanicIfErr("E! Failed to create the configuration validation file. Reason:", err)
 
 }
 
 func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) {
 	res, _ := toyamlconfig.ToYamlConfig(config)
-	err := ioutil.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
+	err := os.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
 	translatorUtil.PanicIfErr("E! Failed to create the configuration validation file. Reason:", err)
 }

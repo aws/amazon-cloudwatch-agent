@@ -4,16 +4,16 @@
 package accumulator
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util"
 )
 
 func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {

@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/structuredlogscommon"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/structuredlogscommon"
 )
 
 func buildTestMetricDeclarations() (mds []*metricDeclaration) {

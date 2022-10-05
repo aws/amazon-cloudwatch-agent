@@ -5,6 +5,9 @@ package adapter
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	telegrafconfig "github.com/influxdata/telegraf/config"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cpu"
 	"github.com/stretchr/testify/assert"
@@ -12,8 +15,6 @@ import (
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
-	"testing"
-	"time"
 )
 
 func Test_Type(t *testing.T) {

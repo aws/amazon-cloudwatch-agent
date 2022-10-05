@@ -7,8 +7,9 @@
 package main
 
 import (
-	lumberjack "github.com/aws/private-amazon-cloudwatch-agent-staging/logger"
 	"github.com/influxdata/telegraf/logger"
+
+	lumberjack "github.com/aws/private-amazon-cloudwatch-agent-staging/logger"
 )
 
 // RegisterEventLogger is for supporting Windows Event

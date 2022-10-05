@@ -6,16 +6,13 @@ package defaultConfig
 import (
 	"testing"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/migration/linux"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/migration/linux"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 )
 
 func TestProcessor_Process(t *testing.T) {

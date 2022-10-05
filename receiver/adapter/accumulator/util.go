@@ -4,8 +4,9 @@
 package accumulator
 
 import (
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"strings"
+
+	"go.opentelemetry.io/collector/pdata/pcommon"
 )
 
 // Otel Attributes = Telegraf Tags = CloudWatch Dimensions

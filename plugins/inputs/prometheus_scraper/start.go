@@ -21,7 +21,6 @@ package prometheus_scraper
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
@@ -271,7 +270,7 @@ const (
 
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
-	content, _ := ioutil.ReadFile(filename)
+	content, _ := os.ReadFile(filename)
 	text := string(content)
 	level.Debug(logger).Log("msg", "Prometheus configuration file", "value", text)
 

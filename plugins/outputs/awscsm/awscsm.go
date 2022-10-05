@@ -14,18 +14,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
+
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane/sdkmetricsdataplaneiface"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/influxdata/telegraf"
-
-	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/models"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/metametrics"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/providers"
-	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (

@@ -5,11 +5,13 @@ package adapter
 
 import (
 	"context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter/accumulator"
+
 	"github.com/influxdata/telegraf/models"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter/accumulator"
 )
 
 type AdaptedReceiver struct {

@@ -6,25 +6,23 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	sysruntime "runtime"
 	"strconv"
-
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/interfaze"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
-
-	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/interfaze"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
 )
 
 const (
@@ -57,7 +55,7 @@ func ConfigFilePath() string {
 
 func PermissionCheck() {
 	filePath := ConfigFilePath()
-	err := ioutil.WriteFile(filePath, []byte(""), 0755)
+	err := os.WriteFile(filePath, []byte(""), 0755)
 	if err != nil {
 		fmt.Printf("Make sure that you have write permission to %s\n", filePath)
 		os.Exit(1)
@@ -66,7 +64,7 @@ func PermissionCheck() {
 
 func ReadConfigFromJsonFile() string {
 	filePath := ConfigFilePath()
-	byteArray, err := ioutil.ReadFile(filePath)
+	byteArray, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("Error in reading config from file %s: %v\n", filePath, err)
 		os.Exit(1)
@@ -85,7 +83,7 @@ func SerializeResultMapToJsonByteArray(resultMap map[string]interface{}) []byte 
 
 func SaveResultByteArrayToJsonFile(resultByteArray []byte) string {
 	filePath := ConfigFilePath()
-	err := ioutil.WriteFile(filePath, resultByteArray, 0755)
+	err := os.WriteFile(filePath, resultByteArray, 0755)
 	if err != nil {
 		fmt.Printf("Error in writing file to %s: %v\nMake sure that you have write permission to %s.", filePath, err, filePath)
 		os.Exit(1)

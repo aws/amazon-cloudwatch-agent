@@ -6,9 +6,10 @@ package prometheus_scraper
 import (
 	"sync"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/ecsservicediscovery"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/ecsservicediscovery"
 )
 
 type PrometheusScraper struct {

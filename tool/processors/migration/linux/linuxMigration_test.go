@@ -4,22 +4,17 @@
 package linux
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
-
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question/logs"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 func TestProcessor_Process(t *testing.T) {
@@ -39,10 +34,10 @@ func TestProcessor_Process(t *testing.T) {
 		initial_position = start_of_file
 		log_group_name = /var/log/messages
 	`
-	tmpFile, _ := ioutil.TempFile("", "")
+	tmpFile, _ := os.CreateTemp("", "")
 	defer os.Remove(tmpFile.Name())
 
-	err := ioutil.WriteFile(tmpFile.Name(), []byte(tomlString), os.ModePerm)
+	err := os.WriteFile(tmpFile.Name(), []byte(tomlString), os.ModePerm)
 	assert.NoError(t, err)
 
 	expectedMap := map[string]interface{}{
@@ -139,10 +134,10 @@ func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
 		},
 	}
 
-	tmpFile, _ := ioutil.TempFile("", "")
+	tmpFile, _ := os.CreateTemp("", "")
 	defer os.Remove(tmpFile.Name())
 
-	err := ioutil.WriteFile(tmpFile.Name(), []byte(tomlString), os.ModePerm)
+	err := os.WriteFile(tmpFile.Name(), []byte(tomlString), os.ModePerm)
 	assert.NoError(t, err)
 
 	ctx := new(runtime.Context)

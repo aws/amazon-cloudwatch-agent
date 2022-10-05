@@ -7,9 +7,10 @@ import (
 	"log"
 	"math"
 
-	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/selfstat"
+
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
 )
 
 var GlobalMetricsGathered = selfstat.Register("agent", "metrics_gathered", map[string]string{})

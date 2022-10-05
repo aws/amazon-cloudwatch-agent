@@ -5,12 +5,14 @@ package adapter
 
 import (
 	"context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter/accumulator"
+	"testing"
+
 	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.uber.org/zap"
-	"testing"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter/accumulator"
 )
 
 func Test_AdaptedReceiver_WithEmptyMetrics(t *testing.T) {

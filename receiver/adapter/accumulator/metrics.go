@@ -5,11 +5,12 @@ package accumulator
 
 import (
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-	"log"
-	"time"
 )
 
 const (

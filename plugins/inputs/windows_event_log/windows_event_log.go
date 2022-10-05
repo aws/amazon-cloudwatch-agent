@@ -13,11 +13,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/logscommon"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/windows_event_log/wineventlog"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const (

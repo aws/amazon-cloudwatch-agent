@@ -6,11 +6,12 @@ package agent
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCommonCredsConfig(t *testing.T) {

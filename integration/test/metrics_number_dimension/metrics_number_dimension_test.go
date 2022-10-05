@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
 	cwPlugin "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
 )

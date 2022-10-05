@@ -2,10 +2,9 @@ package structuredlogscommon
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
-
-	"reflect"
 
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"

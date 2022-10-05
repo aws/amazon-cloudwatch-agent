@@ -6,14 +6,14 @@ package linux
 import (
 	"log"
 
+	"github.com/bigkevmcd/go-configparser"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question/logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
-
-	"github.com/bigkevmcd/go-configparser"
 )
 
 const (

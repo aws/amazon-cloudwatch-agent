@@ -4,9 +4,10 @@
 package structuredlogsadapter
 
 import (
+	"github.com/influxdata/telegraf"
+
 	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/structuredlogscommon"
-	"github.com/influxdata/telegraf"
 )
 
 const (

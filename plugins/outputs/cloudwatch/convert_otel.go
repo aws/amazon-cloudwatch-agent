@@ -33,9 +33,9 @@ func (c *CloudWatch) ConvertOtelDimensions(
 func NumberDataPointValue(dp pmetric.NumberDataPoint) float64 {
 	switch dp.ValueType() {
 	case pmetric.NumberDataPointValueTypeDouble:
-		return dp.DoubleVal()
+		return dp.DoubleValue()
 	case pmetric.NumberDataPointValueTypeInt:
-		return float64(dp.IntVal())
+		return float64(dp.IntValue())
 	}
 	return 0
 }
@@ -103,13 +103,13 @@ func (c *CloudWatch) ConvertOtelNumberDataPoints(
 func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*cloudwatch.MetricDatum {
 	n := m.Name()
 	u := ConvertUnit(m.Unit())
-	switch m.DataType() {
-	case pmetric.MetricDataTypeGauge:
+	switch m.Type() {
+	case pmetric.MetricTypeGauge:
 		return c.ConvertOtelNumberDataPoints(m.Gauge().DataPoints(), n, u)
-	case pmetric.MetricDataTypeSum:
+	case pmetric.MetricTypeSum:
 		return c.ConvertOtelNumberDataPoints(m.Sum().DataPoints(), n, u)
 	default:
-		log.Printf("E! cloudwatch: Unsupported type, %s", m.DataType())
+		log.Printf("E! cloudwatch: Unsupported type, %s", m.Type())
 	}
 	return []*cloudwatch.MetricDatum{}
 }

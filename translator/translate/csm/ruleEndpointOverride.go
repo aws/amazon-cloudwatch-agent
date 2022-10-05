@@ -6,9 +6,8 @@ package csm
 import (
 	"fmt"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/csm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
 
 type EndpointOverride struct{}

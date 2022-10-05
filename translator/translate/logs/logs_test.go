@@ -8,13 +8,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ecsutil"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ecsutil"
 )
 
 func TestLogs(t *testing.T) {

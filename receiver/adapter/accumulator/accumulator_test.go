@@ -5,13 +5,14 @@ package accumulator
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-	"testing"
-	"time"
 )
 
 func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {

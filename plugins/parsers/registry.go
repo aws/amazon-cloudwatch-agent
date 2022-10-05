@@ -4,10 +4,11 @@
 package parsers
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers/awscsm"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers/emf"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers/awscsm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers/emf"
 )
 
 func EMFParserCreator(metricName string) telegraf.Parser {

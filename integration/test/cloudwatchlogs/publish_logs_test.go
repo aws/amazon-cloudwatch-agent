@@ -11,11 +11,10 @@ import (
 	"log"
 	"os"
 	"strings"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
-
 	"testing"
 	"time"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
 )
 
 const (

@@ -12,23 +12,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
-	"go.opentelemetry.io/collector/pdata/pmetric"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	handlers "github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
-
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 )
 
 const (

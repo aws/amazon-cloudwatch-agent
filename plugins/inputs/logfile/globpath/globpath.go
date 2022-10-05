@@ -2,12 +2,11 @@ package globpath
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"log"
 	"runtime"
+	"strings"
 
 	"github.com/gobwas/glob"
 )

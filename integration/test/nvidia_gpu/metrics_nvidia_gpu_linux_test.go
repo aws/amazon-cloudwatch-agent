@@ -7,10 +7,11 @@
 package metrics_nvidia_gpu
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/security"
 	"testing"
 	"time"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/security"
 )
 
 const (

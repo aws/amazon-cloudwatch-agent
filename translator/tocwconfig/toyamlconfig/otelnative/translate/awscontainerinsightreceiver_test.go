@@ -2,8 +2,9 @@ package translate
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAwsContainerInsightReceiverTranslateReceivers(t *testing.T) {

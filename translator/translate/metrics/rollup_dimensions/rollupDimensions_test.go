@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
 
 func TestRollupDimensions(t *testing.T) {

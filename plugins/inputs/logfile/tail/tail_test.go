@@ -2,7 +2,6 @@ package tail
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -119,7 +118,7 @@ func TestStopAtEOF(t *testing.T) {
 }
 
 func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
@@ -182,7 +181,7 @@ func verifyTailerLogging(t *testing.T, tlog *testLogger, expectedErrorMsg string
 func verifyTailerExited(t *testing.T, tail *Tail) {
 	select {
 	case <-tail.Dead():
-		assert.Equal(t,  int64(0), OpenFileCount.Get())
+		assert.Equal(t, int64(0), OpenFileCount.Get())
 		return
 	default:
 		t.Errorf("Tailer is still alive after file removed and wait period")

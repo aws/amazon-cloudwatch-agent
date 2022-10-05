@@ -9,15 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
-	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
-	"go.opentelemetry.io/collector/exporter/loggingexporter"
-	"io/ioutil"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -30,26 +21,31 @@ import (
 	"syscall"
 	"time"
 
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/influxdata/wlog"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/migrate"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
-
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
-	"github.com/influxdata/telegraf/config"
-
 	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
-
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
+	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	otelService "go.opentelemetry.io/collector/service"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/migrate"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 )
 
 const (
@@ -200,7 +196,7 @@ func loadEnvironmentVariables(path string) error {
 		return fmt.Errorf("No env config file specified")
 	}
 
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("Can't read env config file %s due to: %s", path, err.Error())
 	}
@@ -549,7 +545,7 @@ func main() {
 		if *fEnvConfig != "" {
 			parts := strings.SplitN(*fSetEnv, "=", 2)
 			if len(parts) == 2 {
-				bytes, err := ioutil.ReadFile(*fEnvConfig)
+				bytes, err := os.ReadFile(*fEnvConfig)
 				if err != nil {
 					log.Fatalf("E! Failed to read env config: %v", err)
 				}
@@ -560,7 +556,7 @@ func main() {
 				}
 				envVars[parts[0]] = parts[1]
 				bytes, err = json.MarshalIndent(envVars, "", "\t")
-				if err = ioutil.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
+				if err = os.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
 			}

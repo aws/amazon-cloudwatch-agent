@@ -9,6 +9,7 @@ package test
 import (
 	"context"
 	"log"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 )

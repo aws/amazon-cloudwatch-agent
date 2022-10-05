@@ -2,10 +2,12 @@ package translate
 
 import (
 	_ "embed"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative"
+	"fmt"
+
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative"
 )
-import "fmt"
 
 //go:embed emf_config.yml
 var awsemfConfig string

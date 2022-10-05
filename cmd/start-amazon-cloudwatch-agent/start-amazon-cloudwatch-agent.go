@@ -5,14 +5,14 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"syscall"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 )
 
 const (
@@ -117,7 +117,7 @@ func printFileContents(path string) {
 		}
 	}()
 
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 	if err != nil {
 		log.Printf("E! Error when reading file(%s), Error is %v \n", path, err)
 	}

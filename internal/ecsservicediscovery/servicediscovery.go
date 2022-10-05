@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
+
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 )
 

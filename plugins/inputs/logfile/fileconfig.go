@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
-
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/ianaindex"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
 )
 
 const (

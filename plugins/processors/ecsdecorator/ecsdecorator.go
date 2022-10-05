@@ -6,11 +6,12 @@ package ecsdecorator
 import (
 	"fmt"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
+
 	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/logscommon"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/structuredlogscommon"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 const (

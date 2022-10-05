@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+
 	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/k8sCommon/k8sutil"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func createPodKeyFromMetaData(pod *corev1.Pod) string {

@@ -28,7 +28,7 @@ func addDimensions(dp pmetric.NumberDataPoint, count int) {
 	for i := 0; i < count; i++ {
 		key := keyPrefix + strconv.Itoa(i)
 		val := valPrefix + strconv.Itoa(i)
-		dp.Attributes().InsertString(key, val)
+		dp.Attributes().PutString(key, val)
 	}
 }
 
@@ -56,19 +56,19 @@ func createTestMetrics(
 		m.SetUnit(unit)
 
 		if i%2 == 0 {
-			m.SetDataType(pmetric.MetricDataTypeGauge)
+			m.SetEmptyGauge()
 		} else {
-			m.SetDataType(pmetric.MetricDataTypeSum)
+			m.SetEmptySum()
 		}
 
 		for j := 0; j < numDatapoints; j++ {
 			var dp pmetric.NumberDataPoint
 			if i%2 == 0 {
 				dp = m.Gauge().DataPoints().AppendEmpty()
-				dp.SetIntVal(int64(val))
+				dp.SetIntValue(int64(val))
 			} else {
 				dp = m.Sum().DataPoints().AppendEmpty()
-				dp.SetDoubleVal(val)
+				dp.SetDoubleValue(val)
 			}
 			dp.SetStartTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 			dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))

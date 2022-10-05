@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/cadvisor/extractors"
 	cinfo "github.com/google/cadvisor/info/v1"
+
+	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/cadvisor/extractors"
 )
 
 const (

@@ -26,7 +26,7 @@ DARWIN_BUILD = GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFL
 IMAGE = amazon/cloudwatch-agent:$(VERSION)
 DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
 
-CW_AGENT_IMPORT_PATH=https://github.com/aws/private-amazon-cloudwatch-agent-staging.git
+CW_AGENT_IMPORT_PATH=github.com/aws/private-amazon-cloudwatch-agent-staging
 ALL_SRC := $(shell find . -name '*.go' -type f | sort)
 TOOLS_BIN_DIR := $(abspath ./build/tools)
 
@@ -35,6 +35,7 @@ GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
+IMPI = $(TOOLS_BIN_DIR)/impi
 release: clean test build package-rpm package-deb package-win package-darwin
 
 nightly-release: release
@@ -106,6 +107,7 @@ build-for-docker-arm64:
 install-tools:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
 	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@latest
+	GOBIN=$(TOOLS_BIN_DIR) go install github.com/pavius/impi/cmd/impi@v0.0.3
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.45.2
 
 fmt: install-tools
@@ -114,6 +116,10 @@ fmt: install-tools
 
 fmt-sh: install-tools
 	${SHFMT} -w -d -i 5 .
+
+impi: install-tools
+	# Skip plugins/plugins.go
+	echo $(ALL_SRC) | xargs -n 10 ${IMPI} --local $(CW_AGENT_IMPORT_PATH) --scheme stdThirdPartyLocal --skip plugins/plugins.go
 
 lint: install-tools
 	${LINTER} run ./...

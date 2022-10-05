@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
@@ -42,7 +43,7 @@ func GetEC2UtilSingleton() *ec2Util {
 func initEC2UtilSingleton() (newInstance *ec2Util) {
 	newInstance = &ec2Util{Region: "", PrivateIP: ""}
 
-	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise){
+	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise) {
 		return
 	}
 

@@ -6,14 +6,16 @@ package adapter
 import (
 	"context"
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
+	"time"
+
 	telegrafconfig "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
-	"time"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
 )
 
 type Adapter struct {

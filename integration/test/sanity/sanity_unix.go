@@ -7,8 +7,9 @@
 package sanity
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
 	"testing"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/integration/test"
 )
 
 func SanityCheck(t *testing.T) {

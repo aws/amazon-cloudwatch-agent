@@ -5,16 +5,16 @@ package logfile
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
 	"sync"
 	"time"
 
+	"golang.org/x/text/encoding"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
-	"golang.org/x/text/encoding"
 )
 
 const (
@@ -333,5 +333,5 @@ func (ts *tailerSrc) saveState(offset int64) error {
 	}
 
 	content := []byte(strconv.FormatInt(offset, 10) + "\n" + ts.tailer.Filename)
-	return ioutil.WriteFile(ts.stateFilePath, content, stateFileMode)
+	return os.WriteFile(ts.stateFilePath, content, stateFileMode)
 }

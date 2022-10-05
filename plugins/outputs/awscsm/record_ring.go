@@ -6,10 +6,10 @@ package awscsm
 import (
 	"container/list"
 
+	"github.com/influxdata/telegraf"
+
 	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
-
-	"github.com/influxdata/telegraf"
 )
 
 type recordRing struct {

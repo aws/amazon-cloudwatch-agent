@@ -5,18 +5,17 @@ package collect_list
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestFileConfig(t *testing.T) {
@@ -480,7 +479,7 @@ func TestAutoRemoval(t *testing.T) {
 }
 
 func TestFileConfigOutputFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -515,7 +514,7 @@ func TestFileConfigOutputFile(t *testing.T) {
 	_, err = os.Stat(path)
 	assert.NoError(t, err)
 
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	assert.NoError(t, err)
 
 	expectVal := "{\"version\":\"1\",\"log_configs\":[{\"log_group_name\":\"group1\"},{\"log_group_name\":\"group2\"},{\"log_group_name\":\"group3\"}],\"region\":\"us-east-1\"}"

@@ -7,32 +7,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"testing"
 
+	"github.com/BurntSushi/toml"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/kr/pretty"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 
-	"github.com/BurntSushi/toml"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toenvconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/kr/pretty"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-
-	"os"
-
-	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/stretchr/testify/assert"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 func TestLogMetricOnly(t *testing.T) {
@@ -237,7 +233,7 @@ func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFil
 func readCommonConfig() {
 	ctx := context.CurrentContext()
 	config := commonconfig.New()
-	data, _ := ioutil.ReadFile("./sampleConfig/commonConfigTest.toml")
+	data, _ := os.ReadFile("./sampleConfig/commonConfigTest.toml")
 	config.Parse(bytes.NewReader(data))
 	ctx.SetCredentials(config.CredentialsMap())
 	ctx.SetProxy(config.ProxyMap())
@@ -279,7 +275,7 @@ func verifyToTomlTranslation(t *testing.T, config interface{}, desiredTomlPath s
 func verifyToYamlTranslation(t *testing.T, config interface{}, expectedYamlFilePath string) {
 	t.Helper()
 	_, actual := toyamlconfig.ToYamlConfig(config)
-	bs, err := ioutil.ReadFile(expectedYamlFilePath)
+	bs, err := os.ReadFile(expectedYamlFilePath)
 	assert.NoError(t, err)
 	bf := bytes.NewReader(bs)
 	decoder := yaml.NewDecoder(bf)

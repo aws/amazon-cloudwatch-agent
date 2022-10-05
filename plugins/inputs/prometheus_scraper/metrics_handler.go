@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/influxdata/telegraf"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/logscommon"
-	"github.com/influxdata/telegraf"
 )
 
 // Use metricMaterial instead of mbMetric to avoid unnecessary tags&fields copy

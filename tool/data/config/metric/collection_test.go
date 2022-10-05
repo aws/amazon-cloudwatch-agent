@@ -6,11 +6,10 @@ package metric
 import (
 	"testing"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 func TestCollection_ToMap(t *testing.T) {

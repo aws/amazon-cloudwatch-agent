@@ -1,9 +1,10 @@
 package logs
 
 import (
+	"testing"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestRetentionAlreadySet(t *testing.T) {

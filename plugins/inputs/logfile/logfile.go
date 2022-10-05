@@ -6,7 +6,6 @@ package logfile
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,12 +13,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/logscommon"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/globpath"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type LogFile struct {
@@ -322,7 +322,7 @@ func (t *LogFile) restoreState(filename string) (int64, error) {
 		return 0, err
 	}
 
-	byteArray, err := ioutil.ReadFile(filePath)
+	byteArray, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Log.Warnf("Issue encountered when reading offset from file %s: %v", filename, err)
 		return 0, err
@@ -362,7 +362,7 @@ func (t *LogFile) cleanupStateFolder() {
 			continue
 		}
 
-		byteArray, err := ioutil.ReadFile(file)
+		byteArray, err := os.ReadFile(file)
 		if err != nil {
 			t.Log.Errorf("Error happens when reading the content from file %s in clean up state fodler step: %v", file, err)
 			continue

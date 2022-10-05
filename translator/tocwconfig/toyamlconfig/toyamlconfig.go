@@ -7,14 +7,15 @@ import (
 	"bytes"
 	"log"
 
+	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/service"
+	"gopkg.in/yaml.v3"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder/mapstructure"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative/translate"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-	"go.opentelemetry.io/collector/config"
-	"go.opentelemetry.io/collector/service"
-	"gopkg.in/yaml.v3"
 )
 
 const (

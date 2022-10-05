@@ -7,19 +7,19 @@
 package test
 
 import (
-	"os/exec"
-	"log"
 	"fmt"
+	"log"
+	"os/exec"
 	"path/filepath"
 )
 
-func CopyFile(pathIn string, pathOut string) error{
+func CopyFile(pathIn string, pathOut string) error {
 	ps, err := exec.LookPath("powershell.exe")
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	log.Printf("Copy File %s to %s", pathIn, pathOut)
 	pathInAbs, err := filepath.Abs(pathIn)
 
@@ -28,17 +28,17 @@ func CopyFile(pathIn string, pathOut string) error{
 	}
 
 	log.Printf("File %s abs path %s", pathIn, pathInAbs)
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", "cp "+pathInAbs+" "+pathOut})
-	out, err := exec.Command(ps, bashArgs...).Output() 
+	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", "cp " + pathInAbs + " " + pathOut})
+	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
-		log.Printf("Copy file failed: %v; the output is: %s",err, string(out))
+		log.Printf("Copy file failed: %v; the output is: %s", err, string(out))
 		return err
 	}
 
 	log.Printf("File : %s copied to : %s", pathIn, pathOut)
 	return nil
-	
+
 }
 
 func StartAgent(configOutputPath string, fatalOnFailure bool) error {
@@ -48,11 +48,11 @@ func StartAgent(configOutputPath string, fatalOnFailure bool) error {
 		return err
 	}
 
-	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a fetch-config -m ec2 -s -c file:"+configOutputPath})
+	bashArgs := append([]string{"-NoProfile", "-NonInteractive", "-NoExit", "& \"C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent-ctl.ps1\" -a fetch-config -m ec2 -s -c file:" + configOutputPath})
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil && fatalOnFailure {
-		log.Printf("Start agent failed: %v; the output is: %s",err, string(out))
+		log.Printf("Start agent failed: %v; the output is: %s", err, string(out))
 		return err
 	} else if err != nil {
 		log.Printf(fmt.Sprint(err) + string(out))
@@ -63,7 +63,7 @@ func StartAgent(configOutputPath string, fatalOnFailure bool) error {
 	return err
 }
 
-func StopAgent() error{
+func StopAgent() error {
 	ps, err := exec.LookPath("powershell.exe")
 
 	if err != nil {
@@ -74,7 +74,7 @@ func StopAgent() error{
 	out, err := exec.Command(ps, bashArgs...).Output()
 
 	if err != nil {
-		log.Printf("Stop agent failed: %v; the output is: %s",err, string(out))
+		log.Printf("Stop agent failed: %v; the output is: %s", err, string(out))
 		return err
 	}
 
@@ -82,7 +82,7 @@ func StopAgent() error{
 	return nil
 }
 
-func RunShellScript(path string, args ...string) error{
+func RunShellScript(path string, args ...string) error {
 	ps, err := exec.LookPath("powershell.exe")
 
 	if err != nil {

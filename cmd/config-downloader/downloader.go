@@ -5,27 +5,23 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"fmt"
 	"log"
 	"os"
-	"strings"
-
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-	sdkutil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-
-	"fmt"
-
 	"path/filepath"
-
-	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	sdkutil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 const (
@@ -82,7 +78,7 @@ func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[st
 }
 
 func readFromFile(filePath string) (string, error) {
-	bytes, err := ioutil.ReadFile(filePath)
+	bytes, err := os.ReadFile(filePath)
 	return string(bytes), err
 }
 
@@ -216,7 +212,7 @@ func main() {
 
 	if multiConfig != "remove" {
 		outputFilePath = filepath.Join(outputDir, outputFilePath+context.TmpFileSuffix)
-		err = ioutil.WriteFile(outputFilePath, []byte(config), 0644)
+		err = os.WriteFile(outputFilePath, []byte(config), 0644)
 		if err != nil {
 			log.Panicf("E! Failed to write the json file %v: %v", outputFilePath, err)
 		} else {

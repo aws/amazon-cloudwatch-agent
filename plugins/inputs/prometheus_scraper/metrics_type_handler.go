@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/prometheus/prometheus/model/textparse"
-
 	"github.com/prometheus/prometheus/scrape"
 )
 

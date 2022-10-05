@@ -12,11 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/atomiccounter"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"gopkg.in/tomb.v1"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/atomiccounter"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail/watch"
 )
 
 var (

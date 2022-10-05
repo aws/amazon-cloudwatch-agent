@@ -5,13 +5,15 @@ package accumulator
 
 import (
 	"errors"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
-	"time"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util"
 )
 
 // OtelAccumulator implements the telegraf.Accumulator interface, but works as an OTel plugin by passing the metrics

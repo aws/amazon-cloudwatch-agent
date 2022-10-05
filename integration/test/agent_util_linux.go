@@ -72,7 +72,7 @@ func ReadAgentOutput(d time.Duration) string {
 	return string(out)
 }
 
-func RunShellScript(path string, args ...string) error{
+func RunShellScript(path string, args ...string) error {
 	out, err := exec.Command("bash", "-c", "chmod +x "+path).Output()
 
 	if err != nil {
@@ -90,7 +90,7 @@ func RunShellScript(path string, args ...string) error{
 		log.Printf("Error occurred when executing %s: %s | %s", path, err.Error(), string(out))
 		return err
 	}
-	
+
 	return nil
 }
 

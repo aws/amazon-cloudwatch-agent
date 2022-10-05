@@ -1,4 +1,3 @@
-
 package performancetest
 
 import (

@@ -11,6 +11,7 @@ import (
 	"runtime"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+
 	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"

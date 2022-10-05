@@ -8,6 +8,9 @@ package adapter
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs/disk"
@@ -17,8 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap/zaptest"
-	"testing"
-	"time"
 )
 
 var testCfg = "./testdata/all_plugins.toml"
