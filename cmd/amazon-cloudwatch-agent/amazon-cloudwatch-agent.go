@@ -9,6 +9,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
+	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -28,22 +36,26 @@ import (
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/migrate"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
-	"github.com/influxdata/telegraf/agent"
+
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
 	"github.com/influxdata/telegraf/config"
+
+	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
-
 	"github.com/kardianos/service"
+
+	"go.opentelemetry.io/collector/component"
+	otelService "go.opentelemetry.io/collector/service"
 )
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
 	LogTargetEventLog     = "eventlog"
+	yamlConfigFileName    = "amazon-cloudwatch-agent.yaml"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -264,6 +276,7 @@ func runAgent(ctx context.Context,
 	}
 
 	logger.SetupLogging(logConfig)
+
 	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
 	// Need to set SDK log level before plugins get loaded.
 	// Some aws.Config objects get created early and live forever which means
@@ -311,7 +324,97 @@ func runAgent(ctx context.Context,
 	log.Println("creating new logs agent")
 	logAgent := logs.NewLogAgent(c)
 	go logAgent.Run(ctx)
-	return ag.Run(ctx)
+
+	// TODO: Update BuildInfo with agentinfo
+	// info := component.BuildInfo{
+	// 	Command:     "telegraf-otel-poc",
+	// 	Description: "My POC",
+	// 	Version:     "0.0",
+	// }
+
+	yamlConfigPath := filepath.Join("file:", filepath.Dir(*fConfig), yamlConfigFileName)
+	if err != nil {
+		log.Printf("E! Failed to load yaml config due to %v", err)
+		return err
+	}
+
+	fprovider := fileprovider.New()
+	settings := otelService.ConfigProviderSettings{
+		ResolverSettings: confmap.ResolverSettings{
+			URIs:      []string{yamlConfigPath},
+			Providers: map[string]confmap.Provider{fprovider.Scheme(): fprovider},
+		},
+	}
+
+	factories, err := components(c)
+	if err != nil {
+		log.Printf("E! Error while adapting telegraf input plugins: %v", err)
+		return err
+	}
+
+	provider, err := otelService.NewConfigProvider(settings)
+	if err != nil {
+		log.Printf("E! Error while initializing config provider: %v", err)
+		return err
+	}
+
+	params := otelService.CollectorSettings{
+		Factories: factories,
+		// TODO: Update BuildInfo with agentinfo
+		// BuildInfo: info,
+		ConfigProvider: provider,
+	}
+
+	cmd := otelService.NewCommand(params)
+
+	// Noticed that args of parent process get passed here to otel collector which causes failures complaining about
+	// unrecognized args. So below change overwrites the args. Need to investigate this further as I dont think the config
+	// path below here is actually used and it still respects what was set in the settings above.
+	e := []string{"--config=" + yamlConfigPath}
+	cmd.SetArgs(e)
+
+	return cmd.Execute()
+}
+
+func components(telegrafConfig *config.Config) (component.Factories, error) {
+	telegrafAdapter := adapter.NewAdapter(telegrafConfig)
+
+	factories := component.Factories{}
+
+	receiverFactories := make([]component.ReceiverFactory, len(telegrafConfig.InputNames()))
+	for i, inputFilter := range telegrafConfig.InputNames() {
+		receiverFactories[i] = telegrafAdapter.NewReceiverFactory(inputFilter)
+	}
+
+	receivers, err := component.MakeReceiverFactoryMap(receiverFactories...)
+	if err != nil {
+		return factories, err
+	}
+
+	processors, err := component.MakeProcessorFactoryMap(
+		cumulativetodeltaprocessor.NewFactory(),
+	)
+	if err != nil {
+		return factories, err
+	}
+
+	exporters, err := component.MakeExporterFactoryMap(
+		awsemfexporter.NewFactory(),
+		loggingexporter.NewFactory(),
+		cloudwatch.NewFactory(),
+	)
+
+	if err != nil {
+		return factories, err
+	}
+
+	factories = component.Factories{
+		Receivers:  receivers,
+		Processors: processors,
+		Exporters:  exporters,
+	}
+
+	return factories, nil
 }
 
 type program struct {
@@ -578,9 +681,6 @@ func loadTomlConfigIntoAgent(c *config.Config) error {
 }
 
 func validateAgentFinalConfigAndPlugins(c *config.Config) error {
-	if !*fTest && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
-	}
 	if len(c.Inputs) == 0 {
 		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}

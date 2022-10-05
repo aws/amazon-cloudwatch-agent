@@ -25,7 +25,7 @@ const instanceId = "InstanceId"
 const loremIpsum = "Lorem ipsum dolor sit amet consectetur adipiscing elit Vivamus non mauris malesuada mattis ex eget porttitor purus Suspendisse potenti Praesent vel sollicitudin ipsum Quisque luctus pretium lorem non faucibus Ut vel quam dui Nunc fermentum condimentum consectetur Morbi tellus mauris tristique tincidunt elit consectetur hendrerit placerat dui In nulla erat finibus eget erat a hendrerit sodales urna In sapien purus auctor sit amet congue ut congue eget nisi Vivamus sed neque ut ligula lobortis accumsan quis id metus In feugiat velit et leo mattis non fringilla dui elementum Proin a nisi ac sapien vulputate consequat Vestibulum eu tellus mi Integer consectetur efficitur"
 const appendMetric = "append"
 
-//Let the agent run for 2 minutes. This will give agent enough time to call server
+// Let the agent run for 2 minutes. This will give agent enough time to call server
 const agentRuntime = 2 * time.Minute
 
 type input struct {
@@ -40,7 +40,7 @@ type metric struct {
 	value string
 }
 
-//Must run this test with parallel 1 since this will fail if more than one test is running at the same time
+// Must run this test with parallel 1 since this will fail if more than one test is running at the same time
 func TestNumberMetricDimension(t *testing.T) {
 
 	parameters := []input{

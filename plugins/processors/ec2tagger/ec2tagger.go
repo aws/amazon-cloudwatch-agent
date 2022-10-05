@@ -217,7 +217,7 @@ func (t *Tagger) ec2TagsRetrieved() bool {
 	return allTagsRetrieved
 }
 
-//ebsVolumesRetrieved checks if all volumes are successfully retrieved
+// ebsVolumesRetrieved checks if all volumes are successfully retrieved
 func (t *Tagger) ebsVolumesRetrieved() bool {
 	allVolumesRetrieved := true
 
@@ -233,8 +233,8 @@ func (t *Tagger) ebsVolumesRetrieved() bool {
 	return allVolumesRetrieved
 }
 
-//Init() acts as input validation and serves the purpose of updating ec2 tags and ebs volumes if necessary.
-//It will be called when Telegraf is enabling each processor plugin
+// Init() acts as input validation and serves the purpose of updating ec2 tags and ebs volumes if necessary.
+// It will be called when Telegraf is enabling each processor plugin
 func (t *Tagger) Init() error {
 	t.shutdownC = make(chan bool)
 	t.ec2TagCache = map[string]string{}

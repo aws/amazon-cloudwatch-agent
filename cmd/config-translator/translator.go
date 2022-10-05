@@ -23,7 +23,7 @@ const (
 	exitSuccessMessage = "Configuration validation first phase succeeded"
 	version            = "1.0"
 	envConfigFileName  = "env-config.json"
-	yamlConfigFileName = "amazon-cloudwatch-config.yaml"
+	yamlConfigFileName = "amazon-cloudwatch-agent.yaml"
 )
 
 func initFlags() {

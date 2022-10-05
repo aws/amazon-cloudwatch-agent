@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//Check the case when the input is in "cpu":{//specific configuration}
+// Check the case when the input is in "cpu":{//specific configuration}
 func TestMetricDecoration_ApplyRule(t *testing.T) {
 	c := new(MetricDecoration)
 	//Check whether override default config
@@ -48,7 +48,7 @@ func TestMetricDecoration_ApplyRule(t *testing.T) {
 	assert.Equal(t, expected, val)
 }
 
-//Check the case when the input is in "nvidia_gpu":{//specific configuration}
+// Check the case when the input is in "nvidia_gpu":{//specific configuration}
 func TestMetricDecoration_plugin_with_alias_ApplyRule(t *testing.T) {
 	c := new(MetricDecoration)
 	//Check whether override default config

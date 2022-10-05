@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog/v2"
+	klog "k8s.io/klog/v2"
 )
 
 const (
@@ -46,12 +46,12 @@ func init() {
 	})
 }
 
-//SampleConfig returns a sample config
+// SampleConfig returns a sample config
 func (k *K8sAPIServer) SampleConfig() string {
 	return sampleConfig
 }
 
-//Description returns the description of this plugin
+// Description returns the description of this plugin
 func (k *K8sAPIServer) Description() string {
 	return "Calculate cluster level metrics from the k8s api server"
 }

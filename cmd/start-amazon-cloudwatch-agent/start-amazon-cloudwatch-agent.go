@@ -19,7 +19,7 @@ const (
 	COMMON_CONFIG = "common-config.toml"
 	JSON          = "amazon-cloudwatch-agent.json"
 	TOML          = "amazon-cloudwatch-agent.toml"
-	YAML          = "amazon-cloudwatch-config.yaml"
+	YAML          = "amazon-cloudwatch-agent.yaml"
 	ENV           = "env-config.json"
 
 	AGENT_LOG_FILE = "amazon-cloudwatch-agent.log"

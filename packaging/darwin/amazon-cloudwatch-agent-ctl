@@ -26,7 +26,7 @@ readonly AGENT_LAUNCHD_NAME="com.amazon.cloudwatch.agent"
 readonly AGENT_LAUNCHD_CONFIG="/Library/LaunchDaemons/${AGENT_LAUNCHD_NAME}.plist"
 
 readonly TOML="${CONFDIR}/amazon-cloudwatch-agent.toml"
-readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-config.yaml"
+readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-agent.yaml"
 readonly JSON="${CONFDIR}/amazon-cloudwatch-agent.json"
 readonly JSON_DIR="${CONFDIR}/amazon-cloudwatch-agent.d"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"

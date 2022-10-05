@@ -14,8 +14,7 @@ readonly VERSION_FILE="${CMDDIR}/CWAGENT_VERSION"
 
 # The systemd and upstart scripts assume exactly this .toml file name
 readonly TOML="${CONFDIR}/amazon-cloudwatch-agent.toml"
-readonly YAML="${CWOC_CONFDIR}/cwagent-otel-collector.yaml"
-readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-config.yaml"
+readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-agent.yaml"
 readonly JSON="${CONFDIR}/amazon-cloudwatch-agent.json"
 readonly JSON_DIR="${CONFDIR}/amazon-cloudwatch-agent.d"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"

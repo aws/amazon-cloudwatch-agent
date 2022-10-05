@@ -88,7 +88,7 @@ $CVLogFile="${CWALogDirectory}\configuration-validation.log"
 
 # The windows service registration assumes exactly this .toml file path and name
 $TOML="${CWAProgramData}\amazon-cloudwatch-agent.toml"
-$OTEL_YAML="${CWAProgramData}\amazon-cloudwatch-config.yaml"
+$OTEL_YAML="${CWAProgramData}\amazon-cloudwatch-agent.yaml"
 $JSON="${CWAProgramData}\amazon-cloudwatch-agent.json"
 $JSON_DIR = "${CWAProgramData}\Configs"
 $COMMON_CONIG="${CWAProgramData}\common-config.toml"

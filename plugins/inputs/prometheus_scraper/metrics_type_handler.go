@@ -30,7 +30,8 @@ var (
 
 // Get the metric name in the TYPE comments for Summary and Histogram
 // e.g # TYPE nginx_ingress_controller_request_duration_seconds histogram
-//     # TYPE nginx_ingress_controller_ingress_upstream_latency_seconds summary
+//
+//	# TYPE nginx_ingress_controller_ingress_upstream_latency_seconds summary
 func normalizeMetricName(name string, suffixes []string) string {
 	for _, s := range suffixes {
 		if strings.HasSuffix(name, s) && name != s {
