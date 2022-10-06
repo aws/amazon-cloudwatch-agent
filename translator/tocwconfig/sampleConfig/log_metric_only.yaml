@@ -1,5 +1,4 @@
-exporters:
-    telegraf_cloudwatchlogs: {}
+exporters: {}
 processors:
     telegraf_ec2tagger: {}
     telegraf_k8sdecorator: {}
@@ -10,8 +9,7 @@ receivers:
 service:
     pipelines:
         metrics:
-            exporters:
-                - telegraf_cloudwatchlogs
+            exporters: []
             processors:
                 - telegraf_k8sdecorator
                 - telegraf_ec2tagger

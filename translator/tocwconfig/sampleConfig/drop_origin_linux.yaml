@@ -18,7 +18,6 @@ exporters:
               unit: unit
         namespace: CWAgent
         region: us-west-2
-    telegraf_cloudwatch: {}
 processors:
     cumulativetodelta/ace: {}
     telegraf_ec2tagger: {}
@@ -30,7 +29,6 @@ service:
     pipelines:
         metrics:
             exporters:
-                - telegraf_cloudwatch
                 - awscloudwatch/ace
             processors:
                 - telegraf_ec2tagger

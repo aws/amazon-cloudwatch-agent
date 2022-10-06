@@ -70,6 +70,7 @@ func createTestMetrics(
 				dp = m.Sum().DataPoints().AppendEmpty()
 				dp.SetDoubleValue(val)
 			}
+
 			dp.SetStartTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 			dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 			addDimensions(dp, numDimensions)

@@ -25,8 +25,6 @@ exporters:
               - InstanceType
             - - d1
             - []
-    telegraf_cloudwatch: {}
-    telegraf_cloudwatchlogs: {}
 processors:
     cumulativetodelta/ace: {}
     telegraf_delta: {}
@@ -48,8 +46,6 @@ service:
     pipelines:
         metrics:
             exporters:
-                - telegraf_cloudwatchlogs
-                - telegraf_cloudwatch
                 - awscloudwatch/ace
             processors:
                 - telegraf_ec2tagger

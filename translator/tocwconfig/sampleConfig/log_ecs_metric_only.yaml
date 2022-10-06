@@ -31,7 +31,6 @@ exporters:
     parse_json_encoded_attr_values: [ Sources ]
     resource_to_telemetry_conversion:
       enabled: true
-  telegraf_cloudwatchlogs: {}
 
 processors:
   batch/containerinsights:
@@ -48,7 +47,6 @@ service:
   pipelines:
     metrics:
       exporters:
-        - telegraf_cloudwatchlogs
         - awsemf/containerinsights
       processors:
         - batch/containerinsights

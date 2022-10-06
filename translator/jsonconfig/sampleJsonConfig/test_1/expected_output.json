@@ -1,8 +1,15 @@
 {
   "agent": {
+    "credentials": {
+      "role_arn": "global_role_arn_value"
+    },
     "internal": true,
     "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
     "metrics_collection_interval": 10
+  },
+  "csm": {
+    "memory_limit_in_mb": 50,
+    "port": 4000
   },
   "logs": {
     "credentials": {
@@ -90,6 +97,91 @@
           "*"
         ],
         "totalcpu": false
+      },
+      "disk": {
+        "append_dimensions": {
+          "d3": "foo3",
+          "d4": "bar4"
+        },
+        "ignore_file_system_types": [
+          "sysfs",
+          "devtmpfs"
+        ],
+        "measurement": [
+          {
+            "name": "free",
+            "rename": "DISK_FREE",
+            "unit": "unit"
+          },
+          "total",
+          "used"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "/",
+          "/dev",
+          "/sys"
+        ]
+      },
+      "diskio": {
+        "measurement": [
+          "reads",
+          "writes",
+          "read_time",
+          "write_time",
+          "io_time"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "*"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          "mem_used",
+          "mem_cached",
+          "mem_total"
+        ],
+        "metrics_collection_interval": 1
+      },
+      "net": {
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv",
+          "drop_in",
+          "drop_out"
+        ],
+        "resources": [
+          "eth0"
+        ]
+      },
+      "netstat": {
+        "measurement": [
+          "tcp_established",
+          "tcp_syn_sent",
+          "tcp_close"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "processes": {
+        "measurement": [
+          "running",
+          "sleeping",
+          "dead"
+        ]
+      },
+      "statsd": {
+        "metric_separator": "_",
+        "metrics_aggregation_interval": 60,
+        "metrics_collection_interval": 10,
+        "service_address": ":8125"
+      },
+      "swap": {
+        "measurement": [
+          "swap_used",
+          "swap_free",
+          "swap_used_percent"
+        ]
       }
     }
   }

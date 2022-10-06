@@ -136,10 +136,6 @@ func encodeExporters(outputs, nativeOutputs map[string]interface{}, cfg *map[str
 
 func outputsToExporters(outputs, nativeOutputs map[string]interface{}) map[config.ComponentID]interface{} {
 	exporterMap := make(map[config.ComponentID]interface{})
-	///for key := range outputs {
-	//	t := config.Type(TelegrafPrefix + key)
-	//	exporterMap[config.NewComponentID(t)] = struct{}{}
-	//}
 	for key, val := range nativeOutputs {
 		t := config.Type(key)
 		exporterMap[config.NewComponentID(t)] = val

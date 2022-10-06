@@ -115,9 +115,9 @@ func populateNumberDataPoint(measurement string, datapoint pmetric.NumberDataPoi
 
 	switch v := value.(type) {
 	case int64:
-		datapoint.SetIntVal(v)
+		datapoint.SetIntValue(v)
 	case float64:
-		datapoint.SetDoubleVal(v)
+		datapoint.SetDoubleValue(v)
 	default:
 		log.Fatalf("Invalid data type %v for NumberDataPoint ", v)
 	}

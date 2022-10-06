@@ -1,13 +1,11 @@
-exporters:
-    telegraf_cloudwatchlogs: {}
+exporters: {}
 processors: {}
 receivers:
     telegraf_logfile: {}
 service:
     pipelines:
         metrics:
-            exporters:
-                - telegraf_cloudwatchlogs
+            exporters: []
             processors: []
             receivers:
                 - telegraf_logfile

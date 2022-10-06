@@ -5,7 +5,6 @@ exporters:
         profile: AmazonCloudWatchAgent
         region: us-west-2
         shared_credential_file: fake-path
-    telegraf_cloudwatch: {}
 processors:
     cumulativetodelta/ace: {}
     telegraf_delta: {}
@@ -20,7 +19,6 @@ service:
     pipelines:
         metrics:
             exporters:
-                - telegraf_cloudwatch
                 - awscloudwatch/ace
             processors:
                 - telegraf_delta

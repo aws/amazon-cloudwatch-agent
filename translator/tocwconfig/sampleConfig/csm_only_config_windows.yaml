@@ -1,13 +1,11 @@
-exporters:
-    telegraf_aws_csm: {}
+exporters: {}
 processors: {}
 receivers:
     telegraf_awscsm_listener: {}
 service:
     pipelines:
         metrics:
-            exporters:
-                - telegraf_aws_csm
+            exporters: []
             processors: []
             receivers:
                 - telegraf_awscsm_listener
