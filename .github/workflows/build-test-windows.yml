@@ -4,7 +4,8 @@
 name: build-and-test-windows
 on:
   push:
-    branches: [master, main]
+    branches:
+      - main
     paths-ignore:
       - '**/*.md'
       - '.github/**'
