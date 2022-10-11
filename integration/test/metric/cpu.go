@@ -7,9 +7,10 @@
 package metric
 
 import (
+	"log"
+
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"log"
 )
 
 type CPUMetricValueFetcher struct {

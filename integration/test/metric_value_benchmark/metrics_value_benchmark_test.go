@@ -8,12 +8,13 @@ package metric_value_benchmark
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/integration/test"
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/metric"
 	"log"
 	"testing"
 	"text/tabwriter"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/integration/test"
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/metric"
 )
 
 const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"

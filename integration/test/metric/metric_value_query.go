@@ -8,12 +8,13 @@ package metric
 
 import (
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"log"
-	"time"
 )
 
 var metricValueFetchers = []MetricValueFetcher{
