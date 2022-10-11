@@ -230,7 +230,9 @@ Outputs:
         "iam:RemoveRoleFromInstanceProfile",
         "ec2:DeleteKeyPair",
         "iam:ListPolicyVersions",
-        "iam:DeleteInstanceProfile"
+        "iam:DeleteInstanceProfile",
+        "iam:DeletePolicy",
+        "iam:ListInstanceProfilesForRole"
       ],
       "Resource": "*"
     }
