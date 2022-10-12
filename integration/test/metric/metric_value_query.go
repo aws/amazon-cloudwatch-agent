@@ -17,7 +17,7 @@ import (
 )
 
 var metricValueFetchers = []MetricValueFetcher{
-	&CPUMetricValueFetcher{base: &baseMetricValueFetcher{}},
+	&CPUMetricValueFetcher{},
 }
 
 func GetMetricFetcher(metricName string) (MetricValueFetcher, error) {

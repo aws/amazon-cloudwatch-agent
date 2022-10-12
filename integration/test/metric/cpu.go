@@ -14,7 +14,7 @@ import (
 )
 
 type CPUMetricValueFetcher struct {
-	base *baseMetricValueFetcher
+	baseMetricValueFetcher
 }
 
 func (f *CPUMetricValueFetcher) Fetch(namespace string, metricName string, stat Statistics) ([]float64, error) {
@@ -24,10 +24,6 @@ func (f *CPUMetricValueFetcher) Fetch(namespace string, metricName string, stat 
 		log.Printf("Error while fetching metric value for %v: %v", metricName, err.Error())
 	}
 	return values, err
-}
-
-func (f *CPUMetricValueFetcher) fetch(namespace string, metricSpecificDimensions []types.Dimension, metricName string, stat Statistics) ([]float64, error) {
-	return f.base.fetch(namespace, metricSpecificDimensions, metricName, stat)
 }
 
 var cpuSupportedMetricValues = map[string]struct{}{
