@@ -15,6 +15,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/metric"
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 )
 
 const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
@@ -44,10 +45,11 @@ func TestCPUValue(t *testing.T) {
 		log.Printf("Agent has been running for : %s", minimumAgentRuntime.String())
 		test.StopAgent()
 
-		isAllTestPassed, testResult := validateCpuMetrics()
-		printTestResult(isAllTestPassed, testResult)
+		testResult := validateCpuMetrics()
+		testSuiteStatus := getTestSuiteStatus(testResult)
+		printTestResult(testSuiteStatus, testResult)
 
-		if !isAllTestPassed {
+		if testSuiteStatus == status.FAILED {
 			t.Fatalf("Cpu test failed to validate that every metric value is greater than zero")
 		}
 	})
@@ -57,34 +59,34 @@ func TestCPUValue(t *testing.T) {
 	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 }
 
-func validateCpuMetrics() (bool, map[string]bool) {
-	metricsToFetch := []string{
-		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-		"cpu_usage_active", "cpu_usage_quest", "cpu_usage_quest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
-	isAllValid := true
-	validationResult := map[string]bool{}
+var metricsToFetch = []string{
+	"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
+	"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
+	"cpu_usage_active", "cpu_usage_quest", "cpu_usage_quest_nice", "cpu_usage_idle", "cpu_usage_iowait",
+	"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+
+func validateCpuMetrics() map[string]status.TestStatus {
+	validationResult := map[string]status.TestStatus{}
 	for _, metricName := range metricsToFetch {
-		validationResult[metricName] = true
+		validationResult[metricName] = status.FAILED
+
 		fetcher, err := metric.GetMetricFetcher(metricName)
 		if err != nil {
-			isAllValid = false
-			validationResult[metricName] = false
+			continue
 		}
+
 		values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
 		if err != nil {
-			isAllValid = false
-			validationResult[metricName] = false
 			continue
 		}
+
 		if !isAllValuesGreaterThanZero(metricName, values) {
-			isAllValid = false
-			validationResult[metricName] = false
 			continue
 		}
+
+		validationResult[metricName] = status.SUCCESSFUL
 	}
-	return isAllValid, validationResult
+	return validationResult
 }
 
 func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
@@ -102,28 +104,27 @@ func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
 	return true
 }
 
-func printTestResult(isAllTestPassed bool, testSummary map[string]bool) {
+func printTestResult(testSuiteStatus status.TestStatus, testSummary map[string]status.TestStatus) {
 	testSuite := "CPU Test"
-	var status string
-	if isAllTestPassed {
-		status = "Succeeded"
-	} else {
-		status = "Failed"
-	}
 
 	log.Printf("Finished %v", testSuite)
 	log.Printf("==============%v==============", testSuite)
-	log.Printf("==============%v==============", status)
+	log.Printf("==============%v==============", string(testSuiteStatus))
 	w := tabwriter.NewWriter(log.Writer(), 1, 1, 1, ' ', 0)
-	for metricName, isSucessful := range testSummary {
-		var status string
-		if isSucessful {
-			status = "Success"
-		} else {
-			status = "Failed"
-		}
+	for metricName, status := range testSummary {
 		fmt.Fprintln(w, metricName, "\t", status, "\t")
 	}
 	w.Flush()
 	log.Printf("==============================")
+}
+
+func getTestSuiteStatus(testSummary map[string]status.TestStatus) status.TestStatus {
+	isAllSuccessful := status.SUCCESSFUL
+	for _, value := range testSummary {
+		if value == status.FAILED {
+			isAllSuccessful = status.FAILED
+			break
+		}
+	}
+	return isAllSuccessful
 }

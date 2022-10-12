@@ -1,11 +1,7 @@
 package metric
 
-type Statistics int
+type Statistics string
 
 const (
-	AVERAGE Statistics = iota
+	AVERAGE Statistics = "Average"
 )
-
-func (s Statistics) String() string {
-	return [...]string{"Average"}[s]
-}

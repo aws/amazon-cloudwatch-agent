@@ -8,13 +8,12 @@ package metric
 
 import (
 	"fmt"
-	"log"
-	"time"
-
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go/aws"
+	"log"
+	"time"
 )
 
 var metricValueFetchers = []MetricValueFetcher{
@@ -59,7 +58,7 @@ func (f *baseMetricValueFetcher) fetch(namespace string, metricSpecificDimension
 		MetricStat: &types.MetricStat{
 			Metric: &metricToFetch,
 			Period: &metricQueryPeriod,
-			Stat:   aws.String(stat.String()),
+			Stat:   aws.String(string(stat)),
 		},
 		Id: aws.String(metricName),
 	}
