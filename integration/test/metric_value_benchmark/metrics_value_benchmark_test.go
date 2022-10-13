@@ -66,8 +66,7 @@ func (suite *MetricBenchmarkTestSuite) RunAgent(agentConfigFileName string, runn
 }
 
 func (suite *MetricBenchmarkTestSuite) TestDummy() {
-	suite.Assert().Equal(suite.T(), true, false,
-		"Always fail")
+	suite.Assert().Equal(true, false, "Always fail")
 }
 
 func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
@@ -76,7 +75,7 @@ func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
 
 	testGroupResult := validateCpuMetrics()
 	suite.addToSuiteResult(testGroupResult)
-	suite.Assert().Equal(suite.T(), status.SUCCESSFUL, testGroupResult.GetStatus(),
+	suite.Assert().Equal(status.SUCCESSFUL, testGroupResult.GetStatus(),
 		"Cpu test failed to validate that every metric value is greater than zero")
 
 	// TODO: Range test with >0 and <100
