@@ -54,16 +54,16 @@ func (f *baseMetricValueFetcher) fetch(namespace string, metricSpecificDimension
 	}
 
 	metricQueryPeriod := int32(60)
-	metricQuery := types.MetricDataQuery{
-		MetricStat: &types.MetricStat{
-			Metric: &metricToFetch,
-			Period: &metricQueryPeriod,
-			Stat:   aws.String(string(stat)),
+	metricDataQueries := []types.MetricDataQuery{
+		{
+			MetricStat: &types.MetricStat{
+				Metric: &metricToFetch,
+				Period: &metricQueryPeriod,
+				Stat:   aws.String(string(stat)),
+			},
+			Id: aws.String(metricName),
 		},
-		Id: aws.String(metricName),
 	}
-	metricDataQueries := make([]types.MetricDataQuery, 1)
-	metricDataQueries[0] = metricQuery
 
 	endTime := time.Now()
 	startTime := subtractMinutes(endTime, 10)

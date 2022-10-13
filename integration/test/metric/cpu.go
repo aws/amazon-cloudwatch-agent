@@ -56,13 +56,13 @@ func (f *CPUMetricValueFetcher) isApplicable(metricName string) bool {
 	return exists
 }
 
-func (f *CPUMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
-	cpuDimension := types.Dimension{
+var cpuMetricsSpecificDimension = []types.Dimension{
+	{
 		Name:  aws.String("cpu"),
 		Value: aws.String("cpu-total"),
-	}
-	dimensions := make([]types.Dimension, 1)
-	dimensions[0] = cpuDimension
+	},
+}
 
-	return dimensions
+func (f *CPUMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
+	return cpuMetricsSpecificDimension
 }

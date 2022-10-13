@@ -119,12 +119,10 @@ func printTestResult(testSuiteStatus status.TestStatus, testSummary map[string]s
 }
 
 func getTestSuiteStatus(testSummary map[string]status.TestStatus) status.TestStatus {
-	isAllSuccessful := status.SUCCESSFUL
 	for _, value := range testSummary {
 		if value == status.FAILED {
-			isAllSuccessful = status.FAILED
-			break
+			return status.FAILED
 		}
 	}
-	return isAllSuccessful
+	return status.SUCCESSFUL
 }
