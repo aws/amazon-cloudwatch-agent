@@ -16,11 +16,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
 const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const configJSON = "/base_config.json"
+const agentConfigFileName = "/base_config.json"
 
 const namespace = "MetricValueBenchmarkTest"
 const instanceId = "InstanceId"
@@ -29,7 +30,7 @@ const minimumAgentRuntime = 3 * time.Minute
 
 type MetricBenchmarkTestSuite struct {
 	suite.Suite
-	//testResults status.TestResult // TODO this test result should be defined and need to include succcess/failure and error message instead of numbers
+	result status.TestSuiteResult
 }
 
 func (suite *MetricBenchmarkTestSuite) SetupSuite() {
@@ -48,41 +49,43 @@ func TestMetricValueBenchmarkSuite(t *testing.T) {
 	suite.Run(t, new(MetricBenchmarkTestSuite))
 }
 
-// TODO reusable agent running function
-// TODO validateCPUMetrics()
 // TODO assert instead of if statement
 
 // TODO each test function in separate files
 
-func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
-	log.Printf("testing cpu value...")
+const agentConfigDirectory = "agent_configs"
 
-	// suite.Equal(2, suite.StartingNumber)
-
-	resourcePath := "agent_configs"
-
-	log.Printf("resource file location %s", resourcePath)
-
-	//t.Run(fmt.Sprintf("resource file location %s ", resourcePath), func(t *testing.T) {
-	test.CopyFile(resourcePath+configJSON, configOutputPath)
+func (suite *MetricBenchmarkTestSuite) RunAgent(agentConfigFileName string, runningDuration time.Duration) {
+	agentConfigPath := agentConfigDirectory + agentConfigFileName
+	log.Printf("Starting agent using agent config file %s", agentConfigPath)
+	test.CopyFile(agentConfigPath, configOutputPath)
 	err := test.StartAgent(configOutputPath, false)
 
 	if err != nil {
 		suite.T().Fatalf("Agent could not start")
 	}
 
-	time.Sleep(minimumAgentRuntime)
-	log.Printf("Agent has been running for : %s", minimumAgentRuntime.String())
+	time.Sleep(runningDuration)
+	log.Printf("Agent has been running for : %s", runningDuration.String())
 	test.StopAgent()
+}
+
+func (suite *MetricBenchmarkTestSuite) TestDummy() {
+	assert.Equal(suite.T(), true, false,
+		"Always fail")
+}
+
+func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
+	log.Printf("Testing Cpu values...")
+	suite.RunAgent(agentConfigFileName, minimumAgentRuntime)
 
 	testResult := validateCpuMetrics()
 	testSuiteStatus := getTestSuiteStatus(testResult)
 	printTestResult(testSuiteStatus, testResult)
 
-	if testSuiteStatus == status.FAILED {
-		suite.T().Fatalf("Cpu test failed to validate that every metric value is greater than zero")
-	}
-	//})
+	assert.Equal(suite.T(), status.SUCCESSFUL, testSuiteStatus,
+		"Cpu test failed to validate that every metric value is greater than zero")
+
 	// TODO: Get CPU value > 0
 	// TODO: Range test with >0 and <100
 	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
