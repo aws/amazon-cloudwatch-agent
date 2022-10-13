@@ -96,34 +96,38 @@ var metricsToFetch = []string{
 func validateCpuMetrics() status.TestGroupResult {
 	testResults := []status.TestResult{}
 	for _, metricName := range metricsToFetch {
-		testResult := status.TestResult{
-			Name:   metricName,
-			Status: status.FAILED,
-		}
-
-		fetcher, err := metric.GetMetricFetcher(metricName)
-		if err != nil {
-			continue
-		}
-
-		values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
-		if err != nil {
-			continue
-		}
-
-		if !isAllValuesGreaterThanZero(metricName, values) {
-			continue
-		}
-
-		testResult.Status = status.SUCCESSFUL
+		testResult := validateCpuMetric(metricName)
+		testResults = append(testResults, testResult)
 	}
 
-	result := status.TestGroupResult{
+	return status.TestGroupResult{
 		Name:        "CPU",
 		TestResults: testResults,
 	}
+}
 
-	return result
+func validateCpuMetric(metricName string) status.TestResult {
+	testResult := status.TestResult{
+		Name:   metricName,
+		Status: status.FAILED,
+	}
+
+	fetcher, err := metric.GetMetricFetcher(metricName)
+	if err != nil {
+		return testResult
+	}
+
+	values, err := fetcher.Fetch(namespace, metricName, metric.AVERAGE)
+	if err != nil {
+		return testResult
+	}
+
+	if !isAllValuesGreaterThanZero(metricName, values) {
+		return testResult
+	}
+
+	testResult.Status = status.SUCCESSFUL
+	return testResult
 }
 
 func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
