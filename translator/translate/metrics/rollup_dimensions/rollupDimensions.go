@@ -31,7 +31,7 @@ func (ad *rollupDimensions) ApplyRule(input interface{}) (returnKey string, retu
 		returnVal = ""
 	} else {
 		returnKey = metrics.OutputsKey
-		if !isValidRollupList(im[SectionKey]) {
+		if !IsValidRollupList(im[SectionKey]) {
 			returnKey = ""
 		}
 		result["rollup_dimensions"] = im[SectionKey]
@@ -46,7 +46,7 @@ func init() {
 }
 
 // Strict type check for [][]string
-func isValidRollupList(input interface{}) bool {
+func IsValidRollupList(input interface{}) bool {
 	if inputList, ok := input.([]interface{}); ok {
 		if len(inputList) == 0 {
 			return fail()

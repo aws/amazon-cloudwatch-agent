@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/config/configtelemetry"
 )
 
 type inter interface {
@@ -53,6 +54,12 @@ func TestEncode(t *testing.T) {
 				return reflect.ValueOf(nil)
 			},
 			wantResult: nil,
+		},
+		"WithConfigTelemetry": {
+			value: func() reflect.Value {
+				return reflect.ValueOf(configtelemetry.LevelNone)
+			},
+			wantResult: "none",
 		},
 		"WithComponentID": {
 			value: func() reflect.Value {
@@ -178,7 +185,6 @@ func TestEncodeValueError(t *testing.T) {
 	encoder := &mapStructureEncoder{}
 	testValue := reflect.ValueOf("")
 	testEncodes := []func(value reflect.Value) (interface{}, error){
-		encoder.encodeInterfaceOrPtr,
 		encoder.encodeMap,
 		encoder.encodeStruct,
 		encoder.encodeSlice,

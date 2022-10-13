@@ -11,6 +11,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/config/configtelemetry"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder"
 )
@@ -24,7 +25,6 @@ const (
 )
 
 var (
-	componentIDType        = reflect.TypeOf(config.NewComponentID(""))
 	errNonStringEncodedKey = errors.New("non string-encoded key")
 )
 
@@ -66,7 +66,7 @@ func (mse *mapStructureEncoder) encode(value reflect.Value) (interface{}, error)
 	if value.IsValid() {
 		switch value.Kind() {
 		case reflect.Interface, reflect.Ptr:
-			return mse.encodeInterfaceOrPtr(value)
+			return mse.encode(value.Elem())
 		case reflect.Map:
 			return mse.encodeMap(value)
 		case reflect.Slice:
@@ -74,20 +74,21 @@ func (mse *mapStructureEncoder) encode(value reflect.Value) (interface{}, error)
 		case reflect.Struct:
 			return mse.encodeStruct(value)
 		default:
-			return value.Interface(), nil
+			return mse.encodeInterface(value)
 		}
 	}
 	return nil, nil
 }
 
-func (mse *mapStructureEncoder) encodeInterfaceOrPtr(value reflect.Value) (interface{}, error) {
-	if value.Kind() != reflect.Ptr && value.Kind() != reflect.Interface {
-		return nil, &reflect.ValueError{
-			Method: "encodeInterfaceOrPtr",
-			Kind:   value.Kind(),
-		}
+func (mse *mapStructureEncoder) encodeInterface(value reflect.Value) (interface{}, error) {
+	switch v := value.Interface().(type) {
+	case config.ComponentID:
+		return v.String(), nil
+	case configtelemetry.Level:
+		return v.String(), nil
+	default:
+		return v, nil
 	}
-	return mse.encode(value.Elem())
 }
 
 func (mse *mapStructureEncoder) encodeStruct(value reflect.Value) (interface{}, error) {
@@ -97,10 +98,12 @@ func (mse *mapStructureEncoder) encodeStruct(value reflect.Value) (interface{}, 
 			Kind:   value.Kind(),
 		}
 	}
-	// For structs that need to be handled differently.
-	switch value.Type() {
-	case componentIDType:
-		return value.Interface().(config.ComponentID).String(), nil
+	out, _ := mse.encodeInterface(value)
+	value = reflect.ValueOf(out)
+	// if the output of encodeHook is no longer a struct,
+	// call encode against it.
+	if value.Kind() != reflect.Struct {
+		return mse.encode(value)
 	}
 	result := make(map[string]interface{})
 	for i := 0; i < value.NumField(); i++ {

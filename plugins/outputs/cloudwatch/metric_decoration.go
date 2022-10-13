@@ -10,10 +10,10 @@ import (
 )
 
 type MetricDecorationConfig struct {
-	Category string `mapstructure:"category"`
-	Metric   string `mapstructure:"name"`
-	Rename   string `mapstructure:"rename"`
-	Unit     string `mapstructure:"unit"`
+	Category string `mapstructure:"category,omitempty"`
+	Metric   string `mapstructure:"name,omitempty"`
+	Rename   string `mapstructure:"rename,omitempty"`
+	Unit     string `mapstructure:"unit,omitempty"`
 }
 
 var supportedUnits = map[string]struct{}{

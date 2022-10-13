@@ -15,10 +15,10 @@ import (
 type customizedMetric struct {
 }
 
-const Win_Rerf_Counters_Key = "win_perf_counters"
+const Win_Perf_Counters_Key = "win_perf_counters"
 
 func GetObjectPath(object string) string {
-	curPath := parent.GetCurPath() + Win_Rerf_Counters_Key + "/" + object + "/"
+	curPath := parent.GetCurPath() + Win_Perf_Counters_Key + "/" + object + "/"
 	return curPath
 }
 
@@ -49,7 +49,7 @@ func (c *customizedMetric) ApplyRule(input interface{}) (returnKey string, retur
 			sort.Sort(objectConfig)
 			mp["object"] = objectConfig
 		}
-		returnKey = Win_Rerf_Counters_Key
+		returnKey = Win_Perf_Counters_Key
 		returnVal = win_Perf_Counters_Array
 	}
 	return

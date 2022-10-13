@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,6 +64,30 @@ func TestCopyMapKeepsShallowReferenceToValuesInMap(t *testing.T) {
 	// deleting from the original map reference also removes it from the copy
 	_, ok = copiedBazMap["baz"]
 	assert.False(t, ok)
+}
+
+func TestMergeMaps(t *testing.T) {
+	m1 := map[string]int{"first": 1, "overwrite": 1}
+	m2 := map[string]int{"second": 2, "overwrite": 2}
+	got := MergeMaps(m1, m2)
+	require.Len(t, got, 3)
+	value, ok := got["overwrite"]
+	require.True(t, ok)
+	require.Equal(t, 2, value)
+}
+
+func TestPair(t *testing.T) {
+	pair := NewPair("key", "value")
+	assert.Equal(t, "key", pair.Key)
+	assert.Equal(t, "value", pair.Value)
+}
+
+func TestSet(t *testing.T) {
+	set := NewSet(1, 2)
+	assert.True(t, set.Contains(1))
+	set.Remove(1)
+	assert.False(t, set.Contains(1))
+	assert.Equal(t, []int{2}, set.Keys())
 }
 
 func assertMapsEqual(t *testing.T, m1, m2 map[string]interface{}) {

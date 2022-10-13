@@ -14,8 +14,10 @@ import (
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
+)
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
+const (
+	TelegrafPrefix = "telegraf_"
 )
 
 type Adapter struct {
@@ -26,6 +28,11 @@ func NewAdapter(telegrafConfig *telegrafconfig.Config) Adapter {
 	return Adapter{
 		telegrafConfig: telegrafConfig,
 	}
+}
+
+// Type joins the TelegrafPrefix to the input.
+func Type(input string) config.Type {
+	return config.Type(TelegrafPrefix + input)
 }
 
 func createDefaultConfig(cfgType config.Type) func() config.Receiver {
@@ -40,7 +47,7 @@ func createDefaultConfig(cfgType config.Type) func() config.Receiver {
 }
 
 func (a Adapter) NewReceiverFactory(telegrafInputName string) component.ReceiverFactory {
-	typeStr := config.Type(toyamlconfig.TelegrafPrefix + telegrafInputName)
+	typeStr := Type(telegrafInputName)
 	return component.NewReceiverFactory(typeStr, createDefaultConfig(typeStr),
 		component.WithMetricsReceiver(a.createMetricsReceiver(telegrafInputName), component.StabilityLevelStable))
 }

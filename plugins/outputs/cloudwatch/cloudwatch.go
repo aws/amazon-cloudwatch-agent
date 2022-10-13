@@ -37,7 +37,7 @@ const (
 	metricChanBufferSize                  = 10000
 	datumBatchChanBufferSize              = 50 // the number of requests we buffer
 	maxConcurrentPublisher                = 10 // the number of CloudWatch clients send request concurrently
-	defaultForceFlushInterval             = 60 * time.Second
+	defaultForceFlushInterval             = time.Minute
 	highResolutionTagKey                  = "aws:StorageResolution"
 	defaultRetryCount                     = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
 	backoffRetryBase                      = 200 * time.Millisecond
