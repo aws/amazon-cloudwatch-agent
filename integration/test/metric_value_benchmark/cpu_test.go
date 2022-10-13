@@ -15,7 +15,8 @@ import (
 func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
 	log.Printf("Testing Cpu values...")
 	suite.RunAgent(agentConfigFileName, minimumAgentRuntime)
-	suite.addToSuiteResult(validateCpuMetrics())
+	testGroupResult := validateCpuMetrics()
+	suite.addToSuiteResult(testGroupResult)
 	suite.Assert().Equal(status.SUCCESSFUL, testGroupResult.GetStatus(),
 		"Cpu test failed to validate that every metric value is greater than zero")
 
