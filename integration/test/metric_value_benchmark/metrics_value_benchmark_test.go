@@ -10,13 +10,11 @@ import (
 	"fmt"
 	"log"
 	"testing"
-	"text/tabwriter"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -38,10 +36,7 @@ func (suite *MetricBenchmarkTestSuite) SetupSuite() {
 }
 
 func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
-	// TODO: Print all results from suite.testResults
-
-	// TODO: assert here so the entire suite fails ? or can each test fail and suite handles it automatically without skipping?
-
+	suite.result.Print()
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
@@ -71,7 +66,7 @@ func (suite *MetricBenchmarkTestSuite) RunAgent(agentConfigFileName string, runn
 }
 
 func (suite *MetricBenchmarkTestSuite) TestDummy() {
-	assert.Equal(suite.T(), true, false,
+	suite.Assert().Equal(suite.T(), true, false,
 		"Always fail")
 }
 
@@ -79,16 +74,17 @@ func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
 	log.Printf("Testing Cpu values...")
 	suite.RunAgent(agentConfigFileName, minimumAgentRuntime)
 
-	testResult := validateCpuMetrics()
-	testSuiteStatus := getTestSuiteStatus(testResult)
-	printTestResult(testSuiteStatus, testResult)
-
-	assert.Equal(suite.T(), status.SUCCESSFUL, testSuiteStatus,
+	testGroupResult := validateCpuMetrics()
+	suite.addToSuiteResult(testGroupResult)
+	suite.Assert().Equal(suite.T(), status.SUCCESSFUL, testGroupResult.GetStatus(),
 		"Cpu test failed to validate that every metric value is greater than zero")
 
-	// TODO: Get CPU value > 0
 	// TODO: Range test with >0 and <100
 	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
+}
+
+func (suite *MetricBenchmarkTestSuite) addToSuiteResult(r status.TestGroupResult) {
+	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
 }
 
 var metricsToFetch = []string{
@@ -97,10 +93,13 @@ var metricsToFetch = []string{
 	"cpu_usage_active", "cpu_usage_quest", "cpu_usage_quest_nice", "cpu_usage_idle", "cpu_usage_iowait",
 	"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
 
-func validateCpuMetrics() map[string]status.TestStatus {
-	validationResult := map[string]status.TestStatus{}
+func validateCpuMetrics() status.TestGroupResult {
+	testResults := []status.TestResult{}
 	for _, metricName := range metricsToFetch {
-		validationResult[metricName] = status.FAILED
+		testResult := status.TestResult{
+			Name:   metricName,
+			Status: status.FAILED,
+		}
 
 		fetcher, err := metric.GetMetricFetcher(metricName)
 		if err != nil {
@@ -116,9 +115,15 @@ func validateCpuMetrics() map[string]status.TestStatus {
 			continue
 		}
 
-		validationResult[metricName] = status.SUCCESSFUL
+		testResult.Status = status.SUCCESSFUL
 	}
-	return validationResult
+
+	result := status.TestGroupResult{
+		Name:        "CPU",
+		TestResults: testResults,
+	}
+
+	return result
 }
 
 func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
@@ -134,27 +139,4 @@ func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
 	}
 	log.Printf("Values are all greater than zero for %v", metricName)
 	return true
-}
-
-func printTestResult(testSuiteStatus status.TestStatus, testSummary map[string]status.TestStatus) {
-	testSuite := "CPU Test"
-
-	log.Printf("Finished %v", testSuite)
-	log.Printf("==============%v==============", testSuite)
-	log.Printf("==============%v==============", string(testSuiteStatus))
-	w := tabwriter.NewWriter(log.Writer(), 1, 1, 1, ' ', 0)
-	for metricName, status := range testSummary {
-		fmt.Fprintln(w, metricName, "\t", status, "\t")
-	}
-	w.Flush()
-	log.Printf("==============================")
-}
-
-func getTestSuiteStatus(testSummary map[string]status.TestStatus) status.TestStatus {
-	for _, value := range testSummary {
-		if value == status.FAILED {
-			return status.FAILED
-		}
-	}
-	return status.SUCCESSFUL
 }
