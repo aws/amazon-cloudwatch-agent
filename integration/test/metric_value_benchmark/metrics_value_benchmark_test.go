@@ -59,10 +59,6 @@ func (suite *MetricBenchmarkTestSuite) RunAgent(agentConfigFileName string, runn
 	test.StopAgent()
 }
 
-func (suite *MetricBenchmarkTestSuite) TestDummy() {
-	suite.Assert().Equal(true, false, "Always fail")
-}
-
 func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
 	if len(values) == 0 {
 		log.Printf("No values found %v", metricName)
