@@ -7,9 +7,10 @@
 package metric_value_benchmark
 
 import (
+	"log"
+
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
-	"log"
 )
 
 func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
