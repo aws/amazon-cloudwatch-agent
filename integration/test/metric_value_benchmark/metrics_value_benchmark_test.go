@@ -8,23 +8,14 @@ package metric_value_benchmark
 
 import (
 	"fmt"
-	"log"
-	"testing"
-	"time"
-
-	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 	"github.com/stretchr/testify/suite"
+	"log"
+	"testing"
 )
-
-const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const agentConfigDirectory = "agent_configs"
-const agentConfigFileName = "/base_config.json"
 
 const namespace = "MetricValueBenchmarkTest"
 const instanceId = "InstanceId"
-
-const minimumAgentRuntime = 3 * time.Minute
 
 type MetricBenchmarkTestSuite struct {
 	suite.Suite
@@ -40,23 +31,24 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 	fmt.Println(">>>> Finished MetricBenchmarkTestSuite")
 }
 
-func TestMetricValueBenchmarkSuite(t *testing.T) {
-	suite.Run(t, new(MetricBenchmarkTestSuite))
+var testRunners = []*TestRunner{
+	&TestRunner{testRunner: &CPUTestRunner{}},
+	&TestRunner{testRunner: &DummyTestRunner{}},
 }
 
-func (suite *MetricBenchmarkTestSuite) RunAgent(agentConfigFileName string, runningDuration time.Duration) {
-	agentConfigPath := agentConfigDirectory + agentConfigFileName
-	log.Printf("Starting agent using agent config file %s", agentConfigPath)
-	test.CopyFile(agentConfigPath, configOutputPath)
-	err := test.StartAgent(configOutputPath, false)
-
-	if err != nil {
-		suite.T().Fatalf("Agent could not start")
+func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {
+	for _, testRunner := range testRunners {
+		testRunner.Run(suite)
 	}
+	suite.Assert().Equal(status.SUCCESSFUL, suite.result.GetStatus(), "Metric Benchmark Test Suite Failed")
+}
 
-	time.Sleep(runningDuration)
-	log.Printf("Agent has been running for : %s", runningDuration.String())
-	test.StopAgent()
+func (suite *MetricBenchmarkTestSuite) AddToSuiteResult(r status.TestGroupResult) {
+	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
+}
+
+func TestMetricValueBenchmarkSuite(t *testing.T) {
+	suite.Run(t, new(MetricBenchmarkTestSuite))
 }
 
 func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
@@ -72,8 +64,4 @@ func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
 	}
 	log.Printf("Values are all greater than zero for %v", metricName)
 	return true
-}
-
-func (suite *MetricBenchmarkTestSuite) AddToSuiteResult(r status.TestGroupResult) {
-	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
 }

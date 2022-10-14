@@ -6,6 +6,36 @@
 
 package metric_value_benchmark
 
-func (suite *MetricBenchmarkTestSuite) TestDummy() {
-	suite.Assert().Equal(true, true, "This is a placeholder test to show how you can add more tests as part of the benchmark test suite")
+import (
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
+	"time"
+)
+
+const dummyTestName = "Dummy"
+
+type DummyTestRunner struct {
+}
+
+func (t *DummyTestRunner) validate() status.TestGroupResult {
+	return status.TestGroupResult{
+		Name: t.getTestName(),
+		TestResults: []status.TestResult{
+			{
+				Name:   dummyTestName,
+				Status: status.SUCCESSFUL,
+			},
+		},
+	}
+}
+
+func (t *DummyTestRunner) getTestName() string {
+	return dummyTestName
+}
+
+func (t *DummyTestRunner) getAgentConfigFileName() string {
+	return agentConfigFileName
+}
+
+func (t *DummyTestRunner) getAgentRunDuration() time.Duration {
+	return minimumAgentRuntime
 }

@@ -7,22 +7,15 @@
 package metric_value_benchmark
 
 import (
-	"log"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/metric"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 )
 
-func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
-	log.Printf("Testing Cpu values...")
-	suite.RunAgent(agentConfigFileName, minimumAgentRuntime)
-	testGroupResult := validateCpuMetrics()
-	suite.AddToSuiteResult(testGroupResult)
-	suite.Assert().Equal(status.SUCCESSFUL, testGroupResult.GetStatus(),
-		"Cpu test failed to validate that every metric value is greater than zero")
+const cpuTestName = "CPU"
 
-	// TODO: Range test with >0 and <100
-	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
+type CPUTestRunner struct {
 }
 
 var metricsToFetch = []string{
@@ -31,7 +24,7 @@ var metricsToFetch = []string{
 	"cpu_usage_active", "cpu_usage_quest", "cpu_usage_quest_nice", "cpu_usage_idle", "cpu_usage_iowait",
 	"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
 
-func validateCpuMetrics() status.TestGroupResult {
+func (t *CPUTestRunner) validate() status.TestGroupResult {
 	testResults := []status.TestResult{}
 	for _, metricName := range metricsToFetch {
 		testResult := validateCpuMetric(metricName)
@@ -39,9 +32,21 @@ func validateCpuMetrics() status.TestGroupResult {
 	}
 
 	return status.TestGroupResult{
-		Name:        "CPU",
+		Name:        t.getTestName(),
 		TestResults: testResults,
 	}
+}
+
+func (t *CPUTestRunner) getTestName() string {
+	return cpuTestName
+}
+
+func (t *CPUTestRunner) getAgentConfigFileName() string {
+	return agentConfigFileName
+}
+
+func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
+	return minimumAgentRuntime
 }
 
 func validateCpuMetric(metricName string) status.TestResult {
@@ -63,6 +68,9 @@ func validateCpuMetric(metricName string) status.TestResult {
 	if !isAllValuesGreaterThanZero(metricName, values) {
 		return testResult
 	}
+
+	// TODO: Range test with >0 and <100
+	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 
 	testResult.Status = status.SUCCESSFUL
 	return testResult
