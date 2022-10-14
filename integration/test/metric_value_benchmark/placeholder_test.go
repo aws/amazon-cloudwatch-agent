@@ -7,8 +7,9 @@
 package metric_value_benchmark
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 )
 
 const dummyTestName = "Dummy"

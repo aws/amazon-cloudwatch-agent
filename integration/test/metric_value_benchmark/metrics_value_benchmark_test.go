@@ -8,10 +8,11 @@ package metric_value_benchmark
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
-	"github.com/stretchr/testify/suite"
 	"log"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
+	"github.com/stretchr/testify/suite"
 )
 
 const namespace = "MetricValueBenchmarkTest"
