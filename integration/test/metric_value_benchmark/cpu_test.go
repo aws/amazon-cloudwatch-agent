@@ -24,10 +24,6 @@ func (suite *MetricBenchmarkTestSuite) TestCPUValues() {
 	// TODO: Range test: which metric to get? api reference check. should I get average or test every single datapoint for 10 minutes? (and if 90%> of them are in range, we are good)
 }
 
-func (suite *MetricBenchmarkTestSuite) addToSuiteResult(r status.TestGroupResult) {
-	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
-}
-
 var metricsToFetch = []string{
 	"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
 	"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",

@@ -73,3 +73,7 @@ func isAllValuesGreaterThanZero(metricName string, values []float64) bool {
 	log.Printf("Values are all greater than zero for %v", metricName)
 	return true
 }
+
+func (suite *MetricBenchmarkTestSuite) AddToSuiteResult(r status.TestGroupResult) {
+	suite.result.TestGroupResults = append(suite.result.TestGroupResults, r)
+}
