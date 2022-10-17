@@ -396,7 +396,7 @@ spec:
     spec:
       containers:
         - name: cloudwatch-agent
-          image: amazon/cloudwatch-agent:1.247346.0b249609
+          image: amazon/cloudwatch-agent:1.247355.0b252062
           imagePullPolicy: Always
           resources:
             limits:
