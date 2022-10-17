@@ -70,5 +70,11 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 	log.Printf("Agent has been running for : %s", runningDuration.String())
 	test.StopAgent()
 
+	err = test.DeleteFile(configOutputPath)
+	if err != nil {
+		testGroupResult.TestResults[0].Status = status.FAILED
+		return testGroupResult, fmt.Errorf("Failed to cleanup config file after agent run due to: %v", err.Error())
+	}
+
 	return testGroupResult, nil
 }
