@@ -222,7 +222,7 @@ Resources:
       NetworkMode: awsvpc
       ContainerDefinitions:
         - Name: cloudwatch-agent-prometheus
-          Image: amazon/cloudwatch-agent:1.247346.0b249609
+          Image: amazon/cloudwatch-agent:1.247355.0b252062
           Essential: true
           MountPoints: []
           PortMappings: []
