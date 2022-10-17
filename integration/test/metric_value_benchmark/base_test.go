@@ -62,7 +62,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 
 	if err != nil {
 		testGroupResult.TestResults[0].Status = status.FAILED
-		return testGroupResult, fmt.Errorf("Agent could not start")
+		return testGroupResult, fmt.Errorf("Agent could not start due to: %v", err.Error())
 	}
 
 	runningDuration := t.testRunner.getAgentRunDuration()
