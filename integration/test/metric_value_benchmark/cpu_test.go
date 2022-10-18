@@ -65,7 +65,7 @@ func validateCpuMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanZero(metricName, values) {
+	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
 	}
 
