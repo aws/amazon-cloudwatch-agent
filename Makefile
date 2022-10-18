@@ -36,6 +36,7 @@ GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
 IMPI = $(TOOLS_BIN_DIR)/impi
+ADDLICENSE = $(TOOLS_BIN_DIR)/addlicense
 release: clean test build package-rpm package-deb package-win package-darwin
 
 nightly-release: release
@@ -108,6 +109,9 @@ install-tools:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
 	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@latest
 	GOBIN=$(TOOLS_BIN_DIR) go install github.com/pavius/impi/cmd/impi@v0.0.3
+	# Using 04bfe4e to get SPDX template changes that are not present in the most recent tag v1.0.0
+	# This is required to be able to easily omit the year in our license header.
+	GOBIN=$(TOOLS_BIN_DIR) go install github.com/google/addlicense@04bfe4e
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.45.2
 
 fmt: install-tools
@@ -119,9 +123,30 @@ fmt-sh: install-tools
 
 impi: install-tools
 	# Skip plugins/plugins.go
-	echo $(ALL_SRC) | xargs -n 10 ${IMPI} --local $(CW_AGENT_IMPORT_PATH) --scheme stdThirdPartyLocal --skip plugins/plugins.go
+	echo $(ALL_SRC) | xargs -n 10 $(IMPI) --local $(CW_AGENT_IMPORT_PATH) --scheme stdThirdPartyLocal --skip plugins/plugins.go
 
-lint: install-tools
+addlicense: install-tools
+	@ADDLICENSEOUT=`$(ADDLICENSE) -y="" -s=only -l="mit" -c="Amazon.com, Inc. or its affiliates. All Rights Reserved." $(ALL_SRC) 2>&1`; \
+    		if [ "$$ADDLICENSEOUT" ]; then \
+    			echo "$(ADDLICENSE) FAILED => add License errors:\n"; \
+    			echo "$$ADDLICENSEOUT\n"; \
+    			exit 1; \
+    		else \
+    			echo "Add License finished successfully"; \
+    		fi
+
+checklicense: install-tools
+	@ADDLICENSEOUT=`$(ADDLICENSE) -check $(ALL_SRC) 2>&1`; \
+    		if [ "$$ADDLICENSEOUT" ]; then \
+    			echo "$(ADDLICENSE) FAILED => add License errors:\n"; \
+    			echo "$$ADDLICENSEOUT\n"; \
+    			echo "Use 'make addlicense' to fix this."; \
+    			exit 1; \
+    		else \
+    			echo "Check License finished successfully"; \
+    		fi
+
+lint: install-tools checklicense impi
 	${LINTER} run ./...
 
 test:

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package registerrules
 
 // Rules register themselves during import with their parent rules in a hierarchy up until the root translator object.
