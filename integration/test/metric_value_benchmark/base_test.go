@@ -16,10 +16,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 )
 
-const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const agentConfigDirectory = "agent_configs"
-const agentConfigFileName = "base_linux_config.json" // default configuration
-const minimumAgentRuntime = 3 * time.Minute
+const (
+	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	agentConfigDirectory = "agent_configs"
+	minimumAgentRuntime  = 3 * time.Minute
+)
 
 type ITestRunner interface {
 	validate() status.TestGroupResult

@@ -16,7 +16,6 @@ import (
 )
 
 const namespace = "MetricValueBenchmarkTest"
-const instanceId = "InstanceId"
 
 type MetricBenchmarkTestSuite struct {
 	suite.Suite
