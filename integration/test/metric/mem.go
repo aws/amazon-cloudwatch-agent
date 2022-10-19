@@ -10,16 +10,16 @@ import (
 
 var (
 	memSupportedMetricValues = map[string]struct{}{
-		"active":            {},
-		"available":         {},
-		"available_percent": {},
-		"buffered":          {},
-		"cached":            {},
-		"free":              {},
-		"inactive":          {},
-		"total":             {},
-		"used":              {},
-		"used_percent":      {},
+		"mem_active":            {},
+		"mem_available":         {},
+		"mem_available_percent": {},
+		"mem_buffered":          {},
+		"mem_cached":            {},
+		"mem_free":              {},
+		"mem_inactive":          {},
+		"mem_total":             {},
+		"mem_used":              {},
+		"mem_used_percent":      {},
 	}
 )
 
