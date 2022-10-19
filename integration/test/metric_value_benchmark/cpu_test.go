@@ -21,7 +21,7 @@ type CPUTestRunner struct {
 var metricsToFetch = []string{
 	"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
 	"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-	"cpu_usage_active", "cpu_usage_quest", "cpu_usage_quest_nice", "cpu_usage_idle", "cpu_usage_iowait",
+	"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
 	"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
 
 func (t *CPUTestRunner) validate() status.TestGroupResult {
@@ -65,7 +65,7 @@ func validateCpuMetric(metricName string) status.TestResult {
 		return testResult
 	}
 
-	if !isAllValuesGreaterThanZero(metricName, values) {
+	if !isAllValuesGreaterThanOrEqualToZero(metricName, values) {
 		return testResult
 	}
 
