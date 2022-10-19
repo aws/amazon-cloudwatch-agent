@@ -44,8 +44,8 @@ func (m *MemTestRunner) getAgentRunDuration() time.Duration {
 
 func (m *MemTestRunner) getMeasuredMetrics() []string {
 	return []string{
-		"active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total",
-		"used", "used_percent"}
+		"mem_active", "mem_available", "mem_available_percent", "mem_buffered", "mem_cached",
+		"mem_free", "mem_inactive", "mem_total", "mem_used", "mem_used_percent"}
 }
 
 func (m *MemTestRunner) validateMemMetric(metricName string) status.TestResult {
