@@ -4,7 +4,6 @@
 package metric
 
 import (
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
 )
@@ -21,12 +20,6 @@ var (
 		"total":             {},
 		"used":              {},
 		"used_percent":      {},
-	}
-	memMetricsSpecificDimension = []types.Dimension{
-		{
-			Name:  aws.String("mem"),
-			Value: aws.String("mem-total"),
-		},
 	}
 )
 
@@ -51,5 +44,5 @@ func (f *MemMetricValueFetcher) isApplicable(metricName string) bool {
 }
 
 func (f *MemMetricValueFetcher) getMetricSpecificDimensions() []types.Dimension {
-	return memMetricsSpecificDimension
+	return []types.Dimension{}
 }
