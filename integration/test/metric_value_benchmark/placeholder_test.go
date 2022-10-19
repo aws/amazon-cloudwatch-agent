@@ -17,6 +17,8 @@ const dummyTestName = "Dummy"
 type DummyTestRunner struct {
 }
 
+var _ ITestRunner = (*DummyTestRunner)(nil)
+
 func (t *DummyTestRunner) validate() status.TestGroupResult {
 	return status.TestGroupResult{
 		Name: t.getTestName(),
@@ -39,4 +41,8 @@ func (t *DummyTestRunner) getAgentConfigFileName() string {
 
 func (t *DummyTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
+}
+
+func (t *DummyTestRunner) getMeasuredMetrics() []string {
+	return []string{}
 }
