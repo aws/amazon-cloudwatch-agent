@@ -13,22 +13,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 )
 
-const cpuTestName = "CPU"
-
 type CPUTestRunner struct {
 }
 
-var metricsToFetch = []string{
-	"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
-	"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
-	"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
-	"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
+var _ ITestRunner = (*CPUTestRunner)(nil)
 
 func (t *CPUTestRunner) validate() status.TestGroupResult {
-	testResults := []status.TestResult{}
-	for _, metricName := range metricsToFetch {
-		testResult := validateCpuMetric(metricName)
-		testResults = append(testResults, testResult)
+	metricsToFetch := t.getMeasuredMetrics()
+	testResults := make([]status.TestResult, len(metricsToFetch))
+	for i, metricName := range metricsToFetch {
+		testResults[i] = validateCpuMetric(metricName)
 	}
 
 	return status.TestGroupResult{
@@ -38,15 +32,23 @@ func (t *CPUTestRunner) validate() status.TestGroupResult {
 }
 
 func (t *CPUTestRunner) getTestName() string {
-	return cpuTestName
+	return "CPU"
 }
 
 func (t *CPUTestRunner) getAgentConfigFileName() string {
-	return agentConfigFileName
+	return "cpu_config.json"
 }
 
 func (t *CPUTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
+}
+
+func (t *CPUTestRunner) getMeasuredMetrics() []string {
+	return []string{
+		"cpu_time_active", "cpu_time_guest", "cpu_time_guest_nice", "cpu_time_idle", "cpu_time_iowait", "cpu_time_irq",
+		"cpu_time_nice", "cpu_time_softirq", "cpu_time_steal", "cpu_time_system", "cpu_time_user",
+		"cpu_usage_active", "cpu_usage_guest", "cpu_usage_guest_nice", "cpu_usage_idle", "cpu_usage_iowait",
+		"cpu_usage_irq", "cpu_usage_nice", "cpu_usage_softirq", "cpu_usage_steal", "cpu_usage_system", "cpu_usage_user"}
 }
 
 func validateCpuMetric(metricName string) status.TestResult {
