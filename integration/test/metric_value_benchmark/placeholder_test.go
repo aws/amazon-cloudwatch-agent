@@ -12,17 +12,17 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 )
 
-const dummyTestName = "Dummy"
-
 type DummyTestRunner struct {
 }
+
+var _ ITestRunner = (*DummyTestRunner)(nil)
 
 func (t *DummyTestRunner) validate() status.TestGroupResult {
 	return status.TestGroupResult{
 		Name: t.getTestName(),
 		TestResults: []status.TestResult{
 			{
-				Name:   dummyTestName,
+				Name:   t.getTestName(),
 				Status: status.SUCCESSFUL,
 			},
 		},
@@ -30,13 +30,17 @@ func (t *DummyTestRunner) validate() status.TestGroupResult {
 }
 
 func (t *DummyTestRunner) getTestName() string {
-	return dummyTestName
+	return "Dummy"
 }
 
 func (t *DummyTestRunner) getAgentConfigFileName() string {
-	return agentConfigFileName
+	return "base_linux_config.json" // default configuration
 }
 
 func (t *DummyTestRunner) getAgentRunDuration() time.Duration {
 	return minimumAgentRuntime
+}
+
+func (t *DummyTestRunner) getMeasuredMetrics() []string {
+	return []string{}
 }

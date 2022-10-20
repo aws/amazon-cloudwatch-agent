@@ -128,8 +128,8 @@ Outputs:
 
 4. the UI should ask you for inputs for the parameters. In `GitHubOrg`, type in your github username. In `RepositoryName`, type in your fork repo's name. e.g. amazon-cloudwatch-agent
 5. Choose a stackname. Anything. e.g. Terraform-IntegTest-Role
-6. After creating the stack, navigate to IAM console
-7. Search for an IAM role with the stack name you chose above. e.g. Terraform-IntegTest-Role...
+6. After creating the stack, navigate to the `Resources` tab of the created stack
+7. Click on the role ID that was created by CloudFormation
 8. Click add permission
 9. Click attach policy, and then click create policy.
 10. Click JSON tab and copy and paste the following
@@ -232,7 +232,8 @@ Outputs:
         "iam:ListPolicyVersions",
         "iam:DeleteInstanceProfile",
         "iam:DeletePolicy",
-        "iam:ListInstanceProfilesForRole"
+        "iam:ListInstanceProfilesForRole",
+        "iam:DeleteRole"
       ],
       "Resource": "*"
     }

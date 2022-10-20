@@ -16,7 +16,6 @@ import (
 )
 
 const namespace = "MetricValueBenchmarkTest"
-const instanceId = "InstanceId"
 
 type MetricBenchmarkTestSuite struct {
 	suite.Suite
@@ -33,8 +32,9 @@ func (suite *MetricBenchmarkTestSuite) TearDownSuite() {
 }
 
 var testRunners = []*TestRunner{
-	&TestRunner{testRunner: &CPUTestRunner{}},
-	&TestRunner{testRunner: &DummyTestRunner{}},
+	{testRunner: &CPUTestRunner{}},
+	{testRunner: &DummyTestRunner{}},
+	{testRunner: &MemTestRunner{}},
 }
 
 func (suite *MetricBenchmarkTestSuite) TestAllInSuite() {

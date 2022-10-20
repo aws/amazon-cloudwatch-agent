@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "debug": true,
+    "logfile": ""
+  },
+  "metrics": {
+    "namespace": "MetricValueBenchmarkTest",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "mem": {
+        "measurement": [
+          "active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total",
+          "used", "used_percent"
+        ]
+      }
+    }
+  }
+}

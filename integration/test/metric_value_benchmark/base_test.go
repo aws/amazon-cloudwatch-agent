@@ -9,22 +9,25 @@ package metric_value_benchmark
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/integration/test"
 	"github.com/aws/amazon-cloudwatch-agent/integration/test/status"
 )
 
-const configOutputPath = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
-const agentConfigDirectory = "agent_configs"
-const agentConfigFileName = "/base_config.json"
-const minimumAgentRuntime = 3 * time.Minute
+const (
+	configOutputPath     = "/opt/aws/amazon-cloudwatch-agent/bin/config.json"
+	agentConfigDirectory = "agent_configs"
+	minimumAgentRuntime  = 3 * time.Minute
+)
 
 type ITestRunner interface {
 	validate() status.TestGroupResult
 	getTestName() string
 	getAgentConfigFileName() string
 	getAgentRunDuration() time.Duration
+	getMeasuredMetrics() []string
 }
 
 type TestRunner struct {
@@ -55,7 +58,7 @@ func (t *TestRunner) runAgent() (status.TestGroupResult, error) {
 		},
 	}
 
-	agentConfigPath := agentConfigDirectory + t.testRunner.getAgentConfigFileName()
+	agentConfigPath := filepath.Join(agentConfigDirectory, t.testRunner.getAgentConfigFileName())
 	log.Printf("Starting agent using agent config file %s", agentConfigPath)
 	test.CopyFile(agentConfigPath, configOutputPath)
 	err := test.StartAgent(configOutputPath, false)
