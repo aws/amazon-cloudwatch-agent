@@ -21,12 +21,21 @@ func TestConfig(t *testing.T) {
 	factory := NewFactory()
 	factories.Exporters[TypeStr] = factory
 
-	// Test missing region. (valid)
+	// Test missing region.
+	// Expect invalid because factory does not have a default value.
 	fp := filepath.Join("testdata", "missing_region.yaml")
 	_, err = servicetest.LoadConfigAndValidate(fp, factories)
 	assert.Error(t, err)
 
-	// Test missing namespace. (valid)
+	// Test small force flush interval.
+	// Expect invalid because of minimum duration check.
+	// A value of 60 in YAML will be parsed as 60ns.
+	fp = filepath.Join("testdata", "small_force_flush_interval.yaml")
+	_, err = servicetest.LoadConfigAndValidate(fp, factories)
+	assert.Error(t, err)
+
+	// Test missing namespace.
+	// Expect valid because factory has a default value.
 	fp = filepath.Join("testdata", "missing_namespace.yaml")
 	_, err = servicetest.LoadConfigAndValidate(fp, factories)
 	assert.NoError(t, err)

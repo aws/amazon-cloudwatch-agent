@@ -12,7 +12,7 @@ exporters:
     profile: val7
     shared_credential_file: val8
     token: val9
-    force_flush_interval: 60
+    force_flush_interval: 60s
     max_datums_per_call: 7
     max_values_per_datum: 9
 
