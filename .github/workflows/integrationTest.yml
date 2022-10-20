@@ -127,6 +127,7 @@ jobs:
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
     steps:
       - uses: actions/checkout@v2
+        with: aws/amazon-cloudwatch-agent-test
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -136,9 +137,9 @@ jobs:
       - name: Generate matrix
         id: set-matrix
         run: |
-          go run --tags=generator integration/generator/test_case_generator.go
-          echo "::set-output name=ec2_gpu_matrix::$(echo $(cat integration/generator/resources/ec2_gpu_complete_test_matrix.json))"
-          echo "::set-output name=ec2_linux_matrix::$(echo $(cat integration/generator/resources/ec2_linux_complete_test_matrix.json))"
+          go run --tags=generator generator/test_case_generator.go
+          echo "::set-output name=ec2_gpu_matrix::$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat integration/generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat integration/generator/resources/ecs_fargate_complete_test_matrix.json))"
 
