@@ -232,7 +232,8 @@ Outputs:
         "iam:ListPolicyVersions",
         "iam:DeleteInstanceProfile",
         "iam:DeletePolicy",
-        "iam:ListInstanceProfilesForRole"
+        "iam:ListInstanceProfilesForRole",
+        "iam:DeleteRole"
       ],
       "Resource": "*"
     }

@@ -8,20 +8,18 @@ import (
 	"log"
 )
 
-var (
-	memSupportedMetricValues = map[string]struct{}{
-		"mem_active":            {},
-		"mem_available":         {},
-		"mem_available_percent": {},
-		"mem_buffered":          {},
-		"mem_cached":            {},
-		"mem_free":              {},
-		"mem_inactive":          {},
-		"mem_total":             {},
-		"mem_used":              {},
-		"mem_used_percent":      {},
-	}
-)
+var memSupportedMetricValues = map[string]struct{}{
+	"mem_active":            {},
+	"mem_available":         {},
+	"mem_available_percent": {},
+	"mem_buffered":          {},
+	"mem_cached":            {},
+	"mem_free":              {},
+	"mem_inactive":          {},
+	"mem_total":             {},
+	"mem_used":              {},
+	"mem_used_percent":      {},
+}
 
 type MemMetricValueFetcher struct {
 	baseMetricValueFetcher
