@@ -354,7 +354,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: integration/terraform/ec2/localstack
+        working-directory: terraform/ec2/localstack
     outputs:
       local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
     permissions:
@@ -362,6 +362,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
+        with: aws/amazon-cloudwatch-agent-test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -381,8 +382,8 @@ jobs:
           echo run terraform and execute test code &&
           terraform apply --auto-approve
           -var="ssh_key_value=${PRIVATE_KEY}"
-          -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-          -var="github_sha=${GITHUB_SHA}" 
+          -var="github_test_repo=https://github.com/aws/amazon-cloudwatch-agent-test.git"
+          -var="cwa_github_sha=${GITHUB_SHA}"
           -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
           -var="ssh_key_name=${KEY_NAME}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
