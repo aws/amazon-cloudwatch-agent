@@ -147,8 +147,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	// The Aggregator creates a new durationAggregator for each metric.
 	// And there is a delay when each new durationAggregator begins.
 	// So submit a metric and wait for the first aggregation to occur.
-	time.Sleep(aggregationInterval + time.Second)
-	assertMetricContent(t, metricChan, 1*time.Second, m, expectedFieldContent{
+	assertMetricContent(t, metricChan, 3*aggregationInterval, m, expectedFieldContent{
 		"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
 	assertNoMetricsInChan(t, metricChan)
 	// Now submit the same metric and it should be routed to the existing
@@ -156,8 +155,7 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	timestamp = time.Now()
 	m = metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
-	// Shutdown before the aggregationInterval
-	time.Sleep(aggregationInterval / 2)
+	// Shutdown before the 2nd aggregationInterval completes.
 	close(shutdownChan)
 	wg.Wait()
 	assertMetricContent(t, metricChan, 1*time.Second, m, expectedFieldContent{
