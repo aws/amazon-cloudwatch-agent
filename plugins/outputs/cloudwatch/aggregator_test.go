@@ -136,19 +136,32 @@ func TestAggregator_ShutdownBehavior(t *testing.T) {
 	// verify the remaining metrics can be read after shutdown
 	// the metrics should be available immediately after the shutdown even before aggregation period
 	aggregationInterval := 2 * time.Second
-	tags := map[string]string{"d1key": "d1value", "d2key": "d2value", aggregationIntervalTagKey: aggregationInterval.String()}
+	tags := map[string]string{
+		"d1key":                   "d1value",
+		"d2key":                   "d2value",
+		aggregationIntervalTagKey: aggregationInterval.String()}
 	fields := map[string]interface{}{"value": 1}
 	timestamp := time.Now()
 	m := metric.New(metricName, tags, fields, timestamp)
 	aggregator.AddMetric(m)
-
-	//give some time to aggregation to do the work
-	time.Sleep(time.Second * 2)
-
+	// The Aggregator creates a new durationAggregator for each metric.
+	// And there is a delay when each new durationAggregator begins.
+	// So submit a metric and wait for the first aggregation to occur.
+	time.Sleep(aggregationInterval + time.Second)
+	assertMetricContent(t, metricChan, 1*time.Second, m, expectedFieldContent{
+		"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
+	assertNoMetricsInChan(t, metricChan)
+	// Now submit the same metric and it should be routed to the existing
+	// durationAggregator without delay.
+	timestamp = time.Now()
+	m = metric.New(metricName, tags, fields, timestamp)
+	aggregator.AddMetric(m)
+	// Shutdown before the aggregationInterval
+	time.Sleep(aggregationInterval / 2)
 	close(shutdownChan)
 	wg.Wait()
-
-	assertMetricContent(t, metricChan, 1*time.Second, m, expectedFieldContent{"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
+	assertMetricContent(t, metricChan, 1*time.Second, m, expectedFieldContent{
+		"value", 1, 1, 1, 1, "", []float64{1.0488088481701516}, []float64{1}})
 	assertNoMetricsInChan(t, metricChan)
 }
 
