@@ -33,3 +33,8 @@
     tagexclude = ["mode"]
     [inputs.disk.tags]
         metricPath = "metrics"
+
+[[inputs.processes]]
+    fieldpass = ["blocked", "zombies", "stopped", "running", "sleeping", "total", "unknown"]
+    [inputs.processes.tags]
+        metricPath = "metrics"

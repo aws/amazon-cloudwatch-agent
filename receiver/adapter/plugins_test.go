@@ -13,9 +13,10 @@ import (
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/inputs/disk"
-	"github.com/influxdata/telegraf/plugins/inputs/mem"
-	"github.com/influxdata/telegraf/plugins/inputs/net"
+	_ "github.com/influxdata/telegraf/plugins/inputs/disk"
+	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
+	_ "github.com/influxdata/telegraf/plugins/inputs/net"
+	_ "github.com/influxdata/telegraf/plugins/inputs/processes"
 	_ "github.com/influxdata/telegraf/plugins/inputs/swap"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -24,171 +25,122 @@ import (
 
 var testCfg = "./testdata/all_plugins.toml"
 
+type SanityTestConfig struct {
+	plugin                               string
+	scrapeCount                          int
+	expectedMetrics                      [][]string
+	expectedResourceMetricsLen           int
+	expectedResourceMetricsLenComparator assert.ComparisonAssertionFunc
+}
+
 func Test_CPUPlugin(t *testing.T) {
-	t.Helper()
-	as := assert.New(t)
-	cpu := "cpu"
-
-	c := config.NewConfig()
-	c.InputFilters = []string{cpu}
-	err := c.LoadConfig(testCfg)
-	as.NoError(err)
-
-	a, _ := agent.NewAgent(c)
-	as.Len(a.Config.Inputs, 1)
-
-	receiver := newAdaptedReceiver(a.Config.Inputs[0], zaptest.NewLogger(t))
-	err = receiver.start(nil, nil)
-	as.NoError(err)
-
-	// Scrape twice but with a slight delay so that delta is detected and usage metrics are captured
-	// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/cpu/cpu.go#L109-L111
-	otelMetrics, err := receiver.scrape(nil)
-	as.NoError(err)
-	time.Sleep(1 * time.Second)
-	otelMetrics, err = receiver.scrape(nil)
-	as.NoError(err)
-
-	err = receiver.shutdown(nil)
-	as.NoError(err)
-
-	as.Equal(2, otelMetrics.ResourceMetrics().Len())
-
-	// Validate CPU Time metrics
-	// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/cpu/cpu.go#L72-L86
-	metrics := otelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
-	as.Equal(11, metrics.Len())
-	expectedCPUTimeMetrics := []string{"time_active", "time_user", "time_system", "time_idle", "time_nice", "time_iowait", "time_irq", "time_softirq", "time_steal", "time_guest", "time_guest_nice"}
-	validateMetricName(as, cpu, expectedCPUTimeMetrics, metrics)
-
-	// Validate CPU Usage metrics
-	// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/cpu/cpu.go#L113-L123
-	metrics = otelMetrics.ResourceMetrics().At(1).ScopeMetrics().At(0).Metrics()
-	as.Equal(11, metrics.Len())
-	expectedCPUUsageMetrics := []string{"usage_active", "usage_user", "usage_system", "usage_idle", "usage_nice", "usage_iowait", "usage_irq", "usage_softirq", "usage_steal", "usage_guest", "usage_guest_nice"}
-	validateMetricName(as, cpu, expectedCPUUsageMetrics, metrics)
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin: "cpu",
+		// Scrape twice so that delta is detected and usage metrics are captured
+		scrapeCount: 2,
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/cpu/cpu.go#L109-L111
+		expectedMetrics: [][]string{
+			// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/cpu/cpu.go#L72-L86
+			{"time_active", "time_user", "time_system", "time_idle", "time_nice", "time_iowait", "time_irq", "time_softirq", "time_steal", "time_guest", "time_guest_nice"},
+			// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/cpu/cpu.go#L113-L123
+			{"usage_active", "usage_user", "usage_system", "usage_idle", "usage_nice", "usage_iowait", "usage_irq", "usage_softirq", "usage_steal", "usage_guest", "usage_guest_nice"},
+		},
+		expectedResourceMetricsLen:           2,
+		expectedResourceMetricsLenComparator: assert.Equal,
+	})
 }
 
 func Test_MemPlugin(t *testing.T) {
-	t.Helper()
-	as := assert.New(t)
-	memory := "mem"
-
-	memStats := mem.MemStats{}
-	err := memStats.Init()
-	as.NoError(err)
-
-	c := config.NewConfig()
-	c.InputFilters = []string{memory}
-
-	err = c.LoadConfig(testCfg)
-	as.NoError(err)
-
-	a, _ := agent.NewAgent(c)
-	as.Len(a.Config.Inputs, 1)
-
-	receiver := newAdaptedReceiver(a.Config.Inputs[0], zaptest.NewLogger(t))
-	err = receiver.start(nil, nil)
-	as.NoError(err)
-
-	otelMetrics, err := receiver.scrape(nil)
-	as.NoError(err)
-
-	err = receiver.shutdown(nil)
-	as.NoError(err)
-
-	// Validate Mem metrics
-	// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/mem/mem.go#L40-L44
-	metrics := otelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
-	as.Equal(5, metrics.Len())
-	expectedMemoryUsageMetrics := []string{"total", "available", "used", "used_percent", "available_percent"}
-	validateMetricName(as, memory, expectedMemoryUsageMetrics, metrics)
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin:      "mem",
+		scrapeCount: 1,
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/mem/mem.go#L40-L44
+		expectedMetrics:                      [][]string{{"total", "available", "used", "used_percent", "available_percent"}},
+		expectedResourceMetricsLen:           1,
+		expectedResourceMetricsLenComparator: assert.Equal,
+	})
 }
 
 func Test_SwapPlugin(t *testing.T) {
-	t.Helper()
-	as := assert.New(t)
-	swaps := "swap"
-
-	memStats := mem.MemStats{}
-	err := memStats.Init()
-	as.NoError(err)
-
-	c := config.NewConfig()
-	c.InputFilters = []string{swaps}
-
-	err = c.LoadConfig(testCfg)
-	as.NoError(err)
-
-	a, _ := agent.NewAgent(c)
-	as.Len(a.Config.Inputs, 1)
-
-	receiver := newAdaptedReceiver(a.Config.Inputs[0], zaptest.NewLogger(t))
-	err = receiver.start(nil, nil)
-	as.NoError(err)
-
-	otelMetrics, err := receiver.scrape(nil)
-	as.NoError(err)
-
-	err = receiver.shutdown(nil)
-	as.NoError(err)
-
-	// Validate Swap metrics
-	// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/swap/swap.go#L32-L37
-	metrics := otelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
-	as.Equal(4, metrics.Len())
-	expectedSwapMetrics := []string{"total", "free", "used", "used_percent"}
-	validateMetricName(as, swaps, expectedSwapMetrics, metrics)
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin:      "swap",
+		scrapeCount: 1,
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/swap/swap.go#L32-L37
+		expectedMetrics:                      [][]string{{"total", "free", "used", "used_percent"}},
+		expectedResourceMetricsLen:           1,
+		expectedResourceMetricsLenComparator: assert.Equal,
+	})
 }
 
 func Test_NetPlugin(t *testing.T) {
-	t.Helper()
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin:      "net",
+		scrapeCount: 1,
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/net/net.go#L86-L93
+		expectedMetrics:            [][]string{{"bytes_sent", "bytes_recv", "packets_sent", "packets_recv", "err_in", "err_out", "drop_in", "drop_out"}},
+		expectedResourceMetricsLen: 1,
+		// The net plugin stands-out here because we don't specify an interface filter in our config (to be agnostic of where this test runs)
+		// which means the plugin reports metrics for each network interface it picks up. Hence, we only check atleast 1 metric is reported
+		// (expectedResourceMetricsLen i.e. 1 <= actualResourceMetricsCount)
+		expectedResourceMetricsLenComparator: assert.LessOrEqual,
+	})
+}
+
+func Test_DiskPlugin(t *testing.T) {
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin:      "disk",
+		scrapeCount: 1,
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/disk/disk.go#L72-L78
+		expectedMetrics:                      [][]string{{"total", "free", "used", "used_percent", "inodes_total", "inodes_free", "inodes_used"}},
+		expectedResourceMetricsLen:           1,
+		expectedResourceMetricsLenComparator: assert.Equal,
+	})
+}
+
+func Test_ProcessesPlugin(t *testing.T) {
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin:      "processes",
+		scrapeCount: 1,
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/processes/processes_notwindows.go#L65-L71
+		expectedMetrics:                      [][]string{{"blocked", "zombies", "stopped", "running", "sleeping", "total", "unknown"}},
+		expectedResourceMetricsLen:           1,
+		expectedResourceMetricsLenComparator: assert.Equal,
+	})
+}
+
+func scrapeAndValidateMetrics(t *testing.T, cfg *SanityTestConfig) {
 	as := assert.New(t)
-	network := "net"
+	receiver := getInitializedReceiver(t, cfg.plugin)
 
-	netStats := net.NetIOStats{}
-	netStats.IgnoreProtocolStats = true
-
-	c := config.NewConfig()
-	c.InputFilters = []string{network}
-
-	err := c.LoadConfig(testCfg)
+	err := receiver.start(nil, nil)
 	as.NoError(err)
 
-	a, _ := agent.NewAgent(c)
-	as.Len(a.Config.Inputs, 1)
-
-	receiver := newAdaptedReceiver(a.Config.Inputs[0], zaptest.NewLogger(t))
-	err = receiver.start(nil, nil)
-	as.NoError(err)
-
-	otelMetrics, err := receiver.scrape(nil)
-	as.NoError(err)
+	var otelMetrics pmetric.Metrics
+	for i := 0; i < cfg.scrapeCount; i++ {
+		if i != 0 {
+			time.Sleep(1 * time.Second)
+		}
+		otelMetrics, err = receiver.scrape(nil)
+		as.NoError(err)
+	}
 
 	err = receiver.shutdown(nil)
 	as.NoError(err)
 
-	// Validate Net metrics
-	// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/net/net.go#L86-L93
-	metrics := otelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
-	as.Equal(8, metrics.Len())
-	expectedNetMetrics := []string{"bytes_sent", "bytes_recv", "packets_sent", "packets_recv", "err_in", "err_out", "drop_in", "drop_out"}
-	validateMetricName(as, network, expectedNetMetrics, metrics)
+	cfg.expectedResourceMetricsLenComparator(t, cfg.expectedResourceMetricsLen, otelMetrics.ResourceMetrics().Len())
+
+	var metrics pmetric.MetricSlice
+	for i := 0; i < len(cfg.expectedMetrics); i++ {
+		metrics = otelMetrics.ResourceMetrics().At(i).ScopeMetrics().At(0).Metrics()
+		validateMetricName(as, cfg.plugin, cfg.expectedMetrics[i], metrics)
+	}
 }
 
-func Test_DiskPlugin(t *testing.T) {
-	t.Helper()
+func getInitializedReceiver(t *testing.T, plugin string) *AdaptedReceiver {
 	as := assert.New(t)
-	diskP := "disk"
-
-	diskStats := disk.DiskStats{}
-	err := diskStats.Init()
-	as.NoError(err)
-
 	c := config.NewConfig()
-	c.InputFilters = []string{diskP}
-
-	err = c.LoadConfig(testCfg)
+	c.InputFilters = []string{plugin}
+	err := c.LoadConfig(testCfg)
 	as.NoError(err)
 
 	a, _ := agent.NewAgent(c)
@@ -197,22 +149,7 @@ func Test_DiskPlugin(t *testing.T) {
 	err = a.Config.Inputs[0].Init()
 	as.NoError(err)
 
-	receiver := newAdaptedReceiver(a.Config.Inputs[0], zaptest.NewLogger(t))
-	err = receiver.start(nil, nil)
-	as.NoError(err)
-
-	otelMetrics, err := receiver.scrape(nil)
-	as.NoError(err)
-
-	err = receiver.shutdown(nil)
-	as.NoError(err)
-
-	// Validate Disk metrics
-	// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/disk/disk.go#L72-L78
-	metrics := otelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
-	as.Equal(7, metrics.Len())
-	expectedDiskMetrics := []string{"total", "free", "used", "used_percent", "inodes_total", "inodes_free", "inodes_used"}
-	validateMetricName(as, diskP, expectedDiskMetrics, metrics)
+	return newAdaptedReceiver(a.Config.Inputs[0], zaptest.NewLogger(t))
 }
 
 func validateMetricName(as *assert.Assertions, plugin string, expectedResourceMetricsName []string, actualOtelSlMetrics pmetric.MetricSlice) {
