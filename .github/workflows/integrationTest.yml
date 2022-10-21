@@ -637,12 +637,13 @@ jobs:
     needs: [ StartLocalStack, EC2LinuxIntegrationTest ]
     defaults:
       run:
-        working-directory: integration/terraform/ec2/localstack
+        working-directory: terraform/ec2/localstack
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v2
+        with: aws/amazon-cloudwatch-agent-test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
