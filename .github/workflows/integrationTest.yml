@@ -503,6 +503,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
+        with: aws/amazon-cloudwatch-agent-test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -532,11 +533,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd integration/terraform/ec2/linux
+            cd terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
-              -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=https://github.com/aws/amazon-cloudwatch-agent-test.git" \
+              -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
@@ -560,7 +561,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
+          command: cd terraform/ec2/linux && terraform destroy --auto-approve
 
 #  @TODO add back when we add back windows tests
 #  EC2WinIntegrationTest:
