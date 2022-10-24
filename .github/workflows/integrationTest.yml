@@ -222,6 +222,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -251,8 +253,8 @@ jobs:
         run: |
           echo cw agent version $(cat CWAGENT_VERSION)
           cp CWAGENT_VERSION /tmp/CWAGENT_VERSION
-          cp -r integration/pkg/tools/. /tmp/
-          cp -r integration/pkg/tools/. /tmp/arm64/
+          cp -r pkg/tools/. /tmp/
+          cp -r pkg/tools/. /tmp/arm64/
           cp -r darwin/amd64/. /tmp/
           cp -r darwin/arm64/. /tmp/arm64/
 
