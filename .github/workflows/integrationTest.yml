@@ -684,6 +684,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -715,7 +717,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 5
           command: |
-            cd integration/terraform/ecs/linux
+            cd terraform/ecs/linux
             terraform init
             if terraform apply --auto-approve -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then 
               terraform destroy -auto-approve
@@ -730,7 +732,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd integration/terraform/ecs/linux && terraform destroy --auto-approve
+          command: cd terraform/ecs/linux && terraform destroy --auto-approve
 
   PerformanceTrackingTest:
     name: "PerformanceTrackingTest"
