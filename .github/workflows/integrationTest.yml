@@ -444,7 +444,7 @@ jobs:
             cd terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=aws/amazon-cloudwatch-agent-test.git" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=https://github.com/aws/amazon-cloudwatch-agent-test.git" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
@@ -620,7 +620,7 @@ jobs:
 #            if terraform apply --auto-approve \
 #            -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
 #            -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
-#            -var="github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
+#            -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
 #            -var="test_dir=${{ matrix.arrays.test_dir }}" \
 #            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
 #              terraform destroy -auto-approve
@@ -749,6 +749,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -783,11 +785,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd integration/terraform/ec2/linux
+            cd terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_repo=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
-              -var="github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=https://github.com/aws/amazon-cloudwatch-agent-test.git" \
+              -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
@@ -796,7 +798,7 @@ jobs:
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
-              -var="github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
+              -var="cwa_github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
@@ -812,4 +814,4 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd integration/terraform/ec2/linux && terraform destroy --auto-approve
+          command: cd terraform/ec2/linux && terraform destroy --auto-approve
