@@ -159,6 +159,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
+        with: aws/amazon-cloudwatch-agent-test
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -195,10 +196,10 @@ jobs:
           export version=$(cat CWAGENT_VERSION)
           echo cw agent version $version
           mkdir msi_dep
-          cp -r integration/msi/tools/. msi_dep/
+          cp -r msi/tools/. msi_dep/
           cp -r windows-agent/amazon-cloudwatch-agent/. msi_dep/
-          go run integration/msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>' --tags=integration
-          go run integration/msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__ --tags=integration
+          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>' --tags=integration
+          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__ --tags=integration
 
       - name: Zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
