@@ -127,7 +127,8 @@ jobs:
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
     steps:
       - uses: actions/checkout@v2
-        with: aws/amazon-cloudwatch-agent-test
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -159,7 +160,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
-        with: aws/amazon-cloudwatch-agent-test
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -363,7 +365,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
-        with: aws/amazon-cloudwatch-agent-test
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -504,7 +507,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
-        with: aws/amazon-cloudwatch-agent-test
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -644,7 +648,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
-        with: aws/amazon-cloudwatch-agent-test
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
