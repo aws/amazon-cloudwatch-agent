@@ -130,7 +130,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -163,7 +163,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -225,7 +225,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -370,7 +370,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -390,7 +390,7 @@ jobs:
           echo run terraform and execute test code &&
           terraform apply --auto-approve
           -var="ssh_key_value=${PRIVATE_KEY}"
-          -var="github_test_repo=${CWA_GITHUB_TEST_REPO_URL}"
+          -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}"
           -var="cwa_github_sha=${GITHUB_SHA}"
           -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
           -var="ssh_key_name=${KEY_NAME}" &&
@@ -413,7 +413,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -446,7 +446,7 @@ jobs:
             cd terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${CWA_GITHUB_TEST_REPO_URL}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
@@ -475,7 +475,7 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
-              -var="github_repo=${CWA_GITHUB_TEST_REPO_URL}" \
+              -var="github_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -514,7 +514,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -547,7 +547,7 @@ jobs:
             cd terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${CWA_GITHUB_TEST_REPO_URL}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
@@ -655,7 +655,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -689,7 +689,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -752,7 +752,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: ${CWA_GITHUB_TEST_REPO_NAME}
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -790,7 +790,7 @@ jobs:
             cd terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${CWA_GITHUB_TEST_REPO_URL}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
