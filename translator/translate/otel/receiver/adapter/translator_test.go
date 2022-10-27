@@ -16,20 +16,20 @@ import (
 
 func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
-		jsonCfg      map[string]interface{}
+		input        map[string]interface{}
 		cfgType      string
-		key          string
+		cfgKey       string
 		wantErr      error
 		wantInterval time.Duration
 	}{
-		"WithoutKey": {
-			jsonCfg: map[string]interface{}{},
+		"WithoutKeyInConfig": {
+			input:   map[string]interface{}{},
 			cfgType: "test",
-			key:     "mem",
+			cfgKey:  "mem",
 			wantErr: &common.MissingKeyError{Type: "telegraf_test", JsonKey: "mem"},
 		},
-		"WithoutInterval": {
-			jsonCfg: map[string]interface{}{
+		"WithoutIntervalInSection": {
+			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"cpu": map[string]interface{}{},
@@ -37,11 +37,11 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			cfgType:      "test",
-			key:          common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, "cpu"),
+			cfgKey:       "metrics::metrics_collected::cpu",
 			wantInterval: time.Minute,
 		},
-		"WithValid": {
-			jsonCfg: map[string]interface{}{
+		"WithValidConfig": {
+			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"mem": map[string]interface{}{
@@ -52,38 +52,39 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			cfgType:      "test",
-			key:          common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, "mem"),
+			cfgKey:       "metrics::metrics_collected::mem",
 			wantInterval: 20 * time.Second,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			conf := confmap.NewFromStringMap(testCase.jsonCfg)
-			tt := NewTranslator(testCase.cfgType, testCase.key)
+			conf := confmap.NewFromStringMap(testCase.input)
+			tt := NewTranslator(testCase.cfgType, testCase.cfgKey)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
-				cfg := got.(*adapter.Config)
-				require.Equal(t, adapter.Type(testCase.cfgType), cfg.ID().Type())
-				require.Equal(t, testCase.wantInterval, cfg.CollectionInterval)
+				gotCfg, ok := got.(*adapter.Config)
+				require.True(t, ok)
+				require.Equal(t, adapter.Type(testCase.cfgType), gotCfg.ID().Type())
+				require.Equal(t, testCase.wantInterval, gotCfg.CollectionInterval)
 			}
 		})
 	}
 }
 
-func TestGetMetricsCollectionInterval(t *testing.T) {
+func TestGetCollectionInterval(t *testing.T) {
 	sectionKeys := []string{"section", "backup"}
 	testCases := map[string]struct {
-		jsonCfg map[string]interface{}
-		want    time.Duration
+		inputConfig map[string]interface{}
+		want        time.Duration
 	}{
 		"WithDefault": {
-			jsonCfg: map[string]interface{}{},
-			want:    time.Minute,
+			inputConfig: map[string]interface{}{},
+			want:        time.Minute,
 		},
 		"WithoutSectionOverride": {
-			jsonCfg: map[string]interface{}{
+			inputConfig: map[string]interface{}{
 				"backup": map[string]interface{}{
 					"metrics_collection_interval": 10,
 				},
@@ -92,7 +93,7 @@ func TestGetMetricsCollectionInterval(t *testing.T) {
 			want: 10 * time.Second,
 		},
 		"WithInvalidSectionOverride": {
-			jsonCfg: map[string]interface{}{
+			inputConfig: map[string]interface{}{
 				"backup": map[string]interface{}{
 					"metrics_collection_interval": 10,
 				},
@@ -103,7 +104,7 @@ func TestGetMetricsCollectionInterval(t *testing.T) {
 			want: 10 * time.Second,
 		},
 		"WithSectionOverride": {
-			jsonCfg: map[string]interface{}{
+			inputConfig: map[string]interface{}{
 				"backup": map[string]interface{}{
 					"metrics_collection_interval": 10,
 				},
@@ -116,8 +117,8 @@ func TestGetMetricsCollectionInterval(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			conf := confmap.NewFromStringMap(testCase.jsonCfg)
-			got := getMetricsCollectionInterval(conf, sectionKeys)
+			conf := confmap.NewFromStringMap(testCase.inputConfig)
+			got := getCollectionInterval(conf, sectionKeys)
 			require.Equal(t, testCase.want, got)
 		})
 	}

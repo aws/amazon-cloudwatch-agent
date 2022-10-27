@@ -1,12 +1,12 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package util
+package collections
 
 // CopyMap returns a new map that makes a shallow copy of all the
 // references in the input map.
 func CopyMap[K comparable, V any](m map[K]V) map[K]V {
-	dupe := make(map[K]V)
+	dupe := make(map[K]V, len(m))
 	for k, v := range m {
 		dupe[k] = v
 	}
@@ -23,6 +23,43 @@ func MergeMaps[K comparable, V any](maps ...map[K]V) map[K]V {
 		}
 	}
 	return merged
+}
+
+// GetOrDefault retrieves the value for the key in the map if it exists.
+// If it doesn't exist, then returns the default value.
+func GetOrDefault[K comparable, V any](m map[K]V, key K, defaultValue V) V {
+	if value, ok := m[key]; ok {
+		return value
+	}
+	return defaultValue
+}
+
+// Keys creates a slice of the keys in the map.
+func Keys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+// Values creates a slice of the values in the map.
+func Values[K comparable, V any](m map[K]V) []V {
+	values := make([]V, 0, len(m))
+	for _, value := range m {
+		values = append(values, value)
+	}
+	return values
+}
+
+// MapSlice converts a slice of type K into a slice of type V
+// using the provided mapper function.
+func MapSlice[K any, V any](base []K, mapper func(K) V) []V {
+	s := make([]V, len(base))
+	for i, entry := range base {
+		s[i] = mapper(entry)
+	}
+	return s
 }
 
 // Pair is a struct with a K key and V value.
@@ -56,15 +93,6 @@ func (s Set[K]) Remove(key K) {
 func (s Set[K]) Contains(key K) bool {
 	_, ok := s[key]
 	return ok
-}
-
-// Keys creates a slice of the keys.
-func (s Set[K]) Keys() []K {
-	keys := make([]K, 0, len(s))
-	for key := range s {
-		keys = append(keys, key)
-	}
-	return keys
 }
 
 // NewSet creates a new Set with the keys provided.

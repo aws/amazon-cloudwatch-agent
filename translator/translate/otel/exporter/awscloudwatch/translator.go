@@ -43,58 +43,58 @@ func (t *translator) Type() config.Type {
 // metrics section of the JSON config.
 // TODO: remove dependency on global config.
 func (t *translator) Translate(conf *confmap.Conf) (config.Exporter, error) {
-	if conf != nil && conf.IsSet(common.MetricsKey) {
-		cfg := t.factory.CreateDefaultConfig().(*cloudwatch.Config)
-		credentials := confmap.NewFromStringMap(agent.Global_Config.Credentials)
-		_ = credentials.Unmarshal(cfg)
-		cfg.RoleARN = getRoleARN(conf)
-		cfg.Region = agent.Global_Config.Region
-		if namespace, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, namespaceKey)); ok {
-			cfg.Namespace = namespace
-		}
-		if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, endpointOverrideKey)); ok {
-			cfg.EndpointOverride = endpointOverride
-		}
-		if forceFlushInterval, ok := common.GetDuration(conf, common.ConfigKey(common.MetricsKey, forceFlushIntervalKey)); ok {
-			cfg.ForceFlushInterval = forceFlushInterval
-		}
-		if agent.Global_Config.Internal {
-			cfg.MaxValuesPerDatum = internalMaxValuesPerDatum
-		}
-		cfg.RollupDimensions = getRollupDimensions(conf)
-		cfg.DropOriginConfigs = getDropOriginalMetrics(conf)
-		cfg.MetricDecorations = getMetricDecorations(conf)
-		return cfg, nil
+	if conf == nil || !conf.IsSet(common.MetricsKey) {
+		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: common.MetricsKey}
 	}
-	return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: common.MetricsKey}
+	cfg := t.factory.CreateDefaultConfig().(*cloudwatch.Config)
+	credentials := confmap.NewFromStringMap(agent.Global_Config.Credentials)
+	_ = credentials.Unmarshal(cfg)
+	cfg.RoleARN = getRoleARN(conf)
+	cfg.Region = agent.Global_Config.Region
+	if namespace, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, namespaceKey)); ok {
+		cfg.Namespace = namespace
+	}
+	if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, endpointOverrideKey)); ok {
+		cfg.EndpointOverride = endpointOverride
+	}
+	if forceFlushInterval, ok := common.GetDuration(conf, common.ConfigKey(common.MetricsKey, forceFlushIntervalKey)); ok {
+		cfg.ForceFlushInterval = forceFlushInterval
+	}
+	if agent.Global_Config.Internal {
+		cfg.MaxValuesPerDatum = internalMaxValuesPerDatum
+	}
+	cfg.RollupDimensions = getRollupDimensions(conf)
+	cfg.DropOriginConfigs = getDropOriginalMetrics(conf)
+	cfg.MetricDecorations = getMetricDecorations(conf)
+	return cfg, nil
 }
 
-func getRoleARN(conf *confmap.Conf) (roleARN string) {
+func getRoleARN(conf *confmap.Conf) string {
 	key := common.ConfigKey(common.MetricsKey, common.CredentialsKey, common.RoleARNKey)
-	var ok bool
-	if roleARN, ok = common.GetString(conf, key); !ok {
+	roleARN, ok := common.GetString(conf, key)
+	if !ok {
 		roleARN = agent.Global_Config.Role_arn
 	}
-	return
+	return roleARN
 }
 
 // TODO: remove dependency on rule.
 func getRollupDimensions(conf *confmap.Conf) [][]string {
 	key := common.ConfigKey(common.MetricsKey, rollup_dimensions.SectionKey)
 	value := conf.Get(key)
-	if value != nil && rollup_dimensions.IsValidRollupList(value) {
-		aggregates := value.([]interface{})
-		rollup := make([][]string, len(aggregates))
-		for i, aggregate := range aggregates {
-			dimensions := aggregate.([]interface{})
-			rollup[i] = make([]string, len(dimensions))
-			for j, dimension := range dimensions {
-				rollup[i][j] = dimension.(string)
-			}
-		}
-		return rollup
+	if value == nil || !rollup_dimensions.IsValidRollupList(value) {
+		return nil
 	}
-	return nil
+	aggregates := value.([]interface{})
+	rollup := make([][]string, len(aggregates))
+	for i, aggregate := range aggregates {
+		dimensions := aggregate.([]interface{})
+		rollup[i] = make([]string, len(dimensions))
+		for j, dimension := range dimensions {
+			rollup[i][j] = dimension.(string)
+		}
+	}
+	return rollup
 }
 
 // TODO: remove dependency on rule.
@@ -111,16 +111,16 @@ func getDropOriginalMetrics(conf *confmap.Conf) map[string][]string {
 func getMetricDecorations(conf *confmap.Conf) []cloudwatch.MetricDecorationConfig {
 	_, result := new(metric_decoration.MetricDecoration).ApplyRule(conf.Get(common.MetricsKey))
 	mds, ok := result.([]interface{})
-	if ok && len(mds) > 0 {
-		decorations := make([]cloudwatch.MetricDecorationConfig, len(mds))
-		for i, md := range mds {
-			var decoration cloudwatch.MetricDecorationConfig
-			if err := mapstructure.Decode(md, &decoration); err != nil {
-				continue
-			}
-			decorations[i] = decoration
-		}
-		return decorations
+	if !ok || len(mds) == 0 {
+		return nil
 	}
-	return nil
+	decorations := make([]cloudwatch.MetricDecorationConfig, len(mds))
+	for i, md := range mds {
+		var decoration cloudwatch.MetricDecorationConfig
+		if err := mapstructure.Decode(md, &decoration); err != nil {
+			continue
+		}
+		decorations[i] = decoration
+	}
+	return decorations
 }

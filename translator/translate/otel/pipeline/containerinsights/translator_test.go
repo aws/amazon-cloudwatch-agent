@@ -9,6 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -21,11 +24,13 @@ func TestTranslator(t *testing.T) {
 	cit := NewTranslator()
 	require.EqualValues(t, "containerinsights", cit.Type())
 	testCases := map[string]struct {
-		input map[string]interface{}
-		want  *want
+		input   map[string]interface{}
+		want    *want
+		wantErr error
 	}{
-		"WithoutKey": {
-			input: map[string]interface{}{},
+		"WithoutECSKey": {
+			input:   map[string]interface{}{},
+			wantErr: &common.MissingKeyError{Type: "containerinsights", JsonKey: "logs::metrics_collected::ecs"},
 		},
 		"WithECSKey": {
 			input: map[string]interface{}{
@@ -46,23 +51,20 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, _ := cit.Translate(conf)
+			got, err := cit.Translate(conf)
+			require.Equal(t, testCase.wantErr, err)
 			if testCase.want == nil {
 				require.Nil(t, got)
 			} else {
 				require.EqualValues(t, testCase.want.pipelineType, got.Key.String())
-				require.Equal(t, testCase.want.receivers, toStringSlice(got.Value.Receivers))
-				require.Equal(t, testCase.want.processors, toStringSlice(got.Value.Processors))
-				require.Equal(t, testCase.want.exporters, toStringSlice(got.Value.Exporters))
+				require.Equal(t, testCase.want.receivers, collections.MapSlice(got.Value.Receivers, toString))
+				require.Equal(t, testCase.want.processors, collections.MapSlice(got.Value.Processors, toString))
+				require.Equal(t, testCase.want.exporters, collections.MapSlice(got.Value.Exporters, toString))
 			}
 		})
 	}
 }
 
-func toStringSlice(ids []config.ComponentID) []string {
-	var values []string
-	for _, id := range ids {
-		values = append(values, id.String())
-	}
-	return values
+func toString(id config.ComponentID) string {
+	return id.String()
 }

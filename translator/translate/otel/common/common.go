@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 )
 
 const (
@@ -22,7 +22,9 @@ const (
 	MetricsKey                   = "metrics"
 	LogsKey                      = "logs"
 	MetricsCollectedKey          = "metrics_collected"
+	LogsCollectedKey             = "logs_collected"
 	ECSKey                       = "ecs"
+	KubernetesKey                = "kubernetes"
 	CredentialsKey               = "credentials"
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
@@ -47,6 +49,13 @@ func (t TranslatorMap[C]) Add(translator Translator[C]) {
 func (t TranslatorMap[C]) Get(cfgType config.Type) (Translator[C], bool) {
 	translator, ok := t[cfgType]
 	return translator, ok
+}
+
+// Merge adds the translators in the input to the existing map.
+func (t TranslatorMap[C]) Merge(m TranslatorMap[C]) {
+	for _, v := range m {
+		t.Add(v)
+	}
 }
 
 // NewTranslatorMap creates a TranslatorMap from the translators.
@@ -80,7 +89,7 @@ type Identifiable interface {
 }
 
 // Pipeline is a component ID and respective service pipeline.
-type Pipeline *util.Pair[config.ComponentID, *service.ConfigServicePipeline]
+type Pipeline *collections.Pair[config.ComponentID, *service.ConfigServicePipeline]
 
 // Pipelines is a map of component IDs to service pipelines.
 type Pipelines map[config.ComponentID]*service.ConfigServicePipeline

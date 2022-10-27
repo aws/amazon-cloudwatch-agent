@@ -10,8 +10,6 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/containerinsights"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
 )
 
 var (
@@ -24,13 +22,8 @@ type translator struct {
 
 var _ common.Translator[common.Pipelines] = (*translator)(nil)
 
-func NewTranslator() common.Translator[common.Pipelines] {
-	return &translator{
-		translators: []common.Translator[common.Pipeline]{
-			host.NewTranslator(),
-			containerinsights.NewTranslator(),
-		},
-	}
+func NewTranslator(translators ...common.Translator[common.Pipeline]) common.Translator[common.Pipelines] {
+	return &translator{translators}
 }
 
 // Type is unused.

@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/service"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder/mapstructure"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/otelnative"
@@ -47,13 +48,13 @@ func ToYamlConfig(val interface{}) (string, interface{}) {
 	nativeExporters := make(map[string]interface{})
 	for _, t := range otelNativeTranslators {
 		if t.RequiresTranslation(inputs, procs, outputs) {
-			receivers := t.Receivers(util.CopyMap(inputs), util.CopyMap(procs), util.CopyMap(outputs))
-			processors := t.Processors(util.CopyMap(inputs), util.CopyMap(procs), util.CopyMap(outputs))
-			exporters := t.Exporters(util.CopyMap(inputs), util.CopyMap(procs), util.CopyMap(outputs))
+			receivers := t.Receivers(collections.CopyMap(inputs), collections.CopyMap(procs), collections.CopyMap(outputs))
+			processors := t.Processors(collections.CopyMap(inputs), collections.CopyMap(procs), collections.CopyMap(outputs))
+			exporters := t.Exporters(collections.CopyMap(inputs), collections.CopyMap(procs), collections.CopyMap(outputs))
 
-			nativeReceivers = util.MergeMaps(nativeReceivers, receivers)
-			nativeProcessors = util.MergeMaps(nativeProcessors, processors)
-			nativeExporters = util.MergeMaps(nativeExporters, exporters)
+			nativeReceivers = collections.MergeMaps(nativeReceivers, receivers)
+			nativeProcessors = collections.MergeMaps(nativeProcessors, processors)
+			nativeExporters = collections.MergeMaps(nativeExporters, exporters)
 		}
 	}
 

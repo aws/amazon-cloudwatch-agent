@@ -116,14 +116,15 @@ install-tools:
 
 fmt: install-tools
 	go fmt ./...
-	echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
+	@echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
 
 fmt-sh: install-tools
 	${SHFMT} -w -d -i 5 .
 
 impi: install-tools
 	# Skip plugins/plugins.go
-	echo $(ALL_SRC) | xargs -n 10 $(IMPI) --local $(CW_AGENT_IMPORT_PATH) --scheme stdThirdPartyLocal --skip plugins/plugins.go
+	@echo $(ALL_SRC) | xargs -n 10 $(IMPI) --local $(CW_AGENT_IMPORT_PATH) --scheme stdThirdPartyLocal --skip plugins/plugins.go
+	@echo "Check import order/grouping finished"
 
 addlicense: install-tools
 	@ADDLICENSEOUT=`$(ADDLICENSE) -y="" -s=only -l="mit" -c="Amazon.com, Inc. or its affiliates. All Rights Reserved." $(ALL_SRC) 2>&1`; \

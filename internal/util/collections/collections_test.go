@@ -1,9 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package util
+package collections
 
 import (
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -79,18 +81,46 @@ func TestMergeMaps(t *testing.T) {
 	require.Equal(t, 2, value)
 }
 
+func TestGetOrDefault(t *testing.T) {
+	m1 := map[string]int{"first": 1, "second": 2}
+	got := GetOrDefault(m1, "first", 0)
+	require.Equal(t, 1, got)
+	got = GetOrDefault(m1, "missing", 0)
+	require.Equal(t, 0, got)
+}
+
+func TestKeys(t *testing.T) {
+	m1 := map[string]int{"first": 1, "second": 2}
+	got := Keys(m1)
+	sort.Strings(got)
+	require.Equal(t, []string{"first", "second"}, got)
+}
+
+func TestValues(t *testing.T) {
+	m1 := map[string]int{"first": 1, "second": 2}
+	got := Values(m1)
+	sort.Ints(got)
+	require.Equal(t, []int{1, 2}, got)
+}
+
+func TestMapSlice(t *testing.T) {
+	s := []string{"test", "value"}
+	got := MapSlice(s, strings.ToUpper)
+	require.Equal(t, []string{"TEST", "VALUE"}, got)
+}
+
 func TestPair(t *testing.T) {
 	pair := NewPair("key", "value")
-	assert.Equal(t, "key", pair.Key)
-	assert.Equal(t, "value", pair.Value)
+	require.Equal(t, "key", pair.Key)
+	require.Equal(t, "value", pair.Value)
 }
 
 func TestSet(t *testing.T) {
 	set := NewSet(1, 2)
-	assert.True(t, set.Contains(1))
+	require.True(t, set.Contains(1))
 	set.Remove(1)
-	assert.False(t, set.Contains(1))
-	assert.Equal(t, []int{2}, set.Keys())
+	require.False(t, set.Contains(1))
+	require.Equal(t, []int{2}, Keys(set))
 }
 
 func assertMapsEqual(t *testing.T, m1, m2 map[string]interface{}) {

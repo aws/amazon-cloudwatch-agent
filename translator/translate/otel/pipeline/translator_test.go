@@ -11,8 +11,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 type testTranslator struct {
@@ -30,17 +30,16 @@ func (t testTranslator) Type() config.Type {
 }
 
 func TestTranslator(t *testing.T) {
-	pt := NewTranslator().(*translator)
+	pt := NewTranslator()
 	require.EqualValues(t, "", pt.Type())
-	pt.translators = nil
 	got, err := pt.Translate(confmap.New())
 	require.Equal(t, errNoPipelines, err)
 	require.Nil(t, got)
-	pt.translators = []common.Translator[common.Pipeline]{
-		testTranslator{
-			result: util.NewPair(config.NewComponentID(""), &service.ConfigServicePipeline{}),
+	pt = NewTranslator(
+		&testTranslator{
+			result: collections.NewPair(config.NewComponentID(""), &service.ConfigServicePipeline{}),
 		},
-	}
+	)
 	got, err = pt.Translate(confmap.New())
 	require.NoError(t, err)
 	require.NotNil(t, got)
