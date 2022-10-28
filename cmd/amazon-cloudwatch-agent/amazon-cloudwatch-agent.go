@@ -51,7 +51,6 @@ import (
 const (
 	defaultEnvCfgFileName = "env-config.json"
 	LogTargetEventLog     = "eventlog"
-	yamlConfigFileName    = "amazon-cloudwatch-agent.yaml"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -328,7 +327,7 @@ func runAgent(ctx context.Context,
 	// 	Version:     "0.0",
 	// }
 
-	yamlConfigPath := filepath.Join("file:", filepath.Dir(*fConfig), yamlConfigFileName)
+	yamlConfigPath := filepath.Join("file:", *fOtelConfig)
 	if err != nil {
 		log.Printf("E! Failed to load yaml config due to %v", err)
 		return err
