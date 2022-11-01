@@ -331,7 +331,7 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	switch w.renderFormat {
 	case FormatXml, FormatDefault:
 		//XML format
-		newRecord.XmlFormatContent = string(descriptionBytes)
+		newRecord.XmlFormatContent = insertPlaceholderValues(string(descriptionBytes), newRecord.EventData.Values)
 	case FormatPlainText:
 		//old SSM agent Windows format
 		var recordMessage eventMessage
@@ -339,7 +339,7 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 		if err != nil {
 			return nil, fmt.Errorf("Unmarshal() err %v", err)
 		}
-		newRecord.System.Description = recordMessage.Message
+		newRecord.System.Description = insertPlaceholderValues(recordMessage.Message, newRecord.EventData.Values)
 	default:
 		return nil, fmt.Errorf("renderFormat is not recognized, %s", w.renderFormat)
 	}

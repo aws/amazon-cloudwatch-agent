@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -167,4 +169,43 @@ func WindowsEventLogLevelName(levelId int32) string {
 	default:
 		return UNKNOWN
 	}
+}
+
+func insertPlaceholderValues(rawMessage string, evtDataValues []Data) string {
+	if len(evtDataValues) == 0 {
+		return rawMessage
+	}
+	var sb strings.Builder
+	prevIndex := 0
+	searchingIndex := false
+	for i, c := range rawMessage {
+		if searchingIndex {
+			if c > 57 || c < 48 {
+				ind, err := strconv.Atoi(rawMessage[prevIndex+1 : i])
+				if err == nil && ind <= len(evtDataValues) && ind > 0 {
+					sb.WriteString(evtDataValues[ind-1].Value)
+				} else {
+					sb.WriteString(rawMessage[prevIndex:i])
+				}
+				prevIndex = i
+				if c != 37 {
+					searchingIndex = false
+				}
+			}
+		} else {
+			if c == 37 {
+				sb.WriteString(rawMessage[prevIndex:i])
+				searchingIndex = true
+				prevIndex = i
+			}
+
+		}
+	}
+	ind, err := strconv.Atoi(rawMessage[prevIndex+1:])
+	if searchingIndex && err == nil && ind <= len(evtDataValues) && ind > 0 {
+		sb.WriteString(evtDataValues[ind-1].Value)
+	} else {
+		sb.WriteString(rawMessage[prevIndex:])
+	}
+	return sb.String()
 }

@@ -45,6 +45,10 @@ type windowsEventLogRecord struct {
 			Name string `xml:"Name,attr"`
 		} `xml:"Provider"`
 	} `xml:"System"`
+
+	EventData struct {
+		Values []Data `xml:",any"`
+	} `xml:"EventData"`
 }
 
 func newEventLogRecord(l *windowsEventLog) *windowsEventLogRecord {
@@ -77,4 +81,8 @@ func (record *windowsEventLogRecord) Value() (valueString string, err error) {
 
 func (record *windowsEventLogRecord) Timestamp() string {
 	return fmt.Sprint(record.System.TimeCreated.SystemTime.UnixNano())
+}
+
+type Data struct {
+	Value string `xml:",chardata"`
 }
