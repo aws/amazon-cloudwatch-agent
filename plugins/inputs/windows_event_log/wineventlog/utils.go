@@ -187,26 +187,22 @@ func insertPlaceholderValues(rawMessage string, evtDataValues []Data) string {
 	searchingIndex := false
 	for i, c := range rawMessage {
 		// found `%` previously. Determine the index number from the following character(s)
-		if searchingIndex {
-			// found the 1st char other than [0-9]
-			if c > 57 || c < 48 {
-				ind, err := strconv.Atoi(rawMessage[prevIndex+1 : i])
-				// Convert the Slice since the last `%` and see if it's a valid number.
-				// If the index is in [1 - len(evtDataValues)], get it from evtDataValues.
-				if err == nil && ind <= len(evtDataValues) && ind > 0 {
-					sb.WriteString(evtDataValues[ind-1].Value)
-				} else {
-					sb.WriteString(rawMessage[prevIndex:i])
-				}
-				prevIndex = i
-				// In case of consecutive `%`, continue searching for the next index
-				if c != 37 {
-					searchingIndex = false
-				}
+		if searchingIndex && (c > '9' || c < '0') {
+			// Convert the Slice since the last `%` and see if it's a valid number.
+			ind, err := strconv.Atoi(rawMessage[prevIndex+1 : i])
+			// If the index is in [1 - len(evtDataValues)], get it from evtDataValues.
+			if err == nil && ind <= len(evtDataValues) && ind > 0 {
+				sb.WriteString(evtDataValues[ind-1].Value)
+			} else {
+				sb.WriteString(rawMessage[prevIndex:i])
+			}
+			prevIndex = i
+			// In case of consecutive `%`, continue searching for the next index
+			if c != '%' {
+				searchingIndex = false
 			}
 		} else {
-			// ascii code of `%` is 37
-			if c == 37 {
+			if c == '%' {
 				sb.WriteString(rawMessage[prevIndex:i])
 				searchingIndex = true
 				prevIndex = i

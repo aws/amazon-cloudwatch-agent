@@ -99,7 +99,7 @@ func TestInsertPlaceholderValues(t *testing.T) {
 		{
 			"Handle consecutive % characters",
 			"%1 %%3% %2",
-			"value_1 %value_3%value_2",
+			"value_1 %value_3% value_2",
 		},
 		{
 			"Handle % character at the end of message",
