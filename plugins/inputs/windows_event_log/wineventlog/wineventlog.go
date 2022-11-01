@@ -328,10 +328,16 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 		return nil, fmt.Errorf("utf16ToUTF8Bytes() err %v", err)
 	}
 
+	// The insertion strings could be in either EventData or UserData
+	dataValues := newRecord.EventData.Values
+	// The UserData section is used if EventData is empty
+	if len(dataValues) == 0 {
+		dataValues = newRecord.UserData.Values
+	}
 	switch w.renderFormat {
 	case FormatXml, FormatDefault:
 		//XML format
-		newRecord.XmlFormatContent = insertPlaceholderValues(string(descriptionBytes), newRecord.EventData.Values)
+		newRecord.XmlFormatContent = insertPlaceholderValues(string(descriptionBytes), dataValues)
 	case FormatPlainText:
 		//old SSM agent Windows format
 		var recordMessage eventMessage
@@ -339,7 +345,7 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 		if err != nil {
 			return nil, fmt.Errorf("Unmarshal() err %v", err)
 		}
-		newRecord.System.Description = insertPlaceholderValues(recordMessage.Message, newRecord.EventData.Values)
+		newRecord.System.Description = insertPlaceholderValues(recordMessage.Message, dataValues)
 	default:
 		return nil, fmt.Errorf("renderFormat is not recognized, %s", w.renderFormat)
 	}
