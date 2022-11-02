@@ -83,23 +83,26 @@ func (record *windowsEventLogRecord) Timestamp() string {
 	return fmt.Sprint(record.System.TimeCreated.SystemTime.UnixNano())
 }
 
+type Datum struct {
+	Value string `xml:",chardata"`
+}
+
 type EventData struct {
-	Values []Data `xml:",any"`
+	Data []Datum `xml:",any"`
 }
 
 type UserData struct {
-	Values []Data `xml:",any"`
+	Data []Datum `xml:",any"`
 }
 
-// UserData has slightly different schema than EventData so that we need to overrid this
-// unmarshal function to get similar structure
+// UnmarshalXML unmarshals the UserData section in the windows event xml to UserData struct
 //
+// UserData has slightly different schema than EventData so that we need to override this
+// to get similar structure
 // https://learn.microsoft.com/en-us/windows/win32/wes/eventschema-userdatatype-complextype
 // https://learn.microsoft.com/en-us/windows/win32/wes/eventschema-eventdatatype-complextype
 func (u *UserData) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	in := struct {
-		Values []Data `xml:",any"`
-	}{}
+	in := EventData{}
 
 	// Read tokens until we find the first StartElement then unmarshal it.
 	for {
@@ -114,15 +117,11 @@ func (u *UserData) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				return err
 			}
 
-			u.Values = in.Values
+			u.Data = in.Data
 			d.Skip()
 			break
 		}
 	}
 
 	return nil
-}
-
-type Data struct {
-	Value string `xml:",chardata"`
 }

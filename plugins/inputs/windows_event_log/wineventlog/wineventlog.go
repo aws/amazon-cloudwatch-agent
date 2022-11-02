@@ -329,10 +329,14 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	}
 
 	// The insertion strings could be in either EventData or UserData
-	dataValues := newRecord.EventData.Values
+	// Notes on the insertion strings:
+	// - The EvtFormatMessage has the valueCount and values parameters, yet it does not work when we tried passing
+	//   EventData/UserData into those parameters. We can later do more research on making EvtFormatMessage with
+	//   valueCount and values parameters works and compare if there is any benefit.
+	dataValues := newRecord.EventData.Data
 	// The UserData section is used if EventData is empty
 	if len(dataValues) == 0 {
-		dataValues = newRecord.UserData.Values
+		dataValues = newRecord.UserData.Data
 	}
 	switch w.renderFormat {
 	case FormatXml, FormatDefault:

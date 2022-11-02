@@ -171,15 +171,15 @@ func WindowsEventLogLevelName(levelId int32) string {
 	}
 }
 
+// insertPlaceholderValues formats the message with the correct values if we see those data
+// in evtDataValues.
+//
 // In some cases wevtapi does not insert values when formatting the message. The message
 // will contain insertion string placeholders, of the form %n, where %1 indicates the first
 // insertion string, and so on. Noted that wevtapi start the index with 1.
 // https://learn.microsoft.com/en-us/windows/win32/eventlog/event-identifiers#insertion-strings
-//
-// If we see those data in the `EventData` section, `insertPlaceholderValues` format the message
-// with the correct values
-func insertPlaceholderValues(rawMessage string, evtDataValues []Data) string {
-	if len(evtDataValues) == 0 {
+func insertPlaceholderValues(rawMessage string, evtDataValues []Datum) string {
+	if len(evtDataValues) == 0 || len(rawMessage) == 0 {
 		return rawMessage
 	}
 	var sb strings.Builder
@@ -210,7 +210,7 @@ func insertPlaceholderValues(rawMessage string, evtDataValues []Data) string {
 
 		}
 	}
-	// handle the slice sine the last `%` to the end of rawMessage
+	// handle the slice since the last `%` to the end of rawMessage
 	ind, err := strconv.Atoi(rawMessage[prevIndex+1:])
 	if searchingIndex && err == nil && ind <= len(evtDataValues) && ind > 0 {
 		sb.WriteString(evtDataValues[ind-1].Value)
