@@ -60,8 +60,8 @@ func TestUnmarshalWinEvtRecord(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		record := new(windowsEventLogRecord)
-		xml.Unmarshal([]byte(test.xml), record)
-		assert.Equal(t, test.wEvtRecord, &record)
+		var record windowsEventLogRecord
+		xml.Unmarshal([]byte(test.xml), &record)
+		assert.Equal(t, test.wEvtRecord, record)
 	}
 }
