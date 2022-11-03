@@ -5,36 +5,30 @@
     totalcpu = true
     interval = "1s"
     fieldpass = ["time_active", "time_user", "time_system", "time_idle", "time_nice", "time_iowait", "time_irq", "time_softirq", "time_steal", "time_guest", "time_guest_nice", "usage_active", "usage_user", "usage_system", "usage_idle", "usage_nice", "usage_iowait", "usage_irq", "usage_softirq", "usage_steal", "usage_guest", "usage_guest_nice"]
-    [inputs.cpu.tags]
-        metricPath = "metrics"
 
 [[inputs.swap]]
     interval = "1s"
     fieldpass = ["total","used", "free", "used_percent"]
-    [inputs.swap.tags]
-        metricPath = "metrics"
 
 
 [[inputs.mem]]
     interval = "1s"
     fieldpass = ["total", "available", "used", "used_percent", "available_percent"]
-    [inputs.mem.tags]
-        metricPath = "metrics"
 
 [[inputs.net]]
     fieldpass = ["bytes_sent", "bytes_recv", "packets_sent", "packets_recv", "err_in", "err_out", "drop_in", "drop_out"]
-    [inputs.net.tags]
-        metricPath = "metrics"
 
 [[inputs.disk]]
     mount_points = ["/"]
     ignore_fs = []
     fieldpass = ["total", "free", "used", "used_percent", "inodes_total", "inodes_free", "inodes_used"]
     tagexclude = ["mode"]
-    [inputs.disk.tags]
-        metricPath = "metrics"
 
 [[inputs.processes]]
     fieldpass = ["blocked", "zombies", "stopped", "running", "sleeping", "total", "unknown"]
-    [inputs.processes.tags]
-        metricPath = "metrics"
+
+[[inputs.procstat]]
+    pattern = " "
+    fieldpass = ["cpu_time_system", "cpu_time_user", "cpu_usage", "memory_data", "memory_locked", "memory_rss", "memory_stack", "memory_swap", "memory_vms"]
+    pid_finder = "native"
+    interval = "1s"

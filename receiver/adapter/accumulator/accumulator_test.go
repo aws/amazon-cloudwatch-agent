@@ -34,7 +34,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
 			telegrafMetricType:     telegraf.Gauge,
 			expectedOtelMetricType: pmetric.MetricDataTypeGauge,
-			expectedDPAttributes:   generateExpectedAttributesWithMeasurement("acc_gauge_test"),
+			expectedDPAttributes:   generateExpectedAttributes(),
 		},
 		{
 			name:                   "OtelAccumulator with AddCounter",
@@ -42,7 +42,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
 			telegrafMetricType:     telegraf.Counter,
 			expectedOtelMetricType: pmetric.MetricDataTypeSum,
-			expectedDPAttributes:   generateExpectedAttributesWithMeasurement("acc_counter_test"),
+			expectedDPAttributes:   generateExpectedAttributes(),
 		},
 		{
 			name:                   "OtelAccumulator with AddFields",
@@ -50,7 +50,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
 			telegrafMetricType:     telegraf.Untyped,
 			expectedOtelMetricType: pmetric.MetricDataTypeGauge,
-			expectedDPAttributes:   generateExpectedAttributesWithMeasurement("acc_field_test"),
+			expectedDPAttributes:   generateExpectedAttributes(),
 		},
 	}
 	for _, tc := range test_cases {

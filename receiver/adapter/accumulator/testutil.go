@@ -25,10 +25,9 @@ func (t *TestRunningInput) Description() string                 { return "" }
 func (t *TestRunningInput) SampleConfig() string                { return "" }
 func (t *TestRunningInput) Gather(_ telegraf.Accumulator) error { return nil }
 
-func generateExpectedAttributesWithMeasurement(measurement string) pcommon.Map {
+func generateExpectedAttributes() pcommon.Map {
 	sampleAttributes := pcommon.NewMap()
 	sampleAttributes.PutString(defaultInstanceId, defaultInstanceIdValue)
-	sampleAttributes.PutString(measurementAttribute, measurement)
 	return sampleAttributes
 }
 

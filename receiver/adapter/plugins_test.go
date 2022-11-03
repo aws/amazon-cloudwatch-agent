@@ -17,6 +17,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net"
 	_ "github.com/influxdata/telegraf/plugins/inputs/processes"
+	_ "github.com/influxdata/telegraf/plugins/inputs/procstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/swap"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -105,6 +106,21 @@ func Test_ProcessesPlugin(t *testing.T) {
 		expectedMetrics:                      [][]string{{"blocked", "zombies", "stopped", "running", "sleeping", "total", "unknown"}},
 		expectedResourceMetricsLen:           1,
 		expectedResourceMetricsLenComparator: assert.Equal,
+	})
+}
+
+func Test_ProcStatPlugin(t *testing.T) {
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin:      "procstat",
+		scrapeCount: 2,
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/procstat/procstat.go#L69-L300
+		expectedMetrics:            [][]string{{"cpu_time_system", "cpu_time_user", "cpu_usage", "memory_data", "memory_locked", "memory_rss", "memory_stack", "memory_swap", "memory_vms"}},
+		expectedResourceMetricsLen: 9,
+		// The procstat finds the process/PID/User/etc and find corresponding process/PID/User/etc usage from management subsystem.
+		// However, its only able to use pgrep or PID file to find the target
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/procstat/procstat.go#L71-L79
+		// Therefore, the metrics are different based on number of processes/PID find by pgrep or PID File and not stable.
+		expectedResourceMetricsLenComparator: assert.LessOrEqual,
 	})
 }
 

@@ -56,7 +56,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 				{
 					"name":       "cpu_time_user",
 					"value":      float64(42),
-					"attributes": generateExpectedAttributesWithMeasurement("cpu"),
+					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricDataTypeGauge,
 				},
@@ -79,7 +79,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 				{
 					"name":       "swap_Sin",
 					"value":      float64(3),
-					"attributes": generateExpectedAttributesWithMeasurement("swap"),
+					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricDataTypeSum,
 				},
@@ -104,14 +104,14 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 				{
 					"name":       "prometheus_redis_tx",
 					"value":      int64(4),
-					"attributes": generateExpectedAttributesWithMeasurement("prometheus"),
+					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricDataTypeGauge,
 				},
 				{
 					"name":       "prometheus_redis_rx",
 					"value":      float64(2.3),
-					"attributes": generateExpectedAttributesWithMeasurement("prometheus"),
+					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricDataTypeGauge,
 				},

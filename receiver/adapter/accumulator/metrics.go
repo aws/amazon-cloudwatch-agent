@@ -13,10 +13,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-const (
-	measurementAttribute = "measurement"
-)
-
 func ConvertTelegrafToOtelMetrics(measurement string, fields map[string]interface{}, tags map[string]string, tp telegraf.ValueType, t time.Time) (pmetric.Metrics, error) {
 	// Instead of converting as tags as resource attributes, CWAgent will convert it to datapoint's attributes.
 	// It would reduce memory consumption and hostmetricscraper does not add attributes to resource attributes.
@@ -37,9 +33,7 @@ func ConvertTelegrafToOtelMetrics(measurement string, fields map[string]interfac
 
 func NewOtelMetrics(measurement string) pmetric.Metrics {
 	otelMetrics := pmetric.NewMetrics()
-	resourceMetrics := otelMetrics.ResourceMetrics().AppendEmpty()
-
-	addMeasurementNameAsAttribute(resourceMetrics.Resource().Attributes(), measurement)
+	otelMetrics.ResourceMetrics().AppendEmpty()
 
 	return otelMetrics
 }
@@ -123,5 +117,4 @@ func populateNumberDataPoint(measurement string, datapoint pmetric.NumberDataPoi
 	}
 
 	addTagsToAttributes(datapoint.Attributes(), tags)
-	addMeasurementNameAsAttribute(datapoint.Attributes(), measurement)
 }
