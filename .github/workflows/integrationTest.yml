@@ -41,7 +41,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.18.3
+          go-version: ~1.19.2
 
       - name: Install rpm
         run: sudo apt install rpm
@@ -135,7 +135,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.18.3
+          go-version: ~1.19.2
 
       - name: Generate matrix
         id: set-matrix
@@ -168,7 +168,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.18.3
+          go-version: ~1.19.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -192,7 +192,7 @@ jobs:
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           sudo apt install unzip
-          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent  
+          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
 
       - name: Create msi dep folder and copy deps
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
@@ -230,7 +230,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.18.3
+          go-version: ~1.19.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -483,7 +483,7 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-            
+
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
@@ -493,13 +493,13 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if "${{ matrix.arrays.os }}" == window 
+            if "${{ matrix.arrays.os }}" == window
               cd terraform/ec2/win
             else
               cd terraform/ec2/linux
             fi
             terraform destroy --auto-approve
-          
+
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'EC2LinuxIntegrationTest'
@@ -723,7 +723,7 @@ jobs:
           command: |
             cd terraform/ecs/linux
             terraform init
-            if terraform apply --auto-approve -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then 
+            if terraform apply --auto-approve -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
