@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Release Update 
+name: Release Update
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
@@ -17,7 +17,7 @@ env:
 on:
   release:
       types: [created]
-    
+
   workflow_dispatch:
 
 concurrency:
@@ -37,7 +37,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.18.3
+          go-version: ~1.19.2
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -52,4 +52,3 @@ jobs:
             export SHA=$GITHUB_SHA
             export RELEASE_NAME=${{ github.event.release.tag_name }}
             go test -run TestUpdateCommit -p 1 -v --tags=integration
-            
