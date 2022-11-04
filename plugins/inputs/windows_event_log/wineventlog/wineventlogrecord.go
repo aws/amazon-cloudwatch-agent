@@ -7,6 +7,7 @@
 package wineventlog
 
 import (
+	"encoding/xml"
 	"fmt"
 	"strconv"
 	"time"
@@ -45,6 +46,9 @@ type windowsEventLogRecord struct {
 			Name string `xml:"Name,attr"`
 		} `xml:"Provider"`
 	} `xml:"System"`
+
+	EventData EventData `xml:"EventData"`
+	UserData  UserData  `xml:"UserData"`
 }
 
 func newEventLogRecord(l *windowsEventLog) *windowsEventLogRecord {
@@ -77,4 +81,47 @@ func (record *windowsEventLogRecord) Value() (valueString string, err error) {
 
 func (record *windowsEventLogRecord) Timestamp() string {
 	return fmt.Sprint(record.System.TimeCreated.SystemTime.UnixNano())
+}
+
+type Datum struct {
+	Value string `xml:",chardata"`
+}
+
+type EventData struct {
+	Data []Datum `xml:",any"`
+}
+
+type UserData struct {
+	Data []Datum `xml:",any"`
+}
+
+// UnmarshalXML unmarshals the UserData section in the windows event xml to UserData struct
+//
+// UserData has slightly different schema than EventData so that we need to override this
+// to get similar structure
+// https://learn.microsoft.com/en-us/windows/win32/wes/eventschema-userdatatype-complextype
+// https://learn.microsoft.com/en-us/windows/win32/wes/eventschema-eventdatatype-complextype
+func (u *UserData) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	in := EventData{}
+
+	// Read tokens until we find the first StartElement then unmarshal it.
+	for {
+		t, err := d.Token()
+		if err != nil {
+			return err
+		}
+
+		if se, ok := t.(xml.StartElement); ok {
+			err = d.DecodeElement(&in, &se)
+			if err != nil {
+				return err
+			}
+
+			u.Data = in.Data
+			d.Skip()
+			break
+		}
+	}
+
+	return nil
 }

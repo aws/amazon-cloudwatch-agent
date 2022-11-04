@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -167,4 +169,53 @@ func WindowsEventLogLevelName(levelId int32) string {
 	default:
 		return UNKNOWN
 	}
+}
+
+// insertPlaceholderValues formats the message with the correct values if we see those data
+// in evtDataValues.
+//
+// In some cases wevtapi does not insert values when formatting the message. The message
+// will contain insertion string placeholders, of the form %n, where %1 indicates the first
+// insertion string, and so on. Noted that wevtapi start the index with 1.
+// https://learn.microsoft.com/en-us/windows/win32/eventlog/event-identifiers#insertion-strings
+func insertPlaceholderValues(rawMessage string, evtDataValues []Datum) string {
+	if len(evtDataValues) == 0 || len(rawMessage) == 0 {
+		return rawMessage
+	}
+	var sb strings.Builder
+	prevIndex := 0
+	searchingIndex := false
+	for i, c := range rawMessage {
+		// found `%` previously. Determine the index number from the following character(s)
+		if searchingIndex && (c > '9' || c < '0') {
+			// Convert the Slice since the last `%` and see if it's a valid number.
+			ind, err := strconv.Atoi(rawMessage[prevIndex+1 : i])
+			// If the index is in [1 - len(evtDataValues)], get it from evtDataValues.
+			if err == nil && ind <= len(evtDataValues) && ind > 0 {
+				sb.WriteString(evtDataValues[ind-1].Value)
+			} else {
+				sb.WriteString(rawMessage[prevIndex:i])
+			}
+			prevIndex = i
+			// In case of consecutive `%`, continue searching for the next index
+			if c != '%' {
+				searchingIndex = false
+			}
+		} else {
+			if c == '%' {
+				sb.WriteString(rawMessage[prevIndex:i])
+				searchingIndex = true
+				prevIndex = i
+			}
+
+		}
+	}
+	// handle the slice since the last `%` to the end of rawMessage
+	ind, err := strconv.Atoi(rawMessage[prevIndex+1:])
+	if searchingIndex && err == nil && ind <= len(evtDataValues) && ind > 0 {
+		sb.WriteString(evtDataValues[ind-1].Value)
+	} else {
+		sb.WriteString(rawMessage[prevIndex:])
+	}
+	return sb.String()
 }

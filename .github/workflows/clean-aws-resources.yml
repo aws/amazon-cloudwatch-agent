@@ -25,7 +25,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old ami
-        run: go run ./integration/clean/clean_ami/clean_ami.go --tags=clean
+        run: go run ./tool/clean/clean_ami/clean_ami.go --tags=clean
   
   clean-opensource-dedicated-hosts:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old dedicated host
-        run: go run ./integration/clean/clean_dedicated_host/clean_dedicated_host.go --tags=clean
+        run: go run ./tool/clean/clean_dedicated_host/clean_dedicated_host.go --tags=clean
   
   clean-internal-dedicated-hosts:
     runs-on: ubuntu-latest
@@ -76,4 +76,4 @@ jobs:
           aws-region: ${{ matrix.region }}
 
       - name: Clean old dedicated host
-        run: go run ./integration/clean/clean_dedicated_host/clean_dedicated_host.go --tags=clean
+        run: go run ./tool/clean/clean_dedicated_host/clean_dedicated_host.go --tags=clean
