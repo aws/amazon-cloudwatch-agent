@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestAtomicCounter increments then decrements the counter and verifies the
+// value each time.
 func TestAtomicCounter(t *testing.T) {
 	x := NewAtomicCounter()
 	assert.Equal(t, int64(0), x.Get())
@@ -16,7 +18,7 @@ func TestAtomicCounter(t *testing.T) {
 		x.Increment()
 	}
 
-	for i := int64(1000 - 1); i >= 1000; i-- {
+	for i := int64(1000); i >= 0; i-- {
 		assert.Equal(t, i, x.Get())
 		x.Decrement()
 	}
