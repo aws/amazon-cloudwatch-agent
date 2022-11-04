@@ -36,7 +36,7 @@ func TestAtomicCounterParallel(t *testing.T) {
 			}
 			wg.Done()
 		}()
-		go func () {
+		go func() {
 			for k := 0; k < 100; k++ {
 				x.Decrement()
 			}
