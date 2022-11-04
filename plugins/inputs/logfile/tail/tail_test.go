@@ -99,7 +99,7 @@ func TestStopAtEOF(t *testing.T) {
 	assert.Equal(t, errStopAtEOF, tail.Err())
 
 	// Read to EOF
-	for i := 0; i < linesWrittenToFile - 3; i++ {
+	for i := 0; i < linesWrittenToFile-3; i++ {
 		<-tail.Lines
 	}
 
@@ -107,7 +107,7 @@ func TestStopAtEOF(t *testing.T) {
 	select {
 	case <-done:
 		t.Log("StopAtEOF() completed (as expected)")
-	case <- time.After(time.Second * 1):
+	case <-time.After(time.Second * 1):
 		t.Fatalf("StopAtEOF() has not completed")
 	}
 
@@ -148,7 +148,7 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 	if err != nil {
 		t.Fatalf("failed to tail file %v: %v", tmpfile.Name(), err)
 	}
-	// Cannot expect OpenFileCount.Get() to be 1 because the TailFile struct
+	// Cannot expect OpenFileCount to be 1 because the TailFile struct
 	// was not created with MustExist=true, so file may not yet be opened.
 	return tmpfile, tail, &tl
 }
@@ -165,7 +165,7 @@ func readThreelines(t *testing.T, tail *Tail) {
 		}
 	}
 	// If file was readable, then expect it to exist.
-	assert.Equal(t, int64(1), OpenFileCount.Get())
+	assert.Equal(t, int64(1), OpenFileCount.Load())
 }
 
 func verifyTailerLogging(t *testing.T, tlog *testLogger, expectedErrorMsg string) {
@@ -182,7 +182,7 @@ func verifyTailerLogging(t *testing.T, tlog *testLogger, expectedErrorMsg string
 func verifyTailerExited(t *testing.T, tail *Tail) {
 	select {
 	case <-tail.Dead():
-		assert.Equal(t,  int64(0), OpenFileCount.Get())
+		assert.Equal(t, int64(0), OpenFileCount.Load())
 		return
 	default:
 		t.Errorf("Tailer is still alive after file removed and wait period")
