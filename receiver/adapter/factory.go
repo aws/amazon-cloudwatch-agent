@@ -54,7 +54,7 @@ func (a Adapter) NewReceiverFactory(telegrafInputName string) component.Receiver
 
 func (a Adapter) createMetricsReceiver(telegrafInputName string) func(ctx context.Context, settings component.ReceiverCreateSettings, config config.Receiver, consumer consumer.Metrics) (component.MetricsReceiver, error) {
 	input, err := a.initializeInput(telegrafInputName)
-	return func(ctx context.Context, settings component.ReceiverCreateSettings, rConf config.Receiver, consumer consumer.Metrics) (component.MetricsReceiver, error) {
+	return func(_ context.Context, settings component.ReceiverCreateSettings, rConf config.Receiver, consumer consumer.Metrics) (component.MetricsReceiver, error) {
 		cfg := rConf.(*Config)
 
 		if err != nil {
@@ -92,9 +92,6 @@ func (a Adapter) initializeInput(telegrafInputName string) (*models.RunningInput
 				return nil, fmt.Errorf("could not initialize input %s: %v", ri.LogName(), err)
 			}
 
-			// To Do: Add Service Input Start when collecting statsd, collectd metrics,.. moreover, signaling to set
-			// different settings (e.g precision) which is different from regular inputs
-			// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/agent/agent.go#L252-L274
 			return ri, nil
 		}
 

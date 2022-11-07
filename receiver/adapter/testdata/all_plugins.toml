@@ -19,6 +19,7 @@
     fieldpass = ["bytes_sent", "bytes_recv", "packets_sent", "packets_recv", "err_in", "err_out", "drop_in", "drop_out"]
 
 [[inputs.disk]]
+    interval = "1s"
     mount_points = ["/"]
     ignore_fs = []
     fieldpass = ["total", "free", "used", "used_percent", "inodes_total", "inodes_free", "inodes_used"]

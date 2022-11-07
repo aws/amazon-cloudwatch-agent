@@ -8,7 +8,7 @@ import (
 	"os"
 	"regexp"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Prometheus <labelname> definition: a string matching the regular expression [a-zA-Z_][a-zA-Z0-9_]*

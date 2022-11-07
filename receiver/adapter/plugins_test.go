@@ -7,6 +7,7 @@
 package adapter
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -128,7 +129,7 @@ func scrapeAndValidateMetrics(t *testing.T, cfg *SanityTestConfig) {
 	as := assert.New(t)
 	receiver := getInitializedReceiver(t, cfg.plugin)
 
-	err := receiver.start(nil, nil)
+	err := receiver.start(context.TODO(), nil)
 	as.NoError(err)
 
 	var otelMetrics pmetric.Metrics
@@ -136,11 +137,11 @@ func scrapeAndValidateMetrics(t *testing.T, cfg *SanityTestConfig) {
 		if i != 0 {
 			time.Sleep(1 * time.Second)
 		}
-		otelMetrics, err = receiver.scrape(nil)
+		otelMetrics, err = receiver.scrape(context.TODO())
 		as.NoError(err)
 	}
 
-	err = receiver.shutdown(nil)
+	err = receiver.shutdown(context.TODO())
 	as.NoError(err)
 
 	cfg.expectedResourceMetricsLenComparator(t, cfg.expectedResourceMetricsLen, otelMetrics.ResourceMetrics().Len())

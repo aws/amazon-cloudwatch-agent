@@ -67,16 +67,16 @@ func ToYamlConfig(val interface{}) (string, interface{}) {
 
 	var buffer bytes.Buffer
 	yamlEncoder := yaml.NewEncoder(&buffer)
-
-	err := yamlEncoder.Encode(cfg)
-	util.PanicIfErr("Encode to a valid YAML config fails because of", err)
 	// Delete cloudwatch output plugin section from config.
 	log.Printf("I! delete cloudwatch from config")
-	//delete(outputs, "cloudwatch")
 	_, ok := outputs["cloudwatch"]
 	if ok {
 		outputs["cloudwatch"] = []struct{}{{}}
 	}
+
+	err := yamlEncoder.Encode(cfg)
+	util.PanicIfErr("Encode to a valid YAML config fails because of", err)
+
 	return buffer.String(), cfg
 }
 
@@ -112,12 +112,8 @@ func encodeProcessors(processors, nativeProcessors map[string]interface{}, cfg *
 	return p
 }
 
-func procToProcessors(processors, nativeProcessors map[string]interface{}) map[config.ComponentID]interface{} {
+func procToProcessors(_, nativeProcessors map[string]interface{}) map[config.ComponentID]interface{} {
 	processorMap := make(map[config.ComponentID]interface{})
-	for key := range processors {
-		t := config.Type(TelegrafPrefix + key)
-		processorMap[config.NewComponentID(t)] = struct{}{}
-	}
 	for key, val := range nativeProcessors {
 		t := config.Type(key)
 		processorMap[config.NewComponentID(t)] = val
@@ -135,7 +131,7 @@ func encodeExporters(outputs, nativeOutputs map[string]interface{}, cfg *map[str
 	return exporters
 }
 
-func outputsToExporters(outputs, nativeOutputs map[string]interface{}) map[config.ComponentID]interface{} {
+func outputsToExporters(_, nativeOutputs map[string]interface{}) map[config.ComponentID]interface{} {
 	exporterMap := make(map[config.ComponentID]interface{})
 	for key, val := range nativeOutputs {
 		t := config.Type(key)

@@ -81,7 +81,7 @@ func TestStatsDConfig(t *testing.T) {
 	checkTranslation(t, "statsd_config", "darwin", nil, "_linux")
 }
 
-//Linux only for CollectD
+// Linux only for CollectD
 func TestCollectDConfig(t *testing.T) {
 	resetContext()
 	expectedEnvVars := map[string]string{}
@@ -89,7 +89,7 @@ func TestCollectDConfig(t *testing.T) {
 	checkTranslation(t, "collectd_config_linux", "darwin", nil, "")
 }
 
-//prometheus
+// prometheus
 func TestPrometheusConfig(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)

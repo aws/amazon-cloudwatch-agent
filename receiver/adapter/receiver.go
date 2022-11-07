@@ -6,6 +6,7 @@ package adapter
 import (
 	"context"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -36,12 +37,25 @@ func (r *AdaptedReceiver) start(_ context.Context, _ component.Host) error {
 	// TODO: Add Set Precision based on agent precision and agent interval
 	// https://github.com/influxdata/telegraf/blob/3b3584b40b7c9ea10ae9cb02137fc072da202704/agent/agent.go#L316-L317
 	r.accumulator = accumulator.NewAccumulator(r.input, r.logger)
+
+	// Service Input differs from a regular plugin in that it operates a background service while Telegraf/CWAgent is running
+	// https://github.com/influxdata/telegraf/blob/d67f75e55765d364ad0aabe99382656cb5b51014/docs/INPUTS.md#service-input-plugins
+	if serviceInput, ok := r.input.Input.(telegraf.ServiceInput); ok {
+		if err := serviceInput.Start(r.accumulator); err != nil {
+			r.accumulator.AddError(err)
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (r *AdaptedReceiver) scrape(_ context.Context) (pmetric.Metrics, error) {
 	r.logger.Debug("Begining scraping metrics with adapter", zap.String("receiver", r.input.Config.Name))
 
+	// For Service Input, the Gather either return nil or return error when gathering metrics but the metrics will always be collected
+	// and hold in accumulator when receiving metrics from regular inputs or service inputs
+	// e.g: Suricata always return nil https://github.com/influxdata/telegraf/blob/d67f75e55765d364ad0aabe99382656cb5b51014/plugins/inputs/suricata/suricata.go#L251-L253
 	if err := r.input.Input.Gather(r.accumulator); err != nil {
 		r.accumulator.AddError(err)
 		return pmetric.Metrics{}, err
@@ -52,5 +66,9 @@ func (r *AdaptedReceiver) scrape(_ context.Context) (pmetric.Metrics, error) {
 
 func (r *AdaptedReceiver) shutdown(_ context.Context) error {
 	r.logger.Debug("Shutdown adapter", zap.String("receiver", r.input.Config.Name))
+	if serviceInput, ok := r.input.Input.(telegraf.ServiceInput); ok {
+		serviceInput.Stop()
+	}
+
 	return nil
 }

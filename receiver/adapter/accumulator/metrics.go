@@ -79,7 +79,7 @@ func populateDataPointsForGauge(measurement string, metrics pmetric.MetricSlice,
 
 		metric.SetName(getMetricName(measurement, field))
 
-		populateNumberDataPoint(measurement, metric.SetEmptyGauge().DataPoints().AppendEmpty(), value, tags, timestamp)
+		populateNumberDataPoint(metric.SetEmptyGauge().DataPoints().AppendEmpty(), value, tags, timestamp)
 	}
 }
 
@@ -100,11 +100,11 @@ func populateDataPointsForSum(measurement string, metrics pmetric.MetricSlice, f
 		sumMetric := metric.SetEmptySum()
 		sumMetric.SetIsMonotonic(true)
 		sumMetric.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
-		populateNumberDataPoint(measurement, sumMetric.DataPoints().AppendEmpty(), value, tags, timestamp)
+		populateNumberDataPoint(sumMetric.DataPoints().AppendEmpty(), value, tags, timestamp)
 	}
 }
 
-func populateNumberDataPoint(measurement string, datapoint pmetric.NumberDataPoint, value interface{}, tags map[string]string, timestamp pcommon.Timestamp) {
+func populateNumberDataPoint(datapoint pmetric.NumberDataPoint, value interface{}, tags map[string]string, timestamp pcommon.Timestamp) {
 	datapoint.SetTimestamp(timestamp)
 
 	switch v := value.(type) {

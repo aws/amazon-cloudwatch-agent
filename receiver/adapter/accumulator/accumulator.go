@@ -5,6 +5,7 @@ package accumulator
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -38,6 +39,8 @@ type otelAccumulator struct {
 	logger    *zap.Logger
 	precision time.Duration
 	metrics   pmetric.Metrics
+
+	mutex sync.Mutex
 }
 
 func NewAccumulator(input *models.RunningInput, logger *zap.Logger) OtelAccumulator {
@@ -73,7 +76,7 @@ func (o *otelAccumulator) AddFields(measurement string, fields map[string]interf
 	o.addMetric(measurement, tags, fields, telegraf.Untyped, t...)
 }
 
-func (o otelAccumulator) AddMetric(m telegraf.Metric) {
+func (o *otelAccumulator) AddMetric(m telegraf.Metric) {
 	m.SetTime(m.Time().Round(o.precision))
 	o.convertToOtelMetricsAndAddMetric(m)
 }
@@ -88,10 +91,6 @@ func (o *otelAccumulator) AddError(err error) {
 	}
 
 	o.logger.Error("Error with adapter", zap.Error(err))
-}
-
-func (o *otelAccumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
-	panic("implement me")
 }
 
 // addMetric implements from addFields https://github.com/influxdata/telegraf/blob/381dc2272390cd9de1ce2b047a953f8337b55647/agent/accumulator.go#L86-L97
@@ -110,7 +109,6 @@ func (o *otelAccumulator) addMetric(
 // convertToOtelMetricsAndAddMetric converts Telegraf's Metric model to OTEL Stream Model
 // and add the OTEl Metric to channel
 func (o *otelAccumulator) convertToOtelMetricsAndAddMetric(m telegraf.Metric) {
-
 	mMetric, err := o.modifyMetricandConvertToOtelValue(m)
 	if err != nil {
 		o.logger.Warn("Filter and convert failed",
@@ -131,7 +129,13 @@ func (o *otelAccumulator) convertToOtelMetricsAndAddMetric(m telegraf.Metric) {
 			zap.Error(err))
 		return
 	}
+
+	// Gather and Start can add metrics concurrently. Therefore, adding mutex to having a safe-thread
+	// resource metris
+	o.mutex.Lock()
+	defer o.mutex.Unlock()
 	oMetric.ResourceMetrics().MoveAndAppendTo(o.metrics.ResourceMetrics())
+
 }
 
 // GetOtelMetrics return the final OTEL metric that were gathered by scrape controller for each plugin
@@ -189,4 +193,18 @@ func (o *otelAccumulator) getTime(t []time.Time) time.Time {
 		timestamp = time.Now()
 	}
 	return timestamp.Round(o.precision)
+}
+
+// TrackingAccumulator is an Accumulator that provides a signal when the
+// metric has been fully processed. It drives to solve these two issues
+// * https://github.com/influxdata/telegraf/issues/2905
+// * https://github.com/influxdata/telegraf/issues/2919
+// However, it will panic if the delivered message is reach to a certain threshold
+// https://github.com/aws/telegraf/blob/066eb60aa48d74bf63dcd4e10b8f13db12b43c3b/agent/accumulator.go#L155-L159against
+// which against CWA's goal (independent between input and output, etc)
+// and can be solved by using OTEL Exporter persistent queue
+// https://github.com/open-telemetry/opentelemetry-collector/tree/eebe590a465702b9f6b2a257ba3ab9735dd10152/exporter/exporterhelper#persistent-queue
+func (o *otelAccumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	o.logger.Error("CloudWatchAgent's adapter does not support tracking metrics.")
+	return nil
 }

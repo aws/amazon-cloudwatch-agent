@@ -25,7 +25,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 		telegrafMetricName     string
 		telegrafMetricTags     map[string]string
 		telegrafMetricType     telegraf.ValueType
-		expectedOtelMetricType pmetric.MetricDataType
+		expectedOtelMetricType pmetric.MetricType
 		expectedDPAttributes   pcommon.Map
 	}{
 		{
@@ -33,7 +33,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricName:     "acc_gauge_test",
 			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
 			telegrafMetricType:     telegraf.Gauge,
-			expectedOtelMetricType: pmetric.MetricDataTypeGauge,
+			expectedOtelMetricType: pmetric.MetricTypeGauge,
 			expectedDPAttributes:   generateExpectedAttributes(),
 		},
 		{
@@ -41,7 +41,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricName:     "acc_counter_test",
 			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
 			telegrafMetricType:     telegraf.Counter,
-			expectedOtelMetricType: pmetric.MetricDataTypeSum,
+			expectedOtelMetricType: pmetric.MetricTypeSum,
 			expectedDPAttributes:   generateExpectedAttributes(),
 		},
 		{
@@ -49,12 +49,12 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricName:     "acc_field_test",
 			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
 			telegrafMetricType:     telegraf.Untyped,
-			expectedOtelMetricType: pmetric.MetricDataTypeGauge,
+			expectedOtelMetricType: pmetric.MetricTypeGauge,
 			expectedDPAttributes:   generateExpectedAttributes(),
 		},
 	}
 	for _, tc := range test_cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(_ *testing.T) {
 
 			acc := newOtelAccumulatorWithTestRunningInputs(as)
 
@@ -76,7 +76,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 
 			for i := 0; i < metrics.Len(); i++ {
 				metric := metrics.At(i)
-				as.Equal(tc.expectedOtelMetricType, metric.DataType())
+				as.Equal(tc.expectedOtelMetricType, metric.Type())
 				var datapoint pmetric.NumberDataPoint
 				switch tc.telegrafMetricType {
 				case telegraf.Counter:
@@ -184,7 +184,7 @@ func Test_Accumulator_AddMetric(t *testing.T) {
 
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
-		as.Equal(pmetric.MetricDataTypeGauge, metric.DataType())
+		as.Equal(pmetric.MetricTypeGauge, metric.Type())
 	}
 
 	acc.AddMetric(telegrafMetric)
@@ -211,7 +211,7 @@ func Test_Accumulator_AddHistogramSum(t *testing.T) {
 		},
 	}
 	for _, tc := range test_cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(_ *testing.T) {
 			acc := newOtelAccumulatorWithTestRunningInputs(as)
 			now := time.Now()
 			telegrafMetricTags := map[string]string{defaultInstanceId: defaultInstanceIdValue}
