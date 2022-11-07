@@ -58,7 +58,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					"value":      float64(42),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
-					"type":       pmetric.MetricDataTypeGauge,
+					"type":       pmetric.MetricTypeGauge,
 				},
 			},
 		},
@@ -81,7 +81,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					"value":      float64(3),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
-					"type":       pmetric.MetricDataTypeSum,
+					"type":       pmetric.MetricTypeSum,
 				},
 			},
 		},
@@ -106,14 +106,14 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					"value":      int64(4),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
-					"type":       pmetric.MetricDataTypeGauge,
+					"type":       pmetric.MetricTypeGauge,
 				},
 				{
 					"name":       "prometheus_redis_rx",
 					"value":      float64(2.3),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
-					"type":       pmetric.MetricDataTypeGauge,
+					"type":       pmetric.MetricTypeGauge,
 				},
 			},
 		},
@@ -140,7 +140,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					matchMetrics--
 
 					as.Equal(tc.expectedMetrics[index]["name"], metric.Name())
-					as.Equal(tc.expectedMetrics[index]["type"], metric.DataType())
+					as.Equal(tc.expectedMetrics[index]["type"], metric.Type())
 					var datapoint pmetric.NumberDataPoint
 					switch tc.telegrafMetric.Type() {
 					case telegraf.Counter:
@@ -152,9 +152,9 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					value := expectedDp["value"]
 					switch value.(type) {
 					case int64:
-						as.Equal(value, datapoint.IntVal())
+						as.Equal(value, datapoint.IntValue())
 					case float64:
-						as.Equal(value, datapoint.DoubleVal())
+						as.Equal(value, datapoint.DoubleValue())
 					}
 					as.Equal(tc.expectedMetrics[index]["attributes"], datapoint.Attributes())
 					as.Equal(tc.expectedMetrics[index]["timestamp"], datapoint.Timestamp())

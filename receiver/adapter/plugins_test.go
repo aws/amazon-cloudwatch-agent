@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disk"
+	_ "github.com/influxdata/telegraf/plugins/inputs/diskio"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net"
 	_ "github.com/influxdata/telegraf/plugins/inputs/processes"
@@ -82,7 +83,7 @@ func Test_NetPlugin(t *testing.T) {
 		expectedMetrics:            [][]string{{"bytes_sent", "bytes_recv", "packets_sent", "packets_recv", "err_in", "err_out", "drop_in", "drop_out"}},
 		expectedResourceMetricsLen: 1,
 		// The net plugin stands-out here because we don't specify an interface filter in our config (to be agnostic of where this test runs)
-		// which means the plugin reports metrics for each network interface it picks up. Hence, we only check atleast 1 metric is reported
+		// which means the plugin reports metrics for each network interface it picks up. Hence, we only check at least 1 metric is reported
 		// (expectedResourceMetricsLen i.e. 1 <= actualResourceMetricsCount)
 		expectedResourceMetricsLenComparator: assert.LessOrEqual,
 	})
@@ -93,9 +94,11 @@ func Test_DiskPlugin(t *testing.T) {
 		plugin:      "disk",
 		scrapeCount: 1,
 		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/disk/disk.go#L72-L78
-		expectedMetrics:                      [][]string{{"total", "free", "used", "used_percent", "inodes_total", "inodes_free", "inodes_used"}},
-		expectedResourceMetricsLen:           1,
-		expectedResourceMetricsLenComparator: assert.Equal,
+		expectedMetrics:            [][]string{{"total", "free", "used", "used_percent", "inodes_total", "inodes_free", "inodes_used"}},
+		expectedResourceMetricsLen: 1,
+		// The disk plugin shares the same reason with net, being reported by multiple devices. Therefore, we only check at least 1 metric
+		// is reported
+		expectedResourceMetricsLenComparator: assert.LessOrEqual,
 	})
 }
 
@@ -121,6 +124,33 @@ func Test_ProcStatPlugin(t *testing.T) {
 		// However, its only able to use pgrep or PID file to find the target
 		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/procstat/procstat.go#L71-L79
 		// Therefore, the metrics are different based on number of processes/PID find by pgrep or PID File and not stable.
+		expectedResourceMetricsLenComparator: assert.LessOrEqual,
+	})
+}
+
+func Test_NetStatPlugin(t *testing.T) {
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin:      "netstat",
+		scrapeCount: 1,
+		// https://github.com/aws/telegraf/blob/066eb60aa48d74bf63dcd4e10b8f13db12b43c3b/plugins/inputs/net/netstat.go#L48-L63
+		expectedMetrics:            [][]string{{"tcp_close_wait", "tcp_closing", "tcp_fin_wait1", "tcp_fin_wait2", "tcp_last_ack", "tcp_listen", "tcp_none", "tcp_syn_recv", "tcp_time_wait", "udp_socket", "tcp_established", "tcp_syn_sent", "tcp_close"}},
+		expectedResourceMetricsLen: 1,
+		// The netstat plugin stands-out here because we don't specify an interface filter in our config (to be agnostic of where this test runs)
+		// which means the plugin reports metrics for each network interface it picks up. Hence, we only check at least 1 metric is reported
+		// (expectedResourceMetricsLen i.e. 1 <= actualResourceMetricsCount)
+		expectedResourceMetricsLenComparator: assert.LessOrEqual,
+	})
+}
+
+func Test_DiskIOPlugin(t *testing.T) {
+	scrapeAndValidateMetrics(t, &SanityTestConfig{
+		plugin:      "diskio",
+		scrapeCount: 1,
+		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/diskio/diskio.go#L106-L118
+		expectedMetrics:            [][]string{{"iops_in_progress", "io_time", "reads", "read_bytes", "read_time", "writes", "write_bytes", "write_time"}},
+		expectedResourceMetricsLen: 1,
+		// The diskio plugin shares the same reason with netstat, being reported by multiple devices. Therefore, we only check at least 1 metric
+		// is reported
 		expectedResourceMetricsLenComparator: assert.LessOrEqual,
 	})
 }
