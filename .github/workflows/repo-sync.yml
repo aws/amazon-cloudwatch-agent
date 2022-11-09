@@ -38,9 +38,9 @@ jobs:
         source_repo: ${{ env.UPSTREAM }}
         source_branch: "master"
         destination_branch: ${{ needs.define-branch-name.outputs.PR_BRANCH }}
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        github_token: ${{ secrets.WILLIAZZ_PAT }}
 
-  # upon push-latest completion, creates a PR from private/repo-sync to private/main
+  # upon create-branch completion, creates a PR from private/repo-sync to private/main
   # https://github.com/marketplace/actions/github-pull-request-action
   create-pr:
     needs: [define-branch-name, create-branch]
