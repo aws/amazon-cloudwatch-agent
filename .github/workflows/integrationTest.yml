@@ -726,7 +726,12 @@ jobs:
           command: |
             cd terraform/ecs/linux/fargate/daemon
             terraform init
-            if terraform apply --auto-approve -var="test_dir=${{ matrix.arrays.test_dir }}" -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" -var="cwagent_image_tag=${{ github.sha }}" ; then
+            if terraform apply --auto-approve\
+              -var="test_dir=${{ matrix.arrays.test_dir }}"\
+              -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
+              -var="cwagent_image_tag=${{ github.sha }}"\
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="ami=${{ matrix.arrays.ami }}" ; then 
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
