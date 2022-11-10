@@ -12,7 +12,7 @@
   },
   "metrics": {
     "metrics_collected": {
-      "nvidia_gpu" : {
+      "nvidia_gpu": {
         "measurement": [
           "utilization_gpu",
           "utilization_memory",
