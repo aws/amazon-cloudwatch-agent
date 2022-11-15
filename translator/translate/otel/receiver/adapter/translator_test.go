@@ -59,7 +59,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			tt := NewTranslator(testCase.cfgType, testCase.cfgKey)
+			tt := NewTranslator(testCase.cfgType, testCase.cfgKey, time.Minute)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
@@ -69,57 +69,6 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, adapter.Type(testCase.cfgType), gotCfg.ID().Type())
 				require.Equal(t, testCase.wantInterval, gotCfg.CollectionInterval)
 			}
-		})
-	}
-}
-
-func TestGetCollectionInterval(t *testing.T) {
-	sectionKeys := []string{"section", "backup"}
-	testCases := map[string]struct {
-		inputConfig map[string]interface{}
-		want        time.Duration
-	}{
-		"WithDefault": {
-			inputConfig: map[string]interface{}{},
-			want:        time.Minute,
-		},
-		"WithoutSectionOverride": {
-			inputConfig: map[string]interface{}{
-				"backup": map[string]interface{}{
-					"metrics_collection_interval": 10,
-				},
-				"section": map[string]interface{}{},
-			},
-			want: 10 * time.Second,
-		},
-		"WithInvalidSectionOverride": {
-			inputConfig: map[string]interface{}{
-				"backup": map[string]interface{}{
-					"metrics_collection_interval": 10,
-				},
-				"section": map[string]interface{}{
-					"metrics_collection_interval": "invalid",
-				},
-			},
-			want: 10 * time.Second,
-		},
-		"WithSectionOverride": {
-			inputConfig: map[string]interface{}{
-				"backup": map[string]interface{}{
-					"metrics_collection_interval": 10,
-				},
-				"section": map[string]interface{}{
-					"metrics_collection_interval": 120,
-				},
-			},
-			want: 2 * time.Minute,
-		},
-	}
-	for name, testCase := range testCases {
-		t.Run(name, func(t *testing.T) {
-			conf := confmap.NewFromStringMap(testCase.inputConfig)
-			got := getCollectionInterval(conf, sectionKeys)
-			require.Equal(t, testCase.want, got)
 		})
 	}
 }

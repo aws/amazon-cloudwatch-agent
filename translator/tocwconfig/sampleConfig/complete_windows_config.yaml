@@ -1,7 +1,7 @@
 exporters:
-    awscloudwatch/ace:
+    awscloudwatch/host:
         endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
-        force_flush_interval: 60s
+        force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 5000
         metric_decoration:
@@ -17,6 +17,8 @@ exporters:
               unit: PERCENT
         namespace: CWAgent
         region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
         role_arn: metrics_role_arn_value_test
         rollup_dimensions:
             - - ImageId
@@ -24,30 +26,62 @@ exporters:
               - InstanceType
             - - d1
             - []
+extensions: {}
 processors:
-    cumulativetodelta/ace: {}
-    telegraf_ec2tagger: {}
+    cumulativetodelta/host:
+        exclude:
+            match_type: ""
+            metrics: []
+            regexp: null
+        include:
+            match_type: ""
+            metrics: []
+            regexp: null
+        max_staleness: 0s
 receivers:
-    telegraf_logfile: {}
-    telegraf_nvidia_smi: {}
-    telegraf_procstat: {}
-    telegraf_socket_listener: {}
-    telegraf_statsd: {}
-    telegraf_win_perf_counters: {}
-    telegraf_windows_event_log: {}
+    telegraf_logfile:
+        collection_interval: 1m0s
+    telegraf_nvidia_smi:
+        collection_interval: 1m0s
+    telegraf_procstat:
+        collection_interval: 1m0s
+    telegraf_socket_listener:
+        collection_interval: 1m0s
+    telegraf_statsd:
+        collection_interval: 10s
+    telegraf_win_perf_counters:
+        collection_interval: 1m0s
+    telegraf_windows_event_log:
+        collection_interval: 1m0s
 service:
+    extensions: []
     pipelines:
-        metrics:
+        metrics/host:
             exporters:
-                - awscloudwatch/ace
+                - awscloudwatch/host
             processors:
-                - telegraf_ec2tagger
-                - cumulativetodelta/ace
+                - cumulativetodelta/host
             receivers:
                 - telegraf_logfile
-                - telegraf_socket_listener
-                - telegraf_win_perf_counters
                 - telegraf_nvidia_smi
                 - telegraf_procstat
+                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_win_perf_counters
                 - telegraf_windows_event_log
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: ""
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: []
+        metrics:
+            address: ""
+            level: none
+        resource: {}
+        traces:
+            propagators: []

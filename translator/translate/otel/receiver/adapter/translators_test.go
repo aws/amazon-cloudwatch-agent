@@ -6,6 +6,7 @@ package adapter
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/config"
@@ -13,15 +14,19 @@ import (
 )
 
 func TestFindReceiversInConfig(t *testing.T) {
+	type wantResult struct {
+		cfgKey   string
+		interval time.Duration
+	}
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		os      string
-		want    map[config.Type]string
+		want    map[config.Type]wantResult
 		wantErr error
 	}{
 		"WithEmptyConfig": {
 			os:   "linux",
-			want: map[config.Type]string{},
+			want: map[config.Type]wantResult{},
 		},
 		"WithLinuxMetrics": {
 			input: map[string]interface{}{
@@ -31,15 +36,17 @@ func TestFindReceiversInConfig(t *testing.T) {
 						"cpu":        nil,
 						"ethtool":    nil,
 						"nvidia_gpu": nil,
+						"statsd":     nil,
 					},
 				},
 			},
 			os: "linux",
-			want: map[config.Type]string{
-				"telegraf_socket_listener": "metrics::metrics_collected::collectd",
-				"telegraf_cpu":             "metrics::metrics_collected::cpu",
-				"telegraf_ethtool":         "metrics::metrics_collected::ethtool",
-				"telegraf_nvidia_smi":      "metrics::metrics_collected::nvidia_gpu",
+			want: map[config.Type]wantResult{
+				"telegraf_socket_listener": {"metrics::metrics_collected::collectd", time.Minute},
+				"telegraf_cpu":             {"metrics::metrics_collected::cpu", time.Minute},
+				"telegraf_ethtool":         {"metrics::metrics_collected::ethtool", time.Minute},
+				"telegraf_nvidia_smi":      {"metrics::metrics_collected::nvidia_gpu", time.Minute},
+				"telegraf_statsd":          {"metrics::metrics_collected::statsd", 10 * time.Second},
 			},
 		},
 		"WithWindowsMetrics": {
@@ -55,9 +62,9 @@ func TestFindReceiversInConfig(t *testing.T) {
 				},
 			},
 			os: "windows",
-			want: map[config.Type]string{
-				"telegraf_nvidia_smi":        "metrics::metrics_collected::nvidia_gpu",
-				"telegraf_win_perf_counters": "metrics",
+			want: map[config.Type]wantResult{
+				"telegraf_nvidia_smi":        {"metrics::metrics_collected::nvidia_gpu", time.Minute},
+				"telegraf_win_perf_counters": {"metrics", time.Minute},
 			},
 		},
 		"WithLogs": {
@@ -74,10 +81,10 @@ func TestFindReceiversInConfig(t *testing.T) {
 				},
 			},
 			os: "windows",
-			want: map[config.Type]string{
-				"telegraf_socket_listener":   "logs::metrics_collected::emf",
-				"telegraf_logfile":           "logs::logs_collected::files",
-				"telegraf_windows_event_log": "logs::logs_collected::windows_events",
+			want: map[config.Type]wantResult{
+				"telegraf_socket_listener":   {"logs::metrics_collected::emf", time.Minute},
+				"telegraf_logfile":           {"logs::logs_collected::files", time.Minute},
+				"telegraf_windows_event_log": {"logs::logs_collected::windows_events", time.Minute},
 			},
 		},
 		"WithThreeSocketListeners": {
@@ -95,8 +102,8 @@ func TestFindReceiversInConfig(t *testing.T) {
 				},
 			},
 			os: "linux",
-			want: map[config.Type]string{
-				"telegraf_socket_listener": "metrics::metrics_collected::collectd",
+			want: map[config.Type]wantResult{
+				"telegraf_socket_listener": {"metrics::metrics_collected::collectd", time.Minute},
 			},
 		},
 		"WithInvalidOS": {
@@ -116,7 +123,8 @@ func TestFindReceiversInConfig(t *testing.T) {
 				require.True(t, ok)
 				gotAdapterTranslator, ok := gotTranslator.(*translator)
 				require.True(t, ok)
-				require.Equal(t, wantValue, gotAdapterTranslator.cfgKey)
+				require.Equal(t, wantValue.cfgKey, gotAdapterTranslator.cfgKey)
+				require.Equal(t, wantValue.interval, gotAdapterTranslator.defaultMetricCollectionInterval)
 			}
 		})
 	}

@@ -6,8 +6,9 @@ package tocwconfig
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
+	"io/fs"
 	"os"
 	"testing"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
@@ -202,32 +204,33 @@ func TestTomlToTomlComparison(t *testing.T) {
 	var input interface{}
 
 	translator.SetTargetPlatform("linux")
-
-	err := json.Unmarshal([]byte(util.ReadFromFile(jsonFilePath)), &input)
-	assert.NoError(t, err)
-	config := cmdutil.TranslateJsonMapToConfig(input)
-	verifyToTomlTranslation(t, config, "./totomlconfig/tomlConfigTemplate/agentToml.conf")
+	content, err := os.ReadFile(jsonFilePath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(content, &input))
+	verifyToTomlTranslation(t, input, "./totomlconfig/tomlConfigTemplate/agentToml.conf")
 }
 
-func checkTranslation(t *testing.T, fileName string, os string, expectedEnvVars map[string]string, appendString string) {
+func checkTranslation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string) {
 	jsonFilePath := fmt.Sprintf("./sampleConfig/%v.json", fileName)
 	tomlFilePath := fmt.Sprintf("./sampleConfig/%v%v.conf", fileName, appendString)
 	yamlFilePath := fmt.Sprintf("./sampleConfig/%v%v.yaml", fileName, appendString)
-	checkTranslationForPaths(t, jsonFilePath, tomlFilePath, yamlFilePath, os)
+	checkTranslationForPaths(t, jsonFilePath, tomlFilePath, yamlFilePath, targetPlatform)
 	if expectedEnvVars != nil {
-		checkIfEnvTranslateSucceed(t, util.ReadFromFile(jsonFilePath), os, expectedEnvVars)
+		content, err := os.ReadFile(jsonFilePath)
+		require.NoError(t, err)
+		checkIfEnvTranslateSucceed(t, string(content), targetPlatform, expectedEnvVars)
 	}
 }
 
-func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFilePath string, expectedYamlFilePath string, os string) {
+func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFilePath string, expectedYamlFilePath string, targetPlatform string) {
 	agent.Global_Config = *new(agent.Agent)
-	translator.SetTargetPlatform(os)
+	translator.SetTargetPlatform(targetPlatform)
 	var input interface{}
-	err := json.Unmarshal([]byte(util.ReadFromFile(jsonFilePath)), &input)
-	assert.NoError(t, err)
-	config := cmdutil.TranslateJsonMapToConfig(input)
-	verifyToYamlTranslation(t, config, expectedYamlFilePath)
-	verifyToTomlTranslation(t, config, expectedTomlFilePath)
+	content, err := os.ReadFile(jsonFilePath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(content, &input))
+	verifyToTomlTranslation(t, input, expectedTomlFilePath)
+	verifyToYamlTranslation(t, input, expectedYamlFilePath)
 }
 
 func readCommonConfig() {
@@ -253,8 +256,12 @@ func resetContext() {
 }
 
 // toml files in the given path will be parsed into the config toml struct and be compared as struct
-func verifyToTomlTranslation(t *testing.T, config interface{}, desiredTomlPath string) {
-	tomlStr := totomlconfig.ToTomlConfig(config)
+func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath string) {
+	t.Helper()
+	tomlConfig, err := cmdutil.TranslateJsonMapToTomlConfig(input)
+	assert.NoError(t, err)
+
+	tomlStr := totomlconfig.ToTomlConfig(tomlConfig)
 	var expect tomlConfigTemplate.TomlConfig
 	_, decodeError := toml.DecodeFile(desiredTomlPath, &expect)
 	assert.NoError(t, decodeError)
@@ -262,32 +269,40 @@ func verifyToTomlTranslation(t *testing.T, config interface{}, desiredTomlPath s
 	var actual tomlConfigTemplate.TomlConfig
 	_, decodeError2 := toml.Decode(tomlStr, &actual)
 	assert.NoError(t, decodeError2)
-	// This less function sort the content of string slice in a alphabetical order so the
+	// This less function sort the content of string slice in alphabetical order so the
 	// cmp.Equal method will compare the two struct with slices in them, regardless the elements within the slices
 	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 		return pretty.Sprint(x) < pretty.Sprint(y)
 	})
-	diff := cmp.Diff(expect, actual)
-	log.Printf("D! Toml diff: %s", diff)
-	assert.True(t, cmp.Equal(expect, actual, opt))
+	assert.True(t, cmp.Equal(expect, actual, opt), "D! TOML diff: %s", cmp.Diff(expect, actual))
 }
 
-func verifyToYamlTranslation(t *testing.T, config interface{}, expectedYamlFilePath string) {
+func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePath string) {
 	t.Helper()
-	_, actual := toyamlconfig.ToYamlConfig(config)
-	bs, err := os.ReadFile(expectedYamlFilePath)
-	assert.NoError(t, err)
-	bf := bytes.NewReader(bs)
-	decoder := yaml.NewDecoder(bf)
-	var expect interface{}
-	err = decoder.Decode(&expect)
-	assert.NoError(t, err)
 
-	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
-		return pretty.Sprint(x) < pretty.Sprint(y)
-	})
-	assert.True(t, cmp.Equal(expect, actual, opt),
-		fmt.Sprintf("\nexpected:\n%v\n\nactual:\n%v\n", expect, actual))
+	// if the file doesn't exist, then that means it isn't supported yet, so the
+	// YAML translation should fail.
+	if _, err := os.Stat(expectedYamlFilePath); errors.Is(err, fs.ErrNotExist) {
+		yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(input)
+		require.Error(t, err)
+		require.Nil(t, yamlConfig)
+	} else {
+		var expected interface{}
+		bs, err := os.ReadFile(expectedYamlFilePath)
+		require.NoError(t, err)
+		require.NoError(t, yaml.Unmarshal(bs, &expected))
+
+		var actual interface{}
+		yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(input)
+		require.NoError(t, err)
+		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
+			return pretty.Sprint(x) < pretty.Sprint(y)
+		})
+		require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
+	}
 }
 
 func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, expectedEnvVars map[string]string) {
@@ -296,7 +311,6 @@ func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, e
 	err := json.Unmarshal([]byte(jsonStr), &input)
 	if err == nil {
 		envVarsBytes := toenvconfig.ToEnvConfig(input)
-		t.Log(string(envVarsBytes))
 		var actualEnvVars = make(map[string]string)
 		err := json.Unmarshal(envVarsBytes, &actualEnvVars)
 		assert.NoError(t, err)

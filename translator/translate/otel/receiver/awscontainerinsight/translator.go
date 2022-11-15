@@ -5,6 +5,7 @@ package awscontainerinsight
 
 import (
 	"strings"
+	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
@@ -19,6 +20,8 @@ import (
 const (
 	ecs = "ecs"
 	eks = "eks"
+
+	defaultMetricsCollectionInterval = time.Minute
 )
 
 type translator struct {
@@ -57,8 +60,11 @@ func (t *translator) Translate(conf *confmap.Conf) (config.Receiver, error) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: strings.Join(keys, " or ")}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awscontainerinsightreceiver.Config)
-	key := common.ConfigKey(configuredService.Key, common.MetricsCollectionIntervalKey)
-	cfg.CollectionInterval, _ = common.GetDuration(conf, key)
+	intervalKeyChain := []string{
+		common.ConfigKey(configuredService.Key, common.MetricsCollectionIntervalKey),
+		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
+	}
+	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultMetricsCollectionInterval)
 	cfg.ContainerOrchestrator = configuredService.Value
 	return cfg, nil
 }

@@ -101,6 +101,8 @@ func ConfigKey(keys ...string) string {
 	return strings.Join(keys, confmap.KeyDelimiter)
 }
 
+// ParseDuration attempts to parse the input into a duration.
+// Returns a zero duration and an error if invalid.
 func ParseDuration(v interface{}) (time.Duration, error) {
 	if v != nil {
 		if fv, ok := v.(float64); ok {
@@ -128,26 +130,42 @@ func ParseDuration(v interface{}) (time.Duration, error) {
 
 // GetString gets the string value for the key. If the key is missing,
 // ok will be false.
-func GetString(conf *confmap.Conf, key string) (got string, ok bool) {
+func GetString(conf *confmap.Conf, key string) (string, bool) {
 	if value := conf.Get(key); value != nil {
-		got, ok = value.(string)
+		got, ok := value.(string)
 		// if the value isn't a string, convert it
 		if !ok {
 			got = fmt.Sprintf("%v", value)
 			ok = true
 		}
+		return got, ok
 	}
-	return
+	return "", false
 }
 
 // GetDuration gets the value for the key and calls ParseDuration on it.
-// If the key is missing, or it is unable to parse the duration, then ok
-// will be false.
-func GetDuration(conf *confmap.Conf, key string) (duration time.Duration, ok bool) {
+// If the key is missing, it is unable to parse the duration, or the
+// duration is set to 0, then the returned bool will be false.
+func GetDuration(conf *confmap.Conf, key string) (time.Duration, bool) {
+	var duration time.Duration
+	var ok bool
 	if value := conf.Get(key); value != nil {
 		var err error
 		duration, err = ParseDuration(value)
-		ok = err == nil
+		ok = err == nil && duration > 0
 	}
-	return
+	return duration, ok
+}
+
+// GetOrDefaultDuration from the first section in the keychain with a
+// parsable duration. If none are found, returns the defaultDuration.
+func GetOrDefaultDuration(conf *confmap.Conf, keychain []string, defaultDuration time.Duration) time.Duration {
+	for _, key := range keychain {
+		duration, ok := GetDuration(conf, key)
+		if !ok {
+			continue
+		}
+		return duration
+	}
+	return defaultDuration
 }

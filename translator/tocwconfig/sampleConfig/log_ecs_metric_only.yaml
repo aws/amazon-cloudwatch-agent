@@ -1,58 +1,91 @@
 exporters:
-  awsemf/containerinsights:
-    dimension_rollup_option: NoDimensionRollup
-    log_group_name: '/aws/ecs/containerinsights/{ClusterName}/performance'
-    log_stream_name: 'instanceTelemetry/{ContainerInstanceId}'
-    metric_declarations:
-      # instance metrics
-      - dimensions: [ [ ContainerInstanceId, InstanceId, ClusterName ] ]
-        metric_name_selectors:
-          - instance_cpu_reserved_capacity
-          - instance_cpu_utilization
-          - instance_filesystem_utilization
-          - instance_memory_reserved_capacity
-          - instance_memory_utilization
-          - instance_network_total_bytes
-          - instance_number_of_running_tasks
-      - dimensions: [ [ ClusterName ] ]
-        metric_name_selectors:
-          - instance_cpu_limit
-          - instance_cpu_reserved_capacity
-          - instance_cpu_usage_total
-          - instance_cpu_utilization
-          - instance_filesystem_utilization
-          - instance_memory_limit
-          - instance_memory_reserved_capacity
-          - instance_memory_utilization
-          - instance_memory_working_set
-          - instance_network_total_bytes
-          - instance_number_of_running_tasks
-    namespace: ECS/ContainerInsights
-    parse_json_encoded_attr_values: [ Sources ]
-    resource_to_telemetry_conversion:
-      enabled: true
-
+    awsemf/containerinsights:
+        dimension_rollup_option: NoDimensionRollup
+        eks_fargate_container_insights_enabled: false
+        endpoint: ""
+        local_mode: false
+        log_group_name: /aws/ecs/containerinsights/{ClusterName}/performance
+        log_stream_name: instanceTelemetry/{ContainerInstanceId}
+        max_retries: 2
+        metric_declarations:
+            - dimensions:
+                - - ClusterName
+                  - ContainerInstanceId
+                  - InstanceId
+              label_matchers: []
+              metric_name_selectors:
+                - instance_cpu_reserved_capacity
+                - instance_cpu_utilization
+                - instance_filesystem_utilization
+                - instance_memory_reserved_capacity
+                - instance_memory_utilization
+                - instance_network_total_bytes
+                - instance_number_of_running_tasks
+            - dimensions:
+                - - ClusterName
+              label_matchers: []
+              metric_name_selectors:
+                - instance_cpu_limit
+                - instance_cpu_reserved_capacity
+                - instance_cpu_usage_total
+                - instance_cpu_utilization
+                - instance_filesystem_utilization
+                - instance_memory_limit
+                - instance_memory_reserved_capacity
+                - instance_memory_utilization
+                - instance_memory_working_set
+                - instance_network_total_bytes
+                - instance_number_of_running_tasks
+        metric_descriptors: []
+        namespace: ECS/ContainerInsights
+        no_verify_ssl: false
+        num_workers: 8
+        output_destination: cloudwatch
+        parse_json_encoded_attr_values:
+            - Sources
+        proxy_address: ""
+        region: ""
+        request_timeout_seconds: 30
+        resource_arn: ""
+        resource_to_telemetry_conversion:
+            enabled: true
+        role_arn: ""
+extensions: {}
 processors:
-  batch/containerinsights:
-    timeout: 30s
-  telegraf_ec2tagger: {}
-  telegraf_ecsdecorator: {}
+    batch/containerinsights:
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
 receivers:
-  awscontainerinsightreceiver/containerinsights:
-    collection_interval: 30s
-    container_orchestrator: ecs
-  telegraf_cadvisor: {}
-  telegraf_socket_listener: {}
+    awscontainerinsightreceiver:
+        add_full_pod_name_metric_label: false
+        add_service_as_attribute: true
+        collection_interval: 30s
+        container_orchestrator: ecs
+        prefer_full_pod_name: false
 service:
-  pipelines:
-    metrics:
-      exporters:
-        - awsemf/containerinsights
-      processors:
-        - batch/containerinsights
-        - telegraf_ecsdecorator
-        - telegraf_ec2tagger
-      receivers:
-        - awscontainerinsightreceiver/containerinsights
-        - telegraf_cadvisor
-        - telegraf_socket_listener
+    extensions: []
+    pipelines:
+        metrics/containerinsights:
+            exporters:
+                - awsemf/containerinsights
+            processors:
+                - batch/containerinsights
+            receivers:
+                - awscontainerinsightreceiver
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: ""
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: []
+        metrics:
+            address: ""
+            level: none
+        resource: {}
+        traces:
+            propagators: []

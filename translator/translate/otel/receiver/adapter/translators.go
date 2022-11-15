@@ -5,6 +5,7 @@ package adapter
 
 import (
 	"fmt"
+	"time"
 
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
@@ -22,6 +23,10 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
+const (
+	defaultMetricsCollectionInterval = time.Minute
+)
+
 var (
 	// windowsInputSet contains all the supported metric input plugins.
 	// All others are considered custom metrics.
@@ -37,6 +42,11 @@ var (
 		files.SectionKey:          files.SectionMappedKey,
 		gpu.SectionKey:            gpu.SectionMappedKey,
 		windows_events.SectionKey: windows_events.SectionMappedKey,
+	}
+	// defaultCollectionIntervalMap contains all input plugins that have a
+	// different default interval.
+	defaultCollectionIntervalMap = map[string]time.Duration{
+		statsd.SectionKey: 10 * time.Second,
 	}
 )
 
@@ -85,13 +95,21 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[config.Receiver
 		for inputName := range inputs {
 			if windowsInputSet.Contains(inputName) {
 				cfgKey := common.ConfigKey(key, inputName)
-				translators.Add(NewTranslator(toAlias(inputName), cfgKey))
+				translators.Add(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
+					defaultCollectionIntervalMap,
+					inputName,
+					defaultMetricsCollectionInterval,
+				)))
 			} else {
 				isCustomMetricsPresent = true
 			}
 		}
 		if isCustomMetricsPresent {
-			translators.Add(NewTranslator(customizedmetrics.Win_Perf_Counters_Key, common.MetricsKey))
+			translators.Add(NewTranslator(
+				customizedmetrics.Win_Perf_Counters_Key,
+				common.MetricsKey,
+				defaultMetricsCollectionInterval,
+			))
 		}
 	}
 	return translators
@@ -106,7 +124,7 @@ func fromLogs(conf *confmap.Conf) common.TranslatorMap[config.Receiver] {
 	for _, socketListenerKey := range []string{emf.SectionKey, emf.SectionKeyStructuredLog} {
 		cfgKey := common.ConfigKey(key, socketListenerKey)
 		if conf.IsSet(cfgKey) {
-			translators.Add(NewTranslator(collectd.SectionMappedKey, cfgKey))
+			translators.Add(NewTranslator(collectd.SectionMappedKey, cfgKey, defaultMetricsCollectionInterval))
 			break
 		}
 	}
@@ -120,7 +138,11 @@ func fromInputs(conf *confmap.Conf, baseKey string) common.TranslatorMap[config.
 	if inputs, ok := conf.Get(baseKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
 			cfgKey := common.ConfigKey(baseKey, inputName)
-			translators.Add(NewTranslator(toAlias(inputName), cfgKey))
+			translators.Add(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
+				defaultCollectionIntervalMap,
+				inputName,
+				defaultMetricsCollectionInterval,
+			)))
 		}
 	}
 	return translators

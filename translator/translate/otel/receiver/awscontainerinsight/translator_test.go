@@ -39,11 +39,30 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator: ecs,
-				CollectionInterval:    0,
+				CollectionInterval:    time.Minute,
 			},
 		},
-		"WithECS/WithInterval": {
+		"WithECS/WithAgentInterval": {
 			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"metrics_collection_interval": float64(20),
+				},
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"ecs": map[string]interface{}{},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator: ecs,
+				CollectionInterval:    20 * time.Second,
+			},
+		},
+		"WithECS/WithSectionInterval": {
+			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"metrics_collection_interval": float64(20),
+				},
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"ecs": map[string]interface{}{

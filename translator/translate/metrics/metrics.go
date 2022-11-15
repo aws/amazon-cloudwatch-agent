@@ -62,10 +62,10 @@ func (m *Metrics) ApplyRule(input interface{}) (returnKey string, returnVal inte
 			}
 		}
 
-		cloudwatchInfo := map[string]interface{}{}
-		cloudwatchInfo["cloudwatch"] = []interface{}{outputPlugInfo}
-		result["outputs"] = cloudwatchInfo
 		translator.SetMetricPath(result, SectionKey)
+		cloudwatchInfo := map[string]interface{}{}
+		cloudwatchInfo["cloudwatch"] = []interface{}{map[string]interface{}{}}
+		result["outputs"] = cloudwatchInfo
 		returnKey = SectionKey
 		returnVal = result
 	}

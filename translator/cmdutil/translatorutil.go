@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -21,7 +20,9 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toenvconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder/mapstructure"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel"
 	translatorUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
@@ -49,7 +50,7 @@ func getCurBinaryPath() string {
 	if err != nil {
 		log.Panicf("E! Failed to get executable path because of %v", err)
 	}
-	return path.Dir(ex)
+	return filepath.Dir(ex)
 }
 
 func getJsonConfigMap(jsonConfigFilePath, osType string) (map[string]interface{}, error) {
@@ -201,29 +202,39 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 	return mergedJsonConfigMap, nil
 }
 
-func TranslateJsonMapToConfig(jsonConfigValue interface{}) interface{} {
+func TranslateJsonMapToTomlConfig(jsonConfigValue interface{}) (interface{}, error) {
 	r := new(translate.Translator)
 	_, val := r.ApplyRule(jsonConfigValue)
 	if !translator.IsTranslateSuccess() {
-		log.Printf("E! Errors %v", translator.ErrorMessages)
-		log.Panic("E! Failed to generate configuration validation content.")
+		return nil, fmt.Errorf("%v", translator.ErrorMessages)
 	}
-	// Translation is valid, log info messages and continue to convert/write to toml and yaml files
+	// Translation is valid, log info messages and continue to convert/write to toml
 	for _, infoMessage := range translator.InfoMessages {
-		fmt.Println(infoMessage)
+		log.Println(infoMessage)
 	}
-	return val
+	return val, nil
 }
 
-func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) {
+func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, error) {
+	t := otel.NewTranslator()
+	cfg, err := t.Translate(jsonConfigValue, context.CurrentContext().Os())
+	if err != nil {
+		return nil, err
+	}
+	enc := mapstructure.NewEncoder()
+	var out map[string]interface{}
+	if err = enc.Encode(cfg, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
 	res := totomlconfig.ToTomlConfig(config)
-	err := os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
-	translatorUtil.PanicIfErr("E! Failed to create the configuration validation file. Reason:", err)
-
+	return os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
 }
 
-func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) {
-	res, _ := toyamlconfig.ToYamlConfig(config)
-	err := os.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
-	translatorUtil.PanicIfErr("E! Failed to create the configuration validation file. Reason:", err)
+func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
+	res := toyamlconfig.ToYamlConfig(config)
+	return os.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
 }

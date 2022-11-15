@@ -41,6 +41,19 @@ func TestTranslator(t *testing.T) {
 				RoleARN:            "global_arn",
 			},
 		},
+		"WithEndpointOverride": {
+			input: map[string]interface{}{"metrics": map[string]interface{}{
+				"endpoint_override": "https://monitoring-fips.us-east-1.amazonaws.com",
+			}},
+			want: &cloudwatch.Config{
+				Namespace:          "CWAgent",
+				Region:             "us-east-1",
+				ForceFlushInterval: time.Minute,
+				MaxValuesPerDatum:  150,
+				EndpointOverride:   "https://monitoring-fips.us-east-1.amazonaws.com",
+				RoleARN:            "global_arn",
+			},
+		},
 		"WithInvalidCredentialFields": {
 			input: map[string]interface{}{"metrics": map[string]interface{}{}},
 			credentials: map[string]interface{}{
@@ -83,7 +96,7 @@ func TestTranslator(t *testing.T) {
 				SharedCredentialFilename: "shared",
 			},
 		},
-		"FromConfigFile": {
+		"WithInternal": {
 			input:    getJson(t, filepath.Join("testdata", "config.json")),
 			internal: true,
 			want: &cloudwatch.Config{

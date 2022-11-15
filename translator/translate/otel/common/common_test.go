@@ -46,13 +46,16 @@ func TestGetString(t *testing.T) {
 }
 
 func TestGetDuration(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{"invalid": "invalid", "valid": 1})
+	conf := confmap.NewFromStringMap(map[string]interface{}{"invalid": "invalid", "valid": 1, "zero": 0})
 	got, ok := GetDuration(conf, "invalid")
 	require.False(t, ok)
 	require.Equal(t, time.Duration(0), got)
 	got, ok = GetDuration(conf, "valid")
 	require.True(t, ok)
 	require.Equal(t, time.Second, got)
+	got, ok = GetDuration(conf, "zero")
+	require.False(t, ok)
+	require.Equal(t, time.Duration(0), got)
 }
 
 func TestParseDuration(t *testing.T) {
@@ -103,4 +106,66 @@ func TestTranslatorMap(t *testing.T) {
 func TestMissingKeyError(t *testing.T) {
 	err := &MissingKeyError{Type: "type", JsonKey: "key"}
 	require.Equal(t, "\"type\" missing key in JSON: \"key\"", err.Error())
+}
+
+func TestGetOrDefaultDuration(t *testing.T) {
+	sectionKeys := []string{"section::metrics_collection_interval", "backup::metrics_collection_interval"}
+	testCases := map[string]struct {
+		input map[string]interface{}
+		want  time.Duration
+	}{
+		"WithDefault": {
+			input: map[string]interface{}{},
+			want:  time.Minute,
+		},
+		"WithZeroInterval": {
+			input: map[string]interface{}{
+				"backup": map[string]interface{}{
+					"metrics_collection_interval": 0,
+				},
+				"section": map[string]interface{}{
+					"metrics_collection_interval": 0,
+				},
+			},
+			want: time.Minute,
+		},
+		"WithoutSectionOverride": {
+			input: map[string]interface{}{
+				"backup": map[string]interface{}{
+					"metrics_collection_interval": 10,
+				},
+				"section": map[string]interface{}{},
+			},
+			want: 10 * time.Second,
+		},
+		"WithInvalidSectionOverride": {
+			input: map[string]interface{}{
+				"backup": map[string]interface{}{
+					"metrics_collection_interval": 10,
+				},
+				"section": map[string]interface{}{
+					"metrics_collection_interval": "invalid",
+				},
+			},
+			want: 10 * time.Second,
+		},
+		"WithSectionOverride": {
+			input: map[string]interface{}{
+				"backup": map[string]interface{}{
+					"metrics_collection_interval": 10,
+				},
+				"section": map[string]interface{}{
+					"metrics_collection_interval": 120,
+				},
+			},
+			want: 2 * time.Minute,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got := GetOrDefaultDuration(conf, sectionKeys, time.Minute)
+			require.Equal(t, testCase.want, got)
+		})
+	}
 }

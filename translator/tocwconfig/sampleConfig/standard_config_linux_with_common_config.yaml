@@ -1,32 +1,64 @@
 exporters:
-    awscloudwatch/ace:
-        force_flush_interval: 60s
+    awscloudwatch/host:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
         namespace: CWAgent
         profile: AmazonCloudWatchAgent
         region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
         shared_credential_file: fake-path
+extensions: {}
 processors:
-    cumulativetodelta/ace: {}
-    telegraf_delta: {}
-    telegraf_ec2tagger: {}
+    cumulativetodelta/host:
+        exclude:
+            match_type: ""
+            metrics: []
+            regexp: null
+        include:
+            match_type: ""
+            metrics: []
+            regexp: null
+        max_staleness: 0s
 receivers:
-    telegraf_cpu: {}
-    telegraf_disk: {}
-    telegraf_diskio: {}
-    telegraf_mem: {}
-    telegraf_swap: {}
+    telegraf_cpu:
+        collection_interval: 1m0s
+    telegraf_disk:
+        collection_interval: 1m0s
+    telegraf_diskio:
+        collection_interval: 1m0s
+    telegraf_mem:
+        collection_interval: 1m0s
+    telegraf_swap:
+        collection_interval: 1m0s
 service:
+    extensions: []
     pipelines:
-        metrics:
+        metrics/host:
             exporters:
-                - awscloudwatch/ace
+                - awscloudwatch/host
             processors:
-                - telegraf_delta
-                - cumulativetodelta/ace
-                - telegraf_ec2tagger
+                - cumulativetodelta/host
             receivers:
+                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_diskio
                 - telegraf_mem
                 - telegraf_swap
-                - telegraf_cpu
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: ""
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: []
+        metrics:
+            address: ""
+            level: none
+        resource: {}
+        traces:
+            propagators: []

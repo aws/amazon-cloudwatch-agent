@@ -5,7 +5,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -108,14 +107,24 @@ func main() {
 	}
 
 	tomlConfigPath := cmdutil.GetTomlConfigPath(ctx.OutputTomlFilePath())
-	yamlConfigPath := filepath.Join(filepath.Dir(tomlConfigPath), yamlConfigFileName)
-	config := cmdutil.TranslateJsonMapToConfig(mergedJsonConfigMap)
-	// Call ConfigToYamlFile() first so exporters can be removed before writing TOML.
-	// Config translation will be improved later.
-	cmdutil.ConfigToYamlFile(config, yamlConfigPath)
-	cmdutil.ConfigToTomlFile(config, tomlConfigPath)
-	fmt.Println(exitSuccessMessage)
+	tomlConfigDir := filepath.Dir(tomlConfigPath)
+	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
+	tomlConfig, err := cmdutil.TranslateJsonMapToTomlConfig(mergedJsonConfigMap)
+	if err != nil {
+		log.Panicf("E! Failed to generate TOML configuration validation content: %v", err)
+	}
+	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(mergedJsonConfigMap)
+	if err != nil {
+		log.Panicf("E! Failed to generate YAML configuration validation content: %v", err)
+	}
+	if err = cmdutil.ConfigToTomlFile(tomlConfig, tomlConfigPath); err != nil {
+		log.Panicf("E! Failed to create the configuration TOML validation file: %v", err)
+	}
+	if err = cmdutil.ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
+		log.Panicf("E! Failed to create the configuration YAML validation file: %v", err)
+	}
+	log.Println(exitSuccessMessage)
 	// Put env config into the same folder as the toml config
-	envConfigPath := filepath.Join(filepath.Dir(tomlConfigPath), envConfigFileName)
+	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
 	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJsonConfigMap, envConfigPath)
 }

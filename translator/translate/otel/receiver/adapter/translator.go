@@ -14,10 +14,6 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
-const (
-	defaultMetricsCollectionInterval = time.Minute
-)
-
 type translator struct {
 	// cfgType determines the type set in the config.
 	cfgType config.Type
@@ -25,13 +21,16 @@ type translator struct {
 	// JSON config that must be present for the translator to work.
 	// See otel.ConfigKey.
 	cfgKey string
+	// defaultMetricCollectionInterval is the fallback interval if it
+	// it is not present in the interval keychain.
+	defaultMetricCollectionInterval time.Duration
 }
 
 var _ common.Translator[config.Receiver] = (*translator)(nil)
 
 // NewTranslator creates a new adapter receiver translator.
-func NewTranslator(inputName string, cfgKey string) common.Translator[config.Receiver] {
-	return &translator{adapter.Type(inputName), cfgKey}
+func NewTranslator(inputName string, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[config.Receiver] {
+	return &translator{adapter.Type(inputName), cfgKey, defaultMetricCollectionInterval}
 }
 
 func (t *translator) Type() config.Type {
@@ -48,21 +47,10 @@ func (t *translator) Translate(conf *confmap.Conf) (config.Receiver, error) {
 	cfg := &adapter.Config{
 		ScraperControllerSettings: scraperhelper.NewDefaultScraperControllerSettings(t.Type()),
 	}
-	intervalKeyChain := []string{t.cfgKey, common.AgentKey}
-	cfg.CollectionInterval = getCollectionInterval(conf, intervalKeyChain)
-	return cfg, nil
-}
-
-// getCollectionInterval from the first section with a parsable duration.
-// If none are found, uses the defaultMetricsCollectionInterval.
-func getCollectionInterval(conf *confmap.Conf, intervalKeyChain []string) time.Duration {
-	for _, cfgKey := range intervalKeyChain {
-		key := common.ConfigKey(cfgKey, common.MetricsCollectionIntervalKey)
-		duration, ok := common.GetDuration(conf, key)
-		if !ok {
-			continue
-		}
-		return duration
+	intervalKeyChain := []string{
+		common.ConfigKey(t.cfgKey, common.MetricsCollectionIntervalKey),
+		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
-	return defaultMetricsCollectionInterval
+	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, t.defaultMetricCollectionInterval)
+	return cfg, nil
 }
