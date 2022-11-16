@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/aws/amazon-cloudwatch-agent/branch/master/graph/badge.svg?token=79VYANUGOM)](https://codecov.io/gh/aws/amazon-cloudwatch-agent)
+[![codecov](https://codecov.io/gh/aws/amazon-cloudwatch-agent/branch/main/graph/badge.svg?token=79VYANUGOM)](https://codecov.io/gh/aws/amazon-cloudwatch-agent)
 
 # Amazon CloudWatch Agent
 The Amazon CloudWatch Agent is software developed for the [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)
@@ -100,7 +100,7 @@ For example, the following excerpt of the CloudWatch agent configuration file pu
           "expression": "P(UT|OST)"
         }
       ]
-    },
+    }
   ]
 }
 ```

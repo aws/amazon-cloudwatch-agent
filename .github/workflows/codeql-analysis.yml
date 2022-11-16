@@ -5,7 +5,8 @@ name: CodeQL Analysis
 
 on:
   push:
-    branches: [master, main]
+    branches:
+      - main
 
 concurrency:
   group: codeql-${{ github.ref_name }}
