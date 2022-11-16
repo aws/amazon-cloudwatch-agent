@@ -101,7 +101,7 @@ func (c *epClient) refresh() {
 		for _, podKey := range ep.podKeyList {
 			var serviceNamesMap map[string]struct{}
 			var ok bool
-			if serviceNamesMap, ok = tmpMap[podKey]; !ok {
+			if _, ok = tmpMap[podKey]; !ok {
 				tmpMap[podKey] = make(map[string]struct{})
 			}
 			serviceNamesMap = tmpMap[podKey]

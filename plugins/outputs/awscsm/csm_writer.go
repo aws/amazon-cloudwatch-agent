@@ -73,7 +73,7 @@ func (writer *CSMWriter) Write(metrics metametrics.Metrics) error {
 		return errInvalidClientConfiguration // this should never happen
 	}
 
-	var calls int64 = 0
+	var calls int64
 	errorOccurred := false
 
 	for len(writer.pendingMetrics) > 0 && calls < writer.apiCallLimit {

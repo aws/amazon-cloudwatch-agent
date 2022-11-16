@@ -19,8 +19,8 @@ func TestProfiler(t *testing.T) {
 		"[pluginB_StatsB: 0.100000]",
 		"[pluginA_StatsA: 0.000000]",
 	}
-	sort.Sort(sort.StringSlice(stats))
-	sort.Sort(sort.StringSlice(output))
+	sort.Strings(stats)
+	sort.Strings(output)
 
 	assert.True(t, len(Profiler.stats) == 0)
 	assert.Equal(t, stats, output, "Stats do not match")
@@ -29,8 +29,8 @@ func TestProfiler(t *testing.T) {
 	noStats := []string{
 		noStatsInProfiler,
 	}
-	sort.Sort(sort.StringSlice(noStats))
-	sort.Sort(sort.StringSlice(output))
+	sort.Strings(noStats)
+	sort.Strings(output)
 
 	assert.True(t, len(Profiler.stats) == 0)
 	assert.Equal(t, noStats, output, "Stats do not match")

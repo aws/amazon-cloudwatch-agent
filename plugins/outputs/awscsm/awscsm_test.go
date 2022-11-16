@@ -478,7 +478,7 @@ func TestCompression(t *testing.T) {
 		b64, checksum, l, err := compressSamples(c.samples)
 
 		if e, a := c.expectedError, err; e != a {
-			t.Errorf("expected %v, but recieved %v", e, a)
+			t.Errorf("expected %v, but received %v", e, a)
 		}
 
 		if e, a := c.expectedBase64, b64; e != a {

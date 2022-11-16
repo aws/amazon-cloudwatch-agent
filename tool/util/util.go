@@ -161,18 +161,12 @@ func AddToMap(ctx *runtime.Context, resultMap map[string]interface{}, obj interf
 
 func Yes(question string) bool {
 	answer := Choice(question, 1, []string{"yes", "no"})
-	if answer == "yes" {
-		return true
-	}
-	return false
+	return answer == "yes"
 }
 
 func No(question string) bool {
 	answer := Choice(question, 2, []string{"yes", "no"})
-	if answer == "yes" {
-		return true
-	}
-	return false
+	return answer == "yes"
 }
 
 func AskWithDefault(question, defaultValue string) string {

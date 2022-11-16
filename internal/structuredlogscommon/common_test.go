@@ -110,7 +110,7 @@ func TestAttachMetricRulewithDedupValidRules(t *testing.T) {
 	AttachMetricRuleWithDedup(m, rules)
 
 	assert.True(t, m.HasField(MetricRuleKey))
-	fields, _ := m.Fields()[MetricRuleKey]
+	fields := m.Fields()[MetricRuleKey]
 	filteredRule, _ := fields.([]MetricRule)
 	assert.Equal(t, 1, len(filteredRule))
 	assert.Equal(t, []MetricAttr{{Unit: "Bytes", Name: "fieldA"}}, filteredRule[0].Metrics)
@@ -146,7 +146,7 @@ func TestAttachMetricRulewithDedupDupRules(t *testing.T) {
 	AttachMetricRuleWithDedup(m, rules)
 
 	assert.True(t, m.HasField(MetricRuleKey))
-	fields, _ := m.Fields()[MetricRuleKey]
+	fields := m.Fields()[MetricRuleKey]
 	filteredRule, _ := fields.([]MetricRule)
 	assert.Equal(t, 3, len(filteredRule))
 

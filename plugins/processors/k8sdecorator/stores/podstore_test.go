@@ -430,10 +430,9 @@ func TestPodStore_addPodOwnersAndPodNameFallback(t *testing.T) {
 	podStore := &PodStore{}
 	pod := getBaseTestPodInfo()
 	tags := map[string]string{MetricType: TypePod, ContainerNamekey: "ubuntu"}
-	m := metric.New("test", tags, map[string]interface{}{}, time.Now())
 
 	// Test ReplicaSet
-	m = metric.New("test", tags, map[string]interface{}{}, time.Now())
+	m := metric.New("test", tags, map[string]interface{}{}, time.Now())
 	rsName := "ReplicaSetTest"
 	suffix := "-42kcz"
 	pod.OwnerReferences[0].Kind = ReplicaSet

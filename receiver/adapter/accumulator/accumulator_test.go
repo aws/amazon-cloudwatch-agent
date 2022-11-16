@@ -20,7 +20,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 
 	as := assert.New(t)
 
-	test_cases := []struct {
+	testCases := []struct {
 		name                   string
 		telegrafMetricName     string
 		telegrafMetricTags     map[string]string
@@ -53,7 +53,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			expectedDPAttributes:   generateExpectedAttributes(),
 		},
 	}
-	for _, tc := range test_cases {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(_ *testing.T) {
 
 			acc := newOtelAccumulatorWithTestRunningInputs(as)

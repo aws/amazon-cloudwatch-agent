@@ -60,7 +60,7 @@ type Listener struct {
 // routine.
 func NewListenerAndStart(writer MetricWriter, size int, interval time.Duration) Listener {
 	l := Listener{
-		Shutdown: make(chan struct{}, 0),
+		Shutdown: make(chan struct{}),
 		ch:       make(chan Metric, size),
 		metrics:  Metrics{},
 		writer:   writer,

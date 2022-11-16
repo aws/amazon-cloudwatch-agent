@@ -14,7 +14,7 @@ import (
 func Test_metricAppender_Add_BadMetricName(t *testing.T) {
 	var ma metricAppender
 	var ts int64 = 10
-	var v float64 = 10.0
+	var v = 10.0
 
 	ls := []labels.Label{
 		{Name: "name_a", Value: "value_a"},
@@ -30,7 +30,7 @@ func Test_metricAppender_Add(t *testing.T) {
 	mr := metricsReceiver{}
 	ma := mr.Appender(nil)
 	var ts int64 = 10
-	var v float64 = 10.0
+	var v = 10.0
 	ls := []labels.Label{
 		{Name: "__name__", Value: "metric_name"},
 		{Name: "tag_a", Value: "a"},
@@ -63,7 +63,7 @@ func Test_metricAppender_Rollback(t *testing.T) {
 	mr := metricsReceiver{}
 	ma := mr.Appender(nil)
 	var ts int64 = 10
-	var v float64 = 10.0
+	var v = 10.0
 	ls := []labels.Label{
 		{Name: "__name__", Value: "metric_name"},
 		{Name: "tag_a", Value: "a"},
@@ -84,7 +84,7 @@ func Test_metricAppender_Commit(t *testing.T) {
 	mr := metricsReceiver{pmbCh: mbCh}
 	ma := mr.Appender(nil)
 	var ts int64 = 10
-	var v float64 = 10.0
+	var v = 10.0
 	ls := []labels.Label{
 		{Name: "__name__", Value: "metric_name"},
 		{Name: "tag_a", Value: "a"},

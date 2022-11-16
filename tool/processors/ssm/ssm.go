@@ -77,8 +77,7 @@ func determineCreds(ctx *runtime.Context) *credentials.Credentials {
 
 	fileAccessKey := ""
 	fileAccessKeyDesc := ""
-	var fileCredentialsProvider *credentials.Credentials
-	fileCredentialsProvider = credentials.NewSharedCredentials("", "AmazonCloudWatchAgent")
+	fileCredentialsProvider := credentials.NewSharedCredentials("", "AmazonCloudWatchAgent")
 	fileCreds, err := fileCredentialsProvider.Get()
 	if err == nil {
 		fileAccessKey = fileCreds.AccessKeyID

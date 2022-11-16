@@ -27,7 +27,7 @@ const (
 type translator struct {
 	factory component.ReceiverFactory
 	// services is a slice of config keys to orchestrators.
-	services []collections.Pair[string, string]
+	services []*collections.Pair[string, string]
 }
 
 var _ common.Translator[config.Receiver] = (*translator)(nil)
@@ -37,9 +37,9 @@ func NewTranslator() common.Translator[config.Receiver] {
 	baseKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 	return &translator{
 		factory: awscontainerinsightreceiver.NewFactory(),
-		services: []collections.Pair[string, string]{
-			{common.ConfigKey(baseKey, common.ECSKey), ecs},
-			{common.ConfigKey(baseKey, common.KubernetesKey), eks},
+		services: []*collections.Pair[string, string]{
+			{Key: common.ConfigKey(baseKey, common.ECSKey), Value: ecs},
+			{Key: common.ConfigKey(baseKey, common.KubernetesKey), Value: eks},
 		},
 	}
 }
@@ -76,7 +76,7 @@ func (t *translator) getConfiguredContainerService(conf *confmap.Conf) *collecti
 	if conf != nil {
 		for _, service := range t.services {
 			if conf.IsSet(service.Key) {
-				configuredService = &service
+				configuredService = service
 				break
 			}
 		}

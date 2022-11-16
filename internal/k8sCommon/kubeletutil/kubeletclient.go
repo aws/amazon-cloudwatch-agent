@@ -28,13 +28,13 @@ type KubeClient struct {
 	tls.ClientConfig
 }
 
-var ErrKubeClientAccessFailure = errors.New("KubeClinet Access Failure")
+var ErrKubeClientAccessFailure = errors.New("KubeClient Access Failure")
 
 func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 	var result []corev1.Pod
 	url := fmt.Sprintf("https://%s:%s/pods", k.KubeIP, k.Port)
 
-	var req, err = http.NewRequest("GET", url, nil)
+	var req, _ = http.NewRequest("GET", url, nil)
 	var resp *http.Response
 
 	k.InsecureSkipVerify = true

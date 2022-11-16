@@ -65,7 +65,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.29.0
 	github.com/aws/smithy-go v1.13.1
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
-	github.com/go-kit/kit v0.11.0
+	github.com/go-kit/log v0.2.1
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cadvisor v0.45.0
 	github.com/google/go-cmp v0.5.9
@@ -172,7 +172,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/frankban/quicktest v1.14.3 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
-	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

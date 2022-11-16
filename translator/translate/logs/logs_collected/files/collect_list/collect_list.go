@@ -66,9 +66,6 @@ func (f *FileConfig) ApplyRule(input interface{}) (returnKey string, returnVal i
 		}
 		logUtil.ValidateLogRetentionSettings(res, GetCurPath())
 		outputLogConfig(res)
-	} else {
-		returnKey = ""
-		returnVal = ""
 	}
 	returnKey = "file_config"
 	returnVal = res

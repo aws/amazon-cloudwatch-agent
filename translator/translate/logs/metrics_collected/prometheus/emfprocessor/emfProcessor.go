@@ -30,7 +30,7 @@ type EMFProcessor struct {
 
 func (e *EMFProcessor) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	im := input.(map[string]interface{})
-	// add a arbitary order 10 for the EMF processor as the EMF processor should be used as the last processor before output plugins.
+	// add a arbitrary order 10 for the EMF processor as the EMF processor should be used as the last processor before output plugins.
 	result := map[string]interface{}{"order": 10}
 	returnKey = SubSectionKey
 

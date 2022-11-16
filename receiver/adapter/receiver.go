@@ -51,7 +51,7 @@ func (r *AdaptedReceiver) start(_ context.Context, _ component.Host) error {
 }
 
 func (r *AdaptedReceiver) scrape(_ context.Context) (pmetric.Metrics, error) {
-	r.logger.Debug("Begining scraping metrics with adapter", zap.String("receiver", r.input.Config.Name))
+	r.logger.Debug("Beginning scraping metrics with adapter", zap.String("receiver", r.input.Config.Name))
 
 	// For Service Input, the Gather either return nil or return error when gathering metrics but the metrics will always be collected
 	// and hold in accumulator when receiving metrics from regular inputs or service inputs

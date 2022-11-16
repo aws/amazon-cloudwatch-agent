@@ -12,7 +12,7 @@ type (
 	}
 
 	agentConfig struct {
-		// Not all names need the explict toml mapping as they are case insensitive, it is only needed when
+		// Not all names need the explicit toml mapping as they are case insensitive, it is only needed when
 		// underscore is replaced
 		CollectionJitter  string `toml:"collection_jitter"`
 		Debug             bool

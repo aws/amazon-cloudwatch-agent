@@ -45,7 +45,7 @@ func (mStore *mockMetricMetadataStore) GetMetadata(metric string) (scrape.Metric
 
 // dummy function to satisfy the interface
 func (mStore *mockMetricMetadataStore) ListMetadata() []scrape.MetricMetadata {
-	return make([]scrape.MetricMetadata, 0, 0)
+	return make([]scrape.MetricMetadata, 0)
 }
 
 // dummy function to satisfy the interface
@@ -153,7 +153,7 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 	assert.Equal(t, ok, true)
 	assert.Equal(t, expectedMetricMetadata, metricMetadata)
 
-	metricMetadata, ok = mCache.Metadata("m3")
+	_, ok = mCache.Metadata("m3")
 	assert.Equal(t, ok, false)
 }
 

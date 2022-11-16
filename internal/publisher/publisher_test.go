@@ -105,7 +105,7 @@ func TestPublisher_DrainTimeout(t *testing.T) {
 	publisher.Publish("req2")
 	publisher.Close()
 	// drain queue timeout 2s + on fly request timeout 1s = 3s (expected)
-	assert.True(t, time.Now().Sub(start) < 4*time.Second)
+	assert.True(t, time.Since(start) < 4*time.Second)
 }
 
 // testClientNoMutex is to test whether need memory barrier when concurrency of publisher is 1
@@ -147,7 +147,7 @@ func TestPublisher_ClientLongDelay(t *testing.T) {
 	}
 	// Send 30 requests to the publisher whose queue size is 20, there should be no any blocking. So assert the elapsed time less than 10 ms.
 	// You will also see 0~10 requests are dropped in Warning log (depends on the consuming speed vs ingestion speed)
-	assert.True(t, time.Now().Sub(start) < 10*time.Millisecond)
+	assert.True(t, time.Since(start) < 10*time.Millisecond)
 	publisher.Close()
 	// only 10 requests are published since the concurrency is 10
 	assert.Equal(t, int32(10), c.counter)

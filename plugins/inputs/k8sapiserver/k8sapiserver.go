@@ -99,8 +99,8 @@ func (k *K8sAPIServer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
-	ctx := context.Background()
+func (k *K8sAPIServer) Start(telegraf.Accumulator) error {
+	var ctx context.Context
 	ctx, k.cancel = context.WithCancel(context.Background())
 
 	lockNamespace := os.Getenv("K8S_NAMESPACE")

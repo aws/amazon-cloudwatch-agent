@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
@@ -23,8 +23,8 @@ const (
 	DEFAULT_PROFILE = "AmazonCloudWatchAgent"
 )
 
-var DetectRegion func(mode string, credsConfig map[string]string) string = detectRegion
-var DetectCredentialsPath func() string = detectCredentialsPath
+var DetectRegion = detectRegion
+var DetectCredentialsPath = detectCredentialsPath
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 
 func DetectAgentMode(configuredMode string) string {

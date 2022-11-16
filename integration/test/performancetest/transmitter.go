@@ -23,7 +23,7 @@ import (
 
 const (
 	UPDATE_DELAY_THRESHOLD = 60 // this is how long we want to wait for random sleep in seconds
-	MAX_ATTEMPTS           = 5  // number of attemps before we stop retrying to update
+	MAX_ATTEMPTS           = 5  // number of attempts before we stop retrying to update
 	/*
 		!Warning: if this value is less than 25 there is a risk of testCases being lost.
 		This will only happen if all test threads and at the same time and get the same
@@ -296,7 +296,7 @@ func (transmitter *TransmitterAPI) UpdateItem(hash string, packet map[string]int
 	randomSleepDuration := time.Duration(rand.Intn(UPDATE_DELAY_THRESHOLD)) * time.Second
 	for attemptCount := 0; attemptCount < MAX_ATTEMPTS; attemptCount++ {
 		fmt.Println("Updating:", hash)
-		item, err := transmitter.Query(hash) // get most Up to date item from dynamo | O(1) bcs of global sec. idx.
+		item, err := transmitter.Query(hash) // get most up-to-date item from dynamo | O(1) bcs of global sec. idx.
 		if len(item) == 0 {                  // check if hash is in dynamo
 			return errors.New("ERROR: Hash is not found in dynamo")
 		}
@@ -311,7 +311,7 @@ func (transmitter *TransmitterAPI) UpdateItem(hash string, packet map[string]int
 		if err != nil {
 			return err
 		}
-		//setup the update expression
+		// set up the update expression
 		expressionAttributeValues := make(map[string]types.AttributeValue)
 		expressionAttributeNames := make(map[string]string)
 		expression := "set "

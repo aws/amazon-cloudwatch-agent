@@ -95,7 +95,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 				},
 				map[string]interface{}{
 					"redis_tx": int32(4),
-					"redis_rx": float64(2.3),
+					"redis_rx": 2.3,
 				},
 				now.UTC(),
 				telegraf.Untyped,
@@ -110,7 +110,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 				},
 				{
 					"name":       "prometheus_redis_rx",
-					"value":      float64(2.3),
+					"value":      2.3,
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricTypeGauge,

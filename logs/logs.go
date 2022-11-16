@@ -46,7 +46,7 @@ type LogBackend interface {
 }
 
 // A LogDest represents a final endpoint where log events are published to.
-// e.g. a particualr log stream in cloudwatchlogs.
+// e.g. a particular log stream in cloudwatchlogs.
 type LogDest interface {
 	Publish(events []LogEvent) error
 }

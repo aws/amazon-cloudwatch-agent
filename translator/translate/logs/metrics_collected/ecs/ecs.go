@@ -46,7 +46,7 @@ func (e *ECS) ApplyRule(input interface{}) (returnKey string, returnVal interfac
 	}
 
 	if !context.CurrentContext().RunInContainer() {
-		translator.AddErrorMessages(GetCurPath(), fmt.Sprintf("ecs is configured in a non-containerized environment"))
+		translator.AddErrorMessages(GetCurPath(), "ecs is configured in a non-containerized environment")
 		return
 	}
 	for _, rule := range ChildRule {

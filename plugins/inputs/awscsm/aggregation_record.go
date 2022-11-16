@@ -4,7 +4,6 @@
 package awscsm
 
 import (
-	"fmt"
 	"log"
 	"sort"
 	"strconv"
@@ -73,7 +72,7 @@ func (records AggregationRecords) Add(raw map[string]interface{}) {
 
 		ms := int64(ts.(float64))
 		t := time.Unix(ms/msToSec, (ms%msToSec)*msToNs)
-		// TODO: 60 is the default. Will eventually be overriden by configuration
+		// TODO: 60 is the default. Will eventually be overridden by configuration
 
 		record.Timestamp = t
 		record.Keys = keys
@@ -85,7 +84,7 @@ func (records AggregationRecords) Add(raw map[string]interface{}) {
 
 	eventType, ok := raw["Type"].(string)
 	if !ok {
-		log.Println(fmt.Sprintf("E! 'Type' needs to be a string: %T", raw["Type"]))
+		log.Printf("E! 'Type' needs to be a string: %T", raw["Type"])
 	}
 
 	eventDef, hasEventDef := cfg.Definitions.Events.Get(eventType)

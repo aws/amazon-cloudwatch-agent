@@ -331,10 +331,8 @@ func (t *template) Apply(line string) (string, map[string]string, string, error)
 			field = append(field, fields[i])
 		case "field*":
 			field = append(field, fields[i:]...)
-			break
 		case "measurement*":
 			measurement = append(measurement, fields[i:]...)
-			break
 		default:
 			tags[tag] = append(tags[tag], fields[i])
 		}

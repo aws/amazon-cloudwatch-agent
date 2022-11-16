@@ -66,10 +66,7 @@ func (c *CollectMetrics) ApplyRule(input interface{}) (returnKey string, returnV
 
 	//Check if this plugin exist in the input instance
 	//If not, not process
-	if _, ok := im[SectionKey]; !ok {
-		returnKey = ""
-		returnVal = ""
-	} else {
+	if _, ok := im[SectionKey]; ok {
 		//If yes, process it
 		for _, rule := range getOrderedRules(targetRuleMap) {
 			key, val := rule.ApplyRule(im[SectionKey])

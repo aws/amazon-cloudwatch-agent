@@ -29,32 +29,29 @@ func (m *MetricDecoration) ApplyRule(input interface{}) (returnKey string, retur
 
 	//Check if metrics_collect.SectionKey exist in the input instance
 	//If not, not process
-	if _, ok := im[metrics_collect.SectionKey]; !ok {
-		returnKey = ""
-		returnVal = ""
-	} else {
-		pluginMap := im[metrics_collect.SectionKey].(map[string]interface{})
+	if section, ok := im[metrics_collect.SectionKey]; ok {
+		pluginMap := section.(map[string]interface{})
 		//If yes, process it
 		// sort the key first
 		sortedKey := []string{}
-		for k, _ := range pluginMap {
+		for k := range pluginMap {
 			sortedKey = append(sortedKey, k)
 		}
 
 		sort.Strings(sortedKey)
 		for _, key := range sortedKey {
 			/** handle different types: array and map.
-			* array means multiple plugins
-			* array example:
-			* {"procstat": [{...}, {...}]}
-			*
-			* map example:
-			* {"cpu": {...}}
-			**/
+			 * array means multiple plugins
+			 * array example:
+			 * {"procstat": [{...}, {...}]}
+			 *
+			 * map example:
+			 * {"cpu": {...}}
+			 **/
 			switch pluginMap[key].(type) {
 			case map[string]interface{}:
 				plugin := pluginMap[key].(map[string]interface{})
-				if _, ok := plugin[util.Measurement_Key]; !ok {
+				if _, ok = plugin[util.Measurement_Key]; !ok {
 					continue
 				}
 
@@ -63,7 +60,7 @@ func (m *MetricDecoration) ApplyRule(input interface{}) (returnKey string, retur
 			case []map[string]interface{}:
 				plugins := pluginMap[key].([]map[string]interface{})
 				for _, plugin := range plugins {
-					if _, ok := plugin[util.Measurement_Key]; !ok {
+					if _, ok = plugin[util.Measurement_Key]; !ok {
 						continue
 					}
 					decorations := util.ApplyMeasurementRuleForMetricDecoration(plugin[util.Measurement_Key], key, targetOs)
