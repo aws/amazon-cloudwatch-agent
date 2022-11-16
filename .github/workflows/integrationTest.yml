@@ -703,13 +703,6 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
-      - name: Cache if success
-        id: ecs-ec2-launch-daemon-integration-test
-        uses: actions/cache@v2
-        with:
-          path: go.mod
-          key: ecs-ec2-launch-daemon-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
-
       - name: Login ECR
         id: login-ecr
         if: steps.ecs-ec2-launch-daemon-integration-test.outputs.cache-hit != 'true'
