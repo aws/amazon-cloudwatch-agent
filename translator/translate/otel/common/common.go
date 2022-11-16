@@ -28,6 +28,7 @@ const (
 	CredentialsKey               = "credentials"
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
+	Json                         = "json"
 )
 
 // Translator is used to translate the JSON config into an

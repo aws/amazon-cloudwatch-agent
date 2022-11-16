@@ -80,7 +80,7 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*service.Conf
 		Processors: map[config.ComponentID]config.Processor{},
 		Service: service.ConfigService{
 			Telemetry: telemetry.Config{
-				Logs:    telemetry.LogsConfig{Level: zapcore.InfoLevel},
+				Logs:    telemetry.LogsConfig{Level: zapcore.InfoLevel, Encoding: common.Json},
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines: pipelines,
