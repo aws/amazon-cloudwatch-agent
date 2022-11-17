@@ -74,7 +74,7 @@ service:
             development: false
             disable_caller: false
             disable_stacktrace: false
-            encoding: ""
+            encoding: "json"
             error_output_paths: []
             initial_fields: {}
             level: info
