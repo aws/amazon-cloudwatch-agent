@@ -10,13 +10,13 @@ import (
 	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"gopkg.in/tomb.v1"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/atomiccounter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail/watch"
 )
 
@@ -25,7 +25,7 @@ var (
 	ErrDeletedNotReOpen         = errors.New("File was deleted, tail should now stop")
 	exitOnDeletionCheckDuration = time.Minute
 	exitOnDeletionWaitDuration  = 5 * time.Minute
-	OpenFileCount               = atomiccounter.NewAtomicCounter()
+	OpenFileCount               atomic.Int64
 )
 
 type Line struct {
@@ -123,7 +123,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 		if err != nil {
 			return nil, err
 		}
-		OpenFileCount.Increment()
+		OpenFileCount.Add(1)
 	}
 
 	if !config.ReOpen {
@@ -185,7 +185,7 @@ func (tail *Tail) closeFile() {
 	if tail.file != nil {
 		tail.file.Close()
 		tail.file = nil
-		OpenFileCount.Decrement()
+		OpenFileCount.Add(-1)
 	}
 }
 
@@ -210,7 +210,7 @@ func (tail *Tail) reopen() error {
 		}
 		break
 	}
-	OpenFileCount.Increment()
+	OpenFileCount.Add(1)
 	return nil
 }
 
