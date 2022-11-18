@@ -16,12 +16,6 @@ type MetricDecorationConfig struct {
 	Unit     string `toml:"unit"`
 }
 
-var supportedUnits = []string{"Seconds", "Microseconds", "Milliseconds", "Bytes", "Kilobytes", "Megabytes",
-	"Gigabytes", "Terabytes", "Bits", "Kilobits", "Megabits", "Gigabits", "Terabits",
-	"Percent", "Count", "Bytes/Second", "Kilobytes/Second", "Megabytes/Second",
-	"Gigabytes/Second", "Terabytes/Second", "Bits/Second", "Kilobits/Second",
-	"Megabits/Second", "Gigabits/Second", "Terabits/Second", "Count/Second", "None"}
-
 func NewMetricDecorations(metricConfigs []MetricDecorationConfig) (*MetricDecorations, error) {
 	result := &MetricDecorations{
 		decorationNames: make(map[string]map[string]string),
@@ -66,18 +60,6 @@ func (m *MetricDecorations) getRename(category string, metric string) string {
 		return val[metric]
 	}
 	return ""
-}
-
-func isUnitInvalid(unit string) bool {
-	if unit == "" {
-		return false
-	}
-	for _, v := range supportedUnits {
-		if v == unit {
-			return false
-		}
-	}
-	return true
 }
 
 func (m *MetricDecorations) addDecorations(category string, name string, rename string, unit string) error {

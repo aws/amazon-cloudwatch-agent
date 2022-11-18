@@ -3,31 +3,86 @@
 
 package cloudwatch
 
-// default units
-// follow the format "Prefix_Metric"
-var defaultUnits = map[string]string{
-	"procstat_cpu_usage": "Percent",
+type SupportUnit map[string]struct{}
 
-	"procstat_memory_data":   "Bytes",
-	"procstat_memory_locked": "Bytes",
-	"procstat_memory_rss":    "Bytes",
-	"procstat_memory_stack":  "Bytes",
-	"procstat_memory_swap":   "Bytes",
-	"procstat_memory_vms":    "Bytes",
+// CloudWatch supports:
+// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
+var supportedUnits = map[string]struct{}{
+	"Seconds":          {},
+	"Microseconds":     {},
+	"Milliseconds":     {},
+	"Bytes":            {},
+	"Kilobytes":        {},
+	"Megabytes":        {},
+	"Gigabytes":        {},
+	"Terabytes":        {},
+	"Bits":             {},
+	"Kilobits":         {},
+	"Megabits":         {},
+	"Gigabits":         {},
+	"Terabits":         {},
+	"Percent":          {},
+	"Count":            {},
+	"Bytes/Second":     {},
+	"Kilobytes/Second": {},
+	"Megabytes/Second": {},
+	"Gigabytes/Second": {},
+	"Terabytes/Second": {},
+	"Bits/Second":      {},
+	"Kilobits/Second":  {},
+	"Megabits/Second":  {},
+	"Gigabits/Second":  {},
+	"Terabits/Second":  {},
+	"Count/Second":     {},
+	"None":             {},
+}
 
-	"procstat_read_bytes":  "Bytes",
-	"procstat_write_bytes": "Bytes",
+type MetricDefaultUnit map[string]string
 
-	"procstat_rlimit_memory_data_hard":   "Bytes",
-	"procstat_rlimit_memory_data_soft":   "Bytes",
-	"procstat_rlimit_memory_locked_hard": "Bytes",
-	"procstat_rlimit_memory_locked_soft": "Bytes",
-	"procstat_rlimit_memory_rss_hard":    "Bytes",
-	"procstat_rlimit_memory_rss_soft":    "Bytes",
-	"procstat_rlimit_memory_stack_hard":  "Bytes",
-	"procstat_rlimit_memory_stack_soft":  "Bytes",
-	"procstat_rlimit_memory_vms_hard":    "Bytes",
-	"procstat_rlimit_memory_vms_soft":    "Bytes",
+var metricDefaultUnit = MetricDefaultUnit{
+	"procstat_read_bytes":                   "Bytes",
+	"procstat_read_count":                   "Count",
+	"procstat_write_bytes":                  "Bytes",
+	"procstat_write_count":                  "Count",
+	"procstat_memory_data":                  "Bytes",
+	"procstat_memory_locked":                "Bytes",
+	"procstat_memory_rss":                   "Bytes",
+	"procstat_memory_stack":                 "Bytes",
+	"procstat_memory_swap":                  "Bytes",
+	"procstat_memory_vms":                   "Bytes",
+	"procstat_cpu_usage":                    "Percent",
+	"procstat_cpu_time":                     "Count",
+	"procstat_cpu_time_user":                "Count",
+	"procstat_cpu_time_guest":               "Count",
+	"procstat_cpu_time_guest_nice":          "Count",
+	"procstat_cpu_time_idle":                "Count",
+	"procstat_cpu_time_iowait":              "Count",
+	"procstat_cpu_time_irq":                 "Count",
+	"procstat_cpu_time_soft_irq":            "Count",
+	"procstat_cpu_time_nice":                "Count",
+	"procstat_cpu_time_steal":               "Count",
+	"procstat_cpu_time_stolen":              "Count",
+	"procstat_rlimit_cpu_time_hard":         "Count",
+	"procstat_rlimit_cpu_time_soft":         "Count",
+	"procstat_rlimit_file_locks_hard":       "Count",
+	"procstat_rlimit_file_locks_soft":       "Count",
+	"procstat_rlimit_memory_data_hard":      "Bytes",
+	"procstat_rlimit_memory_data_soft":      "Bytes",
+	"procstat_rlimit_memory_locked_hard":    "Bytes",
+	"procstat_rlimit_memory_locked_soft":    "Bytes",
+	"procstat_rlimit_memory_rss_hard":       "Bytes",
+	"procstat_rlimit_memory_rss_soft":       "Bytes",
+	"procstat_rlimit_memory_stack_hard":     "Bytes",
+	"procstat_rlimit_memory_stack_soft":     "Bytes",
+	"procstat_rlimit_memory_vms_hard":       "Bytes",
+	"procstat_rlimit_memory_vms_soft":       "Bytes",
+	"procstat_pid":                          "Count",
+	"procstat_pid_count":                    "Count",
+	"procstat_nice_priority":                "Count",
+	"procstat_realtime_priority":            "Count",
+	"procstat_signals_pending":              "Count",
+	"procstat_voluntary_context_switches":   "Count",
+	"procstat_involuntary_context_switches": "Count",
 
 	"cpu_usage_active":     "Percent",
 	"cpu_usage_idle":       "Percent",
@@ -108,4 +163,12 @@ var defaultUnits = map[string]string{
 	"processes_running":       "Count",
 	"processes_sleeping":      "Count",
 	"processes_dead":          "Count",
+}
+
+func isUnitInvalid(unit string) bool {
+	if unit == "" {
+		return false
+	}
+	_, ok := supportedUnits[unit]
+	return !ok
 }
