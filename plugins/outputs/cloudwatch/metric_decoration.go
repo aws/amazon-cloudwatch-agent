@@ -22,7 +22,7 @@ func NewMetricDecorations(metricConfigs []MetricDecorationConfig) (*MetricDecora
 		decorationUnits: make(map[string]map[string]string),
 	}
 
-	for k, v := range defaultUnits {
+	for k, v := range metricDefaultUnit {
 		res := strings.SplitN(k, "_", 2)
 		if len(res) != 2 {
 			return result, fmt.Errorf("invalid default unit format in default_unit config")
