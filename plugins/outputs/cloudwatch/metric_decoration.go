@@ -23,8 +23,8 @@ func NewMetricDecorations(metricConfigs []MetricDecorationConfig) (*MetricDecora
 	}
 
 	for k, v := range metricDefaultUnit {
-		res := strings.SplitN(k, "_", 2)
-		if len(res) != 2 {
+		res := strings.SplitN(k, "_")
+		if len(res) < 2 {
 			return result, fmt.Errorf("invalid default unit format in default_unit config")
 		}
 
