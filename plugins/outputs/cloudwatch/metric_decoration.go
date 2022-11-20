@@ -6,7 +6,6 @@ package cloudwatch
 import (
 	"fmt"
 	"log"
-	"strings"
 )
 
 type MetricDecorationConfig struct {
@@ -22,15 +21,14 @@ func NewMetricDecorations(metricConfigs []MetricDecorationConfig) (*MetricDecora
 		decorationUnits: make(map[string]map[string]string),
 	}
 
-	for k, v := range metricDefaultUnit {
-		res := strings.SplitN(k, "_")
-		if len(res) < 2 {
-			return result, fmt.Errorf("invalid default unit format in default_unit config")
-		}
-
-		err := result.addDecorations(res[0], res[1], "", v)
-		if err != nil {
-			return result, err
+	for category, categoryMetrics := range metricDefaultUnit {
+		for metricIndex := 0; metricIndex < len(categoryMetrics.supportedMetrics); metricIndex++ {
+			supportedMetric := categoryMetrics.supportedMetrics[metricIndex]
+			supportedMetricUnit := categoryMetrics.defaultMetricsUnit[metricIndex]
+			err := result.addDecorations(category, supportedMetric, "", supportedMetricUnit)
+			if err != nil {
+				return result, err
+			}
 		}
 	}
 

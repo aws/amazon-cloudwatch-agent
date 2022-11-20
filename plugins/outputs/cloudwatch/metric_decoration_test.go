@@ -4,38 +4,35 @@
 package cloudwatch
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewMetricDecorations(t *testing.T) {
-	expected := make([]MetricDecorationConfig, 0)
-
-	mdc := MetricDecorationConfig{
-		Category: "cpu",
-		Metric:   "cpu",
-		Rename:   "CPU",
-		Unit:     "Percent",
+	metricDecoration := []MetricDecorationConfig{
+		{
+			Category: "cpu",
+			Metric:   "cpu",
+			Rename:   "CPU",
+			Unit:     "Percent",
+		},
+		{
+			Category: "mem",
+			Metric:   "mem",
+			Unit:     "Megabytes",
+		},
+		{
+			Category: "disk",
+			Metric:   "disk",
+			Rename:   "DISK",
+		},
 	}
-	expected = append(expected, mdc)
 
-	mdc = MetricDecorationConfig{
-		Category: "mem",
-		Metric:   "mem",
-		Unit:     "Megabytes",
-	}
-	expected = append(expected, mdc)
-
-	mdc = MetricDecorationConfig{
-		Category: "disk",
-		Metric:   "disk",
-		Rename:   "DISK",
-	}
-	expected = append(expected, mdc)
-
-	m, err := NewMetricDecorations(expected)
-	assert.True(t, err == nil)
+	m, err := NewMetricDecorations(metricDecoration)
+	assert.NoError(t, err)
 
 	assert.Equal(t, "CPU", m.getRename("cpu", "cpu"))
 	assert.Equal(t, "Percent", m.getUnit("cpu", "cpu"))
@@ -44,17 +41,16 @@ func TestNewMetricDecorations(t *testing.T) {
 }
 
 func TestNewMetricDecorationsAbnormal(t *testing.T) {
-	expected := make([]MetricDecorationConfig, 0)
-
-	mdc := MetricDecorationConfig{
-		Category: "cpu",
-		Metric:   "cpu",
-		Rename:   "CPU",
-		Unit:     "InvalidUnit",
+	metricDecoration := []MetricDecorationConfig{
+		{
+			Category: "cpu",
+			Metric:   "cpu",
+			Rename:   "CPU",
+			Unit:     "InvalidUnit",
+		},
 	}
-	expected = append(expected, mdc)
 
-	_, err := NewMetricDecorations(expected)
+	_, err := NewMetricDecorations(metricDecoration)
 	assert.True(t, err != nil)
 
 	_, err = NewMetricDecorations(nil)
@@ -62,67 +58,105 @@ func TestNewMetricDecorationsAbnormal(t *testing.T) {
 }
 
 func TestNewMetricDecorationsSpecialCharacter(t *testing.T) {
-	expected := make([]MetricDecorationConfig, 0)
-
-	mdc := MetricDecorationConfig{
-		Category: "/cpu",
-		Metric:   "% cpu",
-		Rename:   "\\CPU",
+	metricDecoration := []MetricDecorationConfig{
+		{Category: "/cpu",
+			Metric: "% cpu",
+			Rename: "\\CPU"},
 	}
-	expected = append(expected, mdc)
 
-	m, err := NewMetricDecorations(expected)
-	assert.True(t, err == nil)
+	m, err := NewMetricDecorations(metricDecoration)
+	assert.NoError(t, err)
 	assert.Equal(t, "\\CPU", m.getRename("/cpu", "% cpu"))
 }
 
 func TestOverrideDefaultUnit(t *testing.T) {
 	m, err := NewMetricDecorations(nil)
 
+	assert.NoError(t, err)
 	assert.Equal(t, "Percent", m.getUnit("cpu", "usage_idle"))
-	expected := make([]MetricDecorationConfig, 0)
 
-	mdc := MetricDecorationConfig{
-		Category: "cpu",
-		Metric:   "usage_idle",
-		Unit:     "Bytes",
+	expectedMetricDecoration := []MetricDecorationConfig{
+		{
+			Category: "cpu",
+			Metric:   "usage_idle",
+			Unit:     "Bytes",
+		},
+		{
+			Category: "Network Interface",
+			Metric:   "Packets Sent/sec",
+			Unit:     "Bytes",
+		},
 	}
 
-	expected = append(expected, mdc)
-	mdc = MetricDecorationConfig{
-		Category: "Network Interface",
-		Metric:   "Packets Sent/sec",
-		Unit:     "Bytes",
-	}
-
-	expected = append(expected, mdc)
-
-	m, err = NewMetricDecorations(expected)
-	assert.True(t, err == nil)
+	m, err = NewMetricDecorations(expectedMetricDecoration)
+	assert.NoError(t, err)
 	assert.Equal(t, "Bytes", m.getUnit("cpu", "usage_idle"))
 }
 
-func TestProcstatDefaultUnit(t *testing.T) {
-	m, err := NewMetricDecorations(nil)
-	assert.True(t, err == nil)
+func TestDefaultUnit(t *testing.T) {
 
-	assert.Equal(t, "Percent", m.getUnit("procstat", "cpu_usage"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "memory_data"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "memory_locked"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "memory_rss"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "memory_stack"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "memory_swap"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "memory_vms"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "read_bytes"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "write_bytes"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_data_hard"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_data_soft"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_locked_hard"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_locked_soft"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_rss_hard"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_rss_soft"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_stack_hard"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_stack_soft"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_vms_hard"))
-	assert.Equal(t, "Bytes", m.getUnit("procstat", "rlimit_memory_vms_soft"))
+	testCases := []struct {
+		category            string
+		actualMetrics       []string
+		expectedMetricsUnit []string
+	}{
+		{
+			category:            "procstat",
+			actualMetrics:       []string{"read_bytes", "rlimit_file_locks_soft", "rlimit_memory_rss_soft", "involuntary_context_switches"},
+			expectedMetricsUnit: []string{cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitCount},
+		},
+		{
+			category:            "cpu",
+			actualMetrics:       []string{"usage_active", "usage_iowait", "usage_user"},
+			expectedMetricsUnit: []string{cloudwatch.StandardUnitPercent, cloudwatch.StandardUnitPercent, cloudwatch.StandardUnitPercent},
+		},
+		{
+			category:            "disk",
+			actualMetrics:       []string{"free", "inodes_free", "used_percent"},
+			expectedMetricsUnit: []string{cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitPercent},
+		},
+		{
+			category:            "diskio",
+			actualMetrics:       []string{"iops_in_progress", "reads", "read_bytes", "write_time"},
+			expectedMetricsUnit: []string{cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitMilliseconds},
+		},
+		{
+			category:            "netstat",
+			actualMetrics:       []string{"tcp_established", "tcp_last_ack", "udp_socket"},
+			expectedMetricsUnit: []string{cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount},
+		},
+		{
+			category:            "processes",
+			actualMetrics:       []string{"blocked", "wait", "dead"},
+			expectedMetricsUnit: []string{cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount},
+		},
+		{
+			category:            "mem",
+			actualMetrics:       []string{"used", "inactive", "used_percent"},
+			expectedMetricsUnit: []string{cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitPercent},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("Category %s default unit", tc.category), func(_ *testing.T) {
+			m, err := NewMetricDecorations(nil)
+			assert.NoError(t, err)
+
+			assert.Equal(t, len(tc.actualMetrics), len(tc.expectedMetricsUnit))
+
+			for metricIndex := 0; metricIndex < len(tc.actualMetrics); metricIndex++ {
+				actualMetric := tc.actualMetrics[metricIndex]
+				expectMetricUnit := tc.expectedMetricsUnit[metricIndex]
+				assert.Equal(t, expectMetricUnit, m.getUnit(tc.category, actualMetric))
+
+			}
+		})
+	}
+
+}
+
+func TestMetricDefaultUnitLength(t *testing.T) {
+	for category := range metricDefaultUnit {
+		assert.Equal(t, len(metricDefaultUnit[category].supportedMetrics), len(metricDefaultUnit[category].defaultMetricsUnit))
+	}
 }

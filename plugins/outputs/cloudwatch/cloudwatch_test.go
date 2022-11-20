@@ -9,12 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -26,6 +20,12 @@ import (
 	"github.com/influxdata/toml/ast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 )
 
 // Test that each tag becomes one dimension
@@ -339,7 +339,6 @@ func newCloudWatchClient(svc cloudwatchiface.CloudWatchAPI, forceFlushInterval t
 	return cloudwatch
 }
 
-//
 func makeMetrics(count int) []telegraf.Metric {
 	metrics := make([]telegraf.Metric, 0, count)
 	measurement := "Test_namespace"
@@ -447,33 +446,28 @@ func TestMetricConfigsRead(t *testing.T) {
 
 	c, err := buildCloudWatchFromToml(contents)
 
-	assert.True(t, err == nil)
+	assert.NoError(t, err)
 
-	expected := make([]MetricDecorationConfig, 0)
-
-	mdc := MetricDecorationConfig{
-		Category: "cpu",
-		Metric:   "cpu",
-		Rename:   "CPU",
-		Unit:     "Percent",
+	expectedMetricDecoration := []MetricDecorationConfig{
+		{
+			Category: "cpu",
+			Metric:   "cpu",
+			Rename:   "CPU",
+			Unit:     "Percent",
+		},
+		{
+			Category: "mem",
+			Metric:   "mem",
+			Unit:     "Megabytes",
+		},
+		{
+			Category: "disk",
+			Metric:   "disk",
+			Rename:   "DISK",
+		},
 	}
-	expected = append(expected, mdc)
 
-	mdc = MetricDecorationConfig{
-		Category: "mem",
-		Metric:   "mem",
-		Unit:     "Megabytes",
-	}
-	expected = append(expected, mdc)
-
-	mdc = MetricDecorationConfig{
-		Category: "disk",
-		Metric:   "disk",
-		Rename:   "DISK",
-	}
-	expected = append(expected, mdc)
-
-	assert.Equal(t, expected, c.MetricConfigs)
+	assert.Equal(t, expectedMetricDecoration, c.MetricConfigs)
 }
 
 func TestDroppingOriginMetrics(t *testing.T) {
@@ -506,9 +500,9 @@ func TestMissMetricConfig(t *testing.T) {
                 `
 	c, err := buildCloudWatchFromToml(contents)
 
-	assert.True(t, err == nil)
+	assert.NoError(t, err)
 
-	assert.True(t, c.MetricConfigs == nil)
+	assert.Nil(t, c.MetricConfigs)
 }
 
 func buildCloudWatchFromToml(contents string) (*CloudWatch, error) {
