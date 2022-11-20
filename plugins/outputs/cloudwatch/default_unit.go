@@ -38,8 +38,8 @@ var metricDefaultUnit = pluginsSupportedMetricDefaultUnit{
 	},
 
 	"swap": {
-		supportedMetrics:   []string{"used", "total", "used_percent", "free"},
-		defaultMetricsUnit: []string{cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitPercent, cloudwatch.StandardUnitBytes},
+		supportedMetrics:   []string{"used", "used_percent", "free"},
+		defaultMetricsUnit: []string{cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitBytes, cloudwatch.StandardUnitPercent},
 	},
 
 	"mem": {
@@ -67,7 +67,7 @@ var metricDefaultUnit = pluginsSupportedMetricDefaultUnit{
 
 	"processes": {
 		supportedMetrics: []string{"blocked", "idle", "paging", "stopped", "total",
-			"total_threads", "wait", "zombie", "running", "sleeping", "dead"},
+			"total_threads", "wait", "zombies", "running", "sleeping", "dead"},
 		defaultMetricsUnit: []string{cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount,
 			cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount, cloudwatch.StandardUnitCount},
 	},

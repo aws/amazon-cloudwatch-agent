@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//Check the case when the input is in "nvidia_gpu":{//specific configuration}
+// Check the case when the input is in "nvidia_gpu":{//specific configuration}
 func TestSpecificConfig(t *testing.T) {
 	n := new(NvidiaSmi)
 	var input interface{}
