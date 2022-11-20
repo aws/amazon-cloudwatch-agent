@@ -8,26 +8,23 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-
-	"os"
+	"github.com/stretchr/testify/assert"
 
 	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/stretchr/testify/assert"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 func ReadFromFile(filename string) string {
@@ -62,7 +59,6 @@ func TestLogMetricOnPrem(t *testing.T) {
 	os.Unsetenv(config.HOST_IP)
 }
 
-
 func TestLogMetricOnPremise(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)
@@ -94,18 +90,11 @@ func TestLogMetricAndLogOnPrem(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeOnPrem)
 	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "linux")
 	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "darwin")
-	os.Unsetenv(config.HOST_NAME)
-	os.Unsetenv(config.HOST_IP)
-}
 
-func TestLogMetricAndLogOnPremise(t *testing.T) {
-	resetContext()
-	context.CurrentContext().SetRunInContainer(true)
-	os.Setenv(config.HOST_NAME, "host_name_from_env")
-	os.Setenv(config.HOST_IP, "127.0.0.1")
 	context.CurrentContext().SetMode(config.ModeOnPremise)
 	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "linux")
 	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "darwin")
+
 	os.Unsetenv(config.HOST_NAME)
 	os.Unsetenv(config.HOST_IP)
 }
@@ -129,14 +118,14 @@ func TestStatsDConfig(t *testing.T) {
 	checkTomlTranslation(t, "./sampleConfig/statsd_config.json", "./sampleConfig/statsd_config_windows.conf", "windows")
 }
 
-//Linux only for CollectD
+// Linux only for CollectD
 func TestCollectDConfig(t *testing.T) {
 	resetContext()
 	checkTomlTranslation(t, "./sampleConfig/collectd_config_linux.json", "./sampleConfig/collectd_config_linux.conf", "linux")
 	checkTomlTranslation(t, "./sampleConfig/collectd_config_linux.json", "./sampleConfig/collectd_config_linux.conf", "darwin")
 }
 
-//prometheus
+// prometheus
 func TestPrometheusConfig(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)

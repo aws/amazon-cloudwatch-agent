@@ -33,7 +33,7 @@ var Registered_Metrics_Darwin = map[string][]string{
 	"disk":      {"free", "inodes_free", "inodes_total", "inodes_used", "total", "used", "used_percent"},
 	"diskio":    {"iops_in_progress", "io_time", "reads", "read_bytes", "read_time", "writes", "write_bytes", "write_time"},
 	"swap":      {"free", "used", "used_percent"},
-	"mem":       {"active", "available", "available_percent", "buffered", "cached", "free", "inactive", "total", "used", "used_percent"},
+	"mem":       {"active", "available", "available_percent", "free", "inactive", "total", "used", "used_percent"},
 	"net":       {"bytes_sent", "bytes_recv", "drop_in", "drop_out", "err_in", "err_out", "packets_sent", "packets_recv"},
 	"netstat":   {"tcp_close", "tcp_close_wait", "tcp_closing", "tcp_established", "tcp_fin_wait1", "tcp_fin_wait2", "tcp_last_ack", "tcp_listen", "tcp_none", "tcp_syn_sent", "tcp_syn_recv", "tcp_time_wait", "udp_socket"},
 	"processes": {"blocked", "idle", "running", "sleeping", "stopped", "total", "zombies"},

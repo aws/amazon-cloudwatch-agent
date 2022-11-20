@@ -15,6 +15,7 @@ type pluginsSupportedMetricDefaultUnit map[string]struct {
 var standardUnitValues = cloudwatch.StandardUnit_Values()
 
 // Supported Metrics https://github.com/aws/amazon-cloudwatch-agent/blob/6451e8b913bcf9892f2cead08e335c913c690e6d/translator/translate/metrics/config/registered_metrics.go
+// Some of the metrics are not declared here are StandardUnitNone as default
 var metricDefaultUnit = pluginsSupportedMetricDefaultUnit{
 	"cpu": {
 		supportedMetrics: []string{"usage_active", "usage_idle", "usage_nice", "usage_guest", "usage_guest_nice",
