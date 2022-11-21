@@ -317,7 +317,6 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v2
-      - uses: olafurpg/setup-gpg@v3
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
