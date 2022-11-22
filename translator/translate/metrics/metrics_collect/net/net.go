@@ -48,8 +48,6 @@ func (n *Net) ApplyRule(input interface{}) (returnKey string, returnVal interfac
 		//Process common config, like measurement
 		hasValidMetric := util.ProcessLinuxCommonConfig(m[SectionKey_Net_Linux], SectionKey_Net_Linux, GetCurPath(), result)
 		if hasValidMetric {
-			//Process report_deltas
-			util.ProcessReportDeltasForNet(m[SectionKey_Net_Linux], result)
 			resArray = append(resArray, result)
 			returnKey = SectionKey_Net_Linux
 			returnVal = resArray

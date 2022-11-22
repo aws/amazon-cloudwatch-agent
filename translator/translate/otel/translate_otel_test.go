@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{},
 			},
-			wantErrContains: "invalid otel config: no enabled receivers",
+			wantErrContains: "no valid pipelines",
 		},
 		"WithMinimalConfig": {
 			input: map[string]interface{}{

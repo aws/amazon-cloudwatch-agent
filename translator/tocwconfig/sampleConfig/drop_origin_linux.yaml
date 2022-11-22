@@ -1,5 +1,5 @@
 exporters:
-    awscloudwatch/host:
+    awscloudwatch:
         drop_original_metrics:
             cpu:
                 - cpu_usage_idle
@@ -23,17 +23,7 @@ exporters:
         resource_to_telemetry_conversion:
             enabled: true
 extensions: {}
-processors:
-    cumulativetodelta/host:
-        exclude:
-            match_type: ""
-            metrics: []
-            regexp: null
-        include:
-            match_type: ""
-            metrics: []
-            regexp: null
-        max_staleness: 0s
+processors: {}
 receivers:
     telegraf_cpu:
         collection_interval: 10s
@@ -46,9 +36,8 @@ service:
     pipelines:
         metrics/host:
             exporters:
-                - awscloudwatch/host
-            processors:
-                - cumulativetodelta/host
+                - awscloudwatch
+            processors: []
             receivers:
                 - telegraf_cpu
                 - telegraf_disk

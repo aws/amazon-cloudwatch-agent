@@ -1,5 +1,5 @@
 exporters:
-    awscloudwatch/host:
+    awscloudwatch:
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 150
@@ -9,10 +9,12 @@ exporters:
             enabled: true
 extensions: {}
 processors:
-    cumulativetodelta/host:
+    cumulativetodelta/hostDeltaMetrics:
         exclude:
-            match_type: ""
-            metrics: []
+            match_type: strict
+            metrics:
+                - iops_in_progress
+                - diskio_iops_in_progress
             regexp: null
         include:
             match_type: ""
@@ -41,18 +43,23 @@ service:
     pipelines:
         metrics/host:
             exporters:
-                - awscloudwatch/host
-            processors:
-                - cumulativetodelta/host
+                - awscloudwatch
+            processors: []
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
-                - telegraf_diskio
                 - telegraf_ethtool
                 - telegraf_mem
                 - telegraf_netstat
                 - telegraf_nvidia_smi
                 - telegraf_swap
+        metrics/hostDeltaMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - cumulativetodelta/hostDeltaMetrics
+            receivers:
+                - telegraf_diskio
     telemetry:
         logs:
             development: false

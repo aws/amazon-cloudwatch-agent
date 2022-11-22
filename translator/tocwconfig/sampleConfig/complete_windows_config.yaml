@@ -1,5 +1,5 @@
 exporters:
-    awscloudwatch/host:
+    awscloudwatch:
         endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
@@ -27,17 +27,7 @@ exporters:
             - - d1
             - []
 extensions: {}
-processors:
-    cumulativetodelta/host:
-        exclude:
-            match_type: ""
-            metrics: []
-            regexp: null
-        include:
-            match_type: ""
-            metrics: []
-            regexp: null
-        max_staleness: 0s
+processors: {}
 receivers:
     telegraf_logfile:
         collection_interval: 1m0s
@@ -58,9 +48,8 @@ service:
     pipelines:
         metrics/host:
             exporters:
-                - awscloudwatch/host
-            processors:
-                - cumulativetodelta/host
+                - awscloudwatch
+            processors: []
             receivers:
                 - telegraf_logfile
                 - telegraf_nvidia_smi

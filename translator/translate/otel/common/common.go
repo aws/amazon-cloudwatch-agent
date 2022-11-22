@@ -29,6 +29,10 @@ const (
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
 	Json                         = "json"
+	DiskIOName                   = "diskio"
+	NetName                      = "net"
+	HostPipelineName             = "host"
+	HostDeltaMetricsPipelineName = "hostDeltaMetrics"
 )
 
 // Translator is used to translate the JSON config into an

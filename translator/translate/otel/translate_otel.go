@@ -6,8 +6,8 @@ package otel
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
@@ -18,13 +18,14 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	receiverAdapter "github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/containerinsights"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
 )
@@ -44,7 +45,7 @@ func NewTranslator() *Translator {
 		),
 		processorTranslators: common.NewTranslatorMap(
 			processor.NewDefaultTranslator(batchprocessor.NewFactory()),
-			processor.NewDefaultTranslator(cumulativetodeltaprocessor.NewFactory()),
+			cumulativetodeltaprocessor.NewTranslator(),
 		),
 		exporterTranslators: common.NewTranslatorMap(
 			awscloudwatch.NewTranslator(),
@@ -67,8 +68,21 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*service.Conf
 	}
 	t.receiverTranslators.Merge(found)
 
+	// split out delta receiver types
+	receiverTypes := collections.Keys(found)
+	var deltaMetricsReceivers []config.Type
+	var hostReceiverTypes []config.Type
+	for i := range receiverTypes {
+		if receiverTypes[i] == receiverAdapter.TelegrafPrefix+common.DiskIOName || receiverTypes[i] == receiverAdapter.TelegrafPrefix+common.NetName {
+			deltaMetricsReceivers = append(deltaMetricsReceivers, receiverTypes[i])
+		} else {
+			hostReceiverTypes = append(hostReceiverTypes, receiverTypes[i])
+		}
+	}
+
 	pipelines, err := pipeline.NewTranslator(
-		host.NewTranslator(collections.Keys(found)),
+		host.NewTranslator(hostReceiverTypes, common.HostPipelineName),
+		host.NewTranslator(deltaMetricsReceivers, common.HostDeltaMetricsPipelineName),
 		containerinsights.NewTranslator(),
 	).Translate(conf)
 	if err != nil {

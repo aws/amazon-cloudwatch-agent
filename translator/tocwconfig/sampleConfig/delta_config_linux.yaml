@@ -1,50 +1,52 @@
 exporters:
-    awscloudwatch/host:
-        force_flush_interval: 1m0s
-        max_datums_per_call: 1000
-        max_values_per_datum: 150
-        metric_decoration:
-            - category: diskio
-              name: iops_in_progress
-              rename: DRIVER_DISKIO_IOPS_IN_PROGRESS
-              unit: Count
-            - category: diskio
-              name: read_time
-              rename: DRIVER_DISKIO_READ_TIME
-              unit: Milliseconds
-            - category: diskio
-              name: write_time
-              rename: DRIVER_DISKIO_WRITE_TIME
-              unit: Milliseconds
-        namespace: CWAgent
-        region: us-east-1
-        resource_to_telemetry_conversion:
-            enabled: true
+    awscloudwatch:
+      force_flush_interval: 1m0s
+      max_datums_per_call: 1000
+      max_values_per_datum: 150
+      metric_decoration:
+        - category: diskio
+          name: iops_in_progress
+          rename: DRIVER_DISKIO_IOPS_IN_PROGRESS
+          unit: Count
+        - category: diskio
+          name: read_time
+          rename: DRIVER_DISKIO_READ_TIME
+          unit: Milliseconds
+        - category: diskio
+          name: write_time
+          rename: DRIVER_DISKIO_WRITE_TIME
+          unit: Milliseconds
+      namespace: CWAgent
+      region: us-east-1
+      resource_to_telemetry_conversion:
+        enabled: true
 extensions: {}
 processors:
-    cumulativetodelta/host:
-        exclude:
-            match_type: ""
-            metrics: []
-            regexp: null
-        include:
-            match_type: ""
-            metrics: []
-            regexp: null
-        max_staleness: 0s
+  cumulativetodelta/hostDeltaMetrics:
+    exclude:
+      match_type: strict
+      metrics:
+        - iops_in_progress
+        - diskio_iops_in_progress
+      regexp: null
+    include:
+      match_type: ""
+      metrics: []
+      regexp: null
+    max_staleness: 0s
 receivers:
     telegraf_diskio:
         collection_interval: 1m0s
 service:
     extensions: []
     pipelines:
-        metrics/host:
-            exporters:
-                - awscloudwatch/host
-            processors:
-                - cumulativetodelta/host
-            receivers:
-                - telegraf_diskio
+      metrics/hostDeltaMetrics:
+        exporters:
+          - awscloudwatch
+        processors:
+          - cumulativetodelta/hostDeltaMetrics
+        receivers:
+          - telegraf_diskio
     telemetry:
         logs:
             development: false

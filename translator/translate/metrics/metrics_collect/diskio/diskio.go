@@ -47,9 +47,6 @@ func (d *DiskIO) ApplyRule(input interface{}) (returnKey string, returnVal inter
 		//Process common config, like measurement
 		hasValidMetric := util.ProcessLinuxCommonConfig(m[SectionKey_DiskIO_Linux], SectionKey_DiskIO_Linux, GetCurPath(), result)
 		if hasValidMetric {
-			//Process report_deltas
-			util.ProcessReportDeltasForDiskIO(m[SectionKey_DiskIO_Linux], result)
-
 			resArray = append(resArray, result)
 			returnKey = SectionKey_DiskIO_Linux
 			returnVal = resArray

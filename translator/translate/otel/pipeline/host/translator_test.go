@@ -21,31 +21,50 @@ func TestTranslator(t *testing.T) {
 		processors   []string
 		exporters    []string
 	}
-	ht := NewTranslator([]config.Type{"other", "nop"})
-	require.EqualValues(t, "host", ht.Type())
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *want
-		wantErr error
+		input        map[string]interface{}
+		pipelineName config.Type
+		want         *want
+		wantErr      error
 	}{
 		"WithoutMetricsKey": {
-			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{Type: "host", JsonKey: "metrics"},
+			input:        map[string]interface{}{},
+			pipelineName: common.HostPipelineName,
+			wantErr:      &common.MissingKeyError{Type: "host", JsonKey: "metrics"},
 		},
 		"WithMetricsKey": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{},
 			},
+			pipelineName: common.HostPipelineName,
 			want: &want{
 				pipelineType: "metrics/host",
 				receivers:    []string{"nop", "other"},
-				processors:   []string{"cumulativetodelta/host"},
-				exporters:    []string{"awscloudwatch/host"},
+				processors:   []string{},
+				exporters:    []string{"awscloudwatch"},
+			},
+		},
+		"WithMetricsKeyNet": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"net": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName: common.HostDeltaMetricsPipelineName,
+			want: &want{
+				pipelineType: "metrics/hostDeltaMetrics",
+				receivers:    []string{"nop", "other"},
+				processors:   []string{"cumulativetodelta/hostDeltaMetrics"},
+				exporters:    []string{"awscloudwatch"},
 			},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ht := NewTranslator([]config.Type{"other", "nop"}, testCase.pipelineName)
+			require.EqualValues(t, testCase.pipelineName, ht.Type())
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := ht.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)

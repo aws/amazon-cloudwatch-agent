@@ -98,16 +98,6 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 	result["inputs"] = allInputPlugin
 	result["outputs"] = allOutputPlugin
 
-	//we need to add delta processor because (only) diskio and net input plugins report delta metric
-	if allInputPlugin["diskio"] != nil || allInputPlugin["net"] != nil {
-		if allProcessorPlugin == nil {
-			allProcessorPlugin = make(map[string]interface{})
-		}
-		deltaProcessorSettings := make([]interface{}, 0)
-		deltaProcessorSettings = append(deltaProcessorSettings, make(map[string]interface{}))
-		allProcessorPlugin["delta"] = deltaProcessorSettings
-	}
-
 	if allProcessorPlugin != nil {
 		result["processors"] = allProcessorPlugin
 	}
