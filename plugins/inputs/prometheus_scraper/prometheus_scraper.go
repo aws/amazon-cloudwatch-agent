@@ -44,8 +44,6 @@ const sampleConfig = `
       [[inputs.prometheus_scraper.ecs_service_discovery.task_definition_list]]
         sd_metrics_ports = "9902"
         sd_task_definition_name = "task_def_2"
-    [inputs.prometheus_scraper.tags]
-      metricPath = "logs"
 `
 
 func (p *PrometheusScraper) SampleConfig() string {
