@@ -96,7 +96,7 @@ agent_start() {
      if [ "${SYSTEMD}" = 'true' ]; then
           systemctl daemon-reload || return
           systemctl enable "${agent_name}.service" || return
-          service "${agent_name}" restart || return
+          systemctl restart "${agent_name}.service" || return
      else
           start "${agent_name}" || return
           sleep 1
