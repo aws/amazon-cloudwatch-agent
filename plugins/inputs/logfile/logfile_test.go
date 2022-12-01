@@ -209,7 +209,20 @@ func TestRestoreState(t *testing.T) {
 	tt.Log = TestLogger{t}
 	tt.FileStateFolder = tmpfolder
 	roffset, err := tt.restoreState(logFilePath)
+	require.NoError(t, err)
 	assert.Equal(t, offset, roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
+
+	// Test negative offset.
+	offset = int64(-8675)
+	err = ioutil.WriteFile(
+		tmpfolder+string(filepath.Separator)+logFileStateFileName,
+		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
+		os.ModePerm)
+	require.NoError(t, err)
+	roffset, err = tt.restoreState(logFilePath)
+	require.Error(t, err)
+	assert.Equal(t, int64(0), roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
+
 	tt.Stop()
 }
 
@@ -311,7 +324,7 @@ func TestLogsMultilineEvent(t *testing.T) {
 	tt.Stop()
 }
 
-//When file is removed, the related tail routing should exit
+// When file is removed, the related tail routing should exit
 func TestLogsFileRemove(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
@@ -429,9 +442,9 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 	}
 	t.Log("Verify every line written to the temp file is received.")
 	for i := 0; i < numLines; i++ {
-		logEvent := <- evts
+		logEvent := <-evts
 		require.Equal(t, msg, logEvent.Message())
-		if i != numLines / 2 {
+		if i != numLines/2 {
 			continue
 		}
 		// Halfway through start another goroutine to create another temp file.
