@@ -23,7 +23,6 @@
     interval = "1s"
     mount_points = ["/"]
     ignore_fs = []
-    interval = "1s"
     fieldpass = ["total", "free", "used", "used_percent", "inodes_total", "inodes_free", "inodes_used"]
     tagexclude = ["mode"]
 
@@ -45,3 +44,10 @@
     interval = "1s"
     fieldpass = ["tcp_close_wait", "tcp_closing", "tcp_fin_wait1", "tcp_fin_wait2", "tcp_last_ack", "tcp_listen", "tcp_none", "tcp_syn_recv", "tcp_time_wait", "udp_socket","tcp_established", "tcp_syn_sent", "tcp_close"]
 
+[[inputs.statsd]]
+    interval = "1s"
+    metric_separator = "_"
+    service_address = "127.0.0.1:14224"
+
+[[inputs.socket_listener]]
+    service_address = "tcp://127.0.0.1:25826"
