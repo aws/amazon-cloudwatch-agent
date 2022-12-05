@@ -519,6 +519,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
