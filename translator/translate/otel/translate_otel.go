@@ -26,6 +26,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/cumulativetodeltaprocessor"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
 )
@@ -46,6 +47,7 @@ func NewTranslator() *Translator {
 		processorTranslators: common.NewTranslatorMap(
 			processor.NewDefaultTranslator(batchprocessor.NewFactory()),
 			cumulativetodeltaprocessor.NewTranslator(),
+			ec2taggerprocessor.NewTranslator(),
 		),
 		exporterTranslators: common.NewTranslatorMap(
 			awscloudwatch.NewTranslator(),

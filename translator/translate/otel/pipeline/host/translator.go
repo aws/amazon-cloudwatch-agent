@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
@@ -54,6 +55,12 @@ func (t translator) Translate(conf *confmap.Conf) (common.Pipeline, error) {
 	if common.HostDeltaMetricsPipelineName == t.pipelineName {
 		log.Printf("D! delta processor required because metrics with diskio or net are required")
 		processors = append(processors, config.NewComponentIDWithName("cumulativetodelta", string(t.pipelineName)))
+	}
+
+	key := common.ConfigKey(common.MetricsKey, "append_dimensions")
+	if conf.IsSet(key) {
+		log.Printf("D! ec2tagger processor required because append_dimensions is set")
+		processors = append(processors, config.NewComponentID(ec2tagger.TypeStr))
 	}
 	id := config.NewComponentIDWithName(config.MetricsDataType, string(t.pipelineName))
 	pipeline := &service.ConfigServicePipeline{

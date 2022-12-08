@@ -61,7 +61,6 @@ type (
 	processorsConfig struct {
 		Delta        []processorDelta
 		EcsDecorator []ecsDecoratorConfig
-		Ec2tagger    []ec2TaggerConfig
 		EmfProcessor []emfProcessorConfig
 		K8sDecorator []k8sDecoratorConfig
 	}
@@ -299,13 +298,6 @@ type (
 		HostIp  string `toml:"host_ip"`
 		Order   int
 		TagPass map[string][]string
-	}
-
-	ec2TaggerConfig struct {
-		Ec2InstanceTagKeys     []string `toml:"ec2_instance_tag_keys"`
-		Ec2MetadataTags        []string `toml:"ec2_metadata_tags"`
-		RefreshIntervalSeconds string   `toml:"refresh_interval_seconds"`
-		TagPass                map[string][]string
 	}
 
 	emfProcessorConfig struct {

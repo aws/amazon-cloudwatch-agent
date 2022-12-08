@@ -31,7 +31,7 @@ func (t *translator) Type() config.Type {
 	return t.factory.Type()
 }
 
-// Translate creates an exporter config based on the fields in the
+// Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 // We use cumulative to delta processor with Disk And Net since these metrics are cumulative. We want to know change in value over a time period
 func (t *translator) Translate(_ *confmap.Conf) (config.Processor, error) {

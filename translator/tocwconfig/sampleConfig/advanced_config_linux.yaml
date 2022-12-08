@@ -21,6 +21,14 @@ processors:
             metrics: []
             regexp: null
         max_staleness: 0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        refresh_interval_seconds: 0s
 receivers:
     telegraf_cpu:
         collection_interval: 1m0s
@@ -44,7 +52,8 @@ service:
         metrics/host:
             exporters:
                 - awscloudwatch
-            processors: []
+            processors:
+                - ec2tagger
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
@@ -58,6 +67,7 @@ service:
                 - awscloudwatch
             processors:
                 - cumulativetodelta/hostDeltaMetrics
+                - ec2tagger
             receivers:
                 - telegraf_diskio
     telemetry:

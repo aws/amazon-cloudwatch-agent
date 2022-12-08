@@ -44,6 +44,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 )
@@ -388,6 +389,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 
 	processors, err := component.MakeProcessorFactoryMap(
 		cumulativetodeltaprocessor.NewFactory(),
+		ec2tagger.NewFactory(),
 	)
 	if err != nil {
 		return factories, err

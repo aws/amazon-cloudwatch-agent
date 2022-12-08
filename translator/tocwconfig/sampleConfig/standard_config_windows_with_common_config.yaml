@@ -10,7 +10,15 @@ exporters:
             enabled: true
         shared_credential_file: fake-path
 extensions: {}
-processors: {}
+processors:
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        refresh_interval_seconds: 0s
 receivers:
     telegraf_win_perf_counters:
         collection_interval: 1m0s
@@ -20,7 +28,8 @@ service:
         metrics/host:
             exporters:
                 - awscloudwatch
-            processors: []
+            processors:
+                - ec2tagger
             receivers:
                 - telegraf_win_perf_counters
     telemetry:
