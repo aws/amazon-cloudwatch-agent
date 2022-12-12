@@ -7,7 +7,7 @@
       "prometheus": {
         "cluster_name": "TestCluster",
         "log_group_name": "/aws/ecs/containerinsights/TestCluster/prometheus",
-        "prometheus_config_path": "file:/tmp/prometheus.yaml",
+        "prometheus_config_path": "{prometheusFileName}",
         "ecs_service_discovery": {
           "docker_label": {
             "sd_job_name_label": "ECS_PROMETHEUS_JOB_NAME_1",
@@ -43,7 +43,7 @@
           ],
           "sd_cluster_region": "us-west-1",
           "sd_frequency": "1m",
-          "sd_result_file": "/tmp/cwagent_ecs_auto_sd.yaml",
+          "sd_result_file": "{ecsSdFileName}",
           "sd_target_cluster": "ecs-cluster-a"
         },
         "emf_processor": {

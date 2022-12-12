@@ -9,6 +9,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -377,9 +383,15 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 
 	factories := component.Factories{}
 
-	receiverFactories := make([]component.ReceiverFactory, len(telegrafConfig.InputNames()))
-	for i, inputFilter := range telegrafConfig.InputNames() {
-		receiverFactories[i] = telegrafAdapter.NewReceiverFactory(inputFilter)
+	receiverFactories := []component.ReceiverFactory{
+		// OTel native receivers
+		awscontainerinsightreceiver.NewFactory(),
+		prometheusreceiver.NewFactory(),
+	}
+
+	// Adapted receivers from telegraf
+	for _, inputFilter := range telegrafConfig.InputNames() {
+		receiverFactories = append(receiverFactories, telegrafAdapter.NewReceiverFactory(inputFilter))
 	}
 
 	receivers, err := component.MakeReceiverFactoryMap(receiverFactories...)
@@ -388,8 +400,11 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 	}
 
 	processors, err := component.MakeProcessorFactoryMap(
+		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		ec2tagger.NewFactory(),
+		metricstransformprocessor.NewFactory(),
+		resourceprocessor.NewFactory(),
 	)
 	if err != nil {
 		return factories, err
@@ -400,7 +415,13 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		loggingexporter.NewFactory(),
 		cloudwatch.NewFactory(),
 	)
+	if err != nil {
+		return factories, err
+	}
 
+	extensions, err := component.MakeExtensionFactoryMap(
+		ecsobserver.NewFactory(),
+	)
 	if err != nil {
 		return factories, err
 	}
@@ -409,6 +430,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		Receivers:  receivers,
 		Processors: processors,
 		Exporters:  exporters,
+		Extensions: extensions,
 	}
 
 	return factories, nil

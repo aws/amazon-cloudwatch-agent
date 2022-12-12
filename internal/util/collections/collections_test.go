@@ -40,7 +40,7 @@ func TestCopyMapDoesNotShareReferenceToOriginalMap(t *testing.T) {
 }
 
 // TODO: could change the implementation to recurse and do a deep copy of everything in the
-//       input map, but not necessary at the moment. Documenting current behavior here.
+// input map, but not necessary at the moment. Documenting current behavior here.
 func TestCopyMapKeepsShallowReferenceToValuesInMap(t *testing.T) {
 	m := map[string]interface{}{
 		"foo": 1,
@@ -107,6 +107,22 @@ func TestMapSlice(t *testing.T) {
 	s := []string{"test", "value"}
 	got := MapSlice(s, strings.ToUpper)
 	require.Equal(t, []string{"TEST", "VALUE"}, got)
+}
+
+func TestWithNewKeys(t *testing.T) {
+	base := map[string]int{
+		"one": 100,
+		"two": 500,
+	}
+	mapper := map[string]string{
+		"two": "five",
+	}
+
+	got := WithNewKeys(base, mapper)
+	require.Equal(t, map[string]int{
+		"one":  100,
+		"five": 500,
+	}, got)
 }
 
 func TestPair(t *testing.T) {

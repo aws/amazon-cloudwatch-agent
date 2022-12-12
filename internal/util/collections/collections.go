@@ -62,6 +62,20 @@ func MapSlice[K any, V any](base []K, mapper func(K) V) []V {
 	return s
 }
 
+// WithNewKeys re-maps every key in a map as dictated by the mapper.
+// If the key does not have an entry in the mapper, it is left untouched.
+func WithNewKeys[K comparable, V any](base map[K]V, keyMapper map[K]K) map[K]V {
+	mapped := make(map[K]V, len(base))
+	for k, v := range base {
+		if _, ok := keyMapper[k]; ok {
+			mapped[keyMapper[k]] = v
+		} else {
+			mapped[k] = v
+		}
+	}
+	return mapped
+}
+
 // Pair is a struct with a K key and V value.
 type Pair[K any, V any] struct {
 	Key   K

@@ -5,11 +5,14 @@ package tocwconfig
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/BurntSushi/toml"
@@ -32,6 +35,14 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
+
+const (
+	prometheusFileNameToken = "prometheusFileName"
+	ecsSdFileNamToken       = "ecsSdFileName"
+)
+
+//go:embed sampleConfig/prometheus_config.yaml
+var prometheusConfig string
 
 func TestLogMetricOnly(t *testing.T) {
 	resetContext()
@@ -96,9 +107,23 @@ func TestPrometheusConfig(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)
 	os.Setenv(config.HOST_NAME, "host_name_from_env")
+	temp := t.TempDir()
+	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
+	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "")
-	checkTranslation(t, "prometheus_config_windows", "windows", nil, "")
+	tokenReplacements := map[string]string{
+		prometheusFileNameToken: strings.ReplaceAll(prometheusConfigFileName, "\\", "\\\\"),
+		ecsSdFileNamToken:       strings.ReplaceAll(ecsSdFileName, "\\", "\\\\"),
+	}
+	// Load prometheus config and replace ecs sd results file name token with temp file name
+	prometheusConfig = strings.ReplaceAll(prometheusConfig, "{"+ecsSdFileNamToken+"}", ecsSdFileName)
+	// Write the modified prometheus config to temp prometheus config file
+	err := os.WriteFile(prometheusConfigFileName, []byte(prometheusConfig), os.ModePerm)
+	require.NoError(t, err)
+	// In the following checks, we first load the json and replace tokens with the temp files
+	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
+	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
+	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
 	os.Unsetenv(config.HOST_NAME)
 }
 
@@ -207,14 +232,14 @@ func TestTomlToTomlComparison(t *testing.T) {
 	content, err := os.ReadFile(jsonFilePath)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(content, &input))
-	verifyToTomlTranslation(t, input, "./totomlconfig/tomlConfigTemplate/agentToml.conf")
+	verifyToTomlTranslation(t, input, "./totomlconfig/tomlConfigTemplate/agentToml.conf", map[string]string{})
 }
 
-func checkTranslation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string) {
+func checkTranslation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string, tokenReplacements ...map[string]string) {
 	jsonFilePath := fmt.Sprintf("./sampleConfig/%v.json", fileName)
 	tomlFilePath := fmt.Sprintf("./sampleConfig/%v%v.conf", fileName, appendString)
 	yamlFilePath := fmt.Sprintf("./sampleConfig/%v%v.yaml", fileName, appendString)
-	checkTranslationForPaths(t, jsonFilePath, tomlFilePath, yamlFilePath, targetPlatform)
+	checkTranslationForPaths(t, jsonFilePath, tomlFilePath, yamlFilePath, targetPlatform, tokenReplacements...)
 	if expectedEnvVars != nil {
 		content, err := os.ReadFile(jsonFilePath)
 		require.NoError(t, err)
@@ -222,15 +247,16 @@ func checkTranslation(t *testing.T, fileName string, targetPlatform string, expe
 	}
 }
 
-func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFilePath string, expectedYamlFilePath string, targetPlatform string) {
+func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFilePath string, expectedYamlFilePath string, targetPlatform string, tokenReplacements ...map[string]string) {
 	agent.Global_Config = *new(agent.Agent)
 	translator.SetTargetPlatform(targetPlatform)
 	var input interface{}
-	content, err := os.ReadFile(jsonFilePath)
+	blob, err := os.ReadFile(jsonFilePath)
+	content := replaceTokens(blob, tokenReplacements...)
 	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(content, &input))
-	verifyToTomlTranslation(t, input, expectedTomlFilePath)
-	verifyToYamlTranslation(t, input, expectedYamlFilePath)
+	require.NoError(t, json.Unmarshal([]byte(content), &input))
+	verifyToTomlTranslation(t, input, expectedTomlFilePath, tokenReplacements...)
+	verifyToYamlTranslation(t, input, expectedYamlFilePath, tokenReplacements...)
 }
 
 func readCommonConfig() {
@@ -256,14 +282,17 @@ func resetContext() {
 }
 
 // toml files in the given path will be parsed into the config toml struct and be compared as struct
-func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath string) {
+func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath string, tokenReplacements ...map[string]string) {
 	t.Helper()
 	tomlConfig, err := cmdutil.TranslateJsonMapToTomlConfig(input)
 	assert.NoError(t, err)
 
 	tomlStr := totomlconfig.ToTomlConfig(tomlConfig)
 	var expect tomlConfigTemplate.TomlConfig
-	_, decodeError := toml.DecodeFile(desiredTomlPath, &expect)
+	blob, err := os.ReadFile(desiredTomlPath)
+	assert.NoError(t, err)
+	content := replaceTokens(blob, tokenReplacements...)
+	_, decodeError := toml.Decode(content, &expect)
 	assert.NoError(t, decodeError)
 
 	var actual tomlConfigTemplate.TomlConfig
@@ -277,7 +306,7 @@ func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath st
 	assert.True(t, cmp.Equal(expect, actual, opt), "D! TOML diff: %s", cmp.Diff(expect, actual))
 }
 
-func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePath string) {
+func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePath string, tokenReplacements ...map[string]string) {
 	t.Helper()
 
 	// if the file doesn't exist, then that means it isn't supported yet, so the
@@ -290,7 +319,9 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		var expected interface{}
 		bs, err := os.ReadFile(expectedYamlFilePath)
 		require.NoError(t, err)
-		require.NoError(t, yaml.Unmarshal(bs, &expected))
+		content := replaceTokens(bs, tokenReplacements...)
+		content = strings.ReplaceAll(content, "\\\\", "\\")
+		require.NoError(t, yaml.Unmarshal([]byte(content), &expected))
 
 		var actual interface{}
 		yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(input)
@@ -303,6 +334,16 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		})
 		require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 	}
+}
+
+func replaceTokens(base []byte, tokenReplacements ...map[string]string) string {
+	content := string(base)
+	for _, replacements := range tokenReplacements {
+		for token, replacement := range replacements {
+			content = strings.ReplaceAll(content, strings.Join([]string{"{", token, "}"}, ""), replacement)
+		}
+	}
+	return content
 }
 
 func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, expectedEnvVars map[string]string) {

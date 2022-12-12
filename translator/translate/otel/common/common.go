@@ -25,6 +25,7 @@ const (
 	LogsCollectedKey             = "logs_collected"
 	ECSKey                       = "ecs"
 	KubernetesKey                = "kubernetes"
+	PrometheusKey                = "prometheus"
 	CredentialsKey               = "credentials"
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
@@ -98,6 +99,9 @@ type Pipeline *collections.Pair[config.ComponentID, *service.ConfigServicePipeli
 
 // Pipelines is a map of component IDs to service pipelines.
 type Pipelines map[config.ComponentID]*service.ConfigServicePipeline
+
+// Extensions is a map of component IDs to service extensions.
+type Extensions map[config.ComponentID]config.Extension
 
 // ConfigKey joins the keys separated by confmap.KeyDelimiter.
 // This helps translators navigate the confmap.Conf that the

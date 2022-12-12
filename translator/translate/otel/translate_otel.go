@@ -6,7 +6,12 @@ package otel
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/prometheus"
+	metricstransformprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/metricstransform"
+	resourceprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/resource"
 
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/config/configtelemetry"
@@ -29,6 +34,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/prometheus"
 )
 
 // Translator is used to create an OTEL config.
@@ -36,6 +42,7 @@ type Translator struct {
 	receiverTranslators  common.TranslatorMap[config.Receiver]
 	processorTranslators common.TranslatorMap[config.Processor]
 	exporterTranslators  common.TranslatorMap[config.Exporter]
+	extensionTranslators common.TranslatorMap[config.Extension]
 }
 
 // NewTranslator creates a new Translator.
@@ -43,15 +50,21 @@ func NewTranslator() *Translator {
 	return &Translator{
 		receiverTranslators: common.NewTranslatorMap(
 			awscontainerinsight.NewTranslator(),
+			prometheusreceiver.NewTranslator(),
 		),
 		processorTranslators: common.NewTranslatorMap(
 			processor.NewDefaultTranslator(batchprocessor.NewFactory()),
 			cumulativetodeltaprocessor.NewTranslator(),
 			ec2taggerprocessor.NewTranslator(),
+			metricstransformprocessor.NewTranslator(),
+			resourceprocessor.NewTranslator(),
 		),
 		exporterTranslators: common.NewTranslatorMap(
 			awscloudwatch.NewTranslator(),
 			awsemf.NewTranslator(),
+		),
+		extensionTranslators: common.NewTranslatorMap(
+			ecsobserver.NewTranslator(),
 		),
 	}
 }
@@ -86,20 +99,26 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*service.Conf
 		host.NewTranslator(hostReceiverTypes, common.HostPipelineName),
 		host.NewTranslator(deltaMetricsReceivers, common.HostDeltaMetricsPipelineName),
 		containerinsights.NewTranslator(),
+		prometheus.NewTranslator(),
 	).Translate(conf)
 	if err != nil {
 		return nil, fmt.Errorf("unable to translate pipelines: %w", err)
 	}
+	extensions, err := extension.NewTranslator(
+		ecsobserver.NewTranslator(),
+	).Translate(conf)
 	cfg := &service.Config{
 		Receivers:  map[config.ComponentID]config.Receiver{},
 		Exporters:  map[config.ComponentID]config.Exporter{},
 		Processors: map[config.ComponentID]config.Processor{},
+		Extensions: extensions,
 		Service: service.ConfigService{
 			Telemetry: telemetry.Config{
 				Logs:    telemetry.LogsConfig{Level: zapcore.InfoLevel, Encoding: common.Json},
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
 			},
-			Pipelines: pipelines,
+			Pipelines:  pipelines,
+			Extensions: collections.Keys(extensions),
 		},
 	}
 	if err = t.buildComponents(cfg, conf); err != nil {
