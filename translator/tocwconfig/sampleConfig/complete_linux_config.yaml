@@ -1,0 +1,124 @@
+exporters:
+    awscloudwatch:
+        drop_original_metrics:
+            cpu:
+                - cpu_usage_idle
+                - time_active
+        endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 5000
+        metric_decoration:
+            - category: cpu
+              name: usage_idle
+              rename: CPU_USAGE_IDLE
+              unit: unit
+            - category: cpu
+              name: usage_nice
+              unit: unit
+            - category: disk
+              name: free
+              rename: DISK_FREE
+              unit: unit
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+        role_arn: metrics_role_arn_value_test
+        rollup_dimensions:
+            - - ImageId
+            - - InstanceId
+              - InstanceType
+            - - d1
+            - []
+extensions: {}
+processors:
+    cumulativetodelta/hostDeltaMetrics:
+        exclude:
+            match_type: strict
+            metrics:
+                - iops_in_progress
+                - diskio_iops_in_progress
+            regexp: null
+        include:
+            match_type: ""
+            metrics: []
+            regexp: null
+        max_staleness: 0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        refresh_interval_seconds: 0s
+receivers:
+    telegraf_cpu:
+        collection_interval: 10s
+    telegraf_disk:
+        collection_interval: 1m0s
+    telegraf_diskio:
+        collection_interval: 1m0s
+    telegraf_logfile:
+        collection_interval: 10s
+    telegraf_mem:
+        collection_interval: 1s
+    telegraf_net:
+        collection_interval: 10s
+    telegraf_netstat:
+        collection_interval: 1m0s
+    telegraf_processes:
+        collection_interval: 10s
+    telegraf_procstat:
+        collection_interval: 10s
+    telegraf_socket_listener:
+        collection_interval: 10s
+    telegraf_statsd:
+        collection_interval: 10s
+    telegraf_swap:
+        collection_interval: 10s
+service:
+    extensions: []
+    pipelines:
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+            receivers:
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_logfile
+                - telegraf_mem
+                - telegraf_netstat
+                - telegraf_processes
+                - telegraf_procstat
+                - telegraf_socket_listener
+                - telegraf_statsd
+                - telegraf_swap
+        metrics/hostDeltaMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - cumulativetodelta/hostDeltaMetrics
+                - ec2tagger
+            receivers:
+                - telegraf_diskio
+                - telegraf_net
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: json
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: []
+        metrics:
+            address: ""
+            level: none
+        resource: {}
+        traces:
+            propagators: []

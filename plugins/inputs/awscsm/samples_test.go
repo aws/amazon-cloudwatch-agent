@@ -4,10 +4,9 @@
 package awscsm
 
 import (
+	"math/rand"
 	"reflect"
 	"testing"
-
-	"math/rand"
 )
 
 func TestSamples(t *testing.T) {

@@ -4,12 +4,12 @@
 package metric
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric/collectd"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric/linux"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric/statsd"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric/windows"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric/collectd"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric/linux"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric/statsd"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric/windows"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 type Collection struct {

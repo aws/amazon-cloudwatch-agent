@@ -4,7 +4,7 @@
 package providers
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/metametrics"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/metametrics"
 )
 
 type MockConfigProvider struct{}

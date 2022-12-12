@@ -8,7 +8,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
 
 func computeIPv4LoopbackAddressFromPort(port interface{}) string {

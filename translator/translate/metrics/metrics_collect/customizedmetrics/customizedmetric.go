@@ -7,18 +7,18 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/util"
 )
 
 type customizedMetric struct {
 }
 
-const Win_Rerf_Counters_Key = "win_perf_counters"
+const Win_Perf_Counters_Key = "win_perf_counters"
 
 func GetObjectPath(object string) string {
-	curPath := parent.GetCurPath() + Win_Rerf_Counters_Key + "/" + object + "/"
+	curPath := parent.GetCurPath() + Win_Perf_Counters_Key + "/" + object + "/"
 	return curPath
 }
 
@@ -49,7 +49,7 @@ func (c *customizedMetric) ApplyRule(input interface{}) (returnKey string, retur
 			sort.Sort(objectConfig)
 			mp["object"] = objectConfig
 		}
-		returnKey = Win_Rerf_Counters_Key
+		returnKey = Win_Perf_Counters_Key
 		returnVal = win_Perf_Counters_Array
 	}
 	return

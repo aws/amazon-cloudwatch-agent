@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
-
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/ianaindex"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
 )
 
 const (
@@ -169,7 +169,7 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 		return time.Time{}
 	}
 	index := config.TimestampRegexP.FindStringSubmatchIndex(logValue)
-	if index != nil && len(index) > 3 {
+	if len(index) > 3 {
 		timestampContent := (logValue)[index[2]:index[3]]
 		if len(index) > 5 {
 			start := index[4] - index[2]
@@ -209,7 +209,7 @@ func (config *FileConfig) isMultilineStart(logValue string) bool {
 }
 
 func ShouldPublish(logGroupName, logStreamName string, filters []*LogFilter, event logs.LogEvent) bool {
-	if filters == nil || len(filters) == 0 {
+	if len(filters) == 0 {
 		return true
 	}
 

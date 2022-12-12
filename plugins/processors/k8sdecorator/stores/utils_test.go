@@ -4,10 +4,11 @@
 package stores
 
 import (
-	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUtils_parseDeploymentFromReplicaSet(t *testing.T) {

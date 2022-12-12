@@ -5,14 +5,13 @@ package agentinfo
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 )
 
 const (
@@ -95,7 +94,7 @@ func readVersionFile() (string, error) {
 		return "", fmt.Errorf("the agent version file %s does not exist: %v", versionFilePath, err)
 	}
 
-	byteArray, err := ioutil.ReadFile(versionFilePath)
+	byteArray, err := os.ReadFile(versionFilePath)
 	if err != nil {
 		return "", fmt.Errorf("issue encountered when reading content from file %s: %v", versionFilePath, err)
 	}

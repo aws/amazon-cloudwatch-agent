@@ -1,0 +1,69 @@
+exporters:
+    awscloudwatch:
+        drop_original_metrics:
+            cpu:
+                - cpu_usage_idle
+                - time_active
+            nvidia_smi:
+                - utilization_gpu
+                - temperature_gpu
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        metric_decoration:
+            - category: cpu
+              name: usage_idle
+              rename: CPU_USAGE_IDLE
+              unit: unit
+            - category: cpu
+              name: usage_nice
+              unit: unit
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+extensions: {}
+processors:
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        refresh_interval_seconds: 0s
+receivers:
+    telegraf_cpu:
+        collection_interval: 10s
+    telegraf_disk:
+        collection_interval: 1m0s
+    telegraf_nvidia_smi:
+        collection_interval: 1m0s
+service:
+    extensions: []
+    pipelines:
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+            receivers:
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_nvidia_smi
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: "json"
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: []
+        metrics:
+            address: ""
+            level: none
+        resource: {}
+        traces:
+            propagators: []

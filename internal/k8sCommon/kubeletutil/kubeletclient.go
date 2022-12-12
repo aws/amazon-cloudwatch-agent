@@ -5,17 +5,18 @@ package kubeletutil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
-	"errors"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/tls"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/tls"
 )
 
 type KubeClient struct {
@@ -27,13 +28,13 @@ type KubeClient struct {
 	tls.ClientConfig
 }
 
-var ErrKubeClientAccessFailure = errors.New("KubeClinet Access Failure")
+var ErrKubeClientAccessFailure = errors.New("KubeClient Access Failure")
 
 func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 	var result []corev1.Pod
 	url := fmt.Sprintf("https://%s:%s/pods", k.KubeIP, k.Port)
 
-	var req, err = http.NewRequest("GET", url, nil)
+	var req, _ = http.NewRequest("GET", url, nil)
 	var resp *http.Response
 
 	k.InsecureSkipVerify = true
@@ -55,7 +56,7 @@ func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 	}
 
 	if k.BearerToken != "" {
-		token, err := ioutil.ReadFile(k.BearerToken)
+		token, err := os.ReadFile(k.BearerToken)
 		if err != nil {
 			return result, err
 		}
@@ -75,7 +76,7 @@ func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 		return result, ErrKubeClientAccessFailure
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("E! Fail to read request %s body: %s", url, err)
 		return result, err

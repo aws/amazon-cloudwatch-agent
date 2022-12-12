@@ -10,20 +10,21 @@ import (
 	"path/filepath"
 	"runtime"
 
-	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/aws-sdk-go/aws/session"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ecsutil"
 )
 
 const (
 	DEFAULT_PROFILE = "AmazonCloudWatchAgent"
 )
 
-var DetectRegion func(mode string, credsConfig map[string]string) string = detectRegion
-var DetectCredentialsPath func() string = detectCredentialsPath
+var DetectRegion = detectRegion
+var DetectCredentialsPath = detectCredentialsPath
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 
 func DetectAgentMode(configuredMode string) string {
@@ -101,7 +102,7 @@ func detectRegion(mode string, credsConfig map[string]string) (region string) {
 		fmt.Println("I! Trying to detect region from ecs")
 		region = defaultECSRegion()
 	}
-	
+
 	return
 }
 

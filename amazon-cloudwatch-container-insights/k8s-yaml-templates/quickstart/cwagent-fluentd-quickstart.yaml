@@ -225,7 +225,6 @@ data:
     @include containers.conf
     @include systemd.conf
     @include host.conf
-
     <match fluent.**>
       @type null
     </match>
@@ -244,7 +243,6 @@ data:
         time_format %Y-%m-%dT%H:%M:%S.%NZ
       </parse>
     </source>
-
     <source>
       @type tail
       @id in_tail_cwagent_logs
@@ -258,7 +256,6 @@ data:
         time_format %Y-%m-%dT%H:%M:%S.%NZ
       </parse>
     </source>
-
     <source>
       @type tail
       @id in_tail_fluentd_logs
@@ -272,13 +269,11 @@ data:
         time_format %Y-%m-%dT%H:%M:%S.%NZ
       </parse>
     </source>
-
     <label @fluentdlogs>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_fluentd
       </filter>
-
       <filter **>
         @type record_transformer
         @id filter_fluentd_stream_transformer
@@ -286,19 +281,16 @@ data:
           stream_name ${tag_parts[3]}
         </record>
       </filter>
-
       <match **>
         @type relabel
         @label @NORMAL
       </match>
     </label>
-
     <label @containers>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata
       </filter>
-
       <filter **>
         @type record_transformer
         @id filter_containers_stream_transformer
@@ -306,7 +298,6 @@ data:
           stream_name ${tag_parts[3]}
         </record>
       </filter>
-
       <filter **>
         @type concat
         key log
@@ -315,19 +306,16 @@ data:
         flush_interval 5
         timeout_label @NORMAL
       </filter>
-
       <match **>
         @type relabel
         @label @NORMAL
       </match>
     </label>
-
     <label @cwagentlogs>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_cwagent
       </filter>
-
       <filter **>
         @type record_transformer
         @id filter_cwagent_stream_transformer
@@ -335,7 +323,6 @@ data:
           stream_name ${tag_parts[3]}
         </record>
       </filter>
-
       <filter **>
         @type concat
         key log
@@ -344,13 +331,11 @@ data:
         flush_interval 5
         timeout_label @NORMAL
       </filter>
-
       <match **>
         @type relabel
         @label @NORMAL
       </match>
     </label>
-
     <label @NORMAL>
       <match **>
         @type cloudwatch_logs
@@ -387,7 +372,6 @@ data:
       read_from_head true
       tag kubelet.service
     </source>
-
     <source>
       @type systemd
       @id in_systemd_kubeproxy
@@ -406,7 +390,6 @@ data:
       read_from_head true
       tag kubeproxy.service
     </source>
-
     <source>
       @type systemd
       @id in_systemd_docker
@@ -425,13 +408,11 @@ data:
       read_from_head true
       tag docker.service
     </source>
-
     <label @systemd>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_systemd
       </filter>
-
       <filter **>
         @type record_transformer
         @id filter_systemd_stream_transformer
@@ -439,7 +420,6 @@ data:
           stream_name ${tag}-${record["hostname"]}
         </record>
       </filter>
-
       <match **>
         @type cloudwatch_logs
         @id out_cloudwatch_logs_systemd
@@ -469,7 +449,6 @@ data:
         @type syslog
       </parse>
     </source>
-
     <source>
       @type tail
       @id in_tail_secure
@@ -482,7 +461,6 @@ data:
         @type syslog
       </parse>
     </source>
-
     <source>
       @type tail
       @id in_tail_messages
@@ -495,13 +473,11 @@ data:
         @type syslog
       </parse>
     </source>
-
     <label @hostlogs>
       <filter **>
         @type kubernetes_metadata
         @id filter_kube_metadata_host
       </filter>
-
       <filter **>
         @type record_transformer
         @id filter_containers_stream_transformer_host
@@ -509,7 +485,6 @@ data:
           stream_name ${tag}-${record["host"]}
         </record>
       </filter>
-
       <match host.**>
         @type cloudwatch_logs
         @id out_cloudwatch_logs_host_logs

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/metametrics"
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/metametrics"
 )
 
 type mockWriter struct {

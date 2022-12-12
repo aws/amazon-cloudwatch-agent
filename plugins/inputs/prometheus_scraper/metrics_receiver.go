@@ -6,13 +6,14 @@ package prometheus_scraper
 import (
 	"context"
 	"errors"
-	"github.com/prometheus/prometheus/model/exemplar"
-	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/model/value"
+	"github.com/prometheus/prometheus/model/metadata"
 	"log"
 	"math"
 
 	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/exemplar"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/value"
 	"github.com/prometheus/prometheus/storage"
 )
 
@@ -109,4 +110,9 @@ func (ma *metricAppender) Rollback() error {
 func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, l labels.Labels, e exemplar.Exemplar) (storage.SeriesRef, error) {
 	ma.Append(ref, l, e.Ts, e.Value)
 	return 0, nil
+}
+
+func (ma *metricAppender) UpdateMetadata(ref storage.SeriesRef, l labels.Labels, m metadata.Metadata) (storage.SeriesRef, error) {
+	// This code should no longer be used
+	return ref, nil
 }

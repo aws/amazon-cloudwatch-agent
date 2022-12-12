@@ -1,9 +1,13 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package logs
 
 import (
+	"testing"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestRetentionAlreadySet(t *testing.T) {

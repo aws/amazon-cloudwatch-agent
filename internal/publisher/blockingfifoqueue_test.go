@@ -26,7 +26,7 @@ func TestBlockingFifoQueue_BlockEnqueue(t *testing.T) {
 	}()
 	queue.Enqueue("test")
 	queue.Enqueue("test")
-	assert.True(t, time.Now().Sub(start).Seconds() >= 1.0)
+	assert.True(t, time.Since(start).Seconds() >= 1.0)
 }
 
 func TestBlockingFifoQueue_BlockDequeue(t *testing.T) {

@@ -12,8 +12,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
 var (
@@ -113,7 +113,7 @@ func chownRecursive(uid, gid int, dir string) error {
 
 func VerifyCredentials(ctx *context.Context, runAsUser string) {
 	credentials := ctx.Credentials()
-	if (config.ModeOnPrem == ctx.Mode()) || (config.ModeOnPremise == ctx.Mode())  {
+	if (config.ModeOnPrem == ctx.Mode()) || (config.ModeOnPremise == ctx.Mode()) {
 		if runAsUser != "root" {
 			if _, ok := credentials["shared_credential_file"]; !ok {
 				log.Panic("E! Credentials path is not set while runasuser is not root")

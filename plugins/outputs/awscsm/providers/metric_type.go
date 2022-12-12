@@ -6,7 +6,7 @@ package providers
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
 )
 
 // MetricType is a type aliased string used to

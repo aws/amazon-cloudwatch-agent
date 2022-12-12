@@ -11,7 +11,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/providers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/providers"
 )
 
 // Samples represent the raw request received from the input.

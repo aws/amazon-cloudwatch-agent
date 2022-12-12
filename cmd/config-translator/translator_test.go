@@ -4,15 +4,14 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"regexp"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldSuccess bool, expectedErrorMap map[string]int) {
@@ -180,13 +179,13 @@ func TestInvalidLogFilterConfig(t *testing.T) {
 
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
-	if files, err := ioutil.ReadDir("../../translator/totomlconfig/sampleConfig/"); err == nil {
+	if files, err := os.ReadDir("../../translator/tocwconfig/sampleConfig/"); err == nil {
 		re := regexp.MustCompile(".json")
 		for _, file := range files {
 			if re.MatchString(file.Name()) {
-				t.Logf("Validating ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
-				checkIfSchemaValidateAsExpected(t, "../../translator/totomlconfig/sampleConfig/"+file.Name(), true, map[string]int{})
-				t.Logf("Validated ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
+				t.Logf("Validating ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
+				checkIfSchemaValidateAsExpected(t, "../../translator/tocwconfig/sampleConfig/"+file.Name(), true, map[string]int{})
+				t.Logf("Validated ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
 			}
 		}
 	} else {

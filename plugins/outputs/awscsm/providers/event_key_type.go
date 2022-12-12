@@ -6,7 +6,7 @@ package providers
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
 )
 
 var errEventEntryKeyTypeNil = newLoopControlError("metric key type is nil", loopStateContinue)

@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/logscommon"
 )
 
 func TestParseValidValues_V1Only(t *testing.T) {

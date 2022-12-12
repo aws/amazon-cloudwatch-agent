@@ -4,12 +4,12 @@
 package prometheus_scraper
 
 import (
-	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/model/textparse"
 	"net/url"
 	"testing"
 
 	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/model/textparse"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,7 +45,7 @@ func (mStore *mockMetricMetadataStore) GetMetadata(metric string) (scrape.Metric
 
 // dummy function to satisfy the interface
 func (mStore *mockMetricMetadataStore) ListMetadata() []scrape.MetricMetadata {
-	return make([]scrape.MetricMetadata, 0, 0)
+	return make([]scrape.MetricMetadata, 0)
 }
 
 // dummy function to satisfy the interface
@@ -153,7 +153,7 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 	assert.Equal(t, ok, true)
 	assert.Equal(t, expectedMetricMetadata, metricMetadata)
 
-	metricMetadata, ok = mCache.Metadata("m3")
+	_, ok = mCache.Metadata("m3")
 	assert.Equal(t, ok, false)
 }
 

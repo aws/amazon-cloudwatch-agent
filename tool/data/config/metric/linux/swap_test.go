@@ -6,9 +6,9 @@ package linux
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 )
 
 func TestSwap_ToMap(t *testing.T) {

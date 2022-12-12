@@ -4,7 +4,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetJsonSchema(t *testing.T) {
-	jsonFile, err := ioutil.ReadFile("./schema.json")
+	jsonFile, err := os.ReadFile("./schema.json")
 	if err != nil {
 		panic(err)
 	}
