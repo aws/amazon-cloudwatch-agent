@@ -214,7 +214,7 @@ func TestRestoreState(t *testing.T) {
 
 	// Test negative offset.
 	offset = int64(-8675)
-	err = ioutil.WriteFile(
+	err = os.WriteFile(
 		tmpfolder+string(filepath.Separator)+logFileStateFileName,
 		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
 		os.ModePerm)
