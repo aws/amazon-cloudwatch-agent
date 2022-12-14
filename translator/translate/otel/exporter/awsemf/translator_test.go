@@ -13,6 +13,7 @@ import (
 )
 
 var nilSlice []string
+var nilMetricDescriptorsSlice []awsemfexporter.MetricDescriptor
 
 func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
@@ -57,6 +58,7 @@ func TestTranslator(t *testing.T) {
 							"instance_memory_working_set", "instance_network_total_bytes", "instance_number_of_running_tasks"},
 					},
 				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheus": {
@@ -75,10 +77,10 @@ func TestTranslator(t *testing.T) {
 										"metric_selectors": []string{"^coredns_dns_request_type_count_total$"},
 									},
 								},
-								//"metric_unit": map[string]interface{}{
-								//	"jvm_threads_current":           "Count",
-								//	"jvm_gc_collection_seconds_sum": "Milliseconds",
-								//},
+								"metric_unit": map[string]interface{}{
+									"jvm_threads_current":           "Count",
+									"jvm_gc_collection_seconds_sum": "Milliseconds",
+								},
 							},
 						},
 					},
@@ -107,16 +109,16 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 				},
-				//"metric_descriptors": []map[string]interface{}{
-				//	{
-				//		"metric_name": "jvm_threads_current",
-				//		"unit":        "Count",
-				//	},
-				//	{
-				//		"metric_name": "jvm_gc_collection_seconds_sum",
-				//		"unit":        "Milliseconds",
-				//	},
-				//},
+				"metric_descriptors": []awsemfexporter.MetricDescriptor{
+					{
+						MetricName: "jvm_threads_current",
+						Unit:       "Count",
+					},
+					{
+						MetricName: "jvm_gc_collection_seconds_sum",
+						Unit:       "Milliseconds",
+					},
+				},
 			},
 		},
 	}
@@ -139,6 +141,7 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)
 				require.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
 				require.Equal(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
+				require.Equal(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
 			}
 		})
 	}
