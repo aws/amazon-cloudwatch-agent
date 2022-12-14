@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 )
 
 type testTranslator struct {
-	cfgType config.Type
+	cfgType component.Type
 	result  int
 }
 
@@ -23,7 +23,7 @@ func (t testTranslator) Translate(_ *confmap.Conf) (int, error) {
 	return t.result, nil
 }
 
-func (t testTranslator) Type() config.Type {
+func (t testTranslator) Type() component.Type {
 	return t.cfgType
 }
 

@@ -248,7 +248,7 @@ func createTestMetrics(metrics []map[string]string) pmetric.Metrics {
 		}
 
 		for attrKey, attrValue := range metric {
-			dp.Attributes().PutString(attrKey, attrValue)
+			dp.Attributes().PutStr(attrKey, attrValue)
 		}
 	}
 	return pm

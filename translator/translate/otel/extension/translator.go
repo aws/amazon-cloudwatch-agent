@@ -4,25 +4,26 @@
 package extension
 
 import (
-	"go.opentelemetry.io/collector/config"
-	"go.opentelemetry.io/collector/confmap"
 	"log"
+
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 type translator struct {
-	translators []common.Translator[config.Extension]
+	translators []common.Translator[component.Config]
 }
 
 var _ common.Translator[common.Extensions] = (*translator)(nil)
 
-func NewTranslator(translators ...common.Translator[config.Extension]) common.Translator[common.Extensions] {
+func NewTranslator(translators ...common.Translator[component.Config]) common.Translator[common.Extensions] {
 	return &translator{translators}
 }
 
 // Type is unused.
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return ""
 }
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
@@ -65,6 +65,6 @@ func TestTranslator(t *testing.T) {
 	}
 }
 
-func toString(id config.ComponentID) string {
+func toString(id component.ID) string {
 	return id.String()
 }

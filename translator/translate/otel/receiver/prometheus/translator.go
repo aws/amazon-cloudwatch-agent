@@ -5,38 +5,38 @@ package prometheusreceiver
 
 import (
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
+	"os"
+
+	emfprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 type translator struct {
 	factory component.ReceiverFactory
 }
 
-var _ common.Translator[config.Receiver] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
 var baseKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 
 // NewTranslator creates a new aws container insight receiver translator.
-func NewTranslator() common.Translator[config.Receiver] {
+func NewTranslator() common.Translator[component.Config] {
 	return &translator{
 		factory: prometheusreceiver.NewFactory(),
 	}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.factory.Type()
 }
 
 // Translate creates a receiver for prometheus if the logs.metrics_collected.prometheus section is present.
-func (t *translator) Translate(conf *confmap.Conf) (config.Receiver, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(baseKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: baseKey}
 	}

@@ -7,7 +7,7 @@ import (
 	"log"
 	"sort"
 
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service"
 
@@ -18,8 +18,8 @@ import (
 )
 
 type translator struct {
-	receivers    []config.ComponentID
-	pipelineName config.Type
+	receivers    []component.ID
+	pipelineName component.Type
 }
 
 var _ common.Translator[common.Pipeline] = (*translator)(nil)
@@ -27,10 +27,10 @@ var _ common.Translator[common.Pipeline] = (*translator)(nil)
 // NewTranslator creates a new host pipeline translator. The receiver types
 // passed in are converted to config.ComponentIDs, sorted, and used directly
 // in the translated pipeline.
-func NewTranslator(receiverTypes []config.Type, pipelineName config.Type) common.Translator[common.Pipeline] {
-	receivers := make([]config.ComponentID, len(receiverTypes))
+func NewTranslator(receiverTypes []component.Type, pipelineName component.Type) common.Translator[common.Pipeline] {
+	receivers := make([]component.ID, len(receiverTypes))
 	for i, receiver := range receiverTypes {
-		receivers[i] = config.NewComponentID(receiver)
+		receivers[i] = component.NewID(receiver)
 	}
 	sort.Slice(receivers, func(i, j int) bool {
 		return receivers[i].String() < receivers[j].String()
@@ -38,7 +38,7 @@ func NewTranslator(receiverTypes []config.Type, pipelineName config.Type) common
 	return &translator{receivers, pipelineName}
 }
 
-func (t translator) Type() config.Type {
+func (t translator) Type() component.Type {
 	return t.pipelineName
 }
 
@@ -51,22 +51,22 @@ func (t translator) Translate(conf *confmap.Conf) (common.Pipeline, error) {
 		return nil, nil
 	}
 	// we need to add delta processor because (only) diskio and net input plugins report delta metric
-	var processors []config.ComponentID
+	var processors []component.ID
 	if common.HostDeltaMetricsPipelineName == t.pipelineName {
 		log.Printf("D! delta processor required because metrics with diskio or net are required")
-		processors = append(processors, config.NewComponentIDWithName("cumulativetodelta", string(t.pipelineName)))
+		processors = append(processors, component.NewIDWithName("cumulativetodelta", string(t.pipelineName)))
 	}
 
 	key := common.ConfigKey(common.MetricsKey, "append_dimensions")
 	if conf.IsSet(key) {
 		log.Printf("D! ec2tagger processor required because append_dimensions is set")
-		processors = append(processors, config.NewComponentID(ec2tagger.TypeStr))
+		processors = append(processors, component.NewID(ec2tagger.TypeStr))
 	}
-	id := config.NewComponentIDWithName(config.MetricsDataType, string(t.pipelineName))
+	id := component.NewIDWithName(component.DataTypeMetrics, string(t.pipelineName))
 	pipeline := &service.ConfigServicePipeline{
 		Receivers:  t.receivers,
 		Processors: processors,
-		Exporters:  []config.ComponentID{config.NewComponentID(cloudwatch.TypeStr)},
+		Exporters:  []component.ID{component.NewID(cloudwatch.TypeStr)},
 	}
 	return collections.NewPair(id, pipeline), nil
 }

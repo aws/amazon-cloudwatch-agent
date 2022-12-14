@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 )
 
@@ -59,19 +59,19 @@ func TestEncode(t *testing.T) {
 			value: func() reflect.Value {
 				return reflect.ValueOf(configtelemetry.LevelNone)
 			},
-			wantResult: "none",
+			wantResult: "None",
 		},
 		"WithComponentID": {
 			value: func() reflect.Value {
-				return reflect.ValueOf(config.NewComponentIDWithName("type", "name"))
+				return reflect.ValueOf(component.NewIDWithName("type", "name"))
 			},
 			wantResult: "type/name",
 		},
 		"WithSlice": {
 			value: func() reflect.Value {
-				s := []config.ComponentID{
-					config.NewComponentID("nop"),
-					config.NewComponentIDWithName("type", "name"),
+				s := []component.ID{
+					component.NewID("nop"),
+					component.NewIDWithName("type", "name"),
 				}
 				return reflect.ValueOf(s)
 			},

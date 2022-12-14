@@ -12,25 +12,26 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
 )
 
 const (
-	TypeStr   config.Type = "awscloudwatch"
-	stability             = component.StabilityLevelAlpha
+	TypeStr   component.Type = "awscloudwatch"
+	stability                = component.StabilityLevelAlpha
 )
 
-func NewFactory() component.ExporterFactory {
-	return component.NewExporterFactory(
+func NewFactory() exporter.Factory {
+	return exporter.NewFactory(
 		TypeStr,
 		createDefaultConfig,
-		component.WithMetricsExporter(createMetricsExporter, stability),
+		exporter.WithMetrics(createMetricsExporter, stability),
 	)
 }
 
-func createDefaultConfig() config.Exporter {
+func createDefaultConfig() component.Config {
 	return &Config{
-		ExporterSettings:   config.NewExporterSettings(config.NewComponentID(TypeStr)),
+		ExporterSettings:   config.NewExporterSettings(component.NewID(TypeStr)),
 		Namespace:          "CWAgent",
 		MaxDatumsPerCall:   defaultMaxDatumsPerCall,
 		MaxValuesPerDatum:  defaultMaxValuesPerDatum,
@@ -43,9 +44,9 @@ func createDefaultConfig() config.Exporter {
 
 func createMetricsExporter(
 	ctx context.Context,
-	settings component.ExporterCreateSettings,
-	config config.Exporter,
-) (component.MetricsExporter, error) {
+	settings exporter.CreateSettings,
+	config component.Config,
+) (exporter.Metrics, error) {
 	exp := &CloudWatch{
 		config: config.(*Config),
 	}

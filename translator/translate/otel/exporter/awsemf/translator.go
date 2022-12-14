@@ -6,14 +6,14 @@ package awsemf
 import (
 	_ "embed"
 	"fmt"
-	prometheus "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/emfprocessor"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
 	"gopkg.in/yaml.v3"
 
+	prometheus "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/emfprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
@@ -33,18 +33,18 @@ type translator struct {
 	factory component.ExporterFactory
 }
 
-var _ common.Translator[config.Exporter] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[config.Exporter] {
+func NewTranslator() common.Translator[component.Config] {
 	return &translator{awsemfexporter.NewFactory()}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.factory.Type()
 }
 
 // Translate creates an awsemf exporter config based on the input json config
-func (t *translator) Translate(c *confmap.Conf) (config.Exporter, error) {
+func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 
 	var defaultConfig string

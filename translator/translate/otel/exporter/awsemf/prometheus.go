@@ -5,6 +5,7 @@ package awsemf
 
 import (
 	"fmt"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
 )
@@ -28,8 +29,7 @@ func setPrometheusMetricDescriptors(conf map[string]interface{}, cfg *awsemfexpo
 		c := confmap.NewFromStringMap(map[string]interface{}{
 			"metric_descriptors": metricDescriptors,
 		})
-		cfg.MetricDescriptors = []awsemfexporter.MetricDescriptor{} // Clear out any existing descriptors
-		// TODO: This currently doesn't work and is pending a bug fix - https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/16566
+		cfg.MetricDescriptors = []awsemfexporter.MetricDescriptor{}
 		if err := c.Unmarshal(&cfg); err != nil {
 			return fmt.Errorf("unable to unmarshal metric_declarations: %w", err)
 		}

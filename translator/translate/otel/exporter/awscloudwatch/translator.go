@@ -6,7 +6,6 @@ package awscloudwatch
 import (
 	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
@@ -29,20 +28,20 @@ type translator struct {
 	factory component.ExporterFactory
 }
 
-var _ common.Translator[config.Exporter] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[config.Exporter] {
+func NewTranslator() common.Translator[component.Config] {
 	return &translator{cloudwatch.NewFactory()}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.factory.Type()
 }
 
 // Translate creates an exporter config based on the fields in the
 // metrics section of the JSON config.
 // TODO: remove dependency on global config.
-func (t *translator) Translate(conf *confmap.Conf) (config.Exporter, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(common.MetricsKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: common.MetricsKey}
 	}

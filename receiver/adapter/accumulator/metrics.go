@@ -99,7 +99,7 @@ func populateDataPointsForSum(measurement string, metrics pmetric.MetricSlice, f
 		// https://opentelemetry.io/docs/reference/specification/metrics/datamodel/#sums
 		sumMetric := metric.SetEmptySum()
 		sumMetric.SetIsMonotonic(true)
-		sumMetric.SetAggregationTemporality(pmetric.MetricAggregationTemporalityCumulative)
+		sumMetric.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 		populateNumberDataPoint(sumMetric.DataPoints().AppendEmpty(), value, tags, timestamp)
 	}
 }

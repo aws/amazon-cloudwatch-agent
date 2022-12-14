@@ -5,8 +5,16 @@ exporters:
     endpoint: ""
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/TestCluster/prometheus
+    log_retention: 0
     log_stream_name: '{job}'
     max_retries: 2
+    metric_descriptors: 
+      - metric_name: "jvm_memory_bytes_used"
+        overwrite: false
+        unit: "Bytes"
+      - metric_name: "nginx_request_count"
+        overwrite: false
+        unit: "Count"
     metric_declarations:
       - dimensions:
           - - Service
@@ -25,7 +33,6 @@ exporters:
             separator: ;
         metric_name_selectors:
           - .*
-    metric_descriptors: []
     namespace: CustomizedNamespace
     no_verify_ssl: false
     num_workers: 8
@@ -249,19 +256,23 @@ service:
         - metricstransform/prometheus
       receivers:
         - prometheus/prometheus
+        
   telemetry:
-    logs:
-      development: false
-      disable_caller: false
-      disable_stacktrace: false
-      encoding: json
-      error_output_paths: []
-      initial_fields: {}
-      level: info
-      output_paths: []
-    metrics:
-      address: ""
-      level: none
-    resource: {}
-    traces:
-      propagators: []
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: json
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: []
+            sampling:
+                initial: 2
+                thereafter: 500
+        metrics:
+            address: ""
+            level: None
+        resource: {}
+        traces:
+            propagators: []

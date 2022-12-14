@@ -140,23 +140,23 @@ func (t *Tagger) processDataPointAttributes(dps pmetric.NumberDataPointSlice) {
 		attr := dps.At(i).Attributes()
 		if t.ec2TagCache != nil {
 			for k, v := range t.ec2TagCache {
-				attr.PutString(k, v)
+				attr.PutStr(k, v)
 			}
 		}
 		if t.ec2MetadataLookup.instanceId {
-			attr.PutString(mdKeyInstanceId, t.ec2MetadataRespond.instanceId)
+			attr.PutStr(mdKeyInstanceId, t.ec2MetadataRespond.instanceId)
 		}
 		if t.ec2MetadataLookup.imageId {
-			attr.PutString(mdKeyImageId, t.ec2MetadataRespond.imageId)
+			attr.PutStr(mdKeyImageId, t.ec2MetadataRespond.imageId)
 		}
 		if t.ec2MetadataLookup.instanceType {
-			attr.PutString(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
+			attr.PutStr(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
 		}
 		if t.ebsVolume != nil {
 			if devName, found := attr.Get(t.DiskDeviceTagKey); found {
 				ebsVolId := t.ebsVolume.getEbsVolumeId(devName.Str())
 				if ebsVolId != "" {
-					attr.PutString(ebsVolumeId, ebsVolId)
+					attr.PutStr(ebsVolumeId, ebsVolId)
 				}
 			}
 		}

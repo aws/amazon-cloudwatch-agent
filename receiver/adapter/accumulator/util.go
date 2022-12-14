@@ -13,7 +13,7 @@ import (
 // Otel Attributes = Telegraf Tags = CloudWatch Dimensions
 func addTagsToAttributes(attributes pcommon.Map, tags map[string]string) {
 	for tag, value := range tags {
-		attributes.PutString(tag, value)
+		attributes.PutStr(tag, value)
 	}
 }
 

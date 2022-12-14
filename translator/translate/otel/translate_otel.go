@@ -6,16 +6,11 @@ package otel
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension/ecsobserver"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/prometheus"
-	metricstransformprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/metricstransform"
-	resourceprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/resource"
 
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/service/telemetry"
@@ -27,22 +22,28 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/containerinsights"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/ec2taggerprocessor"
+	metricstransformprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/metricstransform"
+	resourceprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/resource"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/prometheus"
+	prometheusreceiver "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/prometheus"
 )
 
 // Translator is used to create an OTEL config.
 type Translator struct {
-	receiverTranslators  common.TranslatorMap[config.Receiver]
-	processorTranslators common.TranslatorMap[config.Processor]
-	exporterTranslators  common.TranslatorMap[config.Exporter]
-	extensionTranslators common.TranslatorMap[config.Extension]
+	receiverTranslators  common.TranslatorMap[component.Config]
+	processorTranslators common.TranslatorMap[component.Config]
+	exporterTranslators  common.TranslatorMap[component.Config]
+	extensionTranslators common.TranslatorMap[component.Config]
 }
 
 // NewTranslator creates a new Translator.
@@ -70,7 +71,7 @@ func NewTranslator() *Translator {
 }
 
 // Translate converts a JSON config into an OTEL config.
-func (t *Translator) Translate(jsonConfig interface{}, os string) (*service.Config, error) {
+func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	m, ok := jsonConfig.(map[string]interface{})
 	if !ok {
 		return nil, errors.New("invalid json config")
@@ -85,8 +86,8 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*service.Conf
 
 	// split out delta receiver types
 	receiverTypes := collections.Keys(found)
-	var deltaMetricsReceivers []config.Type
-	var hostReceiverTypes []config.Type
+	var deltaMetricsReceivers []component.Type
+	var hostReceiverTypes []component.Type
 	for i := range receiverTypes {
 		if receiverTypes[i] == receiverAdapter.TelegrafPrefix+common.DiskIOName || receiverTypes[i] == receiverAdapter.TelegrafPrefix+common.NetName {
 			deltaMetricsReceivers = append(deltaMetricsReceivers, receiverTypes[i])
@@ -107,14 +108,20 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*service.Conf
 	extensions, err := extension.NewTranslator(
 		ecsobserver.NewTranslator(),
 	).Translate(conf)
-	cfg := &service.Config{
-		Receivers:  map[config.ComponentID]config.Receiver{},
-		Exporters:  map[config.ComponentID]config.Exporter{},
-		Processors: map[config.ComponentID]config.Processor{},
+	cfg := &otelcol.Config{
+		Receivers:  map[component.ID]component.Config{},
+		Exporters:  map[component.ID]component.Config{},
+		Processors: map[component.ID]component.Config{},
 		Extensions: extensions,
 		Service: service.ConfigService{
 			Telemetry: telemetry.Config{
-				Logs:    telemetry.LogsConfig{Level: zapcore.InfoLevel, Encoding: common.Json},
+				Logs: telemetry.LogsConfig{
+					Level:    zapcore.InfoLevel,
+					Encoding: common.Json,
+					Sampling: &telemetry.LogsSamplingConfig{
+						Initial:    2,
+						Thereafter: 500,
+					}},
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines:  pipelines,
@@ -131,12 +138,12 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*service.Conf
 }
 
 // buildComponents uses the pipelines defined in the config to build the components.
-func (t *Translator) buildComponents(cfg *service.Config, conf *confmap.Conf) error {
+func (t *Translator) buildComponents(cfg *otelcol.Config, conf *confmap.Conf) error {
 	var errs error
-	receivers := collections.NewSet[config.ComponentID]()
-	processors := collections.NewSet[config.ComponentID]()
-	exporters := collections.NewSet[config.ComponentID]()
-	for _, p := range cfg.Pipelines {
+	receivers := collections.NewSet[component.ID]()
+	processors := collections.NewSet[component.ID]()
+	exporters := collections.NewSet[component.ID]()
+	for _, p := range cfg.Service.Pipelines {
 		receivers.Add(p.Receivers...)
 		processors.Add(p.Processors...)
 		exporters.Add(p.Exporters...)
@@ -150,9 +157,9 @@ func (t *Translator) buildComponents(cfg *service.Config, conf *confmap.Conf) er
 // buildComponents attempts to translate a component for each ID in the set.
 func buildComponents[C common.Identifiable](
 	conf *confmap.Conf,
-	ids collections.Set[config.ComponentID],
-	components map[config.ComponentID]C,
-	getTranslator func(config.Type) (common.Translator[C], bool),
+	ids collections.Set[component.ID],
+	components map[component.ID]C,
+	getTranslator func(component.Type) (common.Translator[C], bool),
 ) error {
 	var errs error
 	for id := range ids {

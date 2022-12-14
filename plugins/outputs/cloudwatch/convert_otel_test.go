@@ -28,7 +28,7 @@ func addDimensions(dp pmetric.NumberDataPoint, count int) {
 	for i := 0; i < count; i++ {
 		key := keyPrefix + strconv.Itoa(i)
 		val := valPrefix + strconv.Itoa(i)
-		dp.Attributes().PutString(key, val)
+		dp.Attributes().PutStr(key, val)
 	}
 }
 

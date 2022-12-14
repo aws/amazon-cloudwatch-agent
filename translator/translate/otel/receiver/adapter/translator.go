@@ -6,7 +6,7 @@ package adapter
 import (
 	"time"
 
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
 
@@ -16,7 +16,7 @@ import (
 
 type translator struct {
 	// cfgType determines the type set in the config.
-	cfgType config.Type
+	cfgType component.Type
 	// cfgKey represents the flattened path to the section in the
 	// JSON config that must be present for the translator to work.
 	// See otel.ConfigKey.
@@ -26,21 +26,21 @@ type translator struct {
 	defaultMetricCollectionInterval time.Duration
 }
 
-var _ common.Translator[config.Receiver] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
 // NewTranslator creates a new adapter receiver translator.
-func NewTranslator(inputName string, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[config.Receiver] {
+func NewTranslator(inputName string, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
 	return &translator{adapter.Type(inputName), cfgKey, defaultMetricCollectionInterval}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.cfgType
 }
 
 // Translate creates an adapter receiver config if the section set on
 // the translator exists. Tries to get the collection interval from
 // the section key. Falls back on the agent section if it is not present.
-func (t *translator) Translate(conf *confmap.Conf) (config.Receiver, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(t.cfgKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: t.cfgKey}
 	}

@@ -6,11 +6,11 @@ package ec2taggerprocessor
 import (
 	"time"
 
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
-	"go.opentelemetry.io/collector/confmap"
 )
 
 const (
@@ -21,19 +21,19 @@ type translator struct {
 	factory component.ProcessorFactory
 }
 
-var _ common.Translator[config.Processor] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[config.Processor] {
+func NewTranslator() common.Translator[component.Config] {
 	return &translator{ec2tagger.NewFactory()}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.factory.Type()
 }
 
 // Translate creates an processor config based on the fields in the
 // Metrics section of the JSON config.
-func (t *translator) Translate(conf *confmap.Conf) (config.Processor, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	taggerKey := common.ConfigKey(common.MetricsKey, AppendDimensionsKey)
 	if conf == nil || !conf.IsSet(taggerKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: taggerKey}

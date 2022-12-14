@@ -7,7 +7,6 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
 )
 
@@ -21,20 +20,20 @@ type translator struct {
 	factory component.ProcessorFactory
 }
 
-var _ common.Translator[config.Processor] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[config.Processor] {
+func NewTranslator() common.Translator[component.Config] {
 	return &translator{cumulativetodeltaprocessor.NewFactory()}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.factory.Type()
 }
 
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 // We use cumulative to delta processor with Disk And Net since these metrics are cumulative. We want to know change in value over a time period
-func (t *translator) Translate(_ *confmap.Conf) (config.Processor, error) {
+func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*cumulativetodeltaprocessor.Config)
 	cfg.Exclude.MatchType = strict
 	cfg.Exclude.Metrics = []string{"iops_in_progress", "diskio_iops_in_progress"}

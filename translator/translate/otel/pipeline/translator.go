@@ -6,7 +6,7 @@ package pipeline
 import (
 	"errors"
 
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
@@ -27,7 +27,7 @@ func NewTranslator(translators ...common.Translator[common.Pipeline]) common.Tra
 }
 
 // Type is unused.
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return ""
 }
 

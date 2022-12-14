@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service"
 
@@ -40,11 +40,11 @@ const (
 // OTEL config.
 type Translator[C any] interface {
 	Translate(*confmap.Conf) (C, error)
-	Type() config.Type
+	Type() component.Type
 }
 
 // TranslatorMap is a map of translators by their types.
-type TranslatorMap[C any] map[config.Type]Translator[C]
+type TranslatorMap[C any] map[component.Type]Translator[C]
 
 // Add is a convenience method to add a translator to the map.
 func (t TranslatorMap[C]) Add(translator Translator[C]) {
@@ -52,7 +52,7 @@ func (t TranslatorMap[C]) Add(translator Translator[C]) {
 }
 
 // Get is a convenience method to get the translator from the map.
-func (t TranslatorMap[C]) Get(cfgType config.Type) (Translator[C], bool) {
+func (t TranslatorMap[C]) Get(cfgType component.Type) (Translator[C], bool) {
 	translator, ok := t[cfgType]
 	return translator, ok
 }
@@ -77,7 +77,7 @@ func NewTranslatorMap[C any](translators ...Translator[C]) TranslatorMap[C] {
 // config that does not have a required key. This typically means
 // that the pipeline was configured incorrectly.
 type MissingKeyError struct {
-	Type    config.Type
+	Type    component.Type
 	JsonKey string
 }
 
@@ -89,19 +89,19 @@ func (e *MissingKeyError) Error() string {
 // Taken straight from OTEL.
 type Identifiable interface {
 	// ID returns the ID of the component that this configuration belongs to.
-	ID() config.ComponentID
+	ID() component.ID
 	// SetIDName updates the name part of the ID for the component that this configuration belongs to.
 	SetIDName(idName string)
 }
 
 // Pipeline is a component ID and respective service pipeline.
-type Pipeline *collections.Pair[config.ComponentID, *service.ConfigServicePipeline]
+type Pipeline *collections.Pair[component.ID, *service.ConfigServicePipeline]
 
 // Pipelines is a map of component IDs to service pipelines.
-type Pipelines map[config.ComponentID]*service.ConfigServicePipeline
+type Pipelines map[component.ID]*service.ConfigServicePipeline
 
 // Extensions is a map of component IDs to service extensions.
-type Extensions map[config.ComponentID]config.Extension
+type Extensions map[component.ID]component.Config
 
 // ConfigKey joins the keys separated by confmap.KeyDelimiter.
 // This helps translators navigate the confmap.Conf that the

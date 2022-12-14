@@ -9,7 +9,6 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
@@ -30,10 +29,10 @@ type translator struct {
 	services []*collections.Pair[string, string]
 }
 
-var _ common.Translator[config.Receiver] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
 // NewTranslator creates a new aws container insight receiver translator.
-func NewTranslator() common.Translator[config.Receiver] {
+func NewTranslator() common.Translator[component.Config] {
 	baseKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 	return &translator{
 		factory: awscontainerinsightreceiver.NewFactory(),
@@ -44,13 +43,13 @@ func NewTranslator() common.Translator[config.Receiver] {
 	}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.factory.Type()
 }
 
 // Translate creates an aws container insights receiver config if either
 // of the sections defined in the services exist.
-func (t *translator) Translate(conf *confmap.Conf) (config.Receiver, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	configuredService := t.getConfiguredContainerService(conf)
 	if configuredService == nil {
 		var keys []string

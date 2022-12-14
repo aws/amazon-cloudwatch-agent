@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder"
@@ -82,7 +82,7 @@ func (mse *mapStructureEncoder) encode(value reflect.Value) (interface{}, error)
 
 func (mse *mapStructureEncoder) encodeInterface(value reflect.Value) (interface{}, error) {
 	switch v := value.Interface().(type) {
-	case config.ComponentID:
+	case component.ID:
 		return v.String(), nil
 	case configtelemetry.Level:
 		return v.String(), nil

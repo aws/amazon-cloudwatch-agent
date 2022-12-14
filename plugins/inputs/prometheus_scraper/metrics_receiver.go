@@ -6,9 +6,11 @@ package prometheus_scraper
 import (
 	"context"
 	"errors"
-	"github.com/prometheus/prometheus/model/metadata"
 	"log"
 	"math"
+
+	"github.com/prometheus/prometheus/model/histogram"
+	"github.com/prometheus/prometheus/model/metadata"
 
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/exemplar"
@@ -113,6 +115,11 @@ func (ma *metricAppender) AppendExemplar(ref storage.SeriesRef, l labels.Labels,
 }
 
 func (ma *metricAppender) UpdateMetadata(ref storage.SeriesRef, l labels.Labels, m metadata.Metadata) (storage.SeriesRef, error) {
+	// This code should no longer be used
+	return ref, nil
+}
+
+func (ma *metricAppender) AppendHistogram(ref storage.SeriesRef, l labels.Labels, t int64, h *histogram.Histogram) (storage.SeriesRef, error) {
 	// This code should no longer be used
 	return ref, nil
 }

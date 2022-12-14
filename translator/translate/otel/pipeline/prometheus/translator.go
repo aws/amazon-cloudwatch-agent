@@ -4,7 +4,7 @@
 package prometheus
 
 import (
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service"
 
@@ -25,7 +25,7 @@ func NewTranslator() common.Translator[common.Pipeline] {
 	return &translator{}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return pipelineName
 }
 
@@ -36,15 +36,15 @@ func (t *translator) Translate(conf *confmap.Conf) (common.Pipeline, error) {
 	if conf == nil || !conf.IsSet(key) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: key}
 	}
-	id := config.NewComponentIDWithName(config.MetricsDataType, pipelineName)
+	id := component.NewIDWithName(component.DataTypeMetrics, pipelineName)
 	pipeline := &service.ConfigServicePipeline{
-		Receivers: []config.ComponentID{config.NewComponentIDWithName("prometheus", pipelineName)},
-		Processors: []config.ComponentID{
-			config.NewComponentIDWithName("batch", pipelineName),
-			config.NewComponentIDWithName("resource", pipelineName),
-			config.NewComponentIDWithName("metricstransform", pipelineName),
+		Receivers: []component.ID{component.NewIDWithName("prometheus", pipelineName)},
+		Processors: []component.ID{
+			component.NewIDWithName("batch", pipelineName),
+			component.NewIDWithName("resource", pipelineName),
+			component.NewIDWithName("metricstransform", pipelineName),
 		},
-		Exporters: []config.ComponentID{config.NewComponentIDWithName("awsemf", pipelineName)},
+		Exporters: []component.ID{component.NewIDWithName("awsemf", pipelineName)},
 	}
 	return collections.NewPair(id, pipeline), nil
 }

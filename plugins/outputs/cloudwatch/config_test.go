@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/service/servicetest"
 )
 
@@ -53,7 +53,7 @@ func TestConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	assert.Equal(t, 1, len(c.Exporters))
-	c2 := c.Exporters[config.NewComponentID(TypeStr)].(*Config)
+	c2 := c.Exporters[component.NewID(TypeStr)].(*Config)
 	assert.Equal(t, "val1", c2.Namespace)
 	assert.Equal(t, "val2", c2.Region)
 	assert.Equal(t, "val3", c2.EndpointOverride)

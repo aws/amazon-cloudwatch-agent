@@ -68,14 +68,17 @@ service:
             development: false
             disable_caller: false
             disable_stacktrace: false
-            encoding: "json"
+            encoding: json
             error_output_paths: []
             initial_fields: {}
             level: info
             output_paths: []
+            sampling:
+                initial: 2
+                thereafter: 500
         metrics:
             address: ""
-            level: none
+            level: None
         resource: {}
         traces:
             propagators: []

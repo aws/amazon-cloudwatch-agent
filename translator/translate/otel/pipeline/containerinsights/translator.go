@@ -4,7 +4,7 @@
 package containerinsights
 
 import (
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service"
 
@@ -25,7 +25,7 @@ func NewTranslator() common.Translator[common.Pipeline] {
 	return &translator{}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return pipelineName
 }
 
@@ -36,11 +36,11 @@ func (t *translator) Translate(conf *confmap.Conf) (common.Pipeline, error) {
 	if conf == nil || !conf.IsSet(key) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: key}
 	}
-	id := config.NewComponentIDWithName(config.MetricsDataType, pipelineName)
+	id := component.NewIDWithName(component.DataTypeMetrics, pipelineName)
 	pipeline := &service.ConfigServicePipeline{
-		Receivers:  []config.ComponentID{config.NewComponentID("awscontainerinsightreceiver")},
-		Processors: []config.ComponentID{config.NewComponentIDWithName("batch", pipelineName)},
-		Exporters:  []config.ComponentID{config.NewComponentIDWithName("awsemf", pipelineName)},
+		Receivers:  []component.ID{component.NewID("awscontainerinsightreceiver")},
+		Processors: []component.ID{component.NewIDWithName("batch", pipelineName)},
+		Exporters:  []component.ID{component.NewIDWithName("awsemf", pipelineName)},
 	}
 	return collections.NewPair(id, pipeline), nil
 }

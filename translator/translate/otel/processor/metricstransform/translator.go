@@ -6,7 +6,6 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
 )
 
@@ -14,19 +13,19 @@ type translator struct {
 	factory component.ProcessorFactory
 }
 
-var _ common.Translator[config.Processor] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[config.Processor] {
+func NewTranslator() common.Translator[component.Config] {
 	return &translator{metricstransformprocessor.NewFactory()}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.factory.Type()
 }
 
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
-func (t *translator) Translate(conf *confmap.Conf) (config.Processor, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*metricstransformprocessor.Config)
 	var transforms []metricstransformprocessor.Transform
 	prometheusTransforms := t.getPrometheusTransforms(conf)

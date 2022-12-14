@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service"
 
@@ -25,7 +25,7 @@ func (t testTranslator) Translate(_ *confmap.Conf) (common.Pipeline, error) {
 	return t.result, nil
 }
 
-func (t testTranslator) Type() config.Type {
+func (t testTranslator) Type() component.Type {
 	return ""
 }
 
@@ -37,7 +37,7 @@ func TestTranslator(t *testing.T) {
 	require.Nil(t, got)
 	pt = NewTranslator(
 		&testTranslator{
-			result: collections.NewPair(config.NewComponentID(""), &service.ConfigServicePipeline{}),
+			result: collections.NewPair(component.NewID(""), &service.ConfigServicePipeline{}),
 		},
 	)
 	got, err = pt.Translate(confmap.New())

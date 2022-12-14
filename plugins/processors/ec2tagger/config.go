@@ -5,8 +5,10 @@ package ec2tagger
 
 import (
 	"fmt"
-	"go.opentelemetry.io/collector/config"
 	"time"
+
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config"
 )
 
 var SupportedAppendDimensions = map[string]string{
@@ -37,7 +39,7 @@ type Config struct {
 }
 
 // Verify Config implements Processor interface.
-var _ config.Processor = (*Config)(nil)
+var _ component.Config = (*Config)(nil)
 
 // Validate checks if the processor configuration is valid
 func (cfg *Config) Validate() error {

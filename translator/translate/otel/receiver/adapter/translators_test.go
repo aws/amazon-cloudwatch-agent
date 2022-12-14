@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 )
 
@@ -21,12 +21,12 @@ func TestFindReceiversInConfig(t *testing.T) {
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		os      string
-		want    map[config.Type]wantResult
+		want    map[component.Type]wantResult
 		wantErr error
 	}{
 		"WithEmptyConfig": {
 			os:   "linux",
-			want: map[config.Type]wantResult{},
+			want: map[component.Type]wantResult{},
 		},
 		"WithLinuxMetrics": {
 			input: map[string]interface{}{
@@ -41,7 +41,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 				},
 			},
 			os: "linux",
-			want: map[config.Type]wantResult{
+			want: map[component.Type]wantResult{
 				"telegraf_socket_listener": {"metrics::metrics_collected::collectd", time.Minute},
 				"telegraf_cpu":             {"metrics::metrics_collected::cpu", time.Minute},
 				"telegraf_ethtool":         {"metrics::metrics_collected::ethtool", time.Minute},
@@ -62,7 +62,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 				},
 			},
 			os: "windows",
-			want: map[config.Type]wantResult{
+			want: map[component.Type]wantResult{
 				"telegraf_nvidia_smi":        {"metrics::metrics_collected::nvidia_gpu", time.Minute},
 				"telegraf_win_perf_counters": {"metrics", time.Minute},
 			},
@@ -81,7 +81,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 				},
 			},
 			os: "windows",
-			want: map[config.Type]wantResult{
+			want: map[component.Type]wantResult{
 				"telegraf_socket_listener":   {"logs::metrics_collected::emf", time.Minute},
 				"telegraf_logfile":           {"logs::logs_collected::files", time.Minute},
 				"telegraf_windows_event_log": {"logs::logs_collected::windows_events", time.Minute},
@@ -102,7 +102,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 				},
 			},
 			os: "linux",
-			want: map[config.Type]wantResult{
+			want: map[component.Type]wantResult{
 				"telegraf_socket_listener": {"metrics::metrics_collected::collectd", time.Minute},
 			},
 		},

@@ -5,6 +5,8 @@ package ecsobserver
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery/dockerlabel"
@@ -13,31 +15,29 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
-	"log"
 )
 
 type translator struct {
 	factory component.ExtensionFactory
 }
 
-var _ common.Translator[config.Extension] = (*translator)(nil)
+var _ common.Translator[component.Config] = (*translator)(nil)
 
 var prometheusBaseKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 var ecsSdBaseKey = common.ConfigKey(prometheusBaseKey, "ecs_service_discovery")
 
-func NewTranslator() common.Translator[config.Extension] {
+func NewTranslator() common.Translator[component.Config] {
 	return &translator{ecsobserver.NewFactory()}
 }
 
-func (t *translator) Type() config.Type {
+func (t *translator) Type() component.Type {
 	return t.factory.Type()
 }
 
 // Translate creates an ecs_observer extension config based on the fields in the
 // 'ecs_service_discovery' section within the 'prometheus' section of the JSON config.
-func (t *translator) Translate(conf *confmap.Conf) (config.Extension, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(ecsSdBaseKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: ecsSdBaseKey}
 	}

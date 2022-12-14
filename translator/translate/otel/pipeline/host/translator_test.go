@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/config"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
@@ -23,7 +23,7 @@ func TestTranslator(t *testing.T) {
 	}
 	testCases := map[string]struct {
 		input        map[string]interface{}
-		pipelineName config.Type
+		pipelineName component.Type
 		want         *want
 		wantErr      error
 	}{
@@ -63,7 +63,7 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ht := NewTranslator([]config.Type{"other", "nop"}, testCase.pipelineName)
+			ht := NewTranslator([]component.Type{"other", "nop"}, testCase.pipelineName)
 			require.EqualValues(t, testCase.pipelineName, ht.Type())
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := ht.Translate(conf)
@@ -80,6 +80,6 @@ func TestTranslator(t *testing.T) {
 	}
 }
 
-func toString(id config.ComponentID) string {
+func toString(id component.ID) string {
 	return id.String()
 }
