@@ -37,7 +37,7 @@ const (
 	maxConcurrentPublisher                = 10 // the number of CloudWatch clients send request concurrently
 	pushIntervalInSec                     = 60 // 60 sec
 	highResolutionTagKey                  = "aws:StorageResolution"
-	defaultRetryCount                     = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
+	defaultRetryCount                     = 5 // the total number of attempts to submit a given metric
 	backoffRetryBase                      = 200 * time.Millisecond
 	MaxDimensions                         = 30
 )

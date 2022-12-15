@@ -96,9 +96,9 @@ func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
 	[general]
 		state_file = /var/lib/awslogs/agent-state
 
-	[/apollo/env/BaldrBifrost/var/output/log/audit_pusher.log]
-		file = /apollo/env/BaldrBifrost/var/output/log/audit_pusher.log
-		log_group_name = Bifrost/audit_pusher
+	[/var/log/audit_pusher.log]
+		file = /var/log/audit_pusher.log
+		log_group_name = audit_pusher
 		log_stream_name = hsm-bqvuwqn72vk
 		datetime_format = %b %d %H:%M:%S,%f
 		encoding = euc_jp
@@ -119,8 +119,8 @@ func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
 			"files": map[string]interface{}{
 				"collect_list": []map[string]interface{}{
 					{
-						"file_path":         "/apollo/env/BaldrBifrost/var/output/log/audit_pusher.log",
-						"log_group_name":    "Bifrost/audit_pusher",
+						"file_path":         "/var/log/audit_pusher.log",
+						"log_group_name":    "audit_pusher",
 						"timestamp_format":  "%b %d %H:%M:%S,%f",
 						"log_stream_name":   "hsm-bqvuwqn72vk",
 						"encoding":          "euc-jp",
