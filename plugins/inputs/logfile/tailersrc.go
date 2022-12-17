@@ -278,6 +278,8 @@ func (ts *tailerSrc) cleanUp() {
 	if ts.autoRemoval {
 		if err := os.Remove(ts.tailer.Filename); err != nil {
 			log.Printf("W! [logfile] Failed to auto remove file %v: %v", ts.tailer.Filename, err)
+		} else {
+			log.Printf("I! [logfile] Successfully removed file %v with auto_removal feature", ts.tailer.Filename)
 		}
 	}
 	for _, clf := range ts.cleanUpFns {
