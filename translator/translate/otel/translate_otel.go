@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/collector/service/telemetry"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/maps"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	receiverAdapter "github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
@@ -85,11 +86,11 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 	t.receiverTranslators.Merge(found)
 
 	// split out delta receiver types
-	receiverTypes := collections.Keys(found)
+	receiverTypes := maps.Keys(found)
 	var deltaMetricsReceivers []component.Type
 	var hostReceiverTypes []component.Type
 	for i := range receiverTypes {
-		if receiverTypes[i] == receiverAdapter.TelegrafPrefix+common.DiskIOName || receiverTypes[i] == receiverAdapter.TelegrafPrefix+common.NetName {
+		if receiverTypes[i] == receiverAdapter.TelegrafPrefix+common.DiskIOKey || receiverTypes[i] == receiverAdapter.TelegrafPrefix+common.NetKey {
 			deltaMetricsReceivers = append(deltaMetricsReceivers, receiverTypes[i])
 		} else {
 			hostReceiverTypes = append(hostReceiverTypes, receiverTypes[i])
@@ -105,7 +106,7 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 	if err != nil {
 		return nil, fmt.Errorf("unable to translate pipelines: %w", err)
 	}
-	extensions, err := extension.NewTranslator(
+	extensions, _ := extension.NewTranslator(
 		ecsobserver.NewTranslator(),
 	).Translate(conf)
 	cfg := &otelcol.Config{
@@ -125,7 +126,7 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines:  pipelines,
-			Extensions: collections.Keys(extensions),
+			Extensions: maps.Keys(extensions),
 		},
 	}
 	if err = t.buildComponents(cfg, conf); err != nil {

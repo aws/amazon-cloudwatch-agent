@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"go.opentelemetry.io/collector/receiver"
 )
 
 // container orchestrator keys
@@ -24,7 +24,7 @@ const (
 )
 
 type translator struct {
-	factory component.ReceiverFactory
+	factory receiver.Factory
 	// services is a slice of config keys to orchestrators.
 	services []*collections.Pair[string, string]
 }

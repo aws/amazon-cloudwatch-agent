@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -24,8 +25,8 @@ func TestTranslator(t *testing.T) {
 	}{
 		"MissingAppendDimensionsConfig": {
 			wantErr: &common.MissingKeyError{
-				Type:    "ec2tagger",
-				JsonKey: common.ConfigKey("metrics", "append_dimensions"),
+				Type:    etpTranslator.Type(),
+				JsonKey: ec2taggerKey,
 			},
 		},
 		"FullEc2TaggerProcessorConfig": {

@@ -6,11 +6,14 @@ package resourceprocessor
 import (
 	"fmt"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
+
+var prometheusKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 
 type translator struct {
 	factory component.ProcessorFactory
@@ -29,6 +32,10 @@ func (t *translator) Type() component.Type {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	if conf == nil || !conf.IsSet(prometheusKey) {
+		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusKey}
+	}
+
 	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
 	var attributes []map[string]interface{}
 	prometheusAttributes, err := t.getPrometheusAttributes(conf)
@@ -46,7 +53,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func (t *translator) getPrometheusAttributes(conf *confmap.Conf) ([]map[string]interface{}, error) {
-	prometheusKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 	var attributes []map[string]interface{} = nil
 	if conf.IsSet(prometheusKey) {
 		if !conf.IsSet(common.ConfigKey(prometheusKey, "ecs_service_discovery")) {

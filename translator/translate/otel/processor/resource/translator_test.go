@@ -4,11 +4,13 @@
 package resourceprocessor
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -27,7 +29,10 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: []map[string]interface{}{},
+			wantErr: &common.MissingKeyError{
+				Type:    rpTranslator.Type(),
+				JsonKey: prometheusKey,
+			},
 		},
 		"GenerateResourceProcessorConfigPrometheus": {
 			input: map[string]interface{}{

@@ -4,6 +4,7 @@
 package containerinsights
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func TestTranslator(t *testing.T) {
 	}{
 		"WithoutECSKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{Type: "containerinsights", JsonKey: "logs::metrics_collected::ecs"},
+			wantErr: &common.MissingKeyError{Type: cit.Type(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)},
 		},
 		"WithECSKey": {
 			input: map[string]interface{}{

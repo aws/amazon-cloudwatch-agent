@@ -4,13 +4,14 @@
 package ecsobserver
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"testing"
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -29,7 +30,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &common.MissingKeyError{Type: "ecs_observer", JsonKey: "logs::metrics_collected::prometheus::ecs_service_discovery"},
+			wantErr: &common.MissingKeyError{Type: eoTranslator.Type(), JsonKey: ecsSdBaseKey},
 		},
 		"GenerateMetricsTransformProcessorConfigPrometheus": {
 			input: map[string]interface{}{

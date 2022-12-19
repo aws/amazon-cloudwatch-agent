@@ -91,6 +91,7 @@ processors:
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 200ms
+
   metricstransform/prometheus:
     transforms:
       - action: update

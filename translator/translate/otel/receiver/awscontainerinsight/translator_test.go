@@ -25,7 +25,7 @@ func TestTranslator(t *testing.T) {
 		"WithoutECSOrKubernetesKeys": {
 			input: map[string]interface{}{},
 			wantErr: &common.MissingKeyError{
-				Type:    "awscontainerinsightreceiver",
+				Type:    acit.Type(),
 				JsonKey: "logs::metrics_collected::ecs or logs::metrics_collected::kubernetes",
 			},
 		},

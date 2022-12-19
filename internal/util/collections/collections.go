@@ -3,16 +3,6 @@
 
 package collections
 
-// CopyMap returns a new map that makes a shallow copy of all the
-// references in the input map.
-func CopyMap[K comparable, V any](m map[K]V) map[K]V {
-	dupe := make(map[K]V, len(m))
-	for k, v := range m {
-		dupe[k] = v
-	}
-	return dupe
-}
-
 // MergeMaps merges multiple maps into a new one. Duplicate keys
 // will take the last map's value.
 func MergeMaps[K comparable, V any](maps ...map[K]V) map[K]V {
@@ -32,24 +22,6 @@ func GetOrDefault[K comparable, V any](m map[K]V, key K, defaultValue V) V {
 		return value
 	}
 	return defaultValue
-}
-
-// Keys creates a slice of the keys in the map.
-func Keys[K comparable, V any](m map[K]V) []K {
-	keys := make([]K, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
-	return keys
-}
-
-// Values creates a slice of the values in the map.
-func Values[K comparable, V any](m map[K]V) []V {
-	values := make([]V, 0, len(m))
-	for _, value := range m {
-		values = append(values, value)
-	}
-	return values
 }
 
 // MapSlice converts a slice of type K into a slice of type V

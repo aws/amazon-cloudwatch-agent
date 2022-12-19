@@ -3,11 +3,14 @@
 package metricstransformprocessor
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
+
+var prometheusKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 
 type translator struct {
 	factory component.ProcessorFactory
@@ -26,6 +29,9 @@ func (t *translator) Type() component.Type {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	if conf == nil || !conf.IsSet(prometheusKey) {
+		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusKey}
+	}
 	cfg := t.factory.CreateDefaultConfig().(*metricstransformprocessor.Config)
 	var transforms []metricstransformprocessor.Transform
 	prometheusTransforms := t.getPrometheusTransforms(conf)

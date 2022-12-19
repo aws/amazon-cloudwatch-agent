@@ -7,22 +7,24 @@ import (
 	"fmt"
 	"os"
 
-	emfprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/receiver"
 	"gopkg.in/yaml.v3"
+
+	emfprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 type translator struct {
-	factory component.ReceiverFactory
+	factory receiver.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-var baseKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
+var prometheusKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 
 // NewTranslator creates a new aws container insight receiver translator.
 func NewTranslator() common.Translator[component.Config] {
@@ -37,8 +39,8 @@ func (t *translator) Type() component.Type {
 
 // Translate creates a receiver for prometheus if the logs.metrics_collected.prometheus section is present.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(baseKey) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: baseKey}
+	if conf == nil || !conf.IsSet(prometheusKey) {
+		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
@@ -68,11 +70,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 // Extract and set the contents of the actual prometheus config yaml
 func (t *translator) setPrometheusConfig(conf *confmap.Conf, cfg *prometheusreceiver.Config) error {
 	cloneCfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
-	prometheusConfigPathKey := common.ConfigKey(baseKey, "prometheus_config_path")
+	prometheusConfigPathKey := common.ConfigKey(prometheusKey, "prometheus_config_path")
 	if conf == nil || !conf.IsSet(prometheusConfigPathKey) {
 		return &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusConfigPathKey}
 	}
-	_, result := new(emfprocessor.ConfigPath).ApplyRule(conf.Get(baseKey)) // TODO: remove dependency on rule.
+	_, result := new(emfprocessor.ConfigPath).ApplyRule(conf.Get(prometheusKey)) // TODO: remove dependency on rule.
 	prometheusConfigPath, ok := result.(string)
 	if !ok || result == "" {
 		return fmt.Errorf("unable to extract prometheus config path")
@@ -98,7 +100,7 @@ func (t *translator) setPrometheusConfig(conf *confmap.Conf, cfg *prometheusrece
 
 // If ecs service discovery is configured, this creates an empty service discovery file
 func (t *translator) createEmptyEcsSdResultFile(conf *confmap.Conf) error {
-	ecsSdPathKey := common.ConfigKey(baseKey, "ecs_service_discovery")
+	ecsSdPathKey := common.ConfigKey(prometheusKey, "ecs_service_discovery")
 	if !conf.IsSet(ecsSdPathKey) {
 		return nil
 	}
@@ -125,7 +127,7 @@ func (t *translator) createEmptyEcsSdResultFile(conf *confmap.Conf) error {
 
 // If ecs service discovery is configured, add ecs relabel rules to maintain backwards compatibility
 func (t *translator) addEcsRelabelConfigs(conf *confmap.Conf, cfg *prometheusreceiver.Config) error {
-	ecsSdPathKey := common.ConfigKey(baseKey, "ecs_service_discovery")
+	ecsSdPathKey := common.ConfigKey(prometheusKey, "ecs_service_discovery")
 	if !conf.IsSet(ecsSdPathKey) {
 		return nil
 	}

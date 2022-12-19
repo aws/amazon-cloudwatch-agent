@@ -5,6 +5,11 @@ package prometheusreceiver
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	cfg "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
@@ -13,11 +18,6 @@ import (
 	"github.com/prometheus/prometheus/discovery/file"
 	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/model/relabel"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
-
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -39,8 +39,8 @@ func TestTranslator(t *testing.T) {
 		"WithoutPrometheusKey": {
 			input: map[string]interface{}{},
 			wantErr: &common.MissingKeyError{
-				Type:    "prometheus",
-				JsonKey: "logs::metrics_collected::prometheus",
+				Type:    pt.Type(),
+				JsonKey: prometheusKey,
 			},
 		},
 		"WithPrometheusEKS": {

@@ -30,8 +30,8 @@ const (
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
 	Json                         = "json"
-	DiskIOName                   = "diskio"
-	NetName                      = "net"
+	DiskIOKey                    = "diskio"
+	NetKey                       = "net"
 	HostPipelineName             = "host"
 	HostDeltaMetricsPipelineName = "hostDeltaMetrics"
 )

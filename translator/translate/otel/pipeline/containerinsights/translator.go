@@ -4,6 +4,8 @@
 package containerinsights
 
 import (
+	"fmt"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service"
@@ -14,6 +16,12 @@ import (
 
 const (
 	pipelineName = "containerinsights"
+)
+
+var (
+	baseKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
+	eksKey  = common.ConfigKey(baseKey, common.ECSKey)
+	ecsKey  = common.ConfigKey(baseKey, common.ECSKey)
 )
 
 type translator struct {
@@ -32,9 +40,8 @@ func (t *translator) Type() component.Type {
 // Translate creates a pipeline for container insights if the logs.metrics_collected.ecs
 // section is present.
 func (t *translator) Translate(conf *confmap.Conf) (common.Pipeline, error) {
-	key := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
-	if conf == nil || !conf.IsSet(key) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: key}
+	if conf == nil || (!conf.IsSet(ecsKey) && !conf.IsSet(eksKey)) {
+		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
 	id := component.NewIDWithName(component.DataTypeMetrics, pipelineName)
 	pipeline := &service.ConfigServicePipeline{

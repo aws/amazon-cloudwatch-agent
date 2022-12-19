@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/maps"
 )
 
 func TestCopyMapHasSameValues(t *testing.T) {
@@ -18,7 +19,7 @@ func TestCopyMapHasSameValues(t *testing.T) {
 		"bar": 2,
 		"baz": 3,
 	}
-	copied := CopyMap(m)
+	copied := maps.Clone(m)
 	assertMapsEqual(t, m, copied)
 }
 
@@ -28,7 +29,7 @@ func TestCopyMapDoesNotShareReferenceToOriginalMap(t *testing.T) {
 		"bar": 2,
 		"baz": 3,
 	}
-	copied := CopyMap(m)
+	copied := maps.Clone(m)
 	assertMapsEqual(t, m, copied)
 	delete(m, "foo")
 	_, ok := m["foo"]
@@ -47,7 +48,7 @@ func TestCopyMapKeepsShallowReferenceToValuesInMap(t *testing.T) {
 		"bar": 2,
 		"baz": map[string]int{"baz": 3, "foo": 1},
 	}
-	copied := CopyMap(m)
+	copied := maps.Clone(m)
 	assertMapsEqual(t, m, copied)
 
 	baz, ok := m["baz"]
@@ -91,14 +92,14 @@ func TestGetOrDefault(t *testing.T) {
 
 func TestKeys(t *testing.T) {
 	m1 := map[string]int{"first": 1, "second": 2}
-	got := Keys(m1)
+	got := maps.Keys(m1)
 	sort.Strings(got)
 	require.Equal(t, []string{"first", "second"}, got)
 }
 
 func TestValues(t *testing.T) {
 	m1 := map[string]int{"first": 1, "second": 2}
-	got := Values(m1)
+	got := maps.Values(m1)
 	sort.Ints(got)
 	require.Equal(t, []int{1, 2}, got)
 }
@@ -136,7 +137,7 @@ func TestSet(t *testing.T) {
 	require.True(t, set.Contains(1))
 	set.Remove(1)
 	require.False(t, set.Contains(1))
-	require.Equal(t, []int{2}, Keys(set))
+	require.Equal(t, []int{2}, maps.Keys(set))
 }
 
 func assertMapsEqual(t *testing.T, m1, m2 map[string]interface{}) {

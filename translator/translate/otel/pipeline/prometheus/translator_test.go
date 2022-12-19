@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 	}{
 		"WithoutPrometheusKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{Type: "prometheus", JsonKey: "logs::metrics_collected::prometheus"},
+			wantErr: &common.MissingKeyError{Type: cit.Type(), JsonKey: "logs::metrics_collected::prometheus"},
 		},
 		"WithPrometheusKey": {
 			input: map[string]interface{}{

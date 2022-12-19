@@ -7,6 +7,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/exporter"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
@@ -25,7 +26,7 @@ const (
 )
 
 type translator struct {
-	factory component.ExporterFactory
+	factory exporter.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)

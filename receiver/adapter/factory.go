@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
 )
 
@@ -46,7 +47,7 @@ func createDefaultConfig(cfgType component.Type) func() component.Config {
 	}
 }
 
-func (a Adapter) NewReceiverFactory(telegrafInputName string) component.ReceiverFactory {
+func (a Adapter) NewReceiverFactory(telegrafInputName string) receiver.Factory {
 	typeStr := Type(telegrafInputName)
 	return component.NewReceiverFactory(typeStr, createDefaultConfig(typeStr),
 		component.WithMetricsReceiver(a.createMetricsReceiver(telegrafInputName), component.StabilityLevelStable))

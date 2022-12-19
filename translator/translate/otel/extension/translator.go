@@ -34,7 +34,7 @@ func (t *translator) Translate(conf *confmap.Conf) (common.Extensions, error) {
 		if extension, err := et.Translate(conf); extension != nil {
 			extensions[extension.ID()] = extension
 		} else if err != nil {
-			log.Printf("W! ignoring translation of ecs_observer due to: %v", err)
+			log.Printf("W! ignoring translation of %v due to: %v", et.Type(), err)
 		}
 	}
 	return extensions, nil

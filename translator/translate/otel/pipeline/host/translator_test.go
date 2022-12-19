@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 		"WithoutMetricsKey": {
 			input:        map[string]interface{}{},
 			pipelineName: common.HostPipelineName,
-			wantErr:      &common.MissingKeyError{Type: "host", JsonKey: "metrics"},
+			wantErr:      &common.MissingKeyError{Type: common.HostPipelineName, JsonKey: common.MetricsKey},
 		},
 		"WithMetricsKey": {
 			input: map[string]interface{}{

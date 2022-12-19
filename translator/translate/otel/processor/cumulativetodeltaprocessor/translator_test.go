@@ -4,11 +4,14 @@
 package cumulativetodeltaprocessor
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -19,11 +22,34 @@ func TestTranslator(t *testing.T) {
 		want    *cumulativetodeltaprocessor.Config
 		wantErr error
 	}{
-		"GenerateDeltaProcessorConfig": {
+		"GenerateDeltaProcessorConfigWithCPU": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{},
+					},
+				},
+			},
+			wantErr: &common.MissingKeyError{Type: cdpTranslator.Type(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey)},
+		},
+		"GenerateDeltaProcessorConfigWithNet": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"net": map[string]interface{}{},
+					},
+				},
+			},
+			want: &cumulativetodeltaprocessor.Config{
+				Include: cumulativetodeltaprocessor.MatchMetrics{},
+				Exclude: cumulativetodeltaprocessor.MatchMetrics{},
+			},
+		},
+		"GenerateDeltaProcessorConfigWithDiskIO": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{},
 					},
 				},
 			},

@@ -17,6 +17,8 @@ const (
 	AppendDimensionsKey = "append_dimensions"
 )
 
+var ec2taggerKey = common.ConfigKey(common.MetricsKey, AppendDimensionsKey)
+
 type translator struct {
 	factory component.ProcessorFactory
 }
@@ -34,9 +36,8 @@ func (t *translator) Type() component.Type {
 // Translate creates an processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	taggerKey := common.ConfigKey(common.MetricsKey, AppendDimensionsKey)
-	if conf == nil || !conf.IsSet(taggerKey) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: taggerKey}
+	if conf == nil || !conf.IsSet(ec2taggerKey) {
+		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: ec2taggerKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*ec2tagger.Config)

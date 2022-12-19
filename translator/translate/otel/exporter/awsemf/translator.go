@@ -10,6 +10,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/exporter"
 	"gopkg.in/yaml.v3"
 
 	prometheus "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
@@ -30,7 +31,7 @@ var (
 )
 
 type translator struct {
-	factory component.ExporterFactory
+	factory exporter.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)

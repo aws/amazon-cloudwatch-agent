@@ -9,15 +9,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
-	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"log"
 	"net/http"
-	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -27,6 +20,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
+
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
@@ -35,11 +30,18 @@ import (
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
+	"go.opentelemetry.io/collector/receiver"
 	otelService "go.opentelemetry.io/collector/service"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
@@ -383,7 +385,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 
 	factories := component.Factories{}
 
-	receiverFactories := []component.ReceiverFactory{
+	receiverFactories := []receiver.Factory{
 		// OTel native receivers
 		awscontainerinsightreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),

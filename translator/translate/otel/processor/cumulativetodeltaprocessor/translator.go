@@ -4,16 +4,24 @@
 package cumulativetodeltaprocessor
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"fmt"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 const (
 	// Match types are in internal package from contrib
 	// Strict is the FilterType for filtering by exact string matches.
 	strict = "strict"
+)
+
+var (
+	netKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.NetKey)
+	diskioKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskIOKey)
 )
 
 type translator struct {
@@ -32,10 +40,33 @@ func (t *translator) Type() component.Type {
 
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
-// We use cumulative to delta processor with Disk And Net since these metrics are cumulative. We want to know change in value over a time period
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	if conf == nil || (!conf.IsSet(diskioKey) && !conf.IsSet(netKey)) {
+		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey)}
+	}
+
 	cfg := t.factory.CreateDefaultConfig().(*cumulativetodeltaprocessor.Config)
+
+	excludeMetrics, err := t.getExcludeNetAndDiskIOMetrics(conf)
+	if err != nil {
+		return nil, err
+	}
+
 	cfg.Exclude.MatchType = strict
-	cfg.Exclude.Metrics = []string{"iops_in_progress", "diskio_iops_in_progress"}
+	cfg.Exclude.Metrics = excludeMetrics
 	return cfg, nil
+}
+
+// DiskIO and Net Metrics are cumulative metrics
+// DiskIO: https://github.com/shirou/gopsutil/blob/master/disk/disk.go#L32-L47
+// Net: https://github.com/shirou/gopsutil/blob/master/net/net.go#L13-L25
+// However, CloudWatch  does have an upper bound https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
+// Therefore, we calculate the delta values for customers instead of using the original values
+// https://github.com/aws/amazon-cloudwatch-agent/blob/5ace5aa6d817684cf82f4e6aa82d9596fb56d74b/translator/translate/metrics/util/deltasutil.go#L33-L65
+func (t *translator) getExcludeNetAndDiskIOMetrics(conf *confmap.Conf) ([]string, error) {
+	var excludeMetricName []string
+	if conf.IsSet(diskioKey) {
+		excludeMetricName = append(excludeMetricName, "iops_in_progress", "diskio_iops_in_progress")
+	}
+	return excludeMetricName, nil
 }

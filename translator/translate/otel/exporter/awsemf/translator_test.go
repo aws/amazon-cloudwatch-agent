@@ -4,12 +4,14 @@
 package awsemf
 
 import (
-	legacytranslator "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"testing"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
-	"testing"
+
+	legacytranslator "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
 
 var nilSlice []string
@@ -78,7 +80,6 @@ func TestTranslator(t *testing.T) {
 									},
 								},
 								"metric_unit": map[string]interface{}{
-									"jvm_threads_current":           "Count",
 									"jvm_gc_collection_seconds_sum": "Milliseconds",
 								},
 							},
@@ -110,10 +111,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
-					{
-						MetricName: "jvm_threads_current",
-						Unit:       "Count",
-					},
 					{
 						MetricName: "jvm_gc_collection_seconds_sum",
 						Unit:       "Milliseconds",

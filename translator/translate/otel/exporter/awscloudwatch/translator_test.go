@@ -30,7 +30,13 @@ func TestTranslator(t *testing.T) {
 		want        *cloudwatch.Config
 		wantErr     error
 	}{
-		"WithMissingKey": {wantErr: &common.MissingKeyError{Type: "awscloudwatch", JsonKey: "metrics"}},
+		"WithMissingKey": {
+			input: map[string]interface{}{"logs": map[string]interface{}{}},
+			wantErr: &common.MissingKeyError{
+				Type:    cwt.Type(),
+				JsonKey: common.MetricsKey,
+			},
+		},
 		"WithDefault": {
 			input: map[string]interface{}{"metrics": map[string]interface{}{}},
 			want: &cloudwatch.Config{

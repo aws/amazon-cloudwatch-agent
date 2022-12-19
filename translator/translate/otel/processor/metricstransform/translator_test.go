@@ -4,11 +4,13 @@
 package metricstransformprocessor
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 var nilSlice []metricstransformprocessor.Transform
@@ -29,8 +31,9 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: &metricstransformprocessor.Config{
-				Transforms: nilSlice,
+			wantErr: &common.MissingKeyError{
+				Type:    mtpTranslator.Type(),
+				JsonKey: prometheusKey,
 			},
 		},
 		"GenerateMetricsTransformProcessorConfigPrometheus": {

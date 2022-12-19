@@ -7,25 +7,29 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/extension"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery/dockerlabel"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery/serviceendpoint"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery/taskdefinition"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/confmap"
 )
 
 type translator struct {
-	factory component.ExtensionFactory
+	factory extension.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-var prometheusBaseKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
-var ecsSdBaseKey = common.ConfigKey(prometheusBaseKey, "ecs_service_discovery")
+var (
+	prometheusBaseKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
+	ecsSdBaseKey      = common.ConfigKey(prometheusBaseKey, "ecs_service_discovery")
+)
 
 func NewTranslator() common.Translator[component.Config] {
 	return &translator{ecsobserver.NewFactory()}
