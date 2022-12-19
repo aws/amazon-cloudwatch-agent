@@ -1,4 +1,15 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247357.0 (2022-12-15)
+========================================================================
+
+Bug fixes:
+* Update AWS SDK Go to fix mac build (#640)
+* Fix control script starting CWA on Oracle Linux 9 by using systemctl (#645)
+* Fix handling negative statefile offset (#646)
+* Fix starting the agent with "auto" mode on an on premise host (#652)
+
+
+========================================================================
 Amazon CloudWatch Agent 1.247356.0 (2022-11-10)
 ========================================================================
 
