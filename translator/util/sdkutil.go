@@ -25,6 +25,8 @@ const (
 
 var DetectRegion = detectRegion
 var DetectCredentialsPath = detectCredentialsPath
+var DefaultEC2Region = defaultEC2Region
+var DefaultECSRegion = defaultECSRegion
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 
 func DetectAgentMode(configuredMode string) string {
@@ -37,17 +39,17 @@ func DetectAgentMode(configuredMode string) string {
 		return config.ModeEC2
 	}
 
-	if defaultEC2Region() != "" {
+	if DefaultEC2Region() != "" {
 		fmt.Println("I! Detected the instance is EC2")
 		return config.ModeEC2
 	}
 
-	if defaultECSRegion() != "" {
+	if DefaultECSRegion() != "" {
 		fmt.Println("I! Detected the instance is ECS")
 		return config.ModeEC2
 	}
 	fmt.Println("I! Detected the instance is OnPremise")
-	return configuredMode
+	return config.ModeOnPrem
 }
 
 func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) (region string) {
@@ -94,13 +96,13 @@ func detectRegion(mode string, credsConfig map[string]string) (region string) {
 	// For ec2, fallback to metadata when no region info found in credential profile.
 	if region == "" && mode == config.ModeEC2 {
 		fmt.Println("I! Trying to detect region from ec2")
-		region = defaultEC2Region()
+		region = DefaultEC2Region()
 	}
 
 	// try to get region from ecs metadata
 	if region == "" && mode == config.ModeEC2 {
 		fmt.Println("I! Trying to detect region from ecs")
-		region = defaultECSRegion()
+		region = DefaultECSRegion()
 	}
 
 	return

@@ -1,4 +1,19 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247356.0 (2022-11-10)
+========================================================================
+
+Enhancements:
+* Enhance Windows event log monitoring in preparation for Windows 11 support (#627)
+* Remove Amazon Open Telemetry Collector that was bundled with CloudWatch Agent (#522)
+* Integration tests moved to new repository (#622) (#625) (#630)
+* Update default metric list scraped via Prometheus (#581)
+
+Bug fixes:
+* Fix corner case where "retention_in_days" was not actually getting set (#554)
+* Fix ethtool name in input config (#585)
+* Fix "amazon-cloudwatch-agent-ctl stop" to use systemd related commands (#542)
+
+========================================================================
 Amazon CloudWatch Agent 1.247355.0 (2022-08-10)
 ========================================================================
 
@@ -392,3 +407,4 @@ operating systems:
 * RedHat Enterprise Linux (RHEL) version 7.4, 7.0, and 6.5
 * Debian 8.0
 * Windows Server 2016, Windows Server 2012, and Windows Server 2008
+
