@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 )
 
 func TestDetectAgentModeAuto(t *testing.T) {
