@@ -5,20 +5,21 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"syscall"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 )
 
 const (
 	COMMON_CONFIG = "common-config.toml"
 	JSON          = "amazon-cloudwatch-agent.json"
 	TOML          = "amazon-cloudwatch-agent.toml"
+	YAML          = "amazon-cloudwatch-agent.yaml"
 	ENV           = "env-config.json"
 
 	AGENT_LOG_FILE = "amazon-cloudwatch-agent.log"
@@ -33,6 +34,7 @@ var (
 	envConfigPath    string
 	tomlConfigPath   string
 	commonConfigPath string
+	yamlConfigPath   string
 
 	agentLogFilePath string
 
@@ -94,6 +96,8 @@ func main() {
 	}
 	log.Printf("I! Config has been translated into TOML %s \n", tomlConfigPath)
 	printFileContents(tomlConfigPath)
+	log.Printf("I! Config has been translated into YAML %s \n", yamlConfigPath)
+	printFileContents(yamlConfigPath)
 
 	if err := startAgent(writer); err != nil {
 		log.Printf("E! Error when starting Agent, Error is %v \n", err)
@@ -113,9 +117,9 @@ func printFileContents(path string) {
 		}
 	}()
 
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 	if err != nil {
 		log.Printf("E! Error when reading file(%s), Error is %v \n", path, err)
 	}
-	log.Printf("D! toml config %v", string(b))
+	log.Printf("D! config %v", string(b))
 }

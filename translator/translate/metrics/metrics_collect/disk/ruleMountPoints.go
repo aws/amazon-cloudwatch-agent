@@ -4,7 +4,7 @@
 package disk
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/util"
 )
 
 type MountPoints struct {

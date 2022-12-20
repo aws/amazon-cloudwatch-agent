@@ -4,7 +4,7 @@
 package csm
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/csm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/csm"
 )
 
 type DataFormat struct {

@@ -1,0 +1,279 @@
+exporters:
+  awsemf/prometheus:
+    dimension_rollup_option: NoDimensionRollup
+    eks_fargate_container_insights_enabled: false
+    endpoint: ""
+    local_mode: false
+    log_group_name: /aws/ecs/containerinsights/TestCluster/prometheus
+    log_retention: 0
+    log_stream_name: '{job}'
+    max_retries: 2
+    metric_descriptors: 
+      - metric_name: "jvm_memory_bytes_used"
+        overwrite: false
+        unit: "Bytes"
+      - metric_name: "nginx_request_count"
+        overwrite: false
+        unit: "Count"
+    metric_declarations:
+      - dimensions:
+          - - Service
+        label_matchers:
+          - label_names:
+              - Service
+            regex: nginx.*
+            separator: ;
+        metric_name_selectors:
+          - ^nginx_request_count$
+      - dimensions: []
+        label_matchers:
+          - label_names:
+              - Namespace
+            regex: default
+            separator: ;
+        metric_name_selectors:
+          - .*
+    namespace: CustomizedNamespace
+    no_verify_ssl: false
+    num_workers: 8
+    output_destination: cloudwatch
+    parse_json_encoded_attr_values: []
+    proxy_address: ""
+    region: ""
+    request_timeout_seconds: 30
+    resource_arn: ""
+    resource_to_telemetry_conversion:
+      enabled: true
+    role_arn: ""
+extensions:
+  ecs_observer/prometheus:
+    cluster_name: ecs-cluster-a
+    cluster_region: us-west-1
+    docker_labels:
+      - job_name: ""
+        job_name_label: ECS_PROMETHEUS_JOB_NAME_1
+        metrics_path: ""
+        metrics_path_label: ECS_PROMETHEUS_METRICS_PATH
+        metrics_ports: []
+        port_label: ECS_PROMETHEUS_EXPORTER_PORT_SUBSET
+    job_label_name: prometheus_job
+    refresh_interval: 1m0s
+    result_file: {ecsSdFileName}
+    services:
+      - container_name_pattern: nginx-prometheus-exporter
+        job_name: service_name_1
+        metrics_path: /metrics
+        metrics_ports:
+          - 9113
+        name_pattern: .*-application-stack
+      - container_name_pattern: ""
+        job_name: ""
+        metrics_path: /stats/metrics
+        metrics_ports:
+          - 9114
+        name_pattern: run-application-stack
+    task_definitions:
+      - arn_pattern: .*task_def_1:[0-9]+
+        container_name_pattern: ""
+        job_name: task_def_1
+        metrics_path: /stats/metrics
+        metrics_ports:
+          - 9901
+      - arn_pattern: task_def_2
+        container_name_pattern: ^envoy$
+        job_name: ""
+        metrics_path: ""
+        metrics_ports:
+          - 9902
+processors:
+  batch/prometheus:
+    send_batch_max_size: 0
+    send_batch_size: 8192
+    timeout: 200ms
+
+  metricstransform/prometheus:
+    transforms:
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: .*
+        match_type: regexp
+        new_name: ""
+        operations:
+          - action: update_label
+            aggregated_values: []
+            aggregation_type: ""
+            experimental_scale: 0
+            label: prometheus_job
+            label_set: []
+            label_value: ""
+            new_label: job
+            new_value: ""
+            value_actions: []
+        submatch_case: ""
+  resource/prometheus:
+    attributes:
+      - action: delete
+        converted_type: ""
+        from_attribute: ""
+        from_context: ""
+        key: service.name
+        pattern: ""
+        value: null
+      - action: upsert
+        converted_type: ""
+        from_attribute: service.instance.id
+        from_context: ""
+        key: instance
+        pattern: ""
+        value: null
+      - action: delete
+        converted_type: ""
+        from_attribute: ""
+        from_context: ""
+        key: service.instance.id
+        pattern: ""
+        value: null
+      - action: delete
+        converted_type: ""
+        from_attribute: ""
+        from_context: ""
+        key: net.host.port
+        pattern: ""
+        value: null
+      - action: delete
+        converted_type: ""
+        from_attribute: ""
+        from_context: ""
+        key: http.scheme
+        pattern: ""
+        value: null
+      - action: insert
+        converted_type: ""
+        from_attribute: ""
+        from_context: ""
+        key: Version
+        pattern: ""
+        value: 1
+      - action: insert
+        converted_type: ""
+        from_attribute: ""
+        from_context: ""
+        key: receiver
+        pattern: ""
+        value: prometheus
+receivers:
+  prometheus/prometheus:
+    buffer_count: 0
+    buffer_period: 0s
+    config:
+      global:
+        evaluation_interval: 1m
+        scrape_interval: 5m
+        scrape_timeout: 5s
+      scrape_configs:
+        - enable_http2: true
+          file_sd_configs:
+            - files:
+                - {ecsSdFileName}
+              refresh_interval: 5m
+          follow_redirects: true
+          honor_timestamps: true
+          job_name: cwagent-ecs-file-sd-config
+          metric_relabel_configs:
+            - action: replace
+              regex: ^arn:aws:ecs:.*:.*:task.*\/(.*)$
+              replacement: ${1}
+              source_labels:
+                - source
+              target_label: TaskId
+          metrics_path: /metrics
+          relabel_configs:
+            - action: replace
+              source_labels:
+                - __meta_ecs_cluster_name
+              target_label: ClusterName
+            - action: replace
+              source_labels:
+                - __meta_ecs_cluster_name
+              target_label: TaskClusterName
+            - action: replace
+              source_labels:
+                - __meta_ecs_task_launch_type
+              target_label: LaunchType
+            - action: replace
+              source_labels:
+                - __meta_ecs_task_started_by
+              target_label: StartedBy
+            - action: replace
+              source_labels:
+                - __meta_ecs_task_group
+              target_label: TaskGroup
+            - action: replace
+              source_labels:
+                - __meta_ecs_task_definition_family
+              target_label: TaskDefinitionFamily
+            - action: replace
+              source_labels:
+                - __meta_ecs_task_definition_revision
+              target_label: TaskRevision
+            - action: replace
+              source_labels:
+                - __meta_ecs_ec2_instance_type
+              target_label: InstanceType
+            - action: replace
+              source_labels:
+                - __meta_ecs_ec2_subnet_id
+              target_label: SubnetId
+            - action: replace
+              source_labels:
+                - __meta_ecs_ec2_vpc_id
+              target_label: VpcId
+            - action: replace
+              source_labels:
+                - __meta_ecs_container_labels_app_x
+              target_label: app_x
+            - action: labelmap
+              regex: ^__meta_ecs_(.+)$
+              replacement: ${1}
+          sample_limit: 10000
+          scheme: http
+          scrape_interval: 5m
+          scrape_timeout: 5s
+    start_time_metric_regex: ""
+    target_allocator: null
+    use_start_time_metric: false
+service:
+  extensions:
+    - ecs_observer/prometheus
+  pipelines:
+    metrics/prometheus:
+      exporters:
+        - awsemf/prometheus
+      processors:
+        - batch/prometheus
+        - resource/prometheus
+        - metricstransform/prometheus
+      receivers:
+        - prometheus/prometheus
+        
+  telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: json
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: []
+            sampling:
+                initial: 2
+                thereafter: 500
+        metrics:
+            address: ""
+            level: None
+        resource: {}
+        traces:
+            propagators: []

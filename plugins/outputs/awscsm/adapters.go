@@ -4,10 +4,10 @@
 package awscsm
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane"
 	"github.com/aws/aws-sdk-go/aws"
 
-	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
+	awscsmmetrics "github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
 )
 
 func adaptToCSMFrequencyMetrics(m []awscsmmetrics.FrequencyMetric) []*sdkmetricsdataplane.FrequencyMetric {

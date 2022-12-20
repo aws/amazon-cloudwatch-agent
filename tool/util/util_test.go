@@ -4,15 +4,13 @@
 package util
 
 import (
-	"io/ioutil"
+	"os"
 	"runtime"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
-
-	"os"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 )
 
 var expectResult = `{
@@ -31,7 +29,7 @@ func TestCurOS(t *testing.T) {
 }
 
 func TestReadConfigFromJsonFile(t *testing.T) {
-	err := ioutil.WriteFile(ConfigFilePath(), []byte(expectResult), os.ModePerm)
+	err := os.WriteFile(ConfigFilePath(), []byte(expectResult), os.ModePerm)
 	assert.NoError(t, err)
 
 	actualResult := ReadConfigFromJsonFile()
@@ -58,7 +56,7 @@ func TestSerializeResultMapToJsonByteArray(t *testing.T) {
 
 func TestSaveResultByteArrayToJsonFile(t *testing.T) {
 	filePath := SaveResultByteArrayToJsonFile([]byte(expectResult))
-	bytes, err := ioutil.ReadFile(filePath)
+	bytes, err := os.ReadFile(filePath)
 	assert.NoError(t, err)
 	actualResult := string(bytes)
 	assert.Equal(t, expectResult, actualResult)

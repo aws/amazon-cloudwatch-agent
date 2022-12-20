@@ -5,15 +5,15 @@ package agentinfo
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 )
 
 func TestVersionUseInjectedIfAvailable(t *testing.T) {
@@ -44,7 +44,7 @@ func TestReadVersionFile(t *testing.T) {
 	vfp := filepath.Join(filepath.Dir(ex), versionFilename)
 	expectedVersion := "TEST_VERSION"
 
-	if err = ioutil.WriteFile(vfp, []byte(expectedVersion), 0644); err != nil {
+	if err = os.WriteFile(vfp, []byte(expectedVersion), 0644); err != nil {
 		t.Fatalf("failed to write version file at %v: %v", vfp, err)
 	}
 	defer os.Remove(vfp)

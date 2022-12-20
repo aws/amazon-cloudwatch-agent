@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	translatorConfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	translatorConfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
 )
 
 const (
@@ -116,7 +116,7 @@ func ApplyMeasurementRuleForMetricDecoration(inputs interface{}, pluginName stri
 }
 
 func getValidMetric(targetOs string, pluginName string, metricName string) string {
-	registeredMetrics := map[string][]string{}
+	var registeredMetrics map[string][]string
 	switch targetOs {
 	case translatorConfig.OS_TYPE_LINUX:
 		registeredMetrics = config.Registered_Metrics_Linux
@@ -128,9 +128,9 @@ func getValidMetric(targetOs string, pluginName string, metricName string) strin
 		log.Panicf("E! Unknown os platform in getValidMetric: %s", targetOs)
 	}
 	if val, ok := registeredMetrics[pluginName]; ok {
-		formatted_metricName := getFormattedMetricName(metricName, pluginName)
-		if ListContains(val, formatted_metricName) {
-			return formatted_metricName
+		formattedMetricName := getFormattedMetricName(metricName, pluginName)
+		if ListContains(val, formattedMetricName) {
+			return formattedMetricName
 		}
 	}
 	return ""

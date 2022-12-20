@@ -1,10 +1,12 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 //go:build !windows
 // +build !windows
 
 package cmdutil
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -26,7 +28,7 @@ func (c *MockChowner) Chown(path string, uid, gid int) error {
 }
 
 func TestChangeFileOwner(t *testing.T) {
-	base, err := ioutil.TempDir("", "testChown")
+	base, err := os.MkdirTemp("", "testChown")
 	if err != nil {
 		t.Fatalf("failed to crate temp test folder: %v", err)
 	}

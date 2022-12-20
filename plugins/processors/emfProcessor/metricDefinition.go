@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"sort"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/structuredlogscommon"
 )
 
 // Declare metric matcher to match metrics with {source_labels, label_separator, labels_matcher and metric_selectors},

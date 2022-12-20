@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 )
 
 type Metadata struct {

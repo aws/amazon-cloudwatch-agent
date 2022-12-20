@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 	cinfo "github.com/google/cadvisor/info/v1"
+
+	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/mapWithExpiry"
 )
 
 type DiskIOMetricExtractor struct {

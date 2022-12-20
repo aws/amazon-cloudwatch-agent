@@ -29,7 +29,12 @@ func startAgent(writer io.WriteCloser) error {
 		return err
 	}
 
-	cmd := exec.Command(agentBinaryPath, "-config", tomlConfigPath, "-envconfig", envConfigPath)
+	cmd := exec.Command(
+		agentBinaryPath,
+		"-config", tomlConfigPath,
+		"-envconfig", envConfigPath,
+		"-otelconfig", yamlConfigPath,
+	)
 	stdoutStderr, err := cmd.CombinedOutput()
 	// log file is closed, so use fmt here
 	fmt.Printf("%s \n", stdoutStderr)
@@ -53,6 +58,7 @@ func init() {
 	jsonDirPath = agentConfigDir + JSON_DIR_WINDOWS
 	envConfigPath = agentConfigDir + "\\" + ENV
 	tomlConfigPath = agentConfigDir + "\\" + TOML
+	yamlConfigPath = agentConfigDir + "\\" + YAML
 
 	commonConfigPath = agentConfigDir + "\\" + COMMON_CONFIG
 

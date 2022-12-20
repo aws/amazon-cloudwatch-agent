@@ -5,17 +5,17 @@ package collect_list
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
-	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/files"
+	logUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/util"
 )
 
 type Rule translator.Rule
@@ -66,9 +66,6 @@ func (f *FileConfig) ApplyRule(input interface{}) (returnKey string, returnVal i
 		}
 		logUtil.ValidateLogRetentionSettings(res, GetCurPath())
 		outputLogConfig(res)
-	} else {
-		returnKey = ""
-		returnVal = ""
 	}
 	returnKey = "file_config"
 	returnVal = res
@@ -119,7 +116,7 @@ func outputLogConfig(logConfigs []interface{}) {
 		Region:     agent.Global_Config.Region,
 	}
 	if bytes, err := json.Marshal(outputFile); err == nil {
-		ioutil.WriteFile(outputLogConfigFilePath, bytes, 0644)
+		os.WriteFile(outputLogConfigFilePath, bytes, 0644)
 	}
 }
 

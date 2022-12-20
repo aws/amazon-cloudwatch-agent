@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/metametrics"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/providers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/metametrics"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/providers"
 )
 
 type mockDataplane struct {
@@ -478,7 +478,7 @@ func TestCompression(t *testing.T) {
 		b64, checksum, l, err := compressSamples(c.samples)
 
 		if e, a := c.expectedError, err; e != a {
-			t.Errorf("expected %v, but recieved %v", e, a)
+			t.Errorf("expected %v, but received %v", e, a)
 		}
 
 		if e, a := c.expectedBase64, b64; e != a {

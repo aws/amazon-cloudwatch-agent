@@ -9,8 +9,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/influxdata/telegraf/config"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
 )
 
 var ErrOutputStopped = errors.New("Output plugin stopped")
@@ -45,7 +46,7 @@ type LogBackend interface {
 }
 
 // A LogDest represents a final endpoint where log events are published to.
-// e.g. a particualr log stream in cloudwatchlogs.
+// e.g. a particular log stream in cloudwatchlogs.
 type LogDest interface {
 	Publish(events []LogEvent) error
 }

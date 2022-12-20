@@ -1,0 +1,23 @@
+receivers:
+  nop: {}
+
+exporters:
+  awscloudwatch:
+    namespace: val1
+    region: val2
+    endpoint_override: val3
+    access_key: val4
+    secret_key: val5
+    role_arn: val6
+    profile: val7
+    shared_credential_file: val8
+    token: val9
+    force_flush_interval: 60s
+    max_datums_per_call: 7
+    max_values_per_datum: 9
+
+service:
+  pipelines:
+    metrics:
+      receivers: [nop]
+      exporters: [awscloudwatch]

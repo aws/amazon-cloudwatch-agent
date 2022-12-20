@@ -1,0 +1,4 @@
+log_stream_name: "{job}"
+resource_to_telemetry_conversion:
+  enabled: true
+dimension_rollup_option: NoDimensionRollup

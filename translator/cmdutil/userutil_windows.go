@@ -6,7 +6,7 @@
 
 package cmdutil
 
-import "github.com/aws/amazon-cloudwatch-agent/translator/context"
+import "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 
 func SetupUser(u string) error {
 	return nil

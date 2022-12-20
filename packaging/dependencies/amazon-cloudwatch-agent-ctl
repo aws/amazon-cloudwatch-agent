@@ -14,6 +14,7 @@ readonly VERSION_FILE="${CMDDIR}/CWAGENT_VERSION"
 
 # The systemd and upstart scripts assume exactly this .toml file name
 readonly TOML="${CONFDIR}/amazon-cloudwatch-agent.toml"
+readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-agent.yaml"
 readonly JSON="${CONFDIR}/amazon-cloudwatch-agent.json"
 readonly JSON_DIR="${CONFDIR}/amazon-cloudwatch-agent.d"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"
@@ -269,6 +270,7 @@ cwa_config() {
      if [ ! "$(ls ${JSON_DIR})" ]; then
           echo "all amazon-cloudwatch-agent configurations have been removed"
           rm -f "${TOML}"
+          rm -f "${OTEL_YAML}"
      else
           echo "Start configuration validation..."
           runTranslatorCommand=`"${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}`
@@ -287,6 +289,7 @@ cwa_config() {
           echo "Configuration validation succeeded"
 
           chmod ug+rw "${TOML}"
+          chmod ug+rw "${OTEL_YAML}"
 
           # for translator:
           #       default:    only process .tmp files
@@ -402,7 +405,7 @@ main() {
      start) start_all "${mode}" ;;
      fetch-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'default' ;;
      append-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'append' ;;
-     remove-config) config_all "${cwa_config_location}"  "${restart}" "${mode}" 'remove' ;;
+     remove-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'remove' ;;
      status) status_all ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install

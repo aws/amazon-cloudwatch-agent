@@ -10,10 +10,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm/csmiface"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/metametrics"
 	"github.com/aws/aws-sdk-go/aws"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm/csmiface"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/metametrics"
 )
 
 const (

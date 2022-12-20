@@ -1,0 +1,49 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+# alpha-release.yml - releasing CWA  artifacts for customers and will be safe to deleted after Alpha release etc.
+name: Alpha Release
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  UploadRelease:
+    name: "UploadRelease"
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.19.2
+
+      # Required to build rpm again to reset cw agent version to new tag version
+      - name: Build RPM
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: make build package-rpm
+
+      - name: Copy RPM To Release
+        run: |
+          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm

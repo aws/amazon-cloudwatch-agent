@@ -7,8 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane"
 	"github.com/aws/aws-sdk-go/aws"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
 )
 
 type mockError struct {
