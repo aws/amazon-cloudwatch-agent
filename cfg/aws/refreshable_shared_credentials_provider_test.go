@@ -4,7 +4,6 @@
 package aws
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -14,10 +13,10 @@ import (
 )
 
 func TestSharedCrednetialsProviderExpiryWindowIsExpired(t *testing.T) {
-	tmpFile, _ := ioutil.TempFile(os.TempDir(), "credential")
+	tmpFile, _ := os.CreateTemp(os.TempDir(), "credential")
 	defer os.Remove(tmpFile.Name())
-	bytes, _ := ioutil.ReadFile("./testdata/credential_original")
-	ioutil.WriteFile(tmpFile.Name(), bytes, 0644)
+	bytes, _ := os.ReadFile("./testdata/credential_original")
+	os.WriteFile(tmpFile.Name(), bytes, 0644)
 	p := credentials.NewCredentials(&Refreshable_shared_credentials_provider{
 		sharedCredentialsProvider: &credentials.SharedCredentialsProvider{
 			Filename: tmpFile.Name(),
@@ -31,8 +30,8 @@ func TestSharedCrednetialsProviderExpiryWindowIsExpired(t *testing.T) {
 
 	assert.False(t, p.IsExpired(), "Expect creds not to be expired.")
 
-	bytes_rotate, _ := ioutil.ReadFile("./testdata/credential_rotate")
-	ioutil.WriteFile(tmpFile.Name(), bytes_rotate, 0644)
+	bytes_rotate, _ := os.ReadFile("./testdata/credential_rotate")
+	os.WriteFile(tmpFile.Name(), bytes_rotate, 0644)
 
 	time.Sleep(2 * time.Second)
 

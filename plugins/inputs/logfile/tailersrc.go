@@ -5,7 +5,6 @@ package logfile
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -335,5 +334,5 @@ func (ts *tailerSrc) saveState(offset int64) error {
 	}
 
 	content := []byte(strconv.FormatInt(offset, 10) + "\n" + ts.tailer.Filename)
-	return ioutil.WriteFile(ts.stateFilePath, content, stateFileMode)
+	return os.WriteFile(ts.stateFilePath, content, stateFileMode)
 }

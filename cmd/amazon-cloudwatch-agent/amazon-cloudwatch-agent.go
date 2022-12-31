@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -28,14 +27,15 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
-	
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
+
 	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
@@ -46,7 +46,7 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
-	LogTargetEventLog = "eventlog"
+	LogTargetEventLog     = "eventlog"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -190,7 +190,7 @@ func loadEnvironmentVariables(path string) error {
 		return fmt.Errorf("No env config file specified")
 	}
 
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("Can't read env config file %s due to: %s", path, err.Error())
 	}
@@ -447,7 +447,7 @@ func main() {
 		if *fEnvConfig != "" {
 			parts := strings.SplitN(*fSetEnv, "=", 2)
 			if len(parts) == 2 {
-				bytes, err := ioutil.ReadFile(*fEnvConfig)
+				bytes, err := os.ReadFile(*fEnvConfig)
 				if err != nil {
 					log.Fatalf("E! Failed to read env config: %v", err)
 				}
@@ -458,14 +458,14 @@ func main() {
 				}
 				envVars[parts[0]] = parts[1]
 				bytes, err = json.MarshalIndent(envVars, "", "\t")
-				if err = ioutil.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
+				if err = os.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
 			}
 		}
 		return
 	}
-		
+
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		programFiles := os.Getenv("ProgramFiles")
 		if programFiles == "" { // Should never happen
@@ -543,7 +543,7 @@ func windowsRunAsService() bool {
 	return !service.Interactive()
 }
 
-func loadTomlConfigIntoAgent(c *config.Config) error{
+func loadTomlConfigIntoAgent(c *config.Config) error {
 	isOld, err := migrate.IsOldConfig(*fConfig)
 	if err != nil {
 		log.Printf("W! Failed to detect if config file is old format: %v", err)
@@ -578,7 +578,7 @@ func loadTomlConfigIntoAgent(c *config.Config) error{
 	return nil
 }
 
-func validateAgentFinalConfigAndPlugins(c *config.Config) error{
+func validateAgentFinalConfigAndPlugins(c *config.Config) error {
 	if !*fTest && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
@@ -616,6 +616,6 @@ func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, e
 			}
 		}
 	}
-	
+
 	return "", nil
 }
