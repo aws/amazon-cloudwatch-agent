@@ -4,7 +4,16 @@
 name: PR Build
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    branches: 
+      - main 
+    types: 
+      - synchronize
+      - reopened
+      - ready_for_review
+    paths-ignore:
+      - '**/*.md'
+      - '.github/**'
+      - '!.github/workflows/PR-build.yml'
   workflow_dispatch:
 
 concurrency:
@@ -13,24 +22,20 @@ concurrency:
 
 jobs:
   macos-unittest:
-    if: ${{ always() }}
     runs-on: macos-latest
     steps:
 
     - name: Set up Go 1.x
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: ~1.19.2
 
     - name: Check out code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-        submodules: 'true'
+      uses: actions/checkout@v3
 
     - name: Cache build output
       id: cached_binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
               ~/Library/Caches/go-build
@@ -43,7 +48,7 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: steps.cached_binaries.outputs.cache-hit != 'true'
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         verbose: true
 
@@ -52,23 +57,23 @@ jobs:
       run: make build
   
   windows-unittest:
-    if: ${{ always() }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ windows-2019, windows-latest ]
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: ~1.19.2
 
       - name: Cache Go
         id: cached_binaries
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             %LocalAppData%\go-build
@@ -85,7 +90,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           verbose: true
 
@@ -94,20 +99,16 @@ jobs:
         run: make build
   
   linux-unittest:
-    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
 
     - name: Set up Go 1.x
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: ~1.19.2
 
     - name: Check out code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-        submodules: 'true'
+      uses: actions/checkout@v3
 
     # This requires the go mod tidy to not look at the go proxy
     - name: Go proxy direct
@@ -119,7 +120,7 @@ jobs:
 
     - name: Cache build output
       id: cached_binaries
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
               ~/.cache/go-build
@@ -132,7 +133,7 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: steps.cached_binaries.outputs.cache-hit != 'true'
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         verbose: true
 
