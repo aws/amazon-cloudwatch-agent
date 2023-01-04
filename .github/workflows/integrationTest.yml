@@ -10,7 +10,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "khanhntd/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/khanhntd/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "separate"
+  CWA_GITHUB_TEST_REPO_BRANCH: "validate"
 
 on:
   push:
@@ -579,7 +579,7 @@ jobs:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ StartLocalStack, PerformanceTrackingTest ]
+    needs: [ StartLocalStack ]
     defaults:
       run:
         working-directory: terraform/ec2/localstack
@@ -741,7 +741,7 @@ jobs:
 
   PerformanceTrackingTest:
     name: "PerformanceTrackingTest"
-    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
+    needs: [MakeBinary, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -763,7 +763,6 @@ jobs:
           aws-region: us-west-2
 
       - name: Cache if success
-        id: performance-tracking
         uses: actions/cache@v2
         with:
           path: go.mod
@@ -782,7 +781,6 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
       - name: Terraform apply
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -799,7 +797,6 @@ jobs:
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
-              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="cwa_github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
