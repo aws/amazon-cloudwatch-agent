@@ -1,9 +1,10 @@
 {
   "agent": {
     "metrics_collection_interval": 10,
-    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+    "logfile": "/tmp/fake/log/hotdog.log",
     "internal": true,
     "debug": true,
+    "quiet": true,
     "aws_sdk_log_level": "LogDebug",
     "user_agent": "CUSTOM USER AGENT VALUE",
     "credentials": {

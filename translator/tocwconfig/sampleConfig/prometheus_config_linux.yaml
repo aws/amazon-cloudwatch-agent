@@ -8,14 +8,14 @@ exporters:
     log_retention: 0
     log_stream_name: '{job}'
     max_retries: 2
-    metric_descriptors: 
+    metric_descriptors:
       - metric_name: "jvm_memory_bytes_used"
         overwrite: false
         unit: "Bytes"
       - metric_name: "nginx_request_count"
         overwrite: false
         unit: "Count"
-      
+
     metric_declarations:
       - dimensions:
           - - Service
@@ -263,7 +263,7 @@ service:
       development: false
       disable_caller: false
       disable_stacktrace: false
-      encoding: json
+      encoding: console
       error_output_paths: []
       initial_fields: {}
       level: info

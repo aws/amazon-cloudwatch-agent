@@ -45,6 +45,25 @@ func TestGetString(t *testing.T) {
 	require.Equal(t, "", got)
 }
 
+func TestGetBool(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]interface{}{"int": 10, "string": "test", "bool1": false, "bool2": true})
+	got, ok := GetBool(conf, "int")
+	require.False(t, ok)
+	require.False(t, got)
+
+	got, ok = GetBool(conf, "string")
+	require.False(t, ok)
+	require.False(t, got)
+
+	got, ok = GetBool(conf, "bool1")
+	require.True(t, ok)
+	require.False(t, got)
+
+	got, ok = GetBool(conf, "bool2")
+	require.True(t, ok)
+	require.True(t, got)
+}
+
 func TestGetDuration(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]interface{}{"invalid": "invalid", "valid": 1, "zero": 0})
 	got, ok := GetDuration(conf, "invalid")

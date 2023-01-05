@@ -20,6 +20,7 @@ import (
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	receiverAdapter "github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
@@ -71,6 +72,52 @@ func NewTranslator() *Translator {
 	}
 }
 
+// parseAgentLogFile returns the log file path form the JSON config, or the
+// default value.
+func parseAgentLogFile(conf *confmap.Conf) string {
+	v, ok := common.GetString(conf, common.ConfigKey("agent", "logfile"))
+	if !ok {
+		return agent.GetDefaultValue()
+	}
+	return v
+}
+
+// parseAgentLogLevel returns the logging level from the JSON config, or the
+// default value.
+func parseAgentLogLevel(conf *confmap.Conf) zapcore.Level {
+	// "quiet" takes precedence over "debug" in Telegraf.
+	v, _ := common.GetBool(conf, common.ConfigKey("agent", "quiet"))
+	if v {
+		return zapcore.ErrorLevel
+	}
+	v, _ = common.GetBool(conf, common.ConfigKey("agent", "debug"))
+	if v {
+		return zapcore.DebugLevel
+	}
+	return zapcore.InfoLevel
+}
+
+// getLoggingConfig uses the given JSON config to determine the correct
+// logging configuration that should go in the YAML.
+func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
+	var outputPaths []string
+	filename := parseAgentLogFile(conf)
+	// A slice with an empty string causes OTEL issues, so avoid it.
+	if filename != "" {
+		outputPaths = []string{filename}
+	}
+	logLevel := parseAgentLogLevel(conf)
+	return telemetry.LogsConfig{
+		OutputPaths: outputPaths,
+		Level:       logLevel,
+		Encoding:    common.Console,
+		Sampling: &telemetry.LogsSamplingConfig{
+			Initial:    2,
+			Thereafter: 500,
+		},
+	}
+}
+
 // Translate converts a JSON config into an OTEL config.
 func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	m, ok := jsonConfig.(map[string]interface{})
@@ -116,13 +163,7 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 		Extensions: extensions,
 		Service: service.ConfigService{
 			Telemetry: telemetry.Config{
-				Logs: telemetry.LogsConfig{
-					Level:    zapcore.InfoLevel,
-					Encoding: common.Json,
-					Sampling: &telemetry.LogsSamplingConfig{
-						Initial:    2,
-						Thereafter: 500,
-					}},
+				Logs:    getLoggingConfig(conf),
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines:  pipelines,

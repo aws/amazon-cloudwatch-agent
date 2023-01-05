@@ -56,11 +56,11 @@ service:
             development: false
             disable_caller: false
             disable_stacktrace: false
-            encoding: json
+            encoding: console
             error_output_paths: []
             initial_fields: {}
             level: info
-            output_paths: []
+            output_paths: [/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log]
             sampling:
                 initial: 2
                 thereafter: 500

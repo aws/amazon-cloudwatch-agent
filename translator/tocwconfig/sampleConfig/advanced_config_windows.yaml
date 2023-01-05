@@ -8,7 +8,7 @@ exporters:
         resource_to_telemetry_conversion:
             enabled: true
 extensions: {}
-processors: 
+processors:
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -35,11 +35,11 @@ service:
             development: false
             disable_caller: false
             disable_stacktrace: false
-            encoding: json
+            encoding: console
             error_output_paths: []
             initial_fields: {}
             level: info
-            output_paths: []
+            output_paths: [c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log]
             sampling:
                 initial: 2
                 thereafter: 500

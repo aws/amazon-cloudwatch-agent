@@ -30,6 +30,7 @@ const (
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
 	Json                         = "json"
+	Console                      = "console"
 	DiskIOKey                    = "diskio"
 	NetKey                       = "net"
 	HostPipelineName             = "host"
@@ -150,6 +151,15 @@ func GetString(conf *confmap.Conf, key string) (string, bool) {
 		return got, ok
 	}
 	return "", false
+}
+
+// GetBool gets the bool value for the key. If the key is missing, or the
+// value is not a bool type then ok will be false.
+func GetBool(conf *confmap.Conf, key string) (value bool, ok bool) {
+	if v := conf.Get(key); v != nil {
+		value, ok = v.(bool)
+	}
+	return
 }
 
 // GetDuration gets the value for the key and calls ParseDuration on it.

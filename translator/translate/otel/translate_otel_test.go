@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 )
 
@@ -44,6 +45,7 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			translator.SetTargetPlatform("linux")
 			got, err := ot.Translate(testCase.input, "linux")
 			if testCase.wantErrContains != "" {
 				require.Error(t, err)

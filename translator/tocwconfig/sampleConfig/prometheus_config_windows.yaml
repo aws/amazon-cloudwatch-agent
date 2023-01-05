@@ -8,7 +8,7 @@ exporters:
     log_retention: 0
     log_stream_name: '{job}'
     max_retries: 2
-    metric_descriptors: 
+    metric_descriptors:
       - metric_name: "jvm_memory_bytes_used"
         overwrite: false
         unit: "Bytes"
@@ -257,13 +257,13 @@ service:
         - metricstransform/prometheus
       receivers:
         - prometheus/prometheus
-        
+
   telemetry:
         logs:
             development: false
             disable_caller: false
             disable_stacktrace: false
-            encoding: json
+            encoding: console
             error_output_paths: []
             initial_fields: {}
             level: info

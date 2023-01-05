@@ -24,8 +24,8 @@ const (
 
 	AGENT_LOG_FILE = "amazon-cloudwatch-agent.log"
 
-	//TODO this CONFIG_DIR_IN_CONTAINE should change to something indicate dir, keep it for now to avoid break testing
-	CONFIG_DIR_IN_CONTAINE = "/etc/cwagentconfig"
+	//TODO this CONFIG_DIR_IN_CONTAINER should change to something indicate dir, keep it for now to avoid break testing
+	CONFIG_DIR_IN_CONTAINER = "/etc/cwagentconfig"
 )
 
 var (
@@ -48,7 +48,7 @@ var runInContainer = os.Getenv(config.RUN_IN_CONTAINER)
 func translateConfig() error {
 	args := []string{"--output", tomlConfigPath, "--mode", "auto"}
 	if runInContainer == config.RUN_IN_CONTAINER_TRUE {
-		args = append(args, "--input-dir", CONFIG_DIR_IN_CONTAINE)
+		args = append(args, "--input-dir", CONFIG_DIR_IN_CONTAINER)
 	} else {
 		args = append(args, "--input", jsonConfigPath, "--input-dir", jsonDirPath, "--config", commonConfigPath)
 	}

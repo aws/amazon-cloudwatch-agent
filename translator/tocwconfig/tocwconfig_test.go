@@ -227,7 +227,8 @@ func TestTomlToTomlComparison(t *testing.T) {
 	resetContext()
 	var jsonFilePath = "./totomlconfig/tomlConfigTemplate/agentToml.json"
 	var input interface{}
-
+	x := os.Getenv("HOST_NAME")
+	require.Equal(t, "", x)
 	translator.SetTargetPlatform("linux")
 	content, err := os.ReadFile(jsonFilePath)
 	require.NoError(t, err)
