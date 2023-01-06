@@ -138,5 +138,15 @@ func (t *translator) setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter
 			}
 		}
 	}
+
+	if len(cfg.MetricDeclarations) == 0 {
+		// When there are no metric declarations, CWA does not generate any EMF structured logs and instead just publishes them as plain log events
+		// The awsemfexporter by default generates EMF structured logs for all if there are no metric declarations, hence adding a dummy rule here to prevent it
+		cfg.MetricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				MetricNameSelectors: []string{"$^"},
+			},
+		}
+	}
 	return nil
 }

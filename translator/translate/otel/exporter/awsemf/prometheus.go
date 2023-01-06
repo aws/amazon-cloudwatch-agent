@@ -49,6 +49,9 @@ func setPrometheusMetricDeclarations(conf map[string]interface{}, cfg *awsemfexp
 			}
 			if metricSelectors, ok := metricDeclaration["metric_selectors"]; ok {
 				declaration["metric_name_selectors"] = metricSelectors
+			} else {
+				// If no metric selectors are provided, that particular metric declaration is invalid
+				continue
 			}
 			sourceLabels, ok1 := metricDeclaration["source_labels"]
 			labelMatcher, ok2 := metricDeclaration["label_matcher"]
@@ -60,6 +63,9 @@ func setPrometheusMetricDeclarations(conf map[string]interface{}, cfg *awsemfexp
 						"regex":       labelMatcher,
 					},
 				}
+			} else {
+				// If no source labels or label matchers are provided, that particular metric declaration is invalid
+				continue
 			}
 			declarations = append(declarations, declaration)
 		}

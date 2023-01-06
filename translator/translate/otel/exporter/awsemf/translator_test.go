@@ -118,6 +118,76 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 		},
+		"GenerateAwsEmfExporterConfigPrometheusNoDeclarations": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"log_group_name":  "/test/log/group",
+							"log_stream_name": "{job}",
+							"emf_processor": map[string]interface{}{
+								"metric_unit": map[string]interface{}{
+									"jvm_gc_collection_seconds_sum": "Milliseconds",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"namespace":                              "CWAgent/Prometheus",
+				"log_group_name":                         "/test/log/group",
+				"log_stream_name":                        "{job}",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"parse_json_encoded_attr_values":         nilSlice,
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						MetricNameSelectors: []string{"$^"},
+					},
+				},
+				"metric_descriptors": []awsemfexporter.MetricDescriptor{
+					{
+						MetricName: "jvm_gc_collection_seconds_sum",
+						Unit:       "Milliseconds",
+					},
+				},
+			},
+		},
+		"GenerateAwsEmfExporterConfigPrometheusNoEmfProcessor": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"log_group_name":  "/test/log/group",
+							"log_stream_name": "{job}",
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"namespace":                              "",
+				"log_group_name":                         "/test/log/group",
+				"log_stream_name":                        "{job}",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"parse_json_encoded_attr_values":         nilSlice,
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						MetricNameSelectors: []string{"$^"},
+					},
+				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
