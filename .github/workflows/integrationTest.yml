@@ -651,7 +651,7 @@ jobs:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ StartLocalStack ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest ]
     defaults:
       run:
         working-directory: terraform/ec2/localstack
