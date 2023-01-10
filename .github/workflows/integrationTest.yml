@@ -791,7 +791,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 5
           command: |
-            cd ecs_fargate/linux
+            cd terraform/ecs_fargate/linux
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -809,5 +809,5 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd ecs_fargate/linux && terraform destroy --auto-approve
+          command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
 
