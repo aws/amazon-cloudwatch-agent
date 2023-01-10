@@ -650,7 +650,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 5
           command: |
-            cd terraform/ecs/linux/ec2_launch/daemon
+            cd terraform/ecs_ec2/daemon
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -670,7 +670,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ecs/linux/ec2_launch/daemon && terraform destroy --auto-approve
+          command: cd terraform/ecs_ec2/daemon && terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
@@ -719,7 +719,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 5
           command: |
-            cd terraform/ecs/linux
+            cd terraform/ecs_fargate/linux
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -737,7 +737,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ecs/linux && terraform destroy --auto-approve
+          command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
 
   PerformanceTrackingTest:
     name: "PerformanceTrackingTest"
@@ -787,7 +787,7 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd terraform/performance
+            cd terraform/ec2/linux
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
@@ -814,4 +814,4 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/performance && terraform destroy --auto-approve
+          command: cd terraform/ec2/linux && terraform destroy --auto-approve
