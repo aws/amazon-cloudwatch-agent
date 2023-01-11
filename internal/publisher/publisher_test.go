@@ -60,29 +60,10 @@ func TestPublisher_PublishWithNonBlockFifoQueueSleep(t *testing.T) {
 	assert.Equal(t, []string{"req1", "req2"}, c.getResult())
 }
 
-func TestPublisher_PublishWithNonBlockingLifoQueue(t *testing.T) {
-	c := &testClient{}
-	publisher, _ := NewPublisher(NewNonBlockingLifoQueue(2), 1, 2*time.Second, c.publish)
-	publisher.Publish("req1")
-	publisher.Publish("req2")
-	publisher.Close()
-	assert.Equal(t, []string{"req2", "req1"}, c.getResult())
-}
-
-func TestPublisher_PublishWithNonBlockingLifoQueueSleep(t *testing.T) {
-	c := &testClient{}
-	publisher, _ := NewPublisher(NewNonBlockingLifoQueue(2), 1, 2*time.Second, c.publish)
-	publisher.Publish("req1")
-	time.Sleep(100 * time.Millisecond)
-	publisher.Publish("req2")
-	publisher.Close()
-	assert.Equal(t, []string{"req1", "req2"}, c.getResult())
-}
-
 func TestPublisher_DrainTimeout(t *testing.T) {
 	start := time.Now()
 	c := &testClient{}
-	publisher, _ := NewPublisher(NewNonBlockingLifoQueue(2), 1, 2*time.Second, c.publishWith5sLatency)
+	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(2), 1, 2*time.Second, c.publishWith5sLatency)
 	publisher.Publish("req1")
 	publisher.Publish("req2")
 	publisher.Close()
@@ -101,13 +82,16 @@ func (c *testClientNoMutex) publish(req interface{}) {
 }
 
 func TestPublisher_ClientNoMutex(t *testing.T) {
+	publishRequestNum := 100000
 	c := &testClientNoMutex{}
 	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(10), 1, 2*time.Second, c.publish)
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < publishRequestNum; i++ {
 		publisher.Publish(1)
 	}
 	publisher.Close()
-	assert.Equal(t, int32(100000), c.counter)
+	expectNonZeroDroppedRequest := 100
+	assert.Lessf(t, c.counter, int32(publishRequestNum-expectNonZeroDroppedRequest),
+		"Less than publish requests actually published due to dropped requests")
 }
 
 // testClientLongDelay is to test publisher latency with nonBlockingQueue
