@@ -53,9 +53,12 @@ func setPrometheusMetricDeclarations(conf map[string]interface{}, cfg *awsemfexp
 				// If no metric selectors are provided, that particular metric declaration is invalid
 				continue
 			}
-			sourceLabels, ok1 := metricDeclaration["source_labels"]
-			labelMatcher, ok2 := metricDeclaration["label_matcher"]
-			if ok1 && ok2 {
+			labelMatcher, ok := metricDeclaration["label_matcher"]
+			if !ok {
+				labelMatcher = ".*"
+			}
+			sourceLabels, ok := metricDeclaration["source_labels"]
+			if ok {
 				// OTel awsemfexporter allows specifying multiple label_matchers but CWA only allows specifying one
 				declaration["label_matchers"] = [...]map[string]interface{}{
 					{
