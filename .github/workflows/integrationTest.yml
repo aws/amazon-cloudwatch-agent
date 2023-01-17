@@ -508,7 +508,7 @@ jobs:
 
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
-    name: 'EC2LinuxIntegrationTest'
+    name: 'Test'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
