@@ -38,9 +38,17 @@ jobs:
         with:
           go-version: ~1.19.2
 
+      - name: Cache go
+        id: cached_go
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
       # Required to build rpm again to reset cw agent version to new tag version
       - name: Build RPM
-        if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: make build package-rpm
 
       - name: Copy RPM To Release
