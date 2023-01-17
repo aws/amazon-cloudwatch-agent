@@ -717,7 +717,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.ecs-ec2-launch-daemon-integration-test.outputs.cache-hit != 'true'
-        uses: nick-invision/retry@v2
+        uses: nick-fields/retry@v2
         with:
           max_attempts: 3
           timeout_minutes: 15
@@ -738,7 +738,7 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ecs-ec2-launch-integration-test.outputs.cache-hit != 'true' }}
-        uses: nick-invision/retry@v2
+        uses: nick-fields/retry@v2
         with:
           max_attempts: 3
           timeout_minutes: 8
