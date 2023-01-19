@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline"
 	translatorUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
@@ -113,12 +115,12 @@ func main() {
 	if err != nil {
 		log.Panicf("E! Failed to generate TOML configuration validation content: %v", err)
 	}
-	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(mergedJsonConfigMap)
-	if err != nil {
-		log.Panicf("E! Failed to generate YAML configuration validation content: %v", err)
-	}
 	if err = cmdutil.ConfigToTomlFile(tomlConfig, tomlConfigPath); err != nil {
 		log.Panicf("E! Failed to create the configuration TOML validation file: %v", err)
+	}
+	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(mergedJsonConfigMap)
+	if err != nil && !errors.Is(err, pipeline.ErrNoPipelines) {
+		log.Panicf("E! Failed to generate YAML configuration validation content: %v", err)
 	}
 	if err = cmdutil.ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
 		log.Panicf("E! Failed to create the configuration YAML validation file: %v", err)

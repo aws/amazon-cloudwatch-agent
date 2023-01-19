@@ -251,13 +251,11 @@ func runAgent(ctx context.Context,
 	c.InputFilters = inputFilters
 
 	err = loadTomlConfigIntoAgent(c)
-
 	if err != nil {
 		return err
 	}
 
 	err = validateAgentFinalConfigAndPlugins(c)
-
 	if err != nil {
 		return err
 	}
@@ -327,7 +325,16 @@ func runAgent(ctx context.Context,
 	}
 	log.Println("creating new logs agent")
 	logAgent := logs.NewLogAgent(c)
+	// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
 	go logAgent.Run(ctx)
+
+	// If OTEL config does not exist, then ASSUME just monitoring logs.
+	// So just start Telegraf.
+	_, err = os.Stat(*fOtelConfig)
+	if errors.Is(err, os.ErrNotExist) {
+		return ag.Run(ctx)
+	}
+	// Else start OTEL and rely on adapter package to start the logfile plugin.
 
 	// TODO: Update BuildInfo with agentinfo
 	// info := component.BuildInfo{
@@ -335,13 +342,7 @@ func runAgent(ctx context.Context,
 	// 	Description: "My POC",
 	// 	Version:     "0.0",
 	// }
-
 	yamlConfigPath := filepath.Join("file:", *fOtelConfig)
-	if err != nil {
-		log.Printf("E! Failed to load yaml config due to %v", err)
-		return err
-	}
-
 	fprovider := fileprovider.New()
 	settings := otelService.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{

@@ -236,5 +236,11 @@ func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
 
 func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
 	res := toyamlconfig.ToYamlConfig(config)
+	// If YAML just contains the word null, then remove the file.
+	if strings.TrimSpace(res) == "null" {
+		// Intentionally not checking return value.
+		_ = os.Remove(yamlConfigFilePath)
+		return nil
+	}
 	return os.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
 }

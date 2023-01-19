@@ -151,7 +151,7 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 		prometheus.NewTranslator(),
 	).Translate(conf)
 	if err != nil {
-		return nil, fmt.Errorf("unable to translate pipelines: %w", err)
+		return nil, err
 	}
 	extensions, _ := extension.NewTranslator(
 		ecsobserver.NewTranslator(),

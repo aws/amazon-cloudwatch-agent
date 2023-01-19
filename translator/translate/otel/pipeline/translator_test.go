@@ -33,7 +33,7 @@ func TestTranslator(t *testing.T) {
 	pt := NewTranslator()
 	require.EqualValues(t, "", pt.Type())
 	got, err := pt.Translate(confmap.New())
-	require.Equal(t, errNoPipelines, err)
+	require.Equal(t, ErrNoPipelines, err)
 	require.Nil(t, got)
 	pt = NewTranslator(
 		&testTranslator{

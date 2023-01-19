@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	errNoPipelines = errors.New("no valid pipelines")
+	ErrNoPipelines = errors.New("no valid pipelines")
 )
 
 type translator struct {
@@ -40,7 +40,7 @@ func (t *translator) Translate(conf *confmap.Conf) (common.Pipelines, error) {
 		}
 	}
 	if len(pipelines) == 0 {
-		return nil, errNoPipelines
+		return nil, ErrNoPipelines
 	}
 	return pipelines, nil
 }

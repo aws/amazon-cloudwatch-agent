@@ -4,7 +4,9 @@
 package main
 
 import (
+	"errors"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -92,7 +94,7 @@ func main() {
 	}
 
 	if err := translateConfig(); err != nil {
-		log.Fatalf("E! Cannot translate JSON config into TOML, ERROR is %v \n", err)
+		log.Fatalf("E! Cannot translate JSON, ERROR is %v \n", err)
 	}
 	log.Printf("I! Config has been translated into TOML %s \n", tomlConfigPath)
 	printFileContents(tomlConfigPath)
@@ -108,12 +110,15 @@ func main() {
 func printFileContents(path string) {
 	file, err := os.Open(path)
 	if err != nil {
-		log.Printf("E! Error when printing file(%s) contents, Error is %v \n", path, err)
-		os.Exit(1)
+		// YAML file may or may not exist and that is okay.
+		if !errors.Is(err, fs.ErrNotExist) {
+			log.Printf("E! Error when printing file(%s) contents, Error is %v \n", path, err)
+		}
+		return
 	}
 	defer func() {
 		if err = file.Close(); err != nil {
-			log.Printf("E! Error when closing file,  Error is %v \n", err)
+			log.Printf("E! Error when closing file, Error is %v \n", err)
 		}
 	}()
 
