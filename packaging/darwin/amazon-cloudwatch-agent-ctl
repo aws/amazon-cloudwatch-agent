@@ -201,7 +201,9 @@ cwa_config() {
           echo "Configuration validation succeeded"
 
           chmod ug+rw "${TOML}"
-          chmod ug+rw "${OTEL_YAML}"
+          if [ -f "${OTEL_YAML}" ]; then
+               chmod ug+rw "${OTEL_YAML}"
+          fi
 
           # for translator:
           #       default:    only process .tmp files
