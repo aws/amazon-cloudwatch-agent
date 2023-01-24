@@ -3,6 +3,7 @@ on:
   push:
     branches:
       performance-benchmark-page
+  workflow_dispatch:
 
 permissions:
   contents: write

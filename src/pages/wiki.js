@@ -1,5 +1,5 @@
 import Navbar from "../helpers/navbar";
-import Page, { ErrorHandler } from "./page";
+import Page from "./page";
 import "./wiki.css";
 import {
   ScrollingProvider,
@@ -9,9 +9,10 @@ import {
 
 export const DynamicMenu = () => {
   const Sections = useScrollSections();
-
+  console.log(Sections)
   return (
     <ul>
+
       {Sections.map(({ id, onClick, selected }) => (
         <li key={id} onClick={onClick} selected={selected}>
           {id.toUpperCase()}
@@ -173,7 +174,6 @@ export default class WikiPage extends Page {
             </div>
           </div>
         </ScrollingProvider>
-        <ErrorHandler error={this.state.error} />
       </div>
     );
   }

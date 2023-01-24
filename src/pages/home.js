@@ -1,4 +1,4 @@
-import Page, { ErrorHandler } from "./page";
+import Page from "./page";
 import "./homepage.css";
 import Navbar from "../helpers/navbar";
 //This webpage provides information about the project
@@ -91,7 +91,6 @@ export default class Home extends Page {
           </p>
         </section>
         <br />
-        <ErrorHandler error={this.state.error} page={this} />
       </div>
     );
   }

@@ -100,11 +100,13 @@ function setGlobalCSSVars(props) {
 
 // This component creates a snack bar alert if errorMsg is not ""
 export function ErrorHandler(props) {
+  console.log(props)
   var errorType = props.error[0];
   if (errorType === "") {
     return;
   }
-  var errorMsg = props.error[1];
+  var errorMsg = props.error[1].message;
+  console.log(errorMsg)
   return (
     <div>
       <Snackbar
@@ -114,7 +116,7 @@ export function ErrorHandler(props) {
           props.page.clearError();
         }}
       >
-        <MuiAlert severity={errorType}>
+        <MuiAlert severity={errorType}> 
           {errorType.toUpperCase()}: {errorMsg}
         </MuiAlert>
       </Snackbar>

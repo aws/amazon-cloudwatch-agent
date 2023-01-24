@@ -238,7 +238,7 @@ export function Graph(props) {
 }
 //This component creates a graph for each metric
 export default function Grapher(props) {
-  if (props.data === undefined) {
+  if (props.data === undefined || props != null) {
     return;
   }
 

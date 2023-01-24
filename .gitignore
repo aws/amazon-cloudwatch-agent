@@ -10,4 +10,7 @@ CWAGENT_VERSION
 terraform.*
 **/.terraform/*
 coverage.txt
+yarn.lock
+package-lock.json
 integration/generator/resources/*complete*.json
+node_modules

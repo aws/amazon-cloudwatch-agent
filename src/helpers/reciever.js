@@ -1,6 +1,5 @@
 import AWS from "aws-sdk";
 import axios from "axios";
-import sjcl from "sjcl"; //Stanford Javascript Crypto Library
 import { GENERAL_ATTRIBUTES, BATCH_SIZE, UPDATE_FREQUENCY } from "../config";
 const LATEST_ITEM = "LatestHash";
 const CWAData = "CWAData";
@@ -20,9 +19,7 @@ class Receiver {
     this.CWAData = null;
     this.ReleaseMap = {}; //hash map
     this.latestItem = null;
-    this.gateway = "";
-    var date = new Date();
-    this.year = date.getFullYear().toString();
+    this.year = "2022";
     let cacheLatestItem = this.cacheGetLatestItem();
     if (cacheLatestItem !== undefined) {
       this.CWAData = this.cacheGetAllData();
@@ -47,7 +44,6 @@ class Receiver {
       if (timeSinceLastUpdate < UPDATE_FREQUENCY) {
         return [true, ""];
       }
-      this.gateway = this.auth();
       let dynamoLatestItem = await this.getLatestItem();
       let DynamoHash = dynamoLatestItem[HASH];
       // ask dynamo what is the lastest hash it received
@@ -58,7 +54,6 @@ class Receiver {
         this.CWAData = await this.getAllItems();
         this.latestItem = dynamoLatestItem;
         this.cacheSaveData();
-        this.gateway = "";
         return [true, ""];
       } else {
         cacheLatestHash = cacheLatestItem[HASH];
@@ -100,7 +95,6 @@ class Receiver {
       this.cacheClear();
       this.update();
     } catch (err) {
-      this.gateway = "";
       if (this.cacheGetLatestItem === undefined) {
         return [false, err];
       }
@@ -144,10 +138,8 @@ class Receiver {
         this.ReleaseMap[item[HASH].S] = true;
       });
       this.cacheSaveData();
-      this.gateway = "";
       return [true, ""];
     } catch (err) {
-      this.gateway = "";
       return [false, err];
     }
   }
@@ -264,8 +256,13 @@ class Receiver {
       method: "POST",
       url: GATEWAY_LINK,
       headers: {
-        "x-api-key": this.gateway, //process.env.REACT_APP_GATEWAY_API_KEY
+        "x-api-key": process.env.REACT_APP_GATEWAY_API_KEY,
         "Content-Type": "application/json",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Request-Headers":"*",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods":"GET,HEAD,OPTIONS,POST,PUT",
+        "Access-Control-Allow-Credentials": "true",
       },
       data: data,
     };
@@ -274,11 +271,6 @@ class Receiver {
         return response.data.body;
       })
       .catch(function (error) {
-        if (error.code === "ERR_BAD_REQUEST") {
-          localStorage.clear();
-          alert("Incorrect Password.");
-          return "error";
-        }
         return "error";
       });
     return out;
@@ -348,18 +340,6 @@ class Receiver {
   }
   getLastUpdate() {
     return JSON.parse(localStorage.getItem(LAST_UPDATE));
-  }
-  /*
-    Desc: Prompts user for a password input, returns a SHA256 salted hash of the password provided.
-    Param: None
-    Returns: SHA256 salted hash of the password provided
-  */
-  auth() {
-    let input = prompt("Please enter the password");
-    const salt = process.env.REACT_APP_SALT;
-    const bitArray = sjcl.hash.sha256.hash(salt + input);
-    const hash = sjcl.codec.hex.fromBits(bitArray);
-    return hash;
   }
 }
 

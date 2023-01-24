@@ -1,4 +1,4 @@
-import Page, {ErrorHandler} from "./page";
+import Page from "./page";
 import Grapher from "../helpers/grapher";
 import Navbar from "../helpers/navbar";
 import Setting, { MetricSettingsBox,SettingsToggle } from "./settings";
@@ -122,7 +122,6 @@ export default class GraphicsPage extends Page {
             </div>
           </div>
         </div>
-        <ErrorHandler error={this.state.error}  page={this}/>
       </div>
     );
   }

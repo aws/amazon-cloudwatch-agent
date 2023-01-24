@@ -386,7 +386,7 @@ export function BasicTable(props) {
 }
 
 export default function TableGroup(props) {
-  if (props.data === undefined) {
+  if (props.data === undefined || props != null) {
     return;
   }
 
