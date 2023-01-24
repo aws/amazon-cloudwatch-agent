@@ -1,22 +1,22 @@
 {
   "files": {
     "main.css": "/amazon-cloudwatch-agent/static/css/main.16456d2c.chunk.css",
-    "main.js": "/amazon-cloudwatch-agent/static/js/main.71e69a70.chunk.js",
-    "main.js.map": "/amazon-cloudwatch-agent/static/js/main.71e69a70.chunk.js.map",
-    "runtime-main.js": "/amazon-cloudwatch-agent/static/js/runtime-main.8d646e7b.js",
-    "runtime-main.js.map": "/amazon-cloudwatch-agent/static/js/runtime-main.8d646e7b.js.map",
-    "static/js/2.ef07676e.chunk.js": "/amazon-cloudwatch-agent/static/js/2.ef07676e.chunk.js",
-    "static/js/2.ef07676e.chunk.js.map": "/amazon-cloudwatch-agent/static/js/2.ef07676e.chunk.js.map",
-    "static/js/3.2b251d0e.chunk.js": "/amazon-cloudwatch-agent/static/js/3.2b251d0e.chunk.js",
-    "static/js/3.2b251d0e.chunk.js.map": "/amazon-cloudwatch-agent/static/js/3.2b251d0e.chunk.js.map",
+    "main.js": "/amazon-cloudwatch-agent/static/js/main.68efa0ec.chunk.js",
+    "main.js.map": "/amazon-cloudwatch-agent/static/js/main.68efa0ec.chunk.js.map",
+    "runtime-main.js": "/amazon-cloudwatch-agent/static/js/runtime-main.f5cc668c.js",
+    "runtime-main.js.map": "/amazon-cloudwatch-agent/static/js/runtime-main.f5cc668c.js.map",
+    "static/js/2.100540c4.chunk.js": "/amazon-cloudwatch-agent/static/js/2.100540c4.chunk.js",
+    "static/js/2.100540c4.chunk.js.map": "/amazon-cloudwatch-agent/static/js/2.100540c4.chunk.js.map",
+    "static/js/3.3705ab21.chunk.js": "/amazon-cloudwatch-agent/static/js/3.3705ab21.chunk.js",
+    "static/js/3.3705ab21.chunk.js.map": "/amazon-cloudwatch-agent/static/js/3.3705ab21.chunk.js.map",
     "index.html": "/amazon-cloudwatch-agent/index.html",
     "static/css/main.16456d2c.chunk.css.map": "/amazon-cloudwatch-agent/static/css/main.16456d2c.chunk.css.map",
-    "static/js/2.ef07676e.chunk.js.LICENSE.txt": "/amazon-cloudwatch-agent/static/js/2.ef07676e.chunk.js.LICENSE.txt"
+    "static/js/2.100540c4.chunk.js.LICENSE.txt": "/amazon-cloudwatch-agent/static/js/2.100540c4.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
-    "static/js/runtime-main.8d646e7b.js",
-    "static/js/2.ef07676e.chunk.js",
+    "static/js/runtime-main.f5cc668c.js",
+    "static/js/2.100540c4.chunk.js",
     "static/css/main.16456d2c.chunk.css",
-    "static/js/main.71e69a70.chunk.js"
+    "static/js/main.68efa0ec.chunk.js"
   ]
 }
