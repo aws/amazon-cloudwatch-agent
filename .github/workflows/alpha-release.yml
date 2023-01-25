@@ -21,6 +21,7 @@ jobs:
   UploadRelease:
     name: "UploadRelease"
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       id-token: write
       contents: read
