@@ -132,6 +132,7 @@ jobs:
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+      ec2_security_matrix: ${{ steps.set-matrix.outputs.ec2_security_matrix }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -152,6 +153,8 @@ jobs:
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
+          echo "::set-output name=ec2_security_matrix::$(echo $(cat generator/resources/ec2_security_complete_test_matrix.json))"
+
       - name: Echo test plan matrix
         run: |
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
@@ -159,6 +162,8 @@ jobs:
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
+          echo "ec2_security_matrix${{ steps.set-matrix.outputs.ec2_security_matrix }}"
+
   MakeMSIZip:
     name: 'MakeMSIZip'
     runs-on: ubuntu-latest
@@ -888,7 +893,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_linux_matrix) }}
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_security_matrix) }}
     permissions:
       id-token: write
       contents: read
