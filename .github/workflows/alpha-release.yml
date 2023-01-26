@@ -54,6 +54,15 @@ jobs:
 
       - name: Copy RPM To Release
         run: |
+          # Check current release version against new version and ensure they are different.
+          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/release/CWAGENT_VERSION /tmp/
+          current_val=`cat /tmp/CWAGENT_VERSION`
+          new_val=`cat build/bin/CWAGENT_VERSION`
+          if [ "$current_val" = "$new_val" ]; then
+            echo "This version has already been published. Do nothing."
+            exit 1
+          fi
           aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
           aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
           aws s3 cp build/bin/CWAGENT_VERSION s3://${S3_INTEGRATION_BUCKET}/release/CWAGENT_VERSION
+
