@@ -885,7 +885,7 @@ jobs:
              terraform destroy -auto-approve && exit 1
            fi
 
-      This is here just in case workflow cancel
+      # This is here just in case workflow cancel
      - name: Terraform destroy
        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
        uses: nick-fields/retry@v2
