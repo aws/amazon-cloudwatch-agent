@@ -813,3 +813,84 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
 
+
+ PerformanceTrackingTest:
+   name: "PerformanceTrackingTest"
+   needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
+   runs-on: ubuntu-latest
+   strategy:
+     fail-fast: false
+     matrix:
+       arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
+   permissions:
+     id-token: write
+     contents: read
+   steps:
+     - uses: actions/checkout@v2
+       with:
+         repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+
+     - name: Configure AWS Credentials
+       uses: aws-actions/configure-aws-credentials@v1
+       with:
+         role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+         aws-region: us-west-2
+
+     - name: Cache if success
+       id: performance-tracking
+       uses: actions/cache@v2
+       with:
+         path: go.mod
+         key: performance-tracking-test-${{ github.sha }}
+
+     - name: Echo Test Info
+       run: echo run performance-tracking
+     - name: Get SHA
+       id: sha
+       run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+     - name: Get git date
+       id: sha_date
+       run: echo "::set-output name=sha_date::$(git show -s --format=%ct ${{ steps.sha.outputs.sha_short }} )"
+     - name: Check env
+       run: echo "SHA ${{ steps.sha.outputs.sha_short }} | Date ${{ steps.sha_date.outputs.sha_date }} "
+     - name: Verify Terraform version
+       run: terraform --version
+     - name: Terraform apply
+       if: steps.performance-tracking.outputs.cache-hit != 'true'
+       uses: nick-fields/retry@v2
+       with:
+         max_attempts: 1
+         timeout_minutes: 30
+         retry_wait_seconds: 5
+         command: |
+           cd terraform/ec2/linux
+           terraform init
+           if terraform apply --auto-approve \
+             -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+             -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+             -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
+             -var="user=${{ matrix.arrays.username }}" \
+             -var="ami=${{ matrix.arrays.ami }}" \
+             -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+             -var="arc=${{ matrix.arrays.arc }}" \
+             -var="binary_name=${{ matrix.arrays.binaryName }}" \
+             -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+             -var="ssh_key_name=${KEY_NAME}" \
+             -var="cwa_github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
+             -var="test_name=${{ matrix.arrays.os }}" \
+             -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
+             -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+           else
+             terraform destroy -auto-approve && exit 1
+           fi
+
+      This is here just in case workflow cancel
+     - name: Terraform destroy
+       if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+       uses: nick-fields/retry@v2
+       with:
+         max_attempts: 3
+         timeout_minutes: 8
+         retry_wait_seconds: 5
+         command: cd terraform/ec2/linux && terraform destroy --auto-approve
