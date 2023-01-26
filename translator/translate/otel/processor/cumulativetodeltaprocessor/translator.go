@@ -47,13 +47,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*cumulativetodeltaprocessor.Config)
 
-	excludeMetrics, err := t.getExcludeNetAndDiskIOMetrics(conf)
-	if err != nil {
-		return nil, err
-	}
+	excludeMetrics := t.getExcludeNetAndDiskIOMetrics(conf)
 
-	cfg.Exclude.MatchType = strict
-	cfg.Exclude.Metrics = excludeMetrics
+	if len(excludeMetrics) != 0 {
+		cfg.Exclude.MatchType = strict
+		cfg.Exclude.Metrics = excludeMetrics
+	}
 	return cfg, nil
 }
 
@@ -63,10 +62,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 // However, CloudWatch  does have an upper bound https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
 // Therefore, we calculate the delta values for customers instead of using the original values
 // https://github.com/aws/amazon-cloudwatch-agent/blob/5ace5aa6d817684cf82f4e6aa82d9596fb56d74b/translator/translate/metrics/util/deltasutil.go#L33-L65
-func (t *translator) getExcludeNetAndDiskIOMetrics(conf *confmap.Conf) ([]string, error) {
+func (t *translator) getExcludeNetAndDiskIOMetrics(conf *confmap.Conf) []string {
 	var excludeMetricName []string
 	if conf.IsSet(diskioKey) {
 		excludeMetricName = append(excludeMetricName, "iops_in_progress", "diskio_iops_in_progress")
 	}
-	return excludeMetricName, nil
+	return excludeMetricName
 }

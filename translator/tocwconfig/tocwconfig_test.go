@@ -194,6 +194,13 @@ func TestDeltaConfigLinux(t *testing.T) {
 	checkTranslation(t, "delta_config_linux", "darwin", nil, "")
 }
 
+func TestDeltaNetConfigLinux(t *testing.T) {
+	resetContext()
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "delta_net_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "delta_net_config_linux", "darwin", nil, "")
+}
+
 func TestCsmServiceAddressesConfig(t *testing.T) {
 	resetContext()
 	expectedEnvVars := map[string]string{
