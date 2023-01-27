@@ -11,6 +11,10 @@
     }
   },
   "metrics": {
+    "global_dimensions": {
+      "Environment": "test",
+      "DeploymentStack": "green"
+    },
     "metrics_collected": {
       "nvidia_gpu": {
         "measurement": [
@@ -32,9 +36,7 @@
           "% User Time",
           "% Processor Time"
         ],
-        "resources": [
-          "*"
-        ],
+        "resources": ["*"],
         "append_dimensions": {
           "d1": "win_foo",
           "d2": "win_bar"
@@ -53,22 +55,13 @@
           "% Disk Write Time",
           "% User Time"
         ],
-        "resources": [
-          "*"
-        ]
+        "resources": ["*"]
       },
       "customizedObjectName": {
         "metrics_collection_interval": 60,
-        "customizedCounterName": [
-          "metric1",
-          "metric2"
-        ],
-        "resources": [
-          "customizedInstaces"
-        ],
-        "measurement": [
-          "customizedCounter1"
-        ]
+        "customizedCounterName": ["metric1", "metric2"],
+        "resources": ["customizedInstaces"],
+        "measurement": ["customizedCounter1"]
       },
       "Memory": {
         "metrics_collection_interval": 5,
@@ -90,9 +83,7 @@
           "Packets Received/sec",
           "Packets Sent/sec"
         ],
-        "resources": [
-          "*"
-        ],
+        "resources": ["*"],
         "append_dimensions": {
           "d3": "win_bo"
         }
@@ -117,10 +108,7 @@
       "procstat": [
         {
           "exe": "agent",
-          "measurement": [
-            "cpu_time_system",
-            "cpu_time_user"
-          ]
+          "measurement": ["cpu_time_system", "cpu_time_user"]
         }
       ]
     },
@@ -131,16 +119,9 @@
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
     },
     "aggregation_dimensions": [
-      [
-        "ImageId"
-      ],
-      [
-        "InstanceId",
-        "InstanceType"
-      ],
-      [
-        "d1"
-      ],
+      ["ImageId"],
+      ["InstanceId", "InstanceType"],
+      ["d1"],
       []
     ],
     "force_flush_interval": 60,
@@ -176,20 +157,14 @@
         "collect_list": [
           {
             "event_name": "System",
-            "event_levels": [
-              "INFORMATION",
-              "ERROR"
-            ],
+            "event_levels": ["INFORMATION", "ERROR"],
             "log_group_name": "System",
             "log_stream_name": "System",
             "event_format": "xml"
           },
           {
             "event_name": "CustomizedName",
-            "event_levels": [
-              "CRITICAL",
-              "VERBOSE"
-            ],
+            "event_levels": ["CRITICAL", "VERBOSE"],
             "log_group_name": "CustomizedLogGroup",
             "log_stream_name": "CustomizedLogStream",
             "event_format": "xml"

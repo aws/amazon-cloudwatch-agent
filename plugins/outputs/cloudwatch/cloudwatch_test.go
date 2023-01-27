@@ -33,7 +33,7 @@ func TestBuildDimensions(t *testing.T) {
 	assert := assert.New(t)
 
 	testPoint := testutil.TestMetric(1)
-	dimensions := BuildDimensions(testPoint.Tags())
+	dimensions := BuildDimensions(testPoint.Tags(), nil)
 
 	tagKeys := make([]string, len(testPoint.Tags()))
 	i := 0
@@ -56,6 +56,108 @@ func TestBuildDimensions(t *testing.T) {
 		}
 		assert.Equal(key, *dimensions[i].Name, "Key should be equal")
 		assert.Equal(testPoint.Tags()[key], *dimensions[i].Value, "Value should be equal")
+	}
+}
+
+// Test that global dimensions are added correctly
+func TestGlobalDimensions(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	globalDimensions := map[string]string{
+		"Environment": "test",
+		"Deployment":  "green",
+	}
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+
+	tagKeys := make([]string, len(testPoint.Tags()))
+	i := 0
+	for k := range testPoint.Tags() {
+		tagKeys[i] = k
+		i += 1
+	}
+
+	sort.Strings(tagKeys)
+
+	if len(testPoint.Tags()) >= MaxDimensions {
+		assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
+	} else {
+		assert.Equal(len(testPoint.Tags())+len(globalDimensions), len(dimensions), "Number of dimensions should be equal to number of tags plus the number of global dimensions")
+	}
+
+	for key, value := range globalDimensions {
+		var matchingDimension *cloudwatch.Dimension
+
+		for _, dimension := range dimensions {
+			if *dimension.Name == key {
+				matchingDimension = dimension
+			}
+		}
+
+		assert.NotNil(matchingDimension, "Global dimension should exist")
+		assert.Equal(value, *matchingDimension.Value, "Global dimension value should be equal")
+	}
+
+	for i, key := range tagKeys {
+		if i >= 10 {
+			break
+		}
+		assert.Equal(key, *dimensions[i+len(globalDimensions)].Name, "Key should be equal")
+		assert.Equal(testPoint.Tags()[key], *dimensions[i+len(globalDimensions)].Value, "Value should be equal")
+	}
+}
+
+// Test that global dimensions override metric tags correctly
+func TestGlobalDimensionsOverride(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	testPoint.AddTag("Environment", "live")
+
+	globalDimensions := map[string]string{
+		"Environment": "test",
+		"Deployment":  "green",
+	}
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+
+	tagKeys := make([]string, len(testPoint.Tags())-1)
+	i := 0
+	for k := range testPoint.Tags() {
+		if k == "Environment" {
+			continue
+		}
+		tagKeys[i] = k
+		i += 1
+	}
+
+	sort.Strings(tagKeys)
+
+	if len(testPoint.Tags()) >= MaxDimensions {
+		assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
+	} else {
+		assert.Equal(len(testPoint.Tags())+len(globalDimensions)-1, len(dimensions), "Conflicting global and metric dimensions should be merged")
+	}
+
+	for key, value := range globalDimensions {
+		var matchingDimension *cloudwatch.Dimension
+
+		for _, dimension := range dimensions {
+			if *dimension.Name == key {
+				matchingDimension = dimension
+				break
+			}
+		}
+
+		assert.NotNil(matchingDimension, "Global dimension should exist")
+		assert.Equal(value, *matchingDimension.Value, "Global dimension value should be equal")
+	}
+
+	for i, key := range tagKeys {
+		if i >= 10 {
+			break
+		}
+		assert.Equal(key, *dimensions[i+len(globalDimensions)].Name, "Key should be equal")
+		assert.Equal(testPoint.Tags()[key], *dimensions[i+len(globalDimensions)].Value, "Value should be equal")
 	}
 }
 
@@ -287,7 +389,7 @@ func TestIsFlushable(t *testing.T) {
 	datum := cloudwatch.MetricDatum{
 		MetricName: aws.String("test_metric"),
 		Value:      aws.Float64(1),
-		Dimensions: BuildDimensions(tags),
+		Dimensions: BuildDimensions(tags, map[string]string{}),
 		Timestamp:  aws.Time(time.Now()),
 	}
 	batch.Partition = append(batch.Partition, &datum)
@@ -305,7 +407,7 @@ func TestIsFull(t *testing.T) {
 	datum := cloudwatch.MetricDatum{
 		MetricName: aws.String("test_metric"),
 		Value:      aws.Float64(1),
-		Dimensions: BuildDimensions(tags),
+		Dimensions: BuildDimensions(tags, map[string]string{}),
 		Timestamp:  aws.Time(time.Now()),
 	}
 	for i := 0; i < 3; {
@@ -339,7 +441,6 @@ func newCloudWatchClient(svc cloudwatchiface.CloudWatchAPI, forceFlushInterval t
 	return cloudwatch
 }
 
-//
 func makeMetrics(count int) []telegraf.Metric {
 	metrics := make([]telegraf.Metric, 0, count)
 	measurement := "Test_namespace"

@@ -63,7 +63,8 @@ type CloudWatch struct {
 	MetricConfigs      []MetricDecorationConfig `toml:"metric_decoration"`
 	RollupDimensions   [][]string               `toml:"rollup_dimensions"`
 	DropOriginConfigs  map[string][]string      `toml:"drop_original_metrics"`
-	Namespace          string                   `toml:"namespace"` // CloudWatch Metrics Namespace
+	Namespace          string                   `toml:"namespace"`         // CloudWatch Metrics Namespace
+	GlobalDimensions   map[string]string        `toml:"global_dimensions"` // Dimensions to append for all Metrics
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -105,8 +106,11 @@ var sampleConfig = `
   ## Namespace for the CloudWatch MetricDatums
   namespace = "InfluxData/Telegraf"
 
+  ## Global dimensions (appended to all metrics)
+	#global_dimensions = { "Environment" = "test", "StackDeployment" = "Green" }
+
   ## RollupDimensions
-  # RollupDimensions = [["host"],["host", "ImageId"],[]]
+  # rollup_dimensions = [["host"],["host", "ImageId"],[]]
 `
 
 func (c *CloudWatch) SampleConfig() string {
@@ -457,7 +461,7 @@ func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.Metri
 		point.RemoveTag(highResolutionTagKey)
 	}
 
-	rawDimensions := BuildDimensions(point.Tags())
+	rawDimensions := BuildDimensions(point.Tags(), c.GlobalDimensions)
 	dimensionsList := c.ProcessRollup(rawDimensions)
 	//https://pratheekadidela.in/2016/02/11/is-append-in-go-efficient/
 	//https://www.ardanlabs.com/blog/2013/08/understanding-slices-in-go-programming.html
@@ -571,7 +575,7 @@ func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.Metri
 // 30 dimensions per metric so we only keep up to the first 30 alphabetically.
 // This always includes the "host" tag if it exists.
 // See https://github.com/aws/amazon-cloudwatch-agent/issues/398
-func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
+func BuildDimensions(mTags map[string]string, globalDimensions map[string]string) []*cloudwatch.Dimension {
 	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
 
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
@@ -582,9 +586,16 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 		})
 	}
 
+	for key, value := range globalDimensions {
+		dimensions = append(dimensions, &cloudwatch.Dimension{
+			Name:  aws.String(key),
+			Value: aws.String(value),
+		})
+	}
+
 	var keys []string
 	for k := range mTags {
-		if k != "host" {
+		if k != "host" && globalDimensions[k] == "" {
 			keys = append(keys, k)
 		}
 	}
