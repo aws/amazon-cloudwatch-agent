@@ -703,11 +703,11 @@ jobs:
           aws-region: us-west-2
 
       - name: Cache if success
-          id: ecs-ec2-launch-daemon-integration-test
-          uses: actions/cache@v2
-          with:
-            path: go.mod
-            key: ecs-ec2-launch-daemon-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+        id: ecs-ec2-launch-daemon-integration-test
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: ecs-ec2-launch-daemon-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Login ECR
         id: login-ecr
