@@ -389,7 +389,7 @@ func TestIsFlushable(t *testing.T) {
 	datum := cloudwatch.MetricDatum{
 		MetricName: aws.String("test_metric"),
 		Value:      aws.Float64(1),
-		Dimensions: BuildDimensions(tags, map[string]string{}),
+		Dimensions: BuildDimensions(tags, nil),
 		Timestamp:  aws.Time(time.Now()),
 	}
 	batch.Partition = append(batch.Partition, &datum)
@@ -407,7 +407,7 @@ func TestIsFull(t *testing.T) {
 	datum := cloudwatch.MetricDatum{
 		MetricName: aws.String("test_metric"),
 		Value:      aws.Float64(1),
-		Dimensions: BuildDimensions(tags, map[string]string{}),
+		Dimensions: BuildDimensions(tags, nil),
 		Timestamp:  aws.Time(time.Now()),
 	}
 	for i := 0; i < 3; {
