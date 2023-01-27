@@ -8,9 +8,9 @@ env:
   S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  CWA_GITHUB_TEST_REPO_NAME: "ChenaLee/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_URL: "https://github.com/ChenaLee/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "securityWorkflow"
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
   push:
@@ -648,7 +648,7 @@ jobs:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, EC2SecurityIntegrationTest ]
     defaults:
       run:
         working-directory: terraform/ec2/localstack
@@ -701,6 +701,13 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+
+      - name: Cache if success
+          id: ecs-ec2-launch-daemon-integration-test
+          uses: actions/cache@v2
+          with:
+            path: go.mod
+            key: ecs-ec2-launch-daemon-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Login ECR
         id: login-ecr
@@ -887,7 +894,7 @@ jobs:
 #          command: cd terraform/ec2/linux && terraform destroy --auto-approve
 
   EC2SecurityIntegrationTest:
-    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix] #For now to make testing easier. Later this will be moved to post feature tests
+    needs: [ECSFargateIntegrationTest, ECSEC2LaunchDaemonIntegrationTest, EC2LinuxIntegrationTest] #For now to make testing easier. Later this will be moved to post feature tests
     name: 'Security'
     runs-on: ubuntu-latest
     strategy:
@@ -909,13 +916,12 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
- # For now, to rerun tests during development
- #     - name: Cache if success
- #       id: ec2-linux-integration-test
- #       uses: actions/cache@v2
- #       with:
- #         path: go.mod
- #         key: ec2-security-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+      - name: Cache if success
+        id: ec2-linux-integration-test
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: ec2-security-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
