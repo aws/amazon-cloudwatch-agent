@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run Integration Tests
+name: Run Continuous Integration
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
@@ -70,6 +70,16 @@ jobs:
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
+
+      - name: Unit Test
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        run: make test
+
+      - name: Upload Coverage report to CodeCov
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.txt
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
