@@ -106,11 +106,8 @@ var sampleConfig = `
   ## Namespace for the CloudWatch MetricDatums
   namespace = "InfluxData/Telegraf"
 
-  ## Global dimensions (appended to all metrics)
-	#global_dimensions = { "Environment" = "test", "StackDeployment" = "Green" }
-
   ## RollupDimensions
-  # rollup_dimensions = [["host"],["host", "ImageId"],[]]
+  # RollupDimensions = [["host"],["host", "ImageId"],[]]
 `
 
 func (c *CloudWatch) SampleConfig() string {
