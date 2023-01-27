@@ -11,21 +11,25 @@
     }
   },
   "metrics": {
-    "global_dimensions": {
-      "Environment": "test",
-      "DeploymentStack": "green"
-    },
     "metrics_collected": {
+      "global_dimensions": {
+        "Environment": "test",
+        "DeploymentStack": "green"
+      },
       "collectd": {
         "service_address": "udp://127.0.0.1:25826",
         "name_prefix": "collectd_",
         "collectd_auth_file": "/etc/collectd/auth_file",
         "collectd_security_level": "encrypt",
-        "collectd_typesdb": ["/usr/share/collectd/types.db"],
+        "collectd_typesdb": [
+          "/usr/share/collectd/types.db"
+        ],
         "metrics_aggregation_interval": 60
       },
       "cpu": {
-        "resources": ["*"],
+        "resources": [
+          "*"
+        ],
         "drop_original_metrics": ["cpu_usage_idle", "time_active"],
         "measurement": [
           {
@@ -49,7 +53,11 @@
         }
       },
       "disk": {
-        "resources": ["/", "/dev", "/sys"],
+        "resources": [
+          "/",
+          "/dev",
+          "/sys"
+        ],
         "measurement": [
           {
             "name": "free",
@@ -64,10 +72,15 @@
           "d3": "foo3",
           "d4": "bar4"
         },
-        "ignore_file_system_types": ["sysfs", "devtmpfs"]
+        "ignore_file_system_types": [
+          "sysfs",
+          "devtmpfs"
+        ]
       },
       "diskio": {
-        "resources": ["*"],
+        "resources": [
+          "*"
+        ],
         "measurement": [
           "reads",
           "writes",
@@ -84,27 +97,53 @@
         "metric_separator": "_"
       },
       "swap": {
-        "measurement": ["swap_used", "swap_free", "swap_used_percent"]
+        "measurement": [
+          "swap_used",
+          "swap_free",
+          "swap_used_percent"
+        ]
       },
       "mem": {
-        "measurement": ["mem_used", "mem_cached", "mem_total"],
+        "measurement": [
+          "mem_used",
+          "mem_cached",
+          "mem_total"
+        ],
         "metrics_collection_interval": 1
       },
       "net": {
-        "resources": ["eth0"],
-        "measurement": ["bytes_sent", "bytes_recv", "drop_in", "drop_out"]
+        "resources": [
+          "eth0"
+        ],
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv",
+          "drop_in",
+          "drop_out"
+        ]
       },
       "netstat": {
-        "measurement": ["tcp_established", "tcp_syn_sent", "tcp_close"],
+        "measurement": [
+          "tcp_established",
+          "tcp_syn_sent",
+          "tcp_close"
+        ],
         "metrics_collection_interval": 60
       },
       "processes": {
-        "measurement": ["running", "sleeping", "dead"]
+        "measurement": [
+          "running",
+          "sleeping",
+          "dead"
+        ]
       },
       "procstat": [
         {
           "pid_file": "/var/run/example1.pid",
-          "measurement": ["cpu_usage", "memory_rss"]
+          "measurement": [
+            "cpu_usage",
+            "memory_rss"
+          ]
         }
       ]
     },
@@ -115,9 +154,16 @@
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
     },
     "aggregation_dimensions": [
-      ["ImageId"],
-      ["InstanceId", "InstanceType"],
-      ["d1"],
+      [
+        "ImageId"
+      ],
+      [
+        "InstanceId",
+        "InstanceType"
+      ],
+      [
+        "d1"
+      ],
       []
     ],
     "force_flush_interval": 60,
