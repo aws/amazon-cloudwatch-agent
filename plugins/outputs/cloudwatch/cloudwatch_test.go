@@ -59,6 +59,27 @@ func TestBuildDimensions(t *testing.T) {
 	}
 }
 
+// Test that we retain as many tags as possible if the number exceeds the max number permitted
+func TestBuildDimensionsExceedMaxNumber(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+
+	for i := len(testPoint.Tags()); i <= MaxDimensions; i++ {
+		testPoint.AddTag(fmt.Sprint(i), "Value"+fmt.Sprint(i))
+	}
+
+	dimensions := BuildDimensions(testPoint.Tags(), nil)
+
+	assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
+	assert.Equal(len(testPoint.Tags())-1, len(dimensions), "Should keep as many dimensions as possible")
+
+	for _, dimension := range dimensions {
+		tagValue := testPoint.Tags()[*dimension.Name]
+		assert.Equal(tagValue, *dimension.Value, "Value should be equal")
+	}
+}
+
 // Test that global dimensions are added correctly
 func TestGlobalDimensions(t *testing.T) {
 	assert := assert.New(t)
@@ -105,6 +126,22 @@ func TestGlobalDimensions(t *testing.T) {
 		assert.Equal(key, *dimensions[i+len(globalDimensions)].Name, "Key should be equal")
 		assert.Equal(testPoint.Tags()[key], *dimensions[i+len(globalDimensions)].Value, "Value should be equal")
 	}
+}
+
+// Test that global dimensions are added correctly
+func TestGlobalDimensionsExceedMaxNumber(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+
+	globalDimensions := map[string]string{}
+
+	for i := 0; i <= MaxDimensions; i++ {
+		globalDimensions[fmt.Sprint(i)] = "Value"
+	}
+
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+	assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
 }
 
 // Test that global dimensions override metric tags correctly

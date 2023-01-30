@@ -584,6 +584,11 @@ func BuildDimensions(mTags map[string]string, globalDimensions map[string]string
 	}
 
 	for key, value := range globalDimensions {
+		if len(dimensions) >= MaxDimensions {
+			log.Printf("D! max MaxDimensions %v is less than than number of dimensions %v thus only taking the max number", MaxDimensions, len(dimensions))
+			break
+		}
+
 		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String(key),
 			Value: aws.String(value),
