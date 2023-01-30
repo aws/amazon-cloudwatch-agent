@@ -14,22 +14,23 @@ const SectionKey = "global_dimensions"
 
 func (ad *globalDimensions) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	im := input.(map[string]interface{})
-
 	dimensions := map[string]interface{}{}
 
-	if _, ok := im[SectionKey]; !ok {
-		returnKey = ""
-		returnVal = ""
-	} else {
+	returnKey = ""
+	returnVal = ""
+
+	if _, ok := im[SectionKey]; ok {
 		for key, val := range im[SectionKey].(map[string]interface{}) {
 			if key != "" && val != "" {
 				dimensions[key] = val
 			}
 		}
 
-		returnKey = "outputs"
-		returnVal = map[string]interface{}{
-			SectionKey: dimensions,
+		if len(dimensions) > 0 {
+			returnKey = "outputs"
+			returnVal = map[string]interface{}{
+				SectionKey: dimensions,
+			}
 		}
 	}
 	return
