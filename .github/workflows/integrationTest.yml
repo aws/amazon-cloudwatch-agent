@@ -132,7 +132,7 @@ jobs:
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
-      ec2_security_matrix: ${{ steps.set-matrix.outputs.ec2_security_matrix }}
+      ec2_acceptance_matrix: ${{ steps.set-matrix.outputs.ec2_acceptance_matrix }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -153,7 +153,7 @@ jobs:
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
-          echo "::set-output name=ec2_security_matrix::$(echo $(cat generator/resources/ec2_security_complete_test_matrix.json))"
+          echo "::set-output name=ec2_acceptance_matrix::$(echo $(cat generator/resources/ec2_acceptance_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
@@ -162,7 +162,7 @@ jobs:
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
-          echo "ec2_security_matrix${{ steps.set-matrix.outputs.ec2_security_matrix }}"
+          echo "ec2_acceptance_matrix${{ steps.set-matrix.outputs.ec2_acceptance_matrix }}"
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -648,7 +648,7 @@ jobs:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, EC2SecurityIntegrationTest ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, EC2AcceptanceIntegrationTest ]
     defaults:
       run:
         working-directory: terraform/ec2/localstack
@@ -893,14 +893,14 @@ jobs:
 #          retry_wait_seconds: 5
 #          command: cd terraform/ec2/linux && terraform destroy --auto-approve
 
-  EC2SecurityIntegrationTest:
+  EC2AcceptanceIntegrationTest:
     needs: [ECSFargateIntegrationTest, ECSEC2LaunchDaemonIntegrationTest, EC2LinuxIntegrationTest] #For now to make testing easier. Later this will be moved to post feature tests
-    name: 'Security'
+    name: 'Acceptance'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_security_matrix) }}
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_acceptance_matrix) }}
     permissions:
       id-token: write
       contents: read
@@ -921,7 +921,7 @@ jobs:
 #        uses: actions/cache@v2
 #        with:
 #          path: go.mod
-#          key: ec2-security-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+#          key: ec2-acceptance-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
@@ -931,7 +931,7 @@ jobs:
 
       # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
-        if: steps.ec2-security-test.outputs.cache-hit != 'true'
+        if: steps.ec2-acceptance-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -961,7 +961,7 @@ jobs:
 
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-security-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() && steps.ec2-acceptance-test.outputs.cache-hit != 'true' }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
