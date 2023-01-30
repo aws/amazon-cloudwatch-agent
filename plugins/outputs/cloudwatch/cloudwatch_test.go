@@ -100,11 +100,7 @@ func TestGlobalDimensions(t *testing.T) {
 
 	sort.Strings(tagKeys)
 
-	if len(testPoint.Tags()) >= MaxDimensions {
-		assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
-	} else {
-		assert.Equal(len(testPoint.Tags())+len(globalDimensions), len(dimensions), "Number of dimensions should be equal to number of tags plus the number of global dimensions")
-	}
+	assert.Equal(len(testPoint.Tags())+len(globalDimensions), len(dimensions), "Number of dimensions should be equal to number of tags plus the number of global dimensions")
 
 	for key, value := range globalDimensions {
 		var matchingDimension *cloudwatch.Dimension
@@ -120,9 +116,6 @@ func TestGlobalDimensions(t *testing.T) {
 	}
 
 	for i, key := range tagKeys {
-		if i >= 10 {
-			break
-		}
 		assert.Equal(key, *dimensions[i+len(globalDimensions)].Name, "Key should be equal")
 		assert.Equal(testPoint.Tags()[key], *dimensions[i+len(globalDimensions)].Value, "Value should be equal")
 	}
@@ -169,11 +162,7 @@ func TestGlobalDimensionsOverride(t *testing.T) {
 
 	sort.Strings(tagKeys)
 
-	if len(testPoint.Tags()) >= MaxDimensions {
-		assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
-	} else {
-		assert.Equal(len(testPoint.Tags())+len(globalDimensions)-1, len(dimensions), "Conflicting global and metric dimensions should be merged")
-	}
+	assert.Equal(len(testPoint.Tags())+len(globalDimensions)-1, len(dimensions), "Conflicting global and metric dimensions should be merged")
 
 	for key, value := range globalDimensions {
 		var matchingDimension *cloudwatch.Dimension
@@ -190,9 +179,6 @@ func TestGlobalDimensionsOverride(t *testing.T) {
 	}
 
 	for i, key := range tagKeys {
-		if i >= 10 {
-			break
-		}
 		assert.Equal(key, *dimensions[i+len(globalDimensions)].Name, "Key should be equal")
 		assert.Equal(testPoint.Tags()[key], *dimensions[i+len(globalDimensions)].Value, "Value should be equal")
 	}
