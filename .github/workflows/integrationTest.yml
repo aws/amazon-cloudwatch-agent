@@ -894,7 +894,7 @@ jobs:
 #          command: cd terraform/ec2/linux && terraform destroy --auto-approve
 
   EC2AcceptanceIntegrationTest:
-    needs: [ECSFargateIntegrationTest, ECSEC2LaunchDaemonIntegrationTest, EC2LinuxIntegrationTest] #For now to make testing easier. Later this will be moved to post feature tests
+    needs: [ECSFargateIntegrationTest, ECSEC2LaunchDaemonIntegrationTest, EC2LinuxIntegrationTest]
     name: 'Acceptance'
     runs-on: ubuntu-latest
     strategy:
