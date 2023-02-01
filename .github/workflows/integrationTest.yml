@@ -816,8 +816,8 @@ jobs:
           command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
 
 
-  PerformanceTrackingTest:
-    name: "PerformanceTrackingTest"
+  StressTrackingTest:
+    name: "StressTrackingTest"
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
