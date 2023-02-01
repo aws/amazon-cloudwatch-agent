@@ -10,7 +10,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "khanhntd/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/khanhntd/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "validate"
+  CWA_GITHUB_TEST_REPO_BRANCH: "setup"
 
 on:
   push:
@@ -816,8 +816,8 @@ jobs:
           command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
 
 
-  StressTrackingTest:
-    name: "StressTrackingTest"
+  PerformanceTrackingTest:
+    name: "PerformanceTrackingTest"
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
@@ -879,7 +879,7 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="data_rate=${{ matrix.arrays.dataRate}}"\
+              -var="performance_number_of_logs=${{ matrix.arrays.performanceNumberOfLogs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
