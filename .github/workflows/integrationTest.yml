@@ -123,7 +123,7 @@ jobs:
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
-      ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
+      ec2_stress_matrix: ${{steps.set-matrix.outputs.ec2_stress_matrix}}
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
     steps:
