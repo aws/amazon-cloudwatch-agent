@@ -10,7 +10,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "khanhntd/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/khanhntd/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "validate"
+  CWA_GITHUB_TEST_REPO_BRANCH: "setup"
 
 on:
   push:
@@ -455,6 +455,7 @@ jobs:
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
@@ -509,7 +510,7 @@ jobs:
 
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
-    name: 'EC2LinuxIntegrationTest'
+    name: 'Test'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -549,7 +550,7 @@ jobs:
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
-          timeout_minutes: 30
+          timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
             cd terraform/ec2/linux
@@ -558,6 +559,7 @@ jobs:
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
@@ -718,7 +720,7 @@ jobs:
 
       - name: Terraform apply
         if: steps.ecs-ec2-launch-daemon-integration-test.outputs.cache-hit != 'true'
-        uses: nick-invision/retry@v2
+        uses: nick-fields/retry@v2
         with:
           max_attempts: 3
           timeout_minutes: 15
@@ -739,12 +741,12 @@ jobs:
 
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ecs-ec2-launch-integration-test.outputs.cache-hit != 'true' }}
-        uses: nick-invision/retry@v2
+        uses: nick-fields/retry@v2
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ecs_ec2/daemon && terraform destroy --auto-approve
+          command: cd terraform/ecs/linux/ec2_launch/daemon && terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
@@ -814,8 +816,8 @@ jobs:
           command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
 
 
-  StressTrackingTest:
-    name: "StressTrackingTest"
+  PerformanceTrackingTest:
+    name: "PerformanceTrackingTest"
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
@@ -877,7 +879,7 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="data_rate=${{ matrix.arrays.dataRate}}"\
+              -var="performance_number_of_logs=${{ matrix.arrays.performanceNumberOfLogs}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
