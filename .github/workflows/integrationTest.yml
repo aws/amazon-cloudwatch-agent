@@ -146,7 +146,6 @@ jobs:
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
-
       - name: Echo test plan matrix
         run: |
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
@@ -154,7 +153,6 @@ jobs:
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
-
   MakeMSIZip:
     name: 'MakeMSIZip'
     runs-on: ubuntu-latest
@@ -189,13 +187,11 @@ jobs:
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} . --recursive
-
       - name: Unzip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           sudo apt install unzip
           unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
-
       - name: Create msi dep folder and copy deps
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
@@ -206,13 +202,11 @@ jobs:
           cp -r windows-agent/amazon-cloudwatch-agent/. msi_dep/
           go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>' --tags=integration
           go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__ --tags=integration
-
       - name: Zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           sudo apt install zip
           zip buildMSI.zip msi_dep/*
-
       - name: Upload zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: aws s3 cp buildMSI.zip s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/buildMSI.zip
@@ -251,7 +245,6 @@ jobs:
         if: steps.cached_pkg.outputs.cache-hit != 'true'
         run: |
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} . --recursive
-
       - name: Create pkg dep folder and copy deps
         if: steps.cached_pkg.outputs.cache-hit != 'true'
         run: |
@@ -261,7 +254,6 @@ jobs:
           cp -r pkg/tools/. /tmp/arm64/
           cp -r darwin/amd64/. /tmp/
           cp -r darwin/arm64/. /tmp/arm64/
-
       - name: Build And Upload PKG
         if: steps.cached_pkg.outputs.cache-hit != 'true'
         working-directory: /tmp/
@@ -271,7 +263,6 @@ jobs:
           ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }} ${{ github.sha }} amd64
           cd arm64
           ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }} ${{ github.sha }} arm64
-
   BuildMSI:
     name: 'BuildMSI'
     runs-on: windows-latest
@@ -310,7 +301,6 @@ jobs:
           Expand-Archive buildMSI.zip -Force
           cd buildMSI/msi_dep
           .\create_msi.ps1 ${{ github.sha }} ${{ secrets.S3_INTEGRATION_BUCKET }}
-
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:
     name: 'SignMacAndWindowsPackage'
@@ -343,7 +333,6 @@ jobs:
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
           aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
-
       - name: Import GPG Key
         uses: crazy-max/ghaction-import-gpg@v5
         with:
@@ -359,7 +348,6 @@ jobs:
           aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi.sig
           aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amd64/amazon-cloudwatch-agent.pkg.sig
           aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/arm64/amazon-cloudwatch-agent.pkg.sig
-
   StartLocalStack:
     name: 'StartLocalStack'
     runs-on: ubuntu-latest
@@ -403,7 +391,6 @@ jobs:
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
-
   EC2NvidiaGPUIntegrationTest:
     needs: [ MakeBinary, BuildMSI, StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
@@ -469,7 +456,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       - name: Terraform apply
         if: ${{ matrix.arrays.family == 'window' && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-fields/retry@v2
@@ -490,7 +476,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
@@ -506,7 +491,6 @@ jobs:
               cd terraform/ec2/linux
             fi
             terraform destroy --auto-approve
-
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'Test'
@@ -572,7 +556,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
@@ -725,7 +708,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 5
           command: |
-            cd terraform/ecs/linux/ec2_launch/daemon
+            cd terraform/ecs_ec2/daemon
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -737,7 +720,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ecs-ec2-launch-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-fields/retry@v2
@@ -794,7 +776,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 5
           command: |
-            cd terraform/ecs/linux
+            cd terraform/ecs_fargate/linux
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -804,7 +786,6 @@ jobs:
             else
               terraform destroy -auto-approve && exit 1
             fi
-
       - name: Terraform destroy
         if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true' }}
         uses: nick-fields/retry@v2
