@@ -195,6 +195,8 @@ func DefaultJsonConfig(os string, mode string) string {
 	default:
 		if mode == ModeEC2 {
 			return defaultLinuxEC2Config
+		} else if mode == ModeWithIRSA {
+			return defaultLinuxOnPremConfig
 		} else {
 			return defaultLinuxOnPremConfig
 		}
