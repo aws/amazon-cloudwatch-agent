@@ -726,7 +726,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 5
           command: |
-            cd terraform/ecs/linux/ec2_launch/daemon
+            cd terraform/ecs_ec2/daemon
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -795,7 +795,7 @@ jobs:
           timeout_minutes: 15
           retry_wait_seconds: 5
           command: |
-            cd terraform/ecs/linux
+            cd terraform/ecs_fargate/linux
             terraform init
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
@@ -879,7 +879,7 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="test_name=${{ matrix.arrays.os }}" \
-              -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
+              -var="data_rate=${{ matrix.arrays.data_rate}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
