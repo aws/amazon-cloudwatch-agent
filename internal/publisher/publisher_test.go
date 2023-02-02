@@ -4,7 +4,6 @@
 package publisher
 
 import (
-	"log"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -61,46 +60,10 @@ func TestPublisher_PublishWithNonBlockFifoQueueSleep(t *testing.T) {
 	assert.Equal(t, []string{"req1", "req2"}, c.getResult())
 }
 
-func TestPublisher_PublishWithNonBlockingLifoQueue(t *testing.T) {
-	c := &testClient{}
-	publisher, _ := NewPublisher(NewNonBlockingLifoQueue(2), 1, 2*time.Second, c.publish)
-	publisher.Publish("req1")
-	publisher.Publish("req2")
-	publisher.Close()
-	assert.Equal(t, []string{"req2", "req1"}, c.getResult())
-}
-
-func TestPublisher_PublishWithNonBlockingLifoQueueSleep(t *testing.T) {
-	c := &testClient{}
-	publisher, _ := NewPublisher(NewNonBlockingLifoQueue(2), 1, 2*time.Second, c.publish)
-	publisher.Publish("req1")
-	time.Sleep(100 * time.Millisecond)
-	publisher.Publish("req2")
-	publisher.Close()
-	assert.Equal(t, []string{"req1", "req2"}, c.getResult())
-}
-
-func TestPublisher_PublishWithBlockingFifoQueue(t *testing.T) {
-	c := &testClient{}
-	publisher, _ := NewPublisher(NewBlockingFifoQueue(1), 1, 2*time.Second, c.publishWith1sLatency)
-	start := time.Now()
-	publisher.Publish("req1")
-	publisher.Publish("req2")
-	publisher.Publish("req3")
-	publisher.Publish("req4")
-	// queue size is 1, so the forth publish should block util the first req is published( because then second req get semphore, and third req get dequeued)
-	since := time.Since(start)
-	log.Printf("since: %v\n", since)
-	assert.True(t, since > 1*time.Second)
-	time.Sleep(3 * time.Second)
-	publisher.Close()
-	assert.Equal(t, []string{"req1", "req2", "req3", "req4"}, c.getResult())
-}
-
 func TestPublisher_DrainTimeout(t *testing.T) {
 	start := time.Now()
 	c := &testClient{}
-	publisher, _ := NewPublisher(NewBlockingFifoQueue(2), 1, 2*time.Second, c.publishWith5sLatency)
+	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(2), 1, 2*time.Second, c.publishWith5sLatency)
 	publisher.Publish("req1")
 	publisher.Publish("req2")
 	publisher.Close()
@@ -119,13 +82,16 @@ func (c *testClientNoMutex) publish(req interface{}) {
 }
 
 func TestPublisher_ClientNoMutex(t *testing.T) {
+	publishRequestNum := 100000
 	c := &testClientNoMutex{}
-	publisher, _ := NewPublisher(NewBlockingFifoQueue(10), 1, 2*time.Second, c.publish)
-	for i := 0; i < 100000; i++ {
+	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(10), 1, 2*time.Second, c.publish)
+	for i := 0; i < publishRequestNum; i++ {
 		publisher.Publish(1)
 	}
 	publisher.Close()
-	assert.Equal(t, int32(100000), c.counter)
+	expectNonZeroDroppedRequest := 100
+	assert.Lessf(t, c.counter, int32(publishRequestNum-expectNonZeroDroppedRequest),
+		"Less than publish requests actually published due to dropped requests")
 }
 
 // testClientLongDelay is to test publisher latency with nonBlockingQueue
