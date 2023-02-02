@@ -21,19 +21,17 @@ func TestGlobalDimensions(t *testing.T) {
 				"": "InvalidBecauseNoKey"
 			}
     }`), &input)
-	if err == nil {
-		actualKey, actualValue := e.ApplyRule(input)
-		expected := map[string]interface{}{
-			"global_dimensions": map[string]interface{}{
-				"Environment": "test",
-				"Dimension":   "value",
-			},
-		}
-		assert.Equal(t, expected, actualValue, "Expect values to be equal")
-		assert.Equal(t, actualKey, "outputs", "Expect keys to be equal")
-	} else {
-		panic(err)
+
+	assert.NoError(t, err)
+	actualKey, actualValue := e.ApplyRule(input)
+	expected := map[string]interface{}{
+		"global_dimensions": map[string]interface{}{
+			"Environment": "test",
+			"Dimension":   "value",
+		},
 	}
+	assert.Equal(t, expected, actualValue, "Expect values to be equal")
+	assert.Equal(t, actualKey, "outputs", "Expect keys to be equal")
 }
 
 func TestGlobalDimensionsNotProvided(t *testing.T) {
