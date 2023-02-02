@@ -45,13 +45,11 @@ func TestGlobalDimensionsNotProvided(t *testing.T) {
 				"Dimension": "value"
 			}
     }`), &input)
-	if err == nil {
-		actualKey, actualValue := e.ApplyRule(input)
-		assert.Equal(t, "", actualValue, "Expect value to be empty string")
-		assert.Equal(t, "", actualKey, "Expect key to be empty string")
-	} else {
-		panic(err)
-	}
+
+	assert.NoError(t, err)
+	actualKey, actualValue := e.ApplyRule(input)
+	assert.Equal(t, "", actualValue, "Expect value to be empty string")
+	assert.Equal(t, "", actualKey, "Expect key to be empty string")
 }
 
 func TestGlobalDimensionsEmpty(t *testing.T) {
@@ -60,13 +58,11 @@ func TestGlobalDimensionsEmpty(t *testing.T) {
 	err := json.Unmarshal([]byte(`{
       "global_dimensions": {}
     }`), &input)
-	if err == nil {
-		actualKey, actualValue := e.ApplyRule(input)
-		assert.Equal(t, "", actualValue, "Expect value to be empty string")
-		assert.Equal(t, "", actualKey, "Expect key to be empty string")
-	} else {
-		panic(err)
-	}
+
+	assert.NoError(t, err)
+	actualKey, actualValue := e.ApplyRule(input)
+	assert.Equal(t, "", actualValue, "Expect value to be empty string")
+	assert.Equal(t, "", actualKey, "Expect key to be empty string")
 }
 
 func TestGlobalDimensionsAllInvalid(t *testing.T) {
@@ -78,11 +74,10 @@ func TestGlobalDimensionsAllInvalid(t *testing.T) {
 				"": "InvalidBecauseNoKey"
 			}
     }`), &input)
-	if err == nil {
-		actualKey, actualValue := e.ApplyRule(input)
-		assert.Equal(t, "", actualValue, "Expect value to be empty string")
-		assert.Equal(t, "", actualKey, "Expect key to be empty string")
-	} else {
-		panic(err)
-	}
+
+	assert.NoError(t, err)
+
+	actualKey, actualValue := e.ApplyRule(input)
+	assert.Equal(t, "", actualValue, "Expect value to be empty string")
+	assert.Equal(t, "", actualKey, "Expect key to be empty string")
 }
