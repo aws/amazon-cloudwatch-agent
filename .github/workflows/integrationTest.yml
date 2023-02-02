@@ -16,6 +16,12 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**/*.md'
+      - 'NOTICE'
+      - 'RELEASE_NOTES'
+      - 'THIRD-PARTY'
+      - 'LICENSE'
   workflow_dispatch:
 
 concurrency:
