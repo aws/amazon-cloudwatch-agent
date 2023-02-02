@@ -583,37 +583,41 @@ func BuildDimensions(mTags map[string]string, globalDimensions map[string]string
 		})
 	}
 
-	for key, value := range globalDimensions {
-		if len(dimensions) >= MaxDimensions {
-			log.Printf("D! max MaxDimensions %v is less than than number of dimensions %v thus only taking the max number", MaxDimensions, len(dimensions))
-			break
-		}
+	globalDimensionKeys := make([]string, 0, len(globalDimensions))
 
+	for key, value := range globalDimensions {
+		if key != "" && value != "" {
+			globalDimensionKeys = append(globalDimensionKeys, key)
+		}
+	}
+
+	if len(globalDimensionKeys)+len(dimensions) > MaxDimensions {
+		log.Printf("D! max MaxDimensions %v is less than than number of global dimensions plus host dimension (if present) %v thus only taking the max number", MaxDimensions, len(globalDimensionKeys)+len(dimensions))
+		sort.Strings(globalDimensionKeys)
+		globalDimensionKeys = globalDimensionKeys[:MaxDimensions-len(dimensions)]
+	}
+
+	for _, key := range globalDimensionKeys {
 		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String(key),
-			Value: aws.String(value),
+			Value: aws.String(globalDimensions[key]),
 		})
 	}
 
 	var keys []string
-	for k := range mTags {
-		if k != "host" && globalDimensions[k] == "" {
-			keys = append(keys, k)
+	for key, value := range mTags {
+		if key != "" && value != "" && globalDimensions[key] == "" {
+			keys = append(keys, key)
 		}
 	}
-	sort.Strings(keys)
+
+	if len(dimensions)+len(keys) > MaxDimensions {
+		log.Printf("D! max MaxDimensions %v is less than than number of dimensions %v thus only taking the max number", MaxDimensions, len(dimensions)+len(keys))
+		sort.Strings(keys)
+		keys = keys[:MaxDimensions-len(dimensions)]
+	}
 
 	for _, k := range keys {
-		if len(dimensions) >= MaxDimensions {
-			log.Printf("D! max MaxDimensions %v is less than than number of dimensions %v thus only taking the max number", MaxDimensions, len(dimensions))
-			break
-		}
-
-		value := mTags[k]
-		if value == "" {
-			continue
-		}
-
 		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String(k),
 			Value: aws.String(mTags[k]),
