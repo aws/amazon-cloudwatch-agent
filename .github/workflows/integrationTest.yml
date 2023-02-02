@@ -657,7 +657,6 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
       - name: Terraform apply
-        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
