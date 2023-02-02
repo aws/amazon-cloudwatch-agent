@@ -143,7 +143,7 @@ jobs:
           go run --tags=generator generator/test_case_generator.go
           echo "::set-output name=ec2_gpu_matrix::$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))"
           echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
-          echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
+          echo "::set-output name=ec2_stress_matrix::$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
 
@@ -151,7 +151,7 @@ jobs:
         run: |
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
-          echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
+          echo "ec2_stress_matrix: ${{ steps.set-matrix.outputs.ec2_stress_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
 
