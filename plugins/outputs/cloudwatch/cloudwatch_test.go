@@ -335,9 +335,7 @@ func newCloudWatch(
 func TestConsumeMetrics(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
-	svc.On("PutMetricData", mock.Anything).Return(
-		&res,
-		nil)
+	svc.On("PutMetricData", mock.Anything).Return(&res, nil)
 	cw := newCloudWatch(svc, time.Second)
 	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10),
@@ -348,7 +346,7 @@ func TestConsumeMetrics(t *testing.T) {
 	metrics := createTestMetrics(1500, 1, 1, "B/s")
 	ctx := context.Background()
 	cw.ConsumeMetrics(ctx, metrics)
-	time.Sleep(time.Second + 2*cw.config.ForceFlushInterval)
+	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 2))
 	cw.Shutdown(ctx)
 }

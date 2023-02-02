@@ -47,7 +47,6 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/migrate"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
@@ -59,7 +58,6 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
-	LogTargetEventLog     = "eventlog"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -102,12 +100,6 @@ var fServiceName = flag.String("service-name", "telegraf", "service name (window
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
-
-var (
-	version string
-	commit  string
-	branch  string
-)
 
 var stop chan struct{}
 
@@ -668,28 +660,9 @@ func windowsRunAsService() bool {
 }
 
 func loadTomlConfigIntoAgent(c *config.Config) error {
-	isOld, err := migrate.IsOldConfig(*fConfig)
+	err := c.LoadConfig(*fConfig)
 	if err != nil {
-		log.Printf("W! Failed to detect if config file is old format: %v", err)
-	}
-
-	if isOld {
-		migratedConfFile, err := migrate.MigrateFile(*fConfig)
-		if err != nil {
-			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
-		}
-
-		err = c.LoadConfig(migratedConfFile)
-		if err != nil {
-			return err
-		}
-
-		agentinfo.BuildStr += "_M"
-	} else {
-		err = c.LoadConfig(*fConfig)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	if *fConfigDirectory != "" {
@@ -704,19 +677,19 @@ func loadTomlConfigIntoAgent(c *config.Config) error {
 
 func validateAgentFinalConfigAndPlugins(c *config.Config) error {
 	if len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
+		return errors.New("error: no inputs found, did you provide a valid config file?")
 	}
 
 	if int64(c.Agent.Interval) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
+		return fmt.Errorf("agent interval must be positive, found %v", c.Agent.Interval)
 	}
 
 	if int64(c.Agent.FlushInterval) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.FlushInterval)
+		return fmt.Errorf("agent flush_interval must be positive; found %v", c.Agent.FlushInterval)
 	}
 
 	if inputPlugin, err := checkRightForBinariesFileWithInputPlugins(c.InputNames()); err != nil {
-		return fmt.Errorf("Validate input plugin %s failed because of %v", inputPlugin, err)
+		return fmt.Errorf("validate input plugin %s failed because of %v", inputPlugin, err)
 	}
 
 	if *fSchemaTest {
