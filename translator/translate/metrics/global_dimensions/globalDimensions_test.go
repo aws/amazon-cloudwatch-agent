@@ -30,7 +30,7 @@ func TestGlobalDimensions(t *testing.T) {
 	assert.NoError(t, err)
 	actualKey, actualValue := e.ApplyRule(input)
 	expected := map[string]interface{}{
-		"global_dimensions": map[string]interface{}{
+		"global_dimensions": map[string]string{
 			"Environment": "test",
 			"Dimension":   "value",
 		},
