@@ -172,8 +172,9 @@ func TestGlobalDimensions(t *testing.T) {
 	}
 
 	for i, key := range tagKeys {
-		assert.Equal(key, *dimensions[i+len(globalDimensions)].Name, "Key should be equal")
-		assert.Equal(testPoint.Tags()[key], *dimensions[i+len(globalDimensions)].Value, "Value should be equal")
+		dimension := *dimensions[i+len(globalDimensions)]
+		assert.Equal(key, *dimension.Name, "Key should be equal")
+		assert.Equal(testPoint.Tags()[key], *dimension.Value, "Value should be equal")
 	}
 }
 
