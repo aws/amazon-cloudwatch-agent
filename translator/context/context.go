@@ -114,7 +114,6 @@ func (ctx *Context) SetMode(mode string) {
 		ctx.mode = config.ModeOnPrem
 	case config.ModeOnPremise:
 		ctx.mode = config.ModeOnPremise
-		ctx.mode = config.ModeOnPrem
 	case config.ModeWithIRSA:
 		ctx.mode = config.ModeWithIRSA
 	default:
