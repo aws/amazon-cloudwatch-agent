@@ -18,7 +18,12 @@ func TestGlobalDimensions(t *testing.T) {
 				"Environment": "test",
 				"Dimension": "value",
 				"InvalidBecauseNoValue": "",
-				"": "InvalidBecauseNoKey"
+				"": "InvalidBecauseNoKey",
+				"InvalidBecauseNumber": 123,
+				"InvalidBecauseBoolean": false,
+				"InvalidBecauseNull": 123,
+				"InvalidBecauseArray": ["test"],
+				"InvalidBecauseObject": {"Environment": "test"}
 			}
     }`), &input)
 
