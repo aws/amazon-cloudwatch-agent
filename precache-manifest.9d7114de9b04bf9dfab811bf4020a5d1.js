@@ -1,11 +1,11 @@
 self.__precacheManifest = [
   {
-    "revision": "69a4d7544852b4459f90",
+    "revision": "4f1651b574088d9305dc",
     "url": "/amazon-cloudwatch-agent/static/css/main.6d10b9cd.chunk.css"
   },
   {
-    "revision": "69a4d7544852b4459f90",
-    "url": "/amazon-cloudwatch-agent/static/js/main.69a4d754.chunk.js"
+    "revision": "4f1651b574088d9305dc",
+    "url": "/amazon-cloudwatch-agent/static/js/main.4f1651b5.chunk.js"
   },
   {
     "revision": "24ba8badcf940109971f",
@@ -20,7 +20,7 @@ self.__precacheManifest = [
     "url": "/amazon-cloudwatch-agent/static/js/runtime~main.fa9762c8.js"
   },
   {
-    "revision": "3f6d922bcd2e4d4df2ab696976328f39",
+    "revision": "d0c7fd17c7479c13c3bae0bed48e67a7",
     "url": "/amazon-cloudwatch-agent/index.html"
   }
 ];

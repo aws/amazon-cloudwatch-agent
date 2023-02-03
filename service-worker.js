@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/3.6.3/workbox-sw.js");
 
 importScripts(
-  "/amazon-cloudwatch-agent/precache-manifest.c17a82b30e2b90c50d173f555fca23eb.js"
+  "/amazon-cloudwatch-agent/precache-manifest.9d7114de9b04bf9dfab811bf4020a5d1.js"
 );
 
 workbox.clientsClaim();
