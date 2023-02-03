@@ -291,6 +291,32 @@ func TestGlobalDimensionsOverride(t *testing.T) {
 	}
 }
 
+// Test that global dimensions don't override the host metric tag
+func TestGlobalDimensionsDoNotOverrideHost(t *testing.T) {
+	assert := assert.New(t)
+	expectedHost := "some-host"
+
+	testPoint := testutil.TestMetric(1)
+	testPoint.AddTag("host", expectedHost)
+
+	globalDimensions := map[string]string{
+		"host":       "bad-global-host",
+		"Deployment": "green",
+	}
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+
+	var actualHost *string
+
+	for _, dimension := range dimensions {
+		if *dimension.Name == "host" {
+			actualHost = dimension.Value
+			assert.Equal(&expectedHost, actualHost, "Global host dimensions should be overridden by metric host names")
+		}
+	}
+
+	assert.NotNil(actualHost, "The host dimension should be present in the output")
+}
+
 // Test that metrics with valid values have a MetricDatum created where as non valid do not.
 // Skips "time.Time" type as something is converting the value to string.
 func TestBuildMetricDatums(t *testing.T) {

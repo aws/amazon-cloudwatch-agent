@@ -575,8 +575,11 @@ func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.Metri
 func BuildDimensions(mTags map[string]string, globalDimensions map[string]string) []*cloudwatch.Dimension {
 	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
 
+	hasHostDimension := false
+
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
 	if host, ok := mTags["host"]; ok && host != "" {
+		hasHostDimension = true
 		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String("host"),
 			Value: aws.String(host),
@@ -598,6 +601,9 @@ func BuildDimensions(mTags map[string]string, globalDimensions map[string]string
 	}
 
 	for _, key := range globalDimensionKeys {
+		if hasHostDimension && key == "host" {
+			continue
+		}
 		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String(key),
 			Value: aws.String(globalDimensions[key]),
