@@ -8,6 +8,10 @@ on:
       - main
     paths-ignore:
       - '**/*.md'
+      - 'NOTICE'
+      - 'RELEASE_NOTES'
+      - 'THIRD-PARTY'
+      - 'LICENSE'
       - '.github/**'
       - '!.github/workflows/build-*'
 
