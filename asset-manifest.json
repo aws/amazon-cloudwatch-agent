@@ -1,12 +1,15 @@
 {
   "files": {
-    "main.js": "/amazon-cloudwatch-agent/static/js/main.dceb5f89.js",
-    "static/js/713.5ea2b412.chunk.js": "/amazon-cloudwatch-agent/static/js/713.5ea2b412.chunk.js",
+    "main.css": "/amazon-cloudwatch-agent/static/css/main.e95cfb56.css",
+    "main.js": "/amazon-cloudwatch-agent/static/js/main.b99520f9.js",
+    "static/js/787.fc66ff55.chunk.js": "/amazon-cloudwatch-agent/static/js/787.fc66ff55.chunk.js",
     "index.html": "/amazon-cloudwatch-agent/index.html",
-    "main.dceb5f89.js.map": "/amazon-cloudwatch-agent/static/js/main.dceb5f89.js.map",
-    "713.5ea2b412.chunk.js.map": "/amazon-cloudwatch-agent/static/js/713.5ea2b412.chunk.js.map"
+    "main.e95cfb56.css.map": "/amazon-cloudwatch-agent/static/css/main.e95cfb56.css.map",
+    "main.b99520f9.js.map": "/amazon-cloudwatch-agent/static/js/main.b99520f9.js.map",
+    "787.fc66ff55.chunk.js.map": "/amazon-cloudwatch-agent/static/js/787.fc66ff55.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.dceb5f89.js"
+    "static/css/main.e95cfb56.css",
+    "static/js/main.b99520f9.js"
   ]
 }
