@@ -23,7 +23,7 @@ func (ad *globalDimensions) ApplyRule(input interface{}) (returnKey string, retu
 		for key, val := range globalDimensionsMap {
 			stringValue, valueIsString := val.(string)
 
-			if key != "" && valueIsString && val != "" {
+			if key != "" && key != "host" && valueIsString && val != "" {
 				dimensions[key] = stringValue
 			}
 		}

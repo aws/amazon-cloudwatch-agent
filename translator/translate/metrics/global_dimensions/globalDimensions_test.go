@@ -18,6 +18,7 @@ func TestGlobalDimensions(t *testing.T) {
 				"Environment": "test",
 				"Dimension": "value",
 				"InvalidBecauseNoValue": "",
+				"host": "HostDimensionNotAllowed",
 				"": "InvalidBecauseNoKey",
 				"InvalidBecauseNumber": 123,
 				"InvalidBecauseBoolean": false,
@@ -74,6 +75,7 @@ func TestGlobalDimensionsAllInvalid(t *testing.T) {
 	err := json.Unmarshal([]byte(`{
       "global_dimensions": {
 				"InvalidBecauseNoValue": "",
+				"host": "HostDimensionNotAllowed",
 				"": "InvalidBecauseNoKey"
 			}
     }`), &input)

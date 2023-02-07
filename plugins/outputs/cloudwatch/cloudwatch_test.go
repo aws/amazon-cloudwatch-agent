@@ -178,6 +178,25 @@ func TestGlobalDimensions(t *testing.T) {
 	}
 }
 
+// Test that global host dimension is ignored
+func TestGlobalDimensionsIgnoreHost(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	globalDimensions := map[string]string{
+		"Environment": "test",
+		"Deployment":  "green",
+		"host":        "ShouldBeDropped",
+	}
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+
+	assert.Equal(len(testPoint.Tags())+len(globalDimensions)-1, len(dimensions), "Output dimensions should not include the global host dimension")
+
+	for _, dimension := range dimensions {
+		assert.NotEqual("host", *dimension.Name, "Global host dimension should be dropped")
+	}
+}
+
 // Test that we retain as many global dimensions as possible if the number exceeds the max number permitted
 func TestGlobalDimensionsExceedMaxNumber(t *testing.T) {
 	assert := assert.New(t)
@@ -289,32 +308,6 @@ func TestGlobalDimensionsOverride(t *testing.T) {
 		assert.Equal(key, *dimensions[i+len(globalDimensions)].Name, "Key should be equal")
 		assert.Equal(testPoint.Tags()[key], *dimensions[i+len(globalDimensions)].Value, "Value should be equal")
 	}
-}
-
-// Test that global dimensions don't override the host metric tag
-func TestGlobalDimensionsDoNotOverrideHost(t *testing.T) {
-	assert := assert.New(t)
-	expectedHost := "some-host"
-
-	testPoint := testutil.TestMetric(1)
-	testPoint.AddTag("host", expectedHost)
-
-	globalDimensions := map[string]string{
-		"host":       "bad-global-host",
-		"Deployment": "green",
-	}
-	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
-
-	var actualHost *string
-
-	for _, dimension := range dimensions {
-		if *dimension.Name == "host" {
-			actualHost = dimension.Value
-			assert.Equal(&expectedHost, actualHost, "Global host dimensions should be overridden by metric host names")
-		}
-	}
-
-	assert.NotNil(actualHost, "The host dimension should be present in the output")
 }
 
 // Test that metrics with valid values have a MetricDatum created where as non valid do not.
