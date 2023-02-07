@@ -12,6 +12,8 @@ import (
 	lumberjack "github.com/aws/private-amazon-cloudwatch-agent-staging/logger"
 )
 
+const LogTargetEventLog = "eventlog"
+
 // RegisterEventLogger is for supporting Windows Event
 func RegisterEventLogger() error {
 	// When in service mode, register eventlog target and setup default logging to eventlog
