@@ -4,6 +4,8 @@
 package cloudwatch
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 )
 
@@ -57,10 +59,13 @@ var unitMap = map[string]types.StandardUnit{
 // For example OTEL could have "KiBy" (kibibytes) with a value of 1.
 // We would need to report 1024/1000 to AWS with unit of kilobytes.
 // Or leave the value as-is and use "kilobytes" to mean 1000 Bytes and 1024.
-func ConvertUnit(unit string) string {
+func ConvertUnit(unit string) (string, error) {
+	if isCloudWatchStandardUnit(unit) {
+		return unit, nil
+	}
 	newUnit, ok := unitMap[unit]
 	if ok {
-		return string(newUnit)
+		return string(newUnit), nil
 	}
-	return unit
+	return string(types.StandardUnitNone), fmt.Errorf("non-standard unit: %q", unit)
 }

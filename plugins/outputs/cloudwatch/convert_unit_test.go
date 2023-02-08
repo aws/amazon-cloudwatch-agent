@@ -18,17 +18,21 @@ func TestConvertUnit(t *testing.T) {
 		{"B/s", "Bytes/Second"},
 		{"By/s", "Bytes/Second"},
 		{"Bi/s", "Bits/Second"},
-		{"banana", "banana"},
 		{"KBi", "Kilobits"},
+		{"None", "None"},
+		{"Percent", "Percent"},
 	}
 
 	for _, c := range cases {
-		a := ConvertUnit(c[0])
+		a, err := ConvertUnit(c[0])
+		assert.NoError(t, err)
 		assert.Equal(t, c[1], a)
 	}
 }
 
-// If the unit cannot be converted then just use the current value.
+// If the unit cannot be converted then use None.
 func TestConvertUnitNoMatch(t *testing.T) {
-	assert.Equal(t, "Bytes", ConvertUnit("Bytes"))
+	got, err := ConvertUnit("banana")
+	assert.Error(t, err)
+	assert.Equal(t, "None", got)
 }

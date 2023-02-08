@@ -25,17 +25,10 @@ func ConvertTelegrafToOtelMetrics(measurement string, fields map[string]interfac
 	case telegraf.Gauge, telegraf.Untyped:
 		AddScopeMetricsIntoOtelMetrics(populateDataPointsForGauge, otelMetrics, measurement, fields, tags, t)
 	default:
-		return pmetric.Metrics{}, fmt.Errorf("Unsupported Telegraf Metric type %v", tp)
+		return pmetric.Metrics{}, fmt.Errorf("unsupported Telegraf Metric type %v", tp)
 	}
 
 	return otelMetrics, nil
-}
-
-func NewOtelMetrics(measurement string) pmetric.Metrics {
-	otelMetrics := pmetric.NewMetrics()
-	otelMetrics.ResourceMetrics().AppendEmpty()
-
-	return otelMetrics
 }
 
 type dataPointPopulator func(measurement string, metrics pmetric.MetricSlice, fields map[string]interface{}, tags map[string]string, timestamp pcommon.Timestamp)
@@ -73,11 +66,12 @@ func AddScopeMetricsIntoOtelMetrics(populateDataPoints dataPointPopulator, otelM
 // Conversion from Influx Gauge to OTEL Gauge
 // https://github.com/influxdata/influxdb-observability/blob/main/docs/metrics.md#gauge-metric
 func populateDataPointsForGauge(measurement string, metrics pmetric.MetricSlice, fields map[string]interface{}, tags map[string]string, timestamp pcommon.Timestamp) {
-
 	for field, value := range fields {
 		metric := metrics.AppendEmpty()
 
-		metric.SetName(getMetricName(measurement, field))
+		name := getMetricName(measurement, field)
+		metric.SetName(name)
+		metric.SetUnit(getDefaultUnit(name))
 
 		populateNumberDataPoint(metric.SetEmptyGauge().DataPoints().AppendEmpty(), value, tags, timestamp)
 	}
@@ -86,11 +80,12 @@ func populateDataPointsForGauge(measurement string, metrics pmetric.MetricSlice,
 // Conversion from Influx Counter to OTEL Sum
 // https://github.com/influxdata/influxdb-observability/blob/main/docs/metrics.md#sum-metric
 func populateDataPointsForSum(measurement string, metrics pmetric.MetricSlice, fields map[string]interface{}, tags map[string]string, timestamp pcommon.Timestamp) {
-
 	for field, value := range fields {
 		metric := metrics.AppendEmpty()
 
-		metric.SetName(getMetricName(measurement, field))
+		name := getMetricName(measurement, field)
+		metric.SetName(name)
+		metric.SetUnit(getDefaultUnit(name))
 
 		// Sum is an  OTEL Stream Model which consists of:
 		// * An Aggregation Temporality of delta or cumulative.

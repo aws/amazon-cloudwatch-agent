@@ -19,8 +19,6 @@ const (
 	keyPrefix          = "key"
 	valPrefix          = "val"
 	namePrefix         = "metric_name_"
-	otelUnit           = "s"
-	cwUnit             = "Seconds"
 	val        float64 = 24
 )
 
@@ -100,7 +98,7 @@ func TestConvertOtelMetrics_NoDimensions(t *testing.T) {
 	}
 
 	for i := 0; i < 100; i++ {
-		metrics := createTestMetrics(i, i, 0, "")
+		metrics := createTestMetrics(i, i, 0, "other")
 		datums := c.ConvertOtelMetrics(metrics)
 		// Expect nummetrics * numDatapointsPerMetric
 		assert.Equal(t, i*i, len(datums))
@@ -135,4 +133,16 @@ func TestConvertOtelMetrics_Dimensions(t *testing.T) {
 			checkDatum(t, d, "Seconds")
 		}
 	}
+}
+
+func TestInvalidMetric(t *testing.T) {
+	c := CloudWatch{
+		config: &Config{},
+	}
+
+	m := pmetric.NewMetric()
+	m.SetName("name")
+	m.SetUnit("unit")
+
+	assert.Empty(t, c.ConvertOtelMetric(m))
 }

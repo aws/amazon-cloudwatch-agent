@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package cloudwatch
+package accumulator
 
 // default units
 // follow the format "Prefix_Metric"
@@ -108,4 +108,11 @@ var defaultUnits = map[string]string{
 	"processes_running":       "Count",
 	"processes_sleeping":      "Count",
 	"processes_dead":          "Count",
+}
+
+func getDefaultUnit(metricName string) string {
+	if unit, ok := defaultUnits[metricName]; ok {
+		return unit
+	}
+	return ""
 }

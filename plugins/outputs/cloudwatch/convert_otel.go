@@ -64,11 +64,6 @@ func (c *CloudWatch) ConvertOtelNumberDataPoints(
 	name string,
 	unit string,
 ) []*cloudwatch.MetricDatum {
-	if unit == "" || isUnitInvalid(unit) {
-		log.Printf("W! cloudwatch: metricname %v, has invalid unit %s",
-			name, unit)
-		unit = "None"
-	}
 	// Could make() with attrs.Len() * len(c.RollupDimensions).
 	datums := make([]*cloudwatch.MetricDatum, 0, dps.Len())
 	for i := 0; i < dps.Len(); i++ {
@@ -102,7 +97,10 @@ func (c *CloudWatch) ConvertOtelNumberDataPoints(
 // Instead use cumulativetodeltaprocessor which supports monotonic cumulative sums.
 func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*cloudwatch.MetricDatum {
 	n := m.Name()
-	u := ConvertUnit(m.Unit())
+	u, err := ConvertUnit(m.Unit())
+	if err != nil {
+		log.Printf("W! cloudwatch: metricname %q has %v", n, err)
+	}
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
 		return c.ConvertOtelNumberDataPoints(m.Gauge().DataPoints(), n, u)

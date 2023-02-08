@@ -47,18 +47,19 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					defaultInstanceId: defaultInstanceIdValue,
 				},
 				map[string]interface{}{
-					"time_user": float64(42),
+					"usage_user": float64(42),
 				},
 				now,
 				telegraf.Gauge,
 			),
 			expectedMetrics: []map[string]interface{}{
 				{
-					"name":       "cpu_time_user",
+					"name":       "cpu_usage_user",
 					"value":      float64(42),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricTypeGauge,
+					"unit":       "Percent",
 				},
 			},
 		},
@@ -82,6 +83,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricTypeSum,
+					"unit":       "",
 				},
 			},
 		},
@@ -107,6 +109,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricTypeGauge,
+					"unit":       "",
 				},
 				{
 					"name":       "prometheus_redis_rx",
@@ -114,6 +117,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
 					"type":       pmetric.MetricTypeGauge,
+					"unit":       "",
 				},
 			},
 		},
@@ -141,6 +145,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 
 					as.Equal(tc.expectedMetrics[index]["name"], metric.Name())
 					as.Equal(tc.expectedMetrics[index]["type"], metric.Type())
+					as.Equal(tc.expectedMetrics[index]["unit"], metric.Unit())
 					var datapoint pmetric.NumberDataPoint
 					switch tc.telegrafMetric.Type() {
 					case telegraf.Counter:
@@ -248,5 +253,53 @@ func Test_PopulateNumberDataPoint_WithDifferentValueType(t *testing.T) {
 				t.Fatalf("Invalid data type for datapoint %v", v)
 			}
 		})
+	}
+}
+
+func TestProcstatDefaultUnit(t *testing.T) {
+	testCases := []struct {
+		category string
+		field    string
+		want     string
+	}{
+		{"procstat", "cpu_usage", "Percent"},
+		{"procstat", "memory_data", "Bytes"},
+		{"procstat", "memory_locked", "Bytes"},
+		{"procstat", "memory_rss", "Bytes"},
+		{"procstat", "memory_stack", "Bytes"},
+		{"procstat", "memory_swap", "Bytes"},
+		{"procstat", "memory_vms", "Bytes"},
+		{"procstat", "read_bytes", "Bytes"},
+		{"procstat", "write_bytes", "Bytes"},
+		{"procstat", "rlimit_memory_data_hard", "Bytes"},
+		{"procstat", "rlimit_memory_data_soft", "Bytes"},
+		{"procstat", "rlimit_memory_locked_hard", "Bytes"},
+		{"procstat", "rlimit_memory_locked_soft", "Bytes"},
+		{"procstat", "rlimit_memory_rss_hard", "Bytes"},
+		{"procstat", "rlimit_memory_rss_soft", "Bytes"},
+		{"procstat", "rlimit_memory_stack_hard", "Bytes"},
+		{"procstat", "rlimit_memory_stack_soft", "Bytes"},
+		{"procstat", "rlimit_memory_vms_hard", "Bytes"},
+		{"procstat", "rlimit_memory_vms_soft", "Bytes"},
+	}
+
+	for _, testCase := range testCases {
+		tMetric := testutil.MustMetric(
+			testCase.category,
+			map[string]string{
+				"instance_id": "mock",
+			},
+			map[string]interface{}{
+				testCase.field: 4,
+			},
+			time.Now().UTC(),
+			telegraf.Gauge,
+		)
+		convertedOtelMetrics, err := ConvertTelegrafToOtelMetrics(tMetric.Name(), tMetric.Fields(), tMetric.Tags(), tMetric.Type(), tMetric.Time())
+		assert.NoError(t, err)
+		assert.Equal(t, 1, convertedOtelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
+
+		got := convertedOtelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0)
+		assert.Equal(t, testCase.want, got.Unit())
 	}
 }
