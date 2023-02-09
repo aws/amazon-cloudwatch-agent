@@ -27,6 +27,7 @@ var DetectCredentialsPath = detectCredentialsPath
 var DefaultEC2Region = defaultEC2Region
 var DefaultECSRegion = defaultECSRegion
 var runInAws = os.Getenv(config.RUN_IN_AWS)
+var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
 
 func DetectAgentMode(configuredMode string) string {
 	if configuredMode != "auto" {
@@ -38,6 +39,11 @@ func DetectAgentMode(configuredMode string) string {
 		return config.ModeEC2
 	}
 
+	if runWithIrsa == config.RUN_WITH_IRSA_TRUE {
+		fmt.Println("I! Detected from ENV RUN_WITH_IRSA is True")
+		return config.ModeWithIRSA
+	}
+
 	if DefaultEC2Region() != "" {
 		fmt.Println("I! Detected the instance is EC2")
 		return config.ModeEC2
@@ -47,6 +53,7 @@ func DetectAgentMode(configuredMode string) string {
 		fmt.Println("I! Detected the instance is ECS")
 		return config.ModeEC2
 	}
+
 	fmt.Println("I! Detected the instance is OnPremise")
 	return config.ModeOnPrem
 }
