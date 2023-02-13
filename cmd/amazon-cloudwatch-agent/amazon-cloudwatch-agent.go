@@ -334,7 +334,7 @@ func runAgent(ctx context.Context,
 	// 	Description: "My POC",
 	// 	Version:     "0.0",
 	// }
-	yamlConfigPath := filepath.Join("file:", *fOtelConfig)
+	yamlConfigPath := *fOtelConfig
 	fprovider := fileprovider.New()
 	settings := otelService.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{

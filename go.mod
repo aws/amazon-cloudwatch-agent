@@ -62,7 +62,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/influxdata/telegraf v0.0.0-00010101000000-000000000000
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
-	github.com/kardianos/service v1.2.2
+	github.com/kardianos/service v1.2.1 // Keep this pinned to v1.2.1. v1.2.2 causes the agent to not register as a service on Windows
 	github.com/kr/pretty v0.3.1
 	github.com/mesos/mesos-go v0.0.7-0.20180413204204-29de6ff97b48
 	github.com/mitchellh/mapstructure v1.5.0
