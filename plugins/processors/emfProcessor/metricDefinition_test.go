@@ -8,8 +8,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/structuredlogscommon"
 )
 
 func buildTestMetricDeclaration() *metricDeclaration {

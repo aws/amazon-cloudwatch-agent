@@ -1,0 +1,12 @@
+receivers:
+  nop: {}
+
+exporters:
+  awscloudwatch:
+    region: us-east-99
+
+service:
+  pipelines:
+    metrics:
+      receivers: [nop]
+      exporters: [awscloudwatch]

@@ -4,16 +4,16 @@
 package emf
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected"
 )
 
 //
-// Need to import new rule package in src/translator/totomlconfig/toTomlConfig.go
+// Need to import new rule package in src/translator/tocwconfig/totomlconfig/toTomlConfig.go
 //
 
-//
+// SectionKeyStructuredLog
 //   "structuredlog" : {
 //       "service_address": "udp://127.0.0.1:25888"
 //   }

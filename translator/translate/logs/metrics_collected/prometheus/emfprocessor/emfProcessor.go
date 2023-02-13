@@ -4,8 +4,8 @@
 package emfprocessor
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
 )
 
 type Rule translator.Rule
@@ -30,7 +30,7 @@ type EMFProcessor struct {
 
 func (e *EMFProcessor) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	im := input.(map[string]interface{})
-	// add a arbitary order 10 for the EMF processor as the EMF processor should be used as the last processor before output plugins.
+	// add a arbitrary order 10 for the EMF processor as the EMF processor should be used as the last processor before output plugins.
 	result := map[string]interface{}{"order": 10}
 	returnKey = SubSectionKey
 

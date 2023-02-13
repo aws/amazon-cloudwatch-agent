@@ -4,13 +4,13 @@
 package csm
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/csm"
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/csm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
 )
 
 const (

@@ -1,0 +1,16 @@
+receivers:
+  telegraf_mem:
+    collection_interval: 1m0s
+
+processors:
+  nop:
+
+exporters:
+  nop:
+
+service:
+  pipelines:
+    metrics:
+      receivers: [telegraf_mem]
+      processors: [nop]
+      exporters: [nop]

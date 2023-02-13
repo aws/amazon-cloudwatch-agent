@@ -7,8 +7,8 @@
 package wineventlog
 
 import (
+	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -17,10 +17,9 @@ import (
 	"syscall"
 	"time"
 
-	"encoding/xml"
-
-	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"golang.org/x/sys/windows"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 )
 
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385588(v=vs.85).aspx
@@ -226,7 +225,7 @@ func (w *windowsEventLog) saveState(offset uint64) error {
 	}
 
 	content := []byte(strconv.FormatUint(offset, 10) + "\n" + w.logGroupName)
-	return ioutil.WriteFile(w.stateFilePath, content, 0644)
+	return os.WriteFile(w.stateFilePath, content, 0644)
 }
 
 func (w *windowsEventLog) read() []*windowsEventLogRecord {
@@ -361,7 +360,7 @@ func (w *windowsEventLog) loadState() {
 		log.Printf("I! [wineventlog] The state file for %s does not exist: %v", w.stateFilePath, err)
 		return
 	}
-	byteArray, err := ioutil.ReadFile(w.stateFilePath)
+	byteArray, err := os.ReadFile(w.stateFilePath)
 	if err != nil {
 		log.Printf("W! [wineventlog] Issue encountered when reading offset from file %s: %v", w.stateFilePath, err)
 		return

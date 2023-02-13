@@ -9,8 +9,9 @@ import (
 	"log"
 	"testing"
 
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	cinfo "github.com/google/cadvisor/info/v1"
+
+	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
 )
 
 func TestMemStats(t *testing.T) {

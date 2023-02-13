@@ -4,7 +4,7 @@
 package agent
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 type GlobalCreds struct {

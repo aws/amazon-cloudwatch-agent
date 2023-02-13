@@ -4,15 +4,15 @@
 package statsd
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
 )
 
 //
-// Need to import new rule package in src/translator/totomlconfig/toTomlConfig.go
+// Need to import new rule package in src/translator/tocwconfig/totomlconfig/toTomlConfig.go
 //
 
-//
+// SectionKey
 //   "statsd" : {
 //       "service_address": ":8125",
 //       "metrics_collection_interval": 10,

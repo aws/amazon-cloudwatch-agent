@@ -4,10 +4,10 @@
 package windows_events
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected"
 )
 
 var ChildRule = map[string]translator.Rule{}
@@ -15,7 +15,10 @@ var ChildRule = map[string]translator.Rule{}
 type WindowsEvent struct {
 }
 
-const SectionKey = "windows_events"
+const (
+	SectionKey       = "windows_events"
+	SectionMappedKey = "windows_event_log"
+)
 
 func GetCurPath() string {
 	return parent.GetCurPath() + SectionKey + "/"
@@ -40,7 +43,7 @@ func (w *WindowsEvent) ApplyRule(input interface{}) (returnKey string, returnVal
 		}
 
 		return "inputs", map[string]interface{}{
-			"windows_event_log": []interface{}{windowsEventConfig},
+			SectionMappedKey: []interface{}{windowsEventConfig},
 		}
 	} else {
 		translator.AddInfoMessages("", "No windows event log configuration found.")

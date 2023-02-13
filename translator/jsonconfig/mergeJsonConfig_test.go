@@ -6,16 +6,15 @@ package jsonconfig
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"reflect"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	_ "github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 type TestData struct {
@@ -52,9 +51,7 @@ func TestMergeJsonConfigMaps(t *testing.T) {
 
 func executeTest(t *testing.T, testData TestData) {
 	log.Printf("Test %v %v started", testData.testId, testData.testName)
-
 	defer shouldFail(t, testData)
-
 	jsonConfigMapMap := make(map[string]map[string]interface{})
 	for i := 0; i < testData.inputJsonFileNumber; i++ {
 		jsonFileName := fmt.Sprintf("./sampleJsonConfig/test_%v/input_%v.json", testData.testId, i+1)
@@ -64,28 +61,23 @@ func executeTest(t *testing.T, testData TestData) {
 		}
 		jsonConfigMapMap[jsonFileName] = jsonConfigMap
 	}
-
 	resultMap, err := MergeJsonConfigMaps(jsonConfigMapMap, nil, "default")
 	if err != nil {
 		t.Fatalf("Failed to merge json maps with error: %v", err)
 	}
 	expectedFileName := fmt.Sprintf("./sampleJsonConfig/test_%v/expected_output.json", testData.testId)
-	expectedOutputBytes, err := ioutil.ReadFile(expectedFileName)
+	expectedOutputBytes, err := os.ReadFile(expectedFileName)
 	if err != nil {
 		t.Fatalf("Failed to read expected output file %v with error: %v", expectedFileName, err)
 	}
-
 	expectedOutputMap, err := util.GetJsonMapFromJsonBytes(expectedOutputBytes)
 	if err != nil {
 		t.Fatalf("Failed to get json map from json bytes from expected output file %v with error: %v", expectedFileName, err)
 	}
-	isEqual := assert.True(t, reflect.DeepEqual(expectedOutputMap, resultMap))
 
 	resultBytes, err := json.MarshalIndent(resultMap, "", "  ")
 	assert.NoError(t, err)
-	if !isEqual {
-		log.Printf("Test %v %v failed: expectedMap=\n%v\nresultMap=\n%v", testData.testId, testData.testName, string(expectedOutputBytes), string(resultBytes))
-	}
+	assert.Truef(t, reflect.DeepEqual(expectedOutputMap, resultMap), "Test %v %v failed: expectedMap=\n%v\nresultMap=\n%v", testData.testId, testData.testName, string(expectedOutputBytes), string(resultBytes))
 }
 
 func shouldFail(t *testing.T, testData TestData) {

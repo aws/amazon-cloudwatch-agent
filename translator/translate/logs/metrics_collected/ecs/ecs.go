@@ -6,11 +6,11 @@ package ecs
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected"
 )
 
 type ECS struct{}
@@ -46,7 +46,7 @@ func (e *ECS) ApplyRule(input interface{}) (returnKey string, returnVal interfac
 	}
 
 	if !context.CurrentContext().RunInContainer() {
-		translator.AddErrorMessages(GetCurPath(), fmt.Sprintf("ecs is configured in a non-containerized environment"))
+		translator.AddErrorMessages(GetCurPath(), "ecs is configured in a non-containerized environment")
 		return
 	}
 	for _, rule := range ChildRule {

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
 )
 
 // Definitions ...

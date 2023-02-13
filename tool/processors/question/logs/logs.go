@@ -8,14 +8,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/data"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/events"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/serialization"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question/events"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/serialization"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
 
 var Processor processors.Processor = &processor{}
