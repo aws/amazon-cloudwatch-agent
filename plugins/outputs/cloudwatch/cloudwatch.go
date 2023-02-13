@@ -606,7 +606,7 @@ func BuildDimensions(mTags map[string]string, globalDimensions map[string]string
 
 	var keys []string
 	for key, value := range mTags {
-		if key != "" && value != "" && globalDimensions[key] == "" {
+		if key != "" && key != "host" && value != "" && globalDimensions[key] == "" {
 			keys = append(keys, key)
 		}
 	}

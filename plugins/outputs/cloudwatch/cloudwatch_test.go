@@ -33,20 +33,20 @@ func TestBuildDimensions(t *testing.T) {
 	assert := assert.New(t)
 
 	testPoint := testutil.TestMetric(1)
-	dimensions := BuildDimensions(testPoint.Tags(), nil)
+	testPoint.AddTag("host", "example.org")
 
-	tagKeys := make([]string, len(testPoint.Tags()))
-	i := 0
-	for k := range testPoint.Tags() {
-		tagKeys[i] = k
-		i += 1
-	}
+	dimensions := BuildDimensions(testPoint.Tags(), nil)
 
 	assert.Equal(len(testPoint.Tags()), len(dimensions), "Number of dimensions should be equal to number of tags")
 
-	for i, key := range tagKeys {
-		assert.Equal(key, *dimensions[i].Name, "Key should be equal")
-		assert.Equal(testPoint.Tags()[key], *dimensions[i].Value, "Value should be equal")
+	tagMap := testPoint.Tags()
+
+	for _, dimension := range dimensions {
+		actualKey := *dimension.Name
+		expectedValue, keyExists := tagMap[actualKey]
+
+		assert.True(keyExists, "Key should be equal")
+		assert.Equal(expectedValue, *dimension.Value, "Value should be equal")
 	}
 }
 
