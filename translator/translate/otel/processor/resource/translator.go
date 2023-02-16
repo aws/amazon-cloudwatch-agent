@@ -66,6 +66,11 @@ func (t *translator) getPrometheusAttributes(conf *confmap.Conf) ([]map[string]i
 				"from_attribute": "service.name",
 				"action":         "upsert",
 			})
+			attributes = append(attributes, map[string]interface{}{
+				"key":            "ServiceName", // Used for replacement in log stream name
+				"from_attribute": "service.name",
+				"action":         "upsert",
+			})
 		}
 		attributes = append(attributes,
 			// Delete service.name since we would have already set the job label

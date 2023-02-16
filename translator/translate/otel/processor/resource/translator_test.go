@@ -53,6 +53,15 @@ func TestTranslator(t *testing.T) {
 					"action":         "upsert",
 				},
 				{
+					"key":            "ServiceName",
+					"value":          nil,
+					"pattern":        "",
+					"from_attribute": "service.name",
+					"from_context":   "",
+					"converted_type": "",
+					"action":         "upsert",
+				},
+				{
 					"key":            "service.name",
 					"value":          nil,
 					"pattern":        "",

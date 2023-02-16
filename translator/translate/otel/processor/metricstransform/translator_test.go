@@ -67,7 +67,7 @@ func TestTranslator(t *testing.T) {
 						Operations: []metricstransformprocessor.Operation{
 							{
 								Action:   metricstransformprocessor.UpdateLabel,
-								NewLabel: "job",
+								NewLabel: "ServiceName",
 								Label:    "prometheus_job",
 							},
 						},

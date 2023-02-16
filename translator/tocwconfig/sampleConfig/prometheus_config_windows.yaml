@@ -6,7 +6,7 @@ exporters:
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/TestCluster/prometheus
     log_retention: 0
-    log_stream_name: '{job}'
+    log_stream_name: '{ServiceName}'
     max_retries: 2
     metric_descriptors:
       - metric_name: "jvm_memory_bytes_used"
@@ -108,7 +108,7 @@ processors:
             label: prometheus_job
             label_set: []
             label_value: ""
-            new_label: job
+            new_label: ServiceName
             new_value: ""
             value_actions: []
         submatch_case: ""
