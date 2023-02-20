@@ -5,6 +5,7 @@
         "cluster_name": "TestCluster"
       }
     },
+    "force_flush_interval": 5,
     "endpoint_override":"https://fake_endpoint"
   }
 }

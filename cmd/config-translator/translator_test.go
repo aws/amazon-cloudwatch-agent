@@ -124,28 +124,6 @@ func TestMetricsConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithInvalidMetrics_Collected.json", false, expectedErrorMap6)
 }
 
-func TestCsmConfig_Valid(t *testing.T) {
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validCsm.json", true, map[string]int{})
-}
-
-func TestCsmConfig_InvalidKey(t *testing.T) {
-	expectedErrorMap := map[string]int{}
-	expectedErrorMap["additional_property_not_allowed"] = 1
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidCsmKey.json", false, expectedErrorMap)
-}
-
-func TestCsmConfig_InvalidPort(t *testing.T) {
-	expectedErrorMap := map[string]int{}
-	expectedErrorMap["number_gte"] = 1
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidCsmPort.json", false, expectedErrorMap)
-}
-
-func TestCsmConfig_InvalidMemoryLimitInMb(t *testing.T) {
-	expectedErrorMap := map[string]int{}
-	expectedErrorMap["invalid_type"] = 1
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidCsmMemoryLimitInMb.json", false, expectedErrorMap)
-}
-
 func TestProcstatConfig(t *testing.T) {
 	expectedErrorMap := map[string]int{}
 	expectedErrorMap["invalid_type"] = 1

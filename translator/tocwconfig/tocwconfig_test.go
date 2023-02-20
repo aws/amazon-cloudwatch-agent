@@ -177,16 +177,6 @@ func TestStandardConfigWithCommonConfig(t *testing.T) {
 	checkTranslation(t, "standard_config_windows", "windows", expectedEnvVars, "_with_common_config")
 }
 
-func TestCsmOnlyConfig(t *testing.T) {
-	resetContext()
-	expectedEnvVars := map[string]string{
-		"AWS_CSM_ENABLED": "TRUE",
-	}
-	checkTranslation(t, "csm_only_config", "windows", expectedEnvVars, "_windows")
-	checkTranslation(t, "csm_only_config", "linux", expectedEnvVars, "_linux")
-	checkTranslation(t, "csm_only_config", "darwin", nil, "_linux")
-}
-
 func TestDeltaConfigLinux(t *testing.T) {
 	resetContext()
 	expectedEnvVars := map[string]string{}
@@ -199,16 +189,6 @@ func TestDeltaNetConfigLinux(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "delta_net_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "delta_net_config_linux", "darwin", nil, "")
-}
-
-func TestCsmServiceAddressesConfig(t *testing.T) {
-	resetContext()
-	expectedEnvVars := map[string]string{
-		"AWS_CSM_ENABLED": "TRUE",
-	}
-	checkTranslation(t, "csm_service_addresses", "windows", expectedEnvVars, "_windows")
-	checkTranslation(t, "csm_service_addresses", "linux", expectedEnvVars, "_linux")
-	checkTranslation(t, "csm_service_addresses", "darwin", nil, "_linux")
 }
 
 func TestECSNodeMetricConfig(t *testing.T) {

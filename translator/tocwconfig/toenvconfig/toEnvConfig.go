@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/csm"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
@@ -23,10 +22,6 @@ const (
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 	envVars := make(map[string]string)
-	// If csm has a configuration section, then also turn on csm for the agent itself
-	if _, ok := jsonConfigValue[csm.JSONSectionKey]; ok {
-		envVars[envconfig.AWS_CSM_ENABLED] = "TRUE"
-	}
 
 	if agentMap, ok := jsonConfigValue[agent.SectionKey].(map[string]interface{}); ok {
 		// Set CWAGENT_USER_AGENT to env config if specified by the json config in agent section

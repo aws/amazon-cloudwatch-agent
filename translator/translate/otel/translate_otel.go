@@ -6,10 +6,8 @@ package otel
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/otel_aws_cloudwatch_logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/emf_logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/tcp_logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/udp_logs"
+	"log"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
@@ -26,10 +24,12 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/otel_aws_cloudwatch_logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/containerinsights"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
@@ -39,6 +39,8 @@ import (
 	resourceprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/resource"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/tcp_logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/udp_logs"
 	prometheusreceiver "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/prometheus"
 )
 
@@ -130,6 +132,10 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 		return nil, errors.New("invalid json config")
 	}
 	conf := confmap.NewFromStringMap(m)
+
+	if conf.IsSet("csm") {
+		log.Printf("W! CSM has already been deprecated")
+	}
 
 	found, err := adapter.FindReceiversInConfig(conf, os)
 	if err != nil {

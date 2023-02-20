@@ -1,8 +1,19 @@
 {
   "logs": {
     "metrics_collected": {
-      "kubernetes": {
-        "cluster_name": "TestCluster"
+      "emf": {
+      },
+      "prometheus": {
+        "prometheus_config_path": "/tmp/prometheus.yaml",
+        "emf_processor": {
+          "metric_declaration": [
+            {
+              "source_labels": ["Service"],
+              "regex": "nginx.*",
+              "dimensions": [["Service"]]
+            }
+          ]
+        }
       }
     },
     "logs_collected": {

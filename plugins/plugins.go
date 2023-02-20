@@ -14,7 +14,6 @@ import (
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers"
 
 	// Enabled cloudwatch-agent input plugins
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/awscsm"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/cadvisor"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/demo"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/k8sapiserver"
@@ -25,7 +24,6 @@ import (
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/windows_event_log"
 
 	// Enabled cloudwatch-agent output plugins
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatchlogs"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/console"
