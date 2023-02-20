@@ -44,6 +44,16 @@ replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v0.
 // go-kit has the fix for nats-io/jwt/v2 merged but not released yet. Replacing this version for now until next release.
 replace github.com/go-kit/kit => github.com/go-kit/kit v0.12.1-0.20220808180842-62c81a0f3047
 
+// There was a change to the internal required by aws cloud watch logs
+// Need to replace all packages that consume the internal cwlogs package
+replace (
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/sethAmazon/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.67.1-0.20230215211207-d2df1cc9c737
+
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/sethAmazon/opentelemetry-collector-contrib/exporter/awsemfexporter v0.67.1-0.20230215211207-d2df1cc9c737
+
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs => github.com/sethAmazon/opentelemetry-collector-contrib/internal/aws/cwlogs v0.67.1-0.20230215211207-d2df1cc9c737
+)
+
 require (
 	github.com/BurntSushi/toml v0.4.1
 	github.com/Jeffail/gabs v1.4.0
@@ -67,14 +77,18 @@ require (
 	github.com/mesos/mesos-go v0.0.7-0.20180413204204-29de6ff97b48
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oklog/run v1.1.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.67.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.67.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.67.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.67.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/common v0.37.1
@@ -130,6 +144,7 @@ require (
 	github.com/antchfx/jsonquery v1.1.5 // indirect
 	github.com/antchfx/xmlquery v1.3.9 // indirect
 	github.com/antchfx/xpath v1.2.0 // indirect
+	github.com/antonmedv/expr v1.9.0 // indirect
 	github.com/armon/go-metrics v0.3.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.11.2 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.3 // indirect
@@ -243,6 +258,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
+	github.com/observiq/ctimefmt v1.0.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil v0.67.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight v0.67.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs v0.67.0 // indirect
@@ -315,6 +331,7 @@ require (
 	golang.org/x/term v0.3.0 // indirect
 	golang.org/x/time v0.1.0 // indirect
 	golang.org/x/tools v0.2.0 // indirect
+	gonum.org/v1/gonum v0.12.0 // indirect
 	google.golang.org/api v0.104.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20221206210731-b1a01be3a5f6 // indirect

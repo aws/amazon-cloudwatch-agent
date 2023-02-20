@@ -31,7 +31,7 @@ func (t *translator) Type() component.Type {
 
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
 	if conf == nil || !conf.IsSet(prometheusKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusKey}
 	}

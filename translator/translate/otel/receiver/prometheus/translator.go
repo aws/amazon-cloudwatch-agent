@@ -38,7 +38,7 @@ func (t *translator) Type() component.Type {
 }
 
 // Translate creates a receiver for prometheus if the logs.metrics_collected.prometheus section is present.
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
 	if conf == nil || !conf.IsSet(prometheusKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusKey}
 	}

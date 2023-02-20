@@ -21,7 +21,7 @@ type testTranslator struct {
 
 var _ common.Translator[component.Config] = (*testTranslator)(nil)
 
-func (t testTranslator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t testTranslator) Translate(_ *confmap.Conf, _ common.TranslatorOptions) (component.Config, error) {
 	return t.result, nil
 }
 
@@ -32,7 +32,7 @@ func (t testTranslator) Type() component.Type {
 func TestTranslator(t *testing.T) {
 	et := NewTranslator()
 	require.EqualValues(t, "", et.Type())
-	got, err := et.Translate(confmap.New())
+	got, err := et.Translate(confmap.New(), common.TranslatorOptions{})
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	require.Len(t, got, 0)
@@ -41,7 +41,7 @@ func TestTranslator(t *testing.T) {
 			result: componenttest.NewNopExtensionFactory().CreateDefaultConfig(),
 		},
 	)
-	got, err = et.Translate(confmap.New())
+	got, err = et.Translate(confmap.New(), common.TranslatorOptions{})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 }

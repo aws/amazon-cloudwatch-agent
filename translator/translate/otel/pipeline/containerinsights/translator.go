@@ -39,7 +39,7 @@ func (t *translator) Type() component.Type {
 
 // Translate creates a pipeline for container insights if the logs.metrics_collected.ecs
 // section is present.
-func (t *translator) Translate(conf *confmap.Conf) (common.Pipeline, error) {
+func (t *translator) Translate(conf *confmap.Conf, _ common.TranslatorOptions) (common.Pipeline, error) {
 	if conf == nil || (!conf.IsSet(ecsKey) && !conf.IsSet(eksKey)) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}

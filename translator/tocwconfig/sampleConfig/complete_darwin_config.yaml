@@ -27,8 +27,34 @@ exporters:
               - InstanceType
             - - d1
             - []
+    awscloudwatchlogs/emf_logs:
+        endpoint: ""
+        local_mode: false
+        log_group_name: emf/logs/default
+        log_retention: 0
+        log_stream_name: LOG_STREAM_NAME
+        max_retries: 2
+        no_verify_ssl: false
+        num_workers: 8
+        proxy_address: ""
+        raw_log: true
+        region: ""
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+        role_arn: ""
+        sending_queue:
+            queue_size: 5000
 extensions: {}
 processors:
+    batch/emf_logs:
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -45,9 +71,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         refresh_interval_seconds: 0s
 receivers:
     telegraf_cpu:
@@ -74,9 +100,29 @@ receivers:
         collection_interval: 10s
     telegraf_swap:
         collection_interval: 10s
+    udplog/emf_logs:
+        attributes: {}
+        encoding: utf-8
+        id: udp_input
+        listen_address: 127.0.0.1:25888
+        multiline:
+            line_end_pattern: .^
+            line_start_pattern: ""
+        operators: []
+        output: []
+        resource: {}
+        storage: null
+        type: udp_input
 service:
     extensions: []
     pipelines:
+        logs/emf_logs:
+            exporters:
+                - awscloudwatchlogs/emf_logs
+            processors:
+                - batch/emf_logs
+            receivers:
+                - udplog/emf_logs
         metrics/host:
             exporters:
                 - awscloudwatch

@@ -31,7 +31,7 @@ func (t *translator) Type() component.Type {
 
 // Translate creates a pipeline for prometheus if the logs.metrics_collected.prometheus
 // section is present.
-func (t *translator) Translate(conf *confmap.Conf) (common.Pipeline, error) {
+func (t *translator) Translate(conf *confmap.Conf, _ common.TranslatorOptions) (common.Pipeline, error) {
 	key := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 	if conf == nil || !conf.IsSet(key) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: key}

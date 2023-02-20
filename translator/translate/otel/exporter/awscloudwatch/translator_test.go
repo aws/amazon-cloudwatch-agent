@@ -130,7 +130,7 @@ func TestTranslator(t *testing.T) {
 			agent.Global_Config.Credentials = testCase.credentials
 
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := cwt.Translate(conf)
+			got, err := cwt.Translate(conf, common.TranslatorOptions{})
 			require.Equal(t, testCase.wantErr, err)
 			if testCase.want != nil {
 				require.NoError(t, err)

@@ -52,7 +52,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := cit.Translate(conf)
+			got, err := cit.Translate(conf, common.TranslatorOptions{})
 			require.Equal(t, testCase.wantErr, err)
 			if testCase.want == nil {
 				require.Nil(t, got)

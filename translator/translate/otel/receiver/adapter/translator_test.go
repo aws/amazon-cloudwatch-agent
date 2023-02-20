@@ -60,7 +60,7 @@ func TestTranslator(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
 			tt := NewTranslator(testCase.cfgType, testCase.cfgKey, time.Minute)
-			got, err := tt.Translate(conf)
+			got, err := tt.Translate(conf, common.TranslatorOptions{})
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

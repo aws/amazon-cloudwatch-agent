@@ -45,7 +45,7 @@ func (t *translator) Type() component.Type {
 }
 
 // Translate creates an awsemf exporter config based on the input json config
-func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(c *confmap.Conf, _ common.TranslatorOptions) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 
 	var defaultConfig string

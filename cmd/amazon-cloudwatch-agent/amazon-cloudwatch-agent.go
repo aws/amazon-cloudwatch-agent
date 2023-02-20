@@ -9,6 +9,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"log"
 	"net/http"
 	"os"
@@ -382,6 +385,8 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		// OTel native receivers
 		awscontainerinsightreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),
+		tcplogreceiver.NewFactory(),
+		udplogreceiver.NewFactory(),
 	}
 
 	// Adapted receivers from telegraf
@@ -409,6 +414,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		awsemfexporter.NewFactory(),
 		loggingexporter.NewFactory(),
 		cloudwatch.NewFactory(),
+		awscloudwatchlogsexporter.NewFactory(),
 	)
 	if err != nil {
 		return factories, err
