@@ -3,7 +3,7 @@
 
 package emfprocessor
 
-import "github.com/aws/amazon-cloudwatch-agent/translator"
+import "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 
 const (
 	SectionKeyMetricDeclarationDedup = "metric_declaration_dedup"

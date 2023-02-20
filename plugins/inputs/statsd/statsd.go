@@ -14,13 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd/graphite"
-
 	//"github.com/influxdata/telegraf/plugins/parsers/graphite"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd/graphite"
 )
 
 const (
@@ -53,7 +52,7 @@ type Statsd struct {
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
-	// This flag enables parsing of tags in the dogstatsd extention to the
+	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool
 

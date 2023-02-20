@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
 )
 
 func TestEmpty(t *testing.T) {

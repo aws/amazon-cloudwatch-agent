@@ -2,15 +2,17 @@
 // SPDX-License-Identifier: MIT
 
 // go:build windows
+//go:build windows
 // +build windows
 
 package security
 
 import (
 	"fmt"
-	"golang.org/x/sys/windows"
 	"os"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 // CheckFileRights check that the given filename has access controls and system permission for Administrator, Local System

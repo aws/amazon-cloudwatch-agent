@@ -6,10 +6,10 @@ package util
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
 )
 
 const (

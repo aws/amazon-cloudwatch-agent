@@ -1,0 +1,26 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "append_dimensions": {
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "metrics_collected": {
+      "net": {
+        "resources": [
+          "eth0"
+        ],
+        "measurement": [
+          "bytes_sent",
+          "bytes_recv",
+          "drop_in",
+          "drop_out"
+        ]
+      }
+    }
+  }
+}

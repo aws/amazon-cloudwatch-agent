@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/mapWithExpiry"
 )
 
 func TestNodeInfo_extractEbsId(t *testing.T) {

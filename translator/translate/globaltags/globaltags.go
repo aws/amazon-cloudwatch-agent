@@ -4,7 +4,7 @@
 package globaltags
 
 import (
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
 )
 
 const SectionKey = "global_tags"

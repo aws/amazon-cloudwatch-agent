@@ -5,7 +5,7 @@ package httpclient
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -63,7 +63,7 @@ func (h *HttpClient) request(endpoint string) ([]byte, error) {
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from %s, error: %v", endpoint, err)
 	}

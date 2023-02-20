@@ -4,13 +4,12 @@
 package emfprocessor
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 )
 
 const (
@@ -65,7 +64,7 @@ func (obj *ConfigPath) ApplyRule(input interface{}) (string, interface{}) {
 		downloadingPath := getDownloadPath()
 		configEnv := splitConfigPath(configPath)
 		if cc, ok := os.LookupEnv(configEnv); ok {
-			if error := ioutil.WriteFile(downloadingPath, []byte(cc), yamlFileMode); error != nil {
+			if error := os.WriteFile(downloadingPath, []byte(cc), yamlFileMode); error != nil {
 				log.Panicf("Failed to download the Prometheus config yaml file. Reason: %s", error.Error())
 			} else {
 				log.Printf("Downloaded the prometheus config from ENV: %v.", configEnv)

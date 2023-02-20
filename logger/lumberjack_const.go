@@ -6,4 +6,3 @@ package logger
 const (
 	LogTargetLumberjack = "lumberjack"
 )
-

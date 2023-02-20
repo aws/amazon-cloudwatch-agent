@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/csm"
 	"github.com/aws/aws-sdk-go/aws"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/metametrics"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/csm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/awscsm/metametrics"
 )
 
 type mockCSMService struct {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm/sdkmetricsdataplane"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/awscsm/sdkmetricsdataplane"
 )
 
 const (

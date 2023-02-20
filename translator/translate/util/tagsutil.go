@@ -13,7 +13,6 @@ var Reserved_Tag_Keys = []string{High_Resolution_Tag_Key, Aggregation_Interval_T
 func AddHighResolutionTag(tags interface{}) {
 	tagMap := tags.(map[string]interface{})
 	tagMap[High_Resolution_Tag_Key] = "true"
-	return
 }
 
 // Filter out reserved tag keys
@@ -22,5 +21,4 @@ func Cleanup(input interface{}) {
 	for _, reserved_key := range Reserved_Tag_Keys {
 		delete(inputmap, reserved_key)
 	}
-	return
 }

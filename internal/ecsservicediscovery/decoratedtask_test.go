@@ -318,7 +318,7 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceNa
 	port9406String := "9406"
 	var port9404Int64 int64 = 9404
 	var port9406Int64 int64 = 9406
-	var port0Int64 int64 = 0
+	var port0Int64 int64
 
 	containerNameTomcat := "bugbash-tomcat-prometheus-workload-java-ec2-bridge-mapped-port"
 	containerNameJar := "bugbash-jar-prometheus-workload-java-ec2-bridge"

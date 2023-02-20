@@ -4,8 +4,8 @@
 package ecsdecorator
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/ecs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/ecs"
 )
 
 type Rule translator.Rule
