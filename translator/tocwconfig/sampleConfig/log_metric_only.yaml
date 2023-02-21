@@ -1,0 +1,83 @@
+exporters:
+  awscloudwatchlogs/emf_logs:
+    endpoint: ""
+    local_mode: false
+    log_group_name: emf/logs/default
+    log_retention: 0
+    log_stream_name: i-UNKNOWN
+    max_retries: 2
+    no_verify_ssl: false
+    num_workers: 8
+    proxy_address: ""
+    raw_log: true
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_elapsed_time: 5m0s
+      max_interval: 30s
+    role_arn: ""
+    sending_queue:
+      queue_size: 5000
+extensions: {}
+processors:
+  batch/emf_logs:
+    send_batch_max_size: 0
+    send_batch_size: 8192
+    timeout: 200ms
+receivers:
+  tcplog/emf_logs:
+    attributes: {}
+    encoding: utf-8
+    id: tcp_input
+    listen_address: 0.0.0.0:25888
+    operators: []
+    output: []
+    resource: {}
+    storage: null
+    type: tcp_input
+  udplog/emf_logs:
+    attributes: {}
+    encoding: utf-8
+    id: udp_input
+    listen_address: 0.0.0.0:25888
+    multiline:
+      line_end_pattern: .^
+      line_start_pattern: ""
+    operators: []
+    output: []
+    resource: {}
+    storage: null
+    type: udp_input
+service:
+  extensions: []
+  pipelines:
+    logs/emf_logs:
+      exporters:
+        - awscloudwatchlogs/emf_logs
+      processors:
+        - batch/emf_logs
+      receivers:
+        - udplog/emf_logs
+        - tcplog/emf_logs
+  telemetry:
+    logs:
+      development: false
+      disable_caller: false
+      disable_stacktrace: false
+      encoding: console
+      error_output_paths: []
+      initial_fields: {}
+      level: info
+      output_paths: []
+      sampling:
+        initial: 2
+        thereafter: 500
+    metrics:
+      address: ""
+      level: None
+    resource: {}
+    traces:
+      propagators: []

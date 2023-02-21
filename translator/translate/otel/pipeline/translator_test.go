@@ -21,7 +21,7 @@ type testTranslator struct {
 
 var _ common.Translator[common.Pipeline] = (*testTranslator)(nil)
 
-func (t testTranslator) Translate(_ *confmap.Conf) (common.Pipeline, error) {
+func (t testTranslator) Translate(_ *confmap.Conf, _ common.TranslatorOptions) (common.Pipeline, error) {
 	return t.result, nil
 }
 
@@ -32,7 +32,7 @@ func (t testTranslator) Type() component.Type {
 func TestTranslator(t *testing.T) {
 	pt := NewTranslator()
 	require.EqualValues(t, "", pt.Type())
-	got, err := pt.Translate(confmap.New())
+	got, err := pt.Translate(confmap.New(), common.TranslatorOptions{})
 	require.Equal(t, ErrNoPipelines, err)
 	require.Nil(t, got)
 	pt = NewTranslator(
@@ -40,7 +40,7 @@ func TestTranslator(t *testing.T) {
 			result: collections.NewPair(component.NewID(""), &service.ConfigServicePipeline{}),
 		},
 	)
-	got, err = pt.Translate(confmap.New())
+	got, err = pt.Translate(confmap.New(), common.TranslatorOptions{})
 	require.NoError(t, err)
 	require.NotNil(t, got)
 }

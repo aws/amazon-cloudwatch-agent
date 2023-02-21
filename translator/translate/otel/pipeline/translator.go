@@ -32,10 +32,10 @@ func (t *translator) Type() component.Type {
 }
 
 // Translate creates the pipeline configuration.
-func (t *translator) Translate(conf *confmap.Conf) (common.Pipelines, error) {
+func (t *translator) Translate(conf *confmap.Conf, any common.TranslatorOptions) (common.Pipelines, error) {
 	pipelines := make(common.Pipelines)
 	for _, pt := range t.translators {
-		if pipeline, _ := pt.Translate(conf); pipeline != nil {
+		if pipeline, _ := pt.Translate(conf, any); pipeline != nil {
 			pipelines[pipeline.Key] = pipeline.Value
 		}
 	}

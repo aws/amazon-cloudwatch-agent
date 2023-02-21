@@ -43,7 +43,7 @@ func (t translator) Type() component.Type {
 }
 
 // Translate creates a pipeline if metrics section exists.
-func (t translator) Translate(conf *confmap.Conf) (common.Pipeline, error) {
+func (t translator) Translate(conf *confmap.Conf, _ common.TranslatorOptions) (common.Pipeline, error) {
 	if conf == nil || !conf.IsSet(common.MetricsKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: common.MetricsKey}
 	} else if len(t.receivers) == 0 {

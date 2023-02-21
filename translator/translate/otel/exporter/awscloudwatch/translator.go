@@ -42,7 +42,7 @@ func (t *translator) Type() component.Type {
 // Translate creates an exporter config based on the fields in the
 // metrics section of the JSON config.
 // TODO: remove dependency on global config.
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf, _ common.TranslatorOptions) (component.Config, error) {
 	if conf == nil || !conf.IsSet(common.MetricsKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: common.MetricsKey}
 	}

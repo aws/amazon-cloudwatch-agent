@@ -66,7 +66,7 @@ func TestTranslator(t *testing.T) {
 			ht := NewTranslator([]component.Type{"other", "nop"}, testCase.pipelineName)
 			require.EqualValues(t, testCase.pipelineName, ht.Type())
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := ht.Translate(conf)
+			got, err := ht.Translate(conf, common.TranslatorOptions{})
 			require.Equal(t, testCase.wantErr, err)
 			if testCase.want == nil {
 				require.Nil(t, got)

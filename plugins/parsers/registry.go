@@ -7,7 +7,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers/awscsm"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers/emf"
 )
 
@@ -18,14 +17,6 @@ func EMFParserCreator(metricName string) telegraf.Parser {
 	}
 }
 
-func CSMParserCreator(metricName string) telegraf.Parser {
-	parser := &awscsm.JSONParser{
-		MetricName: "awscsm",
-	}
-	return parser
-}
-
 func init() {
 	parsers.Add("emf", EMFParserCreator)
-	parsers.Add("aws_csm", CSMParserCreator)
 }

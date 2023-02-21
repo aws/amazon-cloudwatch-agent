@@ -18,7 +18,7 @@ func NewDefaultTranslator(factory component.ProcessorFactory) common.Translator[
 	return &translator{factory}
 }
 
-func (t *translator) Translate(*confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(*confmap.Conf, common.TranslatorOptions) (component.Config, error) {
 	return t.factory.CreateDefaultConfig(), nil
 }
 

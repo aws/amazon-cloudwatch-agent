@@ -45,7 +45,7 @@ func (t *translator) Type() component.Type {
 }
 
 // Translate creates an awsemf exporter config based on the input json config
-func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(c *confmap.Conf, _ common.TranslatorOptions) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 
 	var defaultConfig string
@@ -116,14 +116,14 @@ func (t *translator) setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter
 		cfg.LogGroupName = logGroupName
 	}
 
-	// logStreamName defaults to {job} for prometheus via our embedded config. We do not respect the log_stream_name field in "logs -> metrics_collected section" for backwards compatibility.
+	// logStreamName defaults to {ServiceName} for prometheus via our embedded config. We do not respect the log_stream_name field in "logs -> metrics_collected section" for backwards compatibility.
 	//
 	// We previously used to set the "job" tag on the metric as per https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/inputs/prometheus_scraper/metrics_handler.go#L81-L85
 	// And while determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml as per
 	// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/outputs/cloudwatchlogs/cloudwatchlogs.go#L175-L180.
 	//
-	// In CCWA, prometheus receiver is going to always set the job label (In the case of ECS, special handling is needed for prometheus_job -> job relabelling as explained in the ecs observer extension translation)
-	// Hence, we default the log_stream_name with a placeholder for {job} to achieve backwards compatibility. If we ever come across an edge case where the job label is not set on a metric,
+	// In CCWA, prometheus receiver is going to always set the job (service.name) label which we then map to ServiceName label (In the case of ECS, special handling is needed for prometheus_job -> job relabelling as explained in the ecs observer extension translation)
+	// Hence, we default the log_stream_name with a placeholder for {ServiceName} to achieve backwards compatibility. If we ever come across an edge case where the job label is not set on a metric,
 	// we can add a metrics transform processor to insert the job label and set it to "default" i.e. same as https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/inputs/prometheus_scraper/metrics_handler.go#L84
 
 	if conf.IsSet(common.ConfigKey(prometheusBasePathKey, "emf_processor")) {

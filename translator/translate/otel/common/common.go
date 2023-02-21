@@ -35,13 +35,24 @@ const (
 	NetKey                       = "net"
 	HostPipelineName             = "host"
 	HostDeltaMetricsPipelineName = "hostDeltaMetrics"
+	Emf                          = "emf"
+	ServiceAddress               = "service_address"
+	Udp                          = "udp"
+	Tcp                          = "tcp"
+	Region                       = "region"
+	LogStreamName                = "log_stream_name"
+	EndpointOverride             = "endpoint_override"
 )
 
 // Translator is used to translate the JSON config into an
 // OTEL config.
 type Translator[C any] interface {
-	Translate(*confmap.Conf) (C, error)
+	Translate(*confmap.Conf, TranslatorOptions) (C, error)
 	Type() component.Type
+}
+
+type TranslatorOptions struct {
+	PipelineId component.ID
 }
 
 // TranslatorMap is a map of translators by their types.

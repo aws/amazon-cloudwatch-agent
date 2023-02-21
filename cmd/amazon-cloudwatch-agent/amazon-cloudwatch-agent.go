@@ -20,6 +20,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
+
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 
 	"github.com/influxdata/telegraf/agent"
@@ -334,7 +338,7 @@ func runAgent(ctx context.Context,
 	// 	Description: "My POC",
 	// 	Version:     "0.0",
 	// }
-	yamlConfigPath := filepath.Join("file:", *fOtelConfig)
+	yamlConfigPath := *fOtelConfig
 	fprovider := fileprovider.New()
 	settings := otelService.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
@@ -382,6 +386,8 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		// OTel native receivers
 		awscontainerinsightreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),
+		tcplogreceiver.NewFactory(),
+		udplogreceiver.NewFactory(),
 	}
 
 	// Adapted receivers from telegraf
@@ -409,6 +415,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		awsemfexporter.NewFactory(),
 		loggingexporter.NewFactory(),
 		cloudwatch.NewFactory(),
+		awscloudwatchlogsexporter.NewFactory(),
 	)
 	if err != nil {
 		return factories, err
@@ -676,10 +683,6 @@ func loadTomlConfigIntoAgent(c *config.Config) error {
 }
 
 func validateAgentFinalConfigAndPlugins(c *config.Config) error {
-	if len(c.Inputs) == 0 {
-		return errors.New("error: no inputs found, did you provide a valid config file?")
-	}
-
 	if int64(c.Agent.Interval) <= 0 {
 		return fmt.Errorf("agent interval must be positive, found %v", c.Agent.Interval)
 	}

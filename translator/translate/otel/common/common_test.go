@@ -19,7 +19,7 @@ type testTranslator struct {
 
 var _ Translator[int] = (*testTranslator)(nil)
 
-func (t testTranslator) Translate(_ *confmap.Conf) (int, error) {
+func (t testTranslator) Translate(_ *confmap.Conf, _ TranslatorOptions) (int, error) {
 	return t.result, nil
 }
 
@@ -109,7 +109,7 @@ func TestTranslatorMap(t *testing.T) {
 	require.Len(t, got, 2)
 	translator, ok := got.Get("test")
 	require.True(t, ok)
-	result, err := translator.Translate(nil)
+	result, err := translator.Translate(nil, TranslatorOptions{})
 	require.NoError(t, err)
 	require.Equal(t, 0, result)
 	other := NewTranslatorMap[int](&testTranslator{"test", 2})
@@ -117,7 +117,7 @@ func TestTranslatorMap(t *testing.T) {
 	require.Len(t, got, 2)
 	translator, ok = got.Get("test")
 	require.True(t, ok)
-	result, err = translator.Translate(nil)
+	result, err = translator.Translate(nil, TranslatorOptions{})
 	require.NoError(t, err)
 	require.Equal(t, 2, result)
 }

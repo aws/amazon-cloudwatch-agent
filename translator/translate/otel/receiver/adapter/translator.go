@@ -40,7 +40,7 @@ func (t *translator) Type() component.Type {
 // Translate creates an adapter receiver config if the section set on
 // the translator exists. Tries to get the collection interval from
 // the section key. Falls back on the agent section if it is not present.
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
 	if conf == nil || !conf.IsSet(t.cfgKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: t.cfgKey}
 	}

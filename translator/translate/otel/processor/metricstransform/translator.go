@@ -28,7 +28,7 @@ func (t *translator) Type() component.Type {
 
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
 	if conf == nil || !conf.IsSet(prometheusKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusKey}
 	}
@@ -50,7 +50,7 @@ func (t *translator) getPrometheusTransforms(conf *confmap.Conf) []metricstransf
 		// of 'docker_label' by specifying the label to be used as 'sd_job_name_label'.
 		// Once ecs_observer OTel extension figures out the job name using this logic, it writes it as a label in the sd results file.
 		// But rather than writing it as 'job' which conflicts with the prometheus-generated 'job', it instead writes it as 'prometheus_job'
-		// with the expectation that we rename it back to 'job' if needed, outside the scope of prometheus receiver.
+		// with the expectation that we rename it back as per our needs, outside the scope of prometheus receiver.
 		transforms = append(transforms, metricstransformprocessor.Transform{
 			MetricIncludeFilter: metricstransformprocessor.FilterConfig{
 				Include:   ".*",
@@ -60,7 +60,7 @@ func (t *translator) getPrometheusTransforms(conf *confmap.Conf) []metricstransf
 			Operations: []metricstransformprocessor.Operation{
 				{
 					Action:   metricstransformprocessor.UpdateLabel,
-					NewLabel: "job",
+					NewLabel: "ServiceName",
 					Label:    "prometheus_job", // https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/89a732339795e47bbad4e2d34706fd69f570f5a9/extension/observer/ecsobserver/config.go
 				},
 			},

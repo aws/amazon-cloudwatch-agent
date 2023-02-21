@@ -1,5 +1,9 @@
 {
   "logs": {
+    "metrics_collected": {
+      "emf": {
+      }
+    },
     "logs_collected": {
       "files": {
         "collect_list": [

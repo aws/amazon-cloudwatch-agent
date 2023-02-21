@@ -4,6 +4,7 @@
 package awsemf
 
 import (
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
@@ -69,7 +70,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"log_group_name":  "/test/log/group",
-							"log_stream_name": "{job}",
+							"log_stream_name": "{ServiceName}",
 							"emf_processor": map[string]interface{}{
 								"metric_declaration": []interface{}{
 									map[string]interface{}{
@@ -90,7 +91,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"namespace":                              "CWAgent/Prometheus",
 				"log_group_name":                         "/test/log/group",
-				"log_stream_name":                        "{job}",
+				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
@@ -124,7 +125,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"log_group_name":  "/test/log/group",
-							"log_stream_name": "{job}",
+							"log_stream_name": "{ServiceName}",
 							"emf_processor": map[string]interface{}{
 								"metric_unit": map[string]interface{}{
 									"jvm_gc_collection_seconds_sum": "Milliseconds",
@@ -137,7 +138,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"namespace":                              "CWAgent/Prometheus",
 				"log_group_name":                         "/test/log/group",
-				"log_stream_name":                        "{job}",
+				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
@@ -164,7 +165,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"log_group_name":  "/test/log/group",
-							"log_stream_name": "{job}",
+							"log_stream_name": "{ServiceName}",
 						},
 					},
 				},
@@ -172,7 +173,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"namespace":                              "",
 				"log_group_name":                         "/test/log/group",
-				"log_stream_name":                        "{job}",
+				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
@@ -192,7 +193,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := tt.Translate(conf)
+			got, err := tt.Translate(conf, common.TranslatorOptions{})
 			require.Equal(t, testCase.wantErr, err)
 			require.Truef(t, legacytranslator.IsTranslateSuccess(), "Error in legacy translation rules: %v", legacytranslator.ErrorMessages)
 			if err == nil {

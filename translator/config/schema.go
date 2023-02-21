@@ -23,9 +23,6 @@ var schema = `{
     },
     "logs": {
       "$ref": "#/definitions/logsDefinition"
-    },
-    "csm": {
-      "$ref": "#/definitions/csmDefinition"
     }
   },
   "additionalProperties": true,
@@ -67,40 +64,6 @@ var schema = `{
         }
       },
       "additionalProperties": true
-    },
-    "csmDefinition": {
-      "type": "object",
-      "description": "Configuration for AWS SDK client-side monitoring",
-      "properties": {
-        "service_addresses": {
-          "description": "List of addresses and ports to listen for UDP events on",
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          }
-        },
-        "port": {
-          "description": "Localhost UDP port to listen to client-side monitoring events on",
-          "$ref": "#/definitions/userPortDefinition"
-        },
-        "log_level": {
-          "description": "Determines the verbosity of logging with 0 being disabled.",
-          "type": "integer"
-        },
-        "memory_limit_in_mb": {
-          "description": "Approximate amount of memory, in MB, to use for unpublished monitoring records",
-          "type": "integer"
-        },
-        "endpoint_override": {
-          "description": "Override CSM service endpoint.",
-          "type": "string",
-          "format": "uri"
-        }
-      },
-      "additionalProperties": false
     },
     "metricsDefinition": {
       "type": "object",

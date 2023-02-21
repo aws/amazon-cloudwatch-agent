@@ -1,4 +1,4 @@
-log_stream_name: "{job}"
+log_stream_name: "{ServiceName}"
 resource_to_telemetry_conversion:
   enabled: true
 dimension_rollup_option: NoDimensionRollup

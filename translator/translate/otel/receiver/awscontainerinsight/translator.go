@@ -49,7 +49,7 @@ func (t *translator) Type() component.Type {
 
 // Translate creates an aws container insights receiver config if either
 // of the sections defined in the services exist.
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
 	configuredService := t.getConfiguredContainerService(conf)
 	if configuredService == nil {
 		var keys []string

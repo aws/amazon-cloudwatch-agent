@@ -25,8 +25,8 @@ type TestData struct {
 }
 
 var testDataList = []TestData{
-	{"SeparateSection_CompleteLinuxConfig", 1, 4, false},
-	{"SeparateSection_CompleteWindowsConfig", 2, 5, false},
+	{"SeparateSection_CompleteLinuxConfig", 1, 3, false},
+	{"SeparateSection_CompleteWindowsConfig", 2, 4, false},
 	{"MixedSection_CompleteLinuxConfig", 3, 3, false},
 	{"MixedSection_CompleteWindowsConfig", 4, 4, false},
 	{"CustomizedTest_PutWhateverYouWantToQuicklyTestHere", 5, 2, false},
@@ -34,11 +34,10 @@ var testDataList = []TestData{
 	{"FailureTest_AgentConflicts", 6, 2, true},
 	{"FailureTest_MetricsConflicts", 7, 2, true},
 	{"FailureTest_LogsConflicts", 8, 2, true},
-	{"FailureTest_CsmConflicts", 9, 2, true},
-	{"MixedSection_LogsMetricCollectedConfig", 10, 2, false},
-	{"SeparateSection_LogsMetricAndLog", 11, 2, false},
-	{"SeparateSection_PrometheusAndLog", 12, 2, false},
-	{"Two_procstat", 13, 2, false},
+	{"MixedSection_LogsMetricCollectedConfig", 9, 2, false},
+	{"SeparateSection_LogsMetricAndLog", 10, 2, false},
+	{"SeparateSection_PrometheusAndLog", 11, 2, false},
+	{"Two_procstat", 12, 2, false},
 }
 
 func TestMergeJsonConfigMaps(t *testing.T) {

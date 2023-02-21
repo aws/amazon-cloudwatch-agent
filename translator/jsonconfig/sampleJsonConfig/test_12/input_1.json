@@ -1,19 +1,18 @@
 {
-  "logs": {
-    "metrics_collected": {
-      "prometheus": {
-        "prometheus_config_path": "/tmp/prometheus.yaml",
-        "emf_processor": {
-          "metric_declaration": [
-            {
-              "source_labels": ["Service"],
-              "regex": "nginx.*",
-              "dimensions": [["Service"]]
-            }
-          ]
-        }
-      }
+  "agent": {
+    "logfile": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+  },
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
     },
-    "force_flush_interval": 5
+    "metrics_collected": {
+      "procstat": [{
+        "exe": "KAVFS",
+        "measurement": [
+          "pid_count"
+        ]
+      }]
+    }
   }
 }

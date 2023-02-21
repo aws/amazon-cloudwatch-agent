@@ -1,5 +1,10 @@
 {
-  "csm": {
-    "port": 8000
+  "logs": {
+    "metrics_collected": {
+      "kubernetes": {
+        "cluster_name": "TestCluster"
+      }
+    },
+    "endpoint_override":"https://fake_endpoint"
   }
 }

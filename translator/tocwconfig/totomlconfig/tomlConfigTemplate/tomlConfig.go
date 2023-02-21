@@ -31,7 +31,6 @@ type (
 	}
 
 	inputConfig struct {
-		AwsCsmListener    []awsCsmListenerConfig `toml:"awscsm_listener"`
 		Cadvisor          []cadvisorConfig
 		Cpu               []cpuConfig
 		Disk              []diskConfig
@@ -53,7 +52,6 @@ type (
 	}
 
 	outputConfig struct {
-		AwsCsm         []awsCsmConfig `toml:"aws_csm"`
 		CloudWatch     []cloudWatchOutputConfig
 		CloudWatchLogs []cloudWatchLogsConfig
 	}
@@ -66,11 +64,6 @@ type (
 	}
 
 	// Input Plugins
-
-	awsCsmListenerConfig struct {
-		DataFormat     string   `toml:"data_format"`
-		ServiceAddress []string `toml:"service_address"`
-	}
 
 	cadvisorConfig struct {
 		ContainerOrchestrator string `toml:"container_orchestrator"`
@@ -246,12 +239,6 @@ type (
 	}
 
 	// Output plugins
-
-	awsCsmConfig struct {
-		LogLevel        int `toml:"log_level"`
-		MemoryLimitInMb int `toml:"memory_limit_in_mb"`
-		Region          string
-	}
 
 	cloudWatchOutputConfig struct {
 		EndpointOverride    string `toml:"endpoint_override"`

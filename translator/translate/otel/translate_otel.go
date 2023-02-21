@@ -6,6 +6,7 @@ package otel
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
@@ -18,16 +19,17 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	receiverAdapter "github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/otel_aws_cloudwatch_logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/containerinsights"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
@@ -37,6 +39,8 @@ import (
 	resourceprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/resource"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/tcp_logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/udp_logs"
 	prometheusreceiver "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/prometheus"
 )
 
@@ -54,6 +58,8 @@ func NewTranslator() *Translator {
 		receiverTranslators: common.NewTranslatorMap(
 			awscontainerinsight.NewTranslator(),
 			prometheusreceiver.NewTranslator(),
+			udp_logs.NewTranslator(),
+			tcp_logs.NewTranslator(),
 		),
 		processorTranslators: common.NewTranslatorMap(
 			processor.NewDefaultTranslator(batchprocessor.NewFactory()),
@@ -65,6 +71,7 @@ func NewTranslator() *Translator {
 		exporterTranslators: common.NewTranslatorMap(
 			awscloudwatch.NewTranslator(),
 			awsemf.NewTranslator(),
+			otel_aws_cloudwatch_logs.NewTranslator(),
 		),
 		extensionTranslators: common.NewTranslatorMap(
 			ecsobserver.NewTranslator(),
@@ -126,6 +133,10 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 	}
 	conf := confmap.NewFromStringMap(m)
 
+	if conf.IsSet("csm") {
+		log.Printf("W! CSM has already been deprecated")
+	}
+
 	found, err := adapter.FindReceiversInConfig(conf, os)
 	if err != nil {
 		return nil, fmt.Errorf("unable to find receivers in config: %w", err)
@@ -149,13 +160,14 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 		host.NewTranslator(deltaMetricsReceivers, common.HostDeltaMetricsPipelineName),
 		containerinsights.NewTranslator(),
 		prometheus.NewTranslator(),
-	).Translate(conf)
+		emf_logs.NewTranslator(),
+	).Translate(conf, common.TranslatorOptions{})
 	if err != nil {
 		return nil, err
 	}
 	extensions, _ := extension.NewTranslator(
 		ecsobserver.NewTranslator(),
-	).Translate(conf)
+	).Translate(conf, common.TranslatorOptions{})
 	cfg := &otelcol.Config{
 		Receivers:  map[component.ID]component.Config{},
 		Exporters:  map[component.ID]component.Config{},
@@ -182,35 +194,31 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 // buildComponents uses the pipelines defined in the config to build the components.
 func (t *Translator) buildComponents(cfg *otelcol.Config, conf *confmap.Conf) error {
 	var errs error
-	receivers := collections.NewSet[component.ID]()
-	processors := collections.NewSet[component.ID]()
-	exporters := collections.NewSet[component.ID]()
-	for _, p := range cfg.Service.Pipelines {
-		receivers.Add(p.Receivers...)
-		processors.Add(p.Processors...)
-		exporters.Add(p.Exporters...)
+	for id, p := range cfg.Service.Pipelines {
+		translatorOptions := common.TranslatorOptions{PipelineId: id}
+		errs = multierr.Append(errs, buildComponents(conf, p.Receivers, cfg.Receivers, t.receiverTranslators.Get, translatorOptions))
+		errs = multierr.Append(errs, buildComponents(conf, p.Processors, cfg.Processors, t.processorTranslators.Get, translatorOptions))
+		errs = multierr.Append(errs, buildComponents(conf, p.Exporters, cfg.Exporters, t.exporterTranslators.Get, translatorOptions))
 	}
-	errs = multierr.Append(errs, buildComponents(conf, receivers, cfg.Receivers, t.receiverTranslators.Get))
-	errs = multierr.Append(errs, buildComponents(conf, processors, cfg.Processors, t.processorTranslators.Get))
-	errs = multierr.Append(errs, buildComponents(conf, exporters, cfg.Exporters, t.exporterTranslators.Get))
 	return errs
 }
 
 // buildComponents attempts to translate a component for each ID in the set.
 func buildComponents[C common.Identifiable](
 	conf *confmap.Conf,
-	ids collections.Set[component.ID],
+	ids []component.ID,
 	components map[component.ID]C,
 	getTranslator func(component.Type) (common.Translator[C], bool),
+	translatorOptions common.TranslatorOptions,
 ) error {
 	var errs error
-	for id := range ids {
+	for _, id := range ids {
 		translator, ok := getTranslator(id.Type())
 		if !ok {
 			errs = multierr.Append(errs, fmt.Errorf("missing translator for %v", id.Type()))
 			continue
 		}
-		cfg, err := translator.Translate(conf)
+		cfg, err := translator.Translate(conf, translatorOptions)
 		if err != nil {
 			errs = multierr.Append(errs, err)
 			continue

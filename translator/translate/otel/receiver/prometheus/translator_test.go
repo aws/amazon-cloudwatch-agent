@@ -181,7 +181,7 @@ scrape_configs:
 				require.NoError(t, err)
 			}
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := pt.Translate(conf)
+			got, err := pt.Translate(conf, common.TranslatorOptions{})
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

@@ -31,7 +31,7 @@ func (t *translator) Type() component.Type {
 
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
 	if conf == nil || !conf.IsSet(prometheusKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusKey}
 	}
@@ -63,6 +63,11 @@ func (t *translator) getPrometheusAttributes(conf *confmap.Conf) ([]map[string]i
 			// that would have been set by the ecs_observer OTel extension
 			attributes = append(attributes, map[string]interface{}{
 				"key":            "job",
+				"from_attribute": "service.name",
+				"action":         "upsert",
+			})
+			attributes = append(attributes, map[string]interface{}{
+				"key":            "ServiceName", // Used for replacement in log stream name
 				"from_attribute": "service.name",
 				"action":         "upsert",
 			})

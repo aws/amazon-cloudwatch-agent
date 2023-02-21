@@ -41,7 +41,7 @@ func (t *translator) Type() component.Type {
 
 // Translate creates an ecs_observer extension config based on the fields in the
 // 'ecs_service_discovery' section within the 'prometheus' section of the JSON config.
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
 	if conf == nil || !conf.IsSet(ecsSdBaseKey) {
 		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: ecsSdBaseKey}
 	}
