@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run Integration Tests
+name: Hello
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
@@ -807,6 +807,7 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/ecs/linux && terraform destroy --auto-approve
+
 
 #  PerformanceTrackingTest:
 #    name: "PerformanceTrackingTest"
