@@ -9,9 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"log"
 	"net/http"
 	"os"
@@ -32,6 +29,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
@@ -39,6 +37,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
@@ -682,10 +682,6 @@ func loadTomlConfigIntoAgent(c *config.Config) error {
 }
 
 func validateAgentFinalConfigAndPlugins(c *config.Config) error {
-	if len(c.Inputs) == 0 {
-		return errors.New("error: no inputs found, did you provide a valid config file?")
-	}
-
 	if int64(c.Agent.Interval) <= 0 {
 		return fmt.Errorf("agent interval must be positive, found %v", c.Agent.Interval)
 	}

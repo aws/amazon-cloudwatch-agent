@@ -5,7 +5,6 @@ package plugins
 
 import (
 	//Enable cloudwatch-agent process plugins
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ecsdecorator"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/emfProcessor"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/k8sdecorator"
