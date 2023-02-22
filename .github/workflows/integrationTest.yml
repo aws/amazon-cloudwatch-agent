@@ -834,25 +834,20 @@ jobs:
           aws-region: us-west-2
 
       - name: Cache if success
-        id: performance-tracking
+        id: stress-tracking
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: performance-tracking-test-${{ github.sha }}
+          key: stress-tracking-test-${{ github.sha }}
 
       - name: Echo Test Info
-        run: echo run performance-tracking
-      - name: Get SHA
-        id: sha
-        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-      - name: Get git date
-        id: sha_date
-        run: echo "::set-output name=sha_date::$(git show -s --format=%ct ${{ steps.sha.outputs.sha_short }} )"
-      - name: Check env
-        run: echo "SHA ${{ steps.sha.outputs.sha_short }} | Date ${{ steps.sha_date.outputs.sha_date }} "
+        run: echo run stress-tracking
+      
       - name: Verify Terraform version
         run: terraform --version
+
       - name: Terraform apply
+      if: steps.stress-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -879,13 +874,13 @@ jobs:
             fi
 
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() && steps.stress-tracking.outputs.cache-hit != 'true' }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/linux && terraform destroy --auto-approve
+          command: cd terraform/performance && terraform destroy --auto-approve
   
   #  PerformanceTrackingTest:
 #    name: "PerformanceTrackingTest"
