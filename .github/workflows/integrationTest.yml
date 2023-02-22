@@ -838,16 +838,14 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: stress-tracking-test-${{ github.sha }}
-
-      - name: Echo Test Info
-        run: echo run stress-tracking
+          key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
       
       - name: Verify Terraform version
+        if: steps.stress-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-      if: steps.stress-tracking.outputs.cache-hit != 'true'
+        if: steps.stress-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
