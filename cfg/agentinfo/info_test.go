@@ -11,9 +11,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/service"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 )
 
 func TestVersionUseInjectedIfAvailable(t *testing.T) {
@@ -77,35 +83,86 @@ func TestFullVersion(t *testing.T) {
 }
 
 func TestPlugins(t *testing.T) {
-	InputPlugins = []string{"a", "b", "c"}
-	OutputPlugins = []string{"x", "y", "z"}
+	receivers = []string{"a", "b", "c"}
+	processors = []string{"i", "j", "k"}
+	exporters = []string{"x", "y", "z"}
 
 	isRunningAsRoot = func() bool { return true }
 	plugins := Plugins("")
-	expected := "inputs:(a b c) outputs:(x y z)"
+	expected := "inputs:(a b c) processors:(i j k) outputs:(x y z)"
 	if plugins != expected {
 		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
 	}
 
 	plugins = Plugins("/aws/ecs/containerinsights/ecs-cluster-name/performance")
-	expected = "inputs:(a b c) outputs:(x y z container_insights)"
+	expected = "inputs:(a b c) processors:(i j k) outputs:(x y z container_insights)"
 	if plugins != expected {
 		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
 	}
 
 	isRunningAsRoot = func() bool { return false }
 	plugins = Plugins("")
-	expected = "inputs:(a b c run_as_user) outputs:(x y z)"
+	expected = "inputs:(a b c run_as_user) processors:(i j k) outputs:(x y z)"
 	if plugins != expected {
 		t.Errorf("wrong plugins string constructed '%v', expecting '%v'", plugins, expected)
 	}
 }
 
+func TestSetPlugins(t *testing.T) {
+	otelcfg := &otelcol.Config{
+		Service: service.ConfigService{
+			Pipelines: map[component.ID]*service.ConfigServicePipeline{
+				component.NewID("metrics"): {
+					Receivers: []component.ID{
+						component.NewID(adapter.TelegrafPrefix + "cpu"),
+						component.NewID("prometheus"),
+					},
+					Processors: []component.ID{
+						component.NewID("processor"),
+					},
+					Exporters: []component.ID{
+						component.NewID("cloudwatch"),
+					},
+				},
+			},
+		},
+	}
+	telegrafcfg := &config.Config{
+		Inputs: []*models.RunningInput{
+			{Config: &models.InputConfig{Name: "logs"}},
+			{Config: &models.InputConfig{Name: "cpu"}},
+		},
+		Outputs: []*models.RunningOutput{
+			{Config: &models.OutputConfig{Name: "cloudwatchlogs"}},
+		},
+	}
+	SetPlugins(otelcfg, telegrafcfg)
+	assert.Equal(t, []string{"cpu", "logs", "prometheus"}, receivers)
+	assert.Equal(t, []string{"processor"}, processors)
+	assert.Equal(t, []string{"cloudwatch", "cloudwatchlogs"}, exporters)
+}
+
+func TestSetPluginsTelegrafOnly(t *testing.T) {
+	otelcfg := &otelcol.Config{}
+	telegrafcfg := &config.Config{
+		Inputs: []*models.RunningInput{
+			{Config: &models.InputConfig{Name: "logs"}},
+		},
+		Outputs: []*models.RunningOutput{
+			{Config: &models.OutputConfig{Name: "cloudwatchlogs"}},
+		},
+	}
+	SetPlugins(otelcfg, telegrafcfg)
+	assert.Equal(t, []string{"logs"}, receivers)
+	assert.Equal(t, []string{"cloudwatchlogs"}, exporters)
+}
+
 func TestUserAgent(t *testing.T) {
 	VersionStr = "VSTR"
 	BuildStr = "BSTR"
-	InputPlugins = []string{"a", "b", "c"}
-	OutputPlugins = []string{"x", "y", "z"}
+	receivers = []string{"a", "b", "c"}
+	processors = []string{"i", "j", "k"}
+	exporters = []string{"x", "y", "z"}
 
 	isRunningAsRoot = func() bool { return true }
 
@@ -118,25 +175,25 @@ func TestUserAgent(t *testing.T) {
 		{
 			"non container insights",
 			"test-group",
-			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) processors:(i j k) outputs:(x y z)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
 			"wrong UserAgent string constructed",
 		},
 		{
 			"container insights EKS",
 			"/aws/containerinsights/eks-cluster-name/performance",
-			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) processors:(i j k) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
 			"\"container_insights\" flag shoould be in the outputs plugin list in container insights mode",
 		},
 		{
 			"container insights ECS",
 			"/aws/ecs/containerinsights/ecs-cluster-name/performance",
-			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) processors:(i j k) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
 			"\"container_insights\" flag shoould be in the outputs plugin list in container insights mode",
 		},
 		{
 			"container insights prometheus",
 			"/aws/containerinsights/cluster-name/prometheus",
-			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
+			fmt.Sprintf("CWAgent/VSTR (%v; %v; %v) BSTR inputs:(a b c) processors:(i j k) outputs:(x y z container_insights)", runtime.Version(), runtime.GOOS, runtime.GOARCH),
 			"\"container_insights\" flag shoould be in the outputs plugin list in container insights mode",
 		},
 	}

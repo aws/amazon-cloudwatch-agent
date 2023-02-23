@@ -9,9 +9,15 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
+	"github.com/influxdata/telegraf/config"
+	"go.opentelemetry.io/collector/otelcol"
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -28,8 +34,9 @@ var isRunningAsRoot = func() bool {
 var (
 	VersionStr    string
 	BuildStr      string = "No Build Date"
-	InputPlugins  []string
-	OutputPlugins []string
+	receivers     []string
+	processors    []string
+	exporters     []string
 
 	userAgentMap        = make(map[string]string)
 	ciCompiledRegexp, _ = regexp.Compile(containerInsightRegexp)
@@ -54,17 +61,18 @@ func Build() string {
 }
 
 func Plugins(groupName string) string {
-	outputs := strings.Join(OutputPlugins, " ")
-	inputs := strings.Join(InputPlugins, " ")
+	receiversStr := strings.Join(receivers, " ")
+	processorsStr := strings.Join(processors, " ")
+	exportersStr := strings.Join(exporters, " ")
 
 	if !isRunningAsRoot() {
-		inputs += " run_as_user" // `inputs` is never empty, or agent will not start
+		receiversStr += " run_as_user" // `inputs` is never empty, or agent will not start
 	}
-	if ciCompiledRegexp.MatchString(groupName) && !strings.Contains(outputs, "container_insights") {
-		outputs += " container_insights"
+	if ciCompiledRegexp.MatchString(groupName) && !strings.Contains(exportersStr, "container_insights") {
+		exportersStr += " container_insights"
 	}
 
-	return fmt.Sprintf("inputs:(%s) outputs:(%s)", inputs, outputs)
+	return fmt.Sprintf("inputs:(%s) processors:(%s) outputs:(%s)", receiversStr, processorsStr, exportersStr)
 }
 
 func UserAgent(groupName string) string {
@@ -81,6 +89,41 @@ func UserAgent(groupName string) string {
 
 func FullVersion() string {
 	return fmt.Sprintf("CWAgent/%s (%s; %s; %s) %s", Version(), runtime.Version(), runtime.GOOS, runtime.GOARCH, Build())
+}
+
+func SetPlugins(otelcfg *otelcol.Config, telegrafcfg *config.Config) {
+	receiverSet := collections.NewSet[string]()
+	processorSet := collections.NewSet[string]()
+	exporterSet := collections.NewSet[string]()
+
+	for _, input := range telegrafcfg.Inputs {
+		receiverSet.Add(input.Config.Name)
+	}
+	for _, output := range telegrafcfg.Outputs {
+		exporterSet.Add(output.Config.Name)
+	}
+
+	for _, pipeline := range otelcfg.Service.Pipelines {
+		for _, receiver := range pipeline.Receivers {
+			// trim the adapter prefix from adapted Telegraf plugins
+			name := strings.TrimPrefix(string(receiver.Type()), adapter.TelegrafPrefix)
+			receiverSet.Add(name)
+		}
+		for _, processor := range pipeline.Processors {
+			processorSet.Add(string(processor.Type()))
+		}
+		for _, exporter := range pipeline.Exporters {
+			exporterSet.Add(string(exporter.Type()))
+		}
+	}
+
+	receivers = maps.Keys(receiverSet)
+	processors = maps.Keys(processorSet)
+	exporters = maps.Keys(exporterSet)
+	
+	sort.Strings(receivers)
+	sort.Strings(processors)
+	sort.Strings(exporters)
 }
 
 func readVersionFile() (string, error) {

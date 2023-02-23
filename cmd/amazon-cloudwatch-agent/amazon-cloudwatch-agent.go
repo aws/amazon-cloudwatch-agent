@@ -43,9 +43,9 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
-	otelService "go.opentelemetry.io/collector/service"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
@@ -298,9 +298,6 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 	log.Printf("I! Tags enabled: %s", c.ListTags())
 
-	agentinfo.InputPlugins = c.InputNames()
-	agentinfo.OutputPlugins = c.OutputNames()
-
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -327,6 +324,7 @@ func runAgent(ctx context.Context,
 	// So just start Telegraf.
 	_, err = os.Stat(*fOtelConfig)
 	if errors.Is(err, os.ErrNotExist) {
+		agentinfo.SetPlugins(&otelcol.Config{}, c)
 		return ag.Run(ctx)
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
@@ -339,7 +337,7 @@ func runAgent(ctx context.Context,
 	// }
 	yamlConfigPath := *fOtelConfig
 	fprovider := fileprovider.New()
-	settings := otelService.ConfigProviderSettings{
+	settings := otelcol.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
 			URIs:      []string{yamlConfigPath},
 			Providers: map[string]confmap.Provider{fprovider.Scheme(): fprovider},
@@ -352,20 +350,27 @@ func runAgent(ctx context.Context,
 		return err
 	}
 
-	provider, err := otelService.NewConfigProvider(settings)
+	provider, err := otelcol.NewConfigProvider(settings)
 	if err != nil {
 		log.Printf("E! Error while initializing config provider: %v", err)
 		return err
 	}
 
-	params := otelService.CollectorSettings{
+	cfg, err := provider.Get(ctx, factories)
+	if err != nil {
+		return err
+	}
+
+	agentinfo.SetPlugins(cfg, c)
+
+	params := otelcol.CollectorSettings{
 		Factories: factories,
 		// TODO: Update BuildInfo with agentinfo
 		// BuildInfo: info,
 		ConfigProvider: provider,
 	}
 
-	cmd := otelService.NewCommand(params)
+	cmd := otelcol.NewCommand(params)
 
 	// Noticed that args of parent process get passed here to otel collector which causes failures complaining about
 	// unrecognized args. So below change overwrites the args. Need to investigate this further as I dont think the config
