@@ -23,6 +23,12 @@ on:
       - 'THIRD-PARTY'
       - 'LICENSE'
   workflow_dispatch:
+    inputs:
+      plugins:
+        description: 'Comma delimited list of plugins to test. Default is empty, and tests everything'
+        required: false
+        default: ''
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
@@ -556,6 +562,7 @@ jobs:
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="test_name=${{ matrix.arrays.os }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
