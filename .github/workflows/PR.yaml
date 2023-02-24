@@ -1,0 +1,30 @@
+name: PR
+
+on: [pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "yarn"
+
+      # Install dependencies
+      - run: yarn install
+
+      # Analyze code for potential problems
+      - run: yarn prettier --check .
+      - run: yarn lint
+      - run: yarn tsc --build
+
+      # Test
+      # - run: yarn test
+
+      # Compile
+      - run: yarn build
+
+      # Deploy
+      # - run: yarn deploy

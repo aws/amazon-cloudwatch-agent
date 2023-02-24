@@ -1,0 +1,21 @@
+.commit_box {
+    position: relative;
+    background: #555;
+    border: 2px solid #000000;
+    color: #fff;
+    width: fit-content;
+    padding: 10px;
+}
+  
+.mb {
+    margin-bottom: 6px;
+}
+  
+.f {
+    display: flex;
+}
+
+.ml {
+    margin-left: 30px;
+    margin-top: -7px;
+}
