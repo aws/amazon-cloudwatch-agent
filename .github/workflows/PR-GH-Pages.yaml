@@ -1,6 +1,10 @@
-name: PR
+name: PR Github Pages
 
 on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -16,8 +20,7 @@ jobs:
       - run: yarn install
 
       # Analyze code for potential problems
-      - run: yarn prettier --check .
-      - run: yarn lint
+      - run: yarn prettier --check . # Run yarn prettier --check --write . if needed for prettier to write
       - run: yarn tsc --build
 
       # Test

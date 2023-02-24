@@ -1,8 +1,11 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 import { Octokit } from "@octokit/rest";
 import axios from "axios";
 
 export const AxionConfig = axios.create({
-  baseURL:process.env.REACT_APP_DYNAMODB_URL,
+  baseURL: process.env.REACT_APP_DYNAMODB_URL,
   timeout: 3000,
   headers: {
     "x-api-key": process.env.REACT_APP_DYNAMODB_TOKEN,

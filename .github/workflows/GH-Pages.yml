@@ -1,8 +1,7 @@
 name: Build and Deploy Webpage
-on: 
+on:
   push:
-    branches:
-      performance-benchmark-page
+    branches: performance-benchmark-page
   workflow_dispatch:
 
 permissions:
@@ -17,14 +16,14 @@ jobs:
 
       - name: Install and Build
         run: |
-          npm config set legacy-peer-deps true
-          npm install
-          npm run build
+          yarn install
+          yarn build
         env:
-          REACT_APP_GATEWAY: ${{ secrets.REACT_APP_GATEWAY }}
-          REACT_APP_GATEWAY_API_KEY: ${{ secrets.REACT_APP_GATEWAY_API_KEY }}
-          REACT_APP_SALT: ${{ secrets.REACT_APP_SALT }}
-
+          REACT_APP_DYNAMODB_TOKEN: ${{ secrets.REACT_APP_DYNAMODB_TOKEN }}
+          REACT_APP_DYNAMODB_URL: ${{ secrets.REACT_APP_DYNAMODB_URL }}
+          REACT_APP_DYNAMODB_NAME: ${{ secrets.REACT_APP_DYNAMODB_NAME }}
+          REACT_APP_GITHUB_REPOSITORY: ${{ secrets.REACT_APP_GITHUB_REPOSITORY }}
+          REACT_APP_GITHUB_SECRET_TOKEN: ${{ secrets.REACT_APP_GITHUB_SECRET_TOKEN }}
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4

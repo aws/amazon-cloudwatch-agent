@@ -1,10 +1,23 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
 import moment from "moment";
 import { AxionConfig, OctokitConfig } from "../../common/Axios";
-import { OWNER_REPOSITORY, SERVICE_NAME, USE_CASE } from "../../common/Constant";
-import { PerformanceMetricReport, PerformanceMetricReportParams, ServiceLatestVersion, ServicePRInformation } from "./data.js";
-export async function GetLatestPerformanceReports(): Promise<PerformanceMetricReport[]> {
+import {
+  OWNER_REPOSITORY,
+  SERVICE_NAME,
+  USE_CASE,
+} from "../../common/Constant";
+import {
+  PerformanceMetricReport,
+  PerformanceMetricReportParams,
+  ServiceLatestVersion,
+  ServicePRInformation,
+} from "./data.js";
+export async function GetLatestPerformanceReports(): Promise<
+  PerformanceMetricReport[]
+> {
   return GetPerformanceReports({
-    TableName: process.env.REACT_APP_DYNAMODB_NAME || "",
+    TableName: process.env.REACT_APP_DYNAMODB_NAME,
     Limit: USE_CASE.length,
     IndexName: "ServiceDate",
     KeyConditions: {
@@ -29,7 +42,9 @@ export async function GetLatestPerformanceReports(): Promise<PerformanceMetricRe
   });
 }
 
-async function GetPerformanceReports(params: PerformanceMetricReportParams): Promise<PerformanceMetricReport[]> {
+async function GetPerformanceReports(
+  params: PerformanceMetricReportParams
+): Promise<PerformanceMetricReport[]> {
   return AxionConfig.post("/", { Action: "Query", Params: params })
     .then(function (body: { data: { Items: PerformanceMetricReport[] } }) {
       return body?.data?.Items;
@@ -42,7 +57,7 @@ async function GetPerformanceReports(params: PerformanceMetricReportParams): Pro
 export async function GetServiceLatestVersion(): Promise<ServiceLatestVersion> {
   return OctokitConfig.request("GET /repos/{owner}/{repo}/releases/latest", {
     owner: OWNER_REPOSITORY,
-    repo: process.env.REACT_APP_GITHUB_REPOSITORY || "",
+    repo: process.env.REACT_APP_GITHUB_REPOSITORY,
   })
     .then(function (body: any) {
       return body?.data;
@@ -52,12 +67,17 @@ export async function GetServiceLatestVersion(): Promise<ServiceLatestVersion> {
     });
 }
 
-export async function GetServicePRInformation(commit_sha: string): Promise<ServicePRInformation> {
-  return OctokitConfig.request("GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls", {
-    owner: OWNER_REPOSITORY,
-    repo: process.env.REACT_APP_GITHUB_REPOSITORY || "",
-    commit_sha: commit_sha,
-  })
+export async function GetServicePRInformation(
+  commit_sha: string
+): Promise<ServicePRInformation> {
+  return OctokitConfig.request(
+    "GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls",
+    {
+      owner: OWNER_REPOSITORY,
+      repo: process.env.REACT_APP_GITHUB_REPOSITORY,
+      commit_sha: commit_sha,
+    }
+  )
     .then(function (body: { data: any[] }) {
       return Promise.resolve(body.data.at(0));
     })

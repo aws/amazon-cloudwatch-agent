@@ -37,7 +37,8 @@ export const dark: PaletteOptions = {
   },
 };
 
-export default { light:light, dark: dark };
+/* eslint import/no-anonymous-default-export: [2, {"allowObject": true}] */
+export default { light: light, dark: dark };
 
 /**
  * Append custom variables to the palette object.

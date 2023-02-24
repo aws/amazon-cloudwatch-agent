@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 import { useTheme } from "@mui/material/styles";
 import { ApexOptions } from "apexcharts";
 import { OWNER_REPOSITORY } from "../../common/Constant";
@@ -21,9 +24,17 @@ export function BasedOptionChart(): ApexOptions {
         },
       },
       events: {
-        xAxisLabelClick: function (event: any, context: any, config: { globals: { categoryLabels: number[] }; labelIndex: number }) {
-          const commit_sha = config.globals.categoryLabels.at(config.labelIndex);
-          window.location.assign(`https://github.com/${OWNER_REPOSITORY}/${process.env.REACT_APP_GITHUB_REPOSITORY}/commit/${commit_sha}`);
+        xAxisLabelClick: function (
+          event: any,
+          context: any,
+          config: { globals: { categoryLabels: number[] }; labelIndex: number }
+        ) {
+          const commit_sha = config.globals.categoryLabels.at(
+            config.labelIndex
+          );
+          window.location.assign(
+            `https://github.com/${OWNER_REPOSITORY}/${process.env.REACT_APP_GITHUB_REPOSITORY}/commit/${commit_sha}`
+          );
         },
       },
     },
@@ -50,7 +61,18 @@ export function BasedOptionChart(): ApexOptions {
         offsetY: -20,
       },
     },
-    colors: ["#FF6384", "#FF9F40", "#FFCD56", "#0ED87C", "#4BC0C0", "#36A2EB", "#9965FF", "#996255", "#DF358D", "#DF358D"],
+    colors: [
+      "#FF6384",
+      "#FF9F40",
+      "#FFCD56",
+      "#0ED87C",
+      "#4BC0C0",
+      "#36A2EB",
+      "#9965FF",
+      "#996255",
+      "#DF358D",
+      "#DF358D",
+    ],
     yaxis: {
       min: 0,
       max: 300,

@@ -1,14 +1,17 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-import { Code, Equalizer, Home, LibraryBooks, TrendingUp } from "@mui/icons-material";
-import { AppBar, AppBarProps, Box, Link, Toolbar, Typography } from "@mui/material";
+import {
+  Code,
+  Equalizer,
+  Home,
+  LibraryBooks,
+  TrendingUp,
+} from "@mui/icons-material";
+import { AppBar, Box, Link, Toolbar, Typography } from "@mui/material";
 import { CloudWatchIcon } from "../icons/CloudWatchIcon";
 import { ThemeButton } from "./ThemeButton";
-type AppToolbarProps = AppBarProps;
 
-export function AppToolbar(props: AppToolbarProps): JSX.Element {
-  const { sx, ...other } = props;
-
+export function AppToolbar(): JSX.Element {
   return (
     <AppBar
       sx={{
@@ -47,19 +50,31 @@ export function AppToolbar(props: AppToolbarProps): JSX.Element {
             <Typography>Home</Typography>
           </Link>
 
-          <Link href="/report" sx={{ display: "flex", gap: "10px", color: "#FFF" }}>
+          <Link
+            href="/report"
+            sx={{ display: "flex", gap: "10px", color: "#FFF" }}
+          >
             <Equalizer sx={{ color: "#FFF" }} />
             <Typography>Performance Report</Typography>
           </Link>
-          <Link href="/trend" sx={{ display: "flex", gap: "10px", color: "#FFF" }}>
+          <Link
+            href="/trend"
+            sx={{ display: "flex", gap: "10px", color: "#FFF" }}
+          >
             <TrendingUp sx={{ color: "#FFF" }} />
             <Typography>Performance Trend</Typography>
           </Link>
-          <Link href="/wiki" sx={{ display: "flex", gap: "10px", color: "#FFF" }}>
+          <Link
+            href="/wiki"
+            sx={{ display: "flex", gap: "10px", color: "#FFF" }}
+          >
             <LibraryBooks sx={{ color: "#FFF" }} />
             <Typography>Wikipedia </Typography>
           </Link>
-          <Link href="https://github.com/aws/amazon-cloudwatch-agent" sx={{ display: "flex", gap: "10px", color: "#FFF" }}>
+          <Link
+            href="https://github.com/aws/amazon-cloudwatch-agent"
+            sx={{ display: "flex", gap: "10px", color: "#FFF" }}
+          >
             <Code sx={{ color: "#FFF" }} />
             <Typography>GitHub Code </Typography>
           </Link>

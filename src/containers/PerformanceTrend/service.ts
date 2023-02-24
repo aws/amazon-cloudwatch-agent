@@ -1,11 +1,24 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 import moment from "moment";
 import { AxionConfig, OctokitConfig } from "../../common/Axios";
-import { OWNER_REPOSITORY, SERVICE_NAME, USE_CASE } from "../../common/Constant";
-import { PerformanceTrendData, PerformanceTrendDataParams, ServiceCommitInformation } from "./data";
-export async function GetPerformanceTrendData(): Promise<PerformanceTrendData[]> {
+import {
+  OWNER_REPOSITORY,
+  SERVICE_NAME,
+  USE_CASE,
+} from "../../common/Constant";
+import {
+  PerformanceTrendData,
+  PerformanceTrendDataParams,
+  ServiceCommitInformation,
+} from "./data";
+export async function GetPerformanceTrendData(): Promise<
+  PerformanceTrendData[]
+> {
   const currentUnixTime = moment().unix();
   return GetPerformanceTrend({
-    TableName: process.env.REACT_APP_DYNAMODB_NAME || "",
+    TableName: process.env.REACT_APP_DYNAMODB_NAME,
     Limit: USE_CASE.length * 25,
     IndexName: "ServiceDate",
     KeyConditions: {
@@ -30,7 +43,9 @@ export async function GetPerformanceTrendData(): Promise<PerformanceTrendData[]>
   });
 }
 
-async function GetPerformanceTrend(params: PerformanceTrendDataParams): Promise<PerformanceTrendData[]> {
+async function GetPerformanceTrend(
+  params: PerformanceTrendDataParams
+): Promise<PerformanceTrendData[]> {
   return AxionConfig.post("/", { Action: "Query", Params: params })
     .then(function (body: { data: { Items: any[] } }) {
       return body?.data?.Items;
@@ -40,10 +55,12 @@ async function GetPerformanceTrend(params: PerformanceTrendDataParams): Promise<
     });
 }
 
-export async function GetServiceCommitInformation(commit_sha: string): Promise<ServiceCommitInformation> {
+export async function GetServiceCommitInformation(
+  commit_sha: string
+): Promise<ServiceCommitInformation> {
   return OctokitConfig.request("GET /repos/{owner}/{repo}/commits/{ref}", {
     owner: OWNER_REPOSITORY,
-    repo: process.env.REACT_APP_GITHUB_REPOSITORY || "",
+    repo: process.env.REACT_APP_GITHUB_REPOSITORY,
     ref: commit_sha,
   })
     .then(function (value: { data: any }) {

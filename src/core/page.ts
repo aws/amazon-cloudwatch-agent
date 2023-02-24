@@ -10,7 +10,8 @@ export function usePageEffect(options?: Options, deps?: React.DependencyList) {
   React.useEffect(() => {
     const previousTitle = document.title;
 
-    document.title = location.pathname === "/" && options?.title ? `${options.title} ` : "AWS";
+    document.title =
+      location.pathname === "/" && options?.title ? `${options.title} ` : "AWS";
 
     return function () {
       document.title = previousTitle;
