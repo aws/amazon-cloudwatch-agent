@@ -5,8 +5,9 @@ package cloudwatch
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"log"
+
+	cloudwatchutil "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/cloudwatch"
 )
 
 type MetricDecorationConfig struct {
@@ -66,7 +67,7 @@ func (m *MetricDecorations) addDecorations(category string, name string, rename 
 	}
 
 	if unit != "" {
-		if !isCloudWatchStandardUnit(unit) {
+		if !cloudwatchutil.IsStandardUnit(unit) {
 			return fmt.Errorf("detected unsupported unit: %s", unit)
 		}
 
@@ -78,20 +79,4 @@ func (m *MetricDecorations) addDecorations(category string, name string, rename 
 		val[name] = unit
 	}
 	return nil
-}
-
-var standardUnits = map[string]struct{}{}
-
-func isCloudWatchStandardUnit(unit string) bool {
-	if unit == "" {
-		return false
-	}
-	_, ok := standardUnits[unit]
-	return ok
-}
-
-func init() {
-	for _, unit := range types.StandardUnitNone.Values() {
-		standardUnits[string(unit)] = struct{}{}
-	}
 }

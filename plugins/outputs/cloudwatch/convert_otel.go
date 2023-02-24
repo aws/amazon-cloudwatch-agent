@@ -11,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	cloudwatchutil "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/cloudwatch"
 )
 
 // ConvertOtelDimensions will return a list of lists. Without dimension
@@ -63,6 +65,7 @@ func (c *CloudWatch) ConvertOtelNumberDataPoints(
 	dps pmetric.NumberDataPointSlice,
 	name string,
 	unit string,
+	scale float64,
 ) []*cloudwatch.MetricDatum {
 	// Could make() with attrs.Len() * len(c.RollupDimensions).
 	datums := make([]*cloudwatch.MetricDatum, 0, dps.Len())
@@ -71,7 +74,7 @@ func (c *CloudWatch) ConvertOtelNumberDataPoints(
 		attrs := dp.Attributes()
 		isHighResolution := checkHighResolution(attrs)
 		rolledDims := c.ConvertOtelDimensions(attrs)
-		value := NumberDataPointValue(dp)
+		value := NumberDataPointValue(dp) * scale
 		// Each datapoint may become many datums due to dimension roll up.
 		for _, dims := range rolledDims {
 			// todo: IsDropping()
@@ -96,16 +99,16 @@ func (c *CloudWatch) ConvertOtelNumberDataPoints(
 // Intentionally not caching previous values and converting cumulative to delta.
 // Instead use cumulativetodeltaprocessor which supports monotonic cumulative sums.
 func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*cloudwatch.MetricDatum {
-	n := m.Name()
-	u, err := ConvertUnit(m.Unit())
+	name := m.Name()
+	unit, scale, err := cloudwatchutil.ToStandardUnit(m.Unit())
 	if err != nil {
-		log.Printf("W! cloudwatch: metricname %q has %v", n, err)
+		log.Printf("W! cloudwatch: metricname %q has %v", name, err)
 	}
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
-		return c.ConvertOtelNumberDataPoints(m.Gauge().DataPoints(), n, u)
+		return c.ConvertOtelNumberDataPoints(m.Gauge().DataPoints(), name, unit, scale)
 	case pmetric.MetricTypeSum:
-		return c.ConvertOtelNumberDataPoints(m.Sum().DataPoints(), n, u)
+		return c.ConvertOtelNumberDataPoints(m.Sum().DataPoints(), name, unit, scale)
 	default:
 		log.Printf("E! cloudwatch: Unsupported type, %s", m.Type())
 	}
