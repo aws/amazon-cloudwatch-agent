@@ -1,24 +1,24 @@
 {
   "files": {
-    "main.js": "/amazon-cloudwatch-agent/static/js/main.9b68172d.js",
+    "main.js": "/amazon-cloudwatch-agent/static/js/main.2d5c1dde.js",
     "static/js/651.59246d4a.chunk.js": "/amazon-cloudwatch-agent/static/js/651.59246d4a.chunk.js",
-    "static/js/16.2f33a587.chunk.js": "/amazon-cloudwatch-agent/static/js/16.2f33a587.chunk.js",
+    "static/js/16.ac4e0d60.chunk.js": "/amazon-cloudwatch-agent/static/js/16.ac4e0d60.chunk.js",
     "static/css/105.b5e28d91.chunk.css": "/amazon-cloudwatch-agent/static/css/105.b5e28d91.chunk.css",
-    "static/js/105.5386678a.chunk.js": "/amazon-cloudwatch-agent/static/js/105.5386678a.chunk.js",
+    "static/js/105.6228cc80.chunk.js": "/amazon-cloudwatch-agent/static/js/105.6228cc80.chunk.js",
     "static/js/879.eca5b662.chunk.js": "/amazon-cloudwatch-agent/static/js/879.eca5b662.chunk.js",
-    "static/js/870.a3f959c3.chunk.js": "/amazon-cloudwatch-agent/static/js/870.a3f959c3.chunk.js",
+    "static/js/553.b150188b.chunk.js": "/amazon-cloudwatch-agent/static/js/553.b150188b.chunk.js",
     "static/js/260.55e176b8.chunk.js": "/amazon-cloudwatch-agent/static/js/260.55e176b8.chunk.js",
     "index.html": "/amazon-cloudwatch-agent/index.html",
-    "main.9b68172d.js.map": "/amazon-cloudwatch-agent/static/js/main.9b68172d.js.map",
+    "main.2d5c1dde.js.map": "/amazon-cloudwatch-agent/static/js/main.2d5c1dde.js.map",
     "651.59246d4a.chunk.js.map": "/amazon-cloudwatch-agent/static/js/651.59246d4a.chunk.js.map",
-    "16.2f33a587.chunk.js.map": "/amazon-cloudwatch-agent/static/js/16.2f33a587.chunk.js.map",
+    "16.ac4e0d60.chunk.js.map": "/amazon-cloudwatch-agent/static/js/16.ac4e0d60.chunk.js.map",
     "105.b5e28d91.chunk.css.map": "/amazon-cloudwatch-agent/static/css/105.b5e28d91.chunk.css.map",
-    "105.5386678a.chunk.js.map": "/amazon-cloudwatch-agent/static/js/105.5386678a.chunk.js.map",
+    "105.6228cc80.chunk.js.map": "/amazon-cloudwatch-agent/static/js/105.6228cc80.chunk.js.map",
     "879.eca5b662.chunk.js.map": "/amazon-cloudwatch-agent/static/js/879.eca5b662.chunk.js.map",
-    "870.a3f959c3.chunk.js.map": "/amazon-cloudwatch-agent/static/js/870.a3f959c3.chunk.js.map",
+    "553.b150188b.chunk.js.map": "/amazon-cloudwatch-agent/static/js/553.b150188b.chunk.js.map",
     "260.55e176b8.chunk.js.map": "/amazon-cloudwatch-agent/static/js/260.55e176b8.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.9b68172d.js"
+    "static/js/main.2d5c1dde.js"
   ]
 }
