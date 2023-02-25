@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.js": "/amazon-cloudwatch-agent/static/js/main.fd28d6a2.js",
+    "main.js": "/amazon-cloudwatch-agent/static/js/main.19d25103.js",
     "static/js/651.59246d4a.chunk.js": "/amazon-cloudwatch-agent/static/js/651.59246d4a.chunk.js",
     "static/js/16.5ea01f5b.chunk.js": "/amazon-cloudwatch-agent/static/js/16.5ea01f5b.chunk.js",
     "static/css/105.b5e28d91.chunk.css": "/amazon-cloudwatch-agent/static/css/105.b5e28d91.chunk.css",
@@ -10,7 +10,7 @@
     "static/js/870.a3f959c3.chunk.js": "/amazon-cloudwatch-agent/static/js/870.a3f959c3.chunk.js",
     "static/js/260.55e176b8.chunk.js": "/amazon-cloudwatch-agent/static/js/260.55e176b8.chunk.js",
     "index.html": "/amazon-cloudwatch-agent/index.html",
-    "main.fd28d6a2.js.map": "/amazon-cloudwatch-agent/static/js/main.fd28d6a2.js.map",
+    "main.19d25103.js.map": "/amazon-cloudwatch-agent/static/js/main.19d25103.js.map",
     "651.59246d4a.chunk.js.map": "/amazon-cloudwatch-agent/static/js/651.59246d4a.chunk.js.map",
     "16.5ea01f5b.chunk.js.map": "/amazon-cloudwatch-agent/static/js/16.5ea01f5b.chunk.js.map",
     "105.b5e28d91.chunk.css.map": "/amazon-cloudwatch-agent/static/css/105.b5e28d91.chunk.css.map",
@@ -21,6 +21,6 @@
     "260.55e176b8.chunk.js.map": "/amazon-cloudwatch-agent/static/js/260.55e176b8.chunk.js.map"
   },
   "entrypoints": [
-    "static/js/main.fd28d6a2.js"
+    "static/js/main.19d25103.js"
   ]
 }
