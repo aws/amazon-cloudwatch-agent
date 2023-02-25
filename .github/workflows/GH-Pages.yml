@@ -1,0 +1,31 @@
+name: Build and Deploy Webpage
+on:
+  push:
+    branches: performance-benchmark-page
+  workflow_dispatch:
+
+permissions:
+  contents: write
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install and Build
+        run: |
+          yarn install
+          yarn build
+        env:
+          REACT_APP_DYNAMODB_TOKEN: ${{ secrets.REACT_APP_DYNAMODB_TOKEN }}
+          REACT_APP_DYNAMODB_URL: ${{ secrets.REACT_APP_DYNAMODB_URL }}
+          REACT_APP_DYNAMODB_NAME: ${{ secrets.REACT_APP_DYNAMODB_NAME }}
+          REACT_APP_GITHUB_REPOSITORY: ${{ secrets.REACT_APP_GITHUB_REPOSITORY }}
+          REACT_APP_GITHUB_SECRET_TOKEN: ${{ secrets.REACT_APP_GITHUB_SECRET_TOKEN }}
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build
