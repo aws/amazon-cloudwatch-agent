@@ -3,31 +3,32 @@ name: PR Github Pages
 on: [pull_request]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.ref_name }}
+    cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "yarn"
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+                  cache: 'yarn'
 
-      # Install dependencies
-      - run: yarn install
+            # Install dependencies
+            - run: yarn install
 
-      # Analyze code for potential problems
-      - run: yarn prettier --check . # Run yarn prettier --check --write . if needed for prettier to write
-      - run: yarn tsc --build
+            # Analyze code for potential problems
+            # Run yarn prettier --check --write --config ./.prettierrc . if needed for prettier to write
+            - run: yarn prettier --check --config .prettierrc .
+            - run: yarn tsc --build
 
-      # Test
-      # - run: yarn test
+            # Test
+            # - run: yarn test
 
-      # Compile
-      - run: yarn build
+            # Compile
+            - run: yarn build
 
-      # Deploy
-      # - run: yarn deploy
+            # Deploy
+            # - run: yarn deploy

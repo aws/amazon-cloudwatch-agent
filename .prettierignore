@@ -1,6 +1,5 @@
 # Compiled & generated output
-/*/dist/
-/app/queries/
+/*/build/
 
 # Cache
 /.cache
