@@ -8,13 +8,14 @@ import (
 	"io/ioutil"
 
 	"fmt"
+	"os"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/ssm"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-	"os"
 )
 
 var Processor processors.Processor = &processor{}

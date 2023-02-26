@@ -320,17 +320,28 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	var bufferUsed uint32
 	err = EvtFormatMessage(publisherMetadataEvtHandle, evtHandle, 0, 0, 0, EvtFormatMessageXml, uint32(bufferSize), &renderBuf[0], &bufferUsed)
 	EvtClose(publisherMetadataEvtHandle)
-	if err != nil {
+	if err != nil && bufferUsed == 0 {
 		return nil, fmt.Errorf("EvtFormatMessage() publisher %v, err %v", newRecord.System.Provider.Name, err)
 	}
-	descriptionBytes, err := UTF16ToUTF8Bytes(renderBuf, bufferUsed)
+	descriptionBytes, err := UTF16ToUTF8BytesForWindowsEventBuffer(renderBuf, bufferUsed)
 	if err != nil {
-		return nil, fmt.Errorf("UTF16ToUTF8Bytes() err %v", err)
+		return nil, fmt.Errorf("utf16ToUTF8Bytes() err %v", err)
+	}
+
+	// The insertion strings could be in either EventData or UserData
+	// Notes on the insertion strings:
+	// - The EvtFormatMessage has the valueCount and values parameters, yet it does not work when we tried passing
+	//   EventData/UserData into those parameters. We can later do more research on making EvtFormatMessage with
+	//   valueCount and values parameters works and compare if there is any benefit.
+	dataValues := newRecord.EventData.Data
+	// The UserData section is used if EventData is empty
+	if len(dataValues) == 0 {
+		dataValues = newRecord.UserData.Data
 	}
 	switch w.renderFormat {
 	case FormatXml, FormatDefault:
 		//XML format
-		newRecord.XmlFormatContent = string(descriptionBytes)
+		newRecord.XmlFormatContent = insertPlaceholderValues(string(descriptionBytes), dataValues)
 	case FormatPlainText:
 		//old SSM agent Windows format
 		var recordMessage eventMessage
@@ -338,7 +349,7 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 		if err != nil {
 			return nil, fmt.Errorf("Unmarshal() err %v", err)
 		}
-		newRecord.System.Description = recordMessage.Message
+		newRecord.System.Description = insertPlaceholderValues(recordMessage.Message, dataValues)
 	default:
 		return nil, fmt.Errorf("renderFormat is not recognized, %s", w.renderFormat)
 	}

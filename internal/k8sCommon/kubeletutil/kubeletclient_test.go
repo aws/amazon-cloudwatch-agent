@@ -4,12 +4,13 @@
 package kubeletutil
 
 import (
-	"github.com/docker/docker/pkg/testutil/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/mock"
 )
 
 // Test Data

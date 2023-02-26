@@ -5,6 +5,7 @@ package totomlconfig
 
 import (
 	"bytes"
+	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -30,6 +31,7 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery/taskdefinition"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus/emfprocessor"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/append_dimensions"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/drop_origin"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metric_decoration"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/agentInternal"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/collectd"
@@ -57,9 +59,9 @@ func ToTomlConfig(c interface{}) string {
 	_, val := r.ApplyRule(c)
 	buf := bytes.Buffer{}
 	enc := toml.NewEncoder(&buf)
-	e := enc.Encode(val)
-	if e != nil {
-		panic(e)
+	err := enc.Encode(val)
+	if err != nil {
+		log.Panicf("Encode to a valid TOML config fails because of %v", err)
 	}
 	return buf.String()
 }

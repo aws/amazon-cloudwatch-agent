@@ -1,0 +1,79 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: AWS Daily Resources Cleaner
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Run Every Day At Midnight
+  workflow_dispatch:
+
+jobs:
+  clean-opensource-ami:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old ami
+        run: go run ./tool/clean/clean_ami/clean_ami.go --tags=clean
+  
+  clean-opensource-dedicated-hosts:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old dedicated host
+        run: go run ./tool/clean/clean_dedicated_host/clean_dedicated_host.go --tags=clean
+  
+  clean-internal-dedicated-hosts:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        region: [
+          us-east-1, us-east-2,
+          us-west-1, us-west-2,
+          ap-southeast-1, ap-southeast-2,
+          ap-south-1,
+          ap-northeast-1, ap-northeast-2, ap-northeast-3,
+          ca-central-1,
+          eu-central-1,
+          eu-west-1, eu-west-2, eu-west-3,
+          eu-north-1,
+          sa-east-1
+        ]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.INTERNAL_AWS_ASSUME_ROLE }}
+          aws-region: ${{ matrix.region }}
+
+      - name: Clean old dedicated host
+        run: go run ./tool/clean/clean_dedicated_host/clean_dedicated_host.go --tags=clean

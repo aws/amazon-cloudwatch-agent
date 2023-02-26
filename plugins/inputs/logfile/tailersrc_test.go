@@ -6,8 +6,6 @@ package logfile
 import (
 	"bytes"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"log"
@@ -19,14 +17,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
 
 type tailerTestResources struct {
-	done *chan struct{}
-	consumed *int32
-	file *os.File
+	done      *chan struct{}
+	consumed  *int32
+	file      *os.File
 	statefile *os.File
 }
 
@@ -45,7 +46,7 @@ func TestTailerSrc(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create temp file: %v", err)
 	}
-
+	beforeCount := tail.OpenFileCount.Load()
 	tailer, err := tail.TailFile(file.Name(),
 		tail.Config{
 			ReOpen:      false,
@@ -62,7 +63,7 @@ func TestTailerSrc(t *testing.T) {
 		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
 		return
 	}
-
+	assert.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
 	ts := NewTailerSrc(
 		"groupName", "streamName",
 		"destination",
@@ -143,11 +144,15 @@ func TestTailerSrc(t *testing.T) {
 		fmt.Fprintln(file, l)
 	}
 
-	// Removal of log file should stop tailersrc
+	// Removal of log file should stop tailerSrc and Tail.
 	if err := os.Remove(file.Name()); err != nil {
 		t.Errorf("failed to remove log file '%v': %v", file.Name(), err)
 	}
 	<-done
+	// Most test functions do not wait for the Tail to close the file.
+	// They rely on Tail to detect file deletion and close the file.
+	// So the count might be nonzero due to previous test cases.
+	assert.LessOrEqual(t, tail.OpenFileCount.Load(), beforeCount)
 }
 
 func TestOffsetDoneCallBack(t *testing.T) {
@@ -459,9 +464,9 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 	})
 
 	return tailerTestResources{
-		done: &done,
-		consumed: &consumed,
-		file: file,
+		done:      &done,
+		consumed:  &consumed,
+		file:      file,
 		statefile: statefile,
 	}
 }
@@ -470,7 +475,7 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 	var sleepDuration time.Duration
 	if multiLineWaitMs > 0 {
 		multilineWaitPeriod = time.Duration(multiLineWaitMs) * time.Millisecond
-		sleepDuration = time.Duration(multiLineWaitMs * 6) * time.Millisecond
+		sleepDuration = time.Duration(multiLineWaitMs*10) * time.Millisecond
 	}
 
 	for i := 0; i < n; i++ {
@@ -482,6 +487,8 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 		}
 		if multiLineWaitMs > 0 {
 			time.Sleep(sleepDuration)
+		} else {
+			time.Sleep(multilineWaitPeriod)
 		}
 	}
 }

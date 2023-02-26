@@ -61,7 +61,6 @@ func (fw *InotifyFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 			return tomb.ErrDying
 		}
 	}
-	panic("unreachable")
 }
 
 func (fw *InotifyFileWatcher) ChangeEvents(t *tomb.Tomb, pos int64) (*FileChanges, error) {

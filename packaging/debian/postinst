@@ -1,4 +1,0 @@
-#! /bin/bash
-
-chown -R cwagent:cwagent /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/logs
-chown -R cwagent:cwagent /opt/aws/amazon-cloudwatch-agent/cwagent-otel-collector/var

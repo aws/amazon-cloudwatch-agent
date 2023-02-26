@@ -8,6 +8,8 @@ const (
 	RUN_IN_CONTAINER_TRUE   = "True"
 	RUN_IN_AWS              = "RUN_IN_AWS"
 	RUN_IN_AWS_TRUE         = "True"
+	RUN_WITH_IRSA           = "RUN_WITH_IRSA"
+	RUN_WITH_IRSA_TRUE      = "True"
 	USE_DEFAULT_CONFIG      = "USE_DEFAULT_CONFIG"
 	USE_DEFAULT_CONFIG_TRUE = "True"
 	HOST_NAME               = "HOST_NAME"

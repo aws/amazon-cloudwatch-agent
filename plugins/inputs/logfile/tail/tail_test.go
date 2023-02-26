@@ -8,7 +8,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
+
+const linesWrittenToFile int = 10
 
 type testLogger struct {
 	debugs, infos, warns, errors []string
@@ -71,22 +75,46 @@ func TestNotTailedCompeletlyLogging(t *testing.T) {
 	verifyTailerExited(t, tail)
 }
 
-func TestDroppedLinesWhenStopAtEOFLogging(t *testing.T) {
-	tmpfile, tail, tlog := setup(t)
+func TestStopAtEOF(t *testing.T) {
+	tmpfile, tail, _ := setup(t)
 	defer tearDown(tmpfile)
 
 	readThreelines(t, tail)
 
-	// Ask the tailer to StopAtEOF
-	tail.StopAtEOF()
+	// Since StopAtEOF() will block until the EOF is reached, run it in a goroutine.
+	done := make(chan bool)
+	go func() {
+		tail.StopAtEOF()
+		close(done)
+	}()
+
+	// Verify the goroutine is blocked indefinitely.
+	select {
+	case <-done:
+		t.Fatalf("StopAtEOF() completed unexpectedly")
+	case <-time.After(time.Second * 1):
+		t.Log("timeout waiting for StopAtEOF() (as expected)")
+	}
+
+	assert.Equal(t, errStopAtEOF, tail.Err())
+
+	// Read to EOF
+	for i := 0; i < linesWrittenToFile-3; i++ {
+		<-tail.Lines
+	}
+
+	// Verify StopAtEOF() has completed.
+	select {
+	case <-done:
+		t.Log("StopAtEOF() completed (as expected)")
+	case <-time.After(time.Second * 1):
+		t.Fatalf("StopAtEOF() has not completed")
+	}
+
 	// Then remove the tmpfile
 	if err := os.Remove(tmpfile.Name()); err != nil {
 		t.Fatalf("failed to remove temporary log file %v: %v", tmpfile.Name(), err)
 	}
-	// Wait until the tailer should have been terminated
-	time.Sleep(exitOnDeletionWaitDuration + exitOnDeletionCheckDuration + 1*time.Second)
-
-	verifyTailerLogging(t, tlog, "Dropped 7 lines for stopped tail for file "+tmpfile.Name())
 	verifyTailerExited(t, tail)
 }
 
@@ -97,7 +125,7 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 	}
 
 	// Write the file content
-	for i := 0; i < 10; i++ {
+	for i := 0; i < linesWrittenToFile; i++ {
 		if _, err := fmt.Fprintf(tmpfile, "%v some log line\n", time.Now()); err != nil {
 			log.Fatal(err)
 		}
@@ -120,7 +148,8 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 	if err != nil {
 		t.Fatalf("failed to tail file %v: %v", tmpfile.Name(), err)
 	}
-
+	// Cannot expect OpenFileCount to be 1 because the TailFile struct
+	// was not created with MustExist=true, so file may not yet be opened.
 	return tmpfile, tail, &tl
 }
 
@@ -135,6 +164,8 @@ func readThreelines(t *testing.T, tail *Tail) {
 			t.Errorf("wrong line from tail found: '%v'", line.Text)
 		}
 	}
+	// If file was readable, then expect it to exist.
+	assert.Equal(t, int64(1), OpenFileCount.Load())
 }
 
 func verifyTailerLogging(t *testing.T, tlog *testLogger, expectedErrorMsg string) {
@@ -151,6 +182,7 @@ func verifyTailerLogging(t *testing.T, tlog *testLogger, expectedErrorMsg string
 func verifyTailerExited(t *testing.T, tail *Tail) {
 	select {
 	case <-tail.Dead():
+		assert.Equal(t, int64(0), OpenFileCount.Load())
 		return
 	default:
 		t.Errorf("Tailer is still alive after file removed and wait period")

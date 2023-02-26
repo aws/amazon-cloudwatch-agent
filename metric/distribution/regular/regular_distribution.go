@@ -4,9 +4,11 @@
 package regular
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"errors"
 	"log"
 	"math"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 type RegularDistribution struct {
@@ -64,11 +66,10 @@ func (regularDist *RegularDistribution) Size() int {
 }
 
 // weight is 1/samplingRate
-func (regularDist *RegularDistribution) AddEntryWithUnit(value float64, weight float64, unit string) {
+func (regularDist *RegularDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
 	if weight > 0 {
 		if value < 0 {
-			log.Printf("W! Value cannot be negative: %v", value)
-			return
+			return errors.New("negative value")
 		}
 		//sample count
 		regularDist.sampleCount += weight
@@ -90,16 +91,17 @@ func (regularDist *RegularDistribution) AddEntryWithUnit(value float64, weight f
 		if regularDist.unit == "" {
 			regularDist.unit = unit
 		} else if regularDist.unit != unit && unit != "" {
-			log.Printf("D! Multiple units are dected: %s, %s", regularDist.unit, unit)
+			log.Printf("D! Multiple units are detected: %s, %s", regularDist.unit, unit)
 		}
 	} else {
 		log.Printf("D! Weight should be larger than 0: %v", weight)
 	}
+	return nil
 }
 
 // weight is 1/samplingRate
-func (regularDist *RegularDistribution) AddEntry(value float64, weight float64) {
-	regularDist.AddEntryWithUnit(value, weight, "")
+func (regularDist *RegularDistribution) AddEntry(value float64, weight float64) error {
+	return regularDist.AddEntryWithUnit(value, weight, "")
 }
 
 func (regularDist *RegularDistribution) AddDistribution(distribution distribution.Distribution) {

@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build linux
 // +build linux
 
 package cmdutil
@@ -9,13 +10,14 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"io"
 	"log"
 	"os"
 	"os/user"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sys/unix"
 )
 
 type ExecUser struct {

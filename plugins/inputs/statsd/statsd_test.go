@@ -6,10 +6,11 @@ package statsd
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
 	"math"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -277,11 +278,11 @@ func TestParse_Timings(t *testing.T) {
 	s.Gather(acc)
 
 	dist := distribution.NewDistribution()
-	dist.AddEntry(1, 1)
-	dist.AddEntry(11, 1)
-	dist.AddEntry(1, 1)
-	dist.AddEntry(1, 1)
-	dist.AddEntry(1, 1)
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(11, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
 
 	metrics := acc.Metrics
 	assert.Equal(t, 1, len(metrics))
@@ -1038,18 +1039,18 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 	s.Gather(acc)
 
 	dist := distribution.NewDistribution()
-	dist.AddEntry(1, 1)
-	dist.AddEntry(11, 1)
-	dist.AddEntry(1, 1)
-	dist.AddEntry(1, 1)
-	dist.AddEntry(1, 1)
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(11, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
 
 	dist2 := distribution.NewDistribution()
-	dist2.AddEntry(2, 1)
-	dist2.AddEntry(22, 1)
-	dist2.AddEntry(2, 1)
-	dist2.AddEntry(2, 1)
-	dist2.AddEntry(2, 1)
+	assert.NoError(t, dist2.AddEntry(2, 1))
+	assert.NoError(t, dist2.AddEntry(22, 1))
+	assert.NoError(t, dist2.AddEntry(2, 1))
+	assert.NoError(t, dist2.AddEntry(2, 1))
+	assert.NoError(t, dist2.AddEntry(2, 1))
 
 	metrics := acc.Metrics
 	assert.Equal(t, 1, len(metrics))
@@ -1093,18 +1094,18 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 	s.Gather(acc)
 
 	dist := distribution.NewDistribution()
-	dist.AddEntry(1, 1)
-	dist.AddEntry(11, 1)
-	dist.AddEntry(1, 1)
-	dist.AddEntry(1, 1)
-	dist.AddEntry(1, 1)
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(11, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
+	assert.NoError(t, dist.AddEntry(1, 1))
 
 	dist2 := distribution.NewDistribution()
-	dist2.AddEntry(2, 1)
-	dist2.AddEntry(22, 1)
-	dist2.AddEntry(2, 1)
-	dist2.AddEntry(2, 1)
-	dist2.AddEntry(2, 1)
+	assert.NoError(t, dist2.AddEntry(2, 1))
+	assert.NoError(t, dist2.AddEntry(22, 1))
+	assert.NoError(t, dist2.AddEntry(2, 1))
+	assert.NoError(t, dist2.AddEntry(2, 1))
+	assert.NoError(t, dist2.AddEntry(2, 1))
 
 	metrics := acc.Metrics
 	assert.Equal(t, 2, len(metrics))

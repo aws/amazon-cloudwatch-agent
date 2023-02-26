@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/awscsm"
+	awscsmmetrics "github.com/aws/amazon-cloudwatch-agent/awscsm"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm/metametrics"
 )
 
@@ -87,7 +87,7 @@ func TestMetricWriter(t *testing.T) {
 			for i := 0; i < innerMetricCount; i++ {
 				eventTime := now.Add(time.Duration(j) * time.Minute)
 				bin := i % innerMetricBins
-				fmt.Printf("%d", bin)
+				t.Logf("%d", bin)
 				listener.Count(fmt.Sprintf("%d", bin), float64(bin), eventTime, testEndpoints[k])
 			}
 		}

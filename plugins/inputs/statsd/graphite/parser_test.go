@@ -4,11 +4,12 @@
 package graphite
 
 import (
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/metric"
 
@@ -373,11 +374,10 @@ func TestFilterMatchDefault(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("miss.servers.localhost.cpu_load",
+	exp := metric.New("miss.servers.localhost.cpu_load",
 		map[string]string{},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("miss.servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
@@ -391,11 +391,10 @@ func TestFilterMatchMultipleMeasurement(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu.cpu_load.10",
+	exp := metric.New("cpu.cpu_load.10",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
 	assert.NoError(t, err)
@@ -410,11 +409,10 @@ func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	exp, err := metric.New("cpu_cpu_load_10",
+	exp := metric.New("cpu_cpu_load_10",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
 	assert.NoError(t, err)
@@ -428,7 +426,7 @@ func TestFilterMatchSingle(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
+	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -445,11 +443,10 @@ func TestParseNoMatch(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("servers.localhost.memory.VmallocChunk",
+	exp := metric.New("servers.localhost.memory.VmallocChunk",
 		map[string]string{},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.memory.VmallocChunk 11 1435077219")
 	assert.NoError(t, err)
@@ -463,11 +460,10 @@ func TestFilterMatchWildcard(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
+	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
@@ -483,11 +479,10 @@ func TestFilterMatchExactBeforeWildcard(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
+	exp := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
@@ -532,11 +527,10 @@ func TestFilterMatchMultipleWildcards(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := metric.New("cpu_load",
+	exp := metric.New("cpu_load",
 		map[string]string{"host": "server01"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
 
 	m, err := p.ParseLine("servers.server01.cpu_load 11 1435077219")
 	assert.NoError(t, err)

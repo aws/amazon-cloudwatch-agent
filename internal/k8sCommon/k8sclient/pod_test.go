@@ -4,12 +4,12 @@
 package k8sclient
 
 import (
+	"gotest.tools/v3/assert"
 	"log"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/awsutil"
-	"github.com/docker/docker/pkg/testutil/assert"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

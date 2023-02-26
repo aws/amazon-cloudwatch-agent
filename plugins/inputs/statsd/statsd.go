@@ -6,8 +6,6 @@ package statsd
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd/graphite"
 	"log"
 	"net"
 	"sort"
@@ -15,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd/graphite"
 
 	//"github.com/influxdata/telegraf/plugins/parsers/graphite"
 
@@ -539,7 +540,10 @@ func (s *Statsd) aggregate(m metric) {
 		if m.samplerate > 0 {
 			weight = 1.0 / m.samplerate
 		}
-		field.(distribution.Distribution).AddEntry(m.floatvalue, weight)
+		err := field.(distribution.Distribution).AddEntry(m.floatvalue, weight)
+		if err != nil {
+			log.Printf("W! error: %s, metric: %s, value: %v", err, m.name, m.floatvalue)
+		}
 		cached.fields[m.field] = field
 		s.timings[m.hash] = cached
 	case "c":

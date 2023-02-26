@@ -48,7 +48,7 @@ data:
                 },
                 {
                   "source_labels": ["Service", "backend"],
-                  "label_matcher": ".*haproxy-ingress-.*metrics;(httpback-shared-backend|httpback-default-backend|httpsback-shared-backend|_default_backend|.*backend_http)",
+                  "label_matcher": ".*haproxy-ingress-.*metrics",
                   "dimensions": [["Service","Namespace","ClusterName","backend","code"]],
                   "metric_selectors": [
                     "^haproxy_backend_http_responses_total$"
@@ -230,7 +230,6 @@ data:
         source_labels:
         - __meta_kubernetes_pod_phase
         target_label: pod_phase
-
     - job_name: 'kubernetes-pod-fluentbit-plugin'
       sample_limit: 10000
       metrics_path: /api/v1/metrics/prometheus
@@ -274,7 +273,6 @@ data:
         source_labels:
         - __meta_kubernetes_pod_node_name
         target_label: NodeName
-
     - job_name: kubernetes-service-endpoints
       sample_limit: 10000
       kubernetes_sd_configs:
@@ -341,7 +339,6 @@ data:
         replacement: "$1"
       - regex: proxy
         action: labeldrop
-
     - job_name: 'kubernetes-pod-jmx'
       sample_limit: 10000
       metrics_path: /metrics
@@ -380,7 +377,6 @@ data:
       - source_labels: [__name__]
         regex: 'jvm_gc_collection_seconds.*'
         action: drop
-
 kind: ConfigMap
 metadata:
   name: prometheus-config
@@ -402,16 +398,16 @@ metadata:
 rules:
   - apiGroups: [""]
     resources:
-    - nodes
-    - nodes/proxy
-    - services
-    - endpoints
-    - pods
+      - nodes
+      - nodes/proxy
+      - services
+      - endpoints
+      - pods
     verbs: ["get", "list", "watch"]
   - apiGroups:
-    - extensions
+      - extensions
     resources:
-    - ingresses
+      - ingresses
     verbs: ["get", "list", "watch"]
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]
@@ -449,7 +445,7 @@ spec:
     spec:
       containers:
         - name: cloudwatch-agent
-          image: amazon/cloudwatch-agent:1.247346.0b249609
+          image: amazon/cloudwatch-agent:1.247355.0b252062
           imagePullPolicy: Always
           resources:
             limits:
@@ -461,7 +457,7 @@ spec:
           # Please don't change below envs
           env:
             - name: CI_VERSION
-              value: "k8s/1.2.4"
+              value: "k8s/1.3.9"
           # Please don't change the mountPath
           volumeMounts:
             - name: prometheus-cwagentconfig

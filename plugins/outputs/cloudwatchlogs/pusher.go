@@ -50,14 +50,15 @@ type pusher struct {
 	sequenceToken       *string
 	lastValidTime       int64
 	needSort            bool
-	stop                chan struct{}
+	stop                <-chan struct{}
 	lastSentTime        time.Time
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
+	wg                    *sync.WaitGroup
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
@@ -67,10 +68,12 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushTimer:      time.NewTimer(flushTimeout),
-		stop:            make(chan struct{}),
+		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
+		wg:              wg,
 	}
 	p.putRetentionPolicy()
+	p.wg.Add(1)
 	go p.start()
 	return p
 }
@@ -120,11 +123,9 @@ func hasValidTime(e logs.LogEvent) bool {
 	return true
 }
 
-func (p *pusher) Stop() {
-	close(p.stop)
-}
-
 func (p *pusher) start() {
+	defer p.wg.Done()
+
 	ec := make(chan logs.LogEvent)
 
 	// Merge events from both blocking and non-blocking channel
@@ -274,7 +275,7 @@ func (p *pusher) send() {
 			p.putRetentionPolicy()
 		case *cloudwatchlogs.InvalidSequenceTokenException:
 			if p.sequenceToken == nil {
-				p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v",  p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
+				p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v", p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
 			} else {
 				p.Log.Warnf("Invalid SequenceToken used (%v) while sending logs to %v/%v, will use new token and retry: %v", p.sequenceToken, p.Group, p.Stream, e.Message())
 			}
@@ -299,7 +300,15 @@ func (p *pusher) send() {
 		}
 
 		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCount, wait)
-		time.Sleep(wait)
+
+		select {
+		case <-p.stop:
+			p.Log.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
+			p.reset()
+			return
+		case <-time.After(wait):
+		}
+
 		retryCount++
 	}
 
@@ -307,10 +316,10 @@ func (p *pusher) send() {
 
 func retryWait(n int) time.Duration {
 	const base = 200 * time.Millisecond
-	const max = 1 * time.Minute
-	d := base * time.Duration(1<<int64(n))
-	if n > 5 {
-		d = max
+	// Max wait time is 1 minute (jittered)
+	d := 1 * time.Minute
+	if n < 5 {
+		d = base * time.Duration(1<<int64(n))
 	}
 	return time.Duration(seededRand.Int63n(int64(d/2)) + int64(d/2))
 }
@@ -321,23 +330,36 @@ func (p *pusher) createLogGroupAndStream() error {
 		LogStreamName: &p.Stream,
 	})
 
-	if err != nil {
-		p.Log.Debugf("creating stream fail due to : %v \n", err)
-		if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
-			_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
-				LogGroupName: &p.Group,
-			})
+	if err == nil {
+		p.Log.Debugf("successfully created log stream %v", p.Stream)
+		return nil
+	}
 
-			// create stream again if group created successfully.
+	p.Log.Debugf("creating stream fail due to : %v", err)
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
+		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
+			LogGroupName: &p.Group,
+		})
+
+		// attempt to create stream again if group created successfully.
+		if err == nil {
+			p.Log.Debugf("successfully created log group %v. Retrying log stream %v", p.Group, p.Stream)
+			_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
+				LogGroupName:  &p.Group,
+				LogStreamName: &p.Stream,
+			})
 			if err == nil {
-				_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
-					LogGroupName:  &p.Group,
-					LogStreamName: &p.Stream,
-				})
-			} else {
-				p.Log.Errorf("creating group fail due to : %v \n", err)
+				p.Log.Debugf("successfully created log stream %v", p.Stream)
 			}
+		} else {
+			p.Log.Debugf("creating group fail due to : %v", err)
 		}
+
+	}
+
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
+		p.Log.Debugf("Resource was already created. %v\n", err)
+		return nil // if the log group or log stream already exist, this is not worth returning an error for
 	}
 
 	return err
@@ -352,7 +374,16 @@ func (p *pusher) putRetentionPolicy() {
 		}
 		_, err := p.Service.PutRetentionPolicy(putRetentionInput)
 		if err != nil {
-			p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
+			// since this gets called both before we start pushing logs, and after we first attempt
+			// to push a log to a non-existent log group, we don't want to dirty the log with an error
+			// if the error is that the log group doesn't exist (yet).
+			if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
+				p.Log.Debugf("Log group %v not created yet: %v", p.Group, err)
+			} else {
+				p.Log.Errorf("Unable to put retention policy for log group %v: %v ", p.Group, err)
+			}
+		} else {
+			p.Log.Debugf("successfully updated log retention policy for log group %v", p.Group)
 		}
 	}
 }

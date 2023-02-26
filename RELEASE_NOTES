@@ -1,4 +1,116 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247358.0 (2023-01-30)
+========================================================================
+
+Enhancements:
+* Add log output when log files are deleted with auto_removal feature (#659)
+
+========================================================================
+Amazon CloudWatch Agent 1.247357.0 (2022-12-15)
+========================================================================
+
+Bug fixes:
+* Update AWS SDK Go to fix mac build (#640)
+* Fix control script starting CWA on Oracle Linux 9 by using systemctl (#645)
+* Fix handling negative statefile offset (#646)
+* Fix starting the agent with "auto" mode on an on premise host (#652)
+
+
+========================================================================
+Amazon CloudWatch Agent 1.247356.0 (2022-11-10)
+========================================================================
+
+Enhancements:
+* Enhance Windows event log monitoring in preparation for Windows 11 support (#627)
+* Remove Amazon Open Telemetry Collector that was bundled with CloudWatch Agent (#522)
+* Integration tests moved to new repository (#622) (#625) (#630)
+* Update default metric list scraped via Prometheus (#581)
+
+Bug fixes:
+* Fix corner case where "retention_in_days" was not actually getting set (#554)
+* Fix ethtool name in input config (#585)
+* Fix "amazon-cloudwatch-agent-ctl stop" to use systemd related commands (#542)
+
+========================================================================
+Amazon CloudWatch Agent 1.247355.0 (2022-08-10)
+========================================================================
+
+Enhancements:
+* Support mode on premise
+* Windows MSI installer silent exec implementation
+
+========================================================================
+Amazon CloudWatch Agent 1.247354.0 (2022-07-14)
+========================================================================
+
+Enhancements:
+* Increase PutMetricData request size allowed in agent
+* Fix Windows ctl issues on Windows 2012R2
+
+========================================================================
+Amazon CloudWatch Agent 1.247353.0 (2022-06-13)
+========================================================================
+
+Enhancements:
+* Upgrade the Telegraf dependency to v1.23.0
+* Drop support for mem_cached metrics on MacOS
+* Fix Windows filepath escaping so paths with spaces work again (#490)
+
+========================================================================
+Amazon CloudWatch Agent 1.247352.0 (2022-05-26)
+========================================================================
+
+New features:
+* Support log group retention in CloudWatch Logs for 6,7,8,9 years (#469)
+* Add scraping ECS_CONTAINER_METADATA_URI_V4 for ECS (#453)
+* Allow account ID as placeholder value for log configuration (#400)
+* Restart agent on RPM upgrade to fix SSM feature to auto update CWAgent (#387)
+* Increase dimension's maximum to 30 for each metrics (#361)
+* Creates a system user, "aoc", for the AWS Distro for OpenTelemetry collector
+  without a shell, or updates an existing "aoc" user on the host so that the existing
+  "aoc" user has no shell.
+
+Bug fixes:
+* Avoid Windows Server 2022 and PowerShell ISE exit on stderr (#473)
+* Enhance config validation for bad regex in CWAgent (#459)
+* Delete log's state file when tailer terminates due to an error (#457)
+* Auto_removal sends all remain logs before deleting the files (#452)
+* Include metric name in warning message when value is negative (#445)
+* Add writing to CWAgent's log before a panic (#421)
+* Move conflicting log retention check to translator (#418)
+* Fix race condition when creating log groups and log streams (ResourceAlreadyExists) (#416)
+* Retry on network failure for detecting EC2 (#397)
+* ECS Service Discovery: Fix implicit network mode (#385)
+* Fix Windows event log messages truncated on Windows Server 2022 (#379)
+* Make CloudWatch Logs's pusher to wait for the final flush to complete before returning (#350)
+
+========================================================================
+Amazon CloudWatch Agent 1.247350.0 (2022-01-19)
+========================================================================
+
+Enhancements and bug fixes:
+* Add support for collect Nvidia GPU metrics on Linux OS with Nvidia_smi installed
+* Improve message in amazon-cloudwatch-agent.log for Invalid Sequence Token case.
+* Update To Otel Version 0.11.0.
+* Improve windows config migration wizard not to include empty files/windows_events field.
+* Improve runtime debugging with added environment variable CWAGENT_LOG_LEVEL.
+* Improve config wizard message regarding collectd.
+* Removed runc dependency
+* Fix potential infinite retry when uploading logs.
+* Fix windows event log plugin to use proper StateFile path.
+* Fix performance for container insights with Kubernetes API server.
+* Improve messages in amazon-cloudwatch-agent.log for dropped log lines in a monitored file.
+* Add messages in amazon-cloudwatch.agent.log when retrying requests with AWS SDK due to throttling.
+* Add support for implicit bridge network mode for ECS (#335)
+* Add feature for agent-side log filtering (#327)
+* Support log retention policy when writing or creating a log group (#250)
+* Add user-agent value for Container Insights for requests (#342)
+* Allow dropping metrics by name for aggregation (#336)
+* Update systemd network target (#344)
+* Fix for K8s naming rule for v1.21+ (#345)
+* Export task ARN resource via Prometheus (#334)
+
+========================================================================
 Amazon CloudWatch Agent 1.247349.0 (2021-07-15)
 ========================================================================
 
@@ -313,3 +425,4 @@ operating systems:
 * RedHat Enterprise Linux (RHEL) version 7.4, 7.0, and 6.5
 * Debian 8.0
 * Windows Server 2016, Windows Server 2012, and Windows Server 2008
+

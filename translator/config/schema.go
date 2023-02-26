@@ -120,10 +120,10 @@ var schema = `{
             "items": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 255
+              "maxLength": 1024
             },
             "uniqueItems": true,
-            "maxItems": 10
+            "maxItems": 30
           },
           "uniqueItems": true,
           "minItems": 1,
@@ -132,11 +132,11 @@ var schema = `{
         "append_dimensions": {
           "type": "object",
           "description": "Adds Amazon EC2 metric dimensions to all metrics collected by the agent, we only support fixed key value pair now: ImageId:{aws:ImageId},InstanceId:{aws:InstanceId},InstanceType:{aws:InstanceType},AutoScalingGroupName:{aws:AutoScalingGroupName}. ",
-          "maxProperties": 10,
+          "maxProperties": 30,
           "additionalProperties": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 255
+            "maxLength": 1024
           }
         },
         "metrics_collected": {
@@ -810,6 +810,10 @@ var schema = `{
             545,
             731,
             1827,
+            2192,
+            2557,
+            2922,
+            3288,
             3653
           ]
         },
@@ -852,11 +856,11 @@ var schema = `{
     "generalAppendDimensionsDefinition": {
       "descriptions": "Additional customized dimensions to use",
       "type": "object",
-      "maxProperties": 10,
+      "maxProperties": 30,
       "additionalProperties": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 255
+        "maxLength": 1024
       }
     },
     "credentialsDefinition": {

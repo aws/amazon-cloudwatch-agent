@@ -9,6 +9,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -51,21 +52,23 @@ type LogDest interface {
 
 // LogAgent is the agent handles pure log pipelines
 type LogAgent struct {
-	Config      *config.Config
-	backends    map[string]LogBackend
-	destNames   map[LogDest]string
-	collections []LogCollection
+	Config                    *config.Config
+	backends                  map[string]LogBackend
+	destNames                 map[LogDest]string
+	collections               []LogCollection
+	retentionAlreadyAttempted map[string]bool
 }
 
 func NewLogAgent(c *config.Config) *LogAgent {
 	return &LogAgent{
-		Config:    c,
-		backends:  make(map[string]LogBackend),
-		destNames: make(map[LogDest]string),
+		Config:                    c,
+		backends:                  make(map[string]LogBackend),
+		destNames:                 make(map[LogDest]string),
+		retentionAlreadyAttempted: make(map[string]bool),
 	}
 }
 
-// LogAgent will scan all input and output plugins for LogCollection and LogBackend.
+// Run LogAgent will scan all input and output plugins for LogCollection and LogBackend.
 // And connect all the LogSrc from the LogCollection found to the respective LogDest
 // based on the configured "destination", and "name"
 func (l *LogAgent) Run(ctx context.Context) {
@@ -95,18 +98,24 @@ func (l *LogAgent) Run(ctx context.Context) {
 	for {
 		select {
 		case <-t.C:
+			log.Printf("D! [logagent] open file count, %v", tail.OpenFileCount.Load())
 			for _, c := range l.collections {
 				srcs := c.FindLogSrc()
 				for _, src := range srcs {
 					dname := src.Destination()
+					logGroup := src.Group()
+					logStream := src.Stream()
+					description := src.Description()
+					retention := src.Retention()
 					backend, ok := l.backends[dname]
 					if !ok {
-						log.Printf("E! [logagent] Failed to find destination %v for log source %v/%v(%v) ", dname, src.Group(), src.Stream(), src.Description())
+						log.Printf("E! [logagent] Failed to find destination %s for log source %s/%s(%s) ", dname, logGroup, logStream, description)
 						continue
 					}
-					dest := backend.CreateDest(src.Group(), src.Stream(), src.Retention())
+					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
+					dest := backend.CreateDest(logGroup, logStream, retention)
 					l.destNames[dest] = dname
-					log.Printf("I! [logagent] piping log from %v/%v(%v) to %v with retention %v", src.Group(), src.Stream(), src.Description(), dname, src.Retention())
+					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
 					go l.runSrcToDest(src, dest)
 				}
 			}
@@ -140,4 +149,15 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 			return
 		}
 	}
+}
+
+func (l *LogAgent) checkRetentionAlreadyAttempted(retention int, logGroup string) int {
+	if retention > 0 && l.retentionAlreadyAttempted[logGroup] {
+		log.Printf("D! [logagent] Retention already set for log group %s, current retention %d", logGroup, retention)
+		retention = -1
+	} else if retention > 0 {
+		log.Printf("I! First time setting retention for log group %s, update map to avoid setting twice", logGroup)
+		l.retentionAlreadyAttempted[logGroup] = true
+	}
+	return retention
 }

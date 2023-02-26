@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package winfile
@@ -54,8 +55,8 @@ func Open(path string, mode int, perm uint32) (fd syscall.Handle, err error) {
 	default:
 		createmode = syscall.OPEN_EXISTING
 	}
-	h, e := syscall.CreateFile(pathp, access, sharemode, sa, createmode, syscall.FILE_ATTRIBUTE_NORMAL, 0)
-	return h, e
+	h, err := syscall.CreateFile(pathp, access, sharemode, sa, createmode, syscall.FILE_ATTRIBUTE_NORMAL, 0)
+	return h, err
 }
 
 // https://github.com/jnwhiteh/golang/blob/master/src/pkg/syscall/syscall_windows.go#L211
@@ -68,9 +69,9 @@ func makeInheritSa() *syscall.SecurityAttributes {
 
 // https://github.com/jnwhiteh/golang/blob/master/src/pkg/os/file_windows.go#L133
 func OpenFile(name string, flag int, perm os.FileMode) (file *os.File, err error) {
-	r, e := Open(name, flag|syscall.O_CLOEXEC, syscallMode(perm))
-	if e != nil {
-		return nil, e
+	r, err := Open(name, flag|syscall.O_CLOEXEC, syscallMode(perm))
+	if err != nil {
+		return nil, err
 	}
 	return os.NewFile(uintptr(r), name), nil
 }

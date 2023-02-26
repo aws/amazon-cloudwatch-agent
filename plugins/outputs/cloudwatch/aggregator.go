@@ -119,12 +119,16 @@ func newDurationAggregator(durationInSeconds time.Duration,
 
 func (durationAgg *durationAggregator) aggregating() {
 	durationAgg.wg.Add(1)
-	// sleep for some time until next round duration from now.
+	// Sleep to align the interval to the wall clock.
+	// This initial sleep is not interrupted if the aggregator gets shutdown.
 	now := time.Now()
 	time.Sleep(now.Truncate(durationAgg.aggregationDuration).Add(durationAgg.aggregationDuration).Sub(now))
 	durationAgg.ticker = time.NewTicker(durationAgg.aggregationDuration)
 	defer durationAgg.ticker.Stop()
 	for {
+		// There is no priority to select{}.
+		// If there is a new metric AND the shutdownChan is closed when this
+		// loop begins, then the behavior is random.
 		select {
 		case m := <-durationAgg.aggregationChan:
 			// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
@@ -132,13 +136,8 @@ func (durationAgg *durationAggregator) aggregating() {
 			metricMapKey := fmt.Sprint(computeHash(m), aggregatedTime.Unix())
 			var aggregatedMetric telegraf.Metric
 			var ok bool
-			var err error
 			if aggregatedMetric, ok = durationAgg.metricMap[metricMapKey]; !ok {
-				aggregatedMetric, err = metric.New(m.Name(), m.Tags(), map[string]interface{}{}, aggregatedTime)
-				if err != nil {
-					log.Printf("E! CloudWatch metrics aggregation failed: %v. The metric %v will be dropped.", err, m.Name())
-					continue
-				}
+				aggregatedMetric = metric.New(m.Name(), m.Tags(), map[string]interface{}{}, aggregatedTime)
 				durationAgg.metricMap[metricMapKey] = aggregatedMetric
 			}
 			//When the code comes here, it means the aggregatedMetric object has the same metric name, tags and aggregated time.
@@ -178,7 +177,10 @@ func (durationAgg *durationAggregator) aggregating() {
 				if dist != nil {
 					existingDist.AddDistribution(dist)
 				} else {
-					existingDist.AddEntry(value, 1)
+					err := existingDist.AddEntry(value, 1)
+					if err != nil {
+						log.Printf("W! error: %s, metric %s, value %v", err, m.Name(), value)
+					}
 				}
 			}
 		case <-durationAgg.ticker.C:

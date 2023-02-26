@@ -13,24 +13,22 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	d := new(Ethtool)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"ethtool": {
+	err := json.Unmarshal([]byte(`{"ethtool": {
 					}}`), &input)
-	if e == nil {
-		_, actual := d.ApplyRule(input)
+	assert.NoError(t, err)
+	_, actual := d.ApplyRule(input)
 
-		d := []interface{}{map[string]interface{}{
-			"interface_include": []string{"*"},
-			"fieldpass":         []string{},
-		},
-		}
-		assert.Equal(t, d, actual, "Expected to be equal")
+	expected := []interface{}{map[string]interface{}{
+		"interface_include": []string{"*"},
+		"fieldpass":         []string{}},
 	}
+	assert.Equal(t, expected, actual, "Expected to be equal")
 }
 
 func TestFullConfig(t *testing.T) {
 	d := new(Ethtool)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"ethtool": {
+	err := json.Unmarshal([]byte(`{"ethtool": {
 					"interface_include": [
 						"eth0"
 					],
@@ -38,19 +36,27 @@ func TestFullConfig(t *testing.T) {
 						"eth1"
 					],
 					"metrics_include": [
-						"bw_in_allowance_exceeded",
-					],
+						"bw_in_allowance_exceeded"
+					]
 					}}`), &input)
-	if e == nil {
-		_, actual := d.ApplyRule(input)
+	assert.NoError(t, err)
+	_, actual := d.ApplyRule(input)
 
-		d := []interface{}{map[string]interface{}{
-			"interface_include": []string{"eth0"},
-			"interface_exclude": []string{"eth1"},
-			"fieldpass":         []string{"bw_in_allowance_exceeded"},
-		},
-		}
-
-		assert.Equal(t, d, actual, "Expected to be equal")
+	expected := []interface{}{map[string]interface{}{
+		"interface_include": []string{"eth0"},
+		"interface_exclude": []string{"eth1"},
+		"fieldpass":         []string{"bw_in_allowance_exceeded"},
+	},
 	}
+
+	// compare marshalled values since unmarshalled values have type conflicts
+	// the actual uses interface instead of expected string type
+	// interface will be converted to string on marshall
+	// this is going to be marshalled into toml not pogo
+	marshalActual, err := json.Marshal(actual)
+	assert.NoError(t, err)
+	marshalExpected, err := json.Marshal(expected)
+	assert.NoError(t, err)
+	assert.Equal(t, string(marshalExpected), string(marshalActual), "Expected to be equal")
+
 }

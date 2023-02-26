@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
@@ -23,6 +24,7 @@ var (
 	ErrDeletedNotReOpen         = errors.New("File was deleted, tail should now stop")
 	exitOnDeletionCheckDuration = time.Minute
 	exitOnDeletionWaitDuration  = 5 * time.Minute
+	OpenFileCount               atomic.Int64
 )
 
 type Line struct {
@@ -83,6 +85,8 @@ type Tail struct {
 	dropCnt   int
 
 	lk sync.Mutex
+
+	FileDeletedCh chan bool
 }
 
 // TailFile begins tailing the file. Output stream is made available
@@ -95,9 +99,10 @@ func TailFile(filename string, config Config) (*Tail, error) {
 	}
 
 	t := &Tail{
-		Filename: filename,
-		Lines:    make(chan *Line),
-		Config:   config,
+		Filename:      filename,
+		Lines:         make(chan *Line),
+		Config:        config,
+		FileDeletedCh: make(chan bool),
 	}
 
 	// when Logger was not specified in config, create new one
@@ -117,6 +122,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 		if err != nil {
 			return nil, err
 		}
+		OpenFileCount.Add(1)
 	}
 
 	if !config.ReOpen {
@@ -158,6 +164,7 @@ func (tail *Tail) Stop() error {
 }
 
 // StopAtEOF stops tailing as soon as the end of the file is reached.
+// Blocks until tailer is dead and returns reason for death.
 func (tail *Tail) StopAtEOF() error {
 	tail.Kill(errStopAtEOF)
 	return tail.Wait()
@@ -177,6 +184,7 @@ func (tail *Tail) closeFile() {
 	if tail.file != nil {
 		tail.file.Close()
 		tail.file = nil
+		OpenFileCount.Add(-1)
 	}
 }
 
@@ -201,6 +209,7 @@ func (tail *Tail) reopen() error {
 		}
 		break
 	}
+	OpenFileCount.Add(1)
 	return nil
 }
 
@@ -385,12 +394,13 @@ func (tail *Tail) tailFileSync() {
 			err := tail.waitForChanges()
 			if err != nil {
 				if err == ErrDeletedNotReOpen {
+					close(tail.FileDeletedCh)
 					for {
 						line, errReadLine := tail.readLine()
 						if errReadLine == nil {
 							tail.sendLine(line, tail.curOffset)
 						} else {
-							break
+							return
 						}
 					}
 				} else if err != ErrStop {
@@ -465,7 +475,6 @@ func (tail *Tail) waitForChanges() error {
 	case <-tail.Dying():
 		return ErrStop
 	}
-	panic("unreachable")
 }
 
 func (tail *Tail) openReader() {
@@ -510,8 +519,13 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 		select {
 		case tail.Lines <- &Line{line, now, nil, offset}:
 		case <-tail.Dying():
-			tail.dropCnt += len(lines) - i
-			return true
+			if tail.Err() == errStopAtEOF {
+				// Try sending, even if it blocks.
+				tail.Lines <- &Line{line, now, nil, offset}
+			} else {
+				tail.dropCnt += len(lines) - i
+				return true
+			}
 		}
 	}
 
@@ -593,7 +607,7 @@ func (tail *Tail) exitOnDeletion() {
 // with the last chunk of variable size.
 func partitionString(s string, chunkSize int) []string {
 	if chunkSize <= 0 {
-		panic("invalid chunkSize")
+		panic("Invalid chunkSize")
 	}
 	length := len(s)
 	chunks := 1 + length/chunkSize

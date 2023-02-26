@@ -8,16 +8,19 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
-const versionFilename = "CWAGENT_VERSION"
-
-// We will fall back to a major version if no valid version file is found
-const fallbackVersion = "1"
+const (
+	containerInsightRegexp = "^/aws/.*containerinsights/.*/(performance|prometheus)$"
+	versionFilename        = "CWAGENT_VERSION"
+	// We will fall back to a major version if no valid version file is found
+	fallbackVersion = "1"
+)
 
 var isRunningAsRoot = func() bool {
 	return os.Getuid() == 0
@@ -29,7 +32,8 @@ var (
 	InputPlugins  []string
 	OutputPlugins []string
 
-	userAgent string
+	userAgentMap        = make(map[string]string)
+	ciCompiledRegexp, _ = regexp.Compile(containerInsightRegexp)
 )
 
 func Version() string {
@@ -50,26 +54,30 @@ func Build() string {
 	return BuildStr
 }
 
-func Plugins() string {
+func Plugins(groupName string) string {
 	outputs := strings.Join(OutputPlugins, " ")
 	inputs := strings.Join(InputPlugins, " ")
 
 	if !isRunningAsRoot() {
 		inputs += " run_as_user" // `inputs` is never empty, or agent will not start
 	}
+	if ciCompiledRegexp.MatchString(groupName) && !strings.Contains(outputs, "container_insights") {
+		outputs += " container_insights"
+	}
 
 	return fmt.Sprintf("inputs:(%s) outputs:(%s)", inputs, outputs)
 }
 
-func UserAgent() string {
-	if userAgent == "" {
-		ua := os.Getenv(envconfig.CWAGENT_USER_AGENT)
+func UserAgent(groupName string) string {
+	ua, found := userAgentMap[groupName]
+	if !found {
+		ua = os.Getenv(envconfig.CWAGENT_USER_AGENT)
 		if ua == "" {
-			ua = fmt.Sprintf("%s %s", FullVersion(), Plugins())
+			ua = fmt.Sprintf("%s %s", FullVersion(), Plugins(groupName))
 		}
-		userAgent = ua
+		userAgentMap[groupName] = ua
 	}
-	return userAgent
+	return ua
 }
 
 func FullVersion() string {

@@ -6,10 +6,11 @@ package extractors
 import (
 	"bytes"
 	"encoding/json"
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	cinfo "github.com/google/cadvisor/info/v1"
 	"log"
 	"testing"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	cinfo "github.com/google/cadvisor/info/v1"
 )
 
 func TestMemStats(t *testing.T) {

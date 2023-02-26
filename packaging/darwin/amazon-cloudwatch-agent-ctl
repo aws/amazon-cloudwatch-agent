@@ -36,7 +36,7 @@ readonly ALL_CONFIG='all'
 UsageString="
 
 
-        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s]
+        usage: amazon-cloudwatch-agent-ctl -a stop|start|status|fetch-config|append-config|remove-config [-m ec2|onPremise|onPrem|auto] [-c default|ssm:<parameter-store-name>|file:<file-path>] [-s]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -56,7 +56,7 @@ UsageString="
 
         -m: mode
             ec2:                                    indicate this is on ec2 host.
-            onPremise:                              indicate this is on onPremise host.
+            onPremise, onPrem:                      indicate this is on onPremise host.
             auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
 
         -c: configuration
@@ -71,251 +71,230 @@ UsageString="
 "
 
 cwa_start() {
-  mode="${1:-}"
+     mode="${1:-}"
 
-  if [ "$(cwa_runstatus)" = 'running' ]; then
-    return 0
-  fi
+     if [ "$(cwa_runstatus)" = 'running' ]; then
+          return 0
+     fi
 
-  if [ ! -f "${TOML}" ]; then
-    echo "amazon-cloudwatch-agent is not configured. Applying default configuration before starting it."
-    cwa_config 'default' 'false' "${mode}" 'default'
-  fi
+     if [ ! -f "${TOML}" ]; then
+          echo "amazon-cloudwatch-agent is not configured. Applying default configuration before starting it."
+          cwa_config 'default' 'false' "${mode}" 'default'
+     fi
 
-  launchctl load $AGENT_LAUNCHD_CONFIG
+     launchctl load $AGENT_LAUNCHD_CONFIG
 }
 
 cwa_stop() {
-  if [ "$(cwa_runstatus)" = 'stopped' ]; then
-    return 0
-  fi
+     if [ "$(cwa_runstatus)" = 'stopped' ]; then
+          return 0
+     fi
 
-  launchctl unload $AGENT_LAUNCHD_CONFIG
+     launchctl unload $AGENT_LAUNCHD_CONFIG
 }
 
 # support for restart during upgrade via SSM packages
 cwa_prep_restart() {
-  if [ "$(cwa_runstatus)" = 'running' ]; then
-    touch "$RESTART_FILE"
-  fi
+     if [ "$(cwa_runstatus)" = 'running' ]; then
+          touch "$RESTART_FILE"
+     fi
 }
 
 # support for restart during upgrade via SSM packages
 cwa_cond_restart() {
-  if [ -f "${RESTART_FILE}" ]; then
-    cwa_start
-    rm -f "${RESTART_FILE}"
-  fi
+     if [ -f "${RESTART_FILE}" ]; then
+          cwa_start
+          rm -f "${RESTART_FILE}"
+     fi
 }
 
 cwa_preun() {
-  cwa_stop
+     cwa_stop
 }
 
 cwa_status() {
-  cwa_config_status='configured'
-  if [ ! -f "${TOML}" ]; then
-    cwa_config_status='not configured'
-  fi
+     cwa_config_status='configured'
+     if [ ! -f "${TOML}" ]; then
+          cwa_config_status='not configured'
+     fi
 
-  starttime_fmt=''
-  local pid=$(cwa_pid)
-  if [[ $pid =~ ^[\-0-9]+$ ]] && ((pid > 0)); then
-    starttime="$(TZ=UTC LC_ALL=C ps -o lstart= "${pid}")"
-    starttime_fmt="$(TZ=UTC date -jf "%a %b %d %T %Y " "${starttime}" +%FT%T%z)"
-  else
-    echo ${pid}
-  fi
+     starttime_fmt=''
+     local pid=$(cwa_pid)
+     if [[ $pid =~ ^[\-0-9]+$ ]] && ((pid > 0)); then
+          starttime="$(TZ=UTC LC_ALL=C ps -o lstart= "${pid}")"
+          starttime_fmt="$(TZ=UTC date -jf "%a %b %d %T %Y " "${starttime}" +%FT%T%z)"
+     else
+          echo ${pid}
+     fi
 
-  version="$(cat ${VERSION_FILE})"
+     version="$(cat ${VERSION_FILE})"
 
-  echo "{"
-  echo "  \"status\": \"$(cwa_runstatus)\","
-  echo "  \"starttime\": \"${starttime_fmt}\","
-  echo "  \"configstatus\": \"${cwa_config_status}\","
-  echo "  \"version\": \"${version}\""
-  echo "}"
+     echo "{"
+     echo "  \"status\": \"$(cwa_runstatus)\","
+     echo "  \"starttime\": \"${starttime_fmt}\","
+     echo "  \"configstatus\": \"${cwa_config_status}\","
+     echo "  \"version\": \"${version}\""
+     echo "}"
 }
 
 cwa_runstatus() {
-  running=false
-  set +e
-  local pid=$(cwa_pid)
-  if [[ "$pid" =~ ^[0-9]+$ ]] && ((pid > 0)); then
-    running='true'
-  elif [[ "$pid" == "-" ]]; then
-    running='true'
-  fi
-  set -e
+     running=false
+     set +e
+     local pid=$(cwa_pid)
+     if [[ "$pid" =~ ^[0-9]+$ ]] && ((pid > 0)); then
+          running='true'
+     elif [[ "$pid" == "-" ]]; then
+          running='true'
+     fi
+     set -e
 
-  if [ "${running}" = 'true' ]; then
-    echo "running"
-  else
-    echo "stopped"
-  fi
+     if [ "${running}" = 'true' ]; then
+          echo "running"
+     else
+          echo "stopped"
+     fi
 }
 
 cwa_pid() {
-  echo "$({ sudo launchctl list | grep ${AGENT_LAUNCHD_NAME} | awk '{print $1}'; } 2>/dev/null)"
+     echo "$({ sudo launchctl list | grep ${AGENT_LAUNCHD_NAME} | awk '{print $1}'; } 2>/dev/null)"
 }
 
 cwa_config() {
-  config_location="${1:-}"
-  restart="${2:-}"
-  mode="${3:-}"
-  multi_config="${4:-}"
+     config_location="${1:-}"
+     restart="${2:-}"
+     mode="${3:-}"
+     multi_config="${4:-}"
 
-  mkdir -p "${CONFDIR}"
+     mkdir -p "${CONFDIR}"
 
-  param_mode="ec2"
-  case "${mode}" in
-  ec2)
-    param_mode="ec2"
-    ;;
-  onPremise)
-    param_mode="onPrem"
-    ;;
-  auto)
-    param_mode="auto"
-    ;;
-  *)
-    echo "Invalid mode: ${mode}" >&2
-    exit 1
-    ;;
-  esac
+     if [ "${config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
+          echo "ignore cwa configuration \"${ALL_CONFIG}\" as it is only supported by action \"remove-config\""
+          return
+     fi
 
-  if [ "${config_location}" = "${ALL_CONFIG}" ] && [ "${multi_config}" != 'remove' ]; then
-    echo "ignore cwa configuration \"${ALL_CONFIG}\" as it is only supported by action \"remove-config\""
-    return
-  fi
+     if [ "${config_location}" = "${ALL_CONFIG}" ]; then
+          rm -rf "${JSON_DIR}"/*
+     else
+          runDownloaderCommand=`"${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${config_location}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}`
+          echo "${runDownloaderCommand}"
+     fi
 
-  if [ "${config_location}" = "${ALL_CONFIG}" ]; then
-    rm -rf "${JSON_DIR}"/*
-  else
-    runDownloaderCommand="${CMDDIR}/config-downloader --output-dir ${JSON_DIR} --download-source ${config_location} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
-    echo ${runDownloaderCommand}
-    ${runDownloaderCommand}
-  fi
+     if [ ! "$(ls ${JSON_DIR})" ]; then
+          echo "all amazon-cloudwatch-agent configurations have been removed"
+          rm -f "${TOML}"
+     else
+          runTranslatorCommand=`"${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}`
+          echo "${runTranslatorCommand}"
 
-    if [ ! "$(ls ${JSON_DIR})" ]; then
-        echo "all amazon-cloudwatch-agent configurations have been removed"
-        rm -f "${TOML}"
-    else
-      runTranslatorCommand="${CMDDIR}/config-translator --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config}"
-      echo ${runTranslatorCommand}
-      ${runTranslatorCommand}
-
-      runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
-      echo ${runAgentSchemaTestCommand}
-      # We will redirect the verbose error message out
-      if ! ${runAgentSchemaTestCommand} >${CV_LOG_FILE} 2>&1; then
-        echo "Configuration validation second phase failed"
-        echo "======== Error Log ========"
-        cat ${CV_LOG_FILE}
-        exit 1
-      fi
-      echo "Configuration validation second phase succeeded"
-      echo "Configuration validation succeeded"
-
-      chmod ug+rw "${TOML}"
-
-      # for translator:
-      #       default:    only process .tmp files
-      #       append:     process both existing files and .tmp files
-      #       remove:     only process existing files
-      # At this point, all json configs have been validated
-      # multi_config:
-      #       default:    delete non .tmp file, rename .tmp file
-      #       append:     rename .tmp file
-      #       remove:     no-op
-      if [ "${multi_config}" = 'default' ]; then
-        rm -f "${JSON}"
-        for file in "${JSON_DIR}"/*; do
-          base="${JSON_DIR}/$(basename "${file}" .tmp)"
-          if [ "${file}" = "${base}" ]; then
-            rm -f "${file}"
-          else
-            mv -f "${file}" "${base}"
+          runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
+          echo "${runAgentSchemaTestCommand}"
+          # We will redirect the verbose error message out
+          if ! ${runAgentSchemaTestCommand} >${CV_LOG_FILE} 2>&1; then
+               echo "Configuration validation second phase failed"
+               echo "======== Error Log ========"
+               cat ${CV_LOG_FILE}
+               exit 1
           fi
-        done
-      elif [ "${multi_config}" = 'append' ]; then
-        for file in "${JSON_DIR}"/*.tmp; do
-          mv -f "${file}" "${JSON_DIR}/$(basename "${file}" .tmp)"
-        done
-      fi
+          echo "Configuration validation second phase succeeded"
+          echo "Configuration validation succeeded"
 
-    fi
+          chmod ug+rw "${TOML}"
 
-  if [ "${restart}" = 'true' ]; then
-    cwa_stop
-    cwa_start "${param_mode}"
-  fi
+          # for translator:
+          #       default:    only process .tmp files
+          #       append:     process both existing files and .tmp files
+          #       remove:     only process existing files
+          # At this point, all json configs have been validated
+          # multi_config:
+          #       default:    delete non .tmp file, rename .tmp file
+          #       append:     rename .tmp file
+          #       remove:     no-op
+          if [ "${multi_config}" = 'default' ]; then
+               rm -f "${JSON}"
+               for file in "${JSON_DIR}"/*; do
+                    base="${JSON_DIR}/$(basename "${file}" .tmp)"
+                    if [ "${file}" = "${base}" ]; then
+                         rm -f "${file}"
+                    else
+                         mv -f "${file}" "${base}"
+                    fi
+               done
+          elif [ "${multi_config}" = 'append' ]; then
+               for file in "${JSON_DIR}"/*.tmp; do
+                    mv -f "${file}" "${JSON_DIR}/$(basename "${file}" .tmp)"
+               done
+          fi
+
+     fi
+
+     if [ "${restart}" = 'true' ]; then
+          cwa_stop
+          cwa_start "${mode}"
+     fi
 }
 
 main() {
-  action=''
-  config_location='default'
-  restart='false'
-  mode='auto'
+     action=''
+     config_location='default'
+     restart='false'
+     mode='auto'
 
-  OPTIND=1
-  while getopts ":hsa:r:c:m:" opt; do
-    case "${opt}" in
-    h)
-      echo "${UsageString}"
-      exit 0
-      ;;
-    s) restart='true' ;;
-    a) action="${OPTARG}" ;;
-    c) config_location="${OPTARG}" ;;
-    m) mode="${OPTARG}" ;;
-    \?)
-      echo "Invalid option: -${OPTARG} ${UsageString}" >&2
-      ;;
-    :)
-      echo "Option -${OPTARG} requires an argument ${UsageString}" >&2
-      exit 1
-      ;;
-    esac
-  done
-  shift "$((${OPTIND} - 1))"
+     OPTIND=1
+     while getopts ":hsa:r:c:m:" opt; do
+          case "${opt}" in
+          h)
+               echo "${UsageString}"
+               exit 0
+               ;;
+          s) restart='true' ;;
+          a) action="${OPTARG}" ;;
+          c) config_location="${OPTARG}" ;;
+          m) mode="${OPTARG}" ;;
+          \?)
+               echo "Invalid option: -${OPTARG} ${UsageString}" >&2
+               ;;
+          :)
+               echo "Option -${OPTARG} requires an argument ${UsageString}" >&2
+               exit 1
+               ;;
+          esac
+     done
+     shift "$((${OPTIND} - 1))"
 
-  case "${mode}" in
-  ec2) ;;
+     case "${mode}" in
+     ec2) ;;
+     onPremise) ;;
+     onPrem) ;;
+     auto) ;;
+     *)
+          echo "Invalid mode: ${mode} ${UsageString}" >&2
+          exit 1
+          ;;
+     esac
 
-  onPremise) ;;
+     current_user=$(id -u -n)
+     if [ "${action}" != 'status' -a "${current_user}" != 'root' ]; then
+          echo "Please use root to run this script"
+          exit 1
+     fi
 
-  auto) ;;
-
-  *)
-    echo "Invalid mode: ${mode} ${UsageString}" >&2
-    exit 1
-    ;;
-  esac
-
-  current_user=$(id -u -n)
-  if [ "${action}" != 'status' -a "${current_user}" != 'root' ]; then
-    echo "Please use root to run this script"
-    exit 1
-  fi
-
-  case "${action}" in
-  stop) cwa_stop ;;
-  start) cwa_start "${mode}" ;;
-  fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default' ;;
-  append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append' ;;
-  remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove' ;;
-  status) cwa_status ;;
-    # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
-    # upgrade or install
-  prep-restart) cwa_prep_restart ;;
-  cond-restart) cwa_cond_restart ;;
-  preun) cwa_preun ;;
-  *)
-    echo "Invalid action: ${action} ${UsageString}" >&2
-    exit 1
-    ;;
-  esac
+     case "${action}" in
+     stop) cwa_stop ;;
+     start) cwa_start "${mode}" ;;
+     fetch-config) cwa_config "${config_location}" "${restart}" "${mode}" 'default' ;;
+     append-config) cwa_config "${config_location}" "${restart}" "${mode}" 'append' ;;
+     remove-config) cwa_config "${config_location}" "${restart}" "${mode}" 'remove' ;;
+     status) cwa_status ;;
+          # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
+          # upgrade or install
+     prep-restart) cwa_prep_restart ;;
+     cond-restart) cwa_cond_restart ;;
+     preun) cwa_preun ;;
+     *)
+          echo "Invalid action: ${action} ${UsageString}" >&2
+          exit 1
+          ;;
+     esac
 }
 
 main "$@"

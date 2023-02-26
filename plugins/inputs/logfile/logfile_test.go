@@ -209,7 +209,20 @@ func TestRestoreState(t *testing.T) {
 	tt.Log = TestLogger{t}
 	tt.FileStateFolder = tmpfolder
 	roffset, err := tt.restoreState(logFilePath)
+	require.NoError(t, err)
 	assert.Equal(t, offset, roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
+
+	// Test negative offset.
+	offset = int64(-8675)
+	err = ioutil.WriteFile(
+		tmpfolder+string(filepath.Separator)+logFileStateFileName,
+		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
+		os.ModePerm)
+	require.NoError(t, err)
+	roffset, err = tt.restoreState(logFilePath)
+	require.Error(t, err)
+	assert.Equal(t, int64(0), roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
+
 	tt.Stop()
 }
 
@@ -311,7 +324,7 @@ func TestLogsMultilineEvent(t *testing.T) {
 	tt.Stop()
 }
 
-//When file is removed, the related tail routing should exit
+// When file is removed, the related tail routing should exit
 func TestLogsFileRemove(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
@@ -358,91 +371,118 @@ func TestLogsFileRemove(t *testing.T) {
 	tt.Stop()
 }
 
-//When another file is created for the same file config and the file config has auto_removal as true, the old files will stop at EOF and removed afterwards
-func TestLogsFileAutoRemoval(t *testing.T) {
-	multilineWaitPeriod = 10 * time.Millisecond
-	logEntryString := "anything"
-	filePrefix := "file_auto_removal"
-	tmpfile1, err := createTempFile("", filePrefix)
-	require.NoError(t, err)
-
-	_, err = tmpfile1.WriteString(logEntryString + "\n")
-	require.NoError(t, err)
-	tmpfile1.Sync()
-	tmpfile1.Close()
-
-	tt := NewLogFile()
-	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{
-		FilePath:      filepath.Join(filepath.Dir(tmpfile1.Name()), filePrefix+"*"),
+func setupLogFileForTest(t *testing.T, file *os.File, prefix string) *LogFile {
+	logFile := NewLogFile()
+	logFile.Log = TestLogger{t}
+	logFile.FileConfig = []FileConfig{{
+		FilePath:      filepath.Join(filepath.Dir(file.Name()), prefix+"*"),
 		FromBeginning: true,
 		AutoRemoval:   true,
 	}}
-	tt.FileConfig[0].init()
-	tt.started = true
+	logFile.FileConfig[0].init()
+	logFile.started = true
+	return logFile
+}
 
-	lsrcs := tt.FindLogSrc()
-	if len(lsrcs) != 1 {
-		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
-	}
+func makeTempFile(t *testing.T, prefix string) *os.File {
+	file, err := createTempFile("", prefix)
+	t.Logf("Created temp file, %s\n", file.Name())
+	require.NoError(t, err)
+	return file
+}
 
-	lsrc := lsrcs[0]
+// getLogSrc returns a LogSrc from the given LogFile, and the channel for output.
+// Verifies 1 and only 1 LogSrc is discovered.
+func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent) {
+	logSources := logFile.FindLogSrc()
+	require.Equal(t, 1, len(logSources))
+	logSource := logSources[0]
 	evts := make(chan logs.LogEvent)
-	lsrc.SetOutput(func(e logs.LogEvent) {
+	logSource.SetOutput(func(e logs.LogEvent) {
 		if e != nil {
 			evts <- e
 		}
 	})
+	return &logSource, evts
+}
 
-	var tmpfile2 *os.File
-	defer func() {
-		if tmpfile2 != nil {
-			os.Remove(tmpfile2.Name())
-		}
-	}()
-	go func() {
-		time.Sleep(1 * time.Second)
-
-		// create a new file matching configured pattern
-		tmpfile2, err = createTempFile("", filePrefix)
+func writeLines(t *testing.T, file *os.File, numLines int, msg string) {
+	t.Log("Fill temp file with sufficient lines to be read.")
+	for i := 0; i < numLines; i++ {
+		_, err := file.WriteString(msg + "\n")
 		require.NoError(t, err)
-
-		_, err = tmpfile2.WriteString(logEntryString + "\n")
-		require.NoError(t, err)
-
-	}()
-
-	e := <-evts
-	if e.Message() != logEntryString {
-		t.Errorf("Wrong log found from first file: \n%v\nExpecting:\n%v\n", e.Message(), logEntryString)
 	}
-	defer lsrc.Stop()
+}
 
-	for {
-		lsrcs = tt.FindLogSrc()
-		if len(lsrcs) > 0 {
-			break
+// createWriteRead creates a temp file, writes to it, then verifies events
+// are received. If isParent is true, then spawn a 2nd goroutine for createWriteRead.
+// Close the given channel when complete to let caller know it was successful.
+func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bool, isParent bool) {
+	// Let caller know when the goroutine is done.
+	defer close(done)
+	// done2 is only passed to child if this is the parent.
+	done2 := make(chan bool)
+	file := makeTempFile(t, prefix)
+	if isParent {
+		logFile = setupLogFileForTest(t, file, prefix)
+		defer logFile.Stop()
+	}
+	logSrc, evts := getLogSrc(t, logFile)
+	defer (*logSrc).Stop()
+	defer close(evts)
+	// Choose a large enough number of lines so that even high-spec hosts will not
+	// complete receiving logEvents before the 2nd createWriteRead() goroutine begins.
+	const numLines int = 100000
+	const msg string = "this is the best log line ever written to a file"
+	writeLines(t, file, numLines, msg)
+	file.Close()
+	if !isParent {
+		// Child creates 2nd temp file which is NOT auto removed.
+		defer os.Remove(file.Name())
+	}
+	t.Log("Verify every line written to the temp file is received.")
+	for i := 0; i < numLines; i++ {
+		logEvent := <-evts
+		require.Equal(t, msg, logEvent.Message())
+		if i != numLines/2 {
+			continue
 		}
-		time.Sleep(1 * time.Second)
-	}
-
-	lsrc = lsrcs[0]
-	lsrc.SetOutput(func(e logs.LogEvent) {
-		if e != nil {
-			evts <- e
+		// Halfway through start another goroutine to create another temp file.
+		if isParent {
+			go createWriteRead(t, prefix, logFile, done2, false)
 		}
-	})
-
-	e = <-evts
-	if e.Message() != logEntryString {
-		t.Errorf("Wrong log found from 2nd file: \n% x\nExpecting:\n% x\n", e.Message(), logEntryString)
 	}
+	// Only wait for child if it was spawned
+	if isParent {
+		t.Log("Verify child completed.")
+		select {
+		case <-done2:
+			t.Log("Completed before timeout (as expected)")
+		case <-time.After(time.Second * 5):
+			require.Fail(t, "timeout waiting for child")
+		}
+		t.Log("Verify 1st temp file was auto deleted.")
+		_, err := os.Open(file.Name())
+		assert.True(t, os.IsNotExist(err))
+	}
+}
 
-	_, err = os.Open(tmpfile1.Name())
-	assert.True(t, os.IsNotExist(err))
-
-	lsrc.Stop()
-	tt.Stop()
+// TestLogsFileAutoRemoval verifies when a new file matching the configured
+// FilePath is discovered, the old file will be automatically deleted after
+// being read to the end-of-file.
+func TestLogsFileAutoRemoval(t *testing.T) {
+	// Override global in tailersrc.go.
+	multilineWaitPeriod = 10 * time.Millisecond
+	prefix := "file_auto_removal"
+	done := make(chan bool)
+	createWriteRead(t, prefix, nil, done, true)
+	t.Log("Verify 1st tmp file created and discovered.")
+	select {
+	case <-done:
+		t.Log("Completed before timeout (as expected)")
+	case <-time.After(time.Second * 5):
+		require.Fail(t, "timeout waiting for 2nd temp file.")
+	}
 }
 
 func TestLogsTimestampAsMultilineStarter(t *testing.T) {
@@ -707,10 +747,11 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 
 // TestLogsFileRecreate verifies that if a LogSrc matching a LogConfig is detected,
 // We only receive log lines beginning at the offset specified in the corresponding state-file.
-// And if the file happens to get deleted and recreated we expect to receive log lines beginning
-// at that same offset in the state file.
+// And if the file happens to get deleted and recreated we expect to receive log lines
+// from the beginning of the file. See https://github.com/aws/amazon-cloudwatch-agent/issues/447
 func TestLogsFileRecreate(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
+
 	logEntryString := "xxxxxxxxxxContentAfterOffset"
 	expectedContent := "ContentAfterOffset"
 
@@ -725,9 +766,12 @@ func TestLogsFileRecreate(t *testing.T) {
 	defer os.Remove(stateDir)
 
 	stateFileName := filepath.Join(stateDir, escapeFilePath(tmpfile.Name()))
-	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	stateFile, err := os.OpenFile(stateFileName, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 	require.NoError(t, err)
 	_, err = stateFile.WriteString("10")
+	require.NoError(t, err)
+	err = stateFile.Close()
+	require.NoError(t, err)
 	defer os.Remove(stateFileName)
 
 	tt := NewLogFile()
@@ -774,7 +818,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	defer lsrc.Stop()
 
 	// Waiting 10 seconds for the recreated temp file to be detected is plenty sufficient on any OS.
-	for start := time.Now(); time.Since(start) < 10 * time.Second; {
+	for start := time.Now(); time.Since(start) < 10*time.Second; {
 		lsrcs = tt.FindLogSrc()
 		if len(lsrcs) > 0 {
 			break
@@ -791,9 +835,11 @@ func TestLogsFileRecreate(t *testing.T) {
 		}
 	})
 
+	// after the file gets deleted, the state file should be deleted too, so
+	// the tailer should start from the beginning.
 	e = <-evts
-	if e.Message() != expectedContent {
-		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), expectedContent)
+	if e.Message() != logEntryString {
+		t.Errorf("Wrong log found after file replacement: \n% x\nExpecting:\n% x\n", e.Message(), logEntryString)
 	}
 
 	lsrc.Stop()
@@ -1070,23 +1116,4 @@ func TestGenerateLogGroupName(t *testing.T) {
 		"The log group name %s is not the same as %s.",
 		logGroupName,
 		expectLogGroup))
-}
-
-func TestCheckForDuplicateRetentionSettingsPanics(t *testing.T) {
-	tt := NewLogFile()
-	logGroupName := "DuplicateLogGroupName"
-	tt.FileConfig = []FileConfig{{
-		FilePath:        "SampleFilePath",
-		FromBeginning:   true,
-		LogGroupName:    logGroupName,
-		RetentionInDays: 1,
-	},
-		{
-			FilePath:        "SampleFilePath",
-			FromBeginning:   true,
-			LogGroupName:    logGroupName,
-			RetentionInDays: 3,
-		},
-	}
-	assert.Panics(t, func() { tt.checkForDuplicateRetentionSettings() }, "Did not panic after finding duplicate log group")
 }

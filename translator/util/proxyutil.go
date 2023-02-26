@@ -4,8 +4,9 @@
 package util
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"os"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 )
 
 func GetHttpProxy(proxyConfig map[string]string) (result map[string]string) {

@@ -5,6 +5,7 @@ package csm
 
 import (
 	"fmt"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/csm"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
@@ -18,7 +19,7 @@ func applyServiceAddressesRule(input interface{}) (returnKey string, returnVal i
 	stringAddresses := inputAddresses.([]string)
 	addresses := []string{}
 
-	metadata := util.GetMetadataInfo()
+	metadata := util.GetMetadataInfo(util.Ec2MetadataInfoProvider)
 
 	for _, addr := range stringAddresses {
 		resolvedAddr := util.ResolvePlaceholder(addr, metadata)

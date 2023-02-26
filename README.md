@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/gh/aws/amazon-cloudwatch-agent/branch/master/graph/badge.svg?token=79VYANUGOM)](https://codecov.io/gh/aws/amazon-cloudwatch-agent)
+[![codecov](https://codecov.io/gh/aws/amazon-cloudwatch-agent/branch/main/graph/badge.svg?token=79VYANUGOM)](https://codecov.io/gh/aws/amazon-cloudwatch-agent)
 
 # Amazon CloudWatch Agent
 The Amazon CloudWatch Agent is software developed for the [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)
@@ -78,6 +78,38 @@ The following targets are available. Each may be run with `make <target>`.
 | `clean`                  | `clean` removes build artifacts |
 | `dockerized-build`       | build using docker container without local go environment |
 
+## Features
+### Log Filtering
+CloudWatch agent supports log filtering, where the agent processes each log message with the filters that you specify, and only published events that pass all filters to CloudWatch Logs. See [docs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html#CloudWatch-Agent-Configuration-File-Logssection) for details.
+
+For example, the following excerpt of the CloudWatch agent configuration file publishes logs that are PUT and POST requests to CloudWatch Logs, but excluding logs that come from Firefox:
+```json
+{
+  "collect_list": [
+    {
+      "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+      "log_group_name": "test.log",
+      "log_stream_name": "test.log",
+      "filters": [
+        {
+          "type": "exclude",
+          "expression": "Firefox"
+        },
+        {
+          "type": "include",
+          "expression": "P(UT|OST)"
+        }
+      ]
+    }
+  ]
+}
+```
+Example with above config:
+```
+2021-09-27T19:36:35Z I! [logagent] Firefox Detected   // Agent excludes this 
+2021-09-27T19:36:35Z POST (StatusCode: 200).  // Agent would push this to CloudWatch
+2021-09-27T19:36:35Z GET (StatusCode: 400). // doesn't match regex, will be excluded
+```
 ## Versioning
 It is using [Semantic versioning](https://semver.org/)
 
@@ -87,18 +119,16 @@ You can download the official release from S3, refer to [link](https://docs.aws.
 Nightly s3 release are not production ready and should be used at own risk
 1. Download Binaries
     1. Linux
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/amazon-cloudwatch-agent
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/amazon-cloudwatch-agent-config-wizard
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/config-downloader
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/config-translator
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/cwagent-otel-collector
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd_64/arm64}/start-amazon-cloudwatch-agent
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/amazon-cloudwatch-agent
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/amazon-cloudwatch-agent-config-wizard
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/config-downloader
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/config-translator
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux_{amd64/arm64}/start-amazon-cloudwatch-agent
     1. Windows
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/amazon-cloudwatch-agent-config-wizard.exe
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/amazon-cloudwatch-agent.exe
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/config-downloader.exe
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/config-translator.exe
-        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/cwagent-otel-collector.exe
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows_amd64/start-amazon-cloudwatch-agent.exe
     1. Mac
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/amazon-cloudwatch-agent
@@ -108,11 +138,11 @@ Nightly s3 release are not production ready and should be used at own risk
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin_amd64/start-amazon-cloudwatch-agent
 2. Download Packages
     1. Linux
-       * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux/{amd64/arm64}/amazon-cloudwatch-agent.{deb/rpm}
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/linux/{amd64/arm64}/amazon-cloudwatch-agent.{deb/rpm}
     2. Windows
-       * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows/amd64/amazon-cloudwatch-agent.zip
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/windows/amd64/amazon-cloudwatch-agent.zip
     3. Mac
-       * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin/amd64/amazon-cloudwatch-agent.tar.gz
+        * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin/amd64/amazon-cloudwatch-agent.tar.gz
 
 ## Security disclosures
 If you think you’ve found a potential security issue, please do not post it in the Issues.  Instead, please follow the instructions [here](https://aws.amazon.com/security/vulnerability-reporting/) or [email AWS security directly](mailto:aws-security@amazon.com).
@@ -129,4 +159,3 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN  NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-

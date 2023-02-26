@@ -22,9 +22,9 @@ func TestLogs(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"logs":{"log_stream_name":"LOG_STREAM_NAME"}}`), &input)
-	if e != nil {
-		assert.Fail(t, e.Error())
+	err := json.Unmarshal([]byte(`{"logs":{"log_stream_name":"LOG_STREAM_NAME"}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
 	}
 
 	_, actual := l.ApplyRule(input)
@@ -49,9 +49,9 @@ func TestLogs_LogStreamName(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"logs":{}}`), &input)
-	if e != nil {
-		assert.Fail(t, e.Error())
+	err := json.Unmarshal([]byte(`{"logs":{}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
 	}
 
 	ctx := context.CurrentContext()
@@ -134,9 +134,9 @@ func TestLogs_ForceFlushInterval(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"logs":{"force_flush_interval":10}}`), &input)
-	if e != nil {
-		assert.Fail(t, e.Error())
+	err := json.Unmarshal([]byte(`{"logs":{"force_flush_interval":10}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
 	}
 
 	ctx := context.CurrentContext()
@@ -168,9 +168,9 @@ func TestLogs_EndpointOverride(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"logs":{"endpoint_override":"https://logs-fips.us-east-1.amazonaws.com"}}`), &input)
-	if e != nil {
-		assert.Fail(t, e.Error())
+	err := json.Unmarshal([]byte(`{"logs":{"endpoint_override":"https://logs-fips.us-east-1.amazonaws.com"}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
 	}
 
 	ctx := context.CurrentContext()

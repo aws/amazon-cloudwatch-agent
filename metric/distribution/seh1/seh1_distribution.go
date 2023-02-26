@@ -4,9 +4,11 @@
 package seh1
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"errors"
 	"log"
 	"math"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 var bucketForZero int16 = math.MinInt16
@@ -74,11 +76,10 @@ func (seh1Distribution *SEH1Distribution) Size() int {
 }
 
 // weight is 1/samplingRate
-func (seh1Distribution *SEH1Distribution) AddEntryWithUnit(value float64, weight float64, unit string) {
+func (seh1Distribution *SEH1Distribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
 	if weight > 0 {
 		if value < 0 {
-			log.Printf("W! Histogram value cannot be negative: %v", value)
-			return
+			return errors.New("negative value")
 		}
 		//sample count
 		seh1Distribution.sampleCount += weight
@@ -101,16 +102,17 @@ func (seh1Distribution *SEH1Distribution) AddEntryWithUnit(value float64, weight
 		if seh1Distribution.unit == "" {
 			seh1Distribution.unit = unit
 		} else if seh1Distribution.unit != unit && unit != "" {
-			log.Printf("D! Multiple units are dected: %s, %s", seh1Distribution.unit, unit)
+			log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, unit)
 		}
 	} else {
 		log.Printf("D! Weight should be larger than 0: %v", weight)
 	}
+	return nil
 }
 
 // weight is 1/samplingRate
-func (seh1Distribution *SEH1Distribution) AddEntry(value float64, weight float64) {
-	seh1Distribution.AddEntryWithUnit(value, weight, "")
+func (seh1Distribution *SEH1Distribution) AddEntry(value float64, weight float64) error {
+	return seh1Distribution.AddEntryWithUnit(value, weight, "")
 }
 
 func (seh1Distribution *SEH1Distribution) AddDistribution(distribution distribution.Distribution) {

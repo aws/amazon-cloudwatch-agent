@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build linux || darwin
 // +build linux darwin
 
 package cmdutil
@@ -34,8 +35,8 @@ func DetectRunAsUser(mergedJsonConfigMap map[string]interface{}) (runAsUser stri
 			if runasuser, ok := user.(string); ok {
 				return runasuser, nil
 			}
-			fmt.Printf("E! run_as_user is not string %v \n", user)
-			panic("E! run_as_user is not string \n")
+
+			log.Panicf("E! run_as_user is not string %v", user)
 		}
 
 		// agent section exists, but "runasuser" does not exist, then use "root"
@@ -112,10 +113,10 @@ func chownRecursive(uid, gid int, dir string) error {
 
 func VerifyCredentials(ctx *context.Context, runAsUser string) {
 	credentials := ctx.Credentials()
-	if config.ModeOnPrem == ctx.Mode() {
+	if (config.ModeOnPrem == ctx.Mode()) || (config.ModeOnPremise == ctx.Mode())  {
 		if runAsUser != "root" {
 			if _, ok := credentials["shared_credential_file"]; !ok {
-				panic("E! Credentials path is not set while runasuser is not root \n")
+				log.Panic("E! Credentials path is not set while runasuser is not root")
 			}
 		}
 	}

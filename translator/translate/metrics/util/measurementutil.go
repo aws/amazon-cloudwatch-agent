@@ -14,14 +14,22 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 )
 
-const field_pass_key = "fieldpass"
-const windows_measurement_key = "Counters"
-const measurement_name = "name"
-const measurement_category = "category"
-const measurement_rename = "rename"
-const measurement_unit = "unit"
-const nvidia_smi_plugin_name = "nvidia_smi"
-const tag_exclude_key = "tagexclude"
+const (
+	tag_exclude_key         = "tagexclude"
+	field_pass_key          = "fieldpass"
+	windows_measurement_key = "Counters"
+	measurement_name        = "name"
+	measurement_category    = "category"
+	measurement_rename      = "rename"
+	measurement_unit        = "unit"
+)
+
+const (
+	smi_bin_path             = "bin_path"
+	nvidia_smi_plugin_name   = "nvidia_smi"
+	Default_Unix_Smi_Path    = "/usr/bin/nvidia-smi"
+	Default_Windows_Smi_Path = "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
+)
 
 func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string, path string) (returnKey string, returnVal []string) {
 	inputList := inputs.([]interface{})
@@ -117,7 +125,7 @@ func getValidMetric(targetOs string, pluginName string, metricName string) strin
 	case translatorConfig.OS_TYPE_WINDOWS:
 		return metricName
 	default:
-		panic("unknown os platform in getValidMetric: " + targetOs)
+		log.Panicf("E! Unknown os platform in getValidMetric: %s", targetOs)
 	}
 	if val, ok := registeredMetrics[pluginName]; ok {
 		formatted_metricName := getFormattedMetricName(metricName, pluginName)
@@ -146,13 +154,15 @@ func isDecorationAvail(observationMap map[string]interface{}) bool {
 	return false
 }
 
-//        "measurement": [
-//          {"name": "cpu_usage_idle", "rename": "CPU_USAGE_IDLE", "unit": "unit"},
-//          {"name": "cpu_usage_nice", "unit": "unit"},
-//          "cpu_usage_guest",
-//          "time_active",
-//          "usage_active"
-//        ]
+// "measurement": [
+//
+//	{"name": "cpu_usage_idle", "rename": "CPU_USAGE_IDLE", "unit": "unit"},
+//	{"name": "cpu_usage_nice", "unit": "unit"},
+//	"cpu_usage_guest",
+//	"time_active",
+//	"usage_active"
+//
+// ]
 func GetMeasurementName(input interface{}) (measurementNames []string) {
 	m := input.(map[string]interface{})
 	if metricList, ok := m["measurement"]; ok {
@@ -172,11 +182,18 @@ func GetMeasurementName(input interface{}) (measurementNames []string) {
 }
 
 // ApplyPluginSpecificRules returns a map contains all the rules for tagpass, tagdrop, namepass, namedrop,
-//fieldpass, fielddrop, taginclude, tagexclude specifically for certain plugin.
-func ApplyPluginSpecificRules(pluginName string) (map[string][]string, bool) {
+// fieldpass, fielddrop, taginclude, tagexclude specifically for certain plugin.
+func ApplyPluginSpecificRules(pluginName string) (map[string]interface{}, bool) {
 	switch pluginName {
 	case nvidia_smi_plugin_name:
-		return map[string][]string{tag_exclude_key: GetExcludingTags(pluginName)}, true
+		result := map[string]interface{}{tag_exclude_key: GetExcludingTags(pluginName)}
+		// if on windows, will look for smi in a windows style path
+		if translator.GetTargetPlatform() == translatorConfig.OS_TYPE_WINDOWS {
+			// default path for Nvidia_smi.exe is C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe
+			// Todo: for windows 10 the path should default to C:\\Windows\\System32\\nvidia-smi.exe will support in the future
+			result[smi_bin_path] = Default_Windows_Smi_Path
+		}
+		return result, true
 	default:
 		return nil, false
 	}

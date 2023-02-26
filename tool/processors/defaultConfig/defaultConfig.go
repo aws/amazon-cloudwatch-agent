@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"log"
+	"strconv"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig/advancedPlan"
@@ -17,8 +20,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/question/logs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-	"log"
-	"strconv"
 )
 
 var Processor processors.Processor = &processor{}
@@ -63,7 +64,7 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 		case "None":
 			return question.Processor
 		default:
-			panic(whichDefaultConfig)
+			log.Panicf("Unknown default config: %s", whichDefaultConfig)
 		}
 		if config.SatisfiedWithCurrentConfig(ctx) {
 			if ctx.OsParameter == util.OsTypeWindows {

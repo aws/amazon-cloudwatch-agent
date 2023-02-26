@@ -4,10 +4,10 @@ set -u
 set -x
 set -o pipefail
 echo "****************************************"
-echo "Creating tar file for Mac OS X amd64    "
+echo "Creating tar file for Mac OS X ${ARCH}  "
 echo "****************************************"
 
-AGENT_VERSION=`cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g"`
+AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g")
 echo "BUILD_SPACE: ${BUILD_SPACE}    agent_version: ${AGENT_VERSION}  pre-package location:${PREPKGPATH}"
 
 mkdir -p ${BUILD_SPACE}/bin/darwin/${ARCH}/
@@ -55,8 +55,8 @@ chmod ug+rx ${BUILD_ROOT}${MACHINE_ROOT}bin/start-amazon-cloudwatch-agent
 
 echo "Creating tar"
 (
-  cd ${BUILD_ROOT}
-  tar -czf $TAR_NAME *
+     cd ${BUILD_ROOT}
+     tar -czf $TAR_NAME *
 )
 
 echo "Archive created at ${BUILD_ROOT}/${TAR_NAME}"

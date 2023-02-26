@@ -2,8 +2,9 @@ package gpu
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 //Check the case when the input is in "nvidia_gpu":{//specific configuration}
@@ -17,7 +18,7 @@ func TestSpecificConfig(t *testing.T) {
 	if err == nil {
 		_, actualVal := n.ApplyRule(input)
 		expectedVal := []interface{}{map[string]interface{}{
-			"fieldpass": []string{"utilization_gpu", "temperature_gpu"},
+			"fieldpass":  []string{"utilization_gpu", "temperature_gpu"},
 			"tagexclude": []string{"compute_mode", "pstate", "uuid"},
 		},
 		}
@@ -101,15 +102,15 @@ func TestInvalidMetrics(t *testing.T) {
 func TestNonGpuConfig(t *testing.T) {
 	c := new(NvidiaSmi)
 	var input interface{}
-	e := json.Unmarshal([]byte(`{"nvidia_smi":{"foo":"bar"}}`), &input)
+	err := json.Unmarshal([]byte(`{"nvidia_smi":{"foo":"bar"}}`), &input)
 
-	if e == nil {
+	if err == nil {
 		actualKey, actualVal := c.ApplyRule(input)
 		expectedKey := ""
 		expectedVal := ""
 		assert.Equal(t, expectedKey, actualKey, "ReturnKey should be empty")
 		assert.Equal(t, expectedVal, actualVal, "ReturnVal should be empty")
 	} else {
-		panic(e)
+		panic(err)
 	}
 }

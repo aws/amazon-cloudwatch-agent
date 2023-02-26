@@ -27,6 +27,7 @@ const (
 	tomlFileMode             = 0644
 	jsonTemplateName_Linux   = "default_linux_config.json"
 	jsonTemplateName_Windows = "default_windows_config.json"
+	jsonTemplateName_Darwin  = "default_darwin_config.json"
 	defaultTomlConfigName    = "CWAgent.conf"
 	exitSuccessMessage       = "Configuration validation first phase succeeded"
 )
@@ -35,7 +36,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 	res := totomlconfig.ToTomlConfig(jsonConfigValue)
 	if translator.IsTranslateSuccess() {
 		if err := ioutil.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); err != nil {
-			panic(fmt.Sprintf("Failed to create the configuration validation file. Reason: %s \n", err.Error()))
+			log.Panicf("E! Failed to create the configuration validation file. Reason: %s", err.Error())
 		} else {
 			for _, infoMessage := range translator.InfoMessages {
 				fmt.Println(infoMessage)
@@ -43,7 +44,7 @@ func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConf
 			fmt.Println(exitSuccessMessage)
 		}
 	} else {
-		panic("Failed to generate configuration validation content. ")
+		log.Panic("E! Failed to generate configuration validation content.")
 	}
 }
 
@@ -54,14 +55,14 @@ func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, env
 	}
 	bytes := toenvconfig.ToEnvConfig(jsonConfigValue)
 	if err := ioutil.WriteFile(envConfigPath, bytes, 0644); err != nil {
-		panic(fmt.Sprintf("Failed to create env config. Reason: %s \n", err.Error()))
+		log.Panicf("E! Failed to create env config. Reason: %s", err.Error())
 	}
 }
 
 func getCurBinaryPath() string {
 	ex, err := os.Executable()
 	if err != nil {
-		panic(err)
+		log.Panicf("E! Failed to get executable path because of %v", err)
 	}
 	return path.Dir(ex)
 }
@@ -71,6 +72,8 @@ func getJsonConfigMap(jsonConfigFilePath, osType string) (map[string]interface{}
 		curPath := getCurBinaryPath()
 		if osType == config.OS_TYPE_WINDOWS {
 			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Windows)
+		} else if osType == config.OS_TYPE_DARWIN {
+			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Darwin)
 		} else {
 			jsonConfigFilePath = filepath.Join(curPath, jsonTemplateName_Linux)
 		}
@@ -101,16 +104,16 @@ func RunSchemaValidation(inputJsonMap map[string]interface{}) (*gojsonschema.Res
 func checkSchema(inputJsonMap map[string]interface{}) {
 	result, err := RunSchemaValidation(inputJsonMap)
 	if err != nil {
-		panic(err.Error())
+		log.Panicf("E! Failed to run schema validation because of %v", err)
 	}
 	if result.Valid() {
-		fmt.Println("Valid Json input schema.")
+		log.Print("I! Valid Json input schema.")
 	} else {
 		errorDetails := result.Errors()
 		for _, errorDetail := range errorDetails {
 			translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
 		}
-		panic("Invalid Json input schema.")
+		log.Panic("E! Invalid Json input schema.")
 	}
 }
 
@@ -136,7 +139,7 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 		ctx.InputJsonDirPath(),
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				fmt.Printf("Cannot access %v: %v", path, err)
+				fmt.Printf("Cannot access %v: %v \n", path, err)
 				return err
 			}
 			if info.Mode()&os.ModeSymlink != 0 {

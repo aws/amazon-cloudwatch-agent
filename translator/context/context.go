@@ -4,10 +4,10 @@
 package context
 
 import (
-	"fmt"
+	"log"
+	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"os"
 )
 
 const (
@@ -28,7 +28,7 @@ func CurrentContext() *Context {
 	return ctx
 }
 
-//Testing only
+// Testing only
 func ResetContext() {
 	ctx = nil
 }
@@ -112,8 +112,12 @@ func (ctx *Context) SetMode(mode string) {
 		ctx.mode = config.ModeEC2
 	case config.ModeOnPrem:
 		ctx.mode = config.ModeOnPrem
+	case config.ModeOnPremise:
+		ctx.mode = config.ModeOnPremise
+	case config.ModeWithIRSA:
+		ctx.mode = config.ModeWithIRSA
 	default:
-		panic(fmt.Sprintf("Invalid mode %s. Valid mode values are %s and %s.\n", mode, config.ModeEC2, config.ModeOnPrem))
+		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA)
 	}
 }
 

@@ -4,10 +4,13 @@
 package metrics
 
 import (
+	"sort"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
@@ -25,8 +28,8 @@ func GetCurPath() string {
 	return curPath
 }
 
-func RegisterRule(fieldname string, r Rule) {
-	ChildRule[fieldname] = r
+func RegisterRule(fieldName string, r Rule) {
+	ChildRule[fieldName] = r
 }
 
 type Metrics struct {
@@ -51,8 +54,8 @@ func (m *Metrics) ApplyRule(input interface{}) (returnKey string, returnVal inte
 			if key != "" {
 				if key == OutputsKey {
 					outputPlugInfo = translator.MergeTwoUniqueMaps(outputPlugInfo, val.(map[string]interface{}))
-				} else if key == "metric_decoration" {
-					addDecorations(key, val, outputPlugInfo)
+				} else if config.ContainsKey(key) {
+					addCloudWatchOutputConfig(key, val, outputPlugInfo)
 				} else {
 					result[key] = val
 				}
@@ -69,16 +72,27 @@ func (m *Metrics) ApplyRule(input interface{}) (returnKey string, returnVal inte
 	return
 }
 
-func addDecorations(key string, val interface{}, outputPlugInfo map[string]interface{}) {
-	if len(val.([]interface{})) > 0 {
+func addCloudWatchOutputConfig(key string, val interface{}, outputPlugInfo map[string]interface{}) {
+	if val1, isSlice := val.([]interface{}); isSlice && len(val1) > 0 {
 		outputPlugInfo[key] = val
+	} else if val2, isMap := val.(map[string][]string); isMap && len(val2) > 0 {
+		sortItems(val2)
+		outputPlugInfo[key] = val2
 	}
+
 }
 
 var MergeRuleMap = map[string]mergeJsonRule.MergeRule{}
 
 func (m *Metrics) Merge(source map[string]interface{}, result map[string]interface{}) {
 	mergeJsonUtil.MergeMap(source, result, SectionKey, MergeRuleMap, GetCurPath())
+}
+
+// Sort items in map alphabetically to temporarily avoid unstable tests before introduce Toml-to-Toml comparison.
+func sortItems(vals map[string][]string) {
+	for _, val := range vals {
+		sort.Strings(val)
+	}
 }
 
 func init() {

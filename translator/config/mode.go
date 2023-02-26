@@ -4,6 +4,8 @@
 package config
 
 const (
-	ModeEC2    = "ec2"
-	ModeOnPrem = "onPrem"
+	ModeEC2       = "ec2"
+	ModeOnPrem    = "onPrem"
+	ModeOnPremise = "onPremise"
+	ModeWithIRSA  = "withIRSA"
 )

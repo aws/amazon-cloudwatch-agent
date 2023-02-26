@@ -1,12 +1,12 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
+//go:build windows
 // +build windows
 
 package windows_event_log
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,7 +26,7 @@ func TestGetStateFilePathGood(t *testing.T) {
 		Name:          "SystemEventLog",
 	}
 	pathname, err := getStateFilePath(&plugin, &ec)
-	fmt.Println(pathname)
+	t.Log(pathname)
 	if err != nil {
 		t.Errorf("expected nil, actual %v", err)
 	}
@@ -54,7 +54,7 @@ func TestGetStateFilePathEscape(t *testing.T) {
 		Name:          "System  Event//Log::",
 	}
 	pathname, err := getStateFilePath(&plugin, &ec)
-	fmt.Println(pathname)
+	t.Log(pathname)
 	if err != nil {
 		t.Errorf("expected nil, actual %v", err)
 	}
@@ -77,7 +77,7 @@ func TestGetStateFilePathEmpty(t *testing.T) {
 		Name:          "SystemEventLog",
 	}
 	pathname, err := getStateFilePath(&plugin, &ec)
-	fmt.Println(pathname)
+	t.Log(pathname)
 	if err == nil {
 		t.Errorf("expected non-nil")
 	}
@@ -96,7 +96,7 @@ func TestGetStateFilePathSpecialChars(t *testing.T) {
 		Name:          "SystemEventLog",
 	}
 	pathname, err := getStateFilePath(&plugin, &ec)
-	fmt.Println(pathname)
+	t.Log(pathname)
 	if err == nil {
 		t.Errorf("expected non-nil")
 	}

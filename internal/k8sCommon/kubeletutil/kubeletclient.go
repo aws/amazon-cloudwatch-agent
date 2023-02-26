@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"errors"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/tls"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -76,7 +77,7 @@ func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("E! Fail to read request %s body: %s", req.URL.String(), err)
+		log.Printf("E! Fail to read request %s body: %s", url, err)
 		return result, err
 	}
 

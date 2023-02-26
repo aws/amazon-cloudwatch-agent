@@ -5,6 +5,7 @@ package csm
 
 import (
 	"fmt"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/csm"

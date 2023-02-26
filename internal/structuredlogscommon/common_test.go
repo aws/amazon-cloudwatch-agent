@@ -12,7 +12,7 @@ import (
 )
 
 func TestAppendAttributesInFields(t *testing.T) {
-	m, _ := metric.New("test", map[string]string{}, map[string]interface{}{}, time.Now())
+	m := metric.New("test", map[string]string{}, map[string]interface{}{}, time.Now())
 	AppendAttributesInFields("testFieldName", "testFieldValue", m)
 	assert.Equal(t, "testFieldName", m.Tags()[attributesInFields])
 	assert.Equal(t, "testFieldValue", m.Fields()["testFieldName"].(string))
@@ -23,7 +23,7 @@ func TestAppendAttributesInFields(t *testing.T) {
 }
 
 func TestBuildAttributes(t *testing.T) {
-	m, _ := metric.New("test", map[string]string{}, map[string]interface{}{}, time.Now())
+	m := metric.New("test", map[string]string{}, map[string]interface{}{}, time.Now())
 	AppendAttributesInFields("testFieldName", "testFieldValue", m)
 	structuredlogs := map[string]interface{}{}
 	BuildAttributes(m, structuredlogs)
@@ -31,7 +31,7 @@ func TestBuildAttributes(t *testing.T) {
 }
 
 func TestBuildValidMeasurements(t *testing.T) {
-	m, _ := metric.New("test",
+	m := metric.New("test",
 		map[string]string{},
 		map[string]interface{}{"testFieldString": "value", "testFieldInt": 0, "testFieldFloat": 0.0, "testFieldBool": true, "testFieldTime": time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC)},
 		time.Now())
@@ -44,7 +44,7 @@ func TestBuildValidMeasurements(t *testing.T) {
 }
 
 func TestBuildInvalidMeasurements(t *testing.T) {
-	m, _ := metric.New("test", map[string]string{}, map[string]interface{}{"testFieldMap": map[string]string{}}, time.Now())
+	m := metric.New("test", map[string]string{}, map[string]interface{}{"testFieldMap": map[string]string{}}, time.Now())
 	structuredlogs := map[string]interface{}{}
 	err := BuildMeasurements(m, structuredlogs)
 	assert.True(t, nil != err)
@@ -52,13 +52,13 @@ func TestBuildInvalidMeasurements(t *testing.T) {
 }
 
 func TestAddVersion(t *testing.T) {
-	m, _ := metric.New("test", map[string]string{}, map[string]interface{}{"testFieldMap": map[string]string{}}, time.Now())
+	m := metric.New("test", map[string]string{}, map[string]interface{}{"testFieldMap": map[string]string{}}, time.Now())
 	AddVersion(m)
 	assert.True(t, m.HasTag("Version"))
 }
 
 func TestAttachMetricRuleValidRules(t *testing.T) {
-	m, _ := metric.New("prometheus_scraper",
+	m := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "a"},
 		map[string]interface{}{"fieldA": 0.1},
 		time.Now())
@@ -75,7 +75,7 @@ func TestAttachMetricRuleValidRules(t *testing.T) {
 }
 
 func TestAttachMetricRuleInvalidRules(t *testing.T) {
-	m, _ := metric.New("prometheus_scraper",
+	m := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "a"},
 		map[string]interface{}{"fieldA": 0.1},
 		time.Now())
@@ -92,7 +92,7 @@ func TestAttachMetricRuleInvalidRules(t *testing.T) {
 }
 
 func TestAttachMetricRulewithDedupValidRules(t *testing.T) {
-	m, _ := metric.New("prometheus_scraper",
+	m := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "a", "tagB": "b"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2},
 		time.Now())
@@ -116,7 +116,7 @@ func TestAttachMetricRulewithDedupValidRules(t *testing.T) {
 }
 
 func TestAttachMetricRulewithDedupDupRules(t *testing.T) {
-	m, _ := metric.New("prometheus_scraper",
+	m := metric.New("prometheus_scraper",
 		map[string]string{"tagA": "a", "tagB": "b", "tagC": "c"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2, "fieldC": 0.3, "fieldD": 0.3},
 		time.Now())

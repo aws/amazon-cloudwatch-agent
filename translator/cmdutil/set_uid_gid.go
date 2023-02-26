@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-// +build linux
-// +build go1.16
+//go:build linux && go1.16
+// +build linux,go1.16
 
 package cmdutil
 

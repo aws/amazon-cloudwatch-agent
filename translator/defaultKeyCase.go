@@ -9,7 +9,17 @@ import (
 
 //DefaultCase check if current input overrides the default value for the given config entry key.
 func DefaultCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
-	m := input.(map[string]interface{})
+	m, ok := input.(map[string]interface{})
+	if !ok {
+		// bypassing special formats like:
+		//		"procstat": [
+		//			{
+		//				"pid_file": "/var/run/example1.pid",
+		// 				...
+		returnKey = ""
+		returnVal = ""
+	}
+
 	if val, ok := m[key]; ok {
 		//The key is in current input instance, use the value in JSON.
 		returnVal = val

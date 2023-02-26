@@ -4,9 +4,10 @@
 package k8sdecorator
 
 import (
+	"os"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"os"
 )
 
 const (

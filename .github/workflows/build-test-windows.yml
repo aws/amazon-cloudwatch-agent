@@ -1,15 +1,34 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
 
 name: build-and-test-windows
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - 'NOTICE'
+      - 'RELEASE_NOTES'
+      - 'THIRD-PARTY'
+      - 'LICENSE'
+      - '.github/**'
+      - '!.github/workflows/build-*'
+
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   windows-unittest:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ windows-2019, windows-latest ]
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
@@ -17,7 +36,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.15.15
+          go-version: ~1.19.2
 
       - name: Cache Go
         uses: actions/cache@v2
@@ -25,10 +44,18 @@ jobs:
           path: |
             %LocalAppData%\go-build
             ~/go/pkg/mod
-            C:\Users\runneradmin\AppData\Local\go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+      - name: Install make
+        run: choco install make
 
       - name: Run Unit tests
-        run: go test ./...
+        run: make test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          verbose: true
+
+      - name: Run build
+        run: make build

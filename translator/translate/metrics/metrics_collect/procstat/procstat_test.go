@@ -5,8 +5,9 @@ package procstat
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func checkResult(t *testing.T, inputBytes []byte, expectedOutput interface{}) {

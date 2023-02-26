@@ -4,12 +4,13 @@
 package publisher
 
 import (
-	"github.com/stretchr/testify/assert"
 	"log"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // testClient will register its "publish" method to publisher

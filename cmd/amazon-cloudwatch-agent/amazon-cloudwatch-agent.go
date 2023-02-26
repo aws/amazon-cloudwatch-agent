@@ -30,13 +30,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
-
-	lumberjack "github.com/aws/amazon-cloudwatch-agent/logger"
+	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
-
 	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
@@ -47,6 +46,7 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
+	LogTargetEventLog = "eventlog"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -236,58 +236,16 @@ func runAgent(ctx context.Context,
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
 
-	isOld, err := migrate.IsOldConfig(*fConfig)
+	err = loadTomlConfigIntoAgent(c)
+
 	if err != nil {
-		log.Printf("W! Failed to detect if config file is old format: %v", err)
+		return err
 	}
 
-	if isOld {
-		migratedConfFile, err := migrate.MigrateFile(*fConfig)
-		if err != nil {
-			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
-		}
+	err = validateAgentFinalConfigAndPlugins(c)
 
-		err = c.LoadConfig(migratedConfFile)
-		if err != nil {
-			return err
-		}
-
-		agentinfo.BuildStr += "_M"
-	} else {
-		err = c.LoadConfig(*fConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	if *fConfigDirectory != "" {
-		err = c.LoadDirectory(*fConfigDirectory)
-		if err != nil {
-			return err
-		}
-	}
-	if !*fTest && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
-	}
-	if len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
-	}
-
-	if int64(c.Agent.Interval.Duration) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %s",
-			c.Agent.Interval.Duration)
-	}
-
-	if int64(c.Agent.FlushInterval.Duration) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %s",
-			c.Agent.Interval.Duration)
-	}
-
-	if *fSchemaTest {
-		//up to this point, the given config file must be valid
-		fmt.Println(agentinfo.FullVersion())
-		fmt.Printf("The given config: %v is valid\n", *fConfig)
-		os.Exit(0)
+	if err != nil {
+		return err
 	}
 
 	ag, err := agent.NewAgent(c)
@@ -304,6 +262,7 @@ func runAgent(ctx context.Context,
 		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
 		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
 		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+		LogWithTimezone:     "",
 	}
 
 	logger.SetupLogging(logConfig)
@@ -356,11 +315,6 @@ func runAgent(ctx context.Context,
 	return ag.Run(ctx)
 }
 
-func usageExit(rc int) {
-	//fmt.Println(internal.Usage)
-	os.Exit(rc)
-}
-
 type program struct {
 	inputFilters      []string
 	outputFilters     []string
@@ -388,7 +342,6 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
-	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	args := flag.Args()
 
@@ -512,7 +465,7 @@ func main() {
 		}
 		return
 	}
-
+		
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		programFiles := os.Getenv("ProgramFiles")
 		if programFiles == "" { // Should never happen
@@ -554,11 +507,10 @@ func main() {
 			}
 			os.Exit(0)
 		} else {
-			winlogger, err := s.Logger(nil)
-			if err == nil {
-				//When in service mode, register eventlog target and setup default logging to eventlog
-				logger.RegisterEventLogger(winlogger)
-				logger.SetupLogging(logger.LogConfig{LogTarget: lumberjack.LogTargetLumberjack})
+			// When in service mode, register eventlog target and setup default logging to eventlog
+			e := RegisterEventLogger()
+			if e != nil {
+				log.Println("E! Cannot register event log " + e.Error())
 			}
 			err = s.Run()
 
@@ -589,4 +541,81 @@ func windowsRunAsService() bool {
 	}
 
 	return !service.Interactive()
+}
+
+func loadTomlConfigIntoAgent(c *config.Config) error{
+	isOld, err := migrate.IsOldConfig(*fConfig)
+	if err != nil {
+		log.Printf("W! Failed to detect if config file is old format: %v", err)
+	}
+
+	if isOld {
+		migratedConfFile, err := migrate.MigrateFile(*fConfig)
+		if err != nil {
+			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
+		}
+
+		err = c.LoadConfig(migratedConfFile)
+		if err != nil {
+			return err
+		}
+
+		agentinfo.BuildStr += "_M"
+	} else {
+		err = c.LoadConfig(*fConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	if *fConfigDirectory != "" {
+		err = c.LoadDirectory(*fConfigDirectory)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateAgentFinalConfigAndPlugins(c *config.Config) error{
+	if !*fTest && len(c.Outputs) == 0 {
+		return errors.New("Error: no outputs found, did you provide a valid config file?")
+	}
+	if len(c.Inputs) == 0 {
+		return errors.New("Error: no inputs found, did you provide a valid config file?")
+	}
+
+	if int64(c.Agent.Interval) <= 0 {
+		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
+	}
+
+	if int64(c.Agent.FlushInterval) <= 0 {
+		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.FlushInterval)
+	}
+
+	if inputPlugin, err := checkRightForBinariesFileWithInputPlugins(c.InputNames()); err != nil {
+		return fmt.Errorf("Validate input plugin %s failed because of %v", inputPlugin, err)
+	}
+
+	if *fSchemaTest {
+		//up to this point, the given config file must be valid
+		fmt.Println(agentinfo.FullVersion())
+		fmt.Printf("The given config: %v is valid\n", *fConfig)
+		os.Exit(0)
+	}
+
+	return nil
+}
+
+func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, error) {
+	for _, inputPlugin := range inputPlugins {
+		if inputPlugin == "nvidia_smi" {
+			if err := internal.CheckNvidiaSMIBinaryRights(); err != nil {
+				return "nvidia_smi", err
+			}
+		}
+	}
+	
+	return "", nil
 }

@@ -5,7 +5,7 @@ k8sDirPrefix="./k8s-deployment-manifest-templates/deployment-mode/daemonset/cont
 ecsDirPrefix="./ecs-task-definition-templates/deployment-mode/daemon-service/cwagent-ecs-instance-metric"
 
 newK8sVersion="k8s/1.3.0"
-agentVersion="amazon/cloudwatch-agent:1.247346.0b249609"
+agentVersion="amazon/cloudwatch-agent:1.247355.0b252062"
 fluentdVersion="fluent/fluentd-kubernetes-daemonset:v1.7.3-debian-cloudwatch-1.0"
 fluentBitVersion="amazon/aws-for-fluent-bit:2.10.0"
 
@@ -50,33 +50,32 @@ rm ${k8sDirPrefix}/fluent-bit/fluent-bit-compatible.yaml.bak
 OUTPUT=${k8sDirPrefix}/quickstart/cwagent-fluentd-quickstart.yaml
 OUTPUT_FLUENT_BIT=${k8sDirPrefix}/quickstart/cwagent-fluent-bit-quickstart.yaml
 
-cat ${k8sDirPrefix}/cloudwatch-namespace.yaml > ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
-cat ${k8sDirPrefix}/cwagent/cwagent-serviceaccount.yaml >> ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
+cat ${k8sDirPrefix}/cloudwatch-namespace.yaml >${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
+cat ${k8sDirPrefix}/cwagent/cwagent-serviceaccount.yaml >>${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
 cat ${k8sDirPrefix}/cwagent/cwagent-configmap.yaml | sed "s|\"logs|\"agent\": {\\
         \"region\": \"{{region_name}}\"\\
       },\\
-      \"logs|g" >> ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
-cat ${k8sDirPrefix}/cwagent/cwagent-daemonset.yaml >> ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
-cat ${k8sDirPrefix}/fluentd/fluentd-configmap.yaml >> ${OUTPUT}
-echo -e "\n---\n" >> ${OUTPUT}
-cat ${k8sDirPrefix}/fluentd/fluentd.yaml >> ${OUTPUT}
+      \"logs|g" >>${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
+cat ${k8sDirPrefix}/cwagent/cwagent-daemonset.yaml >>${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
+cat ${k8sDirPrefix}/fluentd/fluentd-configmap.yaml >>${OUTPUT}
+echo -e "\n---\n" >>${OUTPUT}
+cat ${k8sDirPrefix}/fluentd/fluentd.yaml >>${OUTPUT}
 
-
-cat ${k8sDirPrefix}/cloudwatch-namespace.yaml > ${OUTPUT_FLUENT_BIT}
-echo -e "\n---\n" >> ${OUTPUT_FLUENT_BIT}
-cat ${k8sDirPrefix}/cwagent/cwagent-serviceaccount.yaml >> ${OUTPUT_FLUENT_BIT}
-echo -e "\n---\n" >> ${OUTPUT_FLUENT_BIT}
+cat ${k8sDirPrefix}/cloudwatch-namespace.yaml >${OUTPUT_FLUENT_BIT}
+echo -e "\n---\n" >>${OUTPUT_FLUENT_BIT}
+cat ${k8sDirPrefix}/cwagent/cwagent-serviceaccount.yaml >>${OUTPUT_FLUENT_BIT}
+echo -e "\n---\n" >>${OUTPUT_FLUENT_BIT}
 cat ${k8sDirPrefix}/cwagent/cwagent-configmap.yaml | sed "s|\"logs|\"agent\": {\\
         \"region\": \"{{region_name}}\"\\
       },\\
-      \"logs|g" >> ${OUTPUT_FLUENT_BIT}
-echo -e "\n---\n" >> ${OUTPUT_FLUENT_BIT}
-cat ${k8sDirPrefix}/cwagent/cwagent-daemonset.yaml >> ${OUTPUT_FLUENT_BIT}
-echo -e "\n---\n" >> ${OUTPUT_FLUENT_BIT}
-cat ${k8sDirPrefix}/fluent-bit/fluent-bit-configmap.yaml >> ${OUTPUT_FLUENT_BIT}
-echo -e "\n---\n" >> ${OUTPUT_FLUENT_BIT}
-cat ${k8sDirPrefix}/fluent-bit/fluent-bit.yaml >> ${OUTPUT_FLUENT_BIT}
+      \"logs|g" >>${OUTPUT_FLUENT_BIT}
+echo -e "\n---\n" >>${OUTPUT_FLUENT_BIT}
+cat ${k8sDirPrefix}/cwagent/cwagent-daemonset.yaml >>${OUTPUT_FLUENT_BIT}
+echo -e "\n---\n" >>${OUTPUT_FLUENT_BIT}
+cat ${k8sDirPrefix}/fluent-bit/fluent-bit-configmap.yaml >>${OUTPUT_FLUENT_BIT}
+echo -e "\n---\n" >>${OUTPUT_FLUENT_BIT}
+cat ${k8sDirPrefix}/fluent-bit/fluent-bit.yaml >>${OUTPUT_FLUENT_BIT}

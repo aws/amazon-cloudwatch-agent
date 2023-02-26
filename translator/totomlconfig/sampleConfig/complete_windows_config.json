@@ -12,6 +12,15 @@
   },
   "metrics": {
     "metrics_collected": {
+      "nvidia_gpu": {
+        "measurement": [
+          "utilization_gpu",
+          "utilization_memory",
+          "power_draw",
+          "temperature_gpu"
+        ],
+        "metrics_collection_interval": 60
+      },
       "Processor": {
         "measurement": [
           {
