@@ -6,10 +6,14 @@ package prometheus
 import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/service"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
+	metricstransformprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/metricstransform"
+	resourceprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/resource"
+	prometheusreceiver "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/prometheus"
 )
 
 const (
@@ -19,32 +23,30 @@ const (
 type translator struct {
 }
 
-var _ common.Translator[common.Pipeline] = (*translator)(nil)
+var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
-func NewTranslator() common.Translator[common.Pipeline] {
+func NewTranslator() common.Translator[*common.ComponentTranslators] {
 	return &translator{}
 }
 
-func (t *translator) Type() component.Type {
-	return pipelineName
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(component.DataTypeMetrics, pipelineName)
 }
 
 // Translate creates a pipeline for prometheus if the logs.metrics_collected.prometheus
 // section is present.
-func (t *translator) Translate(conf *confmap.Conf, _ common.TranslatorOptions) (common.Pipeline, error) {
+func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	key := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 	if conf == nil || !conf.IsSet(key) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: key}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: key}
 	}
-	id := component.NewIDWithName(component.DataTypeMetrics, pipelineName)
-	pipeline := &service.ConfigServicePipeline{
-		Receivers: []component.ID{component.NewIDWithName("prometheus", pipelineName)},
-		Processors: []component.ID{
-			component.NewIDWithName("batch", pipelineName),
-			component.NewIDWithName("resource", pipelineName),
-			component.NewIDWithName("metricstransform", pipelineName),
-		},
-		Exporters: []component.ID{component.NewIDWithName("awsemf", pipelineName)},
-	}
-	return collections.NewPair(id, pipeline), nil
+	return &common.ComponentTranslators{
+		Receivers: common.NewTranslatorMap(prometheusreceiver.NewTranslatorWithName(pipelineName)),
+		Processors: common.NewTranslatorMap(
+			processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory()),
+			metricstransformprocessor.NewTranslatorWithName(pipelineName),
+			resourceprocessor.NewTranslatorWithName(pipelineName),
+		),
+		Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
+	}, nil
 }

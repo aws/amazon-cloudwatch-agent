@@ -19,6 +19,7 @@ import (
 )
 
 type translator struct {
+	name    string
 	factory receiver.Factory
 }
 
@@ -26,21 +27,22 @@ var _ common.Translator[component.Config] = (*translator)(nil)
 
 var prometheusKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 
-// NewTranslator creates a new aws container insight receiver translator.
 func NewTranslator() common.Translator[component.Config] {
-	return &translator{
-		factory: prometheusreceiver.NewFactory(),
-	}
+	return NewTranslatorWithName("")
 }
 
-func (t *translator) Type() component.Type {
-	return t.factory.Type()
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
+	return &translator{name, prometheusreceiver.NewFactory()}
+}
+
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 // Translate creates a receiver for prometheus if the logs.metrics_collected.prometheus section is present.
-func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(prometheusKey) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusKey}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: prometheusKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
@@ -72,7 +74,7 @@ func (t *translator) setPrometheusConfig(conf *confmap.Conf, cfg *prometheusrece
 	cloneCfg := t.factory.CreateDefaultConfig().(*prometheusreceiver.Config)
 	prometheusConfigPathKey := common.ConfigKey(prometheusKey, "prometheus_config_path")
 	if conf == nil || !conf.IsSet(prometheusConfigPathKey) {
-		return &common.MissingKeyError{Type: t.Type(), JsonKey: prometheusConfigPathKey}
+		return &common.MissingKeyError{ID: t.ID(), JsonKey: prometheusConfigPathKey}
 	}
 	_, result := new(emfprocessor.ConfigPath).ApplyRule(conf.Get(prometheusKey)) // TODO: remove dependency on rule.
 	prometheusConfigPath, ok := result.(string)
@@ -84,13 +86,13 @@ func (t *translator) setPrometheusConfig(conf *confmap.Conf, cfg *prometheusrece
 		return fmt.Errorf("unable to extract prometheus config content from %s", prometheusConfigPath)
 	}
 	var prometheusConfig map[string]interface{}
-	if err := yaml.Unmarshal(prometheusConfigYaml, &prometheusConfig); err != nil {
+	if err = yaml.Unmarshal(prometheusConfigYaml, &prometheusConfig); err != nil {
 		return fmt.Errorf("unable to read default config: %w", err)
 	}
 	c := confmap.NewFromStringMap(map[string]interface{}{
 		"config": prometheusConfig, // As per https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/7f4d4425a03e7e47575211be489f912cd16ae509/receiver/prometheusreceiver/README.md?plain=1#L58
 	})
-	if err := c.Unmarshal(&cloneCfg); err != nil {
+	if err = c.Unmarshal(&cloneCfg); err != nil {
 		return fmt.Errorf("unable to unmarshal config: %w", err)
 	}
 

@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 // container orchestrator keys
@@ -24,6 +25,7 @@ const (
 )
 
 type translator struct {
+	name    string
 	factory receiver.Factory
 	// services is a slice of config keys to orchestrators.
 	services []*collections.Pair[string, string]
@@ -33,8 +35,13 @@ var _ common.Translator[component.Config] = (*translator)(nil)
 
 // NewTranslator creates a new aws container insight receiver translator.
 func NewTranslator() common.Translator[component.Config] {
+	return NewTranslatorWithName("")
+}
+
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
 	baseKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 	return &translator{
+		name:    name,
 		factory: awscontainerinsightreceiver.NewFactory(),
 		services: []*collections.Pair[string, string]{
 			{Key: common.ConfigKey(baseKey, common.ECSKey), Value: ecs},
@@ -43,20 +50,20 @@ func NewTranslator() common.Translator[component.Config] {
 	}
 }
 
-func (t *translator) Type() component.Type {
-	return t.factory.Type()
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 // Translate creates an aws container insights receiver config if either
 // of the sections defined in the services exist.
-func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	configuredService := t.getConfiguredContainerService(conf)
 	if configuredService == nil {
 		var keys []string
 		for _, service := range t.services {
 			keys = append(keys, service.Key)
 		}
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: strings.Join(keys, " or ")}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: strings.Join(keys, " or ")}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awscontainerinsightreceiver.Config)
 	intervalKeyChain := []string{

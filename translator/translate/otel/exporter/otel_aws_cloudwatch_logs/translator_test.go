@@ -4,27 +4,24 @@
 package otel_aws_cloudwatch_logs
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/emf_logs"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
-	"go.opentelemetry.io/collector/component"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
 	legacytranslator "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
-	tt := NewTranslator()
-	require.EqualValues(t, "awscloudwatchlogs", tt.Type())
+	tt := NewTranslatorWithName(common.PipelineNameEmfLogs)
+	require.EqualValues(t, "awscloudwatchlogs/emf_logs", tt.ID().String())
 	testCases := map[string]struct {
-		env               map[string]string
-		input             map[string]interface{}
-		translatorOptions common.TranslatorOptions
-		want              awscloudwatchlogsexporter.Config
-		wantErr           error
+		env     map[string]string
+		input   map[string]interface{}
+		want    awscloudwatchlogsexporter.Config
+		wantErr error
 	}{
 		"Emf": {
 			input: map[string]interface{}{
@@ -35,7 +32,6 @@ func TestTranslator(t *testing.T) {
 					"log_stream_name": "same random stream",
 				},
 			},
-			translatorOptions: common.TranslatorOptions{PipelineId: component.NewIDWithName("awscloudwatchlogs", emf_logs.PipelineName)},
 			want: awscloudwatchlogsexporter.Config{
 				LogGroupName:  "emf/logs/default",
 				LogStreamName: "same random stream",
@@ -46,7 +42,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := tt.Translate(conf, testCase.translatorOptions)
+			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			require.Truef(t, legacytranslator.IsTranslateSuccess(), "Error in legacy translation rules: %v", legacytranslator.ErrorMessages)
 			if err == nil {

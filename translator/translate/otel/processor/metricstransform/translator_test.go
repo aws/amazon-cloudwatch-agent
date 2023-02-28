@@ -13,11 +13,9 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
-var nilSlice []metricstransformprocessor.Transform
-
 func TestTranslator(t *testing.T) {
 	mtpTranslator := NewTranslator()
-	require.EqualValues(t, "metricstransform", mtpTranslator.Type())
+	require.EqualValues(t, "metricstransform", mtpTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *metricstransformprocessor.Config
@@ -32,7 +30,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			wantErr: &common.MissingKeyError{
-				Type:    mtpTranslator.Type(),
+				ID:      mtpTranslator.ID(),
 				JsonKey: prometheusKey,
 			},
 		},
@@ -79,7 +77,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := mtpTranslator.Translate(conf, common.TranslatorOptions{})
+			got, err := mtpTranslator.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

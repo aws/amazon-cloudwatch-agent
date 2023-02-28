@@ -6,6 +6,7 @@ package prometheus
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -16,13 +17,12 @@ import (
 
 func TestTranslator(t *testing.T) {
 	type want struct {
-		pipelineType string
-		receivers    []string
-		processors   []string
-		exporters    []string
+		receivers  []string
+		processors []string
+		exporters  []string
 	}
 	cit := NewTranslator()
-	require.EqualValues(t, "prometheus", cit.Type())
+	require.EqualValues(t, "metrics/prometheus", cit.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *want
@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 	}{
 		"WithoutPrometheusKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{Type: cit.Type(), JsonKey: "logs::metrics_collected::prometheus"},
+			wantErr: &common.MissingKeyError{ID: cit.ID(), JsonKey: "logs::metrics_collected::prometheus"},
 		},
 		"WithPrometheusKey": {
 			input: map[string]interface{}{
@@ -41,25 +41,24 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &want{
-				pipelineType: "metrics/prometheus",
-				receivers:    []string{"prometheus/prometheus"},
-				processors:   []string{"batch/prometheus", "resource/prometheus", "metricstransform/prometheus"},
-				exporters:    []string{"awsemf/prometheus"},
+				receivers:  []string{"prometheus/prometheus"},
+				processors: []string{"batch/prometheus", "metricstransform/prometheus", "resource/prometheus"},
+				exporters:  []string{"awsemf/prometheus"},
 			},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := cit.Translate(conf, common.TranslatorOptions{})
-			require.Equal(t, testCase.wantErr, err)
+			got, err := cit.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
 			if testCase.want == nil {
-				require.Nil(t, got)
+				assert.Nil(t, got)
 			} else {
-				require.EqualValues(t, testCase.want.pipelineType, got.Key.String())
-				require.Equal(t, testCase.want.receivers, collections.MapSlice(got.Value.Receivers, toString))
-				require.Equal(t, testCase.want.processors, collections.MapSlice(got.Value.Processors, toString))
-				require.Equal(t, testCase.want.exporters, collections.MapSlice(got.Value.Exporters, toString))
+				require.NotNil(t, got)
+				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.SortedKeys(), toString))
+				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.SortedKeys(), toString))
+				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.SortedKeys(), toString))
 			}
 		})
 	}

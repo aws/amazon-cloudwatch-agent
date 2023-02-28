@@ -8,6 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/service"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -16,31 +17,50 @@ var (
 	ErrNoPipelines = errors.New("no valid pipelines")
 )
 
-type translator struct {
-	translators []common.Translator[common.Pipeline]
+type Translation struct {
+	// Pipelines is a map of component IDs to service pipelines.
+	Pipelines   map[component.ID]*service.ConfigServicePipeline
+	Translators common.ComponentTranslators
 }
 
-var _ common.Translator[common.Pipelines] = (*translator)(nil)
+type translator struct {
+	translators []common.Translator[*common.ComponentTranslators]
+}
 
-func NewTranslator(translators ...common.Translator[common.Pipeline]) common.Translator[common.Pipelines] {
+var _ common.Translator[*Translation] = (*translator)(nil)
+
+func NewTranslator(translators ...common.Translator[*common.ComponentTranslators]) common.Translator[*Translation] {
 	return &translator{translators}
 }
 
-// Type is unused.
-func (t *translator) Type() component.Type {
-	return ""
+func (t *translator) ID() component.ID {
+	return component.NewID("")
 }
 
 // Translate creates the pipeline configuration.
-func (t *translator) Translate(conf *confmap.Conf, any common.TranslatorOptions) (common.Pipelines, error) {
-	pipelines := make(common.Pipelines)
+func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
+	translation := Translation{
+		Pipelines: make(map[component.ID]*service.ConfigServicePipeline),
+		Translators: common.ComponentTranslators{
+			Receivers:  common.NewTranslatorMap[component.Config](),
+			Processors: common.NewTranslatorMap[component.Config](),
+			Exporters:  common.NewTranslatorMap[component.Config](),
+		},
+	}
 	for _, pt := range t.translators {
-		if pipeline, _ := pt.Translate(conf, any); pipeline != nil {
-			pipelines[pipeline.Key] = pipeline.Value
+		if pipeline, _ := pt.Translate(conf); pipeline != nil {
+			translation.Pipelines[pt.ID()] = &service.ConfigServicePipeline{
+				Receivers:  pipeline.Receivers.SortedKeys(),
+				Processors: pipeline.Processors.SortedKeys(),
+				Exporters:  pipeline.Exporters.SortedKeys(),
+			}
+			translation.Translators.Receivers.Merge(pipeline.Receivers)
+			translation.Translators.Processors.Merge(pipeline.Processors)
+			translation.Translators.Exporters.Merge(pipeline.Exporters)
 		}
 	}
-	if len(pipelines) == 0 {
+	if len(translation.Pipelines) == 0 {
 		return nil, ErrNoPipelines
 	}
-	return pipelines, nil
+	return &translation, nil
 }

@@ -17,7 +17,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	etpTranslator := NewTranslator()
-	require.EqualValues(t, "ec2tagger", etpTranslator.Type())
+	require.EqualValues(t, "ec2tagger", etpTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *ec2tagger.Config
@@ -25,7 +25,7 @@ func TestTranslator(t *testing.T) {
 	}{
 		"MissingAppendDimensionsConfig": {
 			wantErr: &common.MissingKeyError{
-				Type:    etpTranslator.Type(),
+				ID:      etpTranslator.ID(),
 				JsonKey: ec2taggerKey,
 			},
 		},
@@ -50,7 +50,7 @@ func TestTranslator(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(tc.input)
-			got, err := etpTranslator.Translate(conf, common.TranslatorOptions{})
+			got, err := etpTranslator.Translate(conf)
 			require.Equal(t, tc.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

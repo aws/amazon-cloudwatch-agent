@@ -6,15 +6,16 @@ package otel_aws_cloudwatch_logs
 import (
 	_ "embed"
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/emf_logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
+
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
 )
 
 //go:embed aws_cloudwatch_logs_default.yaml
@@ -27,28 +28,27 @@ var (
 )
 
 type translator struct {
+	name    string
 	factory exporter.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
-	return &translator{
-		awscloudwatchlogsexporter.NewFactory(),
-	}
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
+	return &translator{name, awscloudwatchlogsexporter.NewFactory()}
 }
 
-func (t *translator) Type() component.Type {
-	return t.factory.Type()
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 // Translate creates an awscloudwatchlogsexporter exporter config based on the input json config
-func (t *translator) Translate(c *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
+func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awscloudwatchlogsexporter.Config)
 
 	var defaultConfig string
 	// Add more else if when otel supports log reading
-	if translatorOptions.PipelineId.Name() == emf_logs.PipelineName && t.isEmf(c) {
+	if t.name == common.PipelineNameEmfLogs && t.isEmf(c) {
 		defaultConfig = defaultAwsCloudwatchLogsDefault
 	} else {
 		return cfg, nil
@@ -66,7 +66,7 @@ func (t *translator) Translate(c *confmap.Conf, translatorOptions common.Transla
 	}
 
 	// Add more else if when otel supports log reading
-	if translatorOptions.PipelineId.Name() == emf_logs.PipelineName && t.isEmf(c) {
+	if t.name == common.PipelineNameEmfLogs && t.isEmf(c) {
 		if err := t.setEmfFields(c, cfg); err != nil {
 			return nil, err
 		}

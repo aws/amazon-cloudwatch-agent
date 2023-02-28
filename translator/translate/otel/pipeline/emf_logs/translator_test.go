@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -23,17 +24,15 @@ func TestTranslator(t *testing.T) {
 		exporters    []string
 	}
 	cit := NewTranslator()
-	require.EqualValues(t, PipelineName, cit.Type())
+	require.EqualValues(t, "logs/emf_logs", cit.ID().String())
 	testCases := map[string]struct {
-		input             map[string]interface{}
-		translatorOptions common.TranslatorOptions
-		want              *want
-		wantErr           error
+		input   map[string]interface{}
+		want    *want
+		wantErr error
 	}{
 		"WithoutEmfKey": {
-			input:             map[string]interface{}{},
-			translatorOptions: common.TranslatorOptions{PipelineId: component.NewID(PipelineName)},
-			wantErr:           &common.MissingKeyError{Type: cit.Type(), JsonKey: fmt.Sprint(key)},
+			input:   map[string]interface{}{},
+			wantErr: &common.MissingKeyError{ID: cit.ID(), JsonKey: fmt.Sprint(key)},
 		},
 		"WithEmfKey": {
 			input: map[string]interface{}{
@@ -43,10 +42,9 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			translatorOptions: common.TranslatorOptions{PipelineId: component.NewID(PipelineName)},
 			want: &want{
 				pipelineType: "logs/emf_logs",
-				receivers:    []string{"udplog/emf_logs", "tcplog/emf_logs"},
+				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
 			},
@@ -61,7 +59,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			translatorOptions: common.TranslatorOptions{PipelineId: component.NewID(PipelineName)},
 			want: &want{
 				pipelineType: "logs/emf_logs",
 				receivers:    []string{"udplog/emf_logs"},
@@ -79,7 +76,6 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			translatorOptions: common.TranslatorOptions{PipelineId: component.NewID(PipelineName)},
 			want: &want{
 				pipelineType: "logs/emf_logs",
 				receivers:    []string{"tcplog/emf_logs"},
@@ -91,15 +87,15 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := cit.Translate(conf, testCase.translatorOptions)
+			got, err := cit.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if testCase.want == nil {
 				require.Nil(t, got)
 			} else {
-				require.EqualValues(t, testCase.want.pipelineType, got.Key.String())
-				require.Equal(t, testCase.want.receivers, collections.MapSlice(got.Value.Receivers, toString))
-				require.Equal(t, testCase.want.processors, collections.MapSlice(got.Value.Processors, toString))
-				require.Equal(t, testCase.want.exporters, collections.MapSlice(got.Value.Exporters, toString))
+				require.NotNil(t, got)
+				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.SortedKeys(), toString))
+				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.SortedKeys(), toString))
+				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.SortedKeys(), toString))
 			}
 		})
 	}

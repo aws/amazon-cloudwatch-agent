@@ -16,7 +16,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	eoTranslator := NewTranslator()
-	require.EqualValues(t, "ecs_observer", eoTranslator.Type())
+	require.EqualValues(t, "ecs_observer", eoTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *ecsobserver.Config
@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &common.MissingKeyError{Type: eoTranslator.Type(), JsonKey: ecsSdBaseKey},
+			wantErr: &common.MissingKeyError{ID: eoTranslator.ID(), JsonKey: ecsSdBaseKey},
 		},
 		"GenerateMetricsTransformProcessorConfigPrometheus": {
 			input: map[string]interface{}{
@@ -134,7 +134,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := eoTranslator.Translate(conf, common.TranslatorOptions{})
+			got, err := eoTranslator.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

@@ -5,18 +5,19 @@ package tcp_logs
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/input/tcp"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
-	"testing"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
 	acit := NewTranslator()
-	require.EqualValues(t, "tcplog", acit.Type())
+	require.EqualValues(t, "tcplog", acit.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *tcplogreceiver.TCPLogConfig
@@ -25,7 +26,7 @@ func TestTranslator(t *testing.T) {
 		"WithoutEmf": {
 			input: map[string]interface{}{},
 			wantErr: &common.MissingKeyError{
-				Type:    acit.Type(),
+				ID:      acit.ID(),
 				JsonKey: fmt.Sprintf("missing %s or tcp service address", baseKey),
 			},
 		},
@@ -74,7 +75,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			wantErr: &common.MissingKeyError{
-				Type:    acit.Type(),
+				ID:      acit.ID(),
 				JsonKey: fmt.Sprintf("missing %s or tcp service address", baseKey),
 			},
 		},
@@ -118,7 +119,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := acit.Translate(conf, common.TranslatorOptions{})
+			got, err := acit.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

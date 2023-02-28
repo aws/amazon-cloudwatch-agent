@@ -16,7 +16,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	cdpTranslator := NewTranslator()
-	require.EqualValues(t, "cumulativetodelta", cdpTranslator.Type())
+	require.EqualValues(t, "cumulativetodelta", cdpTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *cumulativetodeltaprocessor.Config
@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &common.MissingKeyError{Type: cdpTranslator.Type(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey)},
+			wantErr: &common.MissingKeyError{ID: cdpTranslator.ID(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey)},
 		},
 		"GenerateDeltaProcessorConfigWithNet": {
 			input: map[string]interface{}{
@@ -62,7 +62,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := cdpTranslator.Translate(conf, common.TranslatorOptions{})
+			got, err := cdpTranslator.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

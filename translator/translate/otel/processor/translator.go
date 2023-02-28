@@ -11,17 +11,22 @@ import (
 )
 
 type translator struct {
+	name    string
 	factory component.ProcessorFactory
 }
 
 func NewDefaultTranslator(factory component.ProcessorFactory) common.Translator[component.Config] {
-	return &translator{factory}
+	return NewDefaultTranslatorWithName("", factory)
 }
 
-func (t *translator) Translate(*confmap.Conf, common.TranslatorOptions) (component.Config, error) {
+func NewDefaultTranslatorWithName(name string, factory component.ProcessorFactory) common.Translator[component.Config] {
+	return &translator{name, factory}
+}
+
+func (t *translator) Translate(*confmap.Conf) (component.Config, error) {
 	return t.factory.CreateDefaultConfig(), nil
 }
 
-func (t *translator) Type() component.Type {
-	return t.factory.Type()
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }

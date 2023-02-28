@@ -15,6 +15,7 @@ import (
 )
 
 type translator struct {
+	name string
 	// cfgType determines the type set in the config.
 	cfgType component.Type
 	// cfgKey represents the flattened path to the section in the
@@ -30,22 +31,26 @@ var _ common.Translator[component.Config] = (*translator)(nil)
 
 // NewTranslator creates a new adapter receiver translator.
 func NewTranslator(inputName string, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
-	return &translator{adapter.Type(inputName), cfgKey, defaultMetricCollectionInterval}
+	return NewTranslatorWithName("", inputName, cfgKey, defaultMetricCollectionInterval)
 }
 
-func (t *translator) Type() component.Type {
-	return t.cfgType
+func NewTranslatorWithName(name string, inputName string, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
+	return &translator{name, adapter.Type(inputName), cfgKey, defaultMetricCollectionInterval}
+}
+
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.cfgType, t.name)
 }
 
 // Translate creates an adapter receiver config if the section set on
 // the translator exists. Tries to get the collection interval from
 // the section key. Falls back on the agent section if it is not present.
-func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(t.cfgKey) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: t.cfgKey}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: t.cfgKey}
 	}
 	cfg := &adapter.Config{
-		ScraperControllerSettings: scraperhelper.NewDefaultScraperControllerSettings(t.Type()),
+		ScraperControllerSettings: scraperhelper.NewDefaultScraperControllerSettings(t.ID().Type()),
 	}
 	intervalKeyChain := []string{
 		common.ConfigKey(t.cfgKey, common.MetricsCollectionIntervalKey),

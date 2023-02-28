@@ -26,7 +26,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	pt := NewTranslator()
-	require.EqualValues(t, "prometheus", pt.Type())
+	require.EqualValues(t, "prometheus", pt.ID().String())
 	temp := t.TempDir()
 	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
 	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
@@ -39,7 +39,7 @@ func TestTranslator(t *testing.T) {
 		"WithoutPrometheusKey": {
 			input: map[string]interface{}{},
 			wantErr: &common.MissingKeyError{
-				Type:    pt.Type(),
+				ID:      pt.ID(),
 				JsonKey: prometheusKey,
 			},
 		},
@@ -181,7 +181,7 @@ scrape_configs:
 				require.NoError(t, err)
 			}
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := pt.Translate(conf, common.TranslatorOptions{})
+			got, err := pt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

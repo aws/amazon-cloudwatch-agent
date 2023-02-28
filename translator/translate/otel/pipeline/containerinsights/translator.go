@@ -8,10 +8,12 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/service"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
 )
 
 const (
@@ -27,27 +29,25 @@ var (
 type translator struct {
 }
 
-var _ common.Translator[common.Pipeline] = (*translator)(nil)
+var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
-func NewTranslator() common.Translator[common.Pipeline] {
+func NewTranslator() common.Translator[*common.ComponentTranslators] {
 	return &translator{}
 }
 
-func (t *translator) Type() component.Type {
-	return pipelineName
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(component.DataTypeMetrics, pipelineName)
 }
 
 // Translate creates a pipeline for container insights if the logs.metrics_collected.ecs
 // section is present.
-func (t *translator) Translate(conf *confmap.Conf, _ common.TranslatorOptions) (common.Pipeline, error) {
+func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	if conf == nil || (!conf.IsSet(ecsKey) && !conf.IsSet(eksKey)) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
-	id := component.NewIDWithName(component.DataTypeMetrics, pipelineName)
-	pipeline := &service.ConfigServicePipeline{
-		Receivers:  []component.ID{component.NewID("awscontainerinsightreceiver")},
-		Processors: []component.ID{component.NewIDWithName("batch", pipelineName)},
-		Exporters:  []component.ID{component.NewIDWithName("awsemf", pipelineName)},
-	}
-	return collections.NewPair(id, pipeline), nil
+	return &common.ComponentTranslators{
+		Receivers:  common.NewTranslatorMap(awscontainerinsight.NewTranslator()),
+		Processors: common.NewTranslatorMap(processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory())),
+		Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
+	}, nil
 }

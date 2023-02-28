@@ -6,15 +6,18 @@ package udp_logs
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"strings"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
-	"strings"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 type translator struct {
+	name    string
 	factory receiver.Factory
 }
 
@@ -32,13 +35,16 @@ const (
 
 // NewTranslator creates a new udp logs receiver translator.
 func NewTranslator() common.Translator[component.Config] {
-	return &translator{
-		udplogreceiver.NewFactory(),
-	}
+	return NewTranslatorWithName("")
 }
 
-func (t *translator) Type() component.Type {
-	return t.factory.Type()
+// NewTranslatorWithName creates a new udp logs receiver translator.
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
+	return &translator{name, udplogreceiver.NewFactory()}
+}
+
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 // Translate creates an udp logs receiver config if either emf has no service address or is udp service address
@@ -53,10 +59,10 @@ func (t *translator) Type() component.Type {
 // udp://127.0.0.1:25888
 // udp:0.0.0.0:25888
 // udp:localhost:25888
-func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if !conf.IsSet(baseKey) ||
 		(conf.IsSet(common.ConfigKey(serviceAddressKey)) && !strings.Contains(fmt.Sprintf("%v", conf.Get(serviceAddressKey)), common.Udp)) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: fmt.Sprintf("missing %s or udp service address", baseKey)}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprintf("missing %s or udp service address", baseKey)}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*udplogreceiver.UDPLogConfig)
 	if !conf.IsSet(common.ConfigKey(serviceAddressKey)) {

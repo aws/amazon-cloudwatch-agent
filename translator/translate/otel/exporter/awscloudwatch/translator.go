@@ -26,25 +26,30 @@ const (
 )
 
 type translator struct {
+	name    string
 	factory exporter.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator() common.Translator[component.Config] {
-	return &translator{cloudwatch.NewFactory()}
+	return NewTranslatorWithName("")
 }
 
-func (t *translator) Type() component.Type {
-	return t.factory.Type()
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
+	return &translator{name, cloudwatch.NewFactory()}
+}
+
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 // Translate creates an exporter config based on the fields in the
 // metrics section of the JSON config.
 // TODO: remove dependency on global config.
-func (t *translator) Translate(conf *confmap.Conf, _ common.TranslatorOptions) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(common.MetricsKey) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: common.MetricsKey}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.MetricsKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*cloudwatch.Config)
 	credentials := confmap.NewFromStringMap(agent.Global_Config.Credentials)

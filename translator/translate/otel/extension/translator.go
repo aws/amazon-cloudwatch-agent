@@ -22,19 +22,19 @@ func NewTranslator(translators ...common.Translator[component.Config]) common.Tr
 	return &translator{translators}
 }
 
-// Type is unused.
-func (t *translator) Type() component.Type {
-	return ""
+// ID is unused.
+func (t *translator) ID() component.ID {
+	return component.NewID("")
 }
 
 // Translate creates the extension configuration.
-func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (common.Extensions, error) {
+func (t *translator) Translate(conf *confmap.Conf) (common.Extensions, error) {
 	extensions := make(common.Extensions)
 	for _, et := range t.translators {
-		if extension, err := et.Translate(conf, translatorOptions); extension != nil {
-			extensions[extension.ID()] = extension
+		if extension, err := et.Translate(conf); extension != nil {
+			extensions[et.ID()] = extension
 		} else if err != nil {
-			log.Printf("W! ignoring translation of %v due to: %v", et.Type(), err)
+			log.Printf("W! ignoring translation of %v due to: %v", et.ID(), err)
 		}
 	}
 	return extensions, nil

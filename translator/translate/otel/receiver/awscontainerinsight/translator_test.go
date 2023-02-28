@@ -16,7 +16,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	acit := NewTranslator()
-	require.EqualValues(t, "awscontainerinsightreceiver", acit.Type())
+	require.EqualValues(t, "awscontainerinsightreceiver", acit.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *awscontainerinsightreceiver.Config
@@ -25,7 +25,7 @@ func TestTranslator(t *testing.T) {
 		"WithoutECSOrKubernetesKeys": {
 			input: map[string]interface{}{},
 			wantErr: &common.MissingKeyError{
-				Type:    acit.Type(),
+				ID:      acit.ID(),
 				JsonKey: "logs::metrics_collected::ecs or logs::metrics_collected::kubernetes",
 			},
 		},
@@ -113,7 +113,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := acit.Translate(conf, common.TranslatorOptions{})
+			got, err := acit.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

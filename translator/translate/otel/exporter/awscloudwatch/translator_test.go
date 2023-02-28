@@ -22,7 +22,7 @@ func TestTranslator(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
 	cwt := NewTranslator()
-	require.EqualValues(t, "awscloudwatch", cwt.Type())
+	require.EqualValues(t, "awscloudwatch", cwt.ID().String())
 	testCases := map[string]struct {
 		input       map[string]interface{}
 		internal    bool
@@ -33,7 +33,7 @@ func TestTranslator(t *testing.T) {
 		"WithMissingKey": {
 			input: map[string]interface{}{"logs": map[string]interface{}{}},
 			wantErr: &common.MissingKeyError{
-				Type:    cwt.Type(),
+				ID:      cwt.ID(),
 				JsonKey: common.MetricsKey,
 			},
 		},
@@ -130,7 +130,7 @@ func TestTranslator(t *testing.T) {
 			agent.Global_Config.Credentials = testCase.credentials
 
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := cwt.Translate(conf, common.TranslatorOptions{})
+			got, err := cwt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if testCase.want != nil {
 				require.NoError(t, err)

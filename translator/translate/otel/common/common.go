@@ -6,15 +6,14 @@ package common
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/service"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -29,43 +28,41 @@ const (
 	CredentialsKey               = "credentials"
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
-	Json                         = "json"
 	Console                      = "console"
 	DiskIOKey                    = "diskio"
 	NetKey                       = "net"
-	HostPipelineName             = "host"
-	HostDeltaMetricsPipelineName = "hostDeltaMetrics"
 	Emf                          = "emf"
 	ServiceAddress               = "service_address"
 	Udp                          = "udp"
 	Tcp                          = "tcp"
 	Region                       = "region"
 	LogStreamName                = "log_stream_name"
-	EndpointOverride             = "endpoint_override"
+)
+
+const (
+	PipelineNameHost             = "host"
+	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
+	PipelineNameEmfLogs          = "emf_logs"
 )
 
 // Translator is used to translate the JSON config into an
 // OTEL config.
 type Translator[C any] interface {
-	Translate(*confmap.Conf, TranslatorOptions) (C, error)
-	Type() component.Type
-}
-
-type TranslatorOptions struct {
-	PipelineId component.ID
+	Translate(*confmap.Conf) (C, error)
+	ID() component.ID
 }
 
 // TranslatorMap is a map of translators by their types.
-type TranslatorMap[C any] map[component.Type]Translator[C]
+type TranslatorMap[C any] map[component.ID]Translator[C]
 
 // Add is a convenience method to add a translator to the map.
 func (t TranslatorMap[C]) Add(translator Translator[C]) {
-	t[translator.Type()] = translator
+	t[translator.ID()] = translator
 }
 
 // Get is a convenience method to get the translator from the map.
-func (t TranslatorMap[C]) Get(cfgType component.Type) (Translator[C], bool) {
-	translator, ok := t[cfgType]
+func (t TranslatorMap[C]) Get(id component.ID) (Translator[C], bool) {
+	translator, ok := t[id]
 	return translator, ok
 }
 
@@ -74,6 +71,15 @@ func (t TranslatorMap[C]) Merge(m TranslatorMap[C]) {
 	for _, v := range m {
 		t.Add(v)
 	}
+}
+
+// SortedKeys returns the sorted component.ID keys.
+func (t TranslatorMap[C]) SortedKeys() []component.ID {
+	keys := maps.Keys(t)
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].String() < keys[j].String()
+	})
+	return keys
 }
 
 // NewTranslatorMap creates a TranslatorMap from the translators.
@@ -89,28 +95,20 @@ func NewTranslatorMap[C any](translators ...Translator[C]) TranslatorMap[C] {
 // config that does not have a required key. This typically means
 // that the pipeline was configured incorrectly.
 type MissingKeyError struct {
-	Type    component.Type
+	ID      component.ID
 	JsonKey string
 }
 
 func (e *MissingKeyError) Error() string {
-	return fmt.Sprintf("%q missing key in JSON: %q", e.Type, e.JsonKey)
+	return fmt.Sprintf("%q missing key in JSON: %q", e.ID, e.JsonKey)
 }
 
-// Identifiable is an interface that all components configurations MUST embed.
-// Taken straight from OTEL.
-type Identifiable interface {
-	// ID returns the ID of the component that this configuration belongs to.
-	ID() component.ID
-	// SetIDName updates the name part of the ID for the component that this configuration belongs to.
-	SetIDName(idName string)
+// ComponentTranslators is a component ID and respective service pipeline.
+type ComponentTranslators struct {
+	Receivers  TranslatorMap[component.Config]
+	Processors TranslatorMap[component.Config]
+	Exporters  TranslatorMap[component.Config]
 }
-
-// Pipeline is a component ID and respective service pipeline.
-type Pipeline *collections.Pair[component.ID, *service.ConfigServicePipeline]
-
-// Pipelines is a map of component IDs to service pipelines.
-type Pipelines map[component.ID]*service.ConfigServicePipeline
 
 // Extensions is a map of component IDs to service extensions.
 type Extensions map[component.ID]component.Config

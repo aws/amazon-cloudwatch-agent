@@ -21,6 +21,7 @@ import (
 )
 
 type translator struct {
+	name    string
 	factory extension.Factory
 }
 
@@ -32,21 +33,24 @@ var (
 )
 
 func NewTranslator() common.Translator[component.Config] {
-	return &translator{ecsobserver.NewFactory()}
+	return NewTranslatorWithName("")
 }
 
-func (t *translator) Type() component.Type {
-	return t.factory.Type()
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
+	return &translator{name, ecsobserver.NewFactory()}
+}
+
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 // Translate creates an ecs_observer extension config based on the fields in the
 // 'ecs_service_discovery' section within the 'prometheus' section of the JSON config.
-func (t *translator) Translate(conf *confmap.Conf, translatorOptions common.TranslatorOptions) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(ecsSdBaseKey) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: ecsSdBaseKey}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: ecsSdBaseKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*ecsobserver.Config)
-	cfg.SetIDName(common.PrometheusKey)
 
 	_, result := new(ecsservicediscovery.ECSServiceDiscovery).ApplyRule(conf.Get(prometheusBaseKey)) // TODO: remove dependency on rule.
 	c := result.(map[string]interface{})

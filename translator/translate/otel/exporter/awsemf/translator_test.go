@@ -4,7 +4,6 @@
 package awsemf
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
@@ -20,7 +19,7 @@ var nilMetricDescriptorsSlice []awsemfexporter.MetricDescriptor
 
 func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
-	require.EqualValues(t, "awsemf", tt.Type())
+	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
 		env     map[string]string
 		input   map[string]interface{}
@@ -193,7 +192,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := tt.Translate(conf, common.TranslatorOptions{})
+			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			require.Truef(t, legacytranslator.IsTranslateSuccess(), "Error in legacy translation rules: %v", legacytranslator.ErrorMessages)
 			if err == nil {

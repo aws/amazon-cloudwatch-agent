@@ -4,18 +4,17 @@
 package emf_logs
 
 import (
-	"fmt"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/service"
 	"strings"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-)
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
 
-const (
-	PipelineName = "emf_logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/otel_aws_cloudwatch_logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/tcp_logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/udp_logs"
 )
 
 var (
@@ -24,41 +23,41 @@ var (
 )
 
 type translator struct {
+	id component.ID
 }
 
-var _ common.Translator[common.Pipeline] = (*translator)(nil)
+var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
-func NewTranslator() common.Translator[common.Pipeline] {
+func NewTranslator() common.Translator[*common.ComponentTranslators] {
 	return &translator{}
 }
 
-func (t *translator) Type() component.Type {
-	return PipelineName
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(component.DataTypeLogs, common.PipelineNameEmfLogs)
 }
 
 // Translate creates a pipeline for emf if emf logs are collected
 // section is present.
-func (t *translator) Translate(conf *confmap.Conf, _ common.TranslatorOptions) (common.Pipeline, error) {
-	if conf == nil || (!conf.IsSet(key)) {
-		return nil, &common.MissingKeyError{Type: t.Type(), JsonKey: key}
+func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
+	if conf == nil || !conf.IsSet(key) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: key}
 	}
-	id := component.NewIDWithName(component.DataTypeLogs, PipelineName)
-	var com []component.ID
-	if conf.IsSet(serviceAddressKey) {
-		serviceAddress := fmt.Sprintf("%v", conf.Get(serviceAddressKey))
+	translators := common.ComponentTranslators{
+		Receivers:  common.NewTranslatorMap[component.Config](),
+		Processors: common.NewTranslatorMap(processor.NewDefaultTranslatorWithName(common.PipelineNameEmfLogs, batchprocessor.NewFactory())),
+		Exporters:  common.NewTranslatorMap(otel_aws_cloudwatch_logs.NewTranslatorWithName(common.PipelineNameEmfLogs)),
+	}
+	if serviceAddress, ok := common.GetString(conf, serviceAddressKey); ok {
 		if strings.Contains(serviceAddress, common.Udp) {
-			com = []component.ID{component.NewIDWithName("udplog", PipelineName)}
+			translators.Receivers.Add(udp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
 		} else {
-			com = []component.ID{component.NewIDWithName("tcplog", PipelineName)}
+			translators.Receivers.Add(tcp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
 		}
-
 	} else {
-		com = []component.ID{component.NewIDWithName("udplog", PipelineName), component.NewIDWithName("tcplog", PipelineName)}
+		translators.Receivers = common.NewTranslatorMap(
+			udp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs),
+			tcp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs),
+		)
 	}
-	pipeline := &service.ConfigServicePipeline{
-		Receivers:  com,
-		Processors: []component.ID{component.NewIDWithName("batch", PipelineName)},
-		Exporters:  []component.ID{component.NewIDWithName("awscloudwatchlogs", PipelineName)},
-	}
-	return collections.NewPair(id, pipeline), nil
+	return &translators, nil
 }

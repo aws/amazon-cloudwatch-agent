@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
@@ -26,7 +27,7 @@ func TestTranslator(t *testing.T) {
 			input:   map[string]interface{}{},
 			cfgType: "test",
 			cfgKey:  "mem",
-			wantErr: &common.MissingKeyError{Type: "telegraf_test", JsonKey: "mem"},
+			wantErr: &common.MissingKeyError{ID: component.NewID("telegraf_test"), JsonKey: "mem"},
 		},
 		"WithoutIntervalInSection": {
 			input: map[string]interface{}{
@@ -60,13 +61,13 @@ func TestTranslator(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
 			tt := NewTranslator(testCase.cfgType, testCase.cfgKey, time.Minute)
-			got, err := tt.Translate(conf, common.TranslatorOptions{})
+			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*adapter.Config)
 				require.True(t, ok)
-				require.Equal(t, adapter.Type(testCase.cfgType), gotCfg.ID().Type())
+				require.Equal(t, adapter.Type(testCase.cfgType), tt.ID().Type())
 				require.Equal(t, testCase.wantInterval, gotCfg.CollectionInterval)
 			}
 		})

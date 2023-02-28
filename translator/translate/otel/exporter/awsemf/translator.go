@@ -31,21 +31,26 @@ var (
 )
 
 type translator struct {
+	name    string
 	factory exporter.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator() common.Translator[component.Config] {
-	return &translator{awsemfexporter.NewFactory()}
+	return NewTranslatorWithName("")
 }
 
-func (t *translator) Type() component.Type {
-	return t.factory.Type()
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
+	return &translator{name, awsemfexporter.NewFactory()}
+}
+
+func (t *translator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 // Translate creates an awsemf exporter config based on the input json config
-func (t *translator) Translate(c *confmap.Conf, _ common.TranslatorOptions) (component.Config, error) {
+func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 
 	var defaultConfig string
@@ -100,11 +105,11 @@ func (t *translator) isPrometheus(conf *confmap.Conf) bool {
 	return conf.IsSet(prometheusBasePathKey)
 }
 
-func (t *translator) setEcsFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+func (t *translator) setEcsFields(_ *confmap.Conf, _ *awsemfexporter.Config) error {
 	return nil
 }
 
-func (t *translator) setEksFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+func (t *translator) setEksFields(_ *confmap.Conf, _ *awsemfexporter.Config) error {
 	return nil
 }
 

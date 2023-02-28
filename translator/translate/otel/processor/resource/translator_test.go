@@ -15,7 +15,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	rpTranslator := NewTranslator()
-	require.EqualValues(t, "resource", rpTranslator.Type())
+	require.EqualValues(t, "resource", rpTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    []map[string]interface{} // Can't construct & use resourceprocessor.Config as it uses internal only types
@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			wantErr: &common.MissingKeyError{
-				Type:    rpTranslator.Type(),
+				ID:      rpTranslator.ID(),
 				JsonKey: prometheusKey,
 			},
 		},
@@ -216,7 +216,7 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := rpTranslator.Translate(conf, common.TranslatorOptions{})
+			got, err := rpTranslator.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)

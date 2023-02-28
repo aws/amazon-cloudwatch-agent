@@ -19,12 +19,12 @@ type testTranslator struct {
 
 var _ Translator[int] = (*testTranslator)(nil)
 
-func (t testTranslator) Translate(_ *confmap.Conf, _ TranslatorOptions) (int, error) {
+func (t testTranslator) Translate(_ *confmap.Conf) (int, error) {
 	return t.result, nil
 }
 
-func (t testTranslator) Type() component.Type {
-	return t.cfgType
+func (t testTranslator) ID() component.ID {
+	return component.NewID(t.cfgType)
 }
 
 func TestConfigKeys(t *testing.T) {
@@ -107,23 +107,24 @@ func TestParseDuration(t *testing.T) {
 func TestTranslatorMap(t *testing.T) {
 	got := NewTranslatorMap[int](&testTranslator{"test", 0}, &testTranslator{"other", 1})
 	require.Len(t, got, 2)
-	translator, ok := got.Get("test")
+	translator, ok := got.Get(component.NewID("test"))
 	require.True(t, ok)
-	result, err := translator.Translate(nil, TranslatorOptions{})
+	result, err := translator.Translate(nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, result)
 	other := NewTranslatorMap[int](&testTranslator{"test", 2})
 	got.Merge(other)
 	require.Len(t, got, 2)
-	translator, ok = got.Get("test")
+	translator, ok = got.Get(component.NewID("test"))
 	require.True(t, ok)
-	result, err = translator.Translate(nil, TranslatorOptions{})
+	result, err = translator.Translate(nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, result)
+	require.Equal(t, []component.ID{component.NewID("other"), component.NewID("test")}, got.SortedKeys())
 }
 
 func TestMissingKeyError(t *testing.T) {
-	err := &MissingKeyError{Type: "type", JsonKey: "key"}
+	err := &MissingKeyError{ID: component.NewID("type"), JsonKey: "key"}
 	require.Equal(t, "\"type\" missing key in JSON: \"key\"", err.Error())
 }
 

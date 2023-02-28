@@ -119,7 +119,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 			require.Equal(t, testCase.wantErr, err)
 			require.Equal(t, len(testCase.want), len(got))
 			for wantKey, wantValue := range testCase.want {
-				gotTranslator, ok := got.Get(wantKey)
+				gotTranslator, ok := got.Get(component.NewID(wantKey))
 				require.True(t, ok)
 				gotAdapterTranslator, ok := gotTranslator.(*translator)
 				require.True(t, ok)
