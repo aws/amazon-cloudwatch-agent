@@ -6,6 +6,7 @@ package cloudwatch
 import (
 	"log"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -15,20 +16,15 @@ import (
 	cloudwatchutil "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/cloudwatch"
 )
 
-// ConvertOtelDimensions will return a list of lists. Without dimension
-// rollup there will be just 1 list containing 1 list of all the dimensions.
-// With dimension rollup there will be 1 list containing many lists.
-func (c *CloudWatch) ConvertOtelDimensions(
-	attributes pcommon.Map,
-) [][]*cloudwatch.Dimension {
+// ConvertOtelDimensions will returns a sorted list of dimensions.
+func ConvertOtelDimensions(attributes pcommon.Map) []*cloudwatch.Dimension {
 	// Loop through map, similar to EMF exporter createLabels().
 	mTags := make(map[string]string, attributes.Len())
 	attributes.Range(func(k string, v pcommon.Value) bool {
 		mTags[k] = v.AsString()
 		return true
 	})
-	dimensions := BuildDimensions(mTags)
-	return c.ProcessRollup(dimensions)
+	return BuildDimensions(mTags)
 }
 
 // NumberDataPointValue converts to float64 since that is what AWS SDK will use.
@@ -42,54 +38,65 @@ func NumberDataPointValue(dp pmetric.NumberDataPoint) float64 {
 	return 0
 }
 
-// checkHighResolution removes the special dimension/tag/attribute.
-// Return true if it was present and set to "true".
-// This may change depending on how receivers are implemented.
-// Is there a better way to pass the CollectionInterval of each metric
-// to ths exporter? For now, do it like it was done for Telegraf metrics.
-func checkHighResolution(attributes pcommon.Map) bool {
-	r := false
+// checkHighResolution removes the special attribute.
+// Return 1 if it was present and set to "true". Else return 60.
+func checkHighResolution(attributes *pcommon.Map) int64 {
+	var resolution int64 = 60
 	v, ok := attributes.Get(highResolutionTagKey)
 	if ok {
 		if strings.EqualFold(v.AsString(), "true") {
-			r = true
+			resolution = 1
 		}
 		attributes.Remove(highResolutionTagKey)
 	}
-	return r
+	return resolution
+}
+
+// getAggregationInterval removes this special dimension and returns its value.
+func getAggregationInterval(attributes *pcommon.Map) time.Duration {
+	var interval time.Duration
+	v, ok := attributes.Get(aggregationIntervalTagKey)
+	if !ok {
+		return interval
+	}
+	s := v.AsString()
+	interval, err := time.ParseDuration(s)
+	if err != nil {
+		log.Printf("W! cannot parse aggregation interval, %s", s)
+	}
+	attributes.Remove(aggregationIntervalTagKey)
+	return interval
 }
 
 // ConvertOtelNumberDataPoints converts each datapoint in the given slice to
 // 1 or more MetricDatums and returns them.
 func (c *CloudWatch) ConvertOtelNumberDataPoints(
-	dps pmetric.NumberDataPointSlice,
+	dataPoints pmetric.NumberDataPointSlice,
 	name string,
 	unit string,
 	scale float64,
-) []*cloudwatch.MetricDatum {
+) []*aggregationDatum {
 	// Could make() with attrs.Len() * len(c.RollupDimensions).
-	datums := make([]*cloudwatch.MetricDatum, 0, dps.Len())
-	for i := 0; i < dps.Len(); i++ {
-		dp := dps.At(i)
+	datums := make([]*aggregationDatum, 0, dataPoints.Len())
+	for i := 0; i < dataPoints.Len(); i++ {
+		dp := dataPoints.At(i)
 		attrs := dp.Attributes()
-		isHighResolution := checkHighResolution(attrs)
-		rolledDims := c.ConvertOtelDimensions(attrs)
+		storageResolution := checkHighResolution(&attrs)
+		aggregationInterval := getAggregationInterval(&attrs)
+		dimensions := ConvertOtelDimensions(attrs)
 		value := NumberDataPointValue(dp) * scale
-		// Each datapoint may become many datums due to dimension roll up.
-		for _, dims := range rolledDims {
-			// todo: IsDropping()
-			md := cloudwatch.MetricDatum{
-				Dimensions: dims,
-				MetricName: aws.String(name),
-				Unit:       aws.String(unit),
-				Timestamp:  aws.Time(dp.Timestamp().AsTime()),
-				Value:      aws.Float64(value),
-			}
-			if isHighResolution {
-				md.SetStorageResolution(1)
-			}
-			datums = append(datums, &md)
+		ad := aggregationDatum{
+			MetricDatum: cloudwatch.MetricDatum{
+				Dimensions:        dimensions,
+				MetricName:        aws.String(name),
+				Unit:              aws.String(unit),
+				Timestamp:         aws.Time(dp.Timestamp().AsTime()),
+				Value:             aws.Float64(value),
+				StorageResolution: aws.Int64(storageResolution),
+			},
+			aggregationInterval: aggregationInterval,
 		}
+		datums = append(datums, &ad)
 	}
 	return datums
 }
@@ -98,7 +105,7 @@ func (c *CloudWatch) ConvertOtelNumberDataPoints(
 // metric and returns it. Only supports the metric DataTypes that we plan to use.
 // Intentionally not caching previous values and converting cumulative to delta.
 // Instead use cumulativetodeltaprocessor which supports monotonic cumulative sums.
-func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*cloudwatch.MetricDatum {
+func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*aggregationDatum {
 	name := m.Name()
 	unit, scale, err := cloudwatchutil.ToStandardUnit(m.Unit())
 	if err != nil {
@@ -112,16 +119,15 @@ func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*cloudwatch.MetricDat
 	default:
 		log.Printf("E! cloudwatch: Unsupported type, %s", m.Type())
 	}
-	return []*cloudwatch.MetricDatum{}
+	return []*aggregationDatum{}
 }
 
 // ConvertOtelMetrics only uses dimensions/attributes on each "datapoint",
 // not each "Resource".
 // This is acceptable because ResourceToTelemetrySettings defaults to true.
-func (c *CloudWatch) ConvertOtelMetrics(m pmetric.Metrics) []*cloudwatch.MetricDatum {
-	datums := make([]*cloudwatch.MetricDatum, 0, m.DataPointCount())
-	// Metrics -> ResourceMetrics -> ScopeMetrics -> Metrics -> DataPoints
-	// ^^ "Metric" is in there twice... confusing...
+func (c *CloudWatch) ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
+	datums := make([]*aggregationDatum, 0, m.DataPointCount())
+	// Metrics -> ResourceMetrics -> ScopeMetrics -> MetricSlice -> DataPoints
 	resourceMetrics := m.ResourceMetrics()
 	for i := 0; i < resourceMetrics.Len(); i++ {
 		scopeMetrics := resourceMetrics.At(i).ScopeMetrics()
@@ -134,6 +140,5 @@ func (c *CloudWatch) ConvertOtelMetrics(m pmetric.Metrics) []*cloudwatch.MetricD
 			}
 		}
 	}
-
 	return datums
 }

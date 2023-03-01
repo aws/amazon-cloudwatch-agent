@@ -106,7 +106,7 @@ func TestConvertOtelMetrics_NoDimensions(t *testing.T) {
 		// Verify dimensions per metric.
 		for _, d := range datums {
 			assert.Equal(t, 0, len(d.Dimensions))
-			checkDatum(t, d, "None")
+			checkDatum(t, &d.MetricDatum, "None")
 		}
 	}
 }
@@ -130,7 +130,7 @@ func TestConvertOtelMetrics_Dimensions(t *testing.T) {
 				expected = 30
 			}
 			assert.Equal(t, expected, len(d.Dimensions))
-			checkDatum(t, d, "Seconds")
+			checkDatum(t, &d.MetricDatum, "Seconds")
 		}
 	}
 }

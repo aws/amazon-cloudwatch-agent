@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -28,6 +29,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 )
 
 const (
@@ -56,15 +58,18 @@ type CloudWatch struct {
 	// todo: may want to increase the size of the chan since the type changed.
 	// 1 telegraf Metric could have many Fields.
 	// Each field corresponds to a MetricDatum.
-	metricChan            chan *cloudwatch.MetricDatum
-	datumBatchChan        chan []*cloudwatch.MetricDatum
-	metricDatumBatch      *MetricDatumBatch
-	shutdownChan          chan struct{}
-	metricDecorations     *MetricDecorations
-	retries               int
-	publisher             *publisher.Publisher
-	retryer               *retryer.LogThrottleRetryer
-	droppingOriginMetrics map[string]map[string]struct{}
+	metricChan             chan *aggregationDatum
+	datumBatchChan         chan []*cloudwatch.MetricDatum
+	metricDatumBatch       *MetricDatumBatch
+	shutdownChan           chan struct{}
+	metricDecorations      *MetricDecorations
+	retries                int
+	publisher              *publisher.Publisher
+	retryer                *retryer.LogThrottleRetryer
+	droppingOriginMetrics  map[string]map[string]struct{}
+	aggregator             Aggregator
+	aggregatorShutdownChan chan struct{}
+	aggregatorWaitGroup    sync.WaitGroup
 }
 
 // Compile time interface check.
@@ -118,9 +123,11 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 }
 
 func (c *CloudWatch) startRoutines() {
-	c.metricChan = make(chan *cloudwatch.MetricDatum, metricChanBufferSize)
+	c.metricChan = make(chan *aggregationDatum, metricChanBufferSize)
 	c.datumBatchChan = make(chan []*cloudwatch.MetricDatum, datumBatchChanBufferSize)
 	c.shutdownChan = make(chan struct{})
+	c.aggregatorShutdownChan = make(chan struct{})
+	c.aggregator = NewAggregator(c.metricChan, c.aggregatorShutdownChan, &c.aggregatorWaitGroup)
 	setNewDistributionFunc(c.config.MaxValuesPerDatum)
 	perRequestConstSize := overallConstPerRequestSize + len(c.config.Namespace) + namespaceOverheads
 	c.metricDatumBatch = newMetricDatumBatch(c.config.MaxDatumsPerCall, perRequestConstSize)
@@ -154,7 +161,7 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
 	datums := c.ConvertOtelMetrics(metrics)
 	for _, d := range datums {
-		c.metricChan <- d
+		c.aggregator.AddMetric(d)
 	}
 	return nil
 }
@@ -167,13 +174,17 @@ func (c *CloudWatch) pushMetricDatum() {
 	defer ticker.Stop()
 	for {
 		select {
-		case datum := <-c.metricChan:
-			c.metricDatumBatch.Partition = append(c.metricDatumBatch.Partition,
-				datum)
-			c.metricDatumBatch.Size += payload(datum)
-			if c.metricDatumBatch.isFull() {
-				c.datumBatchChan <- c.metricDatumBatch.Partition
-				c.metricDatumBatch.clear()
+		case metric := <-c.metricChan:
+			datums := c.BuildMetricDatum(metric)
+			numberOfPartitions := len(datums)
+			for i := 0; i < numberOfPartitions; i++ {
+				c.metricDatumBatch.Partition = append(c.metricDatumBatch.Partition, datums[i])
+				c.metricDatumBatch.Size += payload(datums[i])
+				if c.metricDatumBatch.isFull() {
+					// if batch is full
+					c.datumBatchChan <- c.metricDatumBatch.Partition
+					c.metricDatumBatch.clear()
+				}
 			}
 		case <-ticker.C:
 			if c.timeToPublish(c.metricDatumBatch) {
@@ -237,7 +248,7 @@ func getFirstPushMs(interval time.Duration) int64 {
 
 // publish loops until a shutdown occurs.
 // It periodically tries pushing batches of metrics (if there are any).
-// If thet batch buffer fills up the interval will be gradually reduced to avoid
+// If the batch buffer fills up the interval will be gradually reduced to avoid
 // many agents bursting the backend.
 func (c *CloudWatch) publish() {
 	currentInterval := c.config.ForceFlushInterval
@@ -386,6 +397,67 @@ func (c *CloudWatch) decorateMetricUnit(category string, name string) (decorated
 		decoratedUnit = c.metricDecorations.getUnit(category, name)
 	}
 	return
+}
+
+// BuildMetricDatum may just return the datum as-is.
+// Or it might expand it into many datums due to dimension aggregation.
+// There may also be more datums due to resize() on a distribution.
+func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.MetricDatum {
+	// todo: first decorate metric name
+
+	var datums []*cloudwatch.MetricDatum
+	var distList []distribution.Distribution
+
+	if metric.distribution != nil {
+		if metric.distribution.Size() == 0 {
+			log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
+			return datums
+		}
+		metric.SetUnit(metric.distribution.Unit())
+		distList = resize(metric.distribution, c.config.MaxValuesPerDatum)
+	}
+
+	dimensionsList := c.ProcessRollup(metric.Dimensions)
+	for _, dimensions := range dimensionsList {
+		// todo: IsDropping()
+
+		if len(distList) == 0 {
+			// Not a distribution.
+			datum := &cloudwatch.MetricDatum{
+				MetricName:        metric.MetricName,
+				Dimensions:        dimensions,
+				Timestamp:         metric.Timestamp,
+				Unit:              metric.Unit,
+				StorageResolution: metric.StorageResolution,
+				Value:             metric.Value,
+			}
+			datums = append(datums, datum)
+		} else {
+			for _, dist := range distList {
+				values, counts := dist.ValuesAndCounts()
+				s := cloudwatch.StatisticSet{}
+				s.SetMaximum(dist.Maximum())
+				s.SetMinimum(dist.Minimum())
+				s.SetSampleCount(dist.SampleCount())
+				s.SetSum(dist.Sum())
+				// Beware there may be many datums sharing pointers to the same
+				// strings for metric names, dimensions, etc.
+				// It is fine since at this point the values will not change.
+				datum := &cloudwatch.MetricDatum{
+					MetricName:        metric.MetricName,
+					Dimensions:        dimensions,
+					Timestamp:         metric.Timestamp,
+					Unit:              metric.Unit,
+					StorageResolution: metric.StorageResolution,
+					Values:            aws.Float64Slice(values),
+					Counts:            aws.Float64Slice(counts),
+					StatisticValues:   &s,
+				}
+				datums = append(datums, datum)
+			}
+		}
+	}
+	return datums
 }
 
 // sortedTagKeys returns a sorted list of keys in the map.
