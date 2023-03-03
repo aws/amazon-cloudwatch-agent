@@ -26,6 +26,24 @@ jobs:
 
       - name: Clean old ami
         run: go run ./tool/clean/clean_ami/clean_ami.go --tags=clean
+
+  clean-old-file-systems:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old file system
+        run: go run ./tool/clean/clean_file_system/clean_file_system.go --tags=clean
   
   clean-opensource-dedicated-hosts:
     runs-on: ubuntu-latest
