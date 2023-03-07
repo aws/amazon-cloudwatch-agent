@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 	"log"
 	"time"
 
@@ -18,9 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	smithyTime "github.com/aws/smithy-go/time"
 )
-
-const daysToKeep = 60
-const keepDuration = -1 * time.Hour * 24 * time.Duration(daysToKeep)
 
 func main() {
 	err := cleanAMI()
@@ -32,7 +30,7 @@ func main() {
 func cleanAMI() error {
 	log.Print("Begin to clean EC2 AMI")
 
-	expirationDate := time.Now().UTC().Add(keepDuration)
+	expirationDate := time.Now().UTC().Add(clean.KeepDurationSixtyDay)
 	cxt := context.Background()
 	defaultConfig, err := config.LoadDefaultConfig(cxt)
 	if err != nil {
