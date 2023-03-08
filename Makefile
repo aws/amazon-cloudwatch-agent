@@ -4,6 +4,7 @@ export BUILD_SPACE=$(BASE_SPACE)/build
 VERSION = $(shell echo `git describe --tag --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
 VERSION := $(shell echo ${VERSION} | sed -e "s/^v//")
 nightly-release: VERSION := $(shell echo ${VERSION}-nightly-build)
+nightly-release-mac: VERSION := $(shell echo ${VERSION}-nightly-build)
 # In case building outside of a git repo, use the version presented in the CWAGENT_VERSION file as a fallback
 ifeq ($(VERSION),)
 VERSION := `cat CWAGENT_VERSION`
@@ -36,9 +37,11 @@ GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
-release: clean test build package-rpm package-deb package-win package-darwin
 
-nightly-release: release
+prepackage: clean test build
+release: prepackage package-rpm package-deb package-win package-darwin
+nightly-release: prepackage package-rpm package-deb package-win
+nightly-release-mac: prepackage package-darwin
 
 build: check_secrets amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
 
@@ -125,8 +128,7 @@ lint: install-tools
 	${LINTER} run ./...
 
 test:
-	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
-
+	CGO_ENABLED=0 go test -timeout 15m -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
 clean::
 	rm -rf release/ build/
 	rm -f CWAGENT_VERSION
