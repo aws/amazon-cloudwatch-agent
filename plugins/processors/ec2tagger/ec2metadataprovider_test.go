@@ -5,6 +5,7 @@ package ec2tagger
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 
@@ -52,6 +53,15 @@ func TestMetadataProvider_available(t *testing.T) {
 			want: nil,
 		},
 	}
+
+	// For build environments where IMDS is disabled via environment variable, explicitly re-enable it.  Otherwise the
+	// call to c.InstanceId() fails before even contacting the mock session.
+	// See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html#envvars-list-AWS_EC2_METADATA_DISABLED
+	const awsEc2MetadataDisabledEnvVar = "AWS_EC2_METADATA_DISABLED"
+	val := os.Getenv(awsEc2MetadataDisabledEnvVar)
+	defer func() { assert.NoError(t, os.Setenv(awsEc2MetadataDisabledEnvVar, val)) }()
+	assert.NoError(t, os.Setenv(awsEc2MetadataDisabledEnvVar, "false"))
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			c := NewMetadataProvider(tc.sess)
