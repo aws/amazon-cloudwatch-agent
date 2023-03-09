@@ -85,7 +85,7 @@ jobs:
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: make build package-rpm package-deb package-win package-darwin
+        run: make build package-rpm package-deb package-win
 
       - name: Sign Build Files
         run: for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
@@ -228,15 +228,19 @@ jobs:
 
   MakeMacPkg:
     name: 'MakeMacPkg'
-    runs-on: macos-latest
-    needs: [MakeBinary]
+    runs-on: macos-11
     permissions:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          path: cwa
+          fetch-depth: 0
+      - uses: actions/checkout@v3
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          path: test
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
@@ -256,19 +260,27 @@ jobs:
           key: "cached_pkg_${{ github.sha }}"
           path: go.mod
 
+      - name: Build Binaries
+        if: steps.cached_pkg.outputs.cache-hit != 'true'
+        working-directory: cwa
+        run: make build package-darwin
+
       - name: Copy binary
         if: steps.cached_pkg.outputs.cache-hit != 'true'
-        run: |
-          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} . --recursive
-      - name: Create pkg dep folder and copy deps
-        if: steps.cached_pkg.outputs.cache-hit != 'true'
+        working-directory: cwa
         run: |
           echo cw agent version $(cat CWAGENT_VERSION)
-          cp CWAGENT_VERSION /tmp/CWAGENT_VERSION
+          cp -r build/bin/darwin/amd64/. /tmp/
+          cp -r build/bin/darwin/arm64/. /tmp/arm64/
+          cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION
+
+      - name: Create pkg dep folder and copy deps
+        if: steps.cached_pkg.outputs.cache-hit != 'true'
+        working-directory: test
+        run: |
           cp -r pkg/tools/. /tmp/
           cp -r pkg/tools/. /tmp/arm64/
-          cp -r darwin/amd64/. /tmp/
-          cp -r darwin/arm64/. /tmp/arm64/
+
       - name: Build And Upload PKG
         if: steps.cached_pkg.outputs.cache-hit != 'true'
         working-directory: /tmp/
@@ -278,6 +290,7 @@ jobs:
           ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }} ${{ github.sha }} amd64
           cd arm64
           ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }} ${{ github.sha }} arm64
+
   BuildMSI:
     name: 'BuildMSI'
     runs-on: windows-latest
