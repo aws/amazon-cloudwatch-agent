@@ -55,10 +55,11 @@ require (
 	github.com/Jeffail/gabs v1.4.0
 	github.com/Rican7/retry v0.1.1-0.20160712041035-272ad122d6e5
 	github.com/aws/aws-sdk-go v1.44.106
-	github.com/aws/aws-sdk-go-v2 v1.16.13
+	github.com/aws/aws-sdk-go-v2 v1.17.5
 	github.com/aws/aws-sdk-go-v2/config v1.15.3
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
-	github.com/aws/smithy-go v1.13.1
+	github.com/aws/aws-sdk-go-v2/service/efs v1.19.7
+	github.com/aws/smithy-go v1.13.5
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
 	github.com/go-kit/kit v0.11.0
 	github.com/gobwas/glob v0.2.3
@@ -120,8 +121,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.11.2 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.3 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.9 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.29 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.23 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.3 // indirect
