@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
@@ -66,7 +66,7 @@ type CloudWatch struct {
 	retries                int
 	publisher              *publisher.Publisher
 	retryer                *retryer.LogThrottleRetryer
-	droppingOriginMetrics  map[string]map[string]struct{}
+	droppingOriginMetrics  collections.Set[string]
 	aggregator             Aggregator
 	aggregatorShutdownChan chan struct{}
 	aggregatorWaitGroup    sync.WaitGroup
@@ -115,7 +115,7 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	//Construct map for metrics that dropping origin
-	c.droppingOriginMetrics = GetDroppingDimensionMap(c.config.DropOriginConfigs)
+	c.droppingOriginMetrics = c.GetDroppingDimensionMap()
 	c.svc = svc
 	c.retryer = logThrottleRetryer
 	c.startRoutines()
@@ -418,9 +418,12 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 	}
 
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
-	for _, dimensions := range dimensionsList {
-		// todo: IsDropping()
-
+	for index, dimensions := range dimensionsList {
+		//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
+		//metric datum
+		if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
+			continue
+		}
 		if len(distList) == 0 {
 			// Not a distribution.
 			datum := &cloudwatch.MetricDatum{
@@ -560,26 +563,44 @@ func GetUniqueRollupList(inputLists [][]string) [][]string {
 	return uniqueLists
 }
 
-func (c *CloudWatch) IsDropping(metricName string, dimensionName string) bool {
-	if droppingDimensions, ok := c.droppingOriginMetrics[metricName]; ok {
-		if _, droppingAll := droppingDimensions[dropOriginalWildcard]; droppingAll {
-			return true
-		}
-		_, dropping := droppingDimensions[dimensionName]
+func (c *CloudWatch) IsDropping(metricName string) bool {
+	// Check if any metrics are provided in drop_original_metrics
+	if len(c.droppingOriginMetrics) == 0  {
+		return false
+	}
+	if dropping := c.droppingOriginMetrics.Contains(metricName); dropping {
 		return dropping
 	}
+	separator := "_"
+	if runtime.GOOS == "windows" {
+		separator = " "
+	}
+	// Breakdown metricName to check if drop original specified only for category name (*)
+	unDecoratedMetrics := strings.Split(metricName, separator)
+	for index := range unDecoratedMetrics {
+		category := strings.Join(unDecoratedMetrics[:index], separator)
+		if dropping := c.droppingOriginMetrics.Contains(category); dropping {
+			return dropping
+		}
+	}
+
 	return false
 }
 
-func GetDroppingDimensionMap(input map[string][]string) map[string]map[string]struct{} {
-	result := make(map[string]map[string]struct{})
-	for k, v := range input {
-		result[k] = make(map[string]struct{})
-		for _, dimension := range v {
-			result[k][dimension] = struct{}{}
+func (c *CloudWatch) GetDroppingDimensionMap() collections.Set[string] {
+	droppingMetrics := collections.NewSet[string]()
+	for category, fields := range c.config.DropOriginConfigs {
+		for index, field := range fields {
+			if index == 0 && dropOriginalWildcard == field {
+				droppingMetrics.Add(category)
+			} else {
+				decoratedName := c.decorateMetricName(category, field)
+				droppingMetrics.Add(decoratedName)
+
+			}
 		}
 	}
-	return result
+	return droppingMetrics
 }
 
 func (c *CloudWatch) SampleConfig() string {

@@ -66,7 +66,7 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, 7, c2.MaxDatumsPerCall)
 	assert.Equal(t, 9, c2.MaxValuesPerDatum)
 	assert.Equal(t, 60*time.Second, c2.ForceFlushInterval)
-	// todo: verify MetricDecorations, DropOriginConfigs
+	// todo: verify MetricDecorations
 }
 
 func TestConfigRollupDimensions(t *testing.T) {
@@ -89,4 +89,28 @@ func TestConfigRollupDimensions(t *testing.T) {
 	assert.Empty(t, dims[1])
 	assert.Len(t, dims[0], 2)
 	assert.Equal(t, []string{"foo", "bar"}, dims[0])
+}
+
+func TestConfigDropOriginConfigs(t *testing.T) {
+	factories, err := componenttest.NopFactories()
+	assert.NoError(t, err)
+	factory := NewFactory()
+	factories.Exporters[TypeStr] = factory
+
+	fp := filepath.Join("testdata", "drop_original.yaml")
+	c, err := otelcoltest.LoadConfigAndValidate(fp, factories)
+	assert.NoError(t, err)
+
+	assert.NotNil(t, c)
+	assert.Equal(t, 1, len(c.Exporters))
+	c2, ok := c.Exporters[component.NewID(TypeStr)].(*Config)
+	assert.True(t, ok)
+	drop := c2.DropOriginConfigs
+	assert.NotEmpty(t, drop)
+	assert.Len(t, drop, 2)
+	assert.NotNil(t, drop["cpu"])
+	assert.Equal(t, []string{"time", "usage"}, drop["cpu"])
+	assert.NotNil(t, drop["foo"])
+	assert.Nil(t, drop["bar"])
+	assert.Equal(t, []string{"bar"}, drop["foo"])
 }
