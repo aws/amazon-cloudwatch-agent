@@ -162,6 +162,16 @@ func GetString(conf *confmap.Conf, key string) (string, bool) {
 	return "", false
 }
 
+// GetArray gets the array value for the key. If the key is missing,
+// the return value will be nil
+func GetArray[C any](conf *confmap.Conf, key string) []C {
+	if value := conf.Get(key); value != nil {
+		got, _ := value.([]C)
+		return got
+	}
+	return nil
+}
+
 // GetBool gets the bool value for the key. If the key is missing, or the
 // value is not a bool type then ok will be false.
 func GetBool(conf *confmap.Conf, key string) (value bool, ok bool) {

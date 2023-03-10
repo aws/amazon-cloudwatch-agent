@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/hash"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -30,16 +31,22 @@ type translator struct {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 // NewTranslator creates a new adapter receiver translator.
-func NewTranslator(inputName string, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
+func NewTranslator(inputName, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
 	return NewTranslatorWithName("", inputName, cfgKey, defaultMetricCollectionInterval)
 }
 
-func NewTranslatorWithName(name string, inputName string, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
+func NewTranslatorWithName(name, inputName, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
 	return &translator{name, adapter.Type(inputName), cfgKey, defaultMetricCollectionInterval}
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.cfgType, t.name)
+	// There are two telegraf input:
+	// * Single input which create single receiver (e.g cpu, mem)
+	// * Single input which create multiple receivers (e.g procstat, wind_perf_counters)
+	// For the former one, we will create an empty hash while the later one
+	// will be hash (e.g procstat can monitor pid file which will create
+	// a complexity receiver name if using non-hash)
+	return component.NewIDWithName(t.cfgType, hash.HashName(t.name))
 }
 
 // Translate creates an adapter receiver config if the section set on
@@ -52,10 +59,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := &adapter.Config{
 		ScraperControllerSettings: scraperhelper.NewDefaultScraperControllerSettings(t.ID().Type()),
 	}
+
 	intervalKeyChain := []string{
 		common.ConfigKey(t.cfgKey, common.MetricsCollectionIntervalKey),
 		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
+
+	cfg.AliasName = t.name
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, t.defaultMetricCollectionInterval)
 	return cfg, nil
 }

@@ -10,6 +10,9 @@ import (
 
 type Config struct {
 	scraperhelper.ScraperControllerSettings `mapstructure:",squash"`
+
+	// The different name of the plugin, share the similar structure with https://github.com/influxdata/telegraf/pull/6207
+	AliasName string `mapstructure:"alias_name,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)

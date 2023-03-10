@@ -18,8 +18,27 @@ processors:
             - InstanceType
         refresh_interval_seconds: 0s
 receivers:
-    telegraf_win_perf_counters:
-        collection_interval: 1m0s
+    telegraf_win_perf_counters/1492679118:
+        alias_name         : Memory
+        collection_interval: 1s
+    telegraf_win_perf_counters/2039663244:
+        alias_name         : TCPv6
+        collection_interval: 1s
+    telegraf_win_perf_counters/2073218482:
+        alias_name         : TCPv4
+        collection_interval: 1s
+    telegraf_win_perf_counters/3446270237:
+        alias_name         : PhysicalDisk
+        collection_interval: 1s
+    telegraf_win_perf_counters/3610923661:
+        alias_name         : Paging File
+        collection_interval: 1s
+    telegraf_win_perf_counters/3762679655:
+        alias_name         : Processor
+        collection_interval: 1s
+    telegraf_win_perf_counters/4283769065:
+        alias_name         : LogicalDisk
+        collection_interval: 1s
 service:
     extensions: []
     pipelines:
@@ -29,7 +48,13 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_win_perf_counters
+                - telegraf_win_perf_counters/1492679118
+                - telegraf_win_perf_counters/2039663244
+                - telegraf_win_perf_counters/3446270237
+                - telegraf_win_perf_counters/2073218482
+                - telegraf_win_perf_counters/3610923661
+                - telegraf_win_perf_counters/3762679655
+                - telegraf_win_perf_counters/4283769065
     telemetry:
         logs:
             development: false

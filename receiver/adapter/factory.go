@@ -49,45 +49,44 @@ func createDefaultConfig(cfgType component.Type) func() component.Config {
 
 func (a Adapter) NewReceiverFactory(telegrafInputName string) receiver.Factory {
 	typeStr := Type(telegrafInputName)
-	return component.NewReceiverFactory(typeStr, createDefaultConfig(typeStr),
-		component.WithMetricsReceiver(a.createMetricsReceiver(telegrafInputName), component.StabilityLevelStable))
+	return receiver.NewFactory(typeStr, createDefaultConfig(typeStr),
+		receiver.WithMetrics(a.createMetricsReceiver, component.StabilityLevelStable))
 }
 
-func (a Adapter) createMetricsReceiver(telegrafInputName string) func(ctx context.Context, settings component.ReceiverCreateSettings, config component.Config, consumer consumer.Metrics) (component.MetricsReceiver, error) {
-	input, err := a.initializeInput(telegrafInputName)
-	return func(_ context.Context, settings component.ReceiverCreateSettings, rConf component.Config, consumer consumer.Metrics) (component.MetricsReceiver, error) {
-		cfg := rConf.(*Config)
+func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.CreateSettings, config component.Config, consumer consumer.Metrics) (receiver.Metrics, error) {
+	cfg := config.(*Config)
+	input, err := a.initializeInput(string(settings.ID.Type()), settings.ID.Name())
 
-		if err != nil {
-			return nil, err
-		}
-
-		receiver := newAdaptedReceiver(input, settings.Logger)
-
-		scraper, err := scraperhelper.NewScraper(
-			telegrafInputName,
-			receiver.scrape,
-			scraperhelper.WithStart(receiver.start),
-			scraperhelper.WithShutdown(receiver.shutdown),
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return scraperhelper.NewScraperControllerReceiver(
-			&cfg.ScraperControllerSettings, settings, consumer,
-			scraperhelper.AddScraper(scraper),
-		)
+	if err != nil {
+		return nil, err
 	}
+
+	receiver := newAdaptedReceiver(input, settings.Logger)
+
+	scraper, err := scraperhelper.NewScraper(
+		settings.ID.Name(),
+		receiver.scrape,
+		scraperhelper.WithStart(receiver.start),
+		scraperhelper.WithShutdown(receiver.shutdown),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return scraperhelper.NewScraperControllerReceiver(
+		&cfg.ScraperControllerSettings, settings, consumer,
+		scraperhelper.AddScraper(scraper),
+	)
 }
 
-func (a Adapter) initializeInput(telegrafInputName string) (*models.RunningInput, error) {
+// initializeInput initialize the telegraf plugins to set value https://github.com/influxdata/telegraf/blob/3b3584b40b7c9ea10ae9cb02137fc072da202704/agent/agent.go#L197-L202
+// E.g Mem scrape their metrics based on OS https://github.com/influxdata/telegraf/blob/3b3584b40b7c9ea10ae9cb02137fc072da202704/plugins/inputs/mem/mem.go#L26-L29
+// and Init to set the Runtime OS
+func (a Adapter) initializeInput(pluginName, pluginAlias string) (*models.RunningInput, error) {
 	for _, ri := range a.telegrafConfig.Inputs {
-		if ri.Config.Name == telegrafInputName {
-			// Initialize the telegraf plugins to set value https://github.com/influxdata/telegraf/blob/3b3584b40b7c9ea10ae9cb02137fc072da202704/agent/agent.go#L197-L202
-			// E.g Mem scrape their metrics based on OS https://github.com/influxdata/telegraf/blob/3b3584b40b7c9ea10ae9cb02137fc072da202704/plugins/inputs/mem/mem.go#L26-L29
-			// and Init to set the Runtime OS
+		if TelegrafPrefix+ri.Config.Name == pluginName && ri.Config.Alias == pluginAlias {
+
 			err := ri.Init()
 			if err != nil {
 				return nil, fmt.Errorf("could not initialize input %s: %v", ri.LogName(), err)
@@ -98,5 +97,5 @@ func (a Adapter) initializeInput(telegrafInputName string) (*models.RunningInput
 
 	}
 
-	return nil, fmt.Errorf("unable to find telegraf input with name %s", telegrafInputName)
+	return nil, fmt.Errorf("unable to find telegraf input with name %s and alias %s", pluginName, pluginAlias)
 }

@@ -67,13 +67,30 @@ receivers:
         collection_interval: 1m0s
     telegraf_nvidia_smi:
         collection_interval: 1m0s
-    telegraf_procstat:
-        collection_interval: 1m0s
     telegraf_socket_listener:
         collection_interval: 1m0s
     telegraf_statsd:
         collection_interval: 10s
-    telegraf_win_perf_counters:
+    telegraf_procstat/1340600742:
+        alias_name:          agent
+        collection_interval: 1m0s
+    telegraf_win_perf_counters/1063858558:
+        alias_name:          Network Interface
+        collection_interval: 5s
+    telegraf_win_perf_counters/1492679118:
+        alias_name:          Memory
+        collection_interval: 5s
+    telegraf_win_perf_counters/2402387132:
+        alias_name:          System
+        collection_interval: 1m0s
+    telegraf_win_perf_counters/3081249416:
+        alias_name:          customizedObjectName
+        collection_interval: 1m0s
+    telegraf_win_perf_counters/3762679655:
+        alias_name:          Processor
+        collection_interval: 1m0s
+    telegraf_win_perf_counters/4283769065:
+        alias_name:          LogicalDisk
         collection_interval: 1m0s
     telegraf_windows_event_log:
         collection_interval: 1m0s
@@ -108,10 +125,15 @@ service:
             receivers:
                 - telegraf_logfile
                 - telegraf_nvidia_smi
-                - telegraf_procstat
                 - telegraf_socket_listener
                 - telegraf_statsd
-                - telegraf_win_perf_counters
+                - telegraf_procstat/1340600742
+                - telegraf_win_perf_counters/1063858558
+                - telegraf_win_perf_counters/1492679118
+                - telegraf_win_perf_counters/2402387132
+                - telegraf_win_perf_counters/3081249416
+                - telegraf_win_perf_counters/3762679655
+                - telegraf_win_perf_counters/4283769065
                 - telegraf_windows_event_log
     telemetry:
         logs:

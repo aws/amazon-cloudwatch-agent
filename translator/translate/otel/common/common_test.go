@@ -45,6 +45,24 @@ func TestGetString(t *testing.T) {
 	require.Equal(t, "", got)
 }
 
+func TestGetArray(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]interface{}{"int": []int{5, 8, 10}, "string": []string{"bool", "empty"}})
+	gotInt := GetArray[int](conf, "int")
+	require.Equal(t, []int{5, 8, 10}, gotInt)
+
+	gotInt = GetArray[int](conf, "int-val")
+	require.Equal(t, []int(nil), gotInt)
+
+	gotStr := GetArray[string](conf, "int")
+	require.Equal(t, []string(nil), gotStr)
+
+	gotStr = GetArray[string](conf, "string")
+	require.Equal(t, []string{"bool", "empty"}, gotStr)
+
+	gotStr = GetArray[string](conf, "string-val")
+	require.Equal(t, []string(nil), gotStr)
+}
+
 func TestGetBool(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]interface{}{"int": 10, "string": "test", "bool1": false, "bool2": true})
 	got, ok := GetBool(conf, "int")

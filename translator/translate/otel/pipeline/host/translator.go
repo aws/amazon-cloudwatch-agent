@@ -53,7 +53,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 
 	// we need to add delta processor because (only) diskio and net input plugins report delta metric
 	if common.PipelineNameHostDeltaMetrics == t.name {
-		log.Printf("D! delta processor required because metrics with diskio or net are required")
+		log.Printf("D! delta processor required because metrics with diskio or net are set")
 		translators.Processors.Add(cumulativetodeltaprocessor.NewTranslatorWithName(t.name))
 	}
 

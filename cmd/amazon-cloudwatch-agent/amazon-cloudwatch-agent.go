@@ -21,7 +21,6 @@ import (
 	"time"
 
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
-
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
@@ -42,15 +41,19 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
+	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
+	"golang.org/x/exp/maps"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
@@ -393,13 +396,17 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
 	}
-
+	adapterReceiverSet := collections.NewSet[string]()
 	// Adapted receivers from telegraf
-	for _, inputFilter := range telegrafConfig.InputNames() {
-		receiverFactories = append(receiverFactories, telegrafAdapter.NewReceiverFactory(inputFilter))
+	for _, input := range telegrafConfig.Inputs {
+		adapterReceiverSet.Add(input.Config.Name)
 	}
 
-	receivers, err := component.MakeReceiverFactoryMap(receiverFactories...)
+	for _, adapterReceiver := range maps.Keys(adapterReceiverSet) {
+		receiverFactories = append(receiverFactories, telegrafAdapter.NewReceiverFactory(adapterReceiver))
+	}
+
+	receivers, err := receiver.MakeFactoryMap(receiverFactories...)
 	if err != nil {
 		return factories, err
 	}
@@ -415,7 +422,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		return factories, err
 	}
 
-	exporters, err := component.MakeExporterFactoryMap(
+	exporters, err := exporter.MakeFactoryMap(
 		awsemfexporter.NewFactory(),
 		loggingexporter.NewFactory(),
 		cloudwatch.NewFactory(),
@@ -425,7 +432,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		return factories, err
 	}
 
-	extensions, err := component.MakeExtensionFactoryMap(
+	extensions, err := extension.MakeFactoryMap(
 		ecsobserver.NewFactory(),
 	)
 	if err != nil {

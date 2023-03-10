@@ -28,11 +28,27 @@ const (
 )
 
 var (
-	// windowsInputSet contains all the supported metric input plugins.
-	// All others are considered custom metrics.
-	windowsInputSet = collections.NewSet(
-		gpu.SectionKey,
+	logKey       = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
+	logMetricKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
+	metricKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
+)
+
+var (
+	multipleInputSet = collections.NewSet[string](
 		procstat.SectionKey,
+	)
+	// Order by PidFile, ExeKey, Pattern Key according to the public documents
+	// if multiple configuration is specified
+	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-procstat-process-metrics.html#CloudWatch-Agent-procstat-configuration
+	procstatMonitoredSet = []string{
+		procstat.PidFileKey,
+		procstat.ExeKey,
+		procstat.PatternKey,
+	}
+	// windowsInputSet contains all the supported metric input plugins. All others are considered custom metrics.
+	// An exception would be procstat metrics
+	windowsInputSet = collections.NewSet[string](
+		gpu.SectionKey,
 		statsd.SectionKey,
 	)
 	// aliasMap contains mappings for all input plugins that use another
@@ -80,7 +96,7 @@ func fromMetrics(conf *confmap.Conf, os string) (common.TranslatorMap[component.
 // fromLinuxMetrics creates a translator for each subsection within the
 // metrics::metrics_collected section of the config. Can be anything.
 func fromLinuxMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config] {
-	return fromInputs(conf, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey))
+	return fromInputs(conf, metricKey)
 }
 
 // fromWindowsMetrics creates a translator for each allow listed subsection
@@ -89,27 +105,18 @@ func fromLinuxMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config]
 // under a windows performance counter adapter translator.
 func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config] {
 	translators := common.NewTranslatorMap[component.Config]()
-	key := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
-	if inputs, ok := conf.Get(key).(map[string]interface{}); ok {
-		var isCustomMetricsPresent bool
+	if inputs, ok := conf.Get(metricKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
 			if windowsInputSet.Contains(inputName) {
-				cfgKey := common.ConfigKey(key, inputName)
+				cfgKey := common.ConfigKey(metricKey, inputName)
 				translators.Add(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
 					defaultCollectionIntervalMap,
 					inputName,
 					defaultMetricsCollectionInterval,
 				)))
 			} else {
-				isCustomMetricsPresent = true
+				translators.Merge(fromMultipleInput(conf, inputName, translatorconfig.OS_TYPE_WINDOWS))
 			}
-		}
-		if isCustomMetricsPresent {
-			translators.Add(NewTranslator(
-				customizedmetrics.Win_Perf_Counters_Key,
-				common.MetricsKey,
-				defaultMetricsCollectionInterval,
-			))
 		}
 	}
 	return translators
@@ -120,15 +127,14 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 // within the logs:metrics_collected section.
 func fromLogs(conf *confmap.Conf) common.TranslatorMap[component.Config] {
 	translators := common.NewTranslatorMap[component.Config]()
-	key := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 	for _, socketListenerKey := range []string{emf.SectionKey, emf.SectionKeyStructuredLog} {
-		cfgKey := common.ConfigKey(key, socketListenerKey)
+		cfgKey := common.ConfigKey(logMetricKey, socketListenerKey)
 		if conf.IsSet(cfgKey) {
 			translators.Add(NewTranslator(collectd.SectionMappedKey, cfgKey, defaultMetricsCollectionInterval))
 			break
 		}
 	}
-	translators.Merge(fromInputs(conf, common.ConfigKey(common.LogsKey, common.LogsCollectedKey)))
+	translators.Merge(fromInputs(conf, logKey))
 	return translators
 }
 
@@ -138,12 +144,77 @@ func fromInputs(conf *confmap.Conf, baseKey string) common.TranslatorMap[compone
 	if inputs, ok := conf.Get(baseKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
 			cfgKey := common.ConfigKey(baseKey, inputName)
-			translators.Add(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
-				defaultCollectionIntervalMap,
-				inputName,
-				defaultMetricsCollectionInterval,
-			)))
+			if multipleInputSet.Contains(inputName) {
+				translators.Merge(fromMultipleInput(conf, inputName, ""))
+			} else {
+				translators.Add(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
+					defaultCollectionIntervalMap,
+					inputName,
+					defaultMetricsCollectionInterval,
+				)))
+			}
 		}
+	}
+	return translators
+}
+
+// fromMultipleInput generates multiple receivers with unique ID depends on the number of inputs.
+// Since there plugins from Telegraf that allows multiple inputs such as procstat, window_perf_counter;
+// therefore, generate a hash of the monitored process (e.g exe: hash(amazon-cloudwatch-agent))
+// to provide a unique identifier for the receivers and easy in compare with the alias
+// https://github.com/influxdata/telegraf/blob/d8db3ca3a293bc24a9120b590984b09e2de1851a/models/running_input.go#L60
+// and generate the appropriate running input when starting adapter
+func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.TranslatorMap[component.Config] {
+	translators := common.NewTranslatorMap[component.Config]()
+	cfgKey := common.ConfigKey(metricKey, inputName)
+
+	if inputName == procstat.SectionKey {
+		/*
+			 For procstat metrics, telegraf allows and generates more than 2 inputs.
+			[[inputs.procstat]]
+				pattern = "ssm-agent"
+				interval = "1s"
+				fieldpass = ["memory_stack"]
+				pid_finder = "native"
+			[[inputs.procstat]]
+				exe = "amazon-cloudwatch-agent"
+				interval = "1s"
+				fieldpass = ["cpu_time_system"]
+				pid_finder = "native"
+		*/
+		for _, procStatKey := range common.GetArray[any](conf, cfgKey) {
+			// Array type validation needs to be specific https://stackoverflow.com/a/47989212
+			for _, procstatMonitored := range procstatMonitoredSet {
+				if componentPsValue, ok := procStatKey.(map[string]interface{})[procstatMonitored]; ok {
+					translators.Add(NewTranslatorWithName(
+						componentPsValue.(string),
+						procstat.SectionKey,
+						cfgKey,
+						defaultMetricsCollectionInterval))
+					break
+				}
+			}
+		}
+	} else if os == translatorconfig.OS_TYPE_WINDOWS && !windowsInputSet.Contains(inputName) {
+		/* For customized metrics from Windows and  window performance counters metrics
+			[[inputs.win_perf_counters.object]]
+				ObjectName = "Processor"
+				Instances = ["*"]
+				Counters = ["% Idle Time", "% Interrupt Time", "% Privileged Time", "% User Time", "% Processor Time"]
+				Measurement = "win_cpu"
+
+		  	[[inputs.win_perf_counters.object]]
+				ObjectName = "LogicalDisk"
+				Instances = ["*"]
+				Counters = ["% Idle Time", "% Disk Time","% Disk Read Time", "% Disk Write Time", "% User Time", "Current Disk Queue Length"]
+				Measurement = "win_disk"
+		*/
+		translators.Add(NewTranslatorWithName(
+			inputName,
+			customizedmetrics.WinPerfCountersKey,
+			cfgKey,
+			defaultMetricsCollectionInterval,
+		))
 	}
 	return translators
 }

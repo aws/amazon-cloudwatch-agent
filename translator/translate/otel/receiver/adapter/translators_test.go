@@ -11,8 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 )
 
+// TestFindReceiversInConfig confirms whether the given the agent json configuration
+// will give the appropriate receivers in the agent yaml
 func TestFindReceiversInConfig(t *testing.T) {
 	type wantResult struct {
 		cfgKey   string
@@ -21,12 +25,12 @@ func TestFindReceiversInConfig(t *testing.T) {
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		os      string
-		want    map[component.Type]wantResult
+		want    map[component.ID]wantResult
 		wantErr error
 	}{
 		"WithEmptyConfig": {
 			os:   "linux",
-			want: map[component.Type]wantResult{},
+			want: map[component.ID]wantResult{},
 		},
 		"WithLinuxMetrics": {
 			input: map[string]interface{}{
@@ -37,34 +41,64 @@ func TestFindReceiversInConfig(t *testing.T) {
 						"ethtool":    nil,
 						"nvidia_gpu": nil,
 						"statsd":     nil,
+						"procstat": []interface{}{
+							map[string]interface{}{
+								"exe":                         "amazon-cloudwatch-agent",
+								"metrics_collection_interval": 15,
+							},
+							map[string]interface{}{
+								"exe":                         "amazon-ssm-agent",
+								"metrics_collection_interval": 25,
+							},
+						},
 					},
 				},
 			},
-			os: "linux",
-			want: map[component.Type]wantResult{
-				"telegraf_socket_listener": {"metrics::metrics_collected::collectd", time.Minute},
-				"telegraf_cpu":             {"metrics::metrics_collected::cpu", time.Minute},
-				"telegraf_ethtool":         {"metrics::metrics_collected::ethtool", time.Minute},
-				"telegraf_nvidia_smi":      {"metrics::metrics_collected::nvidia_gpu", time.Minute},
-				"telegraf_statsd":          {"metrics::metrics_collected::statsd", 10 * time.Second},
+			os: translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{
+				component.NewID("telegraf_socket_listener"):                {"metrics::metrics_collected::collectd", time.Minute},
+				component.NewID("telegraf_cpu"):                            {"metrics::metrics_collected::cpu", time.Minute},
+				component.NewID("telegraf_ethtool"):                        {"metrics::metrics_collected::ethtool", time.Minute},
+				component.NewID("telegraf_nvidia_smi"):                     {"metrics::metrics_collected::nvidia_gpu", time.Minute},
+				component.NewID("telegraf_statsd"):                         {"metrics::metrics_collected::statsd", 10 * time.Second},
+				component.NewIDWithName("telegraf_procstat", "793254176"):  {"metrics::metrics_collected::procstat", time.Minute},
+				component.NewIDWithName("telegraf_procstat", "3599690165"): {"metrics::metrics_collected::procstat", time.Minute},
 			},
 		},
 		"WithWindowsMetrics": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"LogicalDisk":  nil,
+						"LogicalDisk": map[string]interface{}{
+							"measurement":                 []string{"% Free Space"},
+							"metrics_collection_interval": 10,
+						},
 						"Memory":       nil,
 						"Paging File":  nil,
 						"PhysicalDisk": nil,
 						"nvidia_gpu":   nil,
+						"procstat": []interface{}{
+							map[string]interface{}{
+								"exe":                         "amazon-cloudwatch-agent",
+								"metrics_collection_interval": 5,
+							},
+							map[string]interface{}{
+								"exe":                         "amazon-ssm-agent",
+								"metrics_collection_interval": 15,
+							},
+						},
 					},
 				},
 			},
-			os: "windows",
-			want: map[component.Type]wantResult{
-				"telegraf_nvidia_smi":        {"metrics::metrics_collected::nvidia_gpu", time.Minute},
-				"telegraf_win_perf_counters": {"metrics", time.Minute},
+			os: translatorconfig.OS_TYPE_WINDOWS,
+			want: map[component.ID]wantResult{
+				component.NewID("telegraf_nvidia_smi"):                              {"metrics::metrics_collected::nvidia_gpu", time.Minute},
+				component.NewIDWithName("telegraf_procstat", "793254176"):           {"metrics::metrics_collected::procstat", time.Minute},
+				component.NewIDWithName("telegraf_procstat", "3599690165"):          {"metrics::metrics_collected::procstat", time.Minute},
+				component.NewIDWithName("telegraf_win_perf_counters", "4283769065"): {"metrics::metrics_collected::LogicalDisk", time.Minute},
+				component.NewIDWithName("telegraf_win_perf_counters", "1492679118"): {"metrics::metrics_collected::Memory", time.Minute},
+				component.NewIDWithName("telegraf_win_perf_counters", "3610923661"): {"metrics::metrics_collected::Paging File", time.Minute},
+				component.NewIDWithName("telegraf_win_perf_counters", "3446270237"): {"metrics::metrics_collected::PhysicalDisk", time.Minute},
 			},
 		},
 		"WithLogs": {
@@ -80,11 +114,11 @@ func TestFindReceiversInConfig(t *testing.T) {
 					},
 				},
 			},
-			os: "windows",
-			want: map[component.Type]wantResult{
-				"telegraf_socket_listener":   {"logs::metrics_collected::emf", time.Minute},
-				"telegraf_logfile":           {"logs::logs_collected::files", time.Minute},
-				"telegraf_windows_event_log": {"logs::logs_collected::windows_events", time.Minute},
+			os: translatorconfig.OS_TYPE_WINDOWS,
+			want: map[component.ID]wantResult{
+				component.NewID("telegraf_socket_listener"):   {"logs::metrics_collected::emf", time.Minute},
+				component.NewID("telegraf_logfile"):           {"logs::logs_collected::files", time.Minute},
+				component.NewID("telegraf_windows_event_log"): {"logs::logs_collected::windows_events", time.Minute},
 			},
 		},
 		"WithThreeSocketListeners": {
@@ -101,9 +135,9 @@ func TestFindReceiversInConfig(t *testing.T) {
 					},
 				},
 			},
-			os: "linux",
-			want: map[component.Type]wantResult{
-				"telegraf_socket_listener": {"metrics::metrics_collected::collectd", time.Minute},
+			os: translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{
+				component.NewID("telegraf_socket_listener"): {"metrics::metrics_collected::collectd", time.Minute},
 			},
 		},
 		"WithInvalidOS": {
@@ -119,7 +153,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 			require.Equal(t, testCase.wantErr, err)
 			require.Equal(t, len(testCase.want), len(got))
 			for wantKey, wantValue := range testCase.want {
-				gotTranslator, ok := got.Get(component.NewID(wantKey))
+				gotTranslator, ok := got.Get(wantKey)
 				require.True(t, ok)
 				gotAdapterTranslator, ok := gotTranslator.(*translator)
 				require.True(t, ok)

@@ -49,7 +49,6 @@ func (l *Logs) ApplyRule(input interface{}) (returnKey string, returnVal interfa
 	if _, ok := im[SectionKey]; !ok {
 		returnKey = ""
 		returnVal = ""
-		translator.AddInfoMessages("", "No log configuration found.")
 	} else {
 		//If yes, process it
 		for _, rule := range ChildRule {

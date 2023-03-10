@@ -5,21 +5,21 @@ package procstat
 
 type Pattern struct{}
 
-const keyPattern = "pattern"
+const PatternKey = "pattern"
 
 func (p *Pattern) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
-	if _, ok := m[keyPattern]; !ok {
+	if _, ok := m[PatternKey]; !ok {
 		returnKey = ""
 		returnVal = ""
 	} else {
-		returnKey = keyPattern
-		returnVal = m[keyPattern]
+		returnKey = PatternKey
+		returnVal = m[PatternKey]
 	}
 	return
 }
 
 func init() {
 	p := new(Pattern)
-	RegisterRule(keyPattern, p)
+	RegisterRule(PatternKey, p)
 }

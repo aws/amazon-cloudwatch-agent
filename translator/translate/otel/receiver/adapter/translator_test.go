@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/hash"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -18,6 +19,7 @@ import (
 func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input        map[string]interface{}
+		cfgName      string
 		cfgType      string
 		cfgKey       string
 		wantErr      error
@@ -25,6 +27,7 @@ func TestTranslator(t *testing.T) {
 	}{
 		"WithoutKeyInConfig": {
 			input:   map[string]interface{}{},
+			cfgName: "",
 			cfgType: "test",
 			cfgKey:  "mem",
 			wantErr: &common.MissingKeyError{ID: component.NewID("telegraf_test"), JsonKey: "mem"},
@@ -37,6 +40,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
+			cfgName:      "",
 			cfgType:      "test",
 			cfgKey:       "metrics::metrics_collected::cpu",
 			wantInterval: time.Minute,
@@ -52,23 +56,42 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
+			cfgName:      "",
 			cfgType:      "test",
 			cfgKey:       "metrics::metrics_collected::mem",
 			wantInterval: 20 * time.Second,
+		},
+		"WithWindowsConfig": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"LogicalDisk": map[string]interface{}{
+							"measurement":                 []string{"% Free Space"},
+							"metrics_collection_interval": 10,
+						},
+					},
+				},
+			},
+			cfgName:      "LogicalDisk",
+			cfgType:      "test",
+			cfgKey:       "metrics::metrics_collected::LogicalDisk",
+			wantInterval: 10 * time.Second,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			tt := NewTranslator(testCase.cfgType, testCase.cfgKey, time.Minute)
+			tt := NewTranslatorWithName(testCase.cfgName, testCase.cfgType, testCase.cfgKey, time.Minute)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*adapter.Config)
 				require.True(t, ok)
+				require.Equal(t, hash.HashName(testCase.cfgName), tt.ID().Name())
 				require.Equal(t, adapter.Type(testCase.cfgType), tt.ID().Type())
 				require.Equal(t, testCase.wantInterval, gotCfg.CollectionInterval)
+				require.Equal(t, testCase.cfgName, gotCfg.AliasName)
 			}
 		})
 	}
