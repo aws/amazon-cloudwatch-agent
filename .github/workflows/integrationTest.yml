@@ -8,9 +8,9 @@ env:
   S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_NAME: "khanhntd/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/khanhntd/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "wind"
 
 on:
   push:
@@ -478,11 +478,9 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
-              -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="cwa_github_sha=${GITHUB_SHA}"  \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
-              -var="arc=${{ matrix.arrays.arc }}" \
-              -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="test_name=${{ matrix.arrays.os }}" \
