@@ -6,8 +6,6 @@ import (
 	"os"
 )
 
-const IntegConfigTfvarsFilename = "config_ignore.tfvars"
-
 type IntegConfig map[string]any
 
 func FetchIntegConfig() IntegConfig {

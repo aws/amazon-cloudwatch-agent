@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"unicode"
 )
@@ -34,12 +32,6 @@ func ConvertCamelToSnakeCase(camel string) string {
 	}
 	words = append(words, strings.ToLower(camel[lo:]))
 	return strings.Join(words, "_")
-}
-
-func GetRootDir() string {
-	wd, _ := os.Getwd()
-	rootDir := path.Join(wd, "../")
-	return rootDir
 }
 
 func PrettyPrint(data any) {

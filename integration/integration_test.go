@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
@@ -9,15 +8,11 @@ import (
 type IntegrationTestSuite struct {
 	suite.Suite
 	IntegConfig      IntegConfig
-	Region           string
-	RootDir          string
 	VarsAbsolutePath string
 }
 
 func (suite *IntegrationTestSuite) SetupTest() {
 	suite.IntegConfig = FetchIntegConfig()
-	suite.RootDir = GetRootDir()
-	fmt.Println(suite.RootDir)
 	suite.VarsAbsolutePath = WriteVarsFile(suite.IntegConfig)
 }
 
