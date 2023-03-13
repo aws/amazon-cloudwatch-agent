@@ -57,7 +57,7 @@ func ExecCommandWithStderr(name, args string) error {
 	return nil
 }
 
-func GetSha() (string, error) {
+func FetchSha() (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	out, err := cmd.Output()
 	return string(out), err

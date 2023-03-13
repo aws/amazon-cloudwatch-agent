@@ -21,7 +21,7 @@
          * [Optional] `githubTestRepo` - Full github url to the testing repo to run against the agent binary uploaded to `s3Bucket`. Default=`https://github.com/aws/amazon-cloudwatch-agent-test.git`
          * [Optional] `githubTestRepoBranch` - Branch of `githubTestRepo` to use. Default=`main`
          * [Optional] `pluginTests` - Limits tests to a subset of plugins. Default=`""`, which tests everything 
-      2. Fill in fields from a single matrix row
+      2. [Optional] Fill in fields from a single matrix row
          * Select a single test matrix from [`amazon-cloudwatch-agent-test/generator/resources`](https://github.com/aws/amazon-cloudwatch-agent-test/tree/main/generator/resources) and append the fields. It's not necessary to run `test_case_generator.go` before grabbing these fields
 4. Run integration test
    1. `go test -v ./test/integration` based on `config.json`

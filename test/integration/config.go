@@ -17,18 +17,35 @@ func FetchIntegConfig() IntegConfig {
 	if err != nil {
 		log.Fatal("Error during json.Unmarshall() in fetchIntegConfig(): ", err)
 	}
-	fillCwaSha(integConfig)
+	fillInDefaultValues(integConfig)
 	return integConfig
 }
 
-func fillCwaSha(integConfig IntegConfig) {
-	_, ok := integConfig["cwaGithubSha"]
-	if !ok {
-		currentSha, err := GetSha()
-		if err != nil {
-			log.Fatalf("Error GetSha(): %v", err)
-		}
-		integConfig["cwaGithubSha"] = currentSha
-	}
+var defaultValues = map[string]string{
+	"githubTestRepo":       "https://github.com/aws/amazon-cloudwatch-agent-test.git",
+	"githubTestRepoBranch": "main",
+	"pluginTests":          "",
+}
 
+func fillInDefaultValues(integConfig IntegConfig) {
+	fillShaIfEmpty(integConfig)
+	for key, val := range defaultValues {
+		fillIfEmpty(integConfig, key, val)
+	}
+}
+
+func fillIfEmpty(integConfig IntegConfig, key, val string) {
+	_, ok := integConfig[key]
+	if !ok {
+		integConfig[key] = val
+
+	}
+}
+
+func fillShaIfEmpty(integConfig IntegConfig) {
+	currentSha, err := FetchSha()
+	if err != nil {
+		log.Fatalf("Error GetSha(): %v", err)
+	}
+	fillIfEmpty(integConfig, "cwaGithubSha", currentSha)
 }
