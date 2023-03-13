@@ -1,6 +1,6 @@
 # Run integration tests from your local machine
 
-> This workflow  runs a single integration test from the local machine. It is a convenient alternate runtime to GitHub actions, but is limited to just one test at a time.      
+> This workflow  runs a single integration test from the local machine. It is a convenient alternate to GitHub actions; however, the limitation is that only one test can be run at a time.        
 
 ### Setup
 1. `aws configure`
@@ -9,8 +9,8 @@
       1. Checkout the commit you wish to test
       2. `chmod +x ./build_upload_binary.sh`
       3. `sh ./build_upload_binary.sh`
-   2. Option 2: for manual process, read [local setup for terraform](https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/terraform/ec2/README.md#local-setup-not-recommended) from the testing repo
-3. Create `config.json`.
+   2. Option 2: for manual setup, read [local setup for terraform](https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/terraform/ec2/README.md#local-setup-not-recommended) from the testing repo
+3. Create `config.json`. This file is ignored by git
    1. Option 1: use template
       1. `cp config.example.json config.json`
       2. Change S3 bucket name
@@ -24,4 +24,4 @@
       2. Fill in fields from a single matrix row
          * Select a single test matrix from [`amazon-cloudwatch-agent-test/generator/resources`](https://github.com/aws/amazon-cloudwatch-agent-test/tree/main/generator/resources) and append the fields. It's not necessary to run `test_case_generator.go` before grabbing these fields
 4. Run integration test
-   5. `go test -v ./test/integration`
+   1. `go test -v ./test/integration` based on `config.json`
