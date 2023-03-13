@@ -1,7 +1,7 @@
 #!/bin/sh
-# builds the binary and uploads to s3, using the config_ignore.json
+# builds the binary and uploads to s3, using the config.json
 
-configPath="./config_ignore.json"
+configPath="./config.json"
 s3Bucket=$(cat $configPath | python3 -c "import sys, json; print(json.load(sys.stdin)['s3Bucket'])")
 cwaGithubSha=$(cat $configPath | python3 -c "import sys, json; print(json.load(sys.stdin)['cwaGithubSha'])")
 

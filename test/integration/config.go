@@ -9,7 +9,7 @@ import (
 type IntegConfig map[string]any
 
 func FetchIntegConfig() IntegConfig {
-	const configPath = "config_ignore.json"
+	const configPath = "config.json"
 	raw, err := os.ReadFile(configPath)
 	LogFatalIfError(err)
 	var integConfig IntegConfig
