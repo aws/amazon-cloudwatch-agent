@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"log"
 	"os"
+	"path"
 )
 
 const testDir = "/tmp/amazon-cloudwatch-agent-test"
@@ -25,11 +26,13 @@ func RunIntegrationTest(integConfig IntegConfig, varsAbsolutePath string) {
 		log.Fatal("Error cloneTestSuite(): ", err)
 	}
 
-	//if terraformRelativePath, ok := integConfig["terraformRelativePath"].(string); ok {
-	//	terraformAbsolutePath := path.Join(rootDir, terraformRelativePath)
-	//} else {
-	//	log.Fatal("Error: terraformPath was not provided in config.json")
-	//}
+	terraformApply(integConfig, varsAbsolutePath)
+
+	// cleanup
+	err = removeTestSuite()
+	if err != nil {
+		log.Fatal("Error removeTestSuite(): ", err)
+	}
 }
 
 func removeTestSuite() error {
@@ -60,7 +63,19 @@ func cloneTestSuite(githubTestRepo, githubTestRepoBranch string) error {
 	return err
 }
 
-func terraformApply(terraformAbsolutePath, varsAbsolutePath string) {
+func buildTerraformAbsolutePath(integConfig IntegConfig) string {
+	if terraformRelativePath, ok := integConfig["terraformRelativePath"].(string); ok {
+		terraformAbsolutePath := path.Join(testDir, terraformRelativePath)
+		return terraformAbsolutePath
+	} else {
+		log.Fatal("Error: terraformPath was not provided in config.json")
+		return ""
+	}
+}
+
+func terraformApply(integConfig IntegConfig, varsAbsolutePath string) {
+	terraformAbsolutePath := buildTerraformAbsolutePath(integConfig)
+
 	fmt.Println("Running terraform suite =", terraformAbsolutePath)
 	installer := &releases.ExactVersion{
 		Product: product.Terraform,
