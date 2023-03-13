@@ -1,10 +1,12 @@
 package integration
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 	"unicode"
@@ -46,4 +48,28 @@ func PrettyPrint(data any) {
 		fmt.Println("error:", err)
 	}
 	fmt.Println(string(b))
+}
+
+func ExecCommandWithStderr(name, args string) error {
+	cmd := exec.Command(name, strings.Split(args, " ")...)
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(stderr)
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		m := scanner.Text()
+		fmt.Println(m)
+	}
+	err = cmd.Wait()
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -11,7 +11,56 @@ import (
 	"os"
 )
 
-func RunIntegrationTest(terraformAbsolutePath, varsAbsolutePath string) {
+const testDir = "/tmp/amazon-cloudwatch-agent-test"
+
+func RunIntegrationTest(integConfig IntegConfig, varsAbsolutePath string) {
+	err := removeTestSuite()
+	if err != nil {
+		log.Fatal("Error removeTestSuite(): ", err)
+	}
+
+	s3Bucket, cwaGithubSha := validateRunIntegConfig(integConfig)
+	err = cloneTestSuite(s3Bucket, cwaGithubSha)
+	if err != nil {
+		log.Fatal("Error cloneTestSuite(): ", err)
+	}
+
+	//if terraformRelativePath, ok := integConfig["terraformRelativePath"].(string); ok {
+	//	terraformAbsolutePath := path.Join(rootDir, terraformRelativePath)
+	//} else {
+	//	log.Fatal("Error: terraformPath was not provided in config.json")
+	//}
+}
+
+func removeTestSuite() error {
+	log.Print("Remove old test repo")
+	args := fmt.Sprintf("-Rf %v", testDir)
+	err := ExecCommandWithStderr("rm", args)
+	return err
+}
+
+func validateRunIntegConfig(integConfig IntegConfig) (string, string) {
+	s3Bucket, ok := integConfig["githubTestRepo"].(string)
+	if !ok {
+		log.Fatal("Error: githubTestRepo was not provided in integConfig.json")
+	}
+
+	cwaGithubSha, ok := integConfig["githubTestRepoBranch"].(string)
+	if !ok {
+		log.Fatal("Error: githubTestRepoBranch was not provided in integConfig.json")
+	}
+	return s3Bucket, cwaGithubSha
+}
+
+func cloneTestSuite(githubTestRepo, githubTestRepoBranch string) error {
+	log.Print("Cloning test repo")
+	args := fmt.Sprintf("clone -b %v %v %v", githubTestRepoBranch, githubTestRepo, testDir)
+	fmt.Println("git", args)
+	err := ExecCommandWithStderr("git", args)
+	return err
+}
+
+func terraformApply(terraformAbsolutePath, varsAbsolutePath string) {
 	fmt.Println("Running terraform suite =", terraformAbsolutePath)
 	installer := &releases.ExactVersion{
 		Product: product.Terraform,

@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-func validateConfig(integConfig IntegConfig) (string, string) {
+func validateBinaryConfig(integConfig IntegConfig) (string, string) {
 	s3Bucket, ok := integConfig["s3Bucket"].(string)
 	if !ok {
 		log.Fatal("Error: s3Bucket was not provided in integConfig.json")
@@ -27,7 +27,7 @@ func buildKey(cwaGithubSha string) string {
 }
 
 func CheckBinaryExists(integConfig IntegConfig) bool {
-	s3Bucket, cwaGithubSha := validateConfig(integConfig)
+	s3Bucket, cwaGithubSha := validateBinaryConfig(integConfig)
 
 	// Load the Shared AWS Configuration (~/.aws/integConfig)
 	cfg, err := config.LoadDefaultConfig(context.TODO())
