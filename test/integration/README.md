@@ -6,18 +6,19 @@
 ### 1) Configure AWS on local machine
 `aws configure`
 
-   ### 3) Build binary and upload to S3
+### 2) Build binary and upload to S3
    1. Option 1: use convenience script `build_upload_binary.sh`
       1. Checkout the commit you wish to test
       2. `chmod +x ./build_upload_binary.sh`
       3. `sh ./build_upload_binary.sh`
    2. Option 2: for manual setup, read [local setup for terraform](https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/terraform/ec2/README.md#local-setup-not-recommended) from the testing repo
 
-### 2) Create `config.json`. 
+### 3) Create `config.json`. 
 
 `config.json` mimics the integration tests on GitHub actions. It supplies terraform with the same parameters in [integrationTest.yml](https://github.com/aws/amazon-cloudwatch-agent/blob/main/.github/workflows/integrationTest.yml).  
 
-```yml
+```json5
+{
    /** REQUIRED FIELDS **/
    // relative path to the terraform suite in amazon-cloudwatch-agent-test
    "terraformRelativePath": "terraform/ec2/linux",
