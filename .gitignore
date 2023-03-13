@@ -10,3 +10,4 @@ CWAGENT_VERSION
 terraform.*
 **/.terraform/*
 coverage.txt
+*_ignore.*
