@@ -2,7 +2,6 @@ package integration
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os/exec"
@@ -32,14 +31,6 @@ func ConvertCamelToSnakeCase(camel string) string {
 	}
 	words = append(words, strings.ToLower(camel[lo:]))
 	return strings.Join(words, "_")
-}
-
-func PrettyPrint(data any) {
-	b, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-	fmt.Println(string(b))
 }
 
 func ExecCommandWithStderr(name, args string) error {
