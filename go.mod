@@ -71,7 +71,7 @@ require (
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/kardianos/service v1.2.1
 	github.com/kr/pretty v0.3.0
-	github.com/mesos/mesos-go v0.0.7-0.20180413204204-29de6ff97b48
+	github.com/mesos/mesos-go v0.0.11
 	github.com/oklog/run v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.1

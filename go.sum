@@ -1232,8 +1232,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182aff
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 github.com/maxbrunsfeld/counterfeiter/v6 v6.2.2/go.mod h1:eD9eIE7cdwcMi9rYluz88Jz2VyhSmden33/aXg4oVIY=
 github.com/mdlayher/apcupsd v0.0.0-20200608131503-2bf01da7bf1b h1:Kcr+kPbkWZHFHXwl87quXUAmavS4/IMgu2zck3aiE7k=
-github.com/mesos/mesos-go v0.0.7-0.20180413204204-29de6ff97b48 h1:YIHidb4LpHLt+cW1ezhU9T8ed6/K8sWbban61KMgeWI=
-github.com/mesos/mesos-go v0.0.7-0.20180413204204-29de6ff97b48/go.mod h1:kPYCMQ9gsOXVAle1OsoY4I1+9kPu8GHkf88aV59fDr4=
+github.com/mesos/mesos-go v0.0.11 h1:jMp9+W3zLu46g8EuP2su2Sjj7ipBh4N/g65c0kzGl/8=
+github.com/mesos/mesos-go v0.0.11/go.mod h1:kPYCMQ9gsOXVAle1OsoY4I1+9kPu8GHkf88aV59fDr4=
 github.com/microsoft/ApplicationInsights-Go v0.4.4 h1:G4+H9WNs6ygSCe6sUyxRc2U81TI5Es90b2t/MwX5KqY=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/miekg/dns v1.1.26/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKjuso=
