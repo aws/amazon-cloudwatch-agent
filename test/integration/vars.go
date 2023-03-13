@@ -6,7 +6,7 @@ import (
 	"path"
 )
 
-const varsFilename = "config_ignore.tfvars"
+const varsFilename = "config.tfvars"
 
 func WriteVarsFile(integConfig IntegConfig) string {
 	integConfigVars := fetchVars(integConfig)

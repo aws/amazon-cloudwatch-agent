@@ -25,15 +25,14 @@
    // name of the s3 bucket where the agent binary is stored
    "s3Bucket": "localstack-integ-test",
 
-   /** optional fields **/
-   // ...with default values
+   /** optional fields with default values **/
    "githubTestRepo": "https://github.com/aws/amazon-cloudwatch-agent-test.git",
    "githubTestRepoBranch": "main",
    "pluginTests": "",
    "cwaGithubSha": "a791b1484fbc0611e515ccbb9bd24bea469cb9fb",
-   // *cwaGithubSha defaults to the current commit checked out
+   // cwaGithubSha defaults to the current commit 
 
-   // ...a copy and pasted matrix from cwa-test/generator/resources
+   /* optional fields from matrix rows */
    "test_dir": "./test/metric_value_benchmark",
    "os": "al2",
    "family": "linux",
@@ -48,8 +47,9 @@
    "values_per_minute": 0
 }
 ```
+* For, optional fields from matrix row, just copy and paste a single matrix row from [`amazon-cloudwatch-agent-test/generator/resources`](https://github.com/aws/amazon-cloudwatch-agent-test/tree/main/generator/resources). For example, this [stress test](https://github.com/aws/amazon-cloudwatch-agent-test/blob/main/generator/resources/ec2_stress_test_matrix.json#L12-L21) ec2 matrix for al2.
 * All optional or invalid fields in `config.json` are fault tolerant
-* Use `config.example.json` for convenience
+* Refer to `config.example.json` for convenience
 * `config.json` is ignored by git for security reasons
 
 
