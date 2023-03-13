@@ -18,8 +18,8 @@ func (suite *IntegrationTestSuite) SetupTest() {
 }
 
 func (suite *IntegrationTestSuite) TestLocalWorkflow() {
-	//CheckBinaryExists(suite.IntegConfig)
-	//RunIntegrationTest(suite.IntegConfig, suite.VarsAbsolutePath)
+	CheckBinaryExists(suite.IntegConfig)
+	RunIntegrationTest(suite.IntegConfig, suite.VarsAbsolutePath)
 }
 
 func TestLocalWorkflowSuite(t *testing.T) {
