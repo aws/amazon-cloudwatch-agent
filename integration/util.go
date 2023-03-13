@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -36,4 +38,12 @@ func GetRootDir() string {
 	wd, _ := os.Getwd()
 	rootDir := path.Join(wd, "../")
 	return rootDir
+}
+
+func PrettyPrint(data any) {
+	b, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Println(string(b))
 }

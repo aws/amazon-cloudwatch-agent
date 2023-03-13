@@ -11,7 +11,7 @@ const ConfigTfvarsFilename = "config_ignore.tfvars"
 type Config map[string]any
 
 func FetchConfig() Config {
-	const configPath = "config.json"
+	const configPath = "config_ignore.json"
 	raw, err := os.ReadFile(configPath)
 	LogFatalIfError(err)
 	var config Config
