@@ -8,13 +8,13 @@ import (
 
 const varsFilename = "config_ignore.tfvars"
 
-func WriteVarsFile(config Config) string {
-	configVars := fetchVars(config)
+func WriteVarsFile(integConfig IntegConfig) string {
+	integConfigVars := fetchVars(integConfig)
 	file, err := os.Create(varsFilename)
 	LogFatalIfError(err)
 	defer file.Close()
-	for _, configVar := range configVars {
-		_, err := file.WriteString(configVar + "\n")
+	for _, integConfigVar := range integConfigVars {
+		_, err := file.WriteString(integConfigVar + "\n")
 		LogFatalIfError(err)
 	}
 
@@ -27,12 +27,12 @@ func getAbsoluteVarsFilepath() string {
 	return path.Join(wd, varsFilename)
 }
 
-func fetchVars(config Config) []string {
+func fetchVars(integConfig IntegConfig) []string {
 	var vars []string
-	for key, val := range config {
+	for key, val := range integConfig {
 		key = mapMatrixRowFieldToTerraformVar(key)
-		configVar := buildTfvar(key, val)
-		vars = append(vars, configVar)
+		integConfigVar := buildTfvar(key, val)
+		vars = append(vars, integConfigVar)
 	}
 	return vars
 }

@@ -8,21 +8,21 @@ import (
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	Config  Config
-	Region  string
-	RootDir string
+	IntegConfig IntegConfig
+	Region      string
+	RootDir     string
 	//VarsAbsolutePath string
 }
 
 func (suite *IntegrationTestSuite) SetupTest() {
-	suite.Config = FetchConfig()
+	suite.IntegConfig = FetchIntegConfig()
 	suite.RootDir = GetRootDir()
 	fmt.Println(suite.RootDir)
-	//suite.VarsAbsolutePath = WriteVarsFile(suite.Config)
+	//suite.VarsAbsolutePath = WriteVarsFile(suite.IntegConfig)
 }
 
 func (suite *IntegrationTestSuite) TestLocalWorkflow() {
-	CheckBinaryExists(suite.Config)
+	CheckBinaryExists(suite.IntegConfig)
 
 }
 

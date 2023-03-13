@@ -6,18 +6,18 @@ import (
 	"os"
 )
 
-const ConfigTfvarsFilename = "config_ignore.tfvars"
+const IntegConfigTfvarsFilename = "config_ignore.tfvars"
 
-type Config map[string]any
+type IntegConfig map[string]any
 
-func FetchConfig() Config {
+func FetchIntegConfig() IntegConfig {
 	const configPath = "config_ignore.json"
 	raw, err := os.ReadFile(configPath)
 	LogFatalIfError(err)
-	var config Config
+	var config IntegConfig
 	err = json.Unmarshal(raw, &config)
 	if err != nil {
-		log.Fatal("Error during json.Unmarshall() in fetchConfig(): ", err)
+		log.Fatal("Error during json.Unmarshall() in fetchIntegConfig(): ", err)
 	}
 	return config
 }

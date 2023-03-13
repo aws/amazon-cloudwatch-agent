@@ -4,19 +4,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"log"
 )
 
-func validateConfig(config Config) (string, string) {
-	s3Bucket, ok := config["s3Bucket"].(string)
+func validateConfig(integConfig IntegConfig) (string, string) {
+	s3Bucket, ok := integConfig["s3Bucket"].(string)
 	if !ok {
-		log.Fatal("Error: s3Bucket was not provided in config.json")
+		log.Fatal("Error: s3Bucket was not provided in integConfig.json")
 	}
 
-	cwaGithubSha, ok := config["cwaGithubSha"].(string)
+	cwaGithubSha, ok := integConfig["cwaGithubSha"].(string)
 	if !ok {
-		log.Fatal("Error: cwaGithubSha was not provided in config.json")
+		log.Fatal("Error: cwaGithubSha was not provided in integConfig.json")
 	}
 	return s3Bucket, cwaGithubSha
 }
@@ -25,10 +26,10 @@ func buildKey(cwaGithubSha string) string {
 	return fmt.Sprintf("integration-test/binary/%v", cwaGithubSha)
 }
 
-func CheckBinaryExists(config Config) bool {
-	s3Bucket, cwaGithubSha := validateConfig(config)
+func CheckBinaryExists(integConfig IntegConfig) bool {
+	s3Bucket, cwaGithubSha := validateConfig(integConfig)
 
-	// Load the Shared AWS Configuration (~/.aws/config)
+	// Load the Shared AWS Configuration (~/.aws/integConfig)
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Fatal(err)
@@ -51,4 +52,5 @@ func CheckBinaryExists(config Config) bool {
 	if !exists {
 		log.Fatalf("Error: a binary with the following SHA has not been uploaded to s3 yet: %v", cwaGithubSha)
 	}
+	return exists
 }
