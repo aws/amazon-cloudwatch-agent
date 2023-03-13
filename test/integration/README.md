@@ -15,23 +15,24 @@
 
 ### 2) Create `config.json`. 
 
-`config.json` mimics the integration tests on GitHub actions. It supplies terraform with the same parameters in [integrationTest.yml](https://github.com/aws/amazon-cloudwatch-agent/blob/main/.github/workflows/integrationTest.yml). This file is ignored by git 
+`config.json` mimics the integration tests on GitHub actions. It supplies terraform with the same parameters in [integrationTest.yml](https://github.com/aws/amazon-cloudwatch-agent/blob/main/.github/workflows/integrationTest.yml).  
 
 ```yml
    /** REQUIRED FIELDS **/
+   // relative path to the terraform suite in amazon-cloudwatch-agent-test
    "terraformRelativePath": "terraform/ec2/linux",
+   // name of the s3 bucket where the agent binary is stored
    "s3Bucket": "localstack-integ-test",
 
    /** optional fields **/
-   // manual inputs with default values
+   // ...with default values
    "githubTestRepo": "https://github.com/aws/amazon-cloudwatch-agent-test.git",
    "githubTestRepoBranch": "main",
-   // default cwaGithubSha is the current commit hash checked out
-   "cwaGithubSha": "a791b1484fbc0611e515ccbb9bd24bea469cb9fb",
    "pluginTests": "",
+   "cwaGithubSha": "a791b1484fbc0611e515ccbb9bd24bea469cb9fb",
+   // *cwaGithubSha defaults to the current commit checked out
 
-   // a single matrix row
-   // copy and paste this from generator/resources
+   // ...a copy and pasted matrix from cwa-test/generator/resources
    "test_dir": "./test/metric_value_benchmark",
    "os": "al2",
    "family": "linux",
@@ -46,7 +47,10 @@
    "values_per_minute": 0
 }
 ```
+* All optional or invalid fields in `config.json` are fault tolerant
+* Use `config.example.json` for convenience
+* `config.json` is ignored by git for security reasons
 
 
 ### 4) Run integration test
-   1. `go test -v ./test/integration` based on `config.json`
+   1. `go test -v ./test/integration` 
