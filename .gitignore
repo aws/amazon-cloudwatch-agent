@@ -11,4 +11,4 @@ terraform.*
 **/.terraform/*
 coverage.txt
 *_ignore.*
-./test/integration/config.json
+*/integration/config.json
