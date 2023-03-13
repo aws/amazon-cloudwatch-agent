@@ -10,5 +10,5 @@ CWAGENT_VERSION
 terraform.*
 **/.terraform/*
 coverage.txt
-*_ignore.*
+*/integration/*_ignore.*
 */integration/config.json
