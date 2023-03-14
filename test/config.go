@@ -39,7 +39,6 @@ func fillIfEmpty(integConfig IntegConfig, key, val string) {
 	_, ok := integConfig[key]
 	if !ok {
 		integConfig[key] = val
-
 	}
 }
 
