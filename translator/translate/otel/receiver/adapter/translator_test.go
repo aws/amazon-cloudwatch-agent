@@ -18,12 +18,13 @@ import (
 
 func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
-		input        map[string]interface{}
-		cfgName      string
-		cfgType      string
-		cfgKey       string
-		wantErr      error
-		wantInterval time.Duration
+		input             map[string]interface{}
+		cfgName           string
+		cfgType           string
+		cfgKey            string
+		cfgPreferInterval time.Duration
+		wantErr           error
+		wantInterval      time.Duration
 	}{
 		"WithoutKeyInConfig": {
 			input:   map[string]interface{}{},
@@ -40,10 +41,28 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			cfgName:      "",
-			cfgType:      "test",
-			cfgKey:       "metrics::metrics_collected::cpu",
-			wantInterval: time.Minute,
+			cfgName:           "",
+			cfgType:           "test",
+			cfgKey:            "metrics::metrics_collected::cpu",
+			cfgPreferInterval: time.Duration(0),
+			wantInterval:      time.Minute,
+		},
+		"WithPreferInterval": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"mem": map[string]interface{}{
+							"measurement":                 []string{"mem_used_percent"},
+							"metrics_collection_interval": "5s",
+						},
+					},
+				},
+			},
+			cfgName:           "",
+			cfgType:           "test",
+			cfgKey:            "metrics::metrics_collected::mem",
+			cfgPreferInterval: 15 * time.Second,
+			wantInterval:      15 * time.Second,
 		},
 		"WithValidConfig": {
 			input: map[string]interface{}{
@@ -56,10 +75,11 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			cfgName:      "",
-			cfgType:      "test",
-			cfgKey:       "metrics::metrics_collected::mem",
-			wantInterval: 20 * time.Second,
+			cfgName:           "",
+			cfgType:           "test",
+			cfgKey:            "metrics::metrics_collected::mem",
+			cfgPreferInterval: time.Duration(0),
+			wantInterval:      20 * time.Second,
 		},
 		"WithWindowsConfig": {
 			input: map[string]interface{}{
@@ -72,16 +92,17 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			cfgName:      "LogicalDisk",
-			cfgType:      "test",
-			cfgKey:       "metrics::metrics_collected::LogicalDisk",
-			wantInterval: 10 * time.Second,
+			cfgName:           "LogicalDisk",
+			cfgType:           "test",
+			cfgKey:            "metrics::metrics_collected::LogicalDisk",
+			cfgPreferInterval: time.Duration(0),
+			wantInterval:      10 * time.Second,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			tt := NewTranslatorWithName(testCase.cfgName, testCase.cfgType, testCase.cfgKey, time.Minute)
+			tt := NewTranslatorWithName(testCase.cfgName, testCase.cfgType, testCase.cfgKey, testCase.cfgPreferInterval, time.Minute)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
 			if err == nil {

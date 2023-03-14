@@ -183,13 +183,19 @@ func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.Translat
 				pid_finder = "native"
 		*/
 		for _, procStatKey := range common.GetArray[any](conf, cfgKey) {
+			// Each of the procstat monitored process has their own process; therefore, overriding the interval key chain
+			// and setting dirrectly
+			psKey := procStatKey.(map[string]interface{})
+			psCollectionInterval, _ := common.ParseDuration(psKey[common.MetricsCollectionIntervalKey])
+
 			// Array type validation needs to be specific https://stackoverflow.com/a/47989212
 			for _, procstatMonitored := range procstatMonitoredSet {
-				if componentPsValue, ok := procStatKey.(map[string]interface{})[procstatMonitored]; ok {
+				if componentPsValue, ok := psKey[procstatMonitored]; ok {
 					translators.Add(NewTranslatorWithName(
 						componentPsValue.(string),
 						procstat.SectionKey,
 						cfgKey,
+						psCollectionInterval,
 						defaultMetricsCollectionInterval))
 					break
 				}
@@ -213,6 +219,7 @@ func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.Translat
 			inputName,
 			customizedmetrics.WinPerfCountersKey,
 			cfgKey,
+			time.Duration(0),
 			defaultMetricsCollectionInterval,
 		))
 	}

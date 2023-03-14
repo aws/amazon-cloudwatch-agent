@@ -21,6 +21,7 @@ import (
 	"time"
 
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
+
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
@@ -72,15 +73,12 @@ var pprofAddr = flag.String("pprof-addr", "",
 	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
-var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
-var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fOtelConfig = flag.String("otelconfig", "", "YAML configuration file to run OTel pipeline")
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
-var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
@@ -98,8 +96,6 @@ var fAggregatorFilters = flag.String("aggregator-filter", "",
 	"filter the aggregators to enable, separator is :")
 var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
-var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
@@ -289,17 +285,6 @@ func runAgent(ctx context.Context,
 	} else {
 		log.Printf("I! AWS SDK log level, %s", sdkLogLevel)
 	}
-
-	if *fTest || *fTestWait != 0 {
-		testWaitDuration := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, testWaitDuration)
-	}
-
-	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
-	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
-	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-	log.Printf("I! Tags enabled: %s", c.ListTags())
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -558,9 +543,6 @@ func main() {
 			fmt.Printf("  %s\n", k)
 		}
 		return
-	case *fVersion:
-		fmt.Println(agentinfo.FullVersion())
-		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
 			sectionFilters,
@@ -569,13 +551,6 @@ func main() {
 			aggregatorFilters,
 			processorFilters,
 		)
-		return
-	case *fUsage != "":
-		err := config.PrintInputConfig(*fUsage)
-		err2 := config.PrintOutputConfig(*fUsage)
-		if err != nil && err2 != nil {
-			log.Fatalf("E! %s and %s", err, err2)
-		}
 		return
 	case *fSetEnv != "":
 		if *fEnvConfig != "" {

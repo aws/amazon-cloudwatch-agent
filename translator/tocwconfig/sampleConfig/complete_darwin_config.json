@@ -123,7 +123,8 @@
           "measurement": [
             "cpu_usage",
             "memory_rss"
-          ]
+          ],
+          "metrics_collection_interval": 10
         }
       ]
     },

@@ -23,6 +23,11 @@ type translator struct {
 	// JSON config that must be present for the translator to work.
 	// See otel.ConfigKey.
 	cfgKey string
+
+	// preferMetricCollectionInterval is an option to using the preferaable metric collection interval before
+	// using the interval key chain and defaultMetricCollectionInterval
+	preferMetricCollectionInterval time.Duration
+
 	// defaultMetricCollectionInterval is the fallback interval if it
 	// it is not present in the interval keychain.
 	defaultMetricCollectionInterval time.Duration
@@ -32,11 +37,11 @@ var _ common.Translator[component.Config] = (*translator)(nil)
 
 // NewTranslator creates a new adapter receiver translator.
 func NewTranslator(inputName, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
-	return NewTranslatorWithName("", inputName, cfgKey, defaultMetricCollectionInterval)
+	return NewTranslatorWithName("", inputName, cfgKey, time.Duration(0), defaultMetricCollectionInterval)
 }
 
-func NewTranslatorWithName(name, inputName, cfgKey string, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
-	return &translator{name, adapter.Type(inputName), cfgKey, defaultMetricCollectionInterval}
+func NewTranslatorWithName(name, inputName, cfgKey string, preferMetricCollectionInterval, defaultMetricCollectionInterval time.Duration) common.Translator[component.Config] {
+	return &translator{name, adapter.Type(inputName), cfgKey, preferMetricCollectionInterval, defaultMetricCollectionInterval}
 }
 
 func (t *translator) ID() component.ID {
@@ -66,6 +71,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.AliasName = t.name
-	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, t.defaultMetricCollectionInterval)
+	// The fall back interval is 0
+	// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/main/translator/translate/otel/common/common.go#L147
+	if t.preferMetricCollectionInterval != time.Duration(0) {
+		cfg.CollectionInterval = t.preferMetricCollectionInterval
+	} else {
+		cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, t.defaultMetricCollectionInterval)
+	}
+
 	return cfg, nil
 }

@@ -47,8 +47,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 								"metrics_collection_interval": 15,
 							},
 							map[string]interface{}{
-								"exe":                         "amazon-ssm-agent",
-								"metrics_collection_interval": 25,
+								"exe": "amazon-ssm-agent",
 							},
 						},
 					},
