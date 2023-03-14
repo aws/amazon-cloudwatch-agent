@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os/exec"
@@ -60,5 +61,15 @@ func ExecCommandWithStderr(name, args string) error {
 func FetchSha() (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	out, err := cmd.Output()
-	return string(out), err
+	sha := string(out)
+	sha = strings.ReplaceAll(sha, "\n", "")
+	return sha, err
+}
+
+func PrettyPrint(data any) {
+	pretty, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Println(string(pretty))
 }

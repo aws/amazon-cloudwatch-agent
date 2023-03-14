@@ -18,6 +18,7 @@ func FetchIntegConfig() IntegConfig {
 		log.Fatal("Error during json.Unmarshall() in fetchIntegConfig(): ", err)
 	}
 	fillInDefaultValues(integConfig)
+	PrettyPrint(integConfig)
 	return integConfig
 }
 
