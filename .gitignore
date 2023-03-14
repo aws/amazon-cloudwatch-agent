@@ -10,5 +10,5 @@ CWAGENT_VERSION
 terraform.*
 **/.terraform/*
 coverage.txt
-test/integration/config.tfvars
-test/integration/config.json
+test/config.tfvars
+test/config.json
