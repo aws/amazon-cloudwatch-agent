@@ -15,11 +15,11 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -33,11 +33,11 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -51,11 +51,11 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -84,11 +84,11 @@ jobs:
         ]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.INTERNAL_AWS_ASSUME_ROLE }}
           aws-region: ${{ matrix.region }}
@@ -123,11 +123,11 @@ jobs:
         ]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets[matrix.role_secret] }}
           aws-region: ${{ matrix.region }}
