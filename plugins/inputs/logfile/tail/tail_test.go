@@ -2,7 +2,6 @@ package tail
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -119,7 +118,7 @@ func TestStopAtEOF(t *testing.T) {
 }
 
 func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
