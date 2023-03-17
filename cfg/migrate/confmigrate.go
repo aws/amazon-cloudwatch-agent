@@ -2,7 +2,7 @@ package migrate
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
@@ -17,7 +17,7 @@ func AddRule(rule Rule) {
 }
 
 func IsOldConfig(path string) (bool, error) {
-	cf, err := ioutil.ReadFile(path)
+	cf, err := os.ReadFile(path)
 	if err != nil {
 		return false, err
 	}
@@ -40,7 +40,7 @@ func IsOldConfig(path string) (bool, error) {
 }
 
 func MigrateFile(path string) (string, error) {
-	cf, err := ioutil.ReadFile(path)
+	cf, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -51,7 +51,7 @@ func MigrateFile(path string) (string, error) {
 	}
 
 	dir, _ := filepath.Split(path)
-	of, err := ioutil.TempFile(dir, "migrated-*.conf")
+	of, err := os.CreateTemp(dir, "migrated-*.conf")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary migrated config file: %v", err)
 	}

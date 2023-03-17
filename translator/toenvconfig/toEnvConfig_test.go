@@ -6,7 +6,6 @@ package toenvconfig
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"testing"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -22,7 +21,7 @@ import (
 )
 
 func ReadFromFile(filename string) string {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -93,7 +92,7 @@ func TestStatsDConfig(t *testing.T) {
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/statsd_config.json"), "windows", expectedEnvVars)
 }
 
-//Linux only for CollectD
+// Linux only for CollectD
 func TestCollectDConfig(t *testing.T) {
 	resetContext()
 	expectedEnvVars := map[string]string{}
@@ -127,7 +126,7 @@ func TestLogOnlyConfig(t *testing.T) {
 	checkIfTranslateSucceed(t, ReadFromFile("../totomlconfig/sampleConfig/log_only_config_windows.json"), "windows", expectedEnvVars)
 }
 
-//test settings in commonconfig will override the ones in json config
+// test settings in commonconfig will override the ones in json config
 func TestStandardConfigWithCommonConfig(t *testing.T) {
 	resetContext()
 	readCommonConifg()
@@ -171,7 +170,7 @@ func TestECSNodeMetricConfig(t *testing.T) {
 func readCommonConifg() {
 	ctx := context.CurrentContext()
 	conf := commonconfig.New()
-	data, _ := ioutil.ReadFile("../totomlconfig/sampleConfig/commonConfigTest.toml")
+	data, _ := os.ReadFile("../totomlconfig/sampleConfig/commonConfigTest.toml")
 	conf.Parse(bytes.NewReader(data))
 	ctx.SetCredentials(conf.CredentialsMap())
 	ctx.SetProxy(conf.ProxyMap())

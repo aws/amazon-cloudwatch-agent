@@ -5,7 +5,6 @@ package logfile
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -191,7 +190,7 @@ func TestCompressedFile(t *testing.T) {
 
 func TestRestoreState(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	tmpfolder, err := ioutil.TempDir("", "")
+	tmpfolder, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpfolder)
 
@@ -199,7 +198,7 @@ func TestRestoreState(t *testing.T) {
 	logFileStateFileName := "_tmp_logfile.log"
 
 	offset := int64(9323)
-	err = ioutil.WriteFile(
+	err = os.WriteFile(
 		tmpfolder+string(filepath.Separator)+logFileStateFileName,
 		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
 		os.ModePerm)
@@ -214,7 +213,7 @@ func TestRestoreState(t *testing.T) {
 
 	// Test negative offset.
 	offset = int64(-8675)
-	err = ioutil.WriteFile(
+	err = os.WriteFile(
 		tmpfolder+string(filepath.Separator)+logFileStateFileName,
 		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
 		os.ModePerm)
@@ -655,7 +654,7 @@ func TestLogsFileWithOffset(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("", "state")
+	stateDir, err := os.MkdirTemp("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
@@ -705,7 +704,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("", "state")
+	stateDir, err := os.MkdirTemp("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
@@ -761,7 +760,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	_, err = tmpfile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("", "state")
+	stateDir, err := os.MkdirTemp("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
@@ -896,7 +895,7 @@ func TestLogsPartialLineReading(t *testing.T) {
 func TestLogFileMultiLogsReading(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
-	dir, e := ioutil.TempDir("", "test")
+	dir, e := os.MkdirTemp("", "test")
 	require.NoError(t, e)
 	defer os.Remove(dir)
 	agentLog, err := createTempFile(dir, "test_agent.log")
@@ -959,7 +958,7 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
-	dir, e := ioutil.TempDir("", "test")
+	dir, e := os.MkdirTemp("", "test")
 	require.NoError(t, e)
 	defer os.Remove(dir)
 

@@ -21,6 +21,12 @@ package prometheus_scraper
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"runtime"
+	"sync"
+	"syscall"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/oklog/run"
@@ -36,14 +42,8 @@ import (
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
 	promRuntime "github.com/prometheus/prometheus/util/runtime"
-	"io/ioutil"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
-	"os"
-	"os/signal"
-	"runtime"
-	"sync"
-	"syscall"
 )
 
 var (
@@ -270,7 +270,7 @@ const (
 
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
 	level.Info(logger).Log("msg", "Loading configuration file", "filename", filename)
-	content, _ := ioutil.ReadFile(filename)
+	content, _ := os.ReadFile(filename)
 	text := string(content)
 	level.Debug(logger).Log("msg", "Prometheus configuration file", "value", text)
 
