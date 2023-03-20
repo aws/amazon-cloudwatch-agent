@@ -33,20 +33,15 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ~1.19.2
+        cache-dependency-path: |
+          ~/Library/Caches/go-build
+          ~/go/pkg/mod
 
     - name: Check out code
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
         submodules: 'true'
-
-    - name: Cache build output
-      uses: actions/cache@v3
-      with:
-        path: |
-              ~/Library/Caches/go-build
-              ~/go/pkg/mod
-        key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
     - name: Test
       run: make test

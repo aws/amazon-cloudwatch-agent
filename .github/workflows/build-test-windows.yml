@@ -37,14 +37,9 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ~1.19.2
-
-      - name: Cache Go
-        uses: actions/cache@v3
-        with:
-          path: |
+          cache-dependency-path: |
             %LocalAppData%\go-build
             ~/go/pkg/mod
-          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
       - name: Install make
         run: choco install make
