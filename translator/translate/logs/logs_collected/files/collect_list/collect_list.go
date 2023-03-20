@@ -37,7 +37,7 @@ func RegisterRule(fieldname string, r []Rule) {
 	ChildRule[fieldname] = r
 }
 
-//resetIndex resets the state of the Index.
+// resetIndex resets the state of the Index.
 func resetIndex() {
 	Index = 0
 }

@@ -182,9 +182,9 @@ func applyRule1(t *testing.T, buf string) interface{} {
 	return val
 }
 
-//stdNumMonth     // "1"         //%-m
-//stdDay          // "2"         //%-d
-//-hour:-minute:-seconds does not work for golang parser.
+// stdNumMonth     // "1"         //%-m
+// stdDay          // "2"         //%-d
+// -hour:-minute:-seconds does not work for golang parser.
 func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 	f := new(FileConfig)
 	var input interface{}
@@ -230,7 +230,7 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 	}
 }
 
-//^ . * ? | [ ] ( ) { } $
+// ^ . * ? | [ ] ( ) { } $
 func TestTimestampFormat_SpecialCharacters(t *testing.T) {
 	f := new(FileConfig)
 	var input interface{}

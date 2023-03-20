@@ -4,6 +4,7 @@ export BUILD_SPACE=$(BASE_SPACE)/build
 VERSION = $(shell echo `git describe --tag --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
 VERSION := $(shell echo ${VERSION} | sed -e "s/^v//")
 nightly-release: VERSION := $(shell echo ${VERSION}-nightly-build)
+nightly-release-mac: VERSION := $(shell echo ${VERSION}-nightly-build)
 # In case building outside of a git repo, use the version presented in the CWAGENT_VERSION file as a fallback
 ifeq ($(VERSION),)
 VERSION := `cat CWAGENT_VERSION`
@@ -20,9 +21,17 @@ LDFLAGS +=  -X github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agenti
 LDFLAGS +=  -X github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo.BuildStr=${BUILD}
 LINUX_AMD64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64
 LINUX_ARM64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64
-WIN_BUILD = GOOS=windows GOARCH=amd64 go build -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64
-DARWIN_BUILD = GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_amd64
-DARWIN_BUILD_ARM64 = GO111MODULE=on GOOS=darwin GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_arm64
+WIN_BUILD = GOOS=windows GOARCH=amd64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64
+DARWIN_BUILD = GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_amd64
+DARWIN_ARM_BUILD_FLAG = GO111MODULE=on GOOS=darwin GOARCH=arm64
+ifeq ($(OS),Windows_NT)
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Darwin)
+		DARWIN_ARM_BUILD_FLAG += CGO_ENABLED=1
+	endif
+endif
+DARWIN_BUILD_ARM64 = ${DARWIN_ARM_BUILD_FLAG} go build -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_arm64
 
 IMAGE = amazon/cloudwatch-agent:$(VERSION)
 DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
@@ -40,7 +49,10 @@ IMPI = $(TOOLS_BIN_DIR)/impi
 ADDLICENSE = $(TOOLS_BIN_DIR)/addlicense
 release: clean test build package-rpm package-deb package-win package-darwin
 
-nightly-release: release
+prepackage: clean test build
+release: prepackage package-rpm package-deb package-win package-darwin
+nightly-release: prepackage package-rpm package-deb package-win
+nightly-release-mac: prepackage package-darwin
 
 build: check_secrets amazon-cloudwatch-agent config-translator start-amazon-cloudwatch-agent amazon-cloudwatch-agent-config-wizard config-downloader
 
@@ -165,7 +177,7 @@ lint: install-golangci-lint checklicense impi
 	${LINTER} run ./...
 
 test:
-	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
+	CGO_ENABLED=0 go test -timeout 15m -coverprofile coverage.txt -failfast ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
 
 clean::
 	rm -rf release/ build/
