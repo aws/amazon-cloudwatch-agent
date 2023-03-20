@@ -48,7 +48,7 @@ jobs:
 
       # Set up building environment, patch the dev repo code on dispatch events.
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ~1.19.2
 
@@ -146,7 +146,7 @@ jobs:
           ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ~1.19.2
 
@@ -181,7 +181,7 @@ jobs:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ~1.19.2
 
@@ -243,7 +243,7 @@ jobs:
           path: test
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ~1.19.2
 
