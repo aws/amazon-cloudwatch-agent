@@ -37,7 +37,7 @@ func TestDisableMetricExtraction(t *testing.T) {
 				},
 			},
 			DimensionSets: [][]string{{"ClusterName"}},
-			Namespace:     "",
+			Namespace:     "ContainerInsights",
 		},
 	}, m1.Fields()["CloudWatchMetrics"])
 
