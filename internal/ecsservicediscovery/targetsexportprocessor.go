@@ -5,7 +5,6 @@ package ecsservicediscovery
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 
@@ -60,7 +59,7 @@ func (p *TargetsExportProcessor) Process(cluster string, taskList []*DecoratedTa
 	}
 	p.stats.AddStatsCount(ExporterDiscoveredTargetCount, len(targetsArr))
 
-	err = ioutil.WriteFile(p.tmpResultFilePath, m, 0644)
+	err = os.WriteFile(p.tmpResultFilePath, m, 0644)
 	if err != nil {
 		return nil, newServiceDiscoveryError(fmt.Sprintf("Fail to write Prometheus targets into file: %v", p.tmpResultFilePath), &err)
 	}

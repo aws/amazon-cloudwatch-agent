@@ -8,7 +8,6 @@ package cmdutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -17,7 +16,7 @@ import (
 )
 
 func TestGetGroupIds(t *testing.T) {
-	tmpfile, err := ioutil.TempFile("", "group-file-test")
+	tmpfile, err := os.CreateTemp("", "group-file-test")
 	require.Nil(t, err, "Failed to create temp file")
 
 	defer os.Remove(tmpfile.Name())

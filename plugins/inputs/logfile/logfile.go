@@ -6,7 +6,6 @@ package logfile
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -322,7 +321,7 @@ func (t *LogFile) restoreState(filename string) (int64, error) {
 		return 0, err
 	}
 
-	byteArray, err := ioutil.ReadFile(filePath)
+	byteArray, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Log.Warnf("Issue encountered when reading offset from file %s: %v", filename, err)
 		return 0, err
@@ -364,7 +363,7 @@ func (t *LogFile) cleanupStateFolder() {
 			continue
 		}
 
-		byteArray, err := ioutil.ReadFile(file)
+		byteArray, err := os.ReadFile(file)
 		if err != nil {
 			t.Log.Errorf("Error happens when reading the content from file %s in clean up state fodler step: %v", file, err)
 			continue

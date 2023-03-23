@@ -9,7 +9,7 @@ package wineventlog
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"strconv"
 	"strings"
@@ -105,7 +105,7 @@ func utf16ToUTF8Bytes(in []byte, length uint32) ([]byte, error) {
 	win16be := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
 	utf16bom := unicode.BOMOverride(win16be.NewDecoder())
 	unicodeReader := transform.NewReader(bytes.NewReader(in[:i]), utf16bom)
-	decoded, err := ioutil.ReadAll(unicodeReader)
+	decoded, err := io.ReadAll(unicodeReader)
 	return decoded, err
 }
 
