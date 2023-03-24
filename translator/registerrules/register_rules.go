@@ -43,4 +43,5 @@ import (
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/statsd"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/swap"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/rollup_dimensions"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/traces"
 )

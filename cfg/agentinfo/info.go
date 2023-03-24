@@ -12,12 +12,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 	"github.com/influxdata/telegraf/config"
 	"go.opentelemetry.io/collector/otelcol"
 	"golang.org/x/exp/maps"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 )
 
 const (
@@ -32,11 +33,11 @@ var isRunningAsRoot = func() bool {
 }
 
 var (
-	VersionStr    string
-	BuildStr      string = "No Build Date"
-	receivers     []string
-	processors    []string
-	exporters     []string
+	VersionStr string
+	BuildStr   string = "No Build Date"
+	receivers  []string
+	processors []string
+	exporters  []string
 
 	userAgentMap        = make(map[string]string)
 	ciCompiledRegexp, _ = regexp.Compile(containerInsightRegexp)
@@ -120,7 +121,7 @@ func SetPlugins(otelcfg *otelcol.Config, telegrafcfg *config.Config) {
 	receivers = maps.Keys(receiverSet)
 	processors = maps.Keys(processorSet)
 	exporters = maps.Keys(exporterSet)
-	
+
 	sort.Strings(receivers)
 	sort.Strings(processors)
 	sort.Strings(exporters)

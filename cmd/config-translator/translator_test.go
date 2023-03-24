@@ -58,6 +58,10 @@ func TestAgentConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidAgent.json", false, expectedErrorMap)
 }
 
+func TestTracesConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validTrace.json", true, map[string]int{})
+}
+
 func TestLogFilesConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogFiles.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}

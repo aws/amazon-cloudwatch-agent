@@ -206,7 +206,7 @@ func TestUserAgent(t *testing.T) {
 }
 
 func TestUserAgentEnvOverride(t *testing.T) {
-	os.Setenv(envconfig.CWAGENT_USER_AGENT, "CUSTOM CWAGENT USER AGENT")
+	t.Setenv(envconfig.CWAGENT_USER_AGENT, "CUSTOM CWAGENT USER AGENT")
 	expected := "CUSTOM CWAGENT USER AGENT"
 
 	ua := UserAgent("TestUserAgentEnvOverride")

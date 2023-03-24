@@ -11,6 +11,9 @@
     },
     "logs": {
       "$ref": "#/definitions/logsDefinition"
+    },
+    "traces": {
+      "$ref": "#/definitions/tracesDefinition"
     }
   },
   "additionalProperties": true,
@@ -789,6 +792,79 @@
         }
       }
     },
+    "tracesDefinition": {
+      "type": "object",
+      "descriptions": "configuration for collecting traces and uploading to x-ray service",
+      "properties": {
+        "traces_collected": {
+          "type": "object",
+          "properties": {
+            "xray": {
+              "$ref": "#/definitions/tracesDefinition/definitions/xrayDefinition"
+            }
+          },
+          "minProperties": 1
+        },
+        "concurrency": {
+          "description": "Maximum number of concurrent calls to AWS X-Ray to upload documents",
+          "type": "integer",
+          "minimum": 1
+        },
+        "buffer_size_mb": {
+          "description": "Memory limit for traces in MB",
+          "type": "integer",
+          "minimum": 3
+        },
+        "resource_arn": {
+          "description": "Amazon Resource Name (ARN) of the AWS resource running the agent",
+          "type": "string"
+        },
+        "local_mode": {
+          "description": "Disable EC2 instance metadata check",
+          "type": "boolean"
+        },
+        "insecure": {
+          "description": "Disable TLS certification verification",
+          "type": "boolean"
+        },
+        "credentials": {
+          "description": "The credentials with which agent can access aws resources",
+          "$ref": "#/definitions/credentialsDefinition"
+        },
+        "proxy_override": {
+          "description": "The override proxy address to upload segments to",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "endpoint_override": {
+          "description": "The override endpoint to use to access x-ray",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "region_override": {
+          "description": "The override region",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "traces_collected"
+      ],
+      "definitions": {
+        "xrayDefinition": {
+          "type": "object",
+          "properties": {
+            "bind_address": {
+              "description": "UDP endpoint to use to listen for X-Ray segments",
+              "$ref": "#/definitions/endpointOverrideDefinition"
+            },
+            "tcp_proxy": {
+              "description": "TCP proxy server used by the X-Ray SDK to update sampling rules",
+              "$ref": "#/definitions/tcpProxyDefinition"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
     "timeIntervalDefinition": {
       "type": "integer",
       "minimum": 1,
@@ -830,6 +906,16 @@
       "type": "string",
       "minLength": 4,
       "maxLength": 2048
+    },
+    "tcpProxyDefinition": {
+      "type": "object",
+      "properties": {
+        "bind_address": {
+          "description": "TCP endpoint for proxy server",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        }
+      },
+      "additionalProperties": false
     },
     "ecsServiceDiscoveryDefinition": {
       "type": "object",

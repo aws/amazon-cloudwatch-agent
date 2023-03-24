@@ -38,12 +38,15 @@ var testDataList = []TestData{
 	{"SeparateSection_LogsMetricAndLog", 10, 2, false},
 	{"SeparateSection_PrometheusAndLog", 11, 2, false},
 	{"Two_procstat", 12, 2, false},
+	{"Traces", 13, 2, false},
 }
 
 func TestMergeJsonConfigMaps(t *testing.T) {
 	for _, testData := range testDataList {
-		translator.ResetMessages()
-		executeTest(t, testData)
+		t.Run(testData.testName, func(t *testing.T) {
+			translator.ResetMessages()
+			executeTest(t, testData)
+		})
 	}
 	translator.ResetMessages()
 }

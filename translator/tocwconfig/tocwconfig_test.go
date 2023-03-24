@@ -45,31 +45,27 @@ const (
 var prometheusConfig string
 
 func TestLogMetricOnly(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
-	os.Setenv(config.HOST_NAME, "host_name_from_env")
-	os.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "log_metric_only", "linux", expectedEnvVars, "")
 	checkTranslation(t, "log_metric_only", "darwin", nil, "")
-	os.Unsetenv(config.HOST_NAME)
-	os.Unsetenv(config.HOST_IP)
 }
 
 func TestLogMetricAndLog(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
-	os.Setenv(config.HOST_NAME, "host_name_from_env")
-	os.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "log_metric_and_log", "linux", expectedEnvVars, "")
 	checkTranslation(t, "log_metric_and_log", "darwin", nil, "")
-	os.Unsetenv(config.HOST_NAME)
-	os.Unsetenv(config.HOST_IP)
 }
 
 func TestCompleteConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{
 		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
 		"CWAGENT_LOG_LEVEL":  "DEBUG",
@@ -81,13 +77,13 @@ func TestCompleteConfig(t *testing.T) {
 }
 
 func TestWindowsEventOnlyConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "windows_eventlog_only_config", "windows", expectedEnvVars, "")
 }
 
 func TestStatsDConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "statsd_config", "linux", expectedEnvVars, "_linux")
 	checkTranslation(t, "statsd_config", "windows", expectedEnvVars, "_windows")
@@ -96,7 +92,7 @@ func TestStatsDConfig(t *testing.T) {
 
 // Linux only for CollectD
 func TestCollectDConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "collectd_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "collectd_config_linux", "darwin", nil, "")
@@ -104,9 +100,9 @@ func TestCollectDConfig(t *testing.T) {
 
 // prometheus
 func TestPrometheusConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
-	os.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	temp := t.TempDir()
 	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
 	ecsSdFileName := filepath.Join(temp, "ecs_sd_results.yaml")
@@ -124,11 +120,10 @@ func TestPrometheusConfig(t *testing.T) {
 	// Additionally, before comparing with actual, we again replace tokens with temp files in the expected toml & yaml
 	checkTranslation(t, "prometheus_config_linux", "linux", expectedEnvVars, "", tokenReplacements)
 	checkTranslation(t, "prometheus_config_windows", "windows", nil, "", tokenReplacements)
-	os.Unsetenv(config.HOST_NAME)
 }
 
 func TestBasicConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "basic_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "basic_config_linux", "darwin", nil, "")
@@ -136,7 +131,7 @@ func TestBasicConfig(t *testing.T) {
 }
 
 func TestStandardConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "standard_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "standard_config_linux", "darwin", nil, "")
@@ -144,7 +139,7 @@ func TestStandardConfig(t *testing.T) {
 }
 
 func TestAdvancedConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "advanced_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "advanced_config_linux", "darwin", nil, "")
@@ -152,20 +147,20 @@ func TestAdvancedConfig(t *testing.T) {
 }
 
 func TestDropOriginConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "drop_origin_linux", "linux", expectedEnvVars, "")
 }
 
 func TestLogOnlyConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "log_only_config_windows", "windows", expectedEnvVars, "")
 }
 
 func TestStandardConfigWithCommonConfig(t *testing.T) {
-	resetContext()
-	readCommonConfig()
+	resetContext(t)
+	readCommonConfig(t)
 	expectedEnvVars := map[string]string{
 		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
 		"HTTPS_PROXY":   "https://127.0.0.1:3280",
@@ -178,40 +173,37 @@ func TestStandardConfigWithCommonConfig(t *testing.T) {
 }
 
 func TestDeltaConfigLinux(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "delta_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "delta_config_linux", "darwin", nil, "")
 }
 
 func TestDeltaNetConfigLinux(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "delta_net_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "delta_net_config_linux", "darwin", nil, "")
 }
 
 func TestECSNodeMetricConfig(t *testing.T) {
-	resetContext()
-	os.Setenv("RUN_IN_CONTAINER", "True")
-	os.Setenv("HOST_NAME", "fake-host-name")
-	os.Setenv("HOST_IP", "127.0.0.1")
+	resetContext(t)
+	t.Setenv("RUN_IN_CONTAINER", "True")
+	t.Setenv("HOST_NAME", "fake-host-name")
+	t.Setenv("HOST_IP", "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "log_ecs_metric_only", "linux", expectedEnvVars, "")
 	checkTranslation(t, "log_ecs_metric_only", "darwin", nil, "")
-	os.Unsetenv("RUN_IN_CONTAINER")
-	os.Unsetenv("HOST_NAME")
-	os.Unsetenv("HOST_IP")
 }
 
 func TestLogFilterConfig(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	checkTranslation(t, "log_filter", "linux", nil, "")
 	checkTranslation(t, "log_filter", "darwin", nil, "")
 }
 
 func TestTomlToTomlComparison(t *testing.T) {
-	resetContext()
+	resetContext(t)
 	var jsonFilePath = "./totomlconfig/tomlConfigTemplate/agentToml.json"
 	var input interface{}
 	x := os.Getenv("HOST_NAME")
@@ -247,17 +239,17 @@ func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFil
 	verifyToYamlTranslation(t, input, expectedYamlFilePath, tokenReplacements...)
 }
 
-func readCommonConfig() {
+func readCommonConfig(t *testing.T) {
 	ctx := context.CurrentContext()
-	config := commonconfig.New()
+	cfg := commonconfig.New()
 	data, _ := os.ReadFile("./sampleConfig/commonConfigTest.toml")
-	config.Parse(bytes.NewReader(data))
-	ctx.SetCredentials(config.CredentialsMap())
-	ctx.SetProxy(config.ProxyMap())
-	ctx.SetSSL(config.SSLMap())
+	require.NoError(t, cfg.Parse(bytes.NewReader(data)))
+	ctx.SetCredentials(cfg.CredentialsMap())
+	ctx.SetProxy(cfg.ProxyMap())
+	ctx.SetSSL(cfg.SSLMap())
 }
 
-func resetContext() {
+func resetContext(t *testing.T) {
 	util.DetectRegion = func(string, map[string]string) string {
 		return "us-west-2"
 	}
@@ -266,7 +258,7 @@ func resetContext() {
 	}
 	context.ResetContext()
 
-	os.Setenv("ProgramData", "c:\\ProgramData")
+	t.Setenv("ProgramData", "c:\\ProgramData")
 }
 
 // toml files in the given path will be parsed into the config toml struct and be compared as struct
