@@ -13,41 +13,82 @@ import (
 )
 
 func TestDisableMetricExtraction(t *testing.T) {
+
 	tags := map[string]string{MetricType: TypeCluster}
 	fields := map[string]interface{}{MetricName(TypeCluster, NodeCount): 10, MetricName(TypeCluster, FailedNodeCount): 1}
 
-	m1 := metric.New("testClusterMetric", tags, fields, time.Now())
-	decorator := &K8sDecorator{
-		started:                 true,
-		DisableMetricExtraction: false,
-		ClusterName:             "TestK8sCluster",
-	}
-	decorator.Apply(m1)
-	assert.Equal(t, "Sources,CloudWatchMetrics", m1.Tags()["attributesInFields"])
-	assert.Equal(t, []structuredlogscommon.MetricRule{
-		{
-			Metrics: []structuredlogscommon.MetricAttr{
+	testCases := map[string]struct {
+		k8sDecorator               *K8sDecorator
+		expectedAttributesInFields string
+		expectedCloudWatchMetrics  interface{}
+	}{
+		"WithDisableMetricExtractionDefault": {
+			k8sDecorator: &K8sDecorator{
+				started:     true,
+				ClusterName: "TestK8sCluster",
+			},
+			expectedAttributesInFields: "Sources,CloudWatchMetrics",
+			expectedCloudWatchMetrics: []structuredlogscommon.MetricRule{
 				{
-					Unit: "Count",
-					Name: "cluster_node_count",
-				},
-				{
-					Unit: "Count",
-					Name: "cluster_failed_node_count",
+					Metrics: []structuredlogscommon.MetricAttr{
+						{
+							Unit: "Count",
+							Name: "cluster_node_count",
+						},
+						{
+							Unit: "Count",
+							Name: "cluster_failed_node_count",
+						},
+					},
+					DimensionSets: [][]string{{"ClusterName"}},
+					Namespace:     "ContainerInsights",
 				},
 			},
-			DimensionSets: [][]string{{"ClusterName"}},
-			Namespace:     "ContainerInsights",
 		},
-	}, m1.Fields()["CloudWatchMetrics"])
-
-	m2 := metric.New("testClusterMetric", tags, fields, time.Now())
-	decorator = &K8sDecorator{
-		started:                 true,
-		DisableMetricExtraction: true,
-		ClusterName:             "TestK8sCluster",
+		"WithDisableMetricExtractionFalse": {
+			k8sDecorator: &K8sDecorator{
+				started:                 true,
+				DisableMetricExtraction: false,
+				ClusterName:             "TestK8sCluster",
+			},
+			expectedAttributesInFields: "Sources,CloudWatchMetrics",
+			expectedCloudWatchMetrics: []structuredlogscommon.MetricRule{
+				{
+					Metrics: []structuredlogscommon.MetricAttr{
+						{
+							Unit: "Count",
+							Name: "cluster_node_count",
+						},
+						{
+							Unit: "Count",
+							Name: "cluster_failed_node_count",
+						},
+					},
+					DimensionSets: [][]string{{"ClusterName"}},
+					Namespace:     "ContainerInsights",
+				},
+			},
+		},
+		"WithDisableMetricExtractionTrue": {
+			k8sDecorator: &K8sDecorator{
+				started:                 true,
+				DisableMetricExtraction: true,
+				ClusterName:             "TestK8sCluster",
+			},
+			expectedAttributesInFields: "Sources",
+			expectedCloudWatchMetrics:  nil,
+		},
 	}
-	decorator.Apply(m2)
-	assert.Equal(t, "Sources", m2.Tags()["attributesInFields"])
-	assert.Equal(t, nil, m2.Fields()["CloudWatchMetrics"])
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// Given a metric & k8s decorator configuration,
+			testMetric := metric.New("testClusterMetric", tags, fields, time.Now())
+			// When the processor is applied,
+			testCase.k8sDecorator.Apply(testMetric)
+			// Then the metric is expected to be converted to EMF with the following fields & tags
+			assert.Equal(t, testCase.expectedAttributesInFields, testMetric.Tags()["attributesInFields"])
+			assert.Equal(t, testCase.expectedCloudWatchMetrics, testMetric.Fields()["CloudWatchMetrics"])
+		})
+	}
 }
