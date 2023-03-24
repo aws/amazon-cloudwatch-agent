@@ -9,7 +9,8 @@
       "kubernetes": {
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
-        "prefer_full_pod_name": true
+        "prefer_full_pod_name": true,
+        "disable_metric_extraction": true
       }
     },
     "force_flush_interval": 5,
