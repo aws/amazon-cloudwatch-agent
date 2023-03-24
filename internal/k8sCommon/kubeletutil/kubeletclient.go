@@ -6,9 +6,10 @@ package kubeletutil
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -55,7 +56,7 @@ func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 	}
 
 	if k.BearerToken != "" {
-		token, err := ioutil.ReadFile(k.BearerToken)
+		token, err := os.ReadFile(k.BearerToken)
 		if err != nil {
 			return result, err
 		}
@@ -75,7 +76,7 @@ func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 		return result, ErrKubeClientAccessFailure
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("E! Fail to read request %s body: %s", url, err)
 		return result, err

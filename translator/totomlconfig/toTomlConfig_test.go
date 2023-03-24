@@ -6,32 +6,28 @@ package totomlconfig
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-
-	"os"
+	"github.com/stretchr/testify/assert"
 
 	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/stretchr/testify/assert"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 func ReadFromFile(filename string) string {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +57,6 @@ func TestLogMetricOnPrem(t *testing.T) {
 	os.Unsetenv(config.HOST_NAME)
 	os.Unsetenv(config.HOST_IP)
 }
-
 
 func TestLogMetricOnPremise(t *testing.T) {
 	resetContext()
@@ -129,14 +124,14 @@ func TestStatsDConfig(t *testing.T) {
 	checkTomlTranslation(t, "./sampleConfig/statsd_config.json", "./sampleConfig/statsd_config_windows.conf", "windows")
 }
 
-//Linux only for CollectD
+// Linux only for CollectD
 func TestCollectDConfig(t *testing.T) {
 	resetContext()
 	checkTomlTranslation(t, "./sampleConfig/collectd_config_linux.json", "./sampleConfig/collectd_config_linux.conf", "linux")
 	checkTomlTranslation(t, "./sampleConfig/collectd_config_linux.json", "./sampleConfig/collectd_config_linux.conf", "darwin")
 }
 
-//prometheus
+// prometheus
 func TestPrometheusConfig(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)
@@ -164,7 +159,7 @@ func TestStandardConfig(t *testing.T) {
 func TestAdvancedConfig(t *testing.T) {
 	resetContext()
 	checkTomlTranslation(t, "./sampleConfig/advanced_config_linux.json", "./sampleConfig/advanced_config_linux.conf", "linux")
-	checkTomlTranslation(t, "./sampleConfig/advanced_config_linux.json", "./sampleConfig/advanced_config_linux.conf", "darwin")
+	checkTomlTranslation(t, "./sampleConfig/advanced_config_darwin.json", "./sampleConfig/advanced_config_darwin.conf", "darwin")
 	checkTomlTranslation(t, "./sampleConfig/advanced_config_windows.json", "./sampleConfig/advanced_config_windows.conf", "windows")
 }
 
@@ -251,7 +246,7 @@ func checkTomlTranslation(t *testing.T, jsonPath string, desiredTomlPath string,
 func readCommonConfig() {
 	ctx := context.CurrentContext()
 	config := commonconfig.New()
-	data, _ := ioutil.ReadFile("./sampleConfig/commonConfigTest.toml")
+	data, _ := os.ReadFile("./sampleConfig/commonConfigTest.toml")
 	config.Parse(bytes.NewReader(data))
 	ctx.SetCredentials(config.CredentialsMap())
 	ctx.SetProxy(config.ProxyMap())

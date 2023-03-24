@@ -5,7 +5,7 @@ package collect_list
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 
@@ -37,7 +37,7 @@ func RegisterRule(fieldname string, r []Rule) {
 	ChildRule[fieldname] = r
 }
 
-//resetIndex resets the state of the Index.
+// resetIndex resets the state of the Index.
 func resetIndex() {
 	Index = 0
 }
@@ -119,7 +119,7 @@ func outputLogConfig(logConfigs []interface{}) {
 		Region:     agent.Global_Config.Region,
 	}
 	if bytes, err := json.Marshal(outputFile); err == nil {
-		ioutil.WriteFile(outputLogConfigFilePath, bytes, 0644)
+		os.WriteFile(outputLogConfigFilePath, bytes, 0644)
 	}
 }
 

@@ -6,8 +6,8 @@ package jsonconfig
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"reflect"
 	"testing"
 
@@ -70,7 +70,7 @@ func executeTest(t *testing.T, testData TestData) {
 		t.Fatalf("Failed to merge json maps with error: %v", err)
 	}
 	expectedFileName := fmt.Sprintf("./sampleJsonConfig/test_%v/expected_output.json", testData.testId)
-	expectedOutputBytes, err := ioutil.ReadFile(expectedFileName)
+	expectedOutputBytes, err := os.ReadFile(expectedFileName)
 	if err != nil {
 		t.Fatalf("Failed to read expected output file %v with error: %v", expectedFileName, err)
 	}

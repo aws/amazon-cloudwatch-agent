@@ -5,7 +5,6 @@ package cmdutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -35,7 +34,7 @@ const (
 func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConfigFilePath string) {
 	res := totomlconfig.ToTomlConfig(jsonConfigValue)
 	if translator.IsTranslateSuccess() {
-		if err := ioutil.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); err != nil {
+		if err := os.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); err != nil {
 			log.Panicf("E! Failed to create the configuration validation file. Reason: %s", err.Error())
 		} else {
 			for _, infoMessage := range translator.InfoMessages {
@@ -54,7 +53,7 @@ func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, env
 		return
 	}
 	bytes := toenvconfig.ToEnvConfig(jsonConfigValue)
-	if err := ioutil.WriteFile(envConfigPath, bytes, 0644); err != nil {
+	if err := os.WriteFile(envConfigPath, bytes, 0644); err != nil {
 		log.Panicf("E! Failed to create env config. Reason: %s", err.Error())
 	}
 }

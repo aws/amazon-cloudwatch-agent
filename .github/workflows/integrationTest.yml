@@ -8,9 +8,9 @@ env:
   S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  CWA_GITHUB_TEST_REPO_NAME: "khanhntd/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_URL: "https://github.com/khanhntd/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "wind"
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
   push:
@@ -50,7 +50,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.19.2
+          go-version: ~1.19.6
 
       - name: Install rpm
         run: sudo apt install rpm
@@ -61,15 +61,6 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
-      - name: Cache go
-        id: cached_go
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-
       - name: Cache binaries
         id: cached_binaries
         uses: actions/cache@v2
@@ -77,7 +68,17 @@ jobs:
           key: "cached_binaries_${{ github.sha }}"
           path: go.mod
 
+      - name: Cache go
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
       - name: Import GPG Key
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
         uses: crazy-max/ghaction-import-gpg@v5
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -85,9 +86,10 @@ jobs:
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: make build package-rpm package-deb package-win package-darwin
+        run: make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win
 
       - name: Sign Build Files
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
 
 
@@ -128,7 +130,6 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}
           platforms: linux/amd64, linux/arm64
 
-
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
@@ -136,6 +137,7 @@ jobs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+      ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
       ec2_stress_matrix: ${{steps.set-matrix.outputs.ec2_stress_matrix}}
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
@@ -149,7 +151,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.19.2
+          go-version: ~1.19.6
 
       - name: Generate matrix
         id: set-matrix
@@ -158,19 +160,23 @@ jobs:
           echo "::set-output name=ec2_gpu_matrix::$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))"
           echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
           echo "::set-output name=ec2_windows_matrix::$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))"
+          echo "::set-output name=ec2_mac_matrix::$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))"
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ec2_stress_matrix::$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
+
       - name: Echo test plan matrix
         run: |
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
+          echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
           echo "ec2_stress_matrix: ${{ steps.set-matrix.outputs.ec2_stress_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
+
   MakeMSIZip:
     name: 'MakeMSIZip'
     runs-on: ubuntu-latest
@@ -186,7 +192,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.19.2
+          go-version: ~1.19.6
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -218,33 +224,40 @@ jobs:
           mkdir msi_dep
           cp -r msi/tools/. msi_dep/
           cp -r windows-agent/amazon-cloudwatch-agent/. msi_dep/
-          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>' --tags=integration
-          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__ --tags=integration
+          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>' 
+          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__ 
+
       - name: Zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
           sudo apt install zip
           zip buildMSI.zip msi_dep/*
+
       - name: Upload zip
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: aws s3 cp buildMSI.zip s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/buildMSI.zip
 
   MakeMacPkg:
     name: 'MakeMacPkg'
-    runs-on: macos-latest
-    needs: [MakeBinary]
+    runs-on: macos-11
     permissions:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          path: cwa
+          fetch-depth: 0
+
+      - uses: actions/checkout@v3
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          path: test
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.19.2
+          go-version: ~1.19.6
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -252,28 +265,45 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
-      - name: Cache pkg
-        id: cached_pkg
+      - name: Cache binaries
+        id: cached_binaries
         uses: actions/cache@v2
         with:
-          key: "cached_pkg_${{ github.sha }}"
+          key: "cached-binaries-${{ runner.os }}-${{ github.sha }}"
           path: go.mod
 
+      - name: Cache pkg
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/Library/Caches/go-build
+            ~/go/pkg/mod
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          
+      - name: Build Binaries
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        working-directory: cwa
+        run: make amazon-cloudwatch-agent-mac package-darwin
+
       - name: Copy binary
-        if: steps.cached_pkg.outputs.cache-hit != 'true'
-        run: |
-          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ github.sha }} . --recursive
-      - name: Create pkg dep folder and copy deps
-        if: steps.cached_pkg.outputs.cache-hit != 'true'
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        working-directory: cwa
         run: |
           echo cw agent version $(cat CWAGENT_VERSION)
-          cp CWAGENT_VERSION /tmp/CWAGENT_VERSION
+          cp -r build/bin/darwin/amd64/. /tmp/
+          cp -r build/bin/darwin/arm64/. /tmp/arm64/
+          cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION
+
+      - name: Create pkg dep folder and copy deps
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        working-directory: test
+        run: |
           cp -r pkg/tools/. /tmp/
           cp -r pkg/tools/. /tmp/arm64/
-          cp -r darwin/amd64/. /tmp/
-          cp -r darwin/arm64/. /tmp/arm64/
+
       - name: Build And Upload PKG
-        if: steps.cached_pkg.outputs.cache-hit != 'true'
+        if: steps.cached_binaries.outputs.cache-hit != 'true'
         working-directory: /tmp/
         run : |
           chmod +x create_pkg.sh
@@ -281,6 +311,7 @@ jobs:
           ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }} ${{ github.sha }} amd64
           cd arm64
           ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }} ${{ github.sha }} arm64
+
   BuildMSI:
     name: 'BuildMSI'
     runs-on: windows-latest
@@ -319,6 +350,7 @@ jobs:
           Expand-Archive buildMSI.zip -Force
           cd buildMSI/msi_dep
           .\create_msi.ps1 ${{ github.sha }} ${{ secrets.S3_INTEGRATION_BUCKET }}
+
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:
     name: 'SignMacAndWindowsPackage'
@@ -366,6 +398,7 @@ jobs:
           aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi.sig
           aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amd64/amazon-cloudwatch-agent.pkg.sig
           aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/arm64/amazon-cloudwatch-agent.pkg.sig
+  
   StartLocalStack:
     name: 'StartLocalStack'
     runs-on: ubuntu-latest
@@ -509,6 +542,7 @@ jobs:
               cd terraform/ec2/linux
             fi
             terraform destroy --auto-approve
+
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'Test'
@@ -613,7 +647,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: go.mod
-          key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}
+          key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo OS
         run: echo run on ec2 instance os ${{ matrix.arrays.os }}
@@ -627,16 +661,15 @@ jobs:
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
-          timeout_minutes: 15
+          timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
             cd terraform/ec2/win
             terraform init
             if terraform apply --auto-approve \
+            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
             -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
-            -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-            -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
-            -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
+            -var="cwa_github_sha=${GITHUB_SHA}"  \
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
               terraform destroy -auto-approve
@@ -653,6 +686,75 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/ec2/win && terraform destroy --auto-approve 
+    
+  EC2DarwinIntegrationTest:
+    needs: [MakeMacPkg, EC2LinuxIntegrationTest, GenerateTestMatrix]
+    name: 'EC2DarwinIntegrationTest'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_mac_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: ec2-mac-integration-test
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: ec2-mac-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
+      - name: Echo OS
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }}
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+        # nick-fields/retry@v2 starts at base dir
+      - name: Terraform apply
+        if: steps.ec2-mac-integration-test.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/ec2/mac
+            terraform init
+            if terraform apply --auto-approve \
+            -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
+            -var="arc=${{ matrix.arrays.arc }}" \
+            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+            -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
+            -var="test_dir=${{ matrix.arrays.test_dir }}" \
+            -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() && steps.ec2-mac-integration-test.outputs.cache-hit != 'true' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/ec2/mac && terraform destroy --auto-approve 
 
   StopLocalStack:
     name: 'StopLocalStack'
@@ -827,7 +929,7 @@ jobs:
 
   StressTrackingTest:
     name: "StressTrackingTest"
-    needs: [MakeBinary,  GenerateTestMatrix]
+    needs: [MakeBinary, EC2LinuxIntegrationTest, ECSEC2IntegrationTest, ECSFargateIntegrationTest, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -870,8 +972,7 @@ jobs:
             cd terraform/performance
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-              -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
+              -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${GITHUB_SHA}" \
               -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \

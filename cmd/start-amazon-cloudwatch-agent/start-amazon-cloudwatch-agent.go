@@ -5,7 +5,6 @@ package main
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -113,7 +112,7 @@ func printFileContents(path string) {
 		}
 	}()
 
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 	if err != nil {
 		log.Printf("E! Error when reading file(%s), Error is %v \n", path, err)
 	}
