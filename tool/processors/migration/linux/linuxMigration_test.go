@@ -4,7 +4,6 @@
 package linux
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -39,10 +38,10 @@ func TestProcessor_Process(t *testing.T) {
 		initial_position = start_of_file
 		log_group_name = /var/log/messages
 	`
-	tmpFile, _ := ioutil.TempFile("", "")
+	tmpFile, _ := os.CreateTemp("", "")
 	defer os.Remove(tmpFile.Name())
 
-	err := ioutil.WriteFile(tmpFile.Name(), []byte(tomlString), os.ModePerm)
+	err := os.WriteFile(tmpFile.Name(), []byte(tomlString), os.ModePerm)
 	assert.NoError(t, err)
 
 	expectedMap := map[string]interface{}{
@@ -139,10 +138,10 @@ func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
 		},
 	}
 
-	tmpFile, _ := ioutil.TempFile("", "")
+	tmpFile, _ := os.CreateTemp("", "")
 	defer os.Remove(tmpFile.Name())
 
-	err := ioutil.WriteFile(tmpFile.Name(), []byte(tomlString), os.ModePerm)
+	err := os.WriteFile(tmpFile.Name(), []byte(tomlString), os.ModePerm)
 	assert.NoError(t, err)
 
 	ctx := new(runtime.Context)

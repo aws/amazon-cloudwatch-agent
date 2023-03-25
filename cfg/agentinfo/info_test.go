@@ -5,7 +5,6 @@ package agentinfo
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -44,7 +43,7 @@ func TestReadVersionFile(t *testing.T) {
 	vfp := filepath.Join(filepath.Dir(ex), versionFilename)
 	expectedVersion := "TEST_VERSION"
 
-	if err = ioutil.WriteFile(vfp, []byte(expectedVersion), 0644); err != nil {
+	if err = os.WriteFile(vfp, []byte(expectedVersion), 0644); err != nil {
 		t.Fatalf("failed to write version file at %v: %v", vfp, err)
 	}
 	defer os.Remove(vfp)

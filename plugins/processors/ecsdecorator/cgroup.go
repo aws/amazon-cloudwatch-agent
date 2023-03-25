@@ -6,7 +6,6 @@ package ecsdecorator
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -97,7 +96,7 @@ func readString(dirpath string, file string) (string, error) {
 	cgroupFile := path.Join(dirpath, file)
 
 	// Read
-	out, err := ioutil.ReadFile(cgroupFile)
+	out, err := os.ReadFile(cgroupFile)
 	if err != nil {
 		// Ignore non-existent files
 		log.Printf("W! readString: Failed to read %q: %s", cgroupFile, err)

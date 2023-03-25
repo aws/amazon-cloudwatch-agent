@@ -5,7 +5,6 @@ package collect_list
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -183,9 +182,9 @@ func applyRule1(t *testing.T, buf string) interface{} {
 	return val
 }
 
-//stdNumMonth     // "1"         //%-m
-//stdDay          // "2"         //%-d
-//-hour:-minute:-seconds does not work for golang parser.
+// stdNumMonth     // "1"         //%-m
+// stdDay          // "2"         //%-d
+// -hour:-minute:-seconds does not work for golang parser.
 func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 	f := new(FileConfig)
 	var input interface{}
@@ -231,7 +230,7 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 	}
 }
 
-//^ . * ? | [ ] ( ) { } $
+// ^ . * ? | [ ] ( ) { } $
 func TestTimestampFormat_SpecialCharacters(t *testing.T) {
 	f := new(FileConfig)
 	var input interface{}
@@ -480,7 +479,7 @@ func TestAutoRemoval(t *testing.T) {
 }
 
 func TestFileConfigOutputFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -515,7 +514,7 @@ func TestFileConfigOutputFile(t *testing.T) {
 	_, err = os.Stat(path)
 	assert.NoError(t, err)
 
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	assert.NoError(t, err)
 
 	expectVal := "{\"version\":\"1\",\"log_configs\":[{\"log_group_name\":\"group1\"},{\"log_group_name\":\"group2\"},{\"log_group_name\":\"group3\"}],\"region\":\"us-east-1\"}"
