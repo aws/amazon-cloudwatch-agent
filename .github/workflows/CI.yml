@@ -74,7 +74,7 @@ jobs:
         id: cached_binaries
         uses: actions/cache@v2
         with:
-          key: "cached_binaries_${{ github.sha }}"
+          key: "cached-binaries-${{ github.sha }}"
           path: go.mod
 
       - name: Import GPG Key
@@ -95,7 +95,7 @@ jobs:
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: make build package-rpm package-deb package-win
+        run: make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win
 
       - name: Sign Build Files
         run: for f in $(find build/bin/); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
@@ -176,6 +176,7 @@ jobs:
           echo "ec2_stress_matrix: ${{ steps.set-matrix.outputs.ec2_stress_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
+
   MakeMSIZip:
     name: 'MakeMSIZip'
     runs-on: ubuntu-latest
@@ -215,6 +216,7 @@ jobs:
         run: |
           sudo apt install unzip
           unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
+
       - name: Create msi dep folder and copy deps
         if: steps.cached_win_zip.outputs.cache-hit != 'true'
         run: |
@@ -246,6 +248,7 @@ jobs:
         with:
           path: cwa
           fetch-depth: 0
+
       - uses: actions/checkout@v3
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
@@ -266,13 +269,26 @@ jobs:
         id: cached_pkg
         uses: actions/cache@v2
         with:
-          key: "cached_pkg_${{ github.sha }}"
-          path: go.mod
+          key: "cached-pkg-${{ github.sha }}"
+          path: |
+            %LocalAppData%\go-build
+            ~/go/pkg/mod
+
+      - name: Unit Test 
+        if: steps.cached_pkg.outputs.cache-hit != 'true'
+        working-directory: cwa
+        run: make test
+
+      - name: Upload Coverage report to CodeCov
+        if: steps.cached_pkg.outputs.cache-hit != 'true'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.txt
 
       - name: Build Binaries
         if: steps.cached_pkg.outputs.cache-hit != 'true'
         working-directory: cwa
-        run: make build package-darwin
+        run: make amazon-cloudwatch-agent-mac package-darwin
 
       - name: Copy binary
         if: steps.cached_pkg.outputs.cache-hit != 'true'
@@ -338,6 +354,7 @@ jobs:
           Expand-Archive buildMSI.zip -Force
           cd buildMSI/msi_dep
           .\create_msi.ps1 ${{ github.sha }} ${{ secrets.S3_INTEGRATION_BUCKET }}
+
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:
     name: 'SignMacAndWindowsPackage'
@@ -528,6 +545,7 @@ jobs:
               cd terraform/ec2/linux
             fi
             terraform destroy --auto-approve
+
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'Test'

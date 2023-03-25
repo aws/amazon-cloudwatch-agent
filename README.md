@@ -30,7 +30,7 @@ Amazon CloudWatch Agent uses the open-source project [telegraf](https://github.c
 ```
 sudo yum install -y rpmdevtools rpm-build
 ```
-* Run `make build` to build the CloudWatch Agent for Linux, Debian, Windows environment.
+* Run `make build` to build the CloudWatch Agent for Linux, Debian, Windows, MacOS environment.
 
 * Run `make release` to build the agent. This also packages it into a RPM, DEB and ZIP package.
 
