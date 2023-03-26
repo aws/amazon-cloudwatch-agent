@@ -1,6 +1,0 @@
-[
-  {
-    "os": "win-2022",
-    "ami": "cloudwatch-agent-integration-test-win-2022*"
-  }
-]

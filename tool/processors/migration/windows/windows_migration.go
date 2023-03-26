@@ -5,7 +5,6 @@ package windows
 
 import (
 	"encoding/json"
-	"io/ioutil"
 
 	"fmt"
 	"os"
@@ -43,7 +42,7 @@ func migrateOldAgentConfig() {
 	// 1 - parse the old config
 	var oldConfig OldSsmCwConfig
 	absPath := util.AskWithDefault(filePathWindowsConfigQuestion, DefaultFilePathWindowsConfiguration)
-	if file, err := ioutil.ReadFile(absPath); err == nil {
+	if file, err := os.ReadFile(absPath); err == nil {
 		if err := json.Unmarshal(file, &oldConfig); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to parse the provided configuration file. Error details: %v", err)
 			os.Exit(1)

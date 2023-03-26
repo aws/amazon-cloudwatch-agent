@@ -4,7 +4,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"regexp"
 	"testing"
 
@@ -180,7 +180,7 @@ func TestInvalidLogFilterConfig(t *testing.T) {
 
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
-	if files, err := ioutil.ReadDir("../../translator/totomlconfig/sampleConfig/"); err == nil {
+	if files, err := os.ReadDir("../../translator/totomlconfig/sampleConfig/"); err == nil {
 		re := regexp.MustCompile(".json")
 		for _, file := range files {
 			if re.MatchString(file.Name()) {

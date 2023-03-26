@@ -6,7 +6,6 @@ package totomlconfig
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"strings"
 	"testing"
@@ -31,7 +30,7 @@ import (
 )
 
 func ReadFromFile(filename string) string {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -62,6 +61,18 @@ func TestLogMetricOnPrem(t *testing.T) {
 	os.Unsetenv(config.HOST_IP)
 }
 
+func TestLogMetricOnPremise(t *testing.T) {
+	resetContext()
+	context.CurrentContext().SetRunInContainer(true)
+	os.Setenv(config.HOST_NAME, "host_name_from_env")
+	os.Setenv(config.HOST_IP, "127.0.0.1")
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	checkTomlTranslation(t, "./sampleConfig/log_metric_only.json", "./sampleConfig/log_metric_only_on_prem.conf", "linux")
+	checkTomlTranslation(t, "./sampleConfig/log_metric_only.json", "./sampleConfig/log_metric_only_on_prem.conf", "darwin")
+	os.Unsetenv(config.HOST_NAME)
+	os.Unsetenv(config.HOST_IP)
+}
+
 func TestLogMetricAndLog(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)
@@ -79,6 +90,18 @@ func TestLogMetricAndLogOnPrem(t *testing.T) {
 	os.Setenv(config.HOST_NAME, "host_name_from_env")
 	os.Setenv(config.HOST_IP, "127.0.0.1")
 	context.CurrentContext().SetMode(config.ModeOnPrem)
+	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "linux")
+	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "darwin")
+	os.Unsetenv(config.HOST_NAME)
+	os.Unsetenv(config.HOST_IP)
+}
+
+func TestLogMetricAndLogOnPremise(t *testing.T) {
+	resetContext()
+	context.CurrentContext().SetRunInContainer(true)
+	os.Setenv(config.HOST_NAME, "host_name_from_env")
+	os.Setenv(config.HOST_IP, "127.0.0.1")
+	context.CurrentContext().SetMode(config.ModeOnPremise)
 	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "linux")
 	checkTomlTranslation(t, "./sampleConfig/log_metric_and_log.json", "./sampleConfig/log_metric_and_log_on_prem.conf", "darwin")
 	os.Unsetenv(config.HOST_NAME)
@@ -104,14 +127,14 @@ func TestStatsDConfig(t *testing.T) {
 	checkTomlTranslation(t, "./sampleConfig/statsd_config.json", "./sampleConfig/statsd_config_windows.conf", "windows")
 }
 
-//Linux only for CollectD
+// Linux only for CollectD
 func TestCollectDConfig(t *testing.T) {
 	resetContext()
 	checkTomlTranslation(t, "./sampleConfig/collectd_config_linux.json", "./sampleConfig/collectd_config_linux.conf", "linux")
 	checkTomlTranslation(t, "./sampleConfig/collectd_config_linux.json", "./sampleConfig/collectd_config_linux.conf", "darwin")
 }
 
-//prometheus
+// prometheus
 func TestPrometheusConfig(t *testing.T) {
 	resetContext()
 	context.CurrentContext().SetRunInContainer(true)
@@ -226,7 +249,7 @@ func checkTomlTranslation(t *testing.T, jsonPath string, desiredTomlPath string,
 func readCommonConfig() {
 	ctx := context.CurrentContext()
 	config := commonconfig.New()
-	data, _ := ioutil.ReadFile("./sampleConfig/commonConfigTest.toml")
+	data, _ := os.ReadFile("./sampleConfig/commonConfigTest.toml")
 	config.Parse(bytes.NewReader(data))
 	ctx.SetCredentials(config.CredentialsMap())
 	ctx.SetProxy(config.ProxyMap())

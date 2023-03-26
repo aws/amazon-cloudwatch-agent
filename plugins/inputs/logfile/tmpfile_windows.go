@@ -2,14 +2,13 @@ package logfile
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/winfile"
 )
 
 func createTempFile(dir, prefix string) (*os.File, error) {
-	file, err := ioutil.TempFile(dir, prefix)
+	file, err := os.CreateTemp(dir, prefix)
 	if err := file.Close(); err != nil {
 		return nil, fmt.Errorf("Failed to close created temp file %v: %w", file.Name(), err)
 	}

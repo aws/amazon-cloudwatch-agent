@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -41,12 +40,12 @@ func TestTailerSrc(t *testing.T) {
 		t.Errorf("Failed to create temp file: %v", err)
 	}
 
-	statefile, err := ioutil.TempFile("", "tailsrctest-state-*.log")
+	statefile, err := os.CreateTemp("", "tailsrctest-state-*.log")
 	defer os.Remove(statefile.Name())
 	if err != nil {
 		t.Errorf("Failed to create temp file: %v", err)
 	}
-	beforeCount := tail.OpenFileCount.Get()
+	beforeCount := tail.OpenFileCount.Load()
 	tailer, err := tail.TailFile(file.Name(),
 		tail.Config{
 			ReOpen:      false,
@@ -63,7 +62,7 @@ func TestTailerSrc(t *testing.T) {
 		t.Errorf("Failed to create tailer src for file %v with error: %v", file, err)
 		return
 	}
-	assert.Equal(t, beforeCount + 1, tail.OpenFileCount.Get())
+	assert.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
 	ts := NewTailerSrc(
 		"groupName", "streamName",
 		"destination",
@@ -152,7 +151,7 @@ func TestTailerSrc(t *testing.T) {
 	// Most test functions do not wait for the Tail to close the file.
 	// They rely on Tail to detect file deletion and close the file.
 	// So the count might be nonzero due to previous test cases.
-	assert.LessOrEqual(t, tail.OpenFileCount.Get(), beforeCount)
+	assert.LessOrEqual(t, tail.OpenFileCount.Load(), beforeCount)
 }
 
 func TestOffsetDoneCallBack(t *testing.T) {
@@ -165,7 +164,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		t.Errorf("Failed to create temp file: %v", err)
 	}
 
-	statefile, err := ioutil.TempFile("", "tailsrctest-state-*.log")
+	statefile, err := os.CreateTemp("", "tailsrctest-state-*.log")
 	defer os.Remove(statefile.Name())
 	if err != nil {
 		t.Errorf("Failed to create temp file: %v", err)
@@ -216,7 +215,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		log.Println(i)
 		if i == 10 { // Test before first truncate
 			time.Sleep(1 * time.Second)
-			b, err := ioutil.ReadFile(statefile.Name())
+			b, err := os.ReadFile(statefile.Name())
 			if err != nil {
 				t.Errorf("Failed to read state file: %v", err)
 			}
@@ -233,7 +232,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		if i == 15 { // Test after first truncate, saved offset should decrease
 			time.Sleep(1 * time.Second)
 			log.Println(statefile.Name())
-			b, err := ioutil.ReadFile(statefile.Name())
+			b, err := os.ReadFile(statefile.Name())
 			log.Println(b)
 			if err != nil {
 				t.Errorf("Failed to read state file: %v", err)
@@ -256,7 +255,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 
 		if i == 35 { // Test after 2nd truncate, the offset should be larger
 			time.Sleep(1 * time.Second)
-			b, err := ioutil.ReadFile(statefile.Name())
+			b, err := os.ReadFile(statefile.Name())
 			if err != nil {
 				t.Errorf("Failed to read state file: %v", err)
 			}

@@ -77,6 +77,58 @@ func TestFullBufferUsedWithHalfUsedSizeReturned(t *testing.T) {
 	assert.Equal(t, bufferUsed, len(str))
 }
 
+func TestInsertPlaceholderValues(t *testing.T) {
+	evtDataValues := []Datum{
+		{"value_1"}, {"value_2"}, {"value_3"}, {"value_4"},
+	}
+	tests := []struct {
+		name     string
+		message  string
+		expected string
+	}{
+		{
+			"Placeholders %{number} should be replaced by insertion strings",
+			"Service %1 in region %3 stop at %2",
+			"Service value_1 in region value_3 stop at value_2",
+		},
+		{
+			"String without a placeholder should remain the same after insertion",
+			"This is a sentence without placeholders",
+			"This is a sentence without placeholders",
+		},
+		{
+			"Empty string should remain the same",
+			"",
+			"",
+		},
+		{
+			"Index should start from 1 and less than or equal to the amount of values in event data",
+			"%0 %3 %5",
+			"%0 value_3 %5",
+		},
+		{
+			"Handle consecutive % characters",
+			"%1 %%3% %2",
+			"value_1 %value_3% value_2",
+		},
+		{
+			"Handle % character at the end of message",
+			"%3 %2%",
+			"value_3 value_2%",
+		},
+		{
+			"Characters after a % other than numbers should be ignored",
+			"%foo, %foo1, %#$%^&1",
+			"%foo, %foo1, %#$%^&1",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, insertPlaceholderValues(tc.message, evtDataValues))
+		})
+	}
+}
+
 func resetState() {
 	NumberOfBytesPerCharacter = 0
 }

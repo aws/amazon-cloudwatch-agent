@@ -4,9 +4,14 @@
 name: build-and-test-linux
 on:
   push:
-    branches: [master, main]
+    branches:
+      - main
     paths-ignore:
       - '**/*.md'
+      - 'NOTICE'
+      - 'RELEASE_NOTES'
+      - 'THIRD-PARTY'
+      - 'LICENSE'
       - '.github/**'
       - '!.github/workflows/build-*'
 
@@ -22,12 +27,12 @@ concurrency:
 jobs:
   linux-unittest:
     runs-on: ubuntu-latest
-    steps:  
+    steps:
 
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: ~1.18.3
+        go-version: ~1.19.2
 
     - name: Check out code
       uses: actions/checkout@v2
@@ -41,7 +46,7 @@ jobs:
 
     - uses: zencargo/github-action-go-mod-tidy@v1
       with:
-        go-version: 1.18.3
+        go-version: 1.19.2
 
     - name: Cache build output
       uses: actions/cache@v2

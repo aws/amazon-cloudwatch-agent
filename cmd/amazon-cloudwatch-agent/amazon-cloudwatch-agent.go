@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -28,10 +27,11 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
+	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
@@ -46,7 +46,7 @@ import (
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
-	LogTargetEventLog = "eventlog"
+	LogTargetEventLog     = "eventlog"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -190,7 +190,7 @@ func loadEnvironmentVariables(path string) error {
 		return fmt.Errorf("No env config file specified")
 	}
 
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("Can't read env config file %s due to: %s", path, err.Error())
 	}
@@ -236,58 +236,16 @@ func runAgent(ctx context.Context,
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
 
-	isOld, err := migrate.IsOldConfig(*fConfig)
+	err = loadTomlConfigIntoAgent(c)
+
 	if err != nil {
-		log.Printf("W! Failed to detect if config file is old format: %v", err)
+		return err
 	}
 
-	if isOld {
-		migratedConfFile, err := migrate.MigrateFile(*fConfig)
-		if err != nil {
-			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
-		}
+	err = validateAgentFinalConfigAndPlugins(c)
 
-		err = c.LoadConfig(migratedConfFile)
-		if err != nil {
-			return err
-		}
-
-		agentinfo.BuildStr += "_M"
-	} else {
-		err = c.LoadConfig(*fConfig)
-		if err != nil {
-			return err
-		}
-	}
-
-	if *fConfigDirectory != "" {
-		err = c.LoadDirectory(*fConfigDirectory)
-		if err != nil {
-			return err
-		}
-	}
-	if !*fTest && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
-	}
-	if len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
-	}
-
-	if int64(c.Agent.Interval) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %v",
-			c.Agent.Interval)
-	}
-
-	if int64(c.Agent.FlushInterval) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %v",
-			c.Agent.FlushInterval)
-	}
-
-	if *fSchemaTest {
-		//up to this point, the given config file must be valid
-		fmt.Println(agentinfo.FullVersion())
-		fmt.Printf("The given config: %v is valid\n", *fConfig)
-		os.Exit(0)
+	if err != nil {
+		return err
 	}
 
 	ag, err := agent.NewAgent(c)
@@ -489,7 +447,7 @@ func main() {
 		if *fEnvConfig != "" {
 			parts := strings.SplitN(*fSetEnv, "=", 2)
 			if len(parts) == 2 {
-				bytes, err := ioutil.ReadFile(*fEnvConfig)
+				bytes, err := os.ReadFile(*fEnvConfig)
 				if err != nil {
 					log.Fatalf("E! Failed to read env config: %v", err)
 				}
@@ -500,7 +458,7 @@ func main() {
 				}
 				envVars[parts[0]] = parts[1]
 				bytes, err = json.MarshalIndent(envVars, "", "\t")
-				if err = ioutil.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
+				if err = os.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
 			}
@@ -583,4 +541,81 @@ func windowsRunAsService() bool {
 	}
 
 	return !service.Interactive()
+}
+
+func loadTomlConfigIntoAgent(c *config.Config) error {
+	isOld, err := migrate.IsOldConfig(*fConfig)
+	if err != nil {
+		log.Printf("W! Failed to detect if config file is old format: %v", err)
+	}
+
+	if isOld {
+		migratedConfFile, err := migrate.MigrateFile(*fConfig)
+		if err != nil {
+			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
+		}
+
+		err = c.LoadConfig(migratedConfFile)
+		if err != nil {
+			return err
+		}
+
+		agentinfo.BuildStr += "_M"
+	} else {
+		err = c.LoadConfig(*fConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	if *fConfigDirectory != "" {
+		err = c.LoadDirectory(*fConfigDirectory)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateAgentFinalConfigAndPlugins(c *config.Config) error {
+	if !*fTest && len(c.Outputs) == 0 {
+		return errors.New("Error: no outputs found, did you provide a valid config file?")
+	}
+	if len(c.Inputs) == 0 {
+		return errors.New("Error: no inputs found, did you provide a valid config file?")
+	}
+
+	if int64(c.Agent.Interval) <= 0 {
+		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
+	}
+
+	if int64(c.Agent.FlushInterval) <= 0 {
+		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.FlushInterval)
+	}
+
+	if inputPlugin, err := checkRightForBinariesFileWithInputPlugins(c.InputNames()); err != nil {
+		return fmt.Errorf("Validate input plugin %s failed because of %v", inputPlugin, err)
+	}
+
+	if *fSchemaTest {
+		//up to this point, the given config file must be valid
+		fmt.Println(agentinfo.FullVersion())
+		fmt.Printf("The given config: %v is valid\n", *fConfig)
+		os.Exit(0)
+	}
+
+	return nil
+}
+
+func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, error) {
+	for _, inputPlugin := range inputPlugins {
+		if inputPlugin == "nvidia_smi" {
+			if err := internal.CheckNvidiaSMIBinaryRights(); err != nil {
+				return "nvidia_smi", err
+			}
+		}
+	}
+
+	return "", nil
 }

@@ -6,7 +6,6 @@ package logfile
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -139,7 +138,7 @@ func (t *LogFile) Stop() {
 	close(t.done)
 }
 
-//Try to find if there is any new file needs to be added for monitoring.
+// Try to find if there is any new file needs to be added for monitoring.
 func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	if !t.started {
 		return nil
@@ -313,7 +312,7 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	return targetFileList, nil
 }
 
-//The plugin will look at the state folder, and restore the offset of the file seeked if such state exists.
+// The plugin will look at the state folder, and restore the offset of the file seeked if such state exists.
 func (t *LogFile) restoreState(filename string) (int64, error) {
 	filePath := t.getStateFilePath(filename)
 
@@ -322,7 +321,7 @@ func (t *LogFile) restoreState(filename string) (int64, error) {
 		return 0, err
 	}
 
-	byteArray, err := ioutil.ReadFile(filePath)
+	byteArray, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Log.Warnf("Issue encountered when reading offset from file %s: %v", filename, err)
 		return 0, err
@@ -334,8 +333,10 @@ func (t *LogFile) restoreState(filename string) (int64, error) {
 		return 0, err
 	}
 
+	if offset < 0 {
+		return 0, fmt.Errorf("negative state file offset, %v, %v", filePath, offset)
+	}
 	t.Log.Infof("Reading from offset %v in %s", offset, filename)
-
 	return offset, nil
 }
 
@@ -362,7 +363,7 @@ func (t *LogFile) cleanupStateFolder() {
 			continue
 		}
 
-		byteArray, err := ioutil.ReadFile(file)
+		byteArray, err := os.ReadFile(file)
 		if err != nil {
 			t.Log.Errorf("Error happens when reading the content from file %s in clean up state fodler step: %v", file, err)
 			continue

@@ -5,7 +5,6 @@ package logfile
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -191,7 +190,7 @@ func TestCompressedFile(t *testing.T) {
 
 func TestRestoreState(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	tmpfolder, err := ioutil.TempDir("", "")
+	tmpfolder, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpfolder)
 
@@ -199,7 +198,7 @@ func TestRestoreState(t *testing.T) {
 	logFileStateFileName := "_tmp_logfile.log"
 
 	offset := int64(9323)
-	err = ioutil.WriteFile(
+	err = os.WriteFile(
 		tmpfolder+string(filepath.Separator)+logFileStateFileName,
 		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
 		os.ModePerm)
@@ -209,7 +208,20 @@ func TestRestoreState(t *testing.T) {
 	tt.Log = TestLogger{t}
 	tt.FileStateFolder = tmpfolder
 	roffset, err := tt.restoreState(logFilePath)
+	require.NoError(t, err)
 	assert.Equal(t, offset, roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
+
+	// Test negative offset.
+	offset = int64(-8675)
+	err = os.WriteFile(
+		tmpfolder+string(filepath.Separator)+logFileStateFileName,
+		[]byte(strconv.FormatInt(offset, 10)+"\n"+logFilePath),
+		os.ModePerm)
+	require.NoError(t, err)
+	roffset, err = tt.restoreState(logFilePath)
+	require.Error(t, err)
+	assert.Equal(t, int64(0), roffset, fmt.Sprintf("The actual offset is %d, different from the expected offset %d.", roffset, offset))
+
 	tt.Stop()
 }
 
@@ -311,7 +323,7 @@ func TestLogsMultilineEvent(t *testing.T) {
 	tt.Stop()
 }
 
-//When file is removed, the related tail routing should exit
+// When file is removed, the related tail routing should exit
 func TestLogsFileRemove(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "anything"
@@ -429,9 +441,9 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 	}
 	t.Log("Verify every line written to the temp file is received.")
 	for i := 0; i < numLines; i++ {
-		logEvent := <- evts
+		logEvent := <-evts
 		require.Equal(t, msg, logEvent.Message())
-		if i != numLines / 2 {
+		if i != numLines/2 {
 			continue
 		}
 		// Halfway through start another goroutine to create another temp file.
@@ -642,7 +654,7 @@ func TestLogsFileWithOffset(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("", "state")
+	stateDir, err := os.MkdirTemp("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
@@ -692,7 +704,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("", "state")
+	stateDir, err := os.MkdirTemp("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
@@ -748,7 +760,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	_, err = tmpfile.WriteString(logEntryString + "\n")
 	require.NoError(t, err)
 
-	stateDir, err := ioutil.TempDir("", "state")
+	stateDir, err := os.MkdirTemp("", "state")
 	require.NoError(t, err)
 	defer os.Remove(stateDir)
 
@@ -883,7 +895,7 @@ func TestLogsPartialLineReading(t *testing.T) {
 func TestLogFileMultiLogsReading(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
-	dir, e := ioutil.TempDir("", "test")
+	dir, e := os.MkdirTemp("", "test")
 	require.NoError(t, e)
 	defer os.Remove(dir)
 	agentLog, err := createTempFile(dir, "test_agent.log")
@@ -946,7 +958,7 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
-	dir, e := ioutil.TempDir("", "test")
+	dir, e := os.MkdirTemp("", "test")
 	require.NoError(t, e)
 	defer os.Remove(dir)
 

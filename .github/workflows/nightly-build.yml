@@ -2,7 +2,7 @@ name: Upload Nightly Binaries
 
 on:
   schedule:
-    - cron: '0 0 * * *' # run at mid night
+    - cron: '0 0 * * *' # run at midnight
   workflow_dispatch:
 
 jobs:
@@ -18,8 +18,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.18.3
-        id: go
+          go-version: ~1.19.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -42,3 +41,40 @@ jobs:
 
       - name: Upload to S3
         run: aws s3 cp build/bin s3://amazoncloudwatch-agent/nightly-build/latest/ --recursive --acl public-read --source-region us-east-1
+
+      # Users should only take the tar of the darwin build according to our readme so deleting this does not matter. More of a sanity step
+      - name: Delete Mac Binary As This Should Only Be Built On Mac
+        run: |
+          aws s3 rm --recursive s3://amazoncloudwatch-agent/nightly-build/latest/darwin_amd64/
+          aws s3 rm --recursive s3://amazoncloudwatch-agent/nightly-build/latest/darwin_arm64/
+
+  mac-build:
+    name: Upload Mac Nightly Binaries
+    runs-on: macos-11
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.19.2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.S3_AWS_ASSUME_ROLE }}
+          aws-region: us-east-1
+
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Mac nightly release
+        run: make nightly-release-mac
+
+      - name: Upload to S3
+        run: aws s3 cp build/bin/darwin s3://amazoncloudwatch-agent/nightly-build/latest/darwin/ --recursive --acl public-read --source-region us-east-1

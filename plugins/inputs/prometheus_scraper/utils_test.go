@@ -84,3 +84,26 @@ func Test_mergeMetrics_not_merged(t *testing.T) {
 	}
 	assert.Equal(t, 2, len(mergeMetrics(pmb)))
 }
+
+func TestIsInternalMetrics(t *testing.T) {
+	testCases := map[string]struct {
+		metricName             string
+		expectedInternalMetric bool
+	}{
+		"ValidInternalMetric": {
+			metricName:             "scrape_internal",
+			expectedInternalMetric: true,
+		},
+		"InvalidInternalMetric": {
+			metricName:             "internal",
+			expectedInternalMetric: false,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(_ *testing.T) {
+			internalMetric := isInternalMetric("up")
+			assert.True(t, internalMetric)
+		})
+	}
+
+}

@@ -98,7 +98,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 	for {
 		select {
 		case <-t.C:
-			log.Printf("D! [logagent] open file count, %v", tail.OpenFileCount.Get())
+			log.Printf("D! [logagent] open file count, %v", tail.OpenFileCount.Load())
 			for _, c := range l.collections {
 				srcs := c.FindLogSrc()
 				for _, src := range srcs {

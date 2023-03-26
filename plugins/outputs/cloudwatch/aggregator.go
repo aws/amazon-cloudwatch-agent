@@ -119,12 +119,16 @@ func newDurationAggregator(durationInSeconds time.Duration,
 
 func (durationAgg *durationAggregator) aggregating() {
 	durationAgg.wg.Add(1)
-	// sleep for some time until next round duration from now.
+	// Sleep to align the interval to the wall clock.
+	// This initial sleep is not interrupted if the aggregator gets shutdown.
 	now := time.Now()
 	time.Sleep(now.Truncate(durationAgg.aggregationDuration).Add(durationAgg.aggregationDuration).Sub(now))
 	durationAgg.ticker = time.NewTicker(durationAgg.aggregationDuration)
 	defer durationAgg.ticker.Stop()
 	for {
+		// There is no priority to select{}.
+		// If there is a new metric AND the shutdownChan is closed when this
+		// loop begins, then the behavior is random.
 		select {
 		case m := <-durationAgg.aggregationChan:
 			// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
