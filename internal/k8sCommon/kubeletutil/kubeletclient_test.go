@@ -4,11 +4,12 @@
 package kubeletutil
 
 import (
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -187,7 +188,7 @@ func (m *MockHttpRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 // Test
 func TestKubeClient_ListPods(t *testing.T) {
 	mockRoundTripper := new(MockHttpRoundTripper)
-	mockRoundTripper.On("RoundTrip", mock.Anything).Return(&http.Response{StatusCode: http.StatusOK, Body: ioutil.NopCloser(strings.NewReader(podJson))})
+	mockRoundTripper.On("RoundTrip", mock.Anything).Return(&http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(podJson))})
 	client := KubeClient{roundTripper: mockRoundTripper}
 	pods, err := client.ListPods()
 	assert.Equal(t, nil, err)

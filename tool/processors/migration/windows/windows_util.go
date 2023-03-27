@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 )
 
@@ -23,7 +23,7 @@ func AreTwoConfigurationsEqual(config1 NewCwConfig, config2 NewCwConfig) bool {
 
 func ReadNewConfigFromPath(path string) (config NewCwConfig, err error) {
 	var file []byte
-	if file, err = ioutil.ReadFile(path); err == nil {
+	if file, err = os.ReadFile(path); err == nil {
 		if err = json.Unmarshal(file, &config); err == nil {
 			return config, nil
 		}
@@ -34,7 +34,7 @@ func ReadNewConfigFromPath(path string) (config NewCwConfig, err error) {
 
 func ReadOldConfigFromPath(path string) (config OldSsmCwConfig, err error) {
 	var file []byte
-	if file, err = ioutil.ReadFile(path); err == nil {
+	if file, err = os.ReadFile(path); err == nil {
 		if err = json.Unmarshal(file, &config); err == nil {
 			return config, nil
 		}
@@ -45,7 +45,7 @@ func ReadOldConfigFromPath(path string) (config OldSsmCwConfig, err error) {
 
 func ReadConfigFromPathAsString(path string) (str string, err error) {
 	var file []byte
-	if file, err = ioutil.ReadFile(path); err == nil {
+	if file, err = os.ReadFile(path); err == nil {
 		return string(file), nil
 	}
 	fmt.Println(err)

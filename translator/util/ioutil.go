@@ -6,7 +6,7 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
@@ -28,7 +28,7 @@ func GetDefaultJsonConfigMap(osType, mode string) (map[string]interface{}, error
 
 // get the json map from a file
 func GetJsonMapFromFile(filename string) (map[string]interface{}, error) {
-	buf, err := ioutil.ReadFile(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}

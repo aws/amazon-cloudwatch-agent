@@ -58,7 +58,6 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.17.5
 	github.com/aws/aws-sdk-go-v2/config v1.15.3
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.1.0
-	github.com/aws/aws-sdk-go-v2/service/efs v1.19.7
 	github.com/aws/smithy-go v1.13.5
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
 	github.com/go-kit/kit v0.11.0

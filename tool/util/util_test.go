@@ -4,7 +4,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"runtime"
 	"testing"
 
@@ -31,7 +30,7 @@ func TestCurOS(t *testing.T) {
 }
 
 func TestReadConfigFromJsonFile(t *testing.T) {
-	err := ioutil.WriteFile(ConfigFilePath(), []byte(expectResult), os.ModePerm)
+	err := os.WriteFile(ConfigFilePath(), []byte(expectResult), os.ModePerm)
 	assert.NoError(t, err)
 
 	actualResult := ReadConfigFromJsonFile()
@@ -58,7 +57,7 @@ func TestSerializeResultMapToJsonByteArray(t *testing.T) {
 
 func TestSaveResultByteArrayToJsonFile(t *testing.T) {
 	filePath := SaveResultByteArrayToJsonFile([]byte(expectResult))
-	bytes, err := ioutil.ReadFile(filePath)
+	bytes, err := os.ReadFile(filePath)
 	assert.NoError(t, err)
 	actualResult := string(bytes)
 	assert.Equal(t, expectResult, actualResult)

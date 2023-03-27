@@ -3,7 +3,6 @@ package migrate
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,7 +12,7 @@ import (
 )
 
 func getTests() ([]string, error) {
-	files, err := ioutil.ReadDir("new/")
+	files, err := os.ReadDir("new/")
 	if err != nil {
 		return nil, fmt.Errorf("unable to list test case dir: %v", err)
 	}
@@ -72,7 +71,7 @@ func TestMigrateFile(t *testing.T) {
 			continue
 		}
 
-		mcb, err := ioutil.ReadFile(mf)
+		mcb, err := os.ReadFile(mf)
 		if err != nil {
 			t.Errorf("Failed to read test file '%v' from old folder: %v", test, err)
 			continue
@@ -84,7 +83,7 @@ func TestMigrateFile(t *testing.T) {
 			continue
 		}
 
-		ncb, err := ioutil.ReadFile(fmt.Sprintf("new/%v", test))
+		ncb, err := os.ReadFile(fmt.Sprintf("new/%v", test))
 		if err != nil {
 			t.Errorf("Failed to read test file '%v' from new folder: %v", test, err)
 			continue
@@ -115,7 +114,7 @@ func TestMigrateConfigs(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ocb, err := ioutil.ReadFile(fmt.Sprintf("old/%v", test))
+		ocb, err := os.ReadFile(fmt.Sprintf("old/%v", test))
 		if err != nil {
 			t.Fatalf("Failed to read test file '%v' from old folder: %v", test, err)
 		}
@@ -125,7 +124,7 @@ func TestMigrateConfigs(t *testing.T) {
 			t.Fatalf("Failed to unmarshal old test file '%v': %v", test, err)
 		}
 
-		ncb, err := ioutil.ReadFile(fmt.Sprintf("new/%v", test))
+		ncb, err := os.ReadFile(fmt.Sprintf("new/%v", test))
 		if err != nil {
 			t.Fatalf("Failed to read test file '%v' from new folder: %v", test, err)
 		}

@@ -323,12 +323,13 @@ type (
 	}
 
 	k8sDecoratorConfig struct {
-		ClusterName       string `toml:"cluster_name"`
-		HostIp            string `toml:"host_ip"`
-		NodeName          string `toml:"host_name_from_env"`
-		Order             int
-		PreferFullPodName bool `toml:"prefer_full_pod_name"`
-		TagService        bool `toml:"tag_service"`
-		TagPass           map[string][]string
+		ClusterName             string `toml:"cluster_name"`
+		DisableMetricExtraction bool   `toml:"disable_metric_extraction"`
+		HostIp                  string `toml:"host_ip"`
+		NodeName                string `toml:"host_name_from_env"`
+		Order                   int
+		PreferFullPodName       bool `toml:"prefer_full_pod_name"`
+		TagService              bool `toml:"tag_service"`
+		TagPass                 map[string][]string
 	}
 )
