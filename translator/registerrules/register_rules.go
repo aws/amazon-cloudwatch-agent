@@ -27,7 +27,6 @@ import (
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/emfprocessor"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/drop_origin"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metric_decoration"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/agentInternal"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/collectd"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/cpu"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/customizedmetrics"

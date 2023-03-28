@@ -12,7 +12,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/cpu"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
@@ -59,11 +58,14 @@ func Test_CreateMetricsReceiver(t *testing.T) {
 	as.NoError(err)
 
 	adapter := NewAdapter(c)
-
 	factory := adapter.NewReceiverFactory("cpu")
+
+	set := receivertest.NewNopCreateSettings()
+	set.ID = component.NewIDWithName(factory.Type(), "")
+
 	metricsReceiver, err := factory.CreateMetricsReceiver(
 		context.Background(),
-		receivertest.NewNopCreateSettings(),
+		set,
 		&Config{
 			ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
 				CollectionInterval: time.Minute,
@@ -89,7 +91,7 @@ func Test_CreateInvalidMetricsReceiver(t *testing.T) {
 	factory := adapter.NewReceiverFactory("mem")
 	metricsReceiver, err := factory.CreateMetricsReceiver(
 		context.Background(),
-		componenttest.NewNopReceiverCreateSettings(),
+		receivertest.NewNopCreateSettings(),
 		&Config{
 			ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
 				CollectionInterval: time.Minute,

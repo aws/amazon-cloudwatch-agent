@@ -71,7 +71,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.AliasName = t.name
-	// The fall back interval is 0
+	// The fall back interval is 0 when there is no plugin's collection interval or the plugin's collection interval cannot  be scraped.
+	// Therefore, using 0 as a gate for procstat plugin
+	// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/main/translator/translate/otel/receiver/adapter/translators.go#L189
 	// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/main/translator/translate/otel/common/common.go#L147
 	if t.preferMetricCollectionInterval != time.Duration(0) {
 		cfg.CollectionInterval = t.preferMetricCollectionInterval

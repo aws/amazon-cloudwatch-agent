@@ -54,7 +54,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 			),
 			expectedMetrics: []map[string]interface{}{
 				{
-					"name":       "cpu_usage_user",
+					"name":       getMetricName("cpu", "usage_user"),
 					"value":      float64(42),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
@@ -78,7 +78,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 			),
 			expectedMetrics: []map[string]interface{}{
 				{
-					"name":       "swap_Sin",
+					"name":       getMetricName("swap", "Sin"),
 					"value":      float64(3),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
@@ -104,7 +104,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 			),
 			expectedMetrics: []map[string]interface{}{
 				{
-					"name":       "prometheus_redis_tx",
+					"name":       getMetricName("prometheus", "redis_tx"),
 					"value":      int64(4),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
@@ -112,7 +112,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					"unit":       "",
 				},
 				{
-					"name":       "prometheus_redis_rx",
+					"name":       getMetricName("prometheus", "redis_rx"),
 					"value":      2.3,
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),

@@ -14,7 +14,6 @@ import (
 
 	// Enabled cloudwatch-agent input plugins
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/cadvisor"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/demo"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/k8sapiserver"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/prometheus_scraper"
@@ -25,7 +24,6 @@ import (
 	// Enabled cloudwatch-agent output plugins
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatchlogs"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/console"
 
 	// Enabled telegraf input plugins
 	// NOTE: any plugins that are dependencies of the plugins enabled will be enabled too

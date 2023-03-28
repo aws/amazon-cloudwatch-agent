@@ -70,8 +70,9 @@ func populateDataPointsForGauge(measurement string, metrics pmetric.MetricSlice,
 		metric := metrics.AppendEmpty()
 
 		name := getMetricName(measurement, field)
+		unit := getDefaultUnit(measurement, field)
 		metric.SetName(name)
-		metric.SetUnit(getDefaultUnit(name))
+		metric.SetUnit(unit)
 
 		populateNumberDataPoint(metric.SetEmptyGauge().DataPoints().AppendEmpty(), value, tags, timestamp)
 	}
@@ -84,8 +85,9 @@ func populateDataPointsForSum(measurement string, metrics pmetric.MetricSlice, f
 		metric := metrics.AppendEmpty()
 
 		name := getMetricName(measurement, field)
+		unit := getDefaultUnit(measurement, field)
 		metric.SetName(name)
-		metric.SetUnit(getDefaultUnit(name))
+		metric.SetUnit(unit)
 
 		// Sum is an  OTEL Stream Model which consists of:
 		// * An Aggregation Temporality of delta or cumulative.

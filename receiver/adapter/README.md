@@ -11,6 +11,10 @@ input plugins are still intact.
 | Supported pipeline types | metrics                  |
 | Distributions            | [amazon-cloudwatch-agent]|
 
+
+## Architectural
+![](Architectural.png)
+
 ## Data Conversion
 Convert Telegraf Metrics with the following type (Counter, Gauge, or Untyped) 
 ```
@@ -54,11 +58,7 @@ Metrics {
 ## Receiver Configuration
 
 The following receiver configuration parameters are supported.
-
-| Name                                         | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Default                                                                                        |
-|:---------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| `collection_interval`                              | is the option to set the collection interval for each plugin                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | "1m"      
-| `alias_name`                                       | is the option to set the different name for the plugin                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | ""                          
-
-
-## Architectural
+| Name                | Description                                                                                                   | Default |
+|---------------------| --------------------------------------------------------------------------------------------------------------|---------|
+|`collection_interval`| is the option to set the collection interval for each plugin                                                  | "1m"    |
+|`alias_name`         | is the option to set the different name for each plugin. However, it is required to be the same with [Telegraf alias](https://github.com/influxdata/telegraf/blob/0fbe0b39687789b82438c9d300d8d8b470488acd/docs/CONFIGURATION.md#input-plugins)                                                                                                                     | ""      |         
