@@ -3,6 +3,18 @@
 
 name: PR Build
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - 'NOTICE'
+      - 'RELEASE_NOTES'
+      - 'THIRD-PARTY'
+      - 'LICENSE'
+      - '.github/**'
+      - '!.github/workflows/PR-build.yml'
+
   pull_request:
     branches: 
       - main 
@@ -49,19 +61,13 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-              ~/Library/Caches/go-build
-              ~/go/pkg/mod
+          ~/Library/Caches/go-build
+          ~/go/pkg/mod
         key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
     - name: Unit Test
       if: steps.cached_binaries.outputs.cache-hit != 'true'
       run: make test
-
-    - name: Upload coverage to Codecov
-      if: steps.cached_binaries.outputs.cache-hit != 'true'
-      uses: codecov/codecov-action@v3
-      with:
-        verbose: true
 
     - name: Build 
       if: steps.cached_binaries.outputs.cache-hit != 'true'
@@ -94,8 +100,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            %LocalAppData%\go-build
-            ~/go/pkg/mod
+            ~\AppData\Local\go-build
+            ~\go\pkg\mod
           key: v1-go-pkg-mod-${{ matrix.os }}-${{ hashFiles('**/go.sum') }}
 
       - name: Install make
@@ -105,12 +111,6 @@ jobs:
       - name: Unit test
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         run: make test
-
-      - name: Upload coverage to Codecov
-        if: steps.cached_binaries.outputs.cache-hit != 'true'
-        uses: codecov/codecov-action@v3
-        with:
-          verbose: true
 
       - name: Build
         if: steps.cached_binaries.outputs.cache-hit != 'true'
@@ -148,7 +148,6 @@ jobs:
               ~/go/pkg/mod
         key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
-    
     - name: Unit Test
       if: steps.cached_binaries.outputs.cache-hit != 'true'
       run: make test
