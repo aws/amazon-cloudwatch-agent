@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
+	"go.opentelemetry.io/collector/processor/processortest"
 )
 
 func TestCreateDefaultConfig(t *testing.T) {
@@ -28,7 +29,7 @@ func TestCreateProcessor(t *testing.T) {
 	require.NotNil(t, factory)
 
 	cfg := factory.CreateDefaultConfig()
-	setting := componenttest.NewNopProcessorCreateSettings()
+	setting := processortest.NewNopCreateSettings()
 
 	tProcessor, err := factory.CreateTracesProcessor(context.Background(), setting, cfg, consumertest.NewNop())
 	assert.Equal(t, err, component.ErrDataTypeIsNotSupported)

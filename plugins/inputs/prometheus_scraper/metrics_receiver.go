@@ -119,7 +119,7 @@ func (ma *metricAppender) UpdateMetadata(ref storage.SeriesRef, l labels.Labels,
 	return ref, nil
 }
 
-func (ma *metricAppender) AppendHistogram(ref storage.SeriesRef, l labels.Labels, t int64, h *histogram.Histogram) (storage.SeriesRef, error) {
+func (ma *metricAppender) AppendHistogram(ref storage.SeriesRef, l labels.Labels, t int64, h *histogram.Histogram, fh *histogram.FloatHistogram) (storage.SeriesRef, error) {
 	// This code should no longer be used
 	return ref, nil
 }

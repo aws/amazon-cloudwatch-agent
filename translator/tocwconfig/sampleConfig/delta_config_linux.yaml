@@ -1,3 +1,4 @@
+connectors: {}
 exporters:
     awscloudwatch:
       force_flush_interval: 1m0s

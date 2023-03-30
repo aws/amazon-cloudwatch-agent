@@ -3,20 +3,20 @@
 package cloudwatch
 
 import (
-	"go.opentelemetry.io/collector/otelcol/otelcoltest"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/collector/otelcol/otelcoltest"
+
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/component/componenttest"
 )
 
 // TestConfig will verify various config files can be loaded.
 // Verifies Config.Validate() implicitly.
 func TestConfig(t *testing.T) {
-	factories, err := componenttest.NopFactories()
+	factories, err := otelcoltest.NopFactories()
 	assert.NoError(t, err)
 	factory := NewFactory()
 	factories.Exporters[TypeStr] = factory
@@ -70,7 +70,7 @@ func TestConfig(t *testing.T) {
 }
 
 func TestConfigRollupDimensions(t *testing.T) {
-	factories, err := componenttest.NopFactories()
+	factories, err := otelcoltest.NopFactories()
 	assert.NoError(t, err)
 	factory := NewFactory()
 	factories.Exporters[TypeStr] = factory
@@ -92,7 +92,7 @@ func TestConfigRollupDimensions(t *testing.T) {
 }
 
 func TestConfigDropOriginConfigs(t *testing.T) {
-	factories, err := componenttest.NopFactories()
+	factories, err := otelcoltest.NopFactories()
 	assert.NoError(t, err)
 	factory := NewFactory()
 	factories.Exporters[TypeStr] = factory

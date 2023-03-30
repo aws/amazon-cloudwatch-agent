@@ -11,7 +11,6 @@ import (
 	telegrafconfig "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
@@ -36,11 +35,10 @@ func Type(input string) component.Type {
 	return component.Type(TelegrafPrefix + input)
 }
 
-func createDefaultConfig(cfgType component.Type) func() component.Config {
+func createDefaultConfig() func() component.Config {
 	return func() component.Config {
 		return &Config{
 			ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
-				ReceiverSettings:   config.NewReceiverSettings(component.NewID(cfgType)),
 				CollectionInterval: time.Minute,
 			},
 		}
@@ -49,7 +47,7 @@ func createDefaultConfig(cfgType component.Type) func() component.Config {
 
 func (a Adapter) NewReceiverFactory(telegrafInputName string) receiver.Factory {
 	typeStr := Type(telegrafInputName)
-	return receiver.NewFactory(typeStr, createDefaultConfig(typeStr),
+	return receiver.NewFactory(typeStr, createDefaultConfig(),
 		receiver.WithMetrics(a.createMetricsReceiver, component.StabilityLevelStable))
 }
 
@@ -61,13 +59,13 @@ func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.Cr
 		return nil, err
 	}
 
-	receiver := newAdaptedReceiver(input, settings.Logger)
+	rcvr := newAdaptedReceiver(input, settings.Logger)
 
 	scraper, err := scraperhelper.NewScraper(
 		settings.ID.Name(),
-		receiver.scrape,
-		scraperhelper.WithStart(receiver.start),
-		scraperhelper.WithShutdown(receiver.shutdown),
+		rcvr.scrape,
+		scraperhelper.WithStart(rcvr.start),
+		scraperhelper.WithShutdown(rcvr.shutdown),
 	)
 
 	if err != nil {

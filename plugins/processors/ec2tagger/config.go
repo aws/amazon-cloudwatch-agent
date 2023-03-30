@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 )
 
 var SupportedAppendDimensions = map[string]string{
@@ -19,8 +18,6 @@ var SupportedAppendDimensions = map[string]string{
 }
 
 type Config struct {
-	config.ProcessorSettings `mapstructure:",squash"`
-
 	RefreshIntervalSeconds time.Duration `mapstructure:"refresh_interval_seconds"`
 	EC2MetadataTags        []string      `mapstructure:"ec2_metadata_tags"`
 	EC2InstanceTagKeys     []string      `mapstructure:"ec2_instance_tag_keys"`

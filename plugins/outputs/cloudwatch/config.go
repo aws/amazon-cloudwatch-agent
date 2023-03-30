@@ -9,13 +9,10 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 )
 
 // Config represent a configuration for the CloudWatch logs exporter.
 type Config struct {
-	// Squash ensures fields are correctly decoded in embedded struct.
-	config.ExporterSettings  `mapstructure:",squash"`
 	Region                   string                   `mapstructure:"region"`
 	EndpointOverride         string                   `mapstructure:"endpoint_override,omitempty"`
 	AccessKey                string                   `mapstructure:"access_key,omitempty"`

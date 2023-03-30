@@ -1,3 +1,4 @@
+connectors: {}
 exporters:
     awscloudwatch:
         endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
@@ -46,6 +47,8 @@ exporters:
             initial_interval: 5s
             max_elapsed_time: 5m0s
             max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
         role_arn: ""
         sending_queue:
             queue_size: 5000

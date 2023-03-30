@@ -110,8 +110,8 @@ func TestPlugins(t *testing.T) {
 
 func TestSetPlugins(t *testing.T) {
 	otelcfg := &otelcol.Config{
-		Service: service.ConfigService{
-			Pipelines: map[component.ID]*service.ConfigServicePipeline{
+		Service: service.Config{
+			Pipelines: map[component.ID]*service.PipelineConfig{
 				component.NewID("metrics"): {
 					Receivers: []component.ID{
 						component.NewID(adapter.TelegrafPrefix + "cpu"),

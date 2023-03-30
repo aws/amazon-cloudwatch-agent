@@ -8,6 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
@@ -21,7 +22,7 @@ var ec2taggerKey = common.ConfigKey(common.MetricsKey, AppendDimensionsKey)
 
 type translator struct {
 	name    string
-	factory component.ProcessorFactory
+	factory processor.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)

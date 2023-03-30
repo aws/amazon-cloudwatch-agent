@@ -9,6 +9,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -26,7 +27,7 @@ var (
 
 type translator struct {
 	name    string
-	factory component.ProcessorFactory
+	factory processor.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)

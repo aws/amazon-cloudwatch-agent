@@ -40,13 +40,13 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
 	"golang.org/x/exp/maps"
@@ -373,10 +373,10 @@ func runAgent(ctx context.Context,
 	return cmd.Execute()
 }
 
-func components(telegrafConfig *config.Config) (component.Factories, error) {
+func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
 	telegrafAdapter := adapter.NewAdapter(telegrafConfig)
 
-	factories := component.Factories{}
+	factories := otelcol.Factories{}
 
 	receiverFactories := []receiver.Factory{
 		// OTel native receivers
@@ -401,7 +401,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		return factories, err
 	}
 
-	processors, err := component.MakeProcessorFactoryMap(
+	processors, err := processor.MakeFactoryMap(
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		ec2tagger.NewFactory(),
@@ -430,7 +430,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		return factories, err
 	}
 
-	factories = component.Factories{
+	factories = otelcol.Factories{
 		Receivers:  receivers,
 		Processors: processors,
 		Exporters:  exporters,

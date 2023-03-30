@@ -1,3 +1,4 @@
+connectors: {}
 exporters:
     awscloudwatch:
         drop_original_metrics:
@@ -50,6 +51,8 @@ exporters:
             initial_interval: 5s
             max_elapsed_time: 5m0s
             max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
         role_arn: ""
         sending_queue:
             queue_size: 5000
@@ -66,6 +69,7 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
+        aws_log_groups: []
 extensions: {}
 processors:
     batch/emf_logs:

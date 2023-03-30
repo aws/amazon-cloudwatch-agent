@@ -1,38 +1,34 @@
 ## Amazon CloudWatch Exporter for Open Telemetry
 
-This Exporter will send metrics to Amazon CloudWatch.
+The AmazonCloudWatch Exporter will convert the OTEL metrics to MetricDatum and send them to Amazon CloudWatch 
+
+| Status                   |                          |
+| ------------------------ |--------------------------|
+| Stability                | [stable]                 |
+| Supported pipeline types | metrics                  |
+| Distributions            | [amazon-cloudwatch-agent]|
 
 ## Amazon Authentication
 
-This exporter uses a credential chain for Authentication with the CloudWatch
-API endpoint. In the following order the exporter will attempt to authenticate.
-1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
-2. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
-3. Shared profile from `profile` attribute
+The AmazonCloudWatch Exporter uses a credential chain for Authentication with the EC2
+API endpoint. In the following order the plugin will attempt to authenticate.
+1. STS Credentials if Role ARN is specified
+2. Explicit credentials from 'access_key' and 'secret_key'
+3. Shared profile from 'profile' (https://stackoverflow.com/a/66121705)
+
+The next will be the default credential chain from AWS SDK Go https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
 4. [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
-5. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
-6. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
+5. Share Credentials Files with default profile (https://docs.aws.amazon.com/ses/latest/dg/create-shared-credentials-file.html)
+6. ECS Task IAM Role
+7. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
-## Required Config
+The IAM User or Role making the calls must have permissions to call the EC2 DescribeTags API.
 
-* region
-* endpoint_override
-* namespace
+### Exporter Configuration:
 
-### region
-
-The region is the Amazon region that you wish to connect to.
-Examples include but are not limited to:
-* us-west-1
-* us-west-2
-* us-east-1
-* ap-southeast-1
-* ap-southeast-2
-
-### endpoint_override
-
-The endpoint_override is the endpoint you want to use other than the default endpoint based on the region information.
-
-### namespace
-
-The namespace used for AWS CloudWatch metrics.
+The following receiver configuration parameters are supported.
+| Name                     | Description                                                                                                    | Default    | 
+|--------------------------| ---------------------------------------------------------------------------------------------------------------| -----------|
+|`region`                  | is the Amazon region that you wish to connect to. (e.g us-west-2, us-west-2)                                   | ""         |
+|`namespace`               | is the namespace used for AWS CloudWatch metrics.                                                              | "CWAgent   |
+|`endpoint_override`       | is the endpoint you want to use other than the default endpoint based on the region information.               | ""         |

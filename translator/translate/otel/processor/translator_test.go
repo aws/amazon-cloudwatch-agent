@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/collector/processor/processortest"
 )
 
 func TestTranslator(t *testing.T) {
-	factory := componenttest.NewNopProcessorFactory()
+	factory := processortest.NewNopFactory()
 	got := NewDefaultTranslator(factory)
 	require.Equal(t, "nop", got.ID().String())
 	cfg, err := got.Translate(nil)

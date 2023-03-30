@@ -140,11 +140,8 @@ func (o *otelAccumulator) convertToOtelMetricsAndAddMetric(m telegraf.Metric) {
 
 // GetOtelMetrics return the final OTEL metric that were gathered by scrape controller for each plugin
 func (o *otelAccumulator) GetOtelMetrics() pmetric.Metrics {
-	// MoveTo copy all relates properties and reset the current instance to its zero value. However,
-	// the next time adding resources metrics, the Otel Metric will have nil value.
-	// https://pkg.go.dev/go.opentelemetry.io/collector/pdata/pmetric#Metric.MoveTo
-	finalMetrics := pmetric.NewMetrics()
-	o.metrics.MoveTo(finalMetrics)
+	finalMetrics := o.metrics
+	o.metrics = pmetric.NewMetrics()
 	return finalMetrics
 }
 

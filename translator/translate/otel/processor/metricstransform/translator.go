@@ -6,6 +6,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -14,7 +15,7 @@ var prometheusKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey,
 
 type translator struct {
 	name    string
-	factory component.ProcessorFactory
+	factory processor.Factory
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)

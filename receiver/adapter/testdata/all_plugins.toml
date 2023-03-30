@@ -48,6 +48,6 @@
     interval = "1s"
     metric_separator = "_"
     service_address = "127.0.0.1:14224"
-
+    
 [[inputs.socket_listener]]
     service_address = "tcp://127.0.0.1:25826"

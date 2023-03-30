@@ -6,20 +6,21 @@ package processor
 import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 type translator struct {
 	name    string
-	factory component.ProcessorFactory
+	factory processor.Factory
 }
 
-func NewDefaultTranslator(factory component.ProcessorFactory) common.Translator[component.Config] {
+func NewDefaultTranslator(factory processor.Factory) common.Translator[component.Config] {
 	return NewDefaultTranslatorWithName("", factory)
 }
 
-func NewDefaultTranslatorWithName(name string, factory component.ProcessorFactory) common.Translator[component.Config] {
+func NewDefaultTranslatorWithName(name string, factory processor.Factory) common.Translator[component.Config] {
 	return &translator{name, factory}
 }
 

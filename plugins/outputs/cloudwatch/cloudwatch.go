@@ -17,19 +17,20 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pdata/pmetric"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/exporter"
+	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
 const (
@@ -73,7 +74,7 @@ type CloudWatch struct {
 }
 
 // Compile time interface check.
-var _ component.MetricsExporter = (*CloudWatch)(nil)
+var _ exporter.Metrics = (*CloudWatch)(nil)
 
 func (c *CloudWatch) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: false}
@@ -227,7 +228,7 @@ func (b *MetricDatumBatch) isFull() bool {
 }
 
 func (c *CloudWatch) timeToPublish(b *MetricDatumBatch) bool {
-	return len(b.Partition) > 0 && time.Now().Sub(b.BeginTime) >= c.config.ForceFlushInterval
+	return len(b.Partition) > 0 && time.Since(b.BeginTime) >= c.config.ForceFlushInterval
 }
 
 // getFirstPushMs returns the time at which the first upload should occur.
@@ -565,7 +566,7 @@ func GetUniqueRollupList(inputLists [][]string) [][]string {
 
 func (c *CloudWatch) IsDropping(metricName string) bool {
 	// Check if any metrics are provided in drop_original_metrics
-	if len(c.droppingOriginMetrics) == 0  {
+	if len(c.droppingOriginMetrics) == 0 {
 		return false
 	}
 	if dropping := c.droppingOriginMetrics.Contains(metricName); dropping {

@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/confmap"
 )
 
@@ -27,24 +26,20 @@ func TestValidateConfig(t *testing.T) {
 		errorMessage string
 	}{
 		{
-			name: "Without_supported_kv",
-			cfg: &Config{
-				ProcessorSettings: config.NewProcessorSettings(component.NewID(TypeStr)),
-			},
+			name:         "Without_supported_kv",
+			cfg:          &Config{},
 			errorMessage: "append_dimensions set without any supported key-value pairs",
 		},
 		{
 			name: "Invalid_dimension",
 			cfg: &Config{
-				ProcessorSettings: config.NewProcessorSettings(component.NewID(TypeStr)),
-				EC2MetadataTags:   []string{"ImageId", "foo"},
+				EC2MetadataTags: []string{"ImageId", "foo"},
 			},
 			errorMessage: "Unsupported Dimension: foo",
 		},
 		{
 			name: "Valid_config",
 			cfg: &Config{
-				ProcessorSettings:  config.NewProcessorSettings(component.NewID(TypeStr)),
 				EC2MetadataTags:    []string{"ImageId", "InstanceId", "InstanceType"},
 				EC2InstanceTagKeys: []string{"AutoScalingGroupName"},
 			},

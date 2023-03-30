@@ -128,7 +128,7 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 		Exporters:  map[component.ID]component.Config{},
 		Processors: map[component.ID]component.Config{},
 		Extensions: map[component.ID]component.Config{},
-		Service: service.ConfigService{
+		Service: service.Config{
 			Telemetry: telemetry.Config{
 				Logs:    getLoggingConfig(conf),
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},

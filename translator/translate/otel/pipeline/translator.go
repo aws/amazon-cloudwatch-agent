@@ -19,7 +19,7 @@ var (
 
 type Translation struct {
 	// Pipelines is a map of component IDs to service pipelines.
-	Pipelines   map[component.ID]*service.ConfigServicePipeline
+	Pipelines   map[component.ID]*service.PipelineConfig
 	Translators common.ComponentTranslators
 }
 
@@ -40,7 +40,7 @@ func (t *translator) ID() component.ID {
 // Translate creates the pipeline configuration.
 func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 	translation := Translation{
-		Pipelines: make(map[component.ID]*service.ConfigServicePipeline),
+		Pipelines: make(map[component.ID]*service.PipelineConfig),
 		Translators: common.ComponentTranslators{
 			Receivers:  common.NewTranslatorMap[component.Config](),
 			Processors: common.NewTranslatorMap[component.Config](),
@@ -50,7 +50,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 	}
 	for _, pt := range t.translators {
 		if pipeline, _ := pt.Translate(conf); pipeline != nil {
-			translation.Pipelines[pt.ID()] = &service.ConfigServicePipeline{
+			translation.Pipelines[pt.ID()] = &service.PipelineConfig{
 				Receivers:  pipeline.Receivers.SortedKeys(),
 				Processors: pipeline.Processors.SortedKeys(),
 				Exporters:  pipeline.Exporters.SortedKeys(),

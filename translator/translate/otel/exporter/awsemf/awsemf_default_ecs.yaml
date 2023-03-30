@@ -1,10 +1,12 @@
 namespace: ECS/ContainerInsights
 log_group_name: '/aws/ecs/containerinsights/{ClusterName}/performance'
 log_stream_name: 'instanceTelemetry/{ContainerInstanceId}'
+detailed_metrics: false
+dimension_rollup_option: NoDimensionRollup
+retain_initial_value_of_delta_metric: false
+parse_json_encoded_attr_values: [ Sources ]
 resource_to_telemetry_conversion:
   enabled: true
-dimension_rollup_option: NoDimensionRollup
-parse_json_encoded_attr_values: [ Sources ]
 metric_declarations:
   # instance metrics
   - dimensions: [ [ ContainerInstanceId, InstanceId, ClusterName ] ]
