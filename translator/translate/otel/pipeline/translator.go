@@ -45,6 +45,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 			Receivers:  common.NewTranslatorMap[component.Config](),
 			Processors: common.NewTranslatorMap[component.Config](),
 			Exporters:  common.NewTranslatorMap[component.Config](),
+			Extensions: common.NewTranslatorMap[component.Config](),
 		},
 	}
 	for _, pt := range t.translators {
@@ -57,6 +58,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 			translation.Translators.Receivers.Merge(pipeline.Receivers)
 			translation.Translators.Processors.Merge(pipeline.Processors)
 			translation.Translators.Exporters.Merge(pipeline.Exporters)
+			translation.Translators.Extensions.Merge(pipeline.Extensions)
 		}
 	}
 	if len(translation.Pipelines) == 0 {

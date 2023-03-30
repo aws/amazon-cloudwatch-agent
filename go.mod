@@ -81,6 +81,7 @@ require (
 	github.com/oklog/run v1.1.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter v0.67.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.67.0
@@ -88,6 +89,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.67.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.67.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.67.0
@@ -261,6 +263,8 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs v0.67.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s v0.67.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/metrics v0.67.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/proxy v0.67.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray v0.67.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/common v0.67.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.67.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter v0.67.0 // indirect

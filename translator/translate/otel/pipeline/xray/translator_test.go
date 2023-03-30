@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package prometheus
+package xray
 
 import (
 	"testing"
@@ -20,39 +20,37 @@ func TestTranslator(t *testing.T) {
 		receivers  []string
 		processors []string
 		exporters  []string
-		extensions []string
 	}
-	cit := NewTranslator()
-	require.EqualValues(t, "metrics/prometheus", cit.ID().String())
+	tt := NewTranslator()
+	assert.EqualValues(t, "traces/xray", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *want
 		wantErr error
 	}{
-		"WithoutPrometheusKey": {
+		"WithoutTracesCollectedKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: cit.ID(), JsonKey: "logs::metrics_collected::prometheus"},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: baseKey},
 		},
-		"WithPrometheusKey": {
+		"WithTracesCollectedKey": {
 			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": nil,
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"xray": nil,
 					},
 				},
 			},
 			want: &want{
-				receivers:  []string{"prometheus/prometheus"},
-				processors: []string{"batch/prometheus", "metricstransform/prometheus", "resource/prometheus"},
-				exporters:  []string{"awsemf/prometheus"},
-				extensions: []string{"ecs_observer/prometheus"},
+				receivers:  []string{"awsxray"},
+				processors: []string{"batch/xray"},
+				exporters:  []string{"awsxray"},
 			},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
-			got, err := cit.Translate(conf)
+			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
 			if testCase.want == nil {
 				assert.Nil(t, got)
@@ -61,7 +59,6 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.SortedKeys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.SortedKeys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.SortedKeys(), component.ID.String))
-				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.SortedKeys(), component.ID.String))
 			}
 		})
 	}

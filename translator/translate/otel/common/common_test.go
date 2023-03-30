@@ -4,9 +4,11 @@
 package common
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -80,6 +82,31 @@ func TestGetBool(t *testing.T) {
 	got, ok = GetBool(conf, "bool2")
 	require.True(t, ok)
 	require.True(t, got)
+}
+
+func TestGetNumber(t *testing.T) {
+	test := map[string]interface{}{"int": 10, "string": "test", "bool": false, "float": 1.3}
+	marshalled, err := json.Marshal(test)
+	require.NoError(t, err)
+	var unmarshalled map[string]interface{}
+	require.NoError(t, json.Unmarshal(marshalled, &unmarshalled))
+
+	conf := confmap.NewFromStringMap(unmarshalled)
+	got, ok := GetNumber(conf, "int")
+	assert.True(t, ok)
+	assert.Equal(t, 10.0, got)
+
+	got, ok = GetNumber(conf, "string")
+	assert.False(t, ok)
+	assert.Equal(t, 0.0, got)
+
+	got, ok = GetNumber(conf, "bool")
+	assert.False(t, ok)
+	assert.Equal(t, 0.0, got)
+
+	got, ok = GetNumber(conf, "float")
+	assert.True(t, ok)
+	assert.Equal(t, 1.3, got)
 }
 
 func TestGetDuration(t *testing.T) {

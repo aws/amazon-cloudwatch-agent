@@ -7,12 +7,11 @@ import (
 	_ "embed"
 	"fmt"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"

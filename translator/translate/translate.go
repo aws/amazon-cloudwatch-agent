@@ -95,9 +95,12 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 			}
 		}
 	}
-	result["inputs"] = allInputPlugin
-	result["outputs"] = allOutputPlugin
-
+	if len(allInputPlugin) != 0 {
+		result["inputs"] = allInputPlugin
+	}
+	if len(allOutputPlugin) != 0 {
+		result["outputs"] = allOutputPlugin
+	}
 	if allProcessorPlugin != nil {
 		result["processors"] = allProcessorPlugin
 	}

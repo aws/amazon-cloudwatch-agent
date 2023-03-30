@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -19,8 +20,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
@@ -31,11 +30,13 @@ import (
 	"github.com/kardianos/service"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
@@ -303,17 +304,20 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
-	log.Println("creating new logs agent")
-	logAgent := logs.NewLogAgent(c)
-	// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
-	go logAgent.Run(ctx)
 
-	// If OTEL config does not exist, then ASSUME just monitoring logs.
-	// So just start Telegraf.
-	_, err = os.Stat(*fOtelConfig)
-	if errors.Is(err, os.ErrNotExist) {
-		agentinfo.SetPlugins(&otelcol.Config{}, c)
-		return ag.Run(ctx)
+	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
+		log.Println("creating new logs agent")
+		logAgent := logs.NewLogAgent(c)
+		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
+		go logAgent.Run(ctx)
+
+		// If OTEL config does not exist, then ASSUME just monitoring logs.
+		// So just start Telegraf.
+		_, err = os.Stat(*fOtelConfig)
+		if errors.Is(err, os.ErrNotExist) {
+			agentinfo.SetPlugins(&otelcol.Config{}, c)
+			return ag.Run(ctx)
+		}
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
 
@@ -377,6 +381,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 	receiverFactories := []receiver.Factory{
 		// OTel native receivers
 		awscontainerinsightreceiver.NewFactory(),
+		awsxrayreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
@@ -412,6 +417,7 @@ func components(telegrafConfig *config.Config) (component.Factories, error) {
 		loggingexporter.NewFactory(),
 		cloudwatch.NewFactory(),
 		awscloudwatchlogsexporter.NewFactory(),
+		awsxrayexporter.NewFactory(),
 	)
 	if err != nil {
 		return factories, err

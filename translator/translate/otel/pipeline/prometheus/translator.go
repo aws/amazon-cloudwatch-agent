@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
 	metricstransformprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/metricstransform"
 	resourceprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/resource"
@@ -47,6 +48,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			metricstransformprocessor.NewTranslatorWithName(pipelineName),
 			resourceprocessor.NewTranslatorWithName(pipelineName),
 		),
-		Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
+		Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
+		Extensions: common.NewTranslatorMap(ecsobserver.NewTranslatorWithName(common.PrometheusKey)),
 	}, nil
 }

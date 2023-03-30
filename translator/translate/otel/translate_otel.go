@@ -16,18 +16,16 @@ import (
 	"go.opentelemetry.io/collector/service/telemetry"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
-	"golang.org/x/exp/maps"
 
 	receiverAdapter "github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/prometheus"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/xray"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 )
 
@@ -120,25 +118,23 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 		containerinsights.NewTranslator(),
 		prometheus.NewTranslator(),
 		emf_logs.NewTranslator(),
+		xray.NewTranslator(),
 	).Translate(conf)
 	if err != nil {
 		return nil, err
 	}
-	extensions, _ := extension.NewTranslator(
-		ecsobserver.NewTranslatorWithName(common.PrometheusKey),
-	).Translate(conf)
 	cfg := &otelcol.Config{
 		Receivers:  map[component.ID]component.Config{},
 		Exporters:  map[component.ID]component.Config{},
 		Processors: map[component.ID]component.Config{},
-		Extensions: extensions,
+		Extensions: map[component.ID]component.Config{},
 		Service: service.ConfigService{
 			Telemetry: telemetry.Config{
 				Logs:    getLoggingConfig(conf),
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines:  pipelines.Pipelines,
-			Extensions: maps.Keys(extensions),
+			Extensions: pipelines.Translators.Extensions.SortedKeys(),
 		},
 	}
 	if err = t.buildComponents(conf, cfg, pipelines.Translators); err != nil {
@@ -150,9 +146,9 @@ func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Conf
 	return cfg, nil
 }
 
-// buildComponents uses the pipelines defined in the config to build the components.
+// buildComponents uses the pipelines and extensions defined in the config to build the components.
 func (t *Translator) buildComponents(conf *confmap.Conf, cfg *otelcol.Config, translators common.ComponentTranslators) error {
-	var errs error
+	errs := buildComponents(conf, cfg.Service.Extensions, cfg.Extensions, translators.Extensions.Get)
 	for _, p := range cfg.Service.Pipelines {
 		errs = multierr.Append(errs, buildComponents(conf, p.Receivers, cfg.Receivers, translators.Receivers.Get))
 		errs = multierr.Append(errs, buildComponents(conf, p.Processors, cfg.Processors, translators.Processors.Get))

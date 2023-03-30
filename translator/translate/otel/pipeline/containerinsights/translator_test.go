@@ -59,14 +59,10 @@ func TestTranslator(t *testing.T) {
 				require.Nil(t, got)
 			} else {
 				require.NotNil(t, got)
-				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.SortedKeys(), toString))
-				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.SortedKeys(), toString))
-				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.SortedKeys(), toString))
+				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.SortedKeys(), component.ID.String))
+				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.SortedKeys(), component.ID.String))
+				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.SortedKeys(), component.ID.String))
 			}
 		})
 	}
-}
-
-func toString(id component.ID) string {
-	return id.String()
 }

@@ -20,11 +20,19 @@ const (
 	AgentKey                     = "agent"
 	MetricsKey                   = "metrics"
 	LogsKey                      = "logs"
+	TracesKey                    = "traces"
 	MetricsCollectedKey          = "metrics_collected"
 	LogsCollectedKey             = "logs_collected"
+	TracesCollectedKey           = "traces_collected"
 	ECSKey                       = "ecs"
 	KubernetesKey                = "kubernetes"
 	PrometheusKey                = "prometheus"
+	XrayKey                      = "xray"
+	EndpointOverrideKey          = "endpoint_override"
+	RegionOverrideKey            = "region_override"
+	ProxyOverrideKey             = "proxy_override"
+	InsecureKey                  = "insecure"
+	LocalModeKey                 = "local_mode"
 	CredentialsKey               = "credentials"
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
@@ -108,10 +116,8 @@ type ComponentTranslators struct {
 	Receivers  TranslatorMap[component.Config]
 	Processors TranslatorMap[component.Config]
 	Exporters  TranslatorMap[component.Config]
+	Extensions TranslatorMap[component.Config]
 }
-
-// Extensions is a map of component IDs to service extensions.
-type Extensions map[component.ID]component.Config
 
 // ConfigKey joins the keys separated by confmap.KeyDelimiter.
 // This helps translators navigate the confmap.Conf that the
@@ -172,11 +178,21 @@ func GetArray[C any](conf *confmap.Conf, key string) []C {
 	return nil
 }
 
-// GetBool gets the bool value for the key. If the key is missing, or the
-// value is not a bool type then ok will be false.
+// GetBool gets the bool value for the key. If the key is missing or the
+// value is not a bool type, then ok will be false.
 func GetBool(conf *confmap.Conf, key string) (value bool, ok bool) {
 	if v := conf.Get(key); v != nil {
 		value, ok = v.(bool)
+	}
+	return
+}
+
+// GetNumber gets the number value for the key. If the key is missing or
+// the value is not a float64 type (default JSON unmarshal maps number to
+// float64), then ok will be false.
+func GetNumber(conf *confmap.Conf, key string) (value float64, ok bool) {
+	if v := conf.Get(key); v != nil {
+		value, ok = v.(float64)
 	}
 	return
 }

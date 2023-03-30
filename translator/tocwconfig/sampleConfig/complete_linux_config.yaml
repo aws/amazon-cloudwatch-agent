@@ -53,9 +53,26 @@ exporters:
         role_arn: ""
         sending_queue:
             queue_size: 5000
+    awsxray:
+        endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+        index_all_attributes: false
+        indexed_attributes: []
+        local_mode: true
+        max_retries: 2
+        no_verify_ssl: true
+        num_workers: 1
+        proxy_address: https://proxy.proxy.com
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: arn:aws:iam::account:resource
+        role_arn: trace_role_arn_value_test
 extensions: {}
 processors:
     batch/emf_logs:
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    batch/xray:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -80,6 +97,26 @@ processors:
             - InstanceType
         refresh_interval_seconds: 0s
 receivers:
+    awsxray:
+        endpoint: 0.0.0.0:2001
+        proxy_server:
+            aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+            endpoint: 0.0.0.0:1234
+            local_mode: true
+            proxy_address: https://proxy.proxy.com
+            region: us-west-2
+            role_arn: trace_role_arn_value_test
+            tls:
+                ca_file: ""
+                cert_file: ""
+                insecure: true
+                insecure_skip_verify: false
+                key_file: ""
+                max_version: ""
+                min_version: ""
+                reload_interval: 0s
+                server_name_override: ""
+        transport: udp
     telegraf_cpu:
         collection_interval: 10s
     telegraf_disk:
@@ -97,7 +134,7 @@ receivers:
     telegraf_processes:
         collection_interval: 10s
     telegraf_procstat/1917393364:
-        alias_name:          /var/run/example1.pid
+        alias_name: /var/run/example1.pid
         collection_interval: 10s
     telegraf_socket_listener:
         collection_interval: 10s
@@ -153,6 +190,13 @@ service:
             receivers:
                 - telegraf_diskio
                 - telegraf_net
+        traces/xray:
+            exporters:
+                - awsxray
+            processors:
+                - batch/xray
+            receivers:
+                - awsxray
     telemetry:
         logs:
             development: false
@@ -162,7 +206,8 @@ service:
             error_output_paths: []
             initial_fields: {}
             level: error
-            output_paths: [/tmp/fake/log/hotdog.log]
+            output_paths:
+                - /tmp/fake/log/hotdog.log
             sampling:
                 initial: 2
                 thereafter: 500
