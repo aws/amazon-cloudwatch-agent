@@ -986,7 +986,7 @@ jobs:
 
   EC2AcceptanceIntegrationTest:
     needs: [ GenerateTestMatrix, StartLocalStack, MakeBinary ]
-    name: 'Acceptance'
+    name: 'EC2AcceptanceIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
