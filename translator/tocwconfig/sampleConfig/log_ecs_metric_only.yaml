@@ -27,6 +27,7 @@ exporters:
   awsemf/containerinsights:
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
+    version: "0"
     retain_initial_value_of_delta_metric: false
     eks_fargate_container_insights_enabled: false
     endpoint: ""

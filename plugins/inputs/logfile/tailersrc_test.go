@@ -119,14 +119,14 @@ func TestTailerSrc(t *testing.T) {
 	// Slow send
 	for _, l := range lines {
 		fmt.Fprintln(file, l)
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	// Fast send
 	i = 0
 	for _, l := range lines {
 		fmt.Fprintln(file, l)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	// Removal of log file should stop tailerSrc and Tail.
@@ -442,13 +442,13 @@ func publishLogsToFile(file *os.File, matchedLog, unmatchedLog string, n, multiL
 func assertExpectedLogsPublished(t *testing.T, total, numConsumed int) {
 	// Atomic recommends synchronization functions is better done with channels or the facilities of the sync package
 	// Therefore, the count will fluctuate and not equal with the expect consumed.
-	assert.LessOrEqual(t, total/2, numConsumed)
+	assert.LessOrEqual(t, numConsumed, total/2)
 	stats := profiler.Profiler.GetStats()
 	statKey := fmt.Sprintf("logfile_%s_%s_messages_dropped", t.Name(), t.Name())
 	if val, ok := stats[statKey]; !ok {
 		t.Error("Missing profiled stat")
 	} else {
-		assert.LessOrEqual(t, total/2, int(val))
+		assert.LessOrEqual(t, int(val), total/2)
 	}
 }
 

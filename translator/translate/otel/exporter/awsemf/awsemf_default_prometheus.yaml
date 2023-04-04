@@ -3,4 +3,5 @@ resource_to_telemetry_conversion:
   enabled: true
 detailed_metrics: false
 dimension_rollup_option: NoDimensionRollup
+version: "0"
 retain_initial_value_of_delta_metric: false

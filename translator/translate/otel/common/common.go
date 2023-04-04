@@ -41,6 +41,7 @@ const (
 	DiskIOKey                    = "diskio"
 	NetKey                       = "net"
 	Emf                          = "emf"
+	StructuredLog                = "structuredlog"
 	ServiceAddress               = "service_address"
 	Udp                          = "udp"
 	Tcp                          = "tcp"

@@ -46,7 +46,7 @@ func (p *Prometheus) ApplyRule(input interface{}) (returnKey string, returnVal i
 			}
 		}
 
-		inputs["prometheus"] = []interface{}{promScaper}
+		inputs[SectionKey] = []interface{}{promScaper}
 
 		result["inputs"] = inputs
 

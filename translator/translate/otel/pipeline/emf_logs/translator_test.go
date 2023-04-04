@@ -32,13 +32,28 @@ func TestTranslator(t *testing.T) {
 	}{
 		"WithoutEmfKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: cit.ID(), JsonKey: fmt.Sprint(key)},
+			wantErr: &common.MissingKeyError{ID: cit.ID(), JsonKey: fmt.Sprint(emfKey)},
 		},
 		"WithEmfKey": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"emf": nil,
+					},
+				},
+			},
+			want: &want{
+				pipelineType: "logs/emf_logs",
+				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
+				processors:   []string{"batch/emf_logs"},
+				exporters:    []string{"awscloudwatchlogs/emf_logs"},
+			},
+		},
+		"WithStructuredLogKey": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"structuredlog": nil,
 					},
 				},
 			},
