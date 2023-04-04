@@ -13,6 +13,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/ec2taggerprocessor"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/metricsdecorator"
 )
 
 type translator struct {
@@ -60,6 +61,11 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, "append_dimensions")) {
 		log.Printf("D! ec2tagger processor required because append_dimensions is set")
 		translators.Processors.Add(ec2taggerprocessor.NewTranslator())
+	}
+
+	if metricsdecorator.IsSet(conf) {
+		log.Printf("D! metric decorator required because measurement fields are set")
+		translators.Processors.Add(metricsdecorator.NewTranslator())
 	}
 	return &translators, nil
 }

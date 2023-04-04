@@ -25,7 +25,7 @@ const (
 	defaultTruncateSuffix = "[Truncated...]"
 )
 
-//The file config presents the structure of configuration for a file to be tailed.
+// The file config presents the structure of configuration for a file to be tailed.
 type FileConfig struct {
 	//The file path for input log file.
 	FilePath string `toml:"file_path"`
@@ -94,7 +94,7 @@ type FileConfig struct {
 	sampleCount int
 }
 
-//Initialize some variables in the FileConfig object based on the rest info fetched from the configuration file.
+// Initialize some variables in the FileConfig object based on the rest info fetched from the configuration file.
 func (config *FileConfig) init() error {
 	var err error
 	if !(config.Encoding == "" || config.Encoding == "utf_8" || config.Encoding == "utf-8" || config.Encoding == "utf8" || config.Encoding == "ascii") {
@@ -161,9 +161,9 @@ func (config *FileConfig) init() error {
 	return nil
 }
 
-//Try to parse the timestampFromLogLine value from the log entry line.
-//The parser logic will be based on the timestampFromLogLine regex, and time zone info.
-//If the parsing operation encounters any issue, int64(0) is returned.
+// Try to parse the timestampFromLogLine value from the log entry line.
+// The parser logic will be based on the timestampFromLogLine regex, and time zone info.
+// If the parsing operation encounters any issue, int64(0) is returned.
 func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 	if config.TimestampRegexP == nil {
 		return time.Time{}
@@ -199,7 +199,7 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 	return time.Time{}
 }
 
-//This method determine whether the line is a start line for multiline log entry.
+// This method determine whether the line is a start line for multiline log entry.
 func (config *FileConfig) isMultilineStart(logValue string) bool {
 
 	if config.MultiLineStartPatternP == nil {
@@ -232,8 +232,8 @@ func shouldPublishHelper(filters []*LogFilter, event logs.LogEvent) bool {
 	return true
 }
 
-//The default log group name calculation logic if the log group name is not specified.
-//It will use the part before the last dot in the file path, e.g.
+// The default log group name calculation logic if the log group name is not specified.
+// It will use the part before the last dot in the file path, e.g.
 // file path: "/tmp/TestLogFile.log.2017-07-11-14" -> log group name: "/tmp/TestLogFile.log"
 // file path: "/tmp/TestLogFile.log" -> log group name: "/tmp/TestLogFile"
 // Note: the above is default log group behavior, it is always recommended to specify the log group name for each input file pattern

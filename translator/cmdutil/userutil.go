@@ -65,6 +65,7 @@ func changeFileOwner(uid, gid int) error {
 //   - With SUID or SGID bit set
 //   - Allow anyone to write to
 //   - Symbolic links
+//
 // This would prevent any accidental ownership change to files that are executable
 // or with special purpose to be changed to be owned by root when run_as_user option
 // is removed from the configuration

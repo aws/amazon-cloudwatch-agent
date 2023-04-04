@@ -7,8 +7,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 )
 
 var serviceInputMeasurements = collections.NewSet[string](

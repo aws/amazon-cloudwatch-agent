@@ -55,6 +55,12 @@ const (
 	PipelineNameEmfLogs          = "emf_logs"
 )
 
+var (
+	// LinuxPluginKeys - available plugins. The proctstat plugin does not support metric decoration, hence it is omitted
+	LinuxPluginKeys   = []string{"cpu", "disk", "diskio", "internal", "mem", "net", "netstat", "nvidia_gpu", "processes", "swap"}
+	WindowsPluginKeys = []string{"Memory", "LogicalDisk", "Network Interface", "Paging", "PhysicalDisk", "Processor", "System", "TCP"}
+)
+
 // Translator is used to translate the JSON config into an
 // OTEL config.
 type Translator[C any] interface {

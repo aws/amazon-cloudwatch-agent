@@ -175,7 +175,7 @@ func bucketNumber(value float64) int16 {
 	return bucketNumber
 }
 
-//This method is faster than math.Floor
+// This method is faster than math.Floor
 func floor(fvalue float64) int64 {
 	ivalue := int64(fvalue)
 	if fvalue < 0 && float64(ivalue) != fvalue {

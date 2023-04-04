@@ -78,6 +78,18 @@ processors:
             - ImageId
             - InstanceId
         refresh_interval_seconds: 0s
+    transform:
+        log_statements: [ ]
+        error_mode: "propagate"
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(unit, "unit") where name == "cpu_usage_idle"
+                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                  - set(unit, "unit") where name == "cpu_usage_nice"
+                  - set(unit, "unit") where name == "free"
+                  - set(name, "DISK_FREE") where name == "free"
+        trace_statements: []
 receivers:
     telegraf_cpu:
         collection_interval: 10s
@@ -132,6 +144,7 @@ service:
                 - awscloudwatch
             processors:
                 - ec2tagger
+                - transform
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
@@ -149,6 +162,7 @@ service:
             processors:
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
+                - transform
             receivers:
                 - telegraf_diskio
                 - telegraf_net

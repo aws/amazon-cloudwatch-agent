@@ -94,10 +94,11 @@ func walkFilePath(root string, g glob.Glob) map[string]os.FileInfo {
 
 // find the root dir of the given path (could include globs).
 // ie:
-//   /var/log/telegraf.conf -> /var/log
-//   /home/** ->               /home
-//   /home/*/** ->             /home
-//   /lib/share/*/*/**.txt ->  /lib/share
+//
+//	/var/log/telegraf.conf -> /var/log
+//	/home/** ->               /home
+//	/home/*/** ->             /home
+//	/lib/share/*/*/**.txt ->  /lib/share
 func findRootDir(path string) string {
 	pathItems := strings.Split(path, sepStr)
 	out := sepStr
@@ -125,7 +126,9 @@ func findRootDir(path string) string {
 // escapeSeparator escapes the windows path separator '\' in glob pattern
 // old "\\" - first '\' escapes the following path separator
 // new "\\\\" - first '\' escapes second '\' which will be used as escape indicator in glob pattern
-//              the third '\' escapes the fourth '\ which is the windows path separator
+//
+//	the third '\' escapes the fourth '\ which is the windows path separator
+//
 // return val - a string ready to be used in glob pattern
 func escapeSeparator(path string) string {
 	return strings.Replace(path, "\\", "\\\\", -1)

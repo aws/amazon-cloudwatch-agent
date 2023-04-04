@@ -17,13 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -31,6 +24,14 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 )
 
 const (

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 )
 

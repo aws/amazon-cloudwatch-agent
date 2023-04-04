@@ -33,6 +33,16 @@ processors:
             - InstanceId
             - InstanceType
         refresh_interval_seconds: 0s
+    transform:
+        log_statements: []
+        error_mode: "propagate"
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(unit, "unit") where name == "cpu_usage_idle"
+                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                  - set(unit, "unit") where name == "cpu_usage_nice"
+        trace_statements: []
 receivers:
     telegraf_cpu:
         collection_interval: 10s
@@ -48,6 +58,7 @@ service:
                 - awscloudwatch
             processors:
                 - ec2tagger
+                - transform
             receivers:
                 - telegraf_cpu
                 - telegraf_disk

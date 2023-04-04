@@ -25,7 +25,7 @@ func TestProcessor_Process(t *testing.T) {
 	assert.Equal(t, new(data.Config), conf)
 }
 
-//basic metrics config
+// basic metrics config
 var basicMetricsConf = map[string]interface{}{
 	"metrics": map[string]interface{}{
 		"aggregation_dimensions": [][]string{{"InstanceId"}},
@@ -34,7 +34,7 @@ var basicMetricsConf = map[string]interface{}{
 			"disk": map[string]interface{}{"resources": []string{"*"}, "metrics_collection_interval": 60, "measurement": []string{"used_percent"}},
 			"mem":  map[string]interface{}{"metrics_collection_interval": 60, "measurement": []string{"mem_used_percent"}}}}}
 
-//standard metrics config
+// standard metrics config
 var standardMetricsConf = map[string]interface{}{
 	"metrics": map[string]interface{}{
 		"aggregation_dimensions": [][]string{{"InstanceId"}},
@@ -46,7 +46,7 @@ var standardMetricsConf = map[string]interface{}{
 			"mem":    map[string]interface{}{"metrics_collection_interval": 60, "measurement": []string{"mem_used_percent"}},
 			"swap":   map[string]interface{}{"metrics_collection_interval": 60, "measurement": []string{"swap_used_percent"}}}}}
 
-//advanced metrics config
+// advanced metrics config
 var advancedMetricsConf = map[string]interface{}{
 	"metrics": map[string]interface{}{
 		"aggregation_dimensions": [][]string{{"InstanceId"}},

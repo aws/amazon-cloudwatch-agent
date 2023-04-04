@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution/seh1"
 )

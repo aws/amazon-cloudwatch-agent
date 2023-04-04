@@ -13,12 +13,12 @@ import (
 //
 
 // SectionKey
-//   "statsd" : {
-//       "service_address": ":8125",
-//       "metrics_collection_interval": 10,
-//       "metrics_aggregation_interval": 60
-//   }
 //
+//	"statsd" : {
+//	    "service_address": ":8125",
+//	    "metrics_collection_interval": 10,
+//	    "metrics_aggregation_interval": 60
+//	}
 const SectionKey = "statsd"
 
 var ChildRule = map[string]translator.Rule{}

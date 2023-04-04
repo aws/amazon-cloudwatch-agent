@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-//DefaultCase check if current input overrides the default value for the given config entry key.
+// DefaultCase check if current input overrides the default value for the given config entry key.
 func DefaultCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
 	m, ok := input.(map[string]interface{})
 	if !ok {

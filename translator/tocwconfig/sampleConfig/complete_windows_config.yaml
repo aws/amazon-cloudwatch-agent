@@ -61,10 +61,21 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         refresh_interval_seconds: 0s
+    transform:
+        log_statements: [ ]
+        error_mode: "propagate"
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(unit, "PERCENT") where name == "% Idle Time"
+                  - set(name, "DISK_READ") where name == "% Disk Read Time"
+                  - set(unit, "PERCENT") where name == "% Idle Time"
+                  - set(name, "CPU_IDLE") where name == "% Idle Time"
+        trace_statements: []
 receivers:
     telegraf_logfile:
         collection_interval: 1m0s
@@ -123,6 +134,7 @@ service:
                 - awscloudwatch
             processors:
                 - ec2tagger
+                - transform
             receivers:
                 - telegraf_logfile
                 - telegraf_nvidia_smi

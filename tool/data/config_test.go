@@ -12,7 +12,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
-//more detailed internal content should be already tested in the individual struct unit tests
+// more detailed internal content should be already tested in the individual struct unit tests
 func TestConfig_ToMap(t *testing.T) {
 	expectedKey := ""
 	expectedValue := map[string]interface{}{

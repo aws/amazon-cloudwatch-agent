@@ -465,41 +465,39 @@ func TestIsDropping(t *testing.T) {
 	cw := newCloudWatch(svc, time.Second)
 
 	tests := map[string]struct {
-		input  map[string][]string
-		checks []string
-		want   []bool
+		input   map[string][]string
+		checks  []string
+		want    []bool
 		unix_os bool
 	}{
 		"TestIsDroppingWithMultipleCategory": {
 			input: map[string][]string{"cpu": []string{"usage_idle", "time_active"},
 				"nvidia_smi": {"utilization_gpu"}},
-			checks: []string{"cpu_usage_idle", "cpu_time_active", "nvidia_smi", "cpu_usage_guest"},
-			want:   []bool{true, true, false, false},
+			checks:  []string{"cpu_usage_idle", "cpu_time_active", "nvidia_smi", "cpu_usage_guest"},
+			want:    []bool{true, true, false, false},
 			unix_os: true,
 		},
 		"TestIsDroppingWith*": {
 			input: map[string][]string{"cpu": []string{"usage_idle", "time_active"},
 				"nvidia_smi": {"*"}},
-			checks: []string{"cpu_usage_idle", "cpu_time_active", "nvidia_smi", "nvidia_smi_utilization_gpu", "cpu"},
-			want:   []bool{true, true, true, true, false},
-			unix_os : true,
+			checks:  []string{"cpu_usage_idle", "cpu_time_active", "nvidia_smi", "nvidia_smi_utilization_gpu", "cpu"},
+			want:    []bool{true, true, true, true, false},
+			unix_os: true,
 		},
 		"TestIsDroppingWithMultipleCategoryWindows": {
 			input: map[string][]string{"cpu": []string{"usage_idle", "time_active"},
 				"nvidia_smi": {"utilization_gpu"}},
-			checks: []string{"cpu usage_idle", "cpu time_active", "nvidia_smi", "cpu usage_guest"},
-			want:   []bool{true, true, false, false},
-			unix_os : false,
-
+			checks:  []string{"cpu usage_idle", "cpu time_active", "nvidia_smi", "cpu usage_guest"},
+			want:    []bool{true, true, false, false},
+			unix_os: false,
 		},
 
 		"TestIsDroppingWith*Windows": {
 			input: map[string][]string{"cpu": []string{"usage_idle", "time_active"},
 				"nvidia_smi": {"*"}},
-			checks: []string{"cpu usage_idle", "cpu time_active", "nvidia_smi", "nvidia_smi utilization_gpu", "cpu"},
-			want:   []bool{true, true, true, true, false},
-			unix_os : false,
-
+			checks:  []string{"cpu usage_idle", "cpu time_active", "nvidia_smi", "nvidia_smi utilization_gpu", "cpu"},
+			want:    []bool{true, true, true, true, false},
+			unix_os: false,
 		},
 	}
 	for _, test := range tests {
@@ -507,11 +505,11 @@ func TestIsDropping(t *testing.T) {
 		cw.droppingOriginMetrics = cw.GetDroppingDimensionMap()
 		for i, check := range test.checks {
 			if runtime.GOOS == "windows" {
-				if (test.unix_os){
+				if test.unix_os {
 					continue
 				}
-			} else 	{
-				if !(test.unix_os){
+			} else {
+				if !(test.unix_os) {
 					continue
 				}
 			}

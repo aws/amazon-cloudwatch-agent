@@ -78,6 +78,49 @@ func TestTranslator(t *testing.T) {
 				exporters:  []string{"awscloudwatch"},
 			},
 		},
+		"WithMetricDecoration": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{
+							"measurement": []interface{}{
+								map[string]interface{}{
+									"name":   "cpu_usage_idle",
+									"rename": "CPU_USAGE_IDLE",
+								},
+							},
+						},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHost,
+			want: &want{
+				pipelineID: "metrics/host",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"transform"},
+				exporters:  []string{"awscloudwatch"},
+			},
+		},
+		"WithoutMetricDecoration": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{
+							"measurement": []interface{}{
+								"cpu_usage_guest",
+							},
+						},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHost,
+			want: &want{
+				pipelineID: "metrics/host",
+				receivers:  []string{"nop", "other"},
+				processors: []string{},
+				exporters:  []string{"awscloudwatch"},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

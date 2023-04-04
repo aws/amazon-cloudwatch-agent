@@ -8,13 +8,15 @@ package main
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
-	"log"
-	"time"
 )
 
 // Clean integration hosts if they have been open longer than 1 day

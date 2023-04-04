@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//Directly supported by charset and ianaindex.
-//If the mapping here no longer exists, we should add into our override map.
+// Directly supported by charset and ianaindex.
+// If the mapping here no longer exists, we should add into our override map.
 var supportedEncodingByLib = map[string]string{
 	"ascii":     "windows-1252",
 	"big5":      "big5",

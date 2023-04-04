@@ -340,9 +340,7 @@ func TestPodStore_addLabel(t *testing.T) {
 	assert.Equal(t, expected, kubernetesBlob)
 }
 
-//
 // Mock client start
-//
 var mockClient = new(MockClient)
 
 var mockK8sClient = &k8sclient.K8sClient{
@@ -375,9 +373,7 @@ func (client *MockClient) Shutdown() {
 // Mock client end
 //
 
-//
 // Mock client 2 start
-//
 var mockClient2 = new(MockClient2)
 
 var mockK8sClient2 = &k8sclient.K8sClient{

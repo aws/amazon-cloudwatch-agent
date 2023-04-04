@@ -49,7 +49,7 @@ const (
 	unknownAccountId  = "UNKNOWN-ACCOUNT"
 )
 
-//resolve place holder for log group and log stream.
+// resolve place holder for log group and log stream.
 func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	tmpString := placeholder
 	if tmpString == "" {

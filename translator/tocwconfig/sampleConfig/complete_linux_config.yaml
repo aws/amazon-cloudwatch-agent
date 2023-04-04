@@ -100,6 +100,18 @@ processors:
             - InstanceId
             - InstanceType
         refresh_interval_seconds: 0s
+    transform:
+        log_statements: [ ]
+        error_mode: "propagate"
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(unit, "unit") where name == "cpu_usage_idle"
+                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                  - set(unit, "unit") where name == "cpu_usage_nice"
+                  - set(unit, "unit") where name == "free"
+                  - set(name, "DISK_FREE") where name == "free"
+        trace_statements: []
 receivers:
     awsxray:
         endpoint: 0.0.0.0:2001
@@ -174,6 +186,7 @@ service:
                 - awscloudwatch
             processors:
                 - ec2tagger
+                - transform
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
@@ -191,6 +204,7 @@ service:
             processors:
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
+                - transform
             receivers:
                 - telegraf_diskio
                 - telegraf_net

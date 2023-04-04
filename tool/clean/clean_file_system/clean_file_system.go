@@ -8,11 +8,13 @@ package main
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/efs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
 	"log"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/efs"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
 )
 
 func main() {

@@ -12,8 +12,8 @@ import (
 
 func Test_TaskDefinitionConfig_init(t *testing.T) {
 	config := TaskDefinitionConfig{
-		JobName: "test_job_1",
-		MetricsPorts: "11;12;	 13 ;a;14  ",
+		JobName:           "test_job_1",
+		MetricsPorts:      "11;12;	 13 ;a;14  ",
 		TaskDefArnPattern: "^task.*$",
 	}
 
@@ -23,8 +23,8 @@ func Test_TaskDefinitionConfig_init(t *testing.T) {
 
 func Test_ServiceNameForTasksConfig_init(t *testing.T) {
 	config := ServiceNameForTasksConfig{
-		JobName: "test_job_1",
-		MetricsPorts: "11;12;	 13 ;a;14  ",
+		JobName:            "test_job_1",
+		MetricsPorts:       "11;12;	 13 ;a;14  ",
 		ServiceNamePattern: "^task.*$",
 	}
 
