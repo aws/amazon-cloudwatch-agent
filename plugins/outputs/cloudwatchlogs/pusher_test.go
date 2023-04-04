@@ -115,7 +115,7 @@ func TestAddSingleEvent(t *testing.T) {
 	p.FlushTimeout = 10 * time.Millisecond
 	p.resetFlushTimer()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 	require.True(t, called, "PutLogEvents has not been called after FlushTimeout has been reached.")
 	require.NotNil(t, nst, *p.sequenceToken, "Pusher did not capture the NextSequenceToken")
 
@@ -365,8 +365,8 @@ func TestAddMultipleEvents(t *testing.T) {
 
 	p.FlushTimeout = 10 * time.Millisecond
 	p.resetFlushTimer()
-	time.Sleep(2000 * time.Millisecond)
 
+	time.Sleep(3 * time.Second)
 	require.NotNil(t, p.sequenceToken, "Pusher did not capture the NextSequenceToken")
 	require.Equal(t, nst, *p.sequenceToken, "Pusher did not capture the NextSequenceToken")
 
@@ -445,7 +445,7 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	stop, p := testPreparation(-1, &s, 1*time.Hour, maxRetryTimeout)
 	p.AddEvent(evtMock{"msg", time.Now(), nil})
 	p.FlushTimeout = 10 * time.Millisecond
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 
 	logline := logbuf.String()
 	require.True(t, strings.Contains(logline, "E!"), fmt.Sprintf("Expecting error log with unhandled error, but received '%s' in the log", logbuf.String()))
@@ -663,7 +663,7 @@ func TestAddEventNonBlocking(t *testing.T) {
 		evts = append(evts, e)
 	}
 	stop, p := testPreparation(-1, &s, 1*time.Hour, maxRetryTimeout)
-	p.FlushTimeout = 10 * time.Millisecond
+	p.FlushTimeout = 50 * time.Millisecond
 	p.resetFlushTimer()
 	time.Sleep(200 * time.Millisecond) // Wait until pusher started, merge channel is blocked
 

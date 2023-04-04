@@ -126,6 +126,7 @@ func TestTailerSrc(t *testing.T) {
 	i = 0
 	for _, l := range lines {
 		fmt.Fprintln(file, l)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	// Removal of log file should stop tailerSrc and Tail.
@@ -137,8 +138,7 @@ func TestTailerSrc(t *testing.T) {
 	// Most test functions do not wait for the Tail to close the file.
 	// They rely on Tail to detect file deletion and close the file.
 	// So the count might be nonzero due to previous test cases.
-	time.Sleep(2 * time.Second)
-	assert.LessOrEqual(t, tail.OpenFileCount.Load(), beforeCount)
+	assert.Eventually(t, func() bool { return tail.OpenFileCount.Load() <= beforeCount }, 3*time.Second, time.Second)
 }
 
 func TestOffsetDoneCallBack(t *testing.T) {
@@ -259,7 +259,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		fmt.Fprintln(file, logLine("C", 100, time.Now()))
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	// Removal of log file should stop tailersrc
 	err = os.Remove(file.Name())

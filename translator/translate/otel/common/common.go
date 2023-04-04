@@ -27,6 +27,7 @@ const (
 	ECSKey                       = "ecs"
 	KubernetesKey                = "kubernetes"
 	PrometheusKey                = "prometheus"
+	EMFProcessorKey              = "emf_processor"
 	XrayKey                      = "xray"
 	EndpointOverrideKey          = "endpoint_override"
 	RegionOverrideKey            = "region_override"
@@ -44,6 +45,7 @@ const (
 	Udp                          = "udp"
 	Tcp                          = "tcp"
 	Region                       = "region"
+	LogGroupName                 = "log_group_name"
 	LogStreamName                = "log_stream_name"
 )
 

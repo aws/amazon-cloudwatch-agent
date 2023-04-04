@@ -115,12 +115,23 @@ func TestFindReceiversInConfig(t *testing.T) {
 			},
 			os: translatorconfig.OS_TYPE_WINDOWS,
 			want: map[component.ID]wantResult{
-				component.NewID("telegraf_socket_listener"):   {"logs::metrics_collected::emf", time.Minute},
 				component.NewID("telegraf_logfile"):           {"logs::logs_collected::files", time.Minute},
 				component.NewID("telegraf_windows_event_log"): {"logs::logs_collected::windows_events", time.Minute},
 			},
 		},
-		"WithThreeSocketListeners": {
+		"WithNoSocketListener": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"emf":           nil,
+						"structuredlog": nil,
+					},
+				},
+			},
+			os:   translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{},
+		},
+		"WithOneSocketListener": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{

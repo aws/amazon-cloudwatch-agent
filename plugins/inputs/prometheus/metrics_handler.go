@@ -1,17 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package prometheus_scraper
+package prometheus
 
 import (
 	"log"
-	"strconv"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/logscommon"
 )
 
 // Use metricMaterial instead of mbMetric to avoid unnecessary tags&fields copy
@@ -60,16 +59,13 @@ func (mh *metricsHandler) handle(pmb PrometheusMetricBatch) {
 	mh.setEmfMetadata(metricMaterials)
 
 	for _, metricMaterial := range metricMaterials {
-		mh.acc.AddFields("prometheus_scraper", metricMaterial.fields, metricMaterial.tags)
+		mh.acc.AddFields("prometheus", metricMaterial.fields, metricMaterial.tags, time.UnixMilli(metricMaterial.timeInMS))
 	}
 }
 
 // set timestamp, version, logstream
 func (mh *metricsHandler) setEmfMetadata(mms []*metricMaterial) {
 	for _, mm := range mms {
-		mm.tags[logscommon.TimestampTag] = strconv.FormatInt(mm.timeInMS, 10)
-		mm.tags[logscommon.VersionTag] = "0"
-
 		if mh.clusterName != "" {
 			// Customer can specified the cluster name in the scraping job's relabel_config
 			// CWAgent won't overwrite in this case to support cross-cluster monitoring
@@ -78,10 +74,19 @@ func (mh *metricsHandler) setEmfMetadata(mms []*metricMaterial) {
 			}
 		}
 
+		// Prometheus will use the "job" corresponding to the target in prometheus as a log stream
+		// https://github.com/aws/amazon-cloudwatch-agent/blob/59cfe656152e31ca27e7983fac4682d0c33d3316/plugins/inputs/prometheus_scraper/metrics_handler.go#L80-L84
+		// While determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml as per
+		// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/outputs/cloudwatchlogs/cloudwatchlogs.go#L175-L180.
+
+		// However, since we are using awsemfexport, we can leverage the token replacement with the log stream name
+		// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/897db04f747f0bda1707c916b1ec9f6c79a0c678/exporter/awsemfexporter/util.go#L29-L37
+		// Therefore, add a tag {ServiceName} for replacing job as a log stream
+
 		if job, ok := mm.tags["job"]; ok {
-			mm.tags[logscommon.LogStreamNameTag] = job
+			mm.tags["ServiceName"] = job
 		} else {
-			mm.tags[logscommon.LogStreamNameTag] = "default"
+			mm.tags["ServiceName"] = "default"
 		}
 	}
 }

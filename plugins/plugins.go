@@ -6,17 +6,13 @@ package plugins
 import (
 	//Enable cloudwatch-agent process plugins
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ecsdecorator"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/emfProcessor"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/k8sdecorator"
-
-	// Enabled parsers registry
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/parsers"
 
 	// Enabled cloudwatch-agent input plugins
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/cadvisor"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/k8sapiserver"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/prometheus_scraper"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/prometheus"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/win_perf_counters"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/windows_event_log"

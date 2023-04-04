@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package emfprocessor
+package prometheus
 
 import (
 	"log"
@@ -43,9 +43,6 @@ func getDownloadPath() string {
 		var downloadingPath string
 		if _, ok := os.LookupEnv("ProgramData"); ok {
 			downloadingPath = os.Getenv("ProgramData")
-		} else {
-			// Windows 2003
-			downloadingPath = os.Getenv("ALLUSERSPROFILE") + "\\Application Data"
 		}
 		return downloadingPath + windowsDownloadingFile
 	}

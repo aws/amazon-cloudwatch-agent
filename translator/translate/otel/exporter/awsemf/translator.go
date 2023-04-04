@@ -13,8 +13,6 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"gopkg.in/yaml.v3"
 
-	prometheus "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/emfprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
@@ -25,9 +23,10 @@ var defaultEcsConfig string
 var defaultPrometheusConfig string
 
 var (
-	ecsBasePathKey        = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
-	eksBasePathKey        = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
-	prometheusBasePathKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
+	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
+	eksBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
+	prometheusBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
+	emfProcessorBasePathKey = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
 )
 
 type translator struct {
@@ -114,33 +113,29 @@ func (t *translator) setEksFields(_ *confmap.Conf, _ *awsemfexporter.Config) err
 }
 
 func (t *translator) setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
-	// TODO: clusterName should be part of extension and resource processors. Confirm if all those are addressed
 
-	_, logGroupName := new(prometheus.LogGroupName).ApplyRule(conf.Get(prometheusBasePathKey)) // TODO: remove dependency on rule.
-	if logGroupName, ok := logGroupName.(string); ok {
-		cfg.LogGroupName = logGroupName
+	if err := setPrometheusLogGroup(conf, cfg); err != nil {
+		return err
 	}
 
-	// logStreamName defaults to {ServiceName} for prometheus via our embedded config. We do not respect the log_stream_name field in "logs -> metrics_collected section" for backwards compatibility.
-	//
-	// We previously used to set the "job" tag on the metric as per https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/inputs/prometheus_scraper/metrics_handler.go#L81-L85
-	// And while determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml as per
+	// Prometheus will use the "job" corresponding to the target in prometheus as a log stream
+	// https://github.com/aws/amazon-cloudwatch-agent/blob/59cfe656152e31ca27e7983fac4682d0c33d3316/plugins/inputs/prometheus_scraper/metrics_handler.go#L80-L84
+	// While determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml as per
 	// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/outputs/cloudwatchlogs/cloudwatchlogs.go#L175-L180.
-	//
-	// In CCWA, prometheus receiver is going to always set the job (service.name) label which we then map to ServiceName label (In the case of ECS, special handling is needed for prometheus_job -> job relabelling as explained in the ecs observer extension translation)
-	// Hence, we default the log_stream_name with a placeholder for {ServiceName} to achieve backwards compatibility. If we ever come across an edge case where the job label is not set on a metric,
-	// we can add a metrics transform processor to insert the job label and set it to "default" i.e. same as https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/inputs/prometheus_scraper/metrics_handler.go#L84
 
-	if conf.IsSet(common.ConfigKey(prometheusBasePathKey, "emf_processor")) {
-		_, emfProcessor := new(emfprocessor.EMFProcessor).ApplyRule(conf.Get(prometheusBasePathKey)) // TODO: remove dependency on rule.
-		if emfProcessor, ok := emfProcessor.(map[string]interface{}); ok {
-			setPrometheusNamespace(emfProcessor, cfg)
-			if err := setPrometheusMetricDescriptors(emfProcessor, cfg); err != nil {
-				return err
-			}
-			if err := setPrometheusMetricDeclarations(emfProcessor, cfg); err != nil {
-				return err
-			}
+	// However, since we are using awsemfexport, we can leverage the token replacement with the log stream name
+	// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/897db04f747f0bda1707c916b1ec9f6c79a0c678/exporter/awsemfexporter/util.go#L29-L37
+	// Therefore, add a tag {ServiceName} for replacing job as a log stream
+
+	if conf.IsSet(emfProcessorBasePathKey) {
+		if err := setPrometheusNamespace(conf, cfg); err != nil {
+			return err
+		}
+		if err := setPrometheusMetricDescriptors(conf, cfg); err != nil {
+			return err
+		}
+		if err := setPrometheusMetricDeclarations(conf, cfg); err != nil {
+			return err
 		}
 	}
 

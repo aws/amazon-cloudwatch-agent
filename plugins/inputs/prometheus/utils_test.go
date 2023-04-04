@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package prometheus_scraper
+package prometheus
 
 import (
 	"reflect"
@@ -83,4 +83,27 @@ func Test_mergeMetrics_not_merged(t *testing.T) {
 		},
 	}
 	assert.Equal(t, 2, len(mergeMetrics(pmb)))
+}
+
+func TestIsInternalMetrics(t *testing.T) {
+	testCases := map[string]struct {
+		metricName             string
+		expectedInternalMetric bool
+	}{
+		"ValidInternalMetric": {
+			metricName:             "scrape_internal",
+			expectedInternalMetric: true,
+		},
+		"InvalidInternalMetric": {
+			metricName:             "internal",
+			expectedInternalMetric: false,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(_ *testing.T) {
+			isInternalMetric := isInternalMetric(testCase.metricName)
+			assert.Equal(t, testCase.expectedInternalMetric, isInternalMetric)
+		})
+	}
+
 }

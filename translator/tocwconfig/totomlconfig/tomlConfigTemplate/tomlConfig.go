@@ -31,24 +31,24 @@ type (
 	}
 
 	inputConfig struct {
-		Cadvisor          []cadvisorConfig
-		Cpu               []cpuConfig
-		Disk              []diskConfig
-		DiskIo            []diskioConfig
-		Ethtool           []ethtoolConfig
-		K8sapiserver      []k8sApiServerConfig
-		Logfile           []logFileConfig
-		Mem               []memConfig
-		Net               []netConfig
-		NetStat           []netStatConfig
-		NvidiaSmi         []nvidiaSmi `toml:"nvidia_smi"`
-		Processes         []processesConfig
-		PrometheusScraper []prometheusScraperConfig `toml:"prometheus_scraper"`
-		ProcStat          []procStatConfig
-		SocketListener    []socketListenerConfig `toml:"socket_listener"`
-		Statsd            []statsdConfig
-		Swap              []swapConfig
-		WindowsEventLog   []windowsEventLogConfig `toml:"windows_event_log"`
+		Cadvisor        []cadvisorConfig
+		Cpu             []cpuConfig
+		Disk            []diskConfig
+		DiskIo          []diskioConfig
+		Ethtool         []ethtoolConfig
+		K8sapiserver    []k8sApiServerConfig
+		Logfile         []logFileConfig
+		Mem             []memConfig
+		Net             []netConfig
+		NetStat         []netStatConfig
+		NvidiaSmi       []nvidiaSmi `toml:"nvidia_smi"`
+		Processes       []processesConfig
+		Prometheus      []prometheusConfig `toml:"prometheus"`
+		ProcStat        []procStatConfig
+		SocketListener  []socketListenerConfig `toml:"socket_listener"`
+		Statsd          []statsdConfig
+		Swap            []swapConfig
+		WindowsEventLog []windowsEventLogConfig `toml:"windows_event_log"`
 	}
 
 	outputConfig struct {
@@ -166,7 +166,7 @@ type (
 		Tags      map[string]string
 	}
 
-	prometheusScraperConfig struct {
+	prometheusConfig struct {
 		ClusterName          string                              `toml:"cluster_name"`
 		PrometheusConfigPath string                              `toml:"prometheus_config_path"`
 		EcsServiceDiscovery  prometheusEcsServiceDiscoveryConfig `toml:"ecs_service_discovery"`
@@ -183,20 +183,27 @@ type (
 		TaskDefinitionList      []taskDefinitionList      `toml:"task_definition_list"`
 	}
 
-	procStatConfig struct {
-		FieldPass  []string
-		PidFile    string `toml:"pid_file"`
-		PidFinder  string `toml:"pid_finder"`
-		TagExclude []string
-		Tags       map[string]string
-	}
-
 	serviceNameListForTasks struct {
 		SdContainerNamePattern string `toml:"sd_container_name_pattern"`
 		SdJobName              string `toml:"sd_job_name"`
 		SdMetricsPath          string `toml:"sd_metrics_path"`
 		SdMetricsPorts         string `toml:"sd_metrics_ports"`
 		SdServiceNamePattern   string `toml:"sd_service_name_pattern"`
+	}
+
+	taskDefinitionList struct {
+		SdJobName                  string `toml:"sd_job_name"`
+		SdMetricsPath              string `toml:"sd_metrics_path"`
+		SdMetricsPorts             string `toml:"sd_metrics_ports"`
+		SdTaskDefinitionArnPattern string `toml:"sd_task_definition_arn_pattern"`
+	}
+
+	procStatConfig struct {
+		FieldPass  []string
+		PidFile    string `toml:"pid_file"`
+		PidFinder  string `toml:"pid_finder"`
+		TagExclude []string
+		Tags       map[string]string
 	}
 
 	socketListenerConfig struct {
@@ -222,13 +229,6 @@ type (
 	swapConfig struct {
 		FieldPass []string
 		Tags      map[string]string
-	}
-
-	taskDefinitionList struct {
-		SdJobName                  string `toml:"sd_job_name"`
-		SdMetricsPath              string `toml:"sd_metrics_path"`
-		SdMetricsPorts             string `toml:"sd_metrics_ports"`
-		SdTaskDefinitionArnPattern string `toml:"sd_task_definition_arn_pattern"`
 	}
 
 	windowsEventLogConfig struct {

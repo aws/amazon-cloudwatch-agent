@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package prometheus_scraper
+package prometheus
 
 import (
 	"errors"
@@ -132,14 +132,6 @@ func getScrapeTargetInfo(pmb PrometheusMetricBatch) (job string, instance string
 		return job, instance, nil
 	}
 	return "", "", fmt.Errorf("job and/or instance not found from %d metrics job=%q instance=%q", len(pmb), job, instance)
-}
-
-func isInternalMetric(metricName string) bool {
-	//For each endpoint, Prometheus produces a set of internal metrics. See https://prometheus.io/docs/concepts/jobs_instances/
-	if metricName == "up" || strings.HasPrefix(metricName, "scrape_") {
-		return true
-	}
-	return false
 }
 
 // Decorate the Metrics with Metric Types.

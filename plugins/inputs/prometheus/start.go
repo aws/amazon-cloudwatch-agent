@@ -17,7 +17,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prometheus_scraper
+package prometheus
 
 import (
 	"context"
@@ -57,18 +57,35 @@ var (
 	})
 )
 
+var (
+	// Save name before re-label since customers can relabel the prometheus metric name
+	// https://github.com/aws/amazon-cloudwatch-agent/issues/190
+	// and we would not able to get the metric type for the metric
+	// and result in dropping the metrics if it is unknown
+	// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/main/plugins/inputs/prometheus_scraper/metrics_filter.go#L23
+	metricNameRelabelConfigs = []*relabel.Config{
+		{
+			Action:       relabel.Replace,
+			Regex:        relabel.MustNewRegexp("(.*)"),
+			Replacement:  "$1",
+			TargetLabel:  savedScrapeNameLabel,
+			SourceLabels: model.LabelNames{"__name__"},
+		},
+	}
+)
+
 func init() {
 	prometheus.MustRegister(version.NewCollector("prometheus"))
 }
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
-	infoLevel := &promlog.AllowedLevel{}
-	_ = infoLevel.Set("info")
+	logLevel := &promlog.AllowedLevel{}
+	logLevel.Set("info")
 
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
 		runtime.SetMutexProfileFraction(20)
-		_ = infoLevel.Set("debug")
+		logLevel.Set("debug")
 	}
 	logFormat := &promlog.AllowedFormat{}
 	_ = logFormat.Set("logfmt")
@@ -77,7 +94,7 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 		configFile    string
 		promlogConfig promlog.Config
 	}{
-		promlogConfig: promlog.Config{Level: infoLevel, Format: logFormat},
+		promlogConfig: promlog.Config{Level: logLevel, Format: logFormat},
 	}
 
 	cfg.configFile = configFilePath
@@ -291,13 +308,13 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 	// For saving name before relabel
 	// - __name__ https://github.com/aws/amazon-cloudwatch-agent/issues/190
 	// - job and instance https://github.com/aws/amazon-cloudwatch-agent/issues/193
-	for _, scrapeConfig := range conf.ScrapeConfigs {
+	for _, sc := range conf.ScrapeConfigs {
 		relabelConfigs := []*relabel.Config{
 			// job
 			{
 				Action:       relabel.Replace,
 				Regex:        relabel.MustNewRegexp(".*"), // __address__ is always there, so we will find a match for every job
-				Replacement:  scrapeConfig.JobName,        // value is hard coded job name
+				Replacement:  sc.JobName,                  // value is hard coded job name
 				SourceLabels: model.LabelNames{"__address__"},
 				TargetLabel:  savedScrapeJobLabel, // creates a new magic label
 			},
@@ -311,21 +328,11 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 			},
 		}
 
-		// We only got __name__ after scrape, so it's in metric_relabel_configs instead of relabel_configs.
-		metricRelabelConfigs := []*relabel.Config{
-			// __name__
-			{
-				Action:       relabel.Replace,
-				Regex:        relabel.MustNewRegexp("(.*)"),
-				Replacement:  "$1",
-				TargetLabel:  savedScrapeNameLabel,
-				SourceLabels: model.LabelNames{"__name__"},
-			},
-		}
 		level.Info(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
-		// prepend so our relabel rule comes first
-		scrapeConfig.RelabelConfigs = append(relabelConfigs, scrapeConfig.RelabelConfigs...)
-		scrapeConfig.MetricRelabelConfigs = append(metricRelabelConfigs, scrapeConfig.MetricRelabelConfigs...)
+
+		sc.RelabelConfigs = append(relabelConfigs, sc.RelabelConfigs...)
+		sc.MetricRelabelConfigs = append(metricNameRelabelConfigs, sc.MetricRelabelConfigs...)
+
 	}
 
 	failed := false

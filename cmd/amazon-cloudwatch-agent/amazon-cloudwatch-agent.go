@@ -31,13 +31,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"go.opentelemetry.io/collector/confmap"
@@ -382,7 +378,6 @@ func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
 		// OTel native receivers
 		awscontainerinsightreceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
-		prometheusreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
 	}
@@ -405,8 +400,6 @@ func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		ec2tagger.NewFactory(),
-		metricstransformprocessor.NewFactory(),
-		resourceprocessor.NewFactory(),
 	)
 	if err != nil {
 		return factories, err
@@ -423,9 +416,7 @@ func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
 		return factories, err
 	}
 
-	extensions, err := extension.MakeFactoryMap(
-		ecsobserver.NewFactory(),
-	)
+	extensions, err := extension.MakeFactoryMap()
 	if err != nil {
 		return factories, err
 	}

@@ -14,7 +14,6 @@ import (
 	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/files"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/windows_events"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/emf"
 	collectd "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/collectd"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/customizedmetrics"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/gpu"
@@ -126,16 +125,7 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 // along with a socket listener translator if "emf" or "structuredlog" are present
 // within the logs:metrics_collected section.
 func fromLogs(conf *confmap.Conf) common.TranslatorMap[component.Config] {
-	translators := common.NewTranslatorMap[component.Config]()
-	for _, socketListenerKey := range []string{emf.SectionKey, emf.SectionKeyStructuredLog} {
-		cfgKey := common.ConfigKey(logMetricKey, socketListenerKey)
-		if conf.IsSet(cfgKey) {
-			translators.Add(NewTranslator(collectd.SectionMappedKey, cfgKey, defaultMetricsCollectionInterval))
-			break
-		}
-	}
-	translators.Merge(fromInputs(conf, logKey))
-	return translators
+	return fromInputs(conf, logKey)
 }
 
 // fromInputs converts all the keys in the section into adapter translators.

@@ -7,7 +7,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+)
+
+var serviceInputMeasurements = collections.NewSet[string](
+	"prometheus",
 )
 
 // Otel Attributes = Telegraf Tags = CloudWatch Dimensions
@@ -23,6 +28,11 @@ func getMetricName(measurement string, fieldKey string) string {
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6b3384ee44dcc07c1359b075eb9ea8e638126bc8/plugins/inputs/statsd/statsd.go#L492-L494
 	if fieldKey == "value" {
 		return measurement
+	}
+
+	// Honor metrics for service input (e.g prometheus)
+	if serviceInputMeasurements.Contains(measurement) {
+		return fieldKey
 	}
 
 	separator := "_"

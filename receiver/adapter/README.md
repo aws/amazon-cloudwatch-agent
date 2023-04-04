@@ -61,4 +61,4 @@ The following receiver configuration parameters are supported.
 | Name                | Description                                                                                                   | Default |
 |---------------------| --------------------------------------------------------------------------------------------------------------|---------|
 |`collection_interval`| is the option to set the collection interval for each plugin                                                  | "1m"    |
-|`alias_name`         | is the option to set the different name for each plugin. However, it is required to be the same with [Telegraf alias](https://github.com/influxdata/telegraf/blob/0fbe0b39687789b82438c9d300d8d8b470488acd/docs/CONFIGURATION.md#input-plugins)                                                                                                                     | ""      |         
+|`alias_name`         | is the option to set the different name for each plugin.                                                      | ""      |         

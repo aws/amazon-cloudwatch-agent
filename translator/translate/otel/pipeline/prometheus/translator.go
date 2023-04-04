@@ -4,17 +4,17 @@
 package prometheus
 
 import (
+	"time"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/extension/ecsobserver"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
-	metricstransformprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/metricstransform"
-	resourceprocessor "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/resource"
-	prometheusreceiver "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/prometheus"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 )
 
 const (
@@ -42,13 +42,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: key}
 	}
 	return &common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap(prometheusreceiver.NewTranslatorWithName(pipelineName)),
+		Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, key, time.Minute)),
 		Processors: common.NewTranslatorMap(
 			processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory()),
-			metricstransformprocessor.NewTranslatorWithName(pipelineName),
-			resourceprocessor.NewTranslatorWithName(pipelineName),
 		),
-		Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
-		Extensions: common.NewTranslatorMap(ecsobserver.NewTranslatorWithName(common.PrometheusKey)),
+		Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
 	}, nil
 }

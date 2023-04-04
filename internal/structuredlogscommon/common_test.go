@@ -60,7 +60,7 @@ func TestAddVersion(t *testing.T) {
 }
 
 func TestAttachMetricRuleValidRules(t *testing.T) {
-	m := metric.New("prometheus_scraper",
+	m := metric.New("prometheus",
 		map[string]string{"tagA": "a"},
 		map[string]interface{}{"fieldA": 0.1},
 		time.Now())
@@ -77,7 +77,7 @@ func TestAttachMetricRuleValidRules(t *testing.T) {
 }
 
 func TestAttachMetricRuleInvalidRules(t *testing.T) {
-	m := metric.New("prometheus_scraper",
+	m := metric.New("prometheus",
 		map[string]string{"tagA": "a"},
 		map[string]interface{}{"fieldA": 0.1},
 		time.Now())
@@ -94,7 +94,7 @@ func TestAttachMetricRuleInvalidRules(t *testing.T) {
 }
 
 func TestAttachMetricRulewithDedupValidRules(t *testing.T) {
-	m := metric.New("prometheus_scraper",
+	m := metric.New("prometheus",
 		map[string]string{"tagA": "a", "tagB": "b"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2},
 		time.Now())
@@ -118,7 +118,7 @@ func TestAttachMetricRulewithDedupValidRules(t *testing.T) {
 }
 
 func TestAttachMetricRulewithDedupDupRules(t *testing.T) {
-	m := metric.New("prometheus_scraper",
+	m := metric.New("prometheus",
 		map[string]string{"tagA": "a", "tagB": "b", "tagC": "c"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2, "fieldC": 0.3, "fieldD": 0.3},
 		time.Now())

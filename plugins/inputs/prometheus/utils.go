@@ -1,12 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package prometheus_scraper
+package prometheus
 
 import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 func getTagsKey(pm *PrometheusMetric) *bytes.Buffer {
@@ -57,4 +58,9 @@ func mergePrometheusMetrics(mm *metricMaterial, pm *PrometheusMetric) *metricMat
 
 	mm.fields[pm.metricName] = pm.metricValue
 	return mm
+}
+
+func isInternalMetric(metricName string) bool {
+	//For each endpoint, Prometheus produces a set of internal metrics. See https://prometheus.io/docs/concepts/jobs_instances/
+	return metricName == "up" || strings.HasPrefix(metricName, "scrape_")
 }

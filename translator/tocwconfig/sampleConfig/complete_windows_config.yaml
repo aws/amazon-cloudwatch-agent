@@ -70,8 +70,6 @@ receivers:
         collection_interval: 1m0s
     telegraf_nvidia_smi:
         collection_interval: 1m0s
-    telegraf_socket_listener:
-        collection_interval: 1m0s
     telegraf_statsd:
         collection_interval: 10s
     telegraf_procstat/1340600742:
@@ -128,7 +126,6 @@ service:
             receivers:
                 - telegraf_logfile
                 - telegraf_nvidia_smi
-                - telegraf_socket_listener
                 - telegraf_statsd
                 - telegraf_procstat/1340600742
                 - telegraf_win_perf_counters/1063858558
