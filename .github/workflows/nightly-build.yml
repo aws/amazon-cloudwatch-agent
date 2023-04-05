@@ -23,7 +23,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ secrets.S3_INTEGRATION_BUCKET }}
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-east-1
 
       #Need to install rpm so ubuntu can make rpm by default ubuntu can make deb
@@ -65,7 +65,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ secrets.S3_INTEGRATION_BUCKET }}
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-east-1
 
       - name: Check out code
