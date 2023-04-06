@@ -1,4 +1,7 @@
 name: Upload Nightly Binaries
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
 
 on:
   schedule:
@@ -23,8 +26,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-east-1
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
 
       #Need to install rpm so ubuntu can make rpm by default ubuntu can make deb
       - name: Install rpm
@@ -40,13 +43,13 @@ jobs:
         run: make nightly-release
 
       - name: Upload to S3
-        run: aws s3 cp build/bin s3://private-cloudwatch-agent-integration-test/nightly-build/latest/ --recursive --acl public-read --source-region us-east-1
+        run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/ --recursive --acl public-read --source-region us-east-1
 
       # Users should only take the tar of the darwin build according to our readme so deleting this does not matter. More of a sanity step
       - name: Delete Mac Binary As This Should Only Be Built On Mac
         run: |
-          aws s3 rm --recursive s3://private-cloudwatch-agent-integration-test/nightly-build/latest/darwin_amd64/
-          aws s3 rm --recursive s3://private-cloudwatch-agent-integration-test/nightly-build/latest/darwin_arm64/
+          aws s3 rm --recursive s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin_amd64/
+          aws s3 rm --recursive s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin_arm64/
 
   mac-build:
     name: Upload Mac Nightly Binaries
@@ -65,7 +68,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-east-1
 
       - name: Check out code
@@ -77,4 +80,4 @@ jobs:
         run: make nightly-release-mac
 
       - name: Upload to S3
-        run: aws s3 cp build/bin/darwin s3://private-cloudwatch-agent-integration-test/nightly-build/latest/darwin/ --recursive --acl public-read --source-region us-east-1
+        run: aws s3 cp build/bin/darwin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin/ --recursive --acl public-read --source-region us-east-1
