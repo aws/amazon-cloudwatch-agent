@@ -80,4 +80,4 @@ jobs:
         run: make nightly-release-mac
 
       - name: Upload to S3
-        run: aws s3 cp build/bin/darwin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin/ --recursive --acl public-read --source-region us-east-1
+        run: aws s3 cp build/bin/darwin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin/ --recursive --acl public-read --source-region us-west-2
