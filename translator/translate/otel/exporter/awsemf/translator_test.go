@@ -37,7 +37,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"namespace":                              "ECS/ContainerInsights",
 				"log_group_name":                         "/aws/ecs/containerinsights/{ClusterName}/performance",
-				"log_stream_name":                        "instanceTelemetry/{ContainerInstanceId}",
+				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"parse_json_encoded_attr_values":         []string{"Sources"},
 				"output_destination":                     "cloudwatch",

@@ -1,6 +1,6 @@
 namespace: ECS/ContainerInsights
 log_group_name: '/aws/ecs/containerinsights/{ClusterName}/performance'
-log_stream_name: 'instanceTelemetry/{ContainerInstanceId}'
+log_stream_name: 'NodeTelemetry-{ContainerInstanceId}'
 detailed_metrics: false
 dimension_rollup_option: NoDimensionRollup
 version: "0"

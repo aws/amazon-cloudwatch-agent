@@ -34,7 +34,7 @@ exporters:
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/{ClusterName}/performance
     log_retention: 0
-    log_stream_name: instanceTelemetry/{ContainerInstanceId}
+    log_stream_name: NodeTelemetry-{ContainerInstanceId}
     max_retries: 2
     metric_declarations:
       - dimensions:

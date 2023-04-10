@@ -35,14 +35,13 @@ func setPrometheusLogGroup(conf *confmap.Conf, cfg *awsemfexporter.Config) error
 
 	if context.CurrentContext().RunInContainer() {
 		if ecsutil.GetECSUtilSingleton().IsECS() {
-			clusterName := ecsutil.GetECSUtilSingleton().Cluster
-			if clusterName != "" {
-				cfg.LogGroupName = fmt.Sprintf(eksDefaultLogGroupFormat, clusterName)
+			if clusterName := ecsutil.GetECSUtilSingleton().Cluster; clusterName != "" {
+				cfg.LogGroupName = fmt.Sprintf(ecsDefaultLogGroupFormat, clusterName)
 			}
 		} else {
-			clusterName := util.GetClusterNameFromEc2Tagger()
-			if clusterName != "" {
-				cfg.LogGroupName = fmt.Sprintf(ecsDefaultLogGroupFormat, clusterName)
+
+			if clusterName := util.GetClusterNameFromEc2Tagger(); clusterName != "" {
+				cfg.LogGroupName = fmt.Sprintf(eksDefaultLogGroupFormat, clusterName)
 			}
 		}
 	}
