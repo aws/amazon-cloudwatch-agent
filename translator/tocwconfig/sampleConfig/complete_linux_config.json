@@ -210,6 +210,10 @@
         "tcp_proxy": {
           "bind_address": "0.0.0.0:1234"
         }
+      },
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:1111",
+        "http_endpoint": "0.0.0.0:2222"
       }
     },
     "concurrency": 1,

@@ -29,6 +29,7 @@ const (
 	PrometheusKey                = "prometheus"
 	EMFProcessorKey              = "emf_processor"
 	XrayKey                      = "xray"
+	OtlpKey                      = "otlp"
 	EndpointOverrideKey          = "endpoint_override"
 	RegionOverrideKey            = "region_override"
 	ProxyOverrideKey             = "proxy_override"

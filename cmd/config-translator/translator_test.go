@@ -60,6 +60,9 @@ func TestAgentConfig(t *testing.T) {
 
 func TestTracesConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validTrace.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["array_min_properties"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidTrace.json", false, expectedErrorMap)
 }
 
 func TestLogFilesConfig(t *testing.T) {

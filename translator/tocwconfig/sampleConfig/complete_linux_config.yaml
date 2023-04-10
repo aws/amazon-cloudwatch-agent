@@ -57,6 +57,7 @@ exporters:
         sending_queue:
             queue_size: 5000
     awsxray:
+        aws_log_groups: []
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
         index_all_attributes: false
         indexed_attributes: []
@@ -69,7 +70,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
-        aws_log_groups: []
 extensions: {}
 processors:
     batch/emf_logs:
@@ -96,13 +96,13 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         refresh_interval_seconds: 0s
     transform:
-        log_statements: [ ]
-        error_mode: "propagate"
+        error_mode: propagate
+        log_statements: []
         metric_statements:
             - context: metric
               statements:
@@ -133,6 +133,26 @@ receivers:
                 reload_interval: 0s
                 server_name_override: ""
         transport: udp
+    otlp:
+        protocols:
+            grpc:
+                auth: null
+                endpoint: 0.0.0.0:1111
+                include_metadata: false
+                keepalive: null
+                max_concurrent_streams: 0
+                max_recv_msg_size_mib: 0
+                read_buffer_size: 524288
+                tls: null
+                transport: tcp
+                write_buffer_size: 0
+            http:
+                auth: null
+                cors: null
+                endpoint: 0.0.0.0:2222
+                include_metadata: false
+                max_request_body_size: 0
+                tls: null
     telegraf_cpu:
         collection_interval: 10s
     telegraf_disk:
@@ -215,6 +235,7 @@ service:
                 - batch/xray
             receivers:
                 - awsxray
+                - otlp
     telemetry:
         logs:
             development: false

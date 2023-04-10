@@ -4,6 +4,8 @@
 package xray
 
 import (
+	"fmt"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
@@ -12,6 +14,7 @@ import (
 	awsxrayexporter "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsxray"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
 	awsxrayreceiver "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awsxray"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/otlp"
 )
 
 const (
@@ -19,7 +22,8 @@ const (
 )
 
 var (
-	baseKey = common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.XrayKey)
+	xrayKey = common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.XrayKey)
+	otlpKey = common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey)
 )
 
 type translator struct {
@@ -36,12 +40,19 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || !conf.IsSet(baseKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: baseKey}
+	if conf == nil || !(conf.IsSet(xrayKey) || conf.IsSet(otlpKey)) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(xrayKey, " or ", otlpKey)}
 	}
-	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap(awsxrayreceiver.NewTranslator()),
+	translators := &common.ComponentTranslators{
+		Receivers:  common.NewTranslatorMap[component.Config](),
 		Processors: common.NewTranslatorMap(processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory())),
 		Exporters:  common.NewTranslatorMap(awsxrayexporter.NewTranslator()),
-	}, nil
+	}
+	if conf.IsSet(xrayKey) {
+		translators.Receivers.Add(awsxrayreceiver.NewTranslator())
+	}
+	if conf.IsSet(otlpKey) {
+		translators.Receivers.Add(otlp.NewTranslator(otlp.WithDataType(component.DataTypeTraces)))
+	}
+	return translators, nil
 }

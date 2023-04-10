@@ -45,6 +45,7 @@ import (
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
+	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"golang.org/x/exp/maps"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
@@ -378,6 +379,7 @@ func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
 		// OTel native receivers
 		awscontainerinsightreceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
+		otlpreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
 	}

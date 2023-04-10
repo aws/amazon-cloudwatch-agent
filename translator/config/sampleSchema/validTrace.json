@@ -6,6 +6,10 @@
         "tcp_proxy": {
           "bind_address": "0.0.0.0:2345"
         }
+      },
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:4321",
+        "http_endpoint": "0.0.0.0:5432"
       }
     },
     "concurrency": 1,

@@ -1,5 +1,11 @@
 {
   "traces": {
+    "traces_collected": {
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:2345",
+        "http_endpoint": "0.0.0.0:1234"
+      }
+    },
     "insecure": true,
     "credentials": {
       "role_arn": "trace_role_arn_value_test"

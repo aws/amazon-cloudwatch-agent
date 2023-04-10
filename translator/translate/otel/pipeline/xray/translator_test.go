@@ -4,6 +4,7 @@
 package xray
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,9 +31,9 @@ func TestTranslator(t *testing.T) {
 	}{
 		"WithoutTracesCollectedKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: baseKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: fmt.Sprint(xrayKey, " or ", otlpKey)},
 		},
-		"WithTracesCollectedKey": {
+		"WithXrayKey": {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
@@ -42,6 +43,35 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"awsxray"},
+				processors: []string{"batch/xray"},
+				exporters:  []string{"awsxray"},
+			},
+		},
+		"WithOtlpKey": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"otlp": nil,
+					},
+				},
+			},
+			want: &want{
+				receivers:  []string{"otlp"},
+				processors: []string{"batch/xray"},
+				exporters:  []string{"awsxray"},
+			},
+		},
+		"WithXrayAndOtlpKey": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"xray": nil,
+						"otlp": nil,
+					},
+				},
+			},
+			want: &want{
+				receivers:  []string{"awsxray", "otlp"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
 			},

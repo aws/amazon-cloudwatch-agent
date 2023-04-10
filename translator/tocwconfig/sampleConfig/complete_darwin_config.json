@@ -172,5 +172,30 @@
       "role_arn": "log_role_arn_value_test"
     },
     "endpoint_override": "https://logs-fips.us-west-2.amazonaws.com"
+  },
+  "traces": {
+    "traces_collected": {
+      "xray": {
+        "bind_address": "0.0.0.0:2001",
+        "tcp_proxy": {
+          "bind_address": "0.0.0.0:1234"
+        }
+      },
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:1111",
+        "http_endpoint": "0.0.0.0:2222"
+      }
+    },
+    "concurrency": 1,
+    "buffer_size_mb": 3,
+    "resource_arn": "arn:aws:iam::account:resource",
+    "local_mode": true,
+    "insecure": true,
+    "credentials": {
+      "role_arn": "trace_role_arn_value_test"
+    },
+    "endpoint_override": "https://x-ray-endpoint.us-west-2.amazonaws.com",
+    "region_override": "us-west-2",
+    "proxy_override": "https://proxy.proxy.com"
   }
 }

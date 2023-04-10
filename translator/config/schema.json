@@ -801,9 +801,13 @@
           "properties": {
             "xray": {
               "$ref": "#/definitions/tracesDefinition/definitions/xrayDefinition"
+            },
+            "otlp": {
+              "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinition"
             }
           },
-          "minProperties": 1
+          "minProperties": 1,
+          "additionalProperties": false
         },
         "concurrency": {
           "description": "Maximum number of concurrent calls to AWS X-Ray to upload documents",
@@ -859,6 +863,20 @@
             "tcp_proxy": {
               "description": "TCP proxy server used by the X-Ray SDK to update sampling rules",
               "$ref": "#/definitions/tcpProxyDefinition"
+            }
+          },
+          "additionalProperties": false
+        },
+        "otlpDefinition": {
+          "type": "object",
+          "properties": {
+            "grpc_endpoint": {
+              "description": "gRPC endpoint to use to listen for OTLP protobuf traces",
+              "$ref": "#/definitions/endpointOverrideDefinition"
+            },
+            "http_endpoint": {
+              "description": "HTTP endpoint to use to listen for OTLP JSON traces",
+              "$ref": "#/definitions/endpointOverrideDefinition"
             }
           },
           "additionalProperties": false
