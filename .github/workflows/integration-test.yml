@@ -22,6 +22,8 @@ on:
       - 'RELEASE_NOTES'
       - 'THIRD-PARTY'
       - 'LICENSE'
+      - '.github/**'
+      - '!.github/workflows/integration-test.yml'
   workflow_dispatch:
     inputs:
       plugins:
