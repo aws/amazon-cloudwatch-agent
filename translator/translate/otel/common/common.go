@@ -197,6 +197,17 @@ func GetBool(conf *confmap.Conf, key string) (value bool, ok bool) {
 	return
 }
 
+// GetOrDefaultBool gets the bool value for the key. If the key is missing or the
+// value is not a bool type, then the defaultVal is returned.
+func GetOrDefaultBool(conf *confmap.Conf, key string, defaultVal bool) bool {
+	if v := conf.Get(key); v != nil {
+		if val, ok := v.(bool); ok {
+			return val
+		}
+	}
+	return defaultVal
+}
+
 // GetNumber gets the number value for the key. If the key is missing or
 // the value is not a float64 type (default JSON unmarshal maps number to
 // float64), then ok will be false.

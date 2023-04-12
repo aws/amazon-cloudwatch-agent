@@ -84,6 +84,24 @@ func TestGetBool(t *testing.T) {
 	require.True(t, got)
 }
 
+func TestGetOrDefaultBool(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]interface{}{"int": 10, "string": "test", "bool1": false, "bool2": true})
+	got := GetOrDefaultBool(conf, "int", false)
+	require.False(t, got)
+
+	got = GetOrDefaultBool(conf, "string", true)
+	require.True(t, got)
+
+	got = GetOrDefaultBool(conf, "bool1", true)
+	require.False(t, got)
+
+	got = GetOrDefaultBool(conf, "bool2", true)
+	require.True(t, got)
+
+	got = GetOrDefaultBool(conf, "non_existent_key", true)
+	require.True(t, got)
+}
+
 func TestGetNumber(t *testing.T) {
 	test := map[string]interface{}{"int": 10, "string": "test", "bool": false, "float": 1.3}
 	marshalled, err := json.Marshal(test)

@@ -91,6 +91,38 @@ func TestTranslator(t *testing.T) {
 				CollectionInterval:    10 * time.Second,
 			},
 		},
+		"WithKubernetes/WithTagService": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"tag_service": false,
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator: eks,
+				CollectionInterval:    60 * time.Second,
+				TagService:            false,
+			},
+		},
+		"WithKubernetes/WithPrefFullPodName": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"prefer_full_pod_name": true,
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator: eks,
+				CollectionInterval:    60 * time.Second,
+				PrefFullPodName:       true,
+			},
+		},
 		"WithECSAndKubernetes": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{

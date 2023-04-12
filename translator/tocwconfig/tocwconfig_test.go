@@ -44,24 +44,24 @@ const (
 //go:embed sampleConfig/prometheus_config.yaml
 var prometheusConfig string
 
-func TestLogMetricOnly(t *testing.T) {
+func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "log_metric_only", "linux", expectedEnvVars, "")
-	checkTranslation(t, "log_metric_only", "darwin", nil, "")
+	checkTranslation(t, "emf_and_kubernetes_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "emf_and_kubernetes_config", "darwin", nil, "")
 }
 
-func TestLogMetricAndLog(t *testing.T) {
+func TestLogsAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "log_metric_and_log", "linux", expectedEnvVars, "")
-	checkTranslation(t, "log_metric_and_log", "darwin", nil, "")
+	checkTranslation(t, "logs_and_kubernetes_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "logs_and_kubernetes_config", "darwin", nil, "")
 }
 
 func TestCompleteConfig(t *testing.T) {

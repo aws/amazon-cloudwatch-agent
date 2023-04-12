@@ -22,7 +22,7 @@ const (
 
 var (
 	baseKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
-	eksKey  = common.ConfigKey(baseKey, common.ECSKey)
+	eksKey  = common.ConfigKey(baseKey, common.KubernetesKey)
 	ecsKey  = common.ConfigKey(baseKey, common.ECSKey)
 )
 
@@ -39,7 +39,7 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(component.DataTypeMetrics, pipelineName)
 }
 
-// Translate creates a pipeline for container insights if the logs.metrics_collected.ecs
+// Translate creates a pipeline for container insights if the logs.metrics_collected.ecs or logs.metrics_collected.kubernetes
 // section is present.
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	if conf == nil || (!conf.IsSet(ecsKey) && !conf.IsSet(eksKey)) {

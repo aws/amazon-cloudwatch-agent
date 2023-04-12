@@ -19,12 +19,15 @@ import (
 //go:embed awsemf_default_ecs.yaml
 var defaultEcsConfig string
 
+//go:embed awsemf_default_kubernetes.yaml
+var defaultKubernetesConfig string
+
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
 
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
-	eksBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
+	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
 	prometheusBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 	emfProcessorBasePathKey = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
 )
@@ -55,8 +58,8 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	var defaultConfig string
 	if t.isEcs(c) {
 		defaultConfig = defaultEcsConfig
-	} else if t.isEks(c) {
-		defaultConfig = defaultEcsConfig // TODO: Fix when onboarding EKS
+	} else if t.isKubernetes(c) {
+		defaultConfig = defaultKubernetesConfig
 	} else if t.isPrometheus(c) {
 		defaultConfig = defaultPrometheusConfig
 	} else {
@@ -73,13 +76,11 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	// TODO: Do we have use-case of multiple awsemf exporters used in diff pipelines in the same yaml?
-
 	if t.isEcs(c) {
 		if err := t.setEcsFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if t.isEks(c) {
+	} else if t.isKubernetes(c) {
 		if err := t.setEksFields(c, cfg); err != nil {
 			return nil, err
 		}
@@ -96,8 +97,8 @@ func (t *translator) isEcs(conf *confmap.Conf) bool {
 	return conf.IsSet(ecsBasePathKey)
 }
 
-func (t *translator) isEks(conf *confmap.Conf) bool {
-	return conf.IsSet(eksBasePathKey)
+func (t *translator) isKubernetes(conf *confmap.Conf) bool {
+	return conf.IsSet(kubernetesBasePathKey)
 }
 
 func (t *translator) isPrometheus(conf *confmap.Conf) bool {

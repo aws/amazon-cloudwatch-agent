@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 		want    *want
 		wantErr error
 	}{
-		"WithoutECSKey": {
+		"WithoutECSOrKubernetesKey": {
 			input:   map[string]interface{}{},
 			wantErr: &common.MissingKeyError{ID: cit.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)},
 		},
@@ -39,6 +39,21 @@ func TestTranslator(t *testing.T) {
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"ecs": nil,
+					},
+				},
+			},
+			want: &want{
+				pipelineType: "metrics/containerinsights",
+				receivers:    []string{"awscontainerinsightreceiver"},
+				processors:   []string{"batch/containerinsights"},
+				exporters:    []string{"awsemf/containerinsights"},
+			},
+		},
+		"WithKubernetesKey": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": nil,
 					},
 				},
 			},

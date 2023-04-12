@@ -72,6 +72,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultMetricsCollectionInterval)
 	cfg.ContainerOrchestrator = configuredService.Value
+
+	if configuredService.Value == eks {
+		tagServiceKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "tag_service")
+		cfg.TagService = common.GetOrDefaultBool(conf, tagServiceKey, true)
+		prefFullPodNameKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "prefer_full_pod_name")
+		cfg.PrefFullPodName = common.GetOrDefaultBool(conf, prefFullPodNameKey, false)
+	}
+
 	return cfg, nil
 }
 
