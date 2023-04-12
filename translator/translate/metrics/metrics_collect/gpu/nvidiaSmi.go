@@ -68,6 +68,5 @@ func (n *NvidiaSmi) ApplyRule(input interface{}) (returnKey string, returnVal in
 func init() {
 	n := new(NvidiaSmi)
 	parent.RegisterLinuxRule(SectionKey_Nvidia_GPU, n)
-	parent.RegisterDarwinRule(SectionKey_Nvidia_GPU, n)
 	//parent.RegisterWindowsRule(SectionKey_Nvidia_GPU, n)
 }
