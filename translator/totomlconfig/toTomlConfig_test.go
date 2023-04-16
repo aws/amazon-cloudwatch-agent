@@ -7,26 +7,23 @@ import (
 	"bytes"
 	"encoding/json"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-
-	"os"
+	"github.com/stretchr/testify/assert"
 
 	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/stretchr/testify/assert"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 func ReadFromFile(filename string) string {
@@ -162,7 +159,7 @@ func TestStandardConfig(t *testing.T) {
 func TestAdvancedConfig(t *testing.T) {
 	resetContext()
 	checkTomlTranslation(t, "./sampleConfig/advanced_config_linux.json", "./sampleConfig/advanced_config_linux.conf", "linux")
-	checkTomlTranslation(t, "./sampleConfig/advanced_config_linux.json", "./sampleConfig/advanced_config_linux.conf", "darwin")
+	checkTomlTranslation(t, "./sampleConfig/advanced_config_darwin.json", "./sampleConfig/advanced_config_darwin.conf", "darwin")
 	checkTomlTranslation(t, "./sampleConfig/advanced_config_windows.json", "./sampleConfig/advanced_config_windows.conf", "windows")
 }
 
