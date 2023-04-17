@@ -564,7 +564,7 @@ jobs:
           ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -639,7 +639,7 @@ jobs:
           ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -707,7 +707,7 @@ jobs:
           ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -1013,7 +1013,7 @@ jobs:
 #          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
 #
 #      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v1
+#        uses: aws-actions/configure-aws-credentials@v2
 #        with:
 #          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
 #          aws-region: us-west-2
