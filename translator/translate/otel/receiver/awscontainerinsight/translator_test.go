@@ -4,6 +4,7 @@
 package awscontainerinsight
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -82,6 +83,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"kubernetes": map[string]interface{}{
 							"metrics_collection_interval": float64(10),
+							"cluster_name":                "TestCluster",
 						},
 					},
 				},
@@ -89,14 +91,26 @@ func TestTranslator(t *testing.T) {
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator: eks,
 				CollectionInterval:    10 * time.Second,
+				ClusterName:           "TestCluster",
 			},
+		},
+		"WithKubernetes/WithoutClusterName": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{},
+					},
+				},
+			},
+			wantErr: errors.New("cluster name is not provided and was not auto-detected from EC2 tags"),
 		},
 		"WithKubernetes/WithTagService": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"kubernetes": map[string]interface{}{
-							"tag_service": false,
+							"tag_service":  false,
+							"cluster_name": "TestCluster",
 						},
 					},
 				},
@@ -105,6 +119,8 @@ func TestTranslator(t *testing.T) {
 				ContainerOrchestrator: eks,
 				CollectionInterval:    60 * time.Second,
 				TagService:            false,
+				LeaderLockName:        defaultLeaderLockName,
+				ClusterName:           "TestCluster",
 			},
 		},
 		"WithKubernetes/WithPrefFullPodName": {
@@ -113,6 +129,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"kubernetes": map[string]interface{}{
 							"prefer_full_pod_name": true,
+							"cluster_name":         "TestCluster",
 						},
 					},
 				},
@@ -121,6 +138,8 @@ func TestTranslator(t *testing.T) {
 				ContainerOrchestrator: eks,
 				CollectionInterval:    60 * time.Second,
 				PrefFullPodName:       true,
+				LeaderLockName:        defaultLeaderLockName,
+				ClusterName:           "TestCluster",
 			},
 		},
 		"WithECSAndKubernetes": {

@@ -96,6 +96,8 @@ receivers:
     collection_interval: 30s
     container_orchestrator: ecs
     prefer_full_pod_name: false
+    cluster_name: ""
+    leader_lock_name: "otel-container-insight-clusterleader"
   tcplog/emf_logs:
     attributes: {}
     encoding: utf-8

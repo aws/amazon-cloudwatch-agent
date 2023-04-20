@@ -125,6 +125,8 @@ receivers:
     collection_interval: 30s
     container_orchestrator: eks
     prefer_full_pod_name: true
+    cluster_name: "TestCluster"
+    leader_lock_name: cwagent-clusterleader
   tcplog/emf_logs:
     attributes: {}
     encoding: utf-8
