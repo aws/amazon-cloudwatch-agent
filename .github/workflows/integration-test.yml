@@ -287,7 +287,7 @@ jobs:
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         working-directory: cwa
-        run: make amazon-cloudwatch-agent-mac package-darwin
+        run: make amazon-cloudwatch-agent-darwin package-darwin
 
       - name: Copy binary
         if: steps.cached_binaries.outputs.cache-hit != 'true'
@@ -673,6 +673,7 @@ jobs:
             -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
             -var="cwa_github_sha=${GITHUB_SHA}"  \
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
+            -var="ami=${{ matrix.arrays.ami }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
               terraform destroy -auto-approve
             else
