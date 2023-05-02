@@ -405,49 +405,49 @@ jobs:
           aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amd64/amazon-cloudwatch-agent.pkg.sig
           aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/arm64/amazon-cloudwatch-agent.pkg.sig
   
-  StartLocalStack:
-    name: 'StartLocalStack'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: terraform/ec2/localstack
-    outputs:
-      local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-
-      - name: Verify Terraform version
-        run: terraform --version
-
-      - name: Terraform init
-        run: terraform init
-
-      - name: Terraform apply
-        id: localstack
-        run: >
-          echo run terraform and execute test code &&
-          terraform apply --auto-approve
-          -var="ssh_key_value=${PRIVATE_KEY}"
-          -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}"
-          -var="cwa_github_sha=${GITHUB_SHA}"
-          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
-          -var="ssh_key_name=${KEY_NAME}" &&
-          LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
-          echo $LOCAL_STACK_HOST_NAME &&
-          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
-          aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
+#  StartLocalStack:
+#    name: 'StartLocalStack'
+#    runs-on: ubuntu-latest
+#    defaults:
+#      run:
+#        working-directory: terraform/ec2/localstack
+#    outputs:
+#      local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
+#    permissions:
+#      id-token: write
+#      contents: read
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+#          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+#
+#      - name: Configure AWS Credentials
+#        uses: aws-actions/configure-aws-credentials@v2
+#        with:
+#          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+#          aws-region: us-west-2
+#
+#      - name: Verify Terraform version
+#        run: terraform --version
+#
+#      - name: Terraform init
+#        run: terraform init
+#
+#      - name: Terraform apply
+#        id: localstack
+#        run: >
+#          echo run terraform and execute test code &&
+#          terraform apply --auto-approve
+#          -var="ssh_key_value=${PRIVATE_KEY}"
+#          -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}"
+#          -var="cwa_github_sha=${GITHUB_SHA}"
+#          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
+#          -var="ssh_key_name=${KEY_NAME}" &&
+#          LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
+#          echo $LOCAL_STACK_HOST_NAME &&
+#          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
+#          aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
   
 #  EC2NvidiaGPUIntegrationTest:
 #    needs: [ MakeBinary, BuildMSI, StartLocalStack, GenerateTestMatrix ]
@@ -762,40 +762,40 @@ jobs:
 #          retry_wait_seconds: 5
 #          command: cd terraform/ec2/mac && terraform destroy --auto-approve
 
-  StopLocalStack:
-    name: 'StopLocalStack'
-    runs-on: ubuntu-latest
-    if: ${{ always() }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest ]
-    defaults:
-      run:
-        working-directory: terraform/ec2/localstack
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-
-      - name: Copy state
-        run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
-
-      - name: Verify Terraform version
-        run: terraform --version
-
-      - name: Terraform init
-        run: terraform init
-
-      - name: Terraform destroy
-        run: terraform destroy --auto-approve
+#  StopLocalStack:
+#    name: 'StopLocalStack'
+#    runs-on: ubuntu-latest
+#    if: ${{ always() }}
+#    needs: [ StartLocalStack, EC2LinuxIntegrationTest ]
+#    defaults:
+#      run:
+#        working-directory: terraform/ec2/localstack
+#    permissions:
+#      id-token: write
+#      contents: read
+#    steps:
+#      - uses: actions/checkout@v3
+#        with:
+#          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+#          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+#
+#      - name: Configure AWS Credentials
+#        uses: aws-actions/configure-aws-credentials@v2
+#        with:
+#          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+#          aws-region: us-west-2
+#
+#      - name: Copy state
+#        run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
+#
+#      - name: Verify Terraform version
+#        run: terraform --version
+#
+#      - name: Terraform init
+#        run: terraform init
+#
+#      - name: Terraform destroy
+#        run: terraform destroy --auto-approve
 
 #  ECSEC2IntegrationTest:
 #    name: 'ECSEC2IntegrationTest'
