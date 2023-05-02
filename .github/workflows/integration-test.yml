@@ -145,6 +145,7 @@ jobs:
       ec2_stress_matrix: ${{steps.set-matrix.outputs.ec2_stress_matrix}}
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+      eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -168,6 +169,7 @@ jobs:
           echo "::set-output name=ec2_stress_matrix::$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
+          echo "::set-output name=eks_daemon_matrix::$(echo $(cat generator/resources/eks_daemon_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
@@ -177,8 +179,9 @@ jobs:
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
           echo "ec2_stress_matrix: ${{ steps.set-matrix.outputs.ec2_stress_matrix}}"
-          echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
-          echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
+          echo "ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
+          echo "ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
+          echo "eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}"
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -929,6 +932,74 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
+
+
+  EKSIntegrationTest:
+    name: 'EKSIntegrationTest'
+    runs-on: ubuntu-latest
+    needs: [ MakeBinary, GenerateTestMatrix ]
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_daemon_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: eks-ec2-integration-test
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: eks-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
+
+      - name: Login ECR
+        id: login-ecr
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Verify Terraform version
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 15
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/eks/daemon
+            terraform init
+            if terraform apply --auto-approve\
+              -var="test_dir=${{ matrix.arrays.test_dir }}"\
+              -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
+              -var="cwagent_image_tag=${{ github.sha }}"\
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() && steps.eks-ec2-integration-test.outputs.cache-hit != 'true' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/eks/daemon && terraform destroy --auto-approve
 
   StressTrackingTest:
     name: "StressTrackingTest"
