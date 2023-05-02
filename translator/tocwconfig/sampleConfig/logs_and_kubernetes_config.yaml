@@ -60,7 +60,7 @@ exporters:
           - node_memory_working_set
           - node_memory_limit
       # pod metrics
-      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ], [ ClusterName ] ]
+      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ], [ ClusterName ] ]
         label_matchers: []
         metric_name_selectors:
           - pod_cpu_utilization
@@ -69,12 +69,12 @@ exporters:
           - pod_network_tx_bytes
           - pod_cpu_utilization_over_pod_limit
           - pod_memory_utilization_over_pod_limit
-      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
+      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
         label_matchers: []
         metric_name_selectors:
           - pod_cpu_reserved_capacity
           - pod_memory_reserved_capacity
-      - dimensions: [ [ ClusterName, Namespace, PodName ] ]
+      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ] ]
         label_matchers: []
         metric_name_selectors:
           - pod_number_of_container_restarts
@@ -120,7 +120,7 @@ processors:
     timeout: 200ms
 receivers:
   awscontainerinsightreceiver:
-    add_full_pod_name_metric_label: false
+    add_full_pod_name_metric_label: true
     add_service_as_attribute: true
     collection_interval: 30s
     container_orchestrator: eks

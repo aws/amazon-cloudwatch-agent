@@ -81,7 +81,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 			return nil, err
 		}
 	} else if t.isKubernetes(c) {
-		if err := t.setEksFields(c, cfg); err != nil {
+		if err := t.setKubernetesFields(c, cfg); err != nil {
 			return nil, err
 		}
 	} else if t.isPrometheus(c) {
@@ -109,7 +109,11 @@ func (t *translator) setEcsFields(_ *confmap.Conf, _ *awsemfexporter.Config) err
 	return nil
 }
 
-func (t *translator) setEksFields(_ *confmap.Conf, _ *awsemfexporter.Config) error {
+func (t *translator) setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+
+	if err := setKubernetesMetricDeclaration(conf, cfg); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -86,6 +86,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.TagService = common.GetOrDefaultBool(conf, tagServiceKey, true)
 		prefFullPodNameKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "prefer_full_pod_name")
 		cfg.PrefFullPodName = common.GetOrDefaultBool(conf, prefFullPodNameKey, false)
+		enableFullPodMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableFullPodMetricsKey)
+		cfg.AddFullPodNameMetricLabel = common.GetOrDefaultBool(conf, enableFullPodMetricsKey, false)
 	}
 
 	return cfg, nil
