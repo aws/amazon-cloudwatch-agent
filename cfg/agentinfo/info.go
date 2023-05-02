@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/influxdata/telegraf/config"
+	"github.com/shirou/gopsutil/v3/process"
 	"go.opentelemetry.io/collector/otelcol"
 	"golang.org/x/exp/maps"
 
@@ -22,77 +24,98 @@ import (
 )
 
 const (
-	containerInsightRegexp = "^/aws/.*containerinsights/.*/(performance|prometheus)$"
-	versionFilename        = "CWAGENT_VERSION"
-	// We will fall back to a major version if no valid version file is found
-	fallbackVersion = "1"
+	versionFilename   = "CWAGENT_VERSION"
+	idFilename        = "CWAGENT_ID"
+	unknownVersion    = "Unknown"
+	placeholder       = "-"
+	telemetryInterval = time.Minute
 )
 
-var isRunningAsRoot = func() bool {
-	return os.Getuid() == 0
+var defaultAgentInfo = newAgentInfo()
+
+type AgentInfo interface {
+	FullVersion() string
+	SetPlugins(*otelcol.Config, *config.Config)
+	Shutdown()
+	Start()
+	UserAgent() string
+	Version() string
 }
 
-var (
-	VersionStr string
-	BuildStr   string = "No Build Date"
-	receivers  []string
-	processors []string
-	exporters  []string
-
-	userAgentMap        = make(map[string]string)
-	ciCompiledRegexp, _ = regexp.Compile(containerInsightRegexp)
-)
-
-func Version() string {
-	if VersionStr != "" {
-		return VersionStr
-	}
-
-	version, err := readVersionFile()
-	if err != nil {
-		return fallbackVersion
-	}
-
-	VersionStr = version
-	return version
+type agentInfo struct {
+	proc        *process.Process
+	version     string
+	fullVersion string
+	plugins     string
+	telemetry   string
+	userAgent   string
+	id          string
+	done        chan struct{}
 }
 
-func Build() string {
-	return BuildStr
+func Get() AgentInfo {
+	return defaultAgentInfo
 }
 
-func Plugins(groupName string) string {
-	receiversStr := strings.Join(receivers, " ")
-	processorsStr := strings.Join(processors, " ")
-	exportersStr := strings.Join(exporters, " ")
+func newAgentInfo() *agentInfo {
+	ai := new(agentInfo)
+	ai.proc, _ = process.NewProcess(int32(os.Getpid()))
+	ai.version = readVersionFile()
+	ai.fullVersion = fmt.Sprintf("CWAgent/%s (%s; %s; %s)",
+		ai.version,
+		runtime.Version(),
+		runtime.GOOS,
+		runtime.GOARCH)
+	ai.id = readOrWriteUUIDFile()
+	ai.userAgent = ai.createUserAgent()
 
-	if !isRunningAsRoot() {
-		receiversStr += " run_as_user" // `inputs` is never empty, or agent will not start
-	}
-	if ciCompiledRegexp.MatchString(groupName) && !strings.Contains(exportersStr, "container_insights") {
-		exportersStr += " container_insights"
-	}
-
-	return fmt.Sprintf("inputs:(%s) processors:(%s) outputs:(%s)", receiversStr, processorsStr, exportersStr)
+	return ai
 }
 
-func UserAgent(groupName string) string {
-	ua, found := userAgentMap[groupName]
-	if !found {
-		ua = os.Getenv(envconfig.CWAGENT_USER_AGENT)
-		if ua == "" {
-			ua = fmt.Sprintf("%s %s", FullVersion(), Plugins(groupName))
+func (ai *agentInfo) Start() {
+	if ai.proc == nil {
+		return
+	}
+
+	ai.telemetry = ai.createTelemetry()
+	ai.userAgent = ai.createUserAgentWithTelemetry()
+	ai.done = make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(telemetryInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				ai.telemetry = ai.createTelemetry()
+				ai.userAgent = ai.createUserAgentWithTelemetry()
+			case <-ai.done:
+				return
+			}
 		}
-		userAgentMap[groupName] = ua
+	}()
+}
+
+func (ai *agentInfo) Shutdown() {
+	if ai.proc == nil {
+		return
 	}
-	return ua
+
+	close(ai.done)
 }
 
-func FullVersion() string {
-	return fmt.Sprintf("CWAgent/%s (%s; %s; %s) %s", Version(), runtime.Version(), runtime.GOOS, runtime.GOARCH, Build())
+func (ai *agentInfo) Version() string {
+	return ai.version
 }
 
-func SetPlugins(otelcfg *otelcol.Config, telegrafcfg *config.Config) {
+func (ai *agentInfo) FullVersion() string {
+	return ai.fullVersion
+}
+
+func (ai *agentInfo) UserAgent() string {
+	return ai.userAgent
+}
+
+func (ai *agentInfo) SetPlugins(otelcfg *otelcol.Config, telegrafcfg *config.Config) {
 	receiverSet := collections.NewSet[string]()
 	processorSet := collections.NewSet[string]()
 	exporterSet := collections.NewSet[string]()
@@ -118,31 +141,129 @@ func SetPlugins(otelcfg *otelcol.Config, telegrafcfg *config.Config) {
 		}
 	}
 
-	receivers = maps.Keys(receiverSet)
-	processors = maps.Keys(processorSet)
-	exporters = maps.Keys(exporterSet)
+	receivers := maps.Keys(receiverSet)
+	processors := maps.Keys(processorSet)
+	exporters := maps.Keys(exporterSet)
 
 	sort.Strings(receivers)
 	sort.Strings(processors)
 	sort.Strings(exporters)
+
+	receiversStr := strings.Join(receivers, " ")
+	processorsStr := strings.Join(processors, " ")
+	exportersStr := strings.Join(exporters, " ")
+
+	ai.plugins = fmt.Sprintf("Inputs:%s; Processors:%s; Outputs:%s", receiversStr, processorsStr, exportersStr)
+	ai.userAgent = ai.createUserAgent()
 }
 
-func readVersionFile() (string, error) {
+func (ai *agentInfo) cpuPercent() (float64, error) {
+	return ai.proc.CPUPercent()
+}
+
+func (ai *agentInfo) memBytes() (uint64, error) {
+	memInfo, err := ai.proc.MemoryInfo()
+	if err != nil {
+		return 0, err
+	}
+	return memInfo.RSS, nil
+}
+
+func (ai *agentInfo) fileDescriptorCount() (uint64, error) {
+	fdCount, err := ai.proc.NumFDs()
+	return uint64(fdCount), err
+}
+
+func (ai *agentInfo) threadCount() (uint64, error) {
+	thCount, err := ai.proc.NumThreads()
+	return uint64(thCount), err
+}
+
+func (ai *agentInfo) createTelemetry() string {
+	return fmt.Sprintf("Telemetry: %s %s %s %s",
+		telemetryToStr(ai.cpuPercent()),
+		telemetryToStr(ai.memBytes()),
+		telemetryToStr(ai.fileDescriptorCount()),
+		telemetryToStr(ai.threadCount()))
+}
+
+func (ai *agentInfo) createUserAgent() string {
+	if ua := os.Getenv(envconfig.CWAGENT_USER_AGENT); ua != "" {
+		return ua
+	}
+
+	if ai.proc == nil {
+		return fmt.Sprintf("%s ID/%s (%s)", ai.fullVersion, ai.id, ai.plugins)
+	}
+
+	return ai.createUserAgentWithTelemetry()
+}
+
+func (ai *agentInfo) createUserAgentWithTelemetry() string {
+	return fmt.Sprintf("%s ID/%s (%s; %s)", ai.fullVersion, ai.id, ai.plugins, ai.telemetry)
+}
+
+func telemetryToStr[V uint64 | float64](num V, err error) string {
+	if err != nil {
+		return placeholder
+	}
+
+	switch n := any(num).(type) {
+	case uint64:
+		return fmt.Sprintf("%d", n)
+	case float64:
+		return fmt.Sprintf("%.1f", n)
+	}
+
+	return placeholder
+}
+
+func readVersionFile() string {
 	ex, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("cannot get the path for current executable binary: %v", err)
+		return unknownVersion
 	}
-	curPath := filepath.Dir(ex)
-	versionFilePath := filepath.Join(curPath, versionFilename)
+
+	versionFilePath := filepath.Join(filepath.Dir(ex), versionFilename)
 	if _, err := os.Stat(versionFilePath); err != nil {
-		return "", fmt.Errorf("the agent version file %s does not exist: %v", versionFilePath, err)
+		return unknownVersion
 	}
 
 	byteArray, err := os.ReadFile(versionFilePath)
 	if err != nil {
-		return "", fmt.Errorf("issue encountered when reading content from file %s: %v", versionFilePath, err)
+		return unknownVersion
 	}
 
-	//TODO we may consider to do a format checking for the Version value.
-	return strings.Trim(string(byteArray), " \n\r\t"), nil
+	return strings.Trim(string(byteArray), " \n\r\t")
+}
+
+func readOrWriteUUIDFile() string {
+	ex, err := os.Executable()
+	if err != nil {
+		return uuid.NewString()
+	}
+
+	idFilePath := filepath.Join(filepath.Dir(ex), idFilename)
+	if _, err := os.Stat(idFilePath); err != nil {
+		return createAndWriteUUIDFile(idFilePath)
+	}
+
+	byteArray, err := os.ReadFile(idFilePath)
+	if err != nil {
+		return createAndWriteUUIDFile(idFilePath)
+	}
+
+	id, err := uuid.ParseBytes(byteArray)
+	if err != nil {
+		return createAndWriteUUIDFile(idFilePath)
+	}
+
+	return id.String()
+}
+
+func createAndWriteUUIDFile(idFilePath string) string {
+	id := uuid.NewString()
+	_ = os.WriteFile(idFilePath, []byte(id), 0644)
+
+	return id
 }

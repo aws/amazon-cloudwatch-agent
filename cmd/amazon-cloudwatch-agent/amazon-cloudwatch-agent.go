@@ -270,8 +270,9 @@ func runAgent(ctx context.Context,
 	}
 
 	logger.SetupLogging(logConfig)
+	agentInfo := agentinfo.Get()
 
-	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
+	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentInfo.Version())
 	// Need to set SDK log level before plugins get loaded.
 	// Some aws.Config objects get created early and live forever which means
 	// we cannot change the sdk log level without restarting the Agent.
@@ -312,8 +313,13 @@ func runAgent(ctx context.Context,
 		// So just start Telegraf.
 		_, err = os.Stat(*fOtelConfig)
 		if errors.Is(err, os.ErrNotExist) {
-			agentinfo.SetPlugins(&otelcol.Config{}, c)
-			return ag.Run(ctx)
+			agentInfo.SetPlugins(&otelcol.Config{}, c)
+			return func() error {
+				agentInfo.Start()
+				err = ag.Run(ctx)
+				agentInfo.Shutdown()
+				return err
+			}()
 		}
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
@@ -350,7 +356,7 @@ func runAgent(ctx context.Context,
 		return err
 	}
 
-	agentinfo.SetPlugins(cfg, c)
+	agentInfo.SetPlugins(cfg, c)
 
 	params := otelcol.CollectorSettings{
 		Factories: factories,
@@ -367,7 +373,12 @@ func runAgent(ctx context.Context,
 	e := []string{"--config=" + yamlConfigPath}
 	cmd.SetArgs(e)
 
-	return cmd.Execute()
+	return func() error {
+		agentInfo.Start()
+		err = cmd.Execute()
+		agentInfo.Shutdown()
+		return err
+	}()
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
@@ -504,7 +515,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Println(agentinfo.FullVersion())
+			fmt.Println(agentinfo.Get().FullVersion())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -682,7 +693,7 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error {
 
 	if *fSchemaTest {
 		//up to this point, the given config file must be valid
-		fmt.Println(agentinfo.FullVersion())
+		fmt.Println(agentinfo.Get().FullVersion())
 		fmt.Printf("The given config: %v is valid\n", *fConfig)
 		os.Exit(0)
 	}

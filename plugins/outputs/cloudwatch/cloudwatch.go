@@ -113,7 +113,7 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 			Logger:   configaws.SDKLogger{},
 		})
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
-	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent("")))
+	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.Get().UserAgent()))
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	//Construct map for metrics that dropping origin
