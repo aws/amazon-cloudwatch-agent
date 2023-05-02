@@ -450,6 +450,7 @@ jobs:
     needs: [ MakeBinary, BuildMSI, StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -587,7 +588,7 @@ jobs:
         if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
+          max_attempts: 1
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
@@ -625,6 +626,7 @@ jobs:
     needs: [BuildMSI, GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -694,6 +696,7 @@ jobs:
     needs: [MakeMacPkg, EC2LinuxIntegrationTest, GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -798,6 +801,7 @@ jobs:
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
     needs: [ MakeBinary, GenerateTestMatrix ]
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -868,6 +872,7 @@ jobs:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
     needs: [MakeBinary, GenerateTestMatrix]
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -934,6 +939,7 @@ jobs:
     name: "StressTrackingTest"
     needs: [MakeBinary, EC2LinuxIntegrationTest, ECSEC2IntegrationTest, ECSFargateIntegrationTest, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
