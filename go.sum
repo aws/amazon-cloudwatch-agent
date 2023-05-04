@@ -145,8 +145,8 @@ github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137/go.mod h1:OMCwj8V
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483 h1:J8HaD+Zpfi1gcel3HCKpoHHEsrcuRrZlSnx7R9SCf5I=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20230405003931-ee1e4f1f8064 h1:81xFzLIrC6mMsyLSnPVboNU0FQNZpQqG8mm6ZtJoKxU=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20230405003931-ee1e4f1f8064/go.mod h1:vYypd+S9VX1mxwWtJ8CLji555mfP+9RKFxgFnZkoEu4=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230419151836-5cc5b765e1b1 h1:Uoaw6pUzGIIRr18f8j7hDaPOsvnrLnv+JUqS83jwzqY=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230419151836-5cc5b765e1b1/go.mod h1:PzLe3I4AI1R70yIP1LafUySWj45TKoIdnY6UVeDn4WQ=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230502215315-e8191edbc15b h1:D2zjE6Op6y5w0Uulpd7Bk5gpfNMj4Hka2qm9GdMljUg=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230502215315-e8191edbc15b/go.mod h1:PzLe3I4AI1R70yIP1LafUySWj45TKoIdnY6UVeDn4WQ=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9 h1:FXrPTd8Rdlc94dKccl7KPmdmIbVh/OjelJ8/vgMRzcQ=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/antchfx/jsonquery v1.1.5 h1:1YWrNFYCcIuJPIjFeOP5b6TXbLSUYY8qqxWbuZOB1qE=

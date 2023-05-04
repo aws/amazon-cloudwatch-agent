@@ -78,6 +78,13 @@ exporters:
         label_matchers: []
         metric_name_selectors:
           - pod_number_of_container_restarts
+      # container metrics
+      - dimensions: [ [ ClusterName, ContainerName, FullPodName, Namespace ], [ ClusterName, ContainerName, Namespace ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - container_cpu_utilization
+          - container_memory_utilization
+          - container_filesystem_usage
       # cluster metrics
       - dimensions: [ [ ClusterName ] ]
         label_matchers: []
@@ -121,6 +128,7 @@ processors:
 receivers:
   awscontainerinsightreceiver:
     add_full_pod_name_metric_label: true
+    add_container_name_metric_label: true
     add_service_as_attribute: true
     collection_interval: 30s
     container_orchestrator: eks

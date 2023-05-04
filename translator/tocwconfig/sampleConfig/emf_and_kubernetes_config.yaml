@@ -121,6 +121,7 @@ processors:
 receivers:
   awscontainerinsightreceiver:
     add_full_pod_name_metric_label: false
+    add_container_name_metric_label: false
     add_service_as_attribute: true
     collection_interval: 30s
     container_orchestrator: eks

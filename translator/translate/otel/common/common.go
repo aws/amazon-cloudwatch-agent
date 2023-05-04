@@ -39,6 +39,7 @@ const (
 	RoleARNKey                   = "role_arn"
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
 	EnableFullPodMetricsKey      = "enable_full_pod_metrics"
+	EnableContainerMetricsKey    = "enable_container_metrics"
 	Console                      = "console"
 	DiskIOKey                    = "diskio"
 	NetKey                       = "net"

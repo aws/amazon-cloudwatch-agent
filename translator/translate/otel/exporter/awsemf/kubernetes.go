@@ -65,6 +65,19 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, podMetricDeclarations...)
 
+	//Setup container metrics
+	enableContainerMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableContainerMetricsKey)
+	if common.GetOrDefaultBool(conf, enableContainerMetricsKey, false) {
+		kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{{"ContainerName", "FullPodName", "Namespace", "ClusterName"}, {"ContainerName", "Namespace", "ClusterName"}},
+				MetricNameSelectors: []string{
+					"container_cpu_utilization", "container_memory_utilization", "container_filesystem_usage",
+				},
+			},
+		}...)
+	}
+
 	// Setup cluster metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, []*awsemfexporter.MetricDeclaration{
 		{
