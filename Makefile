@@ -47,7 +47,6 @@ SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
 IMPI = $(TOOLS_BIN_DIR)/impi
 ADDLICENSE = $(TOOLS_BIN_DIR)/addlicense
-release: clean test build package-rpm package-deb package-win package-darwin
 
 prepackage: clean test build
 release: prepackage package-rpm package-deb package-win package-darwin
