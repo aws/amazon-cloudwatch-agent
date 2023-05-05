@@ -41,6 +41,8 @@ func TestTranslator(t *testing.T) {
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator: ecs,
 				CollectionInterval:    time.Minute,
+				LeaderLockName:        "otel-container-insight-clusterleader",
+				TagService:            true,
 			},
 		},
 		"WithECS/WithAgentInterval": {
@@ -57,6 +59,8 @@ func TestTranslator(t *testing.T) {
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator: ecs,
 				CollectionInterval:    20 * time.Second,
+				LeaderLockName:        "otel-container-insight-clusterleader",
+				TagService:            true,
 			},
 		},
 		"WithECS/WithSectionInterval": {
@@ -75,6 +79,8 @@ func TestTranslator(t *testing.T) {
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator: ecs,
 				CollectionInterval:    10 * time.Second,
+				LeaderLockName:        "otel-container-insight-clusterleader",
+				TagService:            true,
 			},
 		},
 		"WithKubernetes": {
@@ -89,9 +95,12 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &awscontainerinsightreceiver.Config{
-				ContainerOrchestrator: eks,
-				CollectionInterval:    10 * time.Second,
-				ClusterName:           "TestCluster",
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           10 * time.Second,
+				ClusterName:                  "TestCluster",
+				LeaderLockName:               "cwagent-clusterleader",
+				LeaderLockUsingConfigMapOnly: true,
+				TagService:                   true,
 			},
 		},
 		"WithKubernetes/WithoutClusterName": {
@@ -116,11 +125,12 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &awscontainerinsightreceiver.Config{
-				ContainerOrchestrator: eks,
-				CollectionInterval:    60 * time.Second,
-				TagService:            false,
-				LeaderLockName:        defaultLeaderLockName,
-				ClusterName:           "TestCluster",
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				TagService:                   false,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
 			},
 		},
 		"WithKubernetes/WithPrefFullPodName": {
@@ -135,11 +145,13 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &awscontainerinsightreceiver.Config{
-				ContainerOrchestrator: eks,
-				CollectionInterval:    60 * time.Second,
-				PrefFullPodName:       true,
-				LeaderLockName:        defaultLeaderLockName,
-				ClusterName:           "TestCluster",
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				PrefFullPodName:              true,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				TagService:                   true,
 			},
 		},
 		"WithECSAndKubernetes": {
@@ -156,8 +168,11 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &awscontainerinsightreceiver.Config{
-				ContainerOrchestrator: ecs,
-				CollectionInterval:    5 * time.Second,
+				ContainerOrchestrator:        ecs,
+				CollectionInterval:           5 * time.Second,
+				LeaderLockName:               "otel-container-insight-clusterleader",
+				LeaderLockUsingConfigMapOnly: false,
+				TagService:                   true,
 			},
 		},
 	}
@@ -172,6 +187,13 @@ func TestTranslator(t *testing.T) {
 				require.True(t, ok)
 				require.Equal(t, testCase.want.ContainerOrchestrator, gotCfg.ContainerOrchestrator)
 				require.Equal(t, testCase.want.CollectionInterval, gotCfg.CollectionInterval)
+				require.Equal(t, testCase.want.PrefFullPodName, gotCfg.PrefFullPodName)
+				require.Equal(t, testCase.want.ClusterName, gotCfg.ClusterName)
+				require.Equal(t, testCase.want.AddContainerNameMetricLabel, gotCfg.AddContainerNameMetricLabel)
+				require.Equal(t, testCase.want.AddFullPodNameMetricLabel, gotCfg.AddFullPodNameMetricLabel)
+				require.Equal(t, testCase.want.TagService, gotCfg.TagService)
+				require.Equal(t, testCase.want.LeaderLockName, gotCfg.LeaderLockName)
+				require.Equal(t, testCase.want.LeaderLockUsingConfigMapOnly, gotCfg.LeaderLockUsingConfigMapOnly)
 			}
 		})
 	}

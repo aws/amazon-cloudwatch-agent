@@ -82,6 +82,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			return nil, err
 		}
 		cfg.LeaderLockName = defaultLeaderLockName
+		cfg.LeaderLockUsingConfigMapOnly = true
 		tagServiceKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "tag_service")
 		cfg.TagService = common.GetOrDefaultBool(conf, tagServiceKey, true)
 		prefFullPodNameKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "prefer_full_pod_name")

@@ -99,6 +99,7 @@ receivers:
     prefer_full_pod_name: false
     cluster_name: ""
     leader_lock_name: "otel-container-insight-clusterleader"
+    leader_lock_using_config_map_only: false
   tcplog/emf_logs:
     attributes: {}
     encoding: utf-8
