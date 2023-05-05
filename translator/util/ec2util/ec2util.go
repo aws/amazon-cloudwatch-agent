@@ -48,7 +48,7 @@ func initEC2UtilSingleton() (newInstance *ec2Util) {
 		Tags:      make(map[string]string),
 	}
 
-	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise) {
+	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise){
 		return
 	}
 
