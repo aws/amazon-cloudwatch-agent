@@ -63,8 +63,7 @@ var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
 var fVersion = flag.Bool("version", false, "display the version and exit")
-var fSampleConfig = flag.Bool("sample-config", false,
-	"print out full sample configuration")
+
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fSectionFilters = flag.String("section-filter", "",
 	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
@@ -426,15 +425,6 @@ func main() {
 		return
 	case *fVersion:
 		fmt.Println(agentinfo.FullVersion())
-		return
-	case *fSampleConfig:
-		config.PrintSampleConfig(
-			sectionFilters,
-			inputFilters,
-			outputFilters,
-			aggregatorFilters,
-			processorFilters,
-		)
 		return
 	case *fUsage != "":
 		err := config.PrintInputConfig(*fUsage)
