@@ -143,10 +143,10 @@ github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk5
 github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 h1:s6gZFSlWYmbqAuRjVTiNNhvNRfY2Wxp9nhfyel4rklc=
 github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137/go.mod h1:OMCwj8VM1Kc9e19TLln2VL61YJF0x1XFtfdL4JdbSyE=
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483 h1:J8HaD+Zpfi1gcel3HCKpoHHEsrcuRrZlSnx7R9SCf5I=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20230405003931-ee1e4f1f8064 h1:81xFzLIrC6mMsyLSnPVboNU0FQNZpQqG8mm6ZtJoKxU=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20230405003931-ee1e4f1f8064/go.mod h1:vYypd+S9VX1mxwWtJ8CLji555mfP+9RKFxgFnZkoEu4=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230504015740-354aa71cdf5a h1:Usv2hKLFcQbMY9TPnr/62O30ryTEnqb0KTNcukKSvc8=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230504015740-354aa71cdf5a/go.mod h1:PzLe3I4AI1R70yIP1LafUySWj45TKoIdnY6UVeDn4WQ=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20230508195740-9defe6bfcd8f h1:HqS8J5HMSmhwH5/pHYSJwnANJOjIBz5pt4uS5VtIV+8=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20230508195740-9defe6bfcd8f/go.mod h1:vYypd+S9VX1mxwWtJ8CLji555mfP+9RKFxgFnZkoEu4=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230508195740-9defe6bfcd8f h1:7BjrIBRW5fsY0Y2nF0R44vmxV0lIK6k1qnpkq2jZSGw=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230508195740-9defe6bfcd8f/go.mod h1:PzLe3I4AI1R70yIP1LafUySWj45TKoIdnY6UVeDn4WQ=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9 h1:FXrPTd8Rdlc94dKccl7KPmdmIbVh/OjelJ8/vgMRzcQ=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/antchfx/jsonquery v1.1.5 h1:1YWrNFYCcIuJPIjFeOP5b6TXbLSUYY8qqxWbuZOB1qE=
