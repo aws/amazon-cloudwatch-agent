@@ -11,14 +11,6 @@ exporters:
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 150
-        metric_decoration:
-            - category: cpu
-              name: usage_idle
-              rename: CPU_USAGE_IDLE
-              unit: unit
-            - category: cpu
-              name: usage_nice
-              unit: unit
         namespace: CWAgent
         region: us-west-2
         resource_to_telemetry_conversion:

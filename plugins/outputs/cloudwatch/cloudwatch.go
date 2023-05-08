@@ -7,9 +7,7 @@ import (
 	"context"
 	"log"
 	"reflect"
-	"runtime"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -64,7 +62,6 @@ type CloudWatch struct {
 	datumBatchChan         chan []*cloudwatch.MetricDatum
 	metricDatumBatch       *MetricDatumBatch
 	shutdownChan           chan struct{}
-	metricDecorations      *MetricDecorations
 	retries                int
 	publisher              *publisher.Publisher
 	retryer                *retryer.LogThrottleRetryer
@@ -82,16 +79,11 @@ func (c *CloudWatch) Capabilities() consumer.Capabilities {
 }
 
 func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
-	var err error
 	c.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
 		2*time.Second,
 		c.WriteToCloudWatch)
-	c.metricDecorations, err = NewMetricDecorations(c.config.MetricDecorations)
-	if err != nil {
-		return err
-	}
 	credentialConfig := &configaws.CredentialConfig{
 		Region:    c.config.Region,
 		AccessKey: c.config.AccessKey,
@@ -116,8 +108,6 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.Get().UserAgent()))
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
-	//Construct map for metrics that dropping origin
-	c.droppingOriginMetrics = c.GetDroppingDimensionMap()
 	c.svc = svc
 	c.retryer = logThrottleRetryer
 	c.startRoutines()
@@ -376,31 +366,6 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	}
 }
 
-func (c *CloudWatch) decorateMetricName(category string, name string) (decoratedName string) {
-	if c.metricDecorations != nil {
-		decoratedName = c.metricDecorations.getRename(category, name)
-	}
-	if decoratedName == "" {
-		if name == "value" {
-			decoratedName = category
-		} else {
-			separator := "_"
-			if runtime.GOOS == "windows" {
-				separator = " "
-			}
-			decoratedName = strings.Join([]string{category, name}, separator)
-		}
-	}
-	return
-}
-
-func (c *CloudWatch) decorateMetricUnit(category string, name string) (decoratedUnit string) {
-	if c.metricDecorations != nil {
-		decoratedUnit = c.metricDecorations.getUnit(category, name)
-	}
-	return
-}
-
 // BuildMetricDatum may just return the datum as-is.
 // Or it might expand it into many datums due to dimension aggregation.
 // There may also be more datums due to resize() on a distribution.
@@ -420,12 +385,9 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 	}
 
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
-	for index, dimensions := range dimensionsList {
+	for _, dimensions := range dimensionsList {
 		//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
 		//metric datum
-		if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
-			continue
-		}
 		if len(distList) == 0 {
 			// Not a distribution.
 			datum := &cloudwatch.MetricDatum{
@@ -563,46 +525,6 @@ func GetUniqueRollupList(inputLists [][]string) [][]string {
 	}
 	log.Printf("I! cloudwatch: get unique roll up list %v", uniqueLists)
 	return uniqueLists
-}
-
-func (c *CloudWatch) IsDropping(metricName string) bool {
-	// Check if any metrics are provided in drop_original_metrics
-	if len(c.droppingOriginMetrics) == 0 {
-		return false
-	}
-	if dropping := c.droppingOriginMetrics.Contains(metricName); dropping {
-		return dropping
-	}
-	separator := "_"
-	if runtime.GOOS == "windows" {
-		separator = " "
-	}
-	// Breakdown metricName to check if drop original specified only for category name (*)
-	unDecoratedMetrics := strings.Split(metricName, separator)
-	for index := range unDecoratedMetrics {
-		category := strings.Join(unDecoratedMetrics[:index], separator)
-		if dropping := c.droppingOriginMetrics.Contains(category); dropping {
-			return dropping
-		}
-	}
-
-	return false
-}
-
-func (c *CloudWatch) GetDroppingDimensionMap() collections.Set[string] {
-	droppingMetrics := collections.NewSet[string]()
-	for category, fields := range c.config.DropOriginConfigs {
-		for index, field := range fields {
-			if index == 0 && dropOriginalWildcard == field {
-				droppingMetrics.Add(category)
-			} else {
-				decoratedName := c.decorateMetricName(category, field)
-				droppingMetrics.Add(decoratedName)
-
-			}
-		}
-	}
-	return droppingMetrics
 }
 
 func (c *CloudWatch) SampleConfig() string {

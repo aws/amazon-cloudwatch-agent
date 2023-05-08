@@ -117,10 +117,6 @@ func TestTranslator(t *testing.T) {
 					"cpu":        {"cpu_usage_idle", "time_active"},
 					"nvidia_smi": {"utilization_gpu", "temperature_gpu"},
 				},
-				MetricDecorations: []cloudwatch.MetricDecorationConfig{
-					{Category: "cpu", Metric: "usage_idle", Rename: "CPU_USAGE_IDLE", Unit: "unit"},
-					{Category: "cpu", Metric: "usage_nice", Unit: "unit"},
-				},
 			},
 		},
 	}
@@ -148,7 +144,6 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.MaxValuesPerDatum, gotCfg.MaxValuesPerDatum)
 				require.Equal(t, testCase.want.RollupDimensions, gotCfg.RollupDimensions)
 				require.Equal(t, testCase.want.DropOriginConfigs, gotCfg.DropOriginConfigs)
-				require.Equal(t, testCase.want.MetricDecorations, gotCfg.MetricDecorations)
 			}
 		})
 	}

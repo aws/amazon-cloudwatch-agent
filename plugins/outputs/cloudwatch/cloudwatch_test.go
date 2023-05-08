@@ -6,7 +6,6 @@ package cloudwatch
 import (
 	"context"
 	"log"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,11 +15,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 )
 
 // Return true if found.
@@ -458,63 +455,4 @@ func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 	assert.True(t, c.metricDatumBatchFull())
 	<-c.datumBatchChan
 	assert.False(t, c.metricDatumBatchFull())
-}
-
-func TestIsDropping(t *testing.T) {
-	svc := new(mockCloudWatchClient)
-	cw := newCloudWatch(svc, time.Second)
-
-	tests := map[string]struct {
-		input   map[string][]string
-		checks  []string
-		want    []bool
-		unix_os bool
-	}{
-		"TestIsDroppingWithMultipleCategory": {
-			input: map[string][]string{"cpu": []string{"usage_idle", "time_active"},
-				"nvidia_smi": {"utilization_gpu"}},
-			checks:  []string{"cpu_usage_idle", "cpu_time_active", "nvidia_smi", "cpu_usage_guest"},
-			want:    []bool{true, true, false, false},
-			unix_os: true,
-		},
-		"TestIsDroppingWith*": {
-			input: map[string][]string{"cpu": []string{"usage_idle", "time_active"},
-				"nvidia_smi": {"*"}},
-			checks:  []string{"cpu_usage_idle", "cpu_time_active", "nvidia_smi", "nvidia_smi_utilization_gpu", "cpu"},
-			want:    []bool{true, true, true, true, false},
-			unix_os: true,
-		},
-		"TestIsDroppingWithMultipleCategoryWindows": {
-			input: map[string][]string{"cpu": []string{"usage_idle", "time_active"},
-				"nvidia_smi": {"utilization_gpu"}},
-			checks:  []string{"cpu usage_idle", "cpu time_active", "nvidia_smi", "cpu usage_guest"},
-			want:    []bool{true, true, false, false},
-			unix_os: false,
-		},
-
-		"TestIsDroppingWith*Windows": {
-			input: map[string][]string{"cpu": []string{"usage_idle", "time_active"},
-				"nvidia_smi": {"*"}},
-			checks:  []string{"cpu usage_idle", "cpu time_active", "nvidia_smi", "nvidia_smi utilization_gpu", "cpu"},
-			want:    []bool{true, true, true, true, false},
-			unix_os: false,
-		},
-	}
-	for _, test := range tests {
-		cw.config.DropOriginConfigs = test.input
-		cw.droppingOriginMetrics = cw.GetDroppingDimensionMap()
-		for i, check := range test.checks {
-			if runtime.GOOS == "windows" {
-				if test.unix_os {
-					continue
-				}
-			} else {
-				if !(test.unix_os) {
-					continue
-				}
-			}
-			got := cw.IsDropping(check)
-			require.Equal(t, test.want[i], got)
-		}
-	}
 }

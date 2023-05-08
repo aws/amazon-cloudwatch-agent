@@ -4,7 +4,6 @@
 package awscloudwatch
 
 import (
-	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
@@ -12,7 +11,6 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/drop_origin"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metric_decoration"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/rollup_dimensions"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -69,7 +67,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	cfg.RollupDimensions = getRollupDimensions(conf)
 	cfg.DropOriginConfigs = getDropOriginalMetrics(conf)
-	cfg.MetricDecorations = getMetricDecorations(conf)
 	return cfg, nil
 }
 
@@ -112,19 +109,3 @@ func getDropOriginalMetrics(conf *confmap.Conf) map[string][]string {
 }
 
 // TODO: remove dependency on rule.
-func getMetricDecorations(conf *confmap.Conf) []cloudwatch.MetricDecorationConfig {
-	_, result := new(metric_decoration.MetricDecoration).ApplyRule(conf.Get(common.MetricsKey))
-	mds, ok := result.([]interface{})
-	if !ok || len(mds) == 0 {
-		return nil
-	}
-	decorations := make([]cloudwatch.MetricDecorationConfig, len(mds))
-	for i, md := range mds {
-		var decoration cloudwatch.MetricDecorationConfig
-		if err := mapstructure.Decode(md, &decoration); err != nil {
-			continue
-		}
-		decorations[i] = decoration
-	}
-	return decorations
-}

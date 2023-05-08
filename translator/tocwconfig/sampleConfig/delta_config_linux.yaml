@@ -4,19 +4,6 @@ exporters:
       force_flush_interval: 1m0s
       max_datums_per_call: 1000
       max_values_per_datum: 150
-      metric_decoration:
-        - category: diskio
-          name: iops_in_progress
-          rename: DRIVER_DISKIO_IOPS_IN_PROGRESS
-          unit: Count
-        - category: diskio
-          name: read_time
-          rename: DRIVER_DISKIO_READ_TIME
-          unit: Milliseconds
-        - category: diskio
-          name: write_time
-          rename: DRIVER_DISKIO_WRITE_TIME
-          unit: Milliseconds
       namespace: CWAgent
       region: us-east-1
       resource_to_telemetry_conversion:
