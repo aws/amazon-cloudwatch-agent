@@ -73,7 +73,7 @@ jobs:
 
       - name: Cache go
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/go/pkg/mod
@@ -280,7 +280,7 @@ jobs:
 
       - name: Cache pkg
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/Library/Caches/go-build
@@ -649,7 +649,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-win-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -718,7 +718,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-mac-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ec2-mac-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -822,7 +822,7 @@ jobs:
 
       - name: Cache if success
         id: ecs-ec2-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ecs-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
@@ -959,7 +959,7 @@ jobs:
 
       - name: Cache if success
         id: eks-ec2-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: eks-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
@@ -1000,69 +1000,69 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/eks/daemon && terraform destroy --auto-approve
 
-#  StressTrackingTest:
-#    name: "StressTrackingTest"
-#    needs: [MakeBinary, EC2LinuxIntegrationTest, ECSEC2IntegrationTest, ECSFargateIntegrationTest, GenerateTestMatrix]
-#    runs-on: ubuntu-latest
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_stress_matrix) }}
-#    permissions:
-#      id-token: write
-#      contents: read
-#    steps:
-#      - uses: actions/checkout@v3
-#        with:
-#          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-#          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-#
-#      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v2
-#        with:
-#          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-#          aws-region: us-west-2
-#
-#      - name: Cache if success
-#        id: stress-tracking
-#        uses: actions/cache@v3
-#        with:
-#          path: go.mod
-#          key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-#
-#      - name: Verify Terraform version
-#        if: steps.stress-tracking.outputs.cache-hit != 'true'
-#        run: terraform --version
-#
-#      - name: Terraform apply
-#        if: steps.stress-tracking.outputs.cache-hit != 'true'
-#        uses: nick-fields/retry@v2
-#        with:
-#          max_attempts: 1
-#          timeout_minutes: 30
-#          retry_wait_seconds: 5
-#          command: |
-#            cd terraform/performance
-#            terraform init
-#            if terraform apply --auto-approve \
-#              -var="ssh_key_value=${PRIVATE_KEY}"  \
-#              -var="cwa_github_sha=${GITHUB_SHA}" \
-#              -var="user=${{ matrix.arrays.username }}" \
-#              -var="ami=${{ matrix.arrays.ami }}" \
-#              -var="arc=${{ matrix.arrays.arc }}" \
-#              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-#              -var="ssh_key_name=${KEY_NAME}" \
-#              -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-#              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
-#            else
-#              terraform destroy -auto-approve && exit 1
-#            fi
-#
-#      - name: Terraform destroy
-#        if: ${{ cancelled() && steps.stress-tracking.outputs.cache-hit != 'true' }}
-#        uses: nick-fields/retry@v2
-#        with:
-#          max_attempts: 3
-#          timeout_minutes: 8
-#          retry_wait_seconds: 5
-#          command: cd terraform/performance && terraform destroy --auto-approve
+  StressTrackingTest:
+    name: "StressTrackingTest"
+    needs: [MakeBinary, EC2LinuxIntegrationTest, ECSEC2IntegrationTest, ECSFargateIntegrationTest, GenerateTestMatrix]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_stress_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: stress-tracking
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
+      - name: Verify Terraform version
+        if: steps.stress-tracking.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.stress-tracking.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/performance
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${PRIVATE_KEY}"  \
+              -var="cwa_github_sha=${GITHUB_SHA}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() && steps.stress-tracking.outputs.cache-hit != 'true' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/performance && terraform destroy --auto-approve
