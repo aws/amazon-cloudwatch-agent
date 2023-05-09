@@ -627,7 +627,7 @@ jobs:
           command: cd terraform/ec2/linux && terraform destroy --auto-approve
 
   EC2UserDataIntegrationTest:
-    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
+    needs: [StartLocalStack, GenerateTestMatrix]
     name: 'EC2UserDataIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -671,7 +671,7 @@ jobs:
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
-            cd terraform/ec2/linux
+            cd terraform/ec2/userdata
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
