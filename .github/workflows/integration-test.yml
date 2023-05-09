@@ -167,6 +167,7 @@ jobs:
           echo "::set-output name=ec2_mac_matrix::$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))"
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
           echo "::set-output name=ec2_stress_matrix::$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))"
+          echo "::set-output name=ec2_userdata_matrix::$(echo $(cat generator/resources/ec2_userdata_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
 
@@ -178,6 +179,7 @@ jobs:
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
           echo "ec2_stress_matrix: ${{ steps.set-matrix.outputs.ec2_stress_matrix}}"
+          echo "ec2_userdata_matrix: ${{ steps.set-matrix.outputs.ec2_userdata_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
 
@@ -550,7 +552,7 @@ jobs:
 
   EC2LinuxIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
-    name: 'Test'
+    name: 'EC2LinuxIntegrationTest'
     runs-on: ubuntu-latest
     if: false
     strategy:
@@ -626,7 +628,7 @@ jobs:
 
   EC2UserDataIntegrationTest:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
-    name: 'Test'
+    name: 'EC2UserDataIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
