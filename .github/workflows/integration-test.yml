@@ -10,7 +10,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "zhihonl/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/zhihonl/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "collectd-fix"
+  CWA_GITHUB_TEST_REPO_BRANCH: "linux-integ-test"
 
 on:
   push:
@@ -554,7 +554,6 @@ jobs:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'EC2LinuxIntegrationTest'
     runs-on: ubuntu-latest
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -627,7 +626,7 @@ jobs:
           command: cd terraform/ec2/linux && terraform destroy --auto-approve
 
   EC2UserDataIntegrationTest:
-    needs: [StartLocalStack, GenerateTestMatrix]
+    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'EC2UserDataIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
