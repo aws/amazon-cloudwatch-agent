@@ -649,6 +649,13 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
+      - name: Cache if success
+        id: ec2-userdata-integration-test
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: ec2-userdata-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
       - name: Echo Test Info
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
@@ -667,8 +674,10 @@ jobs:
             cd terraform/ec2/userdata
             terraform init
             if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-              -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" \
+              -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="cwa_github_sha=${GITHUB_SHA}" \
+              -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
               -var="user=${{ matrix.arrays.username }}" \
