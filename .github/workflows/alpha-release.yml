@@ -11,10 +11,6 @@ on:
   release:
     types: [published]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: true
-
 jobs:
   UploadRelease:
     name: "UploadRelease"
@@ -58,7 +54,7 @@ jobs:
           if [ "$current_val" = "$new_val" ]; then
             echo "This version has already been published. Do nothing."
             exit 1
-          fi          
+          fi
 
       - name: Copy RPM To Release
         run: |
@@ -71,7 +67,7 @@ jobs:
           export tag=$(cat build/bin/CWAGENT_VERSION)
           aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/${tag}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
           aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/${tag}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
-          aws s3 cp build/bin/CWAGENT_VERSION s3://${S3_INTEGRATION_BUCKET}/release/${tag}/CWAGENT_VERSION      
+          aws s3 cp build/bin/CWAGENT_VERSION s3://${S3_INTEGRATION_BUCKET}/release/${tag}/CWAGENT_VERSION
 
   # Assume we do not run 2 releases at the same time
   DeployCanary:
