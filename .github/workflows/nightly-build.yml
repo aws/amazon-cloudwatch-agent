@@ -27,7 +27,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          aws-region: us-east-1
+
 
       #Need to install rpm so ubuntu can make rpm by default ubuntu can make deb
       - name: Install rpm
@@ -38,12 +39,12 @@ jobs:
         with:
           fetch-depth: 0
           submodules: 'true'
-
+          
       - name: Release
         run: make nightly-release
 
       - name: Upload to S3
-        run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/ --recursive --acl public-read --source-region us-east-1
+        run: aws s3 cp build/bin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/ --recursive
 
       # Users should only take the tar of the darwin build according to our readme so deleting this does not matter. More of a sanity step
       - name: Delete Mac Binary As This Should Only Be Built On Mac
@@ -69,7 +70,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          aws-region: us-east-1
+
 
       - name: Check out code
         uses: actions/checkout@v2
@@ -80,4 +82,4 @@ jobs:
         run: make nightly-release-mac
 
       - name: Upload to S3
-        run: aws s3 cp build/bin/darwin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin/ --recursive --acl public-read --source-region us-west-2
+        run: aws s3 cp build/bin/darwin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin/ --recursive
