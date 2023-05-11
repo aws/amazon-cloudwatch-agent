@@ -73,7 +73,7 @@ jobs:
 
       - name: Cache go
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/go/pkg/mod
@@ -146,6 +146,7 @@ jobs:
       ec2_userdata_matrix: ${{ steps.set-matrix.outputs.ec2_userdata_matrix }}
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+      eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -170,6 +171,7 @@ jobs:
           echo "::set-output name=ec2_userdata_matrix::$(echo $(cat generator/resources/ec2_userdata_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
+          echo "::set-output name=eks_daemon_matrix::$(echo $(cat generator/resources/eks_daemon_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
@@ -182,6 +184,7 @@ jobs:
           echo "ec2_userdata_matrix: ${{ steps.set-matrix.outputs.ec2_userdata_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
+          echo "eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}"
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -280,7 +283,7 @@ jobs:
 
       - name: Cache pkg
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/Library/Caches/go-build
@@ -724,7 +727,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-win-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ec2-win-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -766,8 +769,8 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/win && terraform destroy --auto-approve 
-    
+          command: cd terraform/ec2/win && terraform destroy --auto-approve
+
   EC2DarwinIntegrationTest:
     needs: [MakeMacPkg, EC2LinuxIntegrationTest, GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
@@ -793,7 +796,7 @@ jobs:
 
       - name: Cache if success
         id: ec2-mac-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ec2-mac-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -835,7 +838,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/mac && terraform destroy --auto-approve 
+          command: cd terraform/ec2/mac && terraform destroy --auto-approve
 
   StopLocalStack:
     name: 'StopLocalStack'
@@ -897,7 +900,7 @@ jobs:
 
       - name: Cache if success
         id: ecs-ec2-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: ecs-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
@@ -927,7 +930,7 @@ jobs:
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
               -var="cwagent_image_tag=${{ github.sha }}"\
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="ami=${{ matrix.arrays.ami }}" ; then 
+              -var="ami=${{ matrix.arrays.ami }}" ; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
@@ -994,7 +997,7 @@ jobs:
             if terraform apply --auto-approve\
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
-              -var="cwagent_image_tag=${{ github.sha }}"; then 
+              -var="cwagent_image_tag=${{ github.sha }}"; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
@@ -1007,6 +1010,73 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
+
+
+  EKSIntegrationTest:
+    name: 'EKSIntegrationTest'
+    runs-on: ubuntu-latest
+    needs: [ MakeBinary, GenerateTestMatrix ]
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_daemon_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: eks-ec2-integration-test
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: eks-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
+
+      - name: Login ECR
+        id: login-ecr
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Verify Terraform version
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/eks/daemon
+            terraform init
+            if terraform apply --auto-approve \
+              -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+              -var="cwagent_image_tag=${{ github.sha }}"; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() && steps.eks-ec2-integration-test.outputs.cache-hit != 'true' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/eks/daemon && terraform destroy --auto-approve
 
   StressTrackingTest:
     name: "StressTrackingTest"
@@ -1037,7 +1107,7 @@ jobs:
         with:
           path: go.mod
           key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-      
+
       - name: Verify Terraform version
         if: steps.stress-tracking.outputs.cache-hit != 'true'
         run: terraform --version
@@ -1074,79 +1144,3 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/performance && terraform destroy --auto-approve
-  
-  #  PerformanceTrackingTest:
-#    name: "PerformanceTrackingTest"
-#    needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
-#    runs-on: ubuntu-latest
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
-#    permissions:
-#      id-token: write
-#      contents: read
-#    steps:
-#      - uses: actions/checkout@v2
-#        with:
-#          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-#
-#      - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v1
-#        with:
-#          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-#          aws-region: us-west-2
-#
-#      - name: Cache if success
-#        id: performance-tracking
-#        uses: actions/cache@v3
-#        with:
-#          path: go.mod
-#          key: performance-tracking-test-${{ github.sha }}
-#
-#      - name: Echo Test Info
-#        run: echo run performance-tracking
-#      - name: Get SHA
-#        id: sha
-#        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-#      - name: Get git date
-#        id: sha_date
-#        run: echo "::set-output name=sha_date::$(git show -s --format=%ct ${{ steps.sha.outputs.sha_short }} )"
-#      - name: Check env
-#        run: echo "SHA ${{ steps.sha.outputs.sha_short }} | Date ${{ steps.sha_date.outputs.sha_date }} "
-#      - name: Verify Terraform version
-#        run: terraform --version
-#      - name: Terraform apply
-#        if: steps.performance-tracking.outputs.cache-hit != 'true'
-#        uses: nick-fields/retry@v2
-#        with:
-#          max_attempts: 1
-#          timeout_minutes: 30
-#          retry_wait_seconds: 5
-#          command: |
-#            cd terraform/ec2/linux
-#            terraform init
-#            if terraform apply --auto-approve \
-#              -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-#              -var="cwa_github_sha=${GITHUB_SHA}" \
-#              -var="user=${{ matrix.arrays.username }}" \
-#              -var="ami=${{ matrix.arrays.ami }}" \
-#              -var="arc=${{ matrix.arrays.arc }}" \
-#              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-#              -var="ssh_key_name=${KEY_NAME}" \
-#              -var="cwa_github_sha_date=${{ steps.sha_date.outputs.sha_date }}" \
-#              -var="performance_number_of_logs=${{ matrix.arrays.performance_number_of_logs}}"\
-#              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
-#            else
-#              terraform destroy -auto-approve && exit 1
-#            fi
-#
-      #This is here just in case workflow cancel
-#      - name: Terraform destroy
-#        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
-#        uses: nick-fields/retry@v2
-#        with:
-#          max_attempts: 3
-#          timeout_minutes: 8
-#          retry_wait_seconds: 5
-#          command: cd terraform/ec2/linux && terraform destroy --auto-approve
