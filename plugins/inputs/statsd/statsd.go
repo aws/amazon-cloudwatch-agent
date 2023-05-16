@@ -178,7 +178,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	for _, metric := range s.timings {
-		acc.AddFields(metric.name, metric.fields, metric.tags, now)
+		acc.AddHistogram(metric.name, metric.fields, metric.tags, now)
 	}
 	if s.DeleteTimings {
 		s.timings = make(map[string]cachedtimings)
@@ -533,6 +533,7 @@ func (s *Statsd) aggregate(m metric) {
 		// this will be the default field name, eg. "value"
 		field, ok := cached.fields[m.field]
 		if !ok {
+			// Assume function pointer is valid.
 			field = distribution.NewDistribution()
 		}
 		weight := 1.0

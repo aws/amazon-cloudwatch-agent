@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	cloudwatchutil "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/cloudwatch"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 )
 
 // ConvertOtelDimensions will returns a sorted list of dimensions.
@@ -70,7 +71,7 @@ func getAggregationInterval(attributes *pcommon.Map) time.Duration {
 
 // ConvertOtelNumberDataPoints converts each datapoint in the given slice to
 // 1 or more MetricDatums and returns them.
-func (c *CloudWatch) ConvertOtelNumberDataPoints(
+func ConvertOtelNumberDataPoints(
 	dataPoints pmetric.NumberDataPointSlice,
 	name string,
 	unit string,
@@ -101,11 +102,44 @@ func (c *CloudWatch) ConvertOtelNumberDataPoints(
 	return datums
 }
 
+// ConvertOtelHistogramDataPoints converts each datapoint in the given slice to
+// Distribution.
+func ConvertOtelHistogramDataPoints(
+	dataPoints pmetric.HistogramDataPointSlice,
+	name string,
+	unit string,
+	scale float64,
+) []*aggregationDatum {
+	datums := make([]*aggregationDatum, 0, dataPoints.Len())
+	for i := 0; i < dataPoints.Len(); i++ {
+		dp := dataPoints.At(i)
+		attrs := dp.Attributes()
+		storageResolution := checkHighResolution(&attrs)
+		aggregationInterval := getAggregationInterval(&attrs)
+		dimensions := ConvertOtelDimensions(attrs)
+		ad := aggregationDatum{
+			MetricDatum: cloudwatch.MetricDatum{
+				Dimensions:        dimensions,
+				MetricName:        aws.String(name),
+				Unit:              aws.String(unit),
+				Timestamp:         aws.Time(dp.Timestamp().AsTime()),
+				StorageResolution: aws.Int64(storageResolution),
+			},
+			aggregationInterval: aggregationInterval,
+		}
+		// Assume function pointer is valid.
+		ad.distribution = distribution.NewDistribution()
+		ad.distribution.ConvertFromOtel(dp, unit)
+		datums = append(datums, &ad)
+	}
+	return datums
+}
+
 // ConvertOtelMetric creates a list of datums from the datapoints in the given
 // metric and returns it. Only supports the metric DataTypes that we plan to use.
 // Intentionally not caching previous values and converting cumulative to delta.
 // Instead use cumulativetodeltaprocessor which supports monotonic cumulative sums.
-func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*aggregationDatum {
+func ConvertOtelMetric(m pmetric.Metric) []*aggregationDatum {
 	name := m.Name()
 	unit, scale, err := cloudwatchutil.ToStandardUnit(m.Unit())
 	if err != nil {
@@ -113,9 +147,11 @@ func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*aggregationDatum {
 	}
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
-		return c.ConvertOtelNumberDataPoints(m.Gauge().DataPoints(), name, unit, scale)
+		return ConvertOtelNumberDataPoints(m.Gauge().DataPoints(), name, unit, scale)
 	case pmetric.MetricTypeSum:
-		return c.ConvertOtelNumberDataPoints(m.Sum().DataPoints(), name, unit, scale)
+		return ConvertOtelNumberDataPoints(m.Sum().DataPoints(), name, unit, scale)
+	case pmetric.MetricTypeHistogram:
+		return ConvertOtelHistogramDataPoints(m.Histogram().DataPoints(), name, unit, scale)
 	default:
 		log.Printf("E! cloudwatch: Unsupported type, %s", m.Type())
 	}
@@ -125,7 +161,7 @@ func (c *CloudWatch) ConvertOtelMetric(m pmetric.Metric) []*aggregationDatum {
 // ConvertOtelMetrics only uses dimensions/attributes on each "datapoint",
 // not each "Resource".
 // This is acceptable because ResourceToTelemetrySettings defaults to true.
-func (c *CloudWatch) ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
+func ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
 	datums := make([]*aggregationDatum, 0, m.DataPointCount())
 	// Metrics -> ResourceMetrics -> ScopeMetrics -> MetricSlice -> DataPoints
 	resourceMetrics := m.ResourceMetrics()
@@ -135,7 +171,7 @@ func (c *CloudWatch) ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
 			metrics := scopeMetrics.At(j).Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				metric := metrics.At(k)
-				newDatums := c.ConvertOtelMetric(metric)
+				newDatums := ConvertOtelMetric(metric)
 				datums = append(datums, newDatums...)
 			}
 		}

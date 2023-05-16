@@ -140,10 +140,7 @@ func (durationAgg *durationAggregator) aggregating() {
 				// First entry. Initialize it.
 				durationAgg.metricMap[metricMapKey] = m
 				if m.distribution == nil {
-					if distribution.NewDistribution == nil {
-						log.Printf("E! NewDistribution func is nil")
-						continue
-					}
+					// Assume function pointer is always valid.
 					m.distribution = distribution.NewDistribution()
 					err := m.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
 					if err != nil {

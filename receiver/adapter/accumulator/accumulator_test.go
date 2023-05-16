@@ -5,9 +5,12 @@ package accumulator
 
 import (
 	"fmt"
+	"math/rand"
+	"runtime"
 	"testing"
 	"time"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution/regular"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -87,9 +90,41 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 
 				as.Equal(tc.expectedDPAttributes, datapoint.Attributes())
 			}
-
 		})
 	}
+}
+
+func TestAddHistogram(t *testing.T) {
+	name := "banana"
+	now := time.Now()
+	dist := regular.NewRegularDistribution()
+	// Random data
+	for i := 0; i < 1000; i++ {
+		dist.AddEntry(rand.Float64()*1000, float64(1+rand.Intn(1000)))
+	}
+	fields := map[string]interface{}{}
+	fields["peel"] = dist
+	tags := map[string]string{defaultInstanceId: defaultInstanceIdValue}
+	as := assert.New(t)
+	acc := newOtelAccumulatorWithTestRunningInputs(as)
+
+	acc.AddHistogram(name, fields, tags, now)
+
+	otelMetrics := acc.GetOtelMetrics().ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
+	as.Equal(1, otelMetrics.Len())
+	m := otelMetrics.At(0)
+	as.Equal(pmetric.MetricTypeHistogram, m.Type())
+	if runtime.GOOS == "windows" {
+		as.Equal("banana peel", m.Name())
+	} else {
+		as.Equal("banana_peel", m.Name())
+	}
+	dp := m.Histogram().DataPoints().At(0)
+	as.Equal(1, dp.Attributes().Len())
+	as.Equal(dist.Minimum(), dp.Min())
+	as.Equal(dist.Maximum(), dp.Max())
+	as.Equal(dist.Sum(), dp.Sum())
+	as.Equal(dist.SampleCount(), float64(dp.Count()))
 }
 
 func Test_Accumulator_WithUnsupportedValueAndEmptyFields(t *testing.T) {
@@ -192,43 +227,19 @@ func Test_Accumulator_AddMetric(t *testing.T) {
 
 }
 
-func Test_Accumulator_AddHistogramSum(t *testing.T) {
+func Test_Accumulator_AddSum(t *testing.T) {
 	t.Helper()
-
 	as := assert.New(t)
+	acc := newOtelAccumulatorWithTestRunningInputs(as)
+	now := time.Now()
+	telegrafMetricTags := map[string]string{defaultInstanceId: defaultInstanceIdValue}
+	telegrafMetricFields := map[string]interface{}{"usage": uint32(20)}
 
-	test_cases := []struct {
-		name               string
-		telegrafMetricType telegraf.ValueType
-	}{
-		{
-			name:               "OtelAccumulator with AddHistogram",
-			telegrafMetricType: telegraf.Histogram,
-		},
-		{
-			name:               "OtelAccumulator with AddSummary",
-			telegrafMetricType: telegraf.Summary,
-		},
-	}
-	for _, tc := range test_cases {
-		t.Run(tc.name, func(_ *testing.T) {
-			acc := newOtelAccumulatorWithTestRunningInputs(as)
-			now := time.Now()
-			telegrafMetricTags := map[string]string{defaultInstanceId: defaultInstanceIdValue}
-			telegrafMetricFields := map[string]interface{}{"usage": uint32(20)}
+	acc.AddSummary("acc_summary_test", telegrafMetricFields, telegrafMetricTags, now)
 
-			switch tc.telegrafMetricType {
-			case telegraf.Histogram:
-				acc.AddHistogram("acc_histogram_test", telegrafMetricFields, telegrafMetricTags, now)
-			case telegraf.Summary:
-				acc.AddSummary("acc_summary_test", telegrafMetricFields, telegrafMetricTags, now)
-			}
-
-			otelMetrics := acc.GetOtelMetrics()
-			as.Equal(0, otelMetrics.ResourceMetrics().Len())
-			as.Equal(pmetric.NewMetrics(), otelMetrics)
-		})
-	}
+	otelMetrics := acc.GetOtelMetrics()
+	as.Equal(0, otelMetrics.ResourceMetrics().Len())
+	as.Equal(pmetric.NewMetrics(), otelMetrics)
 }
 
 func Test_Accumulator_AddError(t *testing.T) {

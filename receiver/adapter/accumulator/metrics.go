@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 	"github.com/influxdata/telegraf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -24,6 +25,8 @@ func ConvertTelegrafToOtelMetrics(measurement string, fields map[string]interfac
 		AddScopeMetricsIntoOtelMetrics(populateDataPointsForSum, otelMetrics, measurement, fields, tags, t)
 	case telegraf.Gauge, telegraf.Untyped:
 		AddScopeMetricsIntoOtelMetrics(populateDataPointsForGauge, otelMetrics, measurement, fields, tags, t)
+	case telegraf.Histogram:
+		AddScopeMetricsIntoOtelMetrics(populateDataPointsForHistogram, otelMetrics, measurement, fields, tags, t)
 	default:
 		return pmetric.Metrics{}, fmt.Errorf("unsupported Telegraf Metric type %v", tp)
 	}
@@ -98,6 +101,28 @@ func populateDataPointsForSum(measurement string, metrics pmetric.MetricSlice, f
 		sumMetric.SetIsMonotonic(true)
 		sumMetric.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 		populateNumberDataPoint(sumMetric.DataPoints().AppendEmpty(), value, tags, timestamp)
+	}
+}
+
+func populateDataPointsForHistogram(
+	measurement string,
+	metrics pmetric.MetricSlice,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp pcommon.Timestamp,
+) {
+	for field, value := range fields {
+		d, ok := value.(distribution.Distribution)
+		if !ok {
+			continue
+		}
+		metric := metrics.AppendEmpty()
+		metric.SetName(getMetricName(measurement, field))
+		metric.SetUnit(getDefaultUnit(measurement, field))
+		h := metric.SetEmptyHistogram().DataPoints().AppendEmpty()
+		h.SetTimestamp(timestamp)
+		d.ConvertToOtel(h)
+		addTagsToAttributes(h.Attributes(), tags)
 	}
 }
 

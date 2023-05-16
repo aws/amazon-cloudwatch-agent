@@ -3,6 +3,8 @@
 
 package distribution
 
+import "go.opentelemetry.io/collector/pdata/pmetric"
+
 type Distribution interface {
 	Maximum() float64
 
@@ -27,6 +29,10 @@ type Distribution interface {
 	AddDistribution(distribution Distribution)
 
 	AddDistributionWithWeight(distribution Distribution, weight float64)
+
+	ConvertToOtel(dp pmetric.HistogramDataPoint)
+
+	ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string)
 }
 
 var NewDistribution func() Distribution

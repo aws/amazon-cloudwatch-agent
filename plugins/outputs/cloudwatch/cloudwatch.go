@@ -115,12 +115,12 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 }
 
 func (c *CloudWatch) startRoutines() {
+	setNewDistributionFunc(c.config.MaxValuesPerDatum)
 	c.metricChan = make(chan *aggregationDatum, metricChanBufferSize)
 	c.datumBatchChan = make(chan []*cloudwatch.MetricDatum, datumBatchChanBufferSize)
 	c.shutdownChan = make(chan struct{})
 	c.aggregatorShutdownChan = make(chan struct{})
 	c.aggregator = NewAggregator(c.metricChan, c.aggregatorShutdownChan, &c.aggregatorWaitGroup)
-	setNewDistributionFunc(c.config.MaxValuesPerDatum)
 	perRequestConstSize := overallConstPerRequestSize + len(c.config.Namespace) + namespaceOverheads
 	c.metricDatumBatch = newMetricDatumBatch(c.config.MaxDatumsPerCall, perRequestConstSize)
 	go c.pushMetricDatum()
@@ -151,7 +151,7 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 // The actual publishing will occur in a long running goroutine.
 // This method can block when publishing is backed up.
 func (c *CloudWatch) ConsumeMetrics(ctx context.Context, metrics pmetric.Metrics) error {
-	datums := c.ConvertOtelMetrics(metrics)
+	datums := ConvertOtelMetrics(metrics)
 	for _, d := range datums {
 		c.aggregator.AddMetric(d)
 	}
@@ -370,8 +370,6 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 // Or it might expand it into many datums due to dimension aggregation.
 // There may also be more datums due to resize() on a distribution.
 func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.MetricDatum {
-	// todo: first decorate metric name
-
 	var datums []*cloudwatch.MetricDatum
 	var distList []distribution.Distribution
 
@@ -380,7 +378,9 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 			log.Printf("E! metric has a distribution with no entries, %s", *metric.MetricName)
 			return datums
 		}
-		metric.SetUnit(metric.distribution.Unit())
+		if metric.distribution.Unit() != "" {
+			metric.SetUnit(metric.distribution.Unit())
+		}
 		distList = resize(metric.distribution, c.config.MaxValuesPerDatum)
 	}
 

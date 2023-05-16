@@ -273,17 +273,15 @@ func checkAttributes(t *testing.T, expected, actual pmetric.Metrics) {
 				actualM := actualMs.At(k)
 				require.Equal(t, expM.Type(), actualM.Type())
 
-				expDps, err := getOtelDataPoints(expM)
-				require.Nil(t, err)
-				actualDps, err := getOtelDataPoints(actualM)
-				require.Nil(t, err)
+				expAttrs := getOtelAttributes(expM)
+				actualAttrs := getOtelAttributes(actualM)
 
-				require.Equal(t, expDps.Len(), actualDps.Len())
-				for l := 0; l < expDps.Len(); l++ {
-					expAttrs := expDps.At(l).Attributes()
-					actualAttrs := actualDps.At(l).Attributes()
-					expAttrs.Range(func(k string, v pcommon.Value) bool {
-						got, found := actualAttrs.Get(k)
+				require.Equal(t, len(expAttrs), len(actualAttrs))
+				for l := 0; l < len(expAttrs); l++ {
+					expected := expAttrs[l]
+					actual := actualAttrs[l]
+					expected.Range(func(k string, v pcommon.Value) bool {
+						got, found := actual.Get(k)
 						assert.True(t, found)
 						assert.Equal(t, v, got)
 						return true

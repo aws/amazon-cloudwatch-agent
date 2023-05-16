@@ -5,7 +5,6 @@ package ec2tagger
 
 import (
 	"context"
-	"fmt"
 	"hash/fnv"
 	"net/http"
 	"os"
@@ -17,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
@@ -90,16 +90,26 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 	return p
 }
 
-func getOtelDataPoints(m pmetric.Metric) (pmetric.NumberDataPointSlice, error) {
+func getOtelAttributes(m pmetric.Metric) []pcommon.Map {
+	attributes := []pcommon.Map{}
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
-		return m.Gauge().DataPoints(), nil
+		dps := m.Gauge().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
 	case pmetric.MetricTypeSum:
-		return m.Sum().DataPoints(), nil
-	default:
-		return pmetric.NewNumberDataPointSlice(), fmt.Errorf("Unsupported metric type: %v", m.Type().String())
+		dps := m.Sum().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
+	case pmetric.MetricTypeHistogram:
+		dps := m.Histogram().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
 	}
-
+	return attributes
 }
 
 func (t *Tagger) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
@@ -118,26 +128,20 @@ func (t *Tagger) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetri
 		for j := 0; j < sms.Len(); j++ {
 			metrics := sms.At(j).Metrics()
 			for k := 0; k < metrics.Len(); k++ {
-				metric := metrics.At(k)
-				dps, err := getOtelDataPoints(metric)
-				if err != nil {
-					t.logger.Error(err.Error())
-				}
-
-				t.processDataPointAttributes(dps)
+				attributes := getOtelAttributes(metrics.At(k))
+				t.updateOtelAttributes(attributes)
 			}
 		}
 	}
 	return md, nil
 }
 
-// processDataPointAttributes adds tags and the requested dimensions to the attributes of each
+// updateOtelAttributes adds tags and the requested dimensions to the attributes of each
 // DataPoint. We add and remove at the DataPoint level instead of resource level because this is
 // where the receiver/adapter does. See:
 // https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/d6047ac26144187d3604d65ea2fe0b6e02357b08/receiver/adapter/accumulator/metrics.go#L16-L19
-func (t *Tagger) processDataPointAttributes(dps pmetric.NumberDataPointSlice) {
-	for i := 0; i < dps.Len(); i++ {
-		attr := dps.At(i).Attributes()
+func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
+	for _, attr := range attributes {
 		if t.ec2TagCache != nil {
 			for k, v := range t.ec2TagCache {
 				attr.PutStr(k, v)

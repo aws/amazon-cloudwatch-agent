@@ -4,6 +4,7 @@
 package accumulator
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution/regular"
 )
 
 func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
@@ -185,7 +187,7 @@ func Test_ConvertTelegrafToOtelMetrics_WithUnsupportTyped(t *testing.T) {
 			"redis_rx": int64(2),
 		},
 		time.Now().UTC(),
-		telegraf.Histogram,
+		telegraf.Summary,
 	)
 
 	convertedOtelMetrics, err := ConvertTelegrafToOtelMetrics(tMetric.Name(), tMetric.Fields(), tMetric.Tags(), tMetric.Type(), tMetric.Time())
@@ -302,4 +304,31 @@ func TestProcstatDefaultUnit(t *testing.T) {
 		got := convertedOtelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0)
 		assert.Equal(t, testCase.want, got.Unit())
 	}
+}
+
+func TestPopulateDataPointsForHistogram(t *testing.T) {
+	metricName := "MyMetric"
+	fieldName := "MyField"
+	timestamp := pcommon.NewTimestampFromTime(time.Now())
+	tags := map[string]string{}
+	fields := map[string]interface{}{}
+	dist := regular.NewRegularDistribution()
+	fields[fieldName] = dist
+	// Random data
+	for i := 0; i < 1000; i++ {
+		dist.AddEntry(rand.Float64()*1000, float64(1+rand.Intn(1000)))
+	}
+	values, counts := dist.ValuesAndCounts()
+	otelMetrics := pmetric.NewMetrics().ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics()
+
+	populateDataPointsForHistogram(metricName, otelMetrics, fields, tags, timestamp)
+
+	assert.Equal(t, 1, otelMetrics.Len())
+	// Assume there is a data point.
+	dp := otelMetrics.At(0).Histogram().DataPoints().At(0)
+	assert.Equal(t, len(counts), dp.BucketCounts().Len())
+	assert.Equal(t, len(values), dp.ExplicitBounds().Len())
+	assert.Equal(t, dist.Minimum(), dp.Min())
+	assert.Equal(t, dist.Maximum(), dp.Max())
+	assert.Equal(t, dist.Sum(), dp.Sum())
 }

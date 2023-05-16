@@ -3,6 +3,8 @@
 
 package util
 
+import "github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
+
 func ToOtelValue(value interface{}) interface{} {
 	switch v := value.(type) {
 	case int:
@@ -35,6 +37,8 @@ func ToOtelValue(value interface{}) interface{} {
 		} else {
 			return int64(0)
 		}
+	case distribution.Distribution:
+		return v
 	default:
 		return nil
 	}

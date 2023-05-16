@@ -69,7 +69,7 @@ func (o *otelAccumulator) AddSummary(measurement string, fields map[string]inter
 // AddHistogram is only being used by OpenTelemetry and Prometheus. https://github.com/influxdata/telegraf/search?q=AddHistogram
 // Therefore, same no use case as AddSummary
 func (o *otelAccumulator) AddHistogram(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
-	o.logger.Error("CloudWatchAgent's adapter does not support Telegraf Histogram.")
+	o.addMetric(measurement, tags, fields, telegraf.Histogram, t...)
 }
 
 func (o *otelAccumulator) AddFields(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
@@ -146,7 +146,8 @@ func (o *otelAccumulator) GetOtelMetrics() pmetric.Metrics {
 }
 
 // modifyMetricandConvertToOtelValue modifies metric by filtering metrics, add prefix for each field in metrics, etc
-// and convert to value supported by OTEL (int64 and float64)
+// and convert to value supported by OTEL (int64 and float64).
+// Distributions are not modified yet.
 func (o *otelAccumulator) modifyMetricandConvertToOtelValue(m telegraf.Metric) (telegraf.Metric, error) {
 	if len(m.Fields()) == 0 {
 		return nil, errors.New("empty metrics before filterting metrics")
@@ -159,12 +160,14 @@ func (o *otelAccumulator) modifyMetricandConvertToOtelValue(m telegraf.Metric) (
 		return nil, errors.New("empty metrics after filterting metrics")
 	}
 
+	if m.Type() == telegraf.Histogram {
+		return mMetric, nil
+	}
 	// Otel only supports numeric data. Therefore, filter unsupported data type and convert metrics value to corresponding value before
 	// converting the data model
 	// https://github.com/open-telemetry/opentelemetry-collector/blob/bdc3e22d28006b6c9496568bd8d8bcf0aa1e4950/pdata/pmetric/metrics.go#L106-L113
 	for field, value := range mMetric.Fields() {
-		// Convert all int,uint to int64 and float to float64 and bool to int
-		// All other types are ignored
+		// Convert all int,uint to int64 and float to float64 and bool to int.
 		otelValue := util.ToOtelValue(value)
 
 		if otelValue == nil {
