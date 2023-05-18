@@ -981,11 +981,18 @@ jobs:
           timeout_minutes: 60 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
           retry_wait_seconds: 5
           command: |
-            cd terraform/eks/daemon
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/daemon
+            fi
+            
             terraform init
             if terraform apply --auto-approve \
+              -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-              -var="cwagent_image_tag=${{ github.sha }}"; then
+              -var="cwagent_image_tag=${{ github.sha }}" \
+              -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
