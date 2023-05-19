@@ -1,9 +1,0 @@
-{
-  "agent" : {
-    "region": "us-west-2"
-  },
-  "csm": {
-    "port": 4000,
-    "memory_limit_in_mb": 50
-  }
-}

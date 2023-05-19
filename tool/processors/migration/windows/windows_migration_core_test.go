@@ -67,7 +67,7 @@ func TestInvalidOldWindowsConfig(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%s", tc.inputFile), func(t *testing.T) {
+		t.Run(tc.inputFile, func(t *testing.T) {
 			// Get input
 			absPath, _ := filepath.Abs(tc.inputFile)
 			oldConfig, err := ReadOldConfigFromPath(absPath)

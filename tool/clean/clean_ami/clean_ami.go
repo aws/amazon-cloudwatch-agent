@@ -9,9 +9,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 	"log"
 	"time"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"

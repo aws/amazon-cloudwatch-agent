@@ -1,15 +1,15 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package emfprocessor
+package prometheus
 
 import (
 	"log"
 	"os"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 )
 
 const (
@@ -43,9 +43,6 @@ func getDownloadPath() string {
 		var downloadingPath string
 		if _, ok := os.LookupEnv("ProgramData"); ok {
 			downloadingPath = os.Getenv("ProgramData")
-		} else {
-			// Windows 2003
-			downloadingPath = os.Getenv("ALLUSERSPROFILE") + "\\Application Data"
 		}
 		return downloadingPath + windowsDownloadingFile
 	}

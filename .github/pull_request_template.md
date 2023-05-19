@@ -13,7 +13,7 @@ _Describe what tests you have done._
 # Requirements
 _Before commit the code, please do the following steps._
 1. Run `make fmt` and `make fmt-sh`
-2. Run `make linter`
+2. Run `make lint`
 
 
 

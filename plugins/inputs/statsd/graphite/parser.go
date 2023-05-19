@@ -331,10 +331,8 @@ func (t *template) Apply(line string) (string, map[string]string, string, error)
 			field = append(field, fields[i])
 		case "field*":
 			field = append(field, fields[i:]...)
-			break
 		case "measurement*":
 			measurement = append(measurement, fields[i:]...)
-			break
 		default:
 			tags[tag] = append(tags[tag], fields[i])
 		}
@@ -466,16 +464,18 @@ type nodes []*node
 // less than a non-wildcard value.
 //
 // For example, the filters:
-//             "*.*"
-//             "servers.*"
-//             "servers.localhost"
-//             "*.localhost"
+//
+//	"*.*"
+//	"servers.*"
+//	"servers.localhost"
+//	"*.localhost"
 //
 // Would be sorted as:
-//             "servers.localhost"
-//             "servers.*"
-//             "*.localhost"
-//             "*.*"
+//
+//	"servers.localhost"
+//	"servers.*"
+//	"*.localhost"
+//	"*.*"
 func (n *nodes) Less(j, k int) bool {
 	if (*n)[j].value == "*" && (*n)[k].value != "*" {
 		return false

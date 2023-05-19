@@ -4,10 +4,6 @@
       "role_arn": "global_role_arn_value"
     }
   },
-  "csm": {
-    "memory_limit_in_mb": 50,
-    "port": 4000
-  },
   "logs": {
     "credentials": {
       "role_arn": "log_role_arn_value_test"

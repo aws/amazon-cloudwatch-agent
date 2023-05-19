@@ -5,9 +5,6 @@
     },
     "internal": true
   },
-  "csm": {
-    "port": 4000
-  },
   "logs": {
     "logs_collected": {
       "files": {

@@ -6,7 +6,7 @@ package collectlist
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
 
 const (

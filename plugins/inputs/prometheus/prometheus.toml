@@ -1,0 +1,20 @@
+[[inputs.prometheus]]
+    cluster_name = "EC2-EC2-Testing"
+    prometheus_config_path = "/opt/aws/amazon-cloudwatch-agent/etc/prometheus.yaml"
+    [inputs.prometheus.ecs_service_discovery]
+      sd_cluster_region = "us-east-2"
+      sd_frequency = "15s"
+      sd_result_file = "/opt/aws/amazon-cloudwatch-agent/etc/ecs_sd_targets.yaml"
+      sd_target_clusters = "EC2-EC2-Justin-Testing"
+      [inputs.prometheus.ecs_service_discovery.docker_label]
+        sd_job_name_label = "ECS_PROMETHEUS_JOB_NAME_1"
+        sd_metrics_path_label = "ECS_PROMETHEUS_METRICS_PATH"
+        sd_port_label = "ECS_PROMETHEUS_EXPORTER_PORT_SUBSET"
+      [[inputs.prometheus.ecs_service_discovery.task_definition_list]]
+        sd_job_name = "task_def_1"
+        sd_metrics_path = "/stats/metrics"
+        sd_metrics_ports = "9901"
+        sd_task_definition_name = "task_def_1"
+      [[inputs.prometheus.ecs_service_discovery.task_definition_list]]
+        sd_metrics_ports = "9902"
+        sd_task_definition_name = "task_def_2"

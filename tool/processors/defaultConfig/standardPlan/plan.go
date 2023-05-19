@@ -4,14 +4,14 @@
 package standardPlan
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/tool/data"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric/linux"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric/windows"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig/basicPlan"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric/linux"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric/windows"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/defaultConfig/basicPlan"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 var Processor processors.Processor = &processor{}

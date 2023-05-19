@@ -1,0 +1,34 @@
+namespace: ECS/ContainerInsights
+log_group_name: '/aws/ecs/containerinsights/{ClusterName}/performance'
+log_stream_name: 'NodeTelemetry-{ContainerInstanceId}'
+detailed_metrics: false
+dimension_rollup_option: NoDimensionRollup
+version: "0"
+retain_initial_value_of_delta_metric: false
+parse_json_encoded_attr_values: [ Sources ]
+resource_to_telemetry_conversion:
+  enabled: true
+metric_declarations:
+  # instance metrics
+  - dimensions: [ [ ContainerInstanceId, InstanceId, ClusterName ] ]
+    metric_name_selectors:
+      - instance_cpu_reserved_capacity
+      - instance_cpu_utilization
+      - instance_filesystem_utilization
+      - instance_memory_reserved_capacity
+      - instance_memory_utilization
+      - instance_network_total_bytes
+      - instance_number_of_running_tasks
+  - dimensions: [ [ ClusterName ] ]
+    metric_name_selectors:
+      - instance_cpu_limit
+      - instance_cpu_reserved_capacity
+      - instance_cpu_usage_total
+      - instance_cpu_utilization
+      - instance_filesystem_utilization
+      - instance_memory_limit
+      - instance_memory_reserved_capacity
+      - instance_memory_utilization
+      - instance_memory_working_set
+      - instance_network_total_bytes
+      - instance_number_of_running_tasks

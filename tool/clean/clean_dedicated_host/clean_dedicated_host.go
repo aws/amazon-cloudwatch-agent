@@ -8,7 +8,7 @@ package main
 
 import (
 	"context"
-	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
 	"log"
 	"time"
 

@@ -21,32 +21,49 @@ import (
 	"syscall"
 	"time"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/influxdata/wlog"
-
-	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/migrate"
-	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
-
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
-
-	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
-
+	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
+	"go.opentelemetry.io/collector/exporter"
+	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/extension"
+	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/processor"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
+	"go.opentelemetry.io/collector/receiver"
+	"go.opentelemetry.io/collector/receiver/otlpreceiver"
+	"golang.org/x/exp/maps"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
 )
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
-	LogTargetEventLog     = "eventlog"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -55,14 +72,12 @@ var pprofAddr = flag.String("pprof-addr", "",
 	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
-var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
-var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
 var fConfig = flag.String("config", "", "configuration file to load")
+var fOtelConfig = flag.String("otelconfig", "", "YAML configuration file to run OTel pipeline")
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
-var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
@@ -80,20 +95,12 @@ var fAggregatorFilters = flag.String("aggregator-filter", "",
 	"filter the aggregators to enable, separator is :")
 var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
-var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
-
-var (
-	version string
-	commit  string
-	branch  string
-)
 
 var stop chan struct{}
 
@@ -237,13 +244,11 @@ func runAgent(ctx context.Context,
 	c.InputFilters = inputFilters
 
 	err = loadTomlConfigIntoAgent(c)
-
 	if err != nil {
 		return err
 	}
 
 	err = validateAgentFinalConfigAndPlugins(c)
-
 	if err != nil {
 		return err
 	}
@@ -266,7 +271,9 @@ func runAgent(ctx context.Context,
 	}
 
 	logger.SetupLogging(logConfig)
-	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentinfo.Version())
+	agentInfo := agentinfo.Get()
+
+	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentInfo.Version())
 	// Need to set SDK log level before plugins get loaded.
 	// Some aws.Config objects get created early and live forever which means
 	// we cannot change the sdk log level without restarting the Agent.
@@ -278,20 +285,6 @@ func runAgent(ctx context.Context,
 	} else {
 		log.Printf("I! AWS SDK log level, %s", sdkLogLevel)
 	}
-
-	if *fTest || *fTestWait != 0 {
-		testWaitDuration := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, testWaitDuration)
-	}
-
-	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
-	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
-	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-	log.Printf("I! Tags enabled: %s", c.ListTags())
-
-	agentinfo.InputPlugins = c.InputNames()
-	agentinfo.OutputPlugins = c.OutputNames()
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
@@ -310,9 +303,147 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
-	logAgent := logs.NewLogAgent(c)
-	go logAgent.Run(ctx)
-	return ag.Run(ctx)
+
+	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
+		log.Println("creating new logs agent")
+		logAgent := logs.NewLogAgent(c)
+		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
+		go logAgent.Run(ctx)
+
+		// If OTEL config does not exist, then ASSUME just monitoring logs.
+		// So just start Telegraf.
+		_, err = os.Stat(*fOtelConfig)
+		if errors.Is(err, os.ErrNotExist) {
+			agentInfo.SetPlugins(&otelcol.Config{}, c)
+			return func() error {
+				agentInfo.Start()
+				err = ag.Run(ctx)
+				agentInfo.Shutdown()
+				return err
+			}()
+		}
+	}
+	// Else start OTEL and rely on adapter package to start the logfile plugin.
+
+	// TODO: Update BuildInfo with agentinfo
+	// info := component.BuildInfo{
+	// 	Command:     "telegraf-otel-poc",
+	// 	Description: "My POC",
+	// 	Version:     "0.0",
+	// }
+	yamlConfigPath := *fOtelConfig
+	fprovider := fileprovider.New()
+	settings := otelcol.ConfigProviderSettings{
+		ResolverSettings: confmap.ResolverSettings{
+			URIs:      []string{yamlConfigPath},
+			Providers: map[string]confmap.Provider{fprovider.Scheme(): fprovider},
+		},
+	}
+
+	factories, err := components(c)
+	if err != nil {
+		log.Printf("E! Error while adapting telegraf input plugins: %v", err)
+		return err
+	}
+
+	provider, err := otelcol.NewConfigProvider(settings)
+	if err != nil {
+		log.Printf("E! Error while initializing config provider: %v", err)
+		return err
+	}
+
+	cfg, err := provider.Get(ctx, factories)
+	if err != nil {
+		return err
+	}
+
+	agentInfo.SetPlugins(cfg, c)
+
+	params := otelcol.CollectorSettings{
+		Factories: factories,
+		// TODO: Update BuildInfo with agentinfo
+		// BuildInfo: info,
+		ConfigProvider: provider,
+	}
+
+	cmd := otelcol.NewCommand(params)
+
+	// Noticed that args of parent process get passed here to otel collector which causes failures complaining about
+	// unrecognized args. So below change overwrites the args. Need to investigate this further as I dont think the config
+	// path below here is actually used and it still respects what was set in the settings above.
+	e := []string{"--config=" + yamlConfigPath}
+	cmd.SetArgs(e)
+
+	return func() error {
+		agentInfo.Start()
+		err = cmd.Execute()
+		agentInfo.Shutdown()
+		return err
+	}()
+}
+
+func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
+	telegrafAdapter := adapter.NewAdapter(telegrafConfig)
+
+	factories := otelcol.Factories{}
+
+	receiverFactories := []receiver.Factory{
+		// OTel native receivers
+		awscontainerinsightreceiver.NewFactory(),
+		awsxrayreceiver.NewFactory(),
+		otlpreceiver.NewFactory(),
+		tcplogreceiver.NewFactory(),
+		udplogreceiver.NewFactory(),
+	}
+	adapterReceiverSet := collections.NewSet[string]()
+	// Adapted receivers from telegraf
+	for _, input := range telegrafConfig.Inputs {
+		adapterReceiverSet.Add(input.Config.Name)
+	}
+
+	for _, adapterReceiver := range maps.Keys(adapterReceiverSet) {
+		receiverFactories = append(receiverFactories, telegrafAdapter.NewReceiverFactory(adapterReceiver))
+	}
+
+	receivers, err := receiver.MakeFactoryMap(receiverFactories...)
+	if err != nil {
+		return factories, err
+	}
+
+	processors, err := processor.MakeFactoryMap(
+		batchprocessor.NewFactory(),
+		cumulativetodeltaprocessor.NewFactory(),
+		ec2tagger.NewFactory(),
+		transformprocessor.NewFactory(),
+	)
+	if err != nil {
+		return factories, err
+	}
+
+	exporters, err := exporter.MakeFactoryMap(
+		awsemfexporter.NewFactory(),
+		loggingexporter.NewFactory(),
+		cloudwatch.NewFactory(),
+		awscloudwatchlogsexporter.NewFactory(),
+		awsxrayexporter.NewFactory(),
+	)
+	if err != nil {
+		return factories, err
+	}
+
+	extensions, err := extension.MakeFactoryMap()
+	if err != nil {
+		return factories, err
+	}
+
+	factories = otelcol.Factories{
+		Receivers:  receivers,
+		Processors: processors,
+		Exporters:  exporters,
+		Extensions: extensions,
+	}
+
+	return factories, nil
 }
 
 type program struct {
@@ -386,7 +517,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Println(agentinfo.FullVersion())
+			fmt.Println(agentinfo.Get().FullVersion())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -424,9 +555,6 @@ func main() {
 			fmt.Printf("  %s\n", k)
 		}
 		return
-	case *fVersion:
-		fmt.Println(agentinfo.FullVersion())
-		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
 			sectionFilters,
@@ -435,13 +563,6 @@ func main() {
 			aggregatorFilters,
 			processorFilters,
 		)
-		return
-	case *fUsage != "":
-		err := config.PrintInputConfig(*fUsage)
-		err2 := config.PrintOutputConfig(*fUsage)
-		if err != nil && err2 != nil {
-			log.Fatalf("E! %s and %s", err, err2)
-		}
 		return
 	case *fSetEnv != "":
 		if *fEnvConfig != "" {
@@ -544,28 +665,9 @@ func windowsRunAsService() bool {
 }
 
 func loadTomlConfigIntoAgent(c *config.Config) error {
-	isOld, err := migrate.IsOldConfig(*fConfig)
+	err := c.LoadConfig(*fConfig)
 	if err != nil {
-		log.Printf("W! Failed to detect if config file is old format: %v", err)
-	}
-
-	if isOld {
-		migratedConfFile, err := migrate.MigrateFile(*fConfig)
-		if err != nil {
-			log.Printf("W! Failed to migrate old config format file %v: %v", *fConfig, err)
-		}
-
-		err = c.LoadConfig(migratedConfFile)
-		if err != nil {
-			return err
-		}
-
-		agentinfo.BuildStr += "_M"
-	} else {
-		err = c.LoadConfig(*fConfig)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	if *fConfigDirectory != "" {
@@ -579,28 +681,21 @@ func loadTomlConfigIntoAgent(c *config.Config) error {
 }
 
 func validateAgentFinalConfigAndPlugins(c *config.Config) error {
-	if !*fTest && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
-	}
-	if len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
-	}
-
 	if int64(c.Agent.Interval) <= 0 {
-		return fmt.Errorf("Agent interval must be positive, found %v", c.Agent.Interval)
+		return fmt.Errorf("agent interval must be positive, found %v", c.Agent.Interval)
 	}
 
 	if int64(c.Agent.FlushInterval) <= 0 {
-		return fmt.Errorf("Agent flush_interval must be positive; found %v", c.Agent.FlushInterval)
+		return fmt.Errorf("agent flush_interval must be positive; found %v", c.Agent.FlushInterval)
 	}
 
 	if inputPlugin, err := checkRightForBinariesFileWithInputPlugins(c.InputNames()); err != nil {
-		return fmt.Errorf("Validate input plugin %s failed because of %v", inputPlugin, err)
+		return fmt.Errorf("validate input plugin %s failed because of %v", inputPlugin, err)
 	}
 
 	if *fSchemaTest {
 		//up to this point, the given config file must be valid
-		fmt.Println(agentinfo.FullVersion())
+		fmt.Println(agentinfo.Get().FullVersion())
 		fmt.Printf("The given config: %v is valid\n", *fConfig)
 		os.Exit(0)
 	}
