@@ -1078,7 +1078,7 @@ jobs:
             fi
 
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.eks-ec2-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
