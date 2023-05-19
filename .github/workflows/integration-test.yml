@@ -498,6 +498,7 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -535,7 +536,7 @@ jobs:
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -598,6 +599,7 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -616,7 +618,7 @@ jobs:
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -674,6 +676,7 @@ jobs:
             if terraform apply --auto-approve \
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
             -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
+            -var="test_name=${{ matrix.arrays.os }}" \
             -var="cwa_github_sha=${GITHUB_SHA}"  \
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="ami=${{ matrix.arrays.ami }}" \
@@ -685,7 +688,7 @@ jobs:
 
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-win-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -754,7 +757,7 @@ jobs:
 
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-mac-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -859,7 +862,7 @@ jobs:
             fi
 
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ecs-ec2-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -925,7 +928,7 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -999,7 +1002,7 @@ jobs:
             fi
 
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.eks-ec2-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -1066,7 +1069,7 @@ jobs:
             fi
 
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.stress-tracking.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
