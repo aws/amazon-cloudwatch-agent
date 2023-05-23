@@ -50,7 +50,7 @@ jobs:
             cache-path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-          - os: macos-latest
+          - os: macos-11
             family: darwin
             cache-path: |
               ~/Library/Caches/go-build
