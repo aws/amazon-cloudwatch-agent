@@ -6,6 +6,7 @@ name: Alpha Release
 env:
   TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
   S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+  ECR_RELEASE_REPO: "ccwa-release"
 
 on:
   release:
@@ -68,6 +69,33 @@ jobs:
           aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/${tag}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
           aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/${tag}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
           aws s3 cp build/bin/CWAGENT_VERSION s3://${S3_INTEGRATION_BUCKET}/release/${tag}/CWAGENT_VERSION
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+        # QEMU is an open-source machine emulator and virtualizer.
+        # It allows users to build ARM CUDA binaries on their x86 machine without needing a cross-compiler.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      # Build dir is ignored in our .dockerignore thus need to copy to another dir.
+      - name: Copy Binary For Agent Image Build
+        run: cp -r build/bin/linux/* .
+
+      # Documentation: https://github.com/docker/build-push-action
+      - name: Build Cloudwatch Agent Image
+        uses: docker/build-push-action@v2
+        with:
+          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localdeb/Dockerfile
+          context: .
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_RELEASE_REPO }}:latest
+          platforms: linux/amd64, linux/arm64
 
   # Assume we do not run 2 releases at the same time
   DeployCanary:
