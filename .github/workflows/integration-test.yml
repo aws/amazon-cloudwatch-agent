@@ -89,7 +89,7 @@ jobs:
 
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
-        run: make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win package-darwin
+        run: make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows amazon-cloudwatch-agent-darwin package-rpm package-deb package-win package-darwin
 
       - name: Sign Build Files
         if: steps.cached_binaries.outputs.cache-hit != 'true'
