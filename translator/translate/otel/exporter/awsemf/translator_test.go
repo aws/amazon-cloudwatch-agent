@@ -84,16 +84,6 @@ func TestTranslator(t *testing.T) {
 				},
 				"metric_declarations": []*awsemfexporter.MetricDeclaration{
 					{
-						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
-							"node_network_total_bytes", "node_cpu_reserved_capacity",
-							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
-					},
-					{
-						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
-					},
-					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"pod_cpu_utilization", "pod_memory_utilization",
 							"pod_network_rx_bytes", "pod_network_tx_bytes", "pod_cpu_utilization_over_pod_limit",
@@ -108,20 +98,30 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"pod_number_of_container_restarts"},
 					},
 					{
-						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
+							"node_network_total_bytes", "node_cpu_reserved_capacity",
+							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
 					},
 					{
-						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"service_number_of_running_pods"},
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
 					},
 					{
 						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"node_filesystem_utilization"},
 					},
 					{
+						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"service_number_of_running_pods"},
+					},
+					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"namespace_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
@@ -150,16 +150,6 @@ func TestTranslator(t *testing.T) {
 				},
 				"metric_declarations": []*awsemfexporter.MetricDeclaration{
 					{
-						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
-							"node_network_total_bytes", "node_cpu_reserved_capacity",
-							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
-					},
-					{
-						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
-					},
-					{
 						Dimensions: [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"},
 							{"ClusterName"}},
 						MetricNameSelectors: []string{"pod_cpu_utilization", "pod_memory_utilization",
@@ -175,20 +165,30 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"pod_number_of_container_restarts"},
 					},
 					{
-						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
+							"node_network_total_bytes", "node_cpu_reserved_capacity",
+							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
 					},
 					{
-						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"service_number_of_running_pods"},
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
 					},
 					{
 						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"node_filesystem_utilization"},
 					},
 					{
+						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"service_number_of_running_pods"},
+					},
+					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"namespace_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
@@ -217,14 +217,8 @@ func TestTranslator(t *testing.T) {
 				},
 				"metric_declarations": []*awsemfexporter.MetricDeclaration{
 					{
-						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
-							"node_network_total_bytes", "node_cpu_reserved_capacity",
-							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
-					},
-					{
-						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
+						Dimensions:          [][]string{{"ContainerName", "FullPodName", "Namespace", "ClusterName"}, {"ContainerName", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{"container_cpu_utilization", "container_memory_utilization", "container_filesystem_usage"},
 					},
 					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"},
@@ -242,24 +236,30 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"pod_number_of_container_restarts"},
 					},
 					{
-						Dimensions:          [][]string{{"ContainerName", "FullPodName", "Namespace", "ClusterName"}, {"ContainerName", "Namespace", "ClusterName"}},
-						MetricNameSelectors: []string{"container_cpu_utilization", "container_memory_utilization", "container_filesystem_usage"},
+						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
+							"node_network_total_bytes", "node_cpu_reserved_capacity",
+							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
-					},
-					{
-						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"service_number_of_running_pods"},
+						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
 					},
 					{
 						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"node_filesystem_utilization"},
 					},
 					{
+						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"service_number_of_running_pods"},
+					},
+					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"namespace_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
@@ -289,14 +289,8 @@ func TestTranslator(t *testing.T) {
 				},
 				"metric_declarations": []*awsemfexporter.MetricDeclaration{
 					{
-						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
-							"node_network_total_bytes", "node_cpu_reserved_capacity",
-							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
-					},
-					{
-						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
+						Dimensions:          [][]string{{"ContainerName", "FullPodName", "Namespace", "ClusterName"}, {"ContainerName", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{"container_cpu_utilization", "container_memory_utilization", "container_filesystem_usage"},
 					},
 					{
 						Dimensions: [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"},
@@ -314,24 +308,96 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"pod_number_of_container_restarts"},
 					},
 					{
-						Dimensions:          [][]string{{"ContainerName", "FullPodName", "Namespace", "ClusterName"}, {"ContainerName", "Namespace", "ClusterName"}},
-						MetricNameSelectors: []string{"container_cpu_utilization", "container_memory_utilization", "container_filesystem_usage"},
+						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
+							"node_network_total_bytes", "node_cpu_reserved_capacity",
+							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
-					},
-					{
-						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"service_number_of_running_pods"},
+						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
 					},
 					{
 						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"node_filesystem_utilization"},
 					},
 					{
+						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"service_number_of_running_pods"},
+					},
+					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"namespace_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+					},
+				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
+			},
+		},
+		"GenerateAwsEmfExporterConfigKubernetesWithEnableNodeDetailedMetrics": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"enable_node_detailed_metrics": true,
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"namespace":                              "ContainerInsights",
+				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
+				"log_stream_name":                        "{NodeName}",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"pod_cpu_utilization", "pod_memory_utilization",
+							"pod_network_rx_bytes", "pod_network_tx_bytes", "pod_cpu_utilization_over_pod_limit",
+							"pod_memory_utilization_over_pod_limit"},
+					},
+					{
+						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity"},
+					},
+					{
+						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{"pod_number_of_container_restarts"},
+					},
+					{
+						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
+							"node_network_total_bytes", "node_cpu_reserved_capacity",
+							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
+							"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
+							"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
+							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable",
+							"node_status_capacity_pods", "node_status_allocatable_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"node_filesystem_utilization", "node_filesystem_inodes", "node_filesystem_inodes_free"},
+					},
+					{
+						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"service_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"namespace_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,

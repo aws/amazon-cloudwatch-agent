@@ -11,7 +11,8 @@
         "metrics_collection_interval": 30,
         "prefer_full_pod_name": true,
         "enable_full_pod_metrics": true,
-        "enable_container_metrics": true
+        "enable_container_metrics": true,
+        "enable_node_detailed_metrics": true
       }
     },
     "logs_collected": {
@@ -35,6 +36,6 @@
       }
     },
     "force_flush_interval": 5,
-    "endpoint_override":"https://fake_endpoint"
+    "endpoint_override": "https://fake_endpoint"
   }
 }

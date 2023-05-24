@@ -40,6 +40,7 @@ const (
 	MetricsCollectionIntervalKey = "metrics_collection_interval"
 	EnableFullPodMetricsKey      = "enable_full_pod_metrics"
 	EnableContainerMetricsKey    = "enable_container_metrics"
+	EnableNodeDetailedMetricsKey = "enable_node_detailed_metrics"
 	Console                      = "console"
 	DiskIOKey                    = "diskio"
 	NetKey                       = "net"

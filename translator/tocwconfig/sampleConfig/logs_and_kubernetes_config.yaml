@@ -1,4 +1,4 @@
-connectors: {}
+connectors: { }
 exporters:
   awscloudwatchlogs/emf_logs:
     endpoint: ""
@@ -41,27 +41,16 @@ exporters:
     resource_to_telemetry_conversion:
       enabled: true
     metric_declarations:
-      # node metrics
-      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
-        label_matchers: []
+      # container metrics
+      - dimensions: [ [ ClusterName, ContainerName, FullPodName, Namespace ], [ ClusterName, ContainerName, Namespace ] ]
+        label_matchers: [ ]
         metric_name_selectors:
-          - node_cpu_utilization
-          - node_memory_utilization
-          - node_network_total_bytes
-          - node_cpu_reserved_capacity
-          - node_memory_reserved_capacity
-          - node_number_of_running_pods
-          - node_number_of_running_containers
-      - dimensions: [ [ ClusterName ] ]
-        label_matchers: []
-        metric_name_selectors:
-          - node_cpu_usage_total
-          - node_cpu_limit
-          - node_memory_working_set
-          - node_memory_limit
+          - container_cpu_utilization
+          - container_memory_utilization
+          - container_filesystem_usage
       # pod metrics
       - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ], [ ClusterName ] ]
-        label_matchers: []
+        label_matchers: [ ]
         metric_name_selectors:
           - pod_cpu_utilization
           - pod_memory_utilization
@@ -70,43 +59,60 @@ exporters:
           - pod_cpu_utilization_over_pod_limit
           - pod_memory_utilization_over_pod_limit
       - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
-        label_matchers: []
+        label_matchers: [ ]
         metric_name_selectors:
           - pod_cpu_reserved_capacity
           - pod_memory_reserved_capacity
       - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ] ]
-        label_matchers: []
-        metric_name_selectors:
-          - pod_number_of_container_restarts
-      # container metrics
-      - dimensions: [ [ ClusterName, ContainerName, FullPodName, Namespace ], [ ClusterName, ContainerName, Namespace ] ]
         label_matchers: [ ]
         metric_name_selectors:
-          - container_cpu_utilization
-          - container_memory_utilization
-          - container_filesystem_usage
+          - pod_number_of_container_restarts
+      # node metrics
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - node_cpu_utilization
+          - node_memory_utilization
+          - node_network_total_bytes
+          - node_cpu_reserved_capacity
+          - node_memory_reserved_capacity
+          - node_number_of_running_pods
+          - node_number_of_running_containers
+          - node_cpu_usage_total
+          - node_cpu_limit
+          - node_memory_working_set
+          - node_memory_limit
+          - node_status_condition_ready
+          - node_status_condition_disk_pressure
+          - node_status_condition_memory_pressure
+          - node_status_condition_pid_pressure
+          - node_status_condition_network_unavailable
+          - node_status_capacity_pods
+          - node_status_allocatable_pods
+      # node fs metrics
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - node_filesystem_utilization
+          - node_filesystem_inodes
+          - node_filesystem_inodes_free
+      # service metrics
+      - dimensions: [ [ ClusterName, Namespace, Service ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - service_number_of_running_pods
+      # namespace metrics
+      - dimensions: [ [ ClusterName, Namespace ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - namespace_number_of_running_pods
       # cluster metrics
       - dimensions: [ [ ClusterName ] ]
-        label_matchers: []
+        label_matchers: [ ]
         metric_name_selectors:
           - cluster_node_count
           - cluster_failed_node_count
-      # service metrics
-      - dimensions: [ [ ClusterName, Namespace, Service ], [ ClusterName ] ]
-        label_matchers: []
-        metric_name_selectors:
-          - service_number_of_running_pods
-      # node fs metrics
-      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
-        label_matchers: []
-        metric_name_selectors:
-          - node_filesystem_utilization
-      # namespace metrics
-      - dimensions: [ [ ClusterName, Namespace ], [ ClusterName ] ]
-        label_matchers: []
-        metric_name_selectors:
-          - namespace_number_of_running_pods
-    metric_descriptors: []
+    metric_descriptors: [ ]
     no_verify_ssl: false
     num_workers: 8
     output_destination: cloudwatch
@@ -115,7 +121,7 @@ exporters:
     request_timeout_seconds: 30
     resource_arn: ""
     role_arn: ""
-extensions: {}
+extensions: { }
 processors:
   batch/emf_logs:
     send_batch_max_size: 0
@@ -137,30 +143,30 @@ receivers:
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
   tcplog/emf_logs:
-    attributes: {}
+    attributes: { }
     encoding: utf-8
     id: tcp_input
     listen_address: 0.0.0.0:25888
-    operators: []
-    output: []
-    resource: {}
+    operators: [ ]
+    output: [ ]
+    resource: { }
     storage: null
     type: tcp_input
   udplog/emf_logs:
-    attributes: {}
+    attributes: { }
     encoding: utf-8
     id: udp_input
     listen_address: 0.0.0.0:25888
     multiline:
       line_end_pattern: .^
       line_start_pattern: ""
-    operators: []
-    output: []
-    resource: {}
+    operators: [ ]
+    output: [ ]
+    resource: { }
     storage: null
     type: udp_input
 service:
-  extensions: []
+  extensions: [ ]
   pipelines:
     logs/emf_logs:
       exporters:
@@ -183,16 +189,16 @@ service:
       disable_caller: false
       disable_stacktrace: false
       encoding: console
-      error_output_paths: []
-      initial_fields: {}
+      error_output_paths: [ ]
+      initial_fields: { }
       level: info
-      output_paths: []
+      output_paths: [ ]
       sampling:
         initial: 2
         thereafter: 500
     metrics:
       address: ""
       level: None
-    resource: {}
+    resource: { }
     traces:
-      propagators: []
+      propagators: [ ]
