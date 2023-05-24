@@ -4,6 +4,7 @@
 package seh1
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,11 +25,12 @@ func TestSEH1Distribution(t *testing.T) {
 	assert.Equal(t, "Count", dist.Unit())
 	values, counts := dist.ValuesAndCounts()
 	assert.Equal(t, len(values), len(counts))
-	valuesCountsMap := map[float64]float64{}
+	valuesCountsMap := map[string]float64{}
 	for i := 0; i < len(values); i++ {
-		valuesCountsMap[values[i]] = counts[i]
+		valuesCountsMap[truncate(values[i])] = counts[i]
 	}
-	expectedValuesCountsMap := map[float64]float64{20.13119624437727: 1, 29.474084421392764: 1, 52.21513847164702: 1}
+	expectedValuesCountsMap := map[string]float64{"20.13119624": 1, "29.47408442": 1, "52.21513847": 1}
+
 	assert.Equal(t, expectedValuesCountsMap, valuesCountsMap)
 
 	//another dist new and add entry
@@ -45,11 +47,11 @@ func TestSEH1Distribution(t *testing.T) {
 	assert.Equal(t, "", anotherDist.Unit())
 	values, counts = anotherDist.ValuesAndCounts()
 	assert.Equal(t, len(values), len(counts))
-	valuesCountsMap = map[float64]float64{}
+	valuesCountsMap = map[string]float64{}
 	for i := 0; i < len(values); i++ {
-		valuesCountsMap[values[i]] = counts[i]
+		valuesCountsMap[truncate(values[i])] = counts[i]
 	}
-	expectedValuesCountsMap = map[float64]float64{20.13119624437727: 1, 22.144315868814992: 3}
+	expectedValuesCountsMap = map[string]float64{"20.13119624": 1, "22.14431587": 3}
 	assert.Equal(t, expectedValuesCountsMap, valuesCountsMap)
 
 	//clone dist and anotherDist
@@ -65,11 +67,11 @@ func TestSEH1Distribution(t *testing.T) {
 	assert.Equal(t, "Count", dist.Unit())
 	values, counts = dist.ValuesAndCounts()
 	assert.Equal(t, len(values), len(counts))
-	valuesCountsMap = map[float64]float64{}
+	valuesCountsMap = map[string]float64{}
 	for i := 0; i < len(values); i++ {
-		valuesCountsMap[values[i]] = counts[i]
+		valuesCountsMap[truncate(values[i])] = counts[i]
 	}
-	expectedValuesCountsMap = map[float64]float64{20.13119624437727: 2, 22.144315868814992: 3, 29.474084421392764: 1, 52.21513847164702: 1}
+	expectedValuesCountsMap = map[string]float64{"20.13119624": 2, "22.14431587": 3, "29.47408442": 1, "52.21513847": 1}
 	assert.Equal(t, expectedValuesCountsMap, valuesCountsMap)
 
 	//add distClone into another dist
@@ -90,4 +92,8 @@ func cloneSEH1Distribution(dist *SEH1Distribution) *SEH1Distribution {
 		clonedDist.buckets[k] = v
 	}
 	return clonedDist
+}
+
+func truncate(f float64) string {
+	return big.NewFloat(f).SetPrec(100).String()
 }

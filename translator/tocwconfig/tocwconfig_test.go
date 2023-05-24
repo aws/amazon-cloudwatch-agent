@@ -142,7 +142,7 @@ func TestAdvancedConfig(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "advanced_config_linux", "linux", expectedEnvVars, "")
-	checkTranslation(t, "advanced_config_linux", "darwin", nil, "")
+	checkTranslation(t, "advanced_config_darwin", "darwin", nil, "")
 	checkTranslation(t, "advanced_config_windows", "windows", expectedEnvVars, "")
 }
 

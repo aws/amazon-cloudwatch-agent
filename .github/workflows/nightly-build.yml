@@ -19,12 +19,12 @@ jobs:
     steps:
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.2
+          go-version: ~1.19.6
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-east-1
@@ -35,11 +35,19 @@ jobs:
         run: sudo apt install rpm
 
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: 'true'
-          
+
+      - name: Cache build output
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
       - name: Release
         run: make nightly-release
 
@@ -52,6 +60,13 @@ jobs:
           aws s3 rm --recursive s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin_amd64/
           aws s3 rm --recursive s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin_arm64/
 
+
+      # Users should only take the tar of the darwin build according to our readme so deleting this does not matter. More of a sanity step
+      - name: Delete Mac Binary As This Should Only Be Built On Mac
+        run: |
+          aws s3 rm --recursive s3://amazoncloudwatch-agent/nightly-build/latest/darwin_amd64/
+          aws s3 rm --recursive s3://amazoncloudwatch-agent/nightly-build/latest/darwin_arm64/
+
   mac-build:
     name: Upload Mac Nightly Binaries
     runs-on: macos-11
@@ -59,22 +74,30 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.2
+          go-version: ~1.19.6
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-east-1
 
+      - name: Cache build output
+        uses: actions/cache@v3
+        with:
+          path: |
+              ~/Library/Caches/go-build
+              ~/go/pkg/mod
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
 
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -82,4 +105,4 @@ jobs:
         run: make nightly-release-mac
 
       - name: Upload to S3
-        run: aws s3 cp build/bin/darwin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin/ --recursive
+        run: aws s3 cp build/bin/darwin s3://${S3_INTEGRATION_BUCKET}/nightly-build/latest/darwin/ --recursive --acl public-read --source-region us-east-1

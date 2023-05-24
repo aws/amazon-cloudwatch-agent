@@ -56,5 +56,4 @@ func (n *Ethtool) ApplyRule(input interface{}) (returnKey string, returnVal inte
 func init() {
 	n := new(Ethtool)
 	parent.RegisterLinuxRule(SectionKey_Ethtool, n)
-	parent.RegisterDarwinRule(SectionKey_Ethtool, n)
 }

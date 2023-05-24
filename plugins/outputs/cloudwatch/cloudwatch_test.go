@@ -5,6 +5,8 @@ package cloudwatch
 
 import (
 	"context"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"log"
 	"strconv"
 	"strings"
@@ -90,7 +92,7 @@ func TestBuildDimensions(t *testing.T) {
 
 func TestProcessRollup(t *testing.T) {
 	svc := new(mockCloudWatchClient)
-	cw := newCloudWatch(svc, time.Second)
+	cw := newCloudWatchClient(svc, time.Second)
 	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10),
 		10,
@@ -259,7 +261,7 @@ func TestIsFlushable(t *testing.T) {
 	svc.On("PutMetricData", mock.Anything).Return(
 		&res,
 		nil)
-	cw := newCloudWatch(svc, time.Second)
+	cw := newCloudWatchClient(svc, time.Second)
 	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10),
 		10,
@@ -317,7 +319,7 @@ func (svc *mockCloudWatchClient) PutMetricData(
 	return args.Get(0).(*cloudwatch.PutMetricDataOutput), args.Error(1)
 }
 
-func newCloudWatch(
+func newCloudWatchClient(
 	svc cloudwatchiface.CloudWatchAPI,
 	forceFlushInterval time.Duration,
 ) *CloudWatch {
@@ -334,20 +336,46 @@ func newCloudWatch(
 	return cloudwatch
 }
 
+func makeMetrics(count int) []telegraf.Metric {
+	metrics := make([]telegraf.Metric, 0, count)
+	measurement := "Test_namespace"
+	fields := map[string]interface{}{
+		"usage_user": 100,
+	}
+
+	tags := map[string]string{}
+	ti := time.Now()
+	m := metric.New(measurement, tags, fields, ti)
+	for i := 0; i < count; i++ {
+		metrics = append(metrics, m.Copy())
+	}
+	return metrics
+}
+
 func TestConsumeMetrics(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
+	svc.On("PutMetricData", mock.Anything).Return(
+		&res,
+		nil)
+	cloudWatchOutput := newCloudWatchClient(svc, time.Second)
+	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
+		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
+		cloudWatchOutput.WriteToCloudWatch)
+	metrics := makeMetrics(1500)
+	cloudWatchOutput.Write(metrics)
+	time.Sleep(2*time.Second + 2*cloudWatchOutput.config.ForceFlushInterval)
 	svc.On("PutMetricData", mock.Anything).Return(&res, nil)
-	cw := newCloudWatch(svc, time.Second)
+	cw := newCloudWatchClient(svc, time.Second)
 	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10),
 		10,
 		2*time.Second,
 		cw.WriteToCloudWatch)
 	// Expect 1500 metrics batched in 2 API calls.
-	metrics := createTestMetrics(1500, 1, 1, "B/s")
+	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	ctx := context.Background()
-	cw.ConsumeMetrics(ctx, metrics)
+	cw.ConsumeMetrics(ctx, pmetrics)
 	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 2))
 	cw.Shutdown(ctx)
@@ -360,7 +388,7 @@ func TestWriteError(t *testing.T) {
 	svc.On("PutMetricData", mock.Anything).Return(
 		&res,
 		serverInternalErr)
-	cw := newCloudWatch(svc, time.Second)
+	cw := newCloudWatchClient(svc, time.Second)
 	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(10),
 		10,
@@ -394,7 +422,7 @@ func TestPublish(t *testing.T) {
 	expectedCalls := numMetrics / defaultMaxDatumsPerCall
 	log.Printf("I! interval %v, numMetrics %v, expectedCalls %v",
 		interval, numMetrics, expectedCalls)
-	cw := newCloudWatch(svc, interval)
+	cw := newCloudWatchClient(svc, interval)
 	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
