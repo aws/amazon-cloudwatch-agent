@@ -13,3 +13,12 @@ func NewCustomHeaderHandler(name, value string) request.NamedHandler {
 		},
 	}
 }
+
+func NewDynamicCustomHeaderHandler(name string, fn func() string) request.NamedHandler {
+	return request.NamedHandler{
+		Name: name + "HeaderHandler",
+		Fn: func(req *request.Request) {
+			req.HTTPRequest.Header.Set(name, fn())
+		},
+	}
+}

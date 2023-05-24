@@ -15,9 +15,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/agentinfo"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 )
 
 // Return true if found.
@@ -326,6 +328,7 @@ func newCloudWatch(
 			MaxDatumsPerCall:   defaultMaxDatumsPerCall,
 			MaxValuesPerDatum:  defaultMaxValuesPerDatum,
 		},
+		agentInfo: agentinfo.New(),
 	}
 	cloudwatch.startRoutines()
 	return cloudwatch

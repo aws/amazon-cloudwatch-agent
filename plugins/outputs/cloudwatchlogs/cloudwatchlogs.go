@@ -16,10 +16,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 )
@@ -123,6 +123,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		Token:     c.Token,
 	}
 
+	agentInfo := agentinfo.New()
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
@@ -134,9 +135,9 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
-	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.Get().UserAgent()))
+	client.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("User-Agent", agentInfo.UserAgent))
 
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup)
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, agentInfo)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd

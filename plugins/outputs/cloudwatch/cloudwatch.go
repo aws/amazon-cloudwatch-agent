@@ -23,9 +23,9 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
@@ -69,6 +69,7 @@ type CloudWatch struct {
 	aggregator             Aggregator
 	aggregatorShutdownChan chan struct{}
 	aggregatorWaitGroup    sync.WaitGroup
+	agentInfo              agentinfo.AgentInfo
 }
 
 // Compile time interface check.
@@ -79,6 +80,7 @@ func (c *CloudWatch) Capabilities() consumer.Capabilities {
 }
 
 func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
+	c.agentInfo = agentinfo.New()
 	c.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
@@ -105,7 +107,7 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 			Logger:   configaws.SDKLogger{},
 		})
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
-	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.Get().UserAgent()))
+	svc.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("User-Agent", c.agentInfo.UserAgent))
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	c.svc = svc
@@ -336,7 +338,9 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	}
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
+		startTime := time.Now()
 		_, err = c.svc.PutMetricData(params)
+		c.agentInfo.RecordOpData(time.Since(startTime), len(params.MetricData), err)
 		if err != nil {
 			awsErr, ok := err.(awserr.Error)
 			if !ok {

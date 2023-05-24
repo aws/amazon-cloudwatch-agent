@@ -18,6 +18,7 @@ const (
 	userAgentKey      = "user_agent"
 	debugKey          = "debug"
 	awsSdkLogLevelKey = "aws_sdk_log_level"
+	usageDataKey      = "usage_data"
 )
 
 func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
@@ -34,6 +35,11 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		}
 		if awsSdkLogLevel, ok := agentMap[awsSdkLogLevelKey].(string); ok {
 			envVars[envconfig.AWS_SDK_LOG_LEVEL] = awsSdkLogLevel
+		}
+
+		// Set CWAGENT_USAGE_DATA to FALSE in env config if present and false in agent section
+		if usageData, ok := agentMap[usageDataKey].(bool); ok && !usageData {
+			envVars[envconfig.CWAGENT_USAGE_DATA] = "FALSE"
 		}
 	}
 

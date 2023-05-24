@@ -49,10 +49,10 @@ import (
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"golang.org/x/exp/maps"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo"
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
@@ -271,7 +271,7 @@ func runAgent(ctx context.Context,
 	}
 
 	logger.SetupLogging(logConfig)
-	agentInfo := agentinfo.Get()
+	agentInfo := agentinfo.New()
 
 	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentInfo.Version())
 	// Need to set SDK log level before plugins get loaded.
@@ -314,13 +314,8 @@ func runAgent(ctx context.Context,
 		// So just start Telegraf.
 		_, err = os.Stat(*fOtelConfig)
 		if errors.Is(err, os.ErrNotExist) {
-			agentInfo.SetPlugins(&otelcol.Config{}, c)
-			return func() error {
-				agentInfo.Start()
-				err = ag.Run(ctx)
-				agentInfo.Shutdown()
-				return err
-			}()
+			agentinfo.SetComponents(&otelcol.Config{}, c)
+			return ag.Run(ctx)
 		}
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
@@ -357,7 +352,7 @@ func runAgent(ctx context.Context,
 		return err
 	}
 
-	agentInfo.SetPlugins(cfg, c)
+	agentinfo.SetComponents(cfg, c)
 
 	params := otelcol.CollectorSettings{
 		Factories: factories,
@@ -374,12 +369,7 @@ func runAgent(ctx context.Context,
 	e := []string{"--config=" + yamlConfigPath}
 	cmd.SetArgs(e)
 
-	return func() error {
-		agentInfo.Start()
-		err = cmd.Execute()
-		agentInfo.Shutdown()
-		return err
-	}()
+	return cmd.Execute()
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
@@ -517,7 +507,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Println(agentinfo.Get().FullVersion())
+			fmt.Println(agentinfo.New().FullVersion())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -695,7 +685,7 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error {
 
 	if *fSchemaTest {
 		//up to this point, the given config file must be valid
-		fmt.Println(agentinfo.Get().FullVersion())
+		fmt.Println(agentinfo.New().FullVersion())
 		fmt.Printf("The given config: %v is valid\n", *fConfig)
 		os.Exit(0)
 	}
