@@ -49,6 +49,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 		"IntegrationTestBase",
 		"CWADockerImageBuilderX86",
 		"CWADockerImageBuilderARM64",
+		"cwagent-integ-test-ec2*",
 	}}
 
 	instanceInput := ec2.DescribeInstancesInput{

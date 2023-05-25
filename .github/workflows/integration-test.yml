@@ -147,6 +147,7 @@ jobs:
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
       eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
+      eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -171,7 +172,8 @@ jobs:
           echo "::set-output name=ec2_userdata_matrix::$(echo $(cat generator/resources/ec2_userdata_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
-          echo "::set-output name=eks_daemon_matrix::$(echo $(cat generator/resources/eks_daemon_test_matrix.json))"
+          echo "::set-output name=eks_daemon_matrix::$(echo $(cat generator/resources/eks_daemon_complete_test_matrix.json))"
+          echo "::set-output name=eks_deployment_matrix::$(echo $(cat generator/resources/eks_deployment_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
@@ -185,6 +187,7 @@ jobs:
           echo "ecs_ec2_launch_daemon_matrix${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
           echo "eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}"
+          echo "eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}"
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -501,6 +504,7 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -538,7 +542,7 @@ jobs:
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-nvidia-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -601,6 +605,7 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -619,7 +624,7 @@ jobs:
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -752,6 +757,7 @@ jobs:
             if terraform apply --auto-approve \
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
             -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
+            -var="test_name=${{ matrix.arrays.os }}" \
             -var="cwa_github_sha=${GITHUB_SHA}"  \
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="ami=${{ matrix.arrays.ami }}" \
@@ -763,7 +769,7 @@ jobs:
 
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-win-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -832,7 +838,7 @@ jobs:
 
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-mac-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -937,7 +943,7 @@ jobs:
             fi
 
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ecs-ec2-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -1003,7 +1009,7 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ecs-fargate-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
@@ -1059,24 +1065,104 @@ jobs:
           timeout_minutes: 60 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
           retry_wait_seconds: 5
           command: |
-            cd terraform/eks/daemon
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/daemon
+            fi
+            
             terraform init
             if terraform apply --auto-approve \
+              -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-              -var="cwagent_image_tag=${{ github.sha }}"; then
+              -var="cwagent_image_tag=${{ github.sha }}" \
+              -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
             fi
 
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.eks-ec2-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/eks/daemon && terraform destroy --auto-approve
+
+  EKSPrometheusIntegrationTest:
+    name: 'EKSPrometheusIntegrationTest'
+    runs-on: ubuntu-latest
+    needs: [ MakeBinary, GenerateTestMatrix ]
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_deployment_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: eks-ec2-integration-test
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: eks-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
+
+      - name: Login ECR
+        id: login-ecr
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Verify Terraform version
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/deployment
+            fi
+
+            terraform init
+            if terraform apply --auto-approve \
+              -var="test_dir=${{ matrix.arrays.test_dir }}"\
+              -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+              -var="cwagent_image_tag=${{ github.sha }}" \
+              -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
+              terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/eks/deployment && terraform destroy --auto-approve
 
   StressTrackingTest:
     name: "StressTrackingTest"
@@ -1137,7 +1223,7 @@ jobs:
             fi
 
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.stress-tracking.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
