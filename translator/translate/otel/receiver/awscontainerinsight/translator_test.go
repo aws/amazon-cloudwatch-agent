@@ -103,6 +103,27 @@ func TestTranslator(t *testing.T) {
 				TagService:                   true,
 			},
 		},
+		"WithKubernetes/FullPodMetrics": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"cluster_name":            "TestCluster",
+							"enable_full_pod_metrics": true,
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				ClusterName:                  "TestCluster",
+				LeaderLockName:               "cwagent-clusterleader",
+				LeaderLockUsingConfigMapOnly: true,
+				TagService:                   true,
+				AddFullPodNameMetricLabel:    true,
+			},
+		},
 		"WithKubernetes/WithoutClusterName": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{

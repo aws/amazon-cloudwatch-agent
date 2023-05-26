@@ -157,12 +157,9 @@ func TestTranslator(t *testing.T) {
 							"pod_memory_utilization_over_pod_limit"},
 					},
 					{
-						Dimensions:          [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity"},
-					},
-					{
-						Dimensions:          [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}},
-						MetricNameSelectors: []string{"pod_number_of_container_restarts"},
+						Dimensions: [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"Service", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts",
+							"pod_number_of_containers", "pod_number_of_running_containers"},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -300,12 +297,9 @@ func TestTranslator(t *testing.T) {
 							"pod_memory_utilization_over_pod_limit"},
 					},
 					{
-						Dimensions:          [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity"},
-					},
-					{
-						Dimensions:          [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}},
-						MetricNameSelectors: []string{"pod_number_of_container_restarts"},
+						Dimensions: [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"Service", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts",
+							"pod_number_of_containers", "pod_number_of_running_containers"},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},

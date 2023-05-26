@@ -58,6 +58,9 @@ func getContainerMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 }
 
 func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	enableFullPodMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableFullPodMetricsKey)
+	isEnableFullPodMetrics := common.GetOrDefaultBool(conf, enableFullPodMetricsKey, false)
+
 	podMetricDeclarations := []*awsemfexporter.MetricDeclaration{
 		{
 			Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"}, {"ClusterName"}},
@@ -66,26 +69,36 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 				"pod_cpu_utilization_over_pod_limit", "pod_memory_utilization_over_pod_limit",
 			},
 		},
-		{
-			Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
-			MetricNameSelectors: []string{
-				"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity",
-			},
-		},
-		{
-			Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}},
-			MetricNameSelectors: []string{
-				"pod_number_of_container_restarts",
-			},
-		},
+	}
+	metricDeclaration := awsemfexporter.MetricDeclaration{
+		Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+		MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity"},
 	}
 
-	enableFullPodMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableFullPodMetricsKey)
-	if common.GetOrDefaultBool(conf, enableFullPodMetricsKey, false) {
-		for _, declaration := range podMetricDeclarations {
-			declaration.Dimensions = append([][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}}, declaration.Dimensions...)
-		}
+	if !isEnableFullPodMetrics {
+		podMetricDeclarations = append(
+			podMetricDeclarations,
+			&metricDeclaration,
+			&awsemfexporter.MetricDeclaration{
+				Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}},
+				MetricNameSelectors: []string{"pod_number_of_container_restarts"},
+			},
+		)
+		return podMetricDeclarations
 	}
+
+	metricDeclaration.Dimensions = append(metricDeclaration.Dimensions, []string{"Service", "Namespace", "ClusterName"})
+	metricDeclaration.MetricNameSelectors = append(
+		metricDeclaration.MetricNameSelectors, "pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers")
+	podMetricDeclarations = append(
+		podMetricDeclarations,
+		&metricDeclaration,
+	)
+
+	for _, declaration := range podMetricDeclarations {
+		declaration.Dimensions = append([][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}}, declaration.Dimensions...)
+	}
+
 	return podMetricDeclarations
 }
 

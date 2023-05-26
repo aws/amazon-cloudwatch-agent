@@ -58,15 +58,14 @@ exporters:
           - pod_network_tx_bytes
           - pod_cpu_utilization_over_pod_limit
           - pod_memory_utilization_over_pod_limit
-      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
-        label_matchers: [ ]
+      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ] ]
+        label_matchers: []
         metric_name_selectors:
           - pod_cpu_reserved_capacity
           - pod_memory_reserved_capacity
-      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ] ]
-        label_matchers: [ ]
-        metric_name_selectors:
           - pod_number_of_container_restarts
+          - pod_number_of_containers
+          - pod_number_of_running_containers
       # node metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
