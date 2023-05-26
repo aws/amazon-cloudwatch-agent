@@ -700,7 +700,7 @@ jobs:
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
-        if: ${{ cancelled() && steps.ec2-linux-integration-test.outputs.cache-hit != 'true' }}
+        if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
           max_attempts: 3
