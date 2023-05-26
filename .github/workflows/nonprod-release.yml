@@ -1,26 +1,31 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-# alpha-release.yml - releasing CWA  artifacts for customers and will be safe to deleted after Alpha release etc.
-name: Alpha Release
+name: NonProd Release
 env:
   TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
   S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
-  UploadRelease:
-    name: "UploadRelease"
+  BuildAndUpload:
+    name: "BuildAndUpload"
     runs-on: ubuntu-latest
-    environment: release
     permissions:
       id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v2
+      # This is a workaround to fix an issue where "git describe" was failing when running the action on my fork.
+      # https://github.com/actions/checkout/issues/206
+      - run: |
+          git fetch --prune --unshallow --tags
+          echo exit code $?
+          git tag --list
+          git describe --tag --dirty
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -46,28 +51,13 @@ jobs:
       - name: Build RPM
         run: make amazon-cloudwatch-agent-linux package-rpm package-deb
 
-      - name: Check current release version against new version and ensure they are different
+      - name: Copy RPM To nonprod
         run: |
-          aws s3 cp s3://${S3_INTEGRATION_BUCKET}/release/CWAGENT_VERSION /tmp/
-          current_val=`cat /tmp/CWAGENT_VERSION`
-          new_val=`cat build/bin/CWAGENT_VERSION`
-          if [ "$current_val" = "$new_val" ]; then
-            echo "This version has already been published. Do nothing."
-            exit 1
-          fi
-
-      - name: Copy RPM To Release
-        run: |
-          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
-          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
-          aws s3 cp build/bin/CWAGENT_VERSION s3://${S3_INTEGRATION_BUCKET}/release/CWAGENT_VERSION
-
-      - name: Copy RPM To Tag
-        run: |
-          export tag=$(cat build/bin/CWAGENT_VERSION)
-          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/${tag}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
-          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/release/${tag}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
-          aws s3 cp build/bin/CWAGENT_VERSION s3://${S3_INTEGRATION_BUCKET}/release/${tag}/CWAGENT_VERSION
+          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/nonprod/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/nonprod/amazon_linux/amd64/latest/amazon-cloudwatch-agent.deb
+          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/nonprod/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
+          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${S3_INTEGRATION_BUCKET}/nonprod/amazon_linux/arm64/latest/amazon-cloudwatch-agent.deb
+          aws s3 cp build/bin/CWAGENT_VERSION s3://${S3_INTEGRATION_BUCKET}/nonprod/CWAGENT_VERSION
 
       - name: Login ECR
         id: login-ecr
@@ -93,11 +83,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/ccwa-release:latest
+            ${{ steps.login-ecr.outputs.registry }}/ccwa_nonprod:latest
           platforms: linux/amd64, linux/arm64
-
-  # Assume we do not run 2 releases at the same time
-  DeployCanary:
-    needs: [UploadRelease]
-    uses: ./.github/workflows/deploy-canary.yml
-    secrets: inherit
