@@ -4,8 +4,9 @@
 package awsemf
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -42,6 +43,9 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	// Setup cluster metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getClusterMetricDeclarations()...)
+
+	// Setup control plane metrics
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getControlPlaneMetricDeclarations()...)
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	return nil
@@ -223,6 +227,30 @@ func getClusterMetricDeclarations() []*awsemfexporter.MetricDeclaration {
 			Dimensions: [][]string{{"ClusterName"}},
 			MetricNameSelectors: []string{
 				"cluster_node_count", "cluster_failed_node_count",
+			},
+		},
+	}
+}
+
+func getControlPlaneMetricDeclarations() []*awsemfexporter.MetricDeclaration {
+	return []*awsemfexporter.MetricDeclaration{
+		{
+			Dimensions: [][]string{{"ClusterName", "endpoint"}},
+			MetricNameSelectors: []string{
+				"etcd_db_total_size_in_bytes",
+			},
+		},
+		{
+			Dimensions: [][]string{{"ClusterName"}},
+			MetricNameSelectors: []string{
+				"apiserver_storage_objects",
+				"apiserver_request_total",
+				"apiserver_request_duration_seconds",
+				"apiserver_admission_controller_admission_duration_seconds",
+				"rest_client_request_duration_seconds",
+				"rest_client_requests_total",
+				"etcd_request_duration_seconds",
+				"etcd_db_total_size_in_bytes",
 			},
 		},
 	}
