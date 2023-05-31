@@ -251,6 +251,15 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"service_number_of_running_pods"},
 					},
 					{
+						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"deployment_spec_replicas", "deployment_status_replicas", "deployment_status_replicas_available", "deployment_status_replicas_unavailable"},
+					},
+					{
+						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"daemonset_status_number_available", "daemonset_status_number_unavailable",
+							"daemonset_status_desired_number_scheduled", "daemonset_status_current_number_scheduled"},
+					},
+					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"namespace_number_of_running_pods"},
 					},
@@ -318,6 +327,15 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"service_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"deployment_spec_replicas", "deployment_status_replicas", "deployment_status_replicas_available", "deployment_status_replicas_unavailable"},
+					},
+					{
+						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"daemonset_status_number_available", "daemonset_status_number_unavailable",
+							"daemonset_status_desired_number_scheduled", "daemonset_status_current_number_scheduled"},
 					},
 					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},

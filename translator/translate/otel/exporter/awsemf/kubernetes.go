@@ -31,6 +31,12 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	// Setup service metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getServiceMetricDeclarations()...)
 
+	// Setup deployment metrics
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getDeploymentMetricDeclarations(conf)...)
+
+	// Setup daemon set metrics
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getDaemonSetMetricDeclarations(conf)...)
+
 	// Setup namespace metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getNamespaceMetricDeclarations()...)
 
@@ -163,6 +169,41 @@ func getServiceMetricDeclarations() []*awsemfexporter.MetricDeclaration {
 			},
 		},
 	}
+}
+
+func getDeploymentMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var deploymentMetricDeclarations []*awsemfexporter.MetricDeclaration
+	// As a placeholder, using the enable_container_metrics flag for now. This will be replaced soon.
+	enableContainerMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableContainerMetricsKey)
+	if common.GetOrDefaultBool(conf, enableContainerMetricsKey, false) {
+		deploymentMetricDeclarations = append(deploymentMetricDeclarations, []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"deployment_spec_replicas", "deployment_status_replicas", "deployment_status_replicas_available", "deployment_status_replicas_unavailable",
+				},
+			},
+		}...)
+	}
+	return deploymentMetricDeclarations
+}
+
+func getDaemonSetMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var daemonSetMetricDeclarations []*awsemfexporter.MetricDeclaration
+	// As a placeholder, using the enable_container_metrics flag for now. This will be replaced soon.
+	enableContainerMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableContainerMetricsKey)
+	if common.GetOrDefaultBool(conf, enableContainerMetricsKey, false) {
+		daemonSetMetricDeclarations = append(daemonSetMetricDeclarations, []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"daemonset_status_number_available", "daemonset_status_number_unavailable",
+					"daemonset_status_desired_number_scheduled", "daemonset_status_current_number_scheduled",
+				},
+			},
+		}...)
+	}
+	return daemonSetMetricDeclarations
 }
 
 func getNamespaceMetricDeclarations() []*awsemfexporter.MetricDeclaration {
