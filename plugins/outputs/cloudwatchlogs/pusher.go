@@ -239,7 +239,7 @@ func (p *pusher) send() {
 		input.SequenceToken = p.sequenceToken
 		opStartTime := time.Now()
 		output, err := p.Service.PutLogEvents(input)
-		p.agentInfo.RecordOpData(time.Since(opStartTime), len(input.LogEvents), err)
+		p.agentInfo.RecordOpData(time.Since(opStartTime), p.bufferredSize, err)
 		if err == nil {
 			if output.NextSequenceToken != nil {
 				p.sequenceToken = output.NextSequenceToken
