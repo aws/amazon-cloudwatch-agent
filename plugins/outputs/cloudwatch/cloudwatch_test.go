@@ -5,8 +5,6 @@ package cloudwatch
 
 import (
 	"context"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"log"
 	"strconv"
 	"strings"
@@ -17,10 +15,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/agentinfo"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
 )
 

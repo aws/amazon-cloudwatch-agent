@@ -10,12 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution/regular"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution/regular"
 )
 
 func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {

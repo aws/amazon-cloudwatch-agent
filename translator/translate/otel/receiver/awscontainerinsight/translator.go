@@ -8,11 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/util"

@@ -18,8 +18,8 @@ import (
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 )

@@ -7,10 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/collector/otelcol/otelcoltest"
-
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/otelcol/otelcoltest"
 )
 
 // TestConfig will verify various config files can be loaded.

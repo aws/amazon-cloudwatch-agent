@@ -21,7 +21,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/agentinfo"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
 )
 
 var wg sync.WaitGroup

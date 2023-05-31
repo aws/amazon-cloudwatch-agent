@@ -52,7 +52,7 @@ import (
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/agentinfo"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"

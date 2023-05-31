@@ -8,8 +8,9 @@ import (
 	"log"
 	"math"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 )
 
 type RegularDistribution struct {

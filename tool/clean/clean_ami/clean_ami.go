@@ -12,13 +12,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	smithyTime "github.com/aws/smithy-go/time"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
 )
 
 func main() {
