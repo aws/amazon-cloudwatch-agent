@@ -125,7 +125,7 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 					{
-						Dimensions:          [][]string{{"ClusterName", "endpoint"}},
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
 					},
 					{
@@ -136,8 +136,7 @@ func TestTranslator(t *testing.T) {
 							"apiserver_admission_controller_admission_duration_seconds",
 							"rest_client_request_duration_seconds",
 							"rest_client_requests_total",
-							"etcd_request_duration_seconds",
-							"etcd_db_total_size_in_bytes"},
+							"etcd_request_duration_seconds"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
@@ -204,7 +203,7 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 					{
-						Dimensions:          [][]string{{"ClusterName", "endpoint"}},
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
 					},
 					{
@@ -215,8 +214,7 @@ func TestTranslator(t *testing.T) {
 							"apiserver_admission_controller_admission_duration_seconds",
 							"rest_client_request_duration_seconds",
 							"rest_client_requests_total",
-							"etcd_request_duration_seconds",
-							"etcd_db_total_size_in_bytes"},
+							"etcd_request_duration_seconds"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
@@ -299,7 +297,7 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 					{
-						Dimensions:          [][]string{{"ClusterName", "endpoint"}},
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
 					},
 					{
@@ -310,8 +308,7 @@ func TestTranslator(t *testing.T) {
 							"apiserver_admission_controller_admission_duration_seconds",
 							"rest_client_request_duration_seconds",
 							"rest_client_requests_total",
-							"etcd_request_duration_seconds",
-							"etcd_db_total_size_in_bytes"},
+							"etcd_request_duration_seconds"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
@@ -392,7 +389,7 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 					{
-						Dimensions:          [][]string{{"ClusterName", "endpoint"}},
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
 					},
 					{
@@ -403,8 +400,7 @@ func TestTranslator(t *testing.T) {
 							"apiserver_admission_controller_admission_duration_seconds",
 							"rest_client_request_duration_seconds",
 							"rest_client_requests_total",
-							"etcd_request_duration_seconds",
-							"etcd_db_total_size_in_bytes"},
+							"etcd_request_duration_seconds"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
@@ -473,7 +469,7 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
 					{
-						Dimensions:          [][]string{{"ClusterName", "endpoint"}},
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
 					},
 					{
@@ -484,8 +480,7 @@ func TestTranslator(t *testing.T) {
 							"apiserver_admission_controller_admission_duration_seconds",
 							"rest_client_request_duration_seconds",
 							"rest_client_requests_total",
-							"etcd_request_duration_seconds",
-							"etcd_db_total_size_in_bytes"},
+							"etcd_request_duration_seconds"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,

@@ -142,7 +142,6 @@ exporters:
           - rest_client_request_duration_seconds
           - rest_client_requests_total
           - etcd_request_duration_seconds
-          - etcd_db_total_size_in_bytes
     metric_descriptors: [ ]
     no_verify_ssl: false
     num_workers: 8
