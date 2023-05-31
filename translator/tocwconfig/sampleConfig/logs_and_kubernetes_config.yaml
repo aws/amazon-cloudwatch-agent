@@ -48,6 +48,13 @@ exporters:
           - container_cpu_utilization
           - container_memory_utilization
           - container_filesystem_usage
+      - dimensions: [ [ ClusterName, ContainerName, FullPodName, Namespace, PodName ], [ ClusterName, ContainerName, Namespace, PodName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - container_status_running
+          - container_status_terminated
+          - container_status_waiting
+          - container_status_waiting_reason_crashed
       # pod metrics
       - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ], [ ClusterName ] ]
         label_matchers: [ ]

@@ -218,6 +218,12 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"container_cpu_utilization", "container_memory_utilization", "container_filesystem_usage"},
 					},
 					{
+						Dimensions: [][]string{{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{
+							"container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed",
+						},
+					},
+					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"},
 							{"ClusterName"}},
 						MetricNameSelectors: []string{"pod_cpu_utilization", "pod_memory_utilization",
@@ -297,6 +303,12 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions:          [][]string{{"ContainerName", "FullPodName", "Namespace", "ClusterName"}, {"ContainerName", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{"container_cpu_utilization", "container_memory_utilization", "container_filesystem_usage"},
+					},
+					{
+						Dimensions: [][]string{{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{
+							"container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed",
+						},
 					},
 					{
 						Dimensions: [][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}, {"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"},

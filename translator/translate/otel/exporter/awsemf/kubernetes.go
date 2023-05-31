@@ -59,6 +59,16 @@ func getContainerMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 		}...)
+
+		// additional container-pod metrics
+		containerMetricDeclarations = append(containerMetricDeclarations, []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
+				MetricNameSelectors: []string{
+					"container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed",
+				},
+			},
+		}...)
 	}
 	return containerMetricDeclarations
 }
