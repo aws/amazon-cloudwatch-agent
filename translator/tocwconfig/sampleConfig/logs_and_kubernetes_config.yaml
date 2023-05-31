@@ -127,6 +127,22 @@ exporters:
         metric_name_selectors:
           - cluster_node_count
           - cluster_failed_node_count
+      # control plane metrics
+      - dimensions: [ [ClusterName, endpoint], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - etcd_db_total_size_in_bytes
+      - dimensions: [ [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_storage_objects
+          - apiserver_request_total
+          - apiserver_request_duration_seconds
+          - apiserver_admission_controller_admission_duration_seconds
+          - rest_client_request_duration_seconds
+          - rest_client_requests_total
+          - etcd_request_duration_seconds
+          - etcd_db_total_size_in_bytes
     metric_descriptors: [ ]
     no_verify_ssl: false
     num_workers: 8
