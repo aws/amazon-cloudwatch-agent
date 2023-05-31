@@ -6,10 +6,11 @@ package awsemf
 import (
 	"testing"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 
 	legacytranslator "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
@@ -123,6 +124,20 @@ func TestTranslator(t *testing.T) {
 						Dimensions:          [][]string{{"ClusterName"}},
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_objects",
+							"apiserver_request_total",
+							"apiserver_request_duration_seconds",
+							"apiserver_admission_controller_admission_duration_seconds",
+							"rest_client_request_duration_seconds",
+							"rest_client_requests_total",
+							"etcd_request_duration_seconds"},
+					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
 			},
@@ -186,6 +201,20 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_objects",
+							"apiserver_request_total",
+							"apiserver_request_duration_seconds",
+							"apiserver_admission_controller_admission_duration_seconds",
+							"rest_client_request_duration_seconds",
+							"rest_client_requests_total",
+							"etcd_request_duration_seconds"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
@@ -273,6 +302,20 @@ func TestTranslator(t *testing.T) {
 						Dimensions:          [][]string{{"ClusterName"}},
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_objects",
+							"apiserver_request_total",
+							"apiserver_request_duration_seconds",
+							"apiserver_admission_controller_admission_duration_seconds",
+							"rest_client_request_duration_seconds",
+							"rest_client_requests_total",
+							"etcd_request_duration_seconds"},
+					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
 			},
@@ -357,6 +400,20 @@ func TestTranslator(t *testing.T) {
 						Dimensions:          [][]string{{"ClusterName"}},
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
 					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_objects",
+							"apiserver_request_total",
+							"apiserver_request_duration_seconds",
+							"apiserver_admission_controller_admission_duration_seconds",
+							"rest_client_request_duration_seconds",
+							"rest_client_requests_total",
+							"etcd_request_duration_seconds"},
+					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
 			},
@@ -422,6 +479,20 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
 						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_objects",
+							"apiserver_request_total",
+							"apiserver_request_duration_seconds",
+							"apiserver_admission_controller_admission_duration_seconds",
+							"rest_client_request_duration_seconds",
+							"rest_client_requests_total",
+							"etcd_request_duration_seconds"},
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
