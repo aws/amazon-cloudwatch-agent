@@ -28,38 +28,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
-	"go.opentelemetry.io/collector/exporter"
-	"go.opentelemetry.io/collector/exporter/loggingexporter"
-	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
-	"go.opentelemetry.io/collector/processor"
-	"go.opentelemetry.io/collector/processor/batchprocessor"
-	"go.opentelemetry.io/collector/receiver"
-	"go.opentelemetry.io/collector/receiver/otlpreceiver"
-	"golang.org/x/exp/maps"
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/defaultcomponents"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/registry"
 )
 
 const (
@@ -375,63 +357,21 @@ func runAgent(ctx context.Context,
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
 	telegrafAdapter := adapter.NewAdapter(telegrafConfig)
 
-	factories := otelcol.Factories{}
-
-	receiverFactories := []receiver.Factory{
-		// OTel native receivers
-		awscontainerinsightreceiver.NewFactory(),
-		awsxrayreceiver.NewFactory(),
-		otlpreceiver.NewFactory(),
-		tcplogreceiver.NewFactory(),
-		udplogreceiver.NewFactory(),
+	factories, err := defaultcomponents.Factories()
+	if err != nil {
+		return factories, err
 	}
-	adapterReceiverSet := collections.NewSet[string]()
+
 	// Adapted receivers from telegraf
 	for _, input := range telegrafConfig.Inputs {
-		adapterReceiverSet.Add(input.Config.Name)
+		registry.Register(registry.WithReceiver(telegrafAdapter.NewReceiverFactory(input.Config.Name)))
 	}
 
-	for _, adapterReceiver := range maps.Keys(adapterReceiverSet) {
-		receiverFactories = append(receiverFactories, telegrafAdapter.NewReceiverFactory(adapterReceiver))
+	for _, apply := range registry.Options() {
+		apply(&factories)
 	}
 
-	receivers, err := receiver.MakeFactoryMap(receiverFactories...)
-	if err != nil {
-		return factories, err
-	}
-
-	processors, err := processor.MakeFactoryMap(
-		batchprocessor.NewFactory(),
-		cumulativetodeltaprocessor.NewFactory(),
-		ec2tagger.NewFactory(),
-		transformprocessor.NewFactory(),
-	)
-	if err != nil {
-		return factories, err
-	}
-
-	exporters, err := exporter.MakeFactoryMap(
-		awsemfexporter.NewFactory(),
-		loggingexporter.NewFactory(),
-		cloudwatch.NewFactory(),
-		awscloudwatchlogsexporter.NewFactory(),
-		awsxrayexporter.NewFactory(),
-	)
-	if err != nil {
-		return factories, err
-	}
-
-	extensions, err := extension.MakeFactoryMap()
-	if err != nil {
-		return factories, err
-	}
-
-	factories = otelcol.Factories{
-		Receivers:  receivers,
-		Processors: processors,
-		Exporters:  exporters,
-		Extensions: extensions,
-	}
+	registry.Reset()
 
 	return factories, nil
 }
