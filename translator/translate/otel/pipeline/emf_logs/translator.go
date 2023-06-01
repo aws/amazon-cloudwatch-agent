@@ -53,15 +53,15 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 	if serviceAddress, ok := common.GetString(conf, serviceAddressEMFKey); ok {
 		if strings.Contains(serviceAddress, common.Udp) {
-			translators.Receivers.Add(udp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
+			translators.Receivers.Set(udp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
 		} else {
-			translators.Receivers.Add(tcp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
+			translators.Receivers.Set(tcp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
 		}
 	} else if serviceAddress, ok := common.GetString(conf, serviceAddressStructuredLogKey); ok {
 		if strings.Contains(serviceAddress, common.Udp) {
-			translators.Receivers.Add(udp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
+			translators.Receivers.Set(udp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
 		} else {
-			translators.Receivers.Add(tcp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
+			translators.Receivers.Set(tcp_logs.NewTranslatorWithName(common.PipelineNameEmfLogs))
 		}
 	} else {
 		translators.Receivers = common.NewTranslatorMap(

@@ -4,9 +4,8 @@
 package awsemf
 
 import (
-	"go.opentelemetry.io/collector/confmap"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )

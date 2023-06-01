@@ -76,8 +76,8 @@ type Translator[C any] interface {
 // TranslatorMap is a map of translators by their types.
 type TranslatorMap[C any] map[component.ID]Translator[C]
 
-// Add is a convenience method to add a translator to the map.
-func (t TranslatorMap[C]) Add(translator Translator[C]) {
+// Set is a convenience method to add a translator to the map.
+func (t TranslatorMap[C]) Set(translator Translator[C]) {
 	t[translator.ID()] = translator
 }
 
@@ -87,10 +87,10 @@ func (t TranslatorMap[C]) Get(id component.ID) (Translator[C], bool) {
 	return translator, ok
 }
 
-// Merge adds the translators in the input to the existing map.
+// Merge sets the translators in the input to the existing map.
 func (t TranslatorMap[C]) Merge(m TranslatorMap[C]) {
 	for _, v := range m {
-		t.Add(v)
+		t.Set(v)
 	}
 }
 
@@ -107,7 +107,7 @@ func (t TranslatorMap[C]) SortedKeys() []component.ID {
 func NewTranslatorMap[C any](translators ...Translator[C]) TranslatorMap[C] {
 	translatorMap := make(TranslatorMap[C], len(translators))
 	for _, translator := range translators {
-		translatorMap.Add(translator)
+		translatorMap.Set(translator)
 	}
 	return translatorMap
 }

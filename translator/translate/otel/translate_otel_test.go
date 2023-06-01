@@ -6,15 +6,18 @@ package otel
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
-	ot := NewTranslator()
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
@@ -46,16 +49,45 @@ func TestTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			translator.SetTargetPlatform("linux")
-			got, err := ot.Translate(testCase.input, "linux")
+			got, err := Translate(testCase.input, "linux")
 			if testCase.wantErrContains != "" {
 				require.Error(t, err)
-				require.Nil(t, got)
+				assert.Nil(t, got)
 				t.Log(err)
-				require.ErrorContains(t, err, testCase.wantErrContains)
+				assert.ErrorContains(t, err, testCase.wantErrContains)
 			} else {
 				require.NoError(t, err)
-				require.NotNil(t, got)
+				assert.NotNil(t, got)
 			}
 		})
 	}
+}
+
+type testTranslator struct {
+	id      component.ID
+	version int
+}
+
+func (t testTranslator) Translate(_ *confmap.Conf) (*common.ComponentTranslators, error) {
+	return nil, nil
+}
+
+func (t testTranslator) ID() component.ID {
+	return t.id
+}
+
+var _ common.Translator[*common.ComponentTranslators] = (*testTranslator)(nil)
+
+func TestRegisterPipeline(t *testing.T) {
+	original := &testTranslator{id: component.NewID("test"), version: 1}
+	tm := common.NewTranslatorMap[*common.ComponentTranslators](original)
+	assert.Len(t, registry, 0)
+	newTranslator := &testTranslator{id: component.NewID("test"), version: 2}
+	RegisterPipeline(newTranslator)
+	assert.Len(t, registry, 1)
+	tm.Merge(registry)
+	got, ok := tm.Get(component.NewID("test"))
+	assert.True(t, ok)
+	assert.Equal(t, newTranslator, got)
+	assert.NotEqual(t, original, got)
 }

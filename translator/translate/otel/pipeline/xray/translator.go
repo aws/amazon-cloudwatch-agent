@@ -49,10 +49,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Exporters:  common.NewTranslatorMap(awsxrayexporter.NewTranslator()),
 	}
 	if conf.IsSet(xrayKey) {
-		translators.Receivers.Add(awsxrayreceiver.NewTranslator())
+		translators.Receivers.Set(awsxrayreceiver.NewTranslator())
 	}
 	if conf.IsSet(otlpKey) {
-		translators.Receivers.Add(otlp.NewTranslator(otlp.WithDataType(component.DataTypeTraces)))
+		translators.Receivers.Set(otlp.NewTranslator(otlp.WithDataType(component.DataTypeTraces)))
 	}
 	return translators, nil
 }

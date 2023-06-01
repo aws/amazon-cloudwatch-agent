@@ -28,15 +28,13 @@ func (t testTranslator) ID() component.ID {
 }
 
 func TestTranslator(t *testing.T) {
-	pt := NewTranslator()
+	pt := NewTranslator(common.NewTranslatorMap[*common.ComponentTranslators]())
 	got, err := pt.Translate(confmap.New())
 	require.Equal(t, ErrNoPipelines, err)
 	require.Nil(t, got)
-	pt = NewTranslator(
-		&testTranslator{
-			result: &common.ComponentTranslators{},
-		},
-	)
+	pt = NewTranslator(common.NewTranslatorMap[*common.ComponentTranslators](&testTranslator{
+		result: &common.ComponentTranslators{},
+	}))
 	got, err = pt.Translate(confmap.New())
 	require.NoError(t, err)
 	require.NotNil(t, got)

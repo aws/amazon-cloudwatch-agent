@@ -108,7 +108,7 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 		for inputName := range inputs {
 			if windowsInputSet.Contains(inputName) {
 				cfgKey := common.ConfigKey(metricKey, inputName)
-				translators.Add(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
+				translators.Set(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
 					defaultCollectionIntervalMap,
 					inputName,
 					defaultMetricsCollectionInterval,
@@ -137,7 +137,7 @@ func fromInputs(conf *confmap.Conf, baseKey string) common.TranslatorMap[compone
 			if multipleInputSet.Contains(inputName) {
 				translators.Merge(fromMultipleInput(conf, inputName, ""))
 			} else {
-				translators.Add(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
+				translators.Set(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(
 					defaultCollectionIntervalMap,
 					inputName,
 					defaultMetricsCollectionInterval,
@@ -181,7 +181,7 @@ func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.Translat
 			// Array type validation needs to be specific https://stackoverflow.com/a/47989212
 			for _, procstatMonitored := range procstatMonitoredSet {
 				if componentPsValue, ok := psKey[procstatMonitored]; ok {
-					translators.Add(NewTranslatorWithName(
+					translators.Set(NewTranslatorWithName(
 						componentPsValue.(string),
 						procstat.SectionKey,
 						cfgKey,
@@ -193,19 +193,19 @@ func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.Translat
 		}
 	} else if os == translatorconfig.OS_TYPE_WINDOWS && !windowsInputSet.Contains(inputName) {
 		/* For customized metrics from Windows and  window performance counters metrics
-			[[inputs.win_perf_counters.object]]
-				ObjectName = "Processor"
-				Instances = ["*"]
-				Counters = ["% Idle Time", "% Interrupt Time", "% Privileged Time", "% User Time", "% Processor Time"]
-				Measurement = "win_cpu"
+		   	[[inputs.win_perf_counters.object]]
+		   		ObjectName = "Processor"
+		   		Instances = ["*"]
+		   		Counters = ["% Idle Time", "% Interrupt Time", "% Privileged Time", "% User Time", "% Processor Time"]
+		   		Measurement = "win_cpu"
 
-		  	[[inputs.win_perf_counters.object]]
-				ObjectName = "LogicalDisk"
-				Instances = ["*"]
-				Counters = ["% Idle Time", "% Disk Time","% Disk Read Time", "% Disk Write Time", "% User Time", "Current Disk Queue Length"]
-				Measurement = "win_disk"
+		     	[[inputs.win_perf_counters.object]]
+		   		ObjectName = "LogicalDisk"
+		   		Instances = ["*"]
+		   		Counters = ["% Idle Time", "% Disk Time","% Disk Read Time", "% Disk Write Time", "% User Time", "Current Disk Queue Length"]
+		   		Measurement = "win_disk"
 		*/
-		translators.Add(NewTranslatorWithName(
+		translators.Set(NewTranslatorWithName(
 			inputName,
 			customizedmetrics.WinPerfCountersKey,
 			cfgKey,

@@ -17,6 +17,8 @@ var (
 	ErrNoPipelines = errors.New("no valid pipelines")
 )
 
+type Translator common.Translator[*common.ComponentTranslators]
+
 type Translation struct {
 	// Pipelines is a map of component IDs to service pipelines.
 	Pipelines   map[component.ID]*service.PipelineConfig
@@ -24,13 +26,13 @@ type Translation struct {
 }
 
 type translator struct {
-	translators []common.Translator[*common.ComponentTranslators]
+	translators common.TranslatorMap[*common.ComponentTranslators]
 }
 
 var _ common.Translator[*Translation] = (*translator)(nil)
 
-func NewTranslator(translators ...common.Translator[*common.ComponentTranslators]) common.Translator[*Translation] {
-	return &translator{translators}
+func NewTranslator(translators common.TranslatorMap[*common.ComponentTranslators]) common.Translator[*Translation] {
+	return &translator{translators: translators}
 }
 
 func (t *translator) ID() component.ID {
@@ -48,9 +50,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 			Extensions: common.NewTranslatorMap[component.Config](),
 		},
 	}
-	for _, pt := range t.translators {
+	for id, pt := range t.translators {
 		if pipeline, _ := pt.Translate(conf); pipeline != nil {
-			translation.Pipelines[pt.ID()] = &service.PipelineConfig{
+			translation.Pipelines[id] = &service.PipelineConfig{
 				Receivers:  pipeline.Receivers.SortedKeys(),
 				Processors: pipeline.Processors.SortedKeys(),
 				Exporters:  pipeline.Exporters.SortedKeys(),

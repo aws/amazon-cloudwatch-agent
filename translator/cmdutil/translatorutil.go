@@ -216,8 +216,7 @@ func TranslateJsonMapToTomlConfig(jsonConfigValue interface{}) (interface{}, err
 }
 
 func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, error) {
-	t := otel.NewTranslator()
-	cfg, err := t.Translate(jsonConfigValue, context.CurrentContext().Os())
+	cfg, err := otel.Translate(jsonConfigValue, context.CurrentContext().Os())
 	if err != nil {
 		return nil, err
 	}

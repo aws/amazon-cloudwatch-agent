@@ -55,17 +55,17 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	// we need to add delta processor because (only) diskio and net input plugins report delta metric
 	if common.PipelineNameHostDeltaMetrics == t.name {
 		log.Printf("D! delta processor required because metrics with diskio or net are set")
-		translators.Processors.Add(cumulativetodeltaprocessor.NewTranslatorWithName(t.name))
+		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslatorWithName(t.name))
 	}
 
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, "append_dimensions")) {
 		log.Printf("D! ec2tagger processor required because append_dimensions is set")
-		translators.Processors.Add(ec2taggerprocessor.NewTranslator())
+		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
 
 	if metricsdecorator.IsSet(conf) {
 		log.Printf("D! metric decorator required because measurement fields are set")
-		translators.Processors.Add(metricsdecorator.NewTranslator())
+		translators.Processors.Set(metricsdecorator.NewTranslator())
 	}
 	return &translators, nil
 }

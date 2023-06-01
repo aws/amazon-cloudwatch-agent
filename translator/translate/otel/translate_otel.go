@@ -29,13 +29,76 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 )
 
-// Translator is used to create an OTEL config.
-type Translator struct {
+var registry = common.NewTranslatorMap[*common.ComponentTranslators]()
+
+func RegisterPipeline(translators ...pipeline.Translator) {
+	for _, translator := range translators {
+		registry.Set(translator)
+	}
 }
 
-// NewTranslator creates a new Translator.
-func NewTranslator() *Translator {
-	return &Translator{}
+// Translate converts a JSON config into an OTEL config.
+func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
+	m, ok := jsonConfig.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("invalid json config")
+	}
+	conf := confmap.NewFromStringMap(m)
+
+	if conf.IsSet("csm") {
+		log.Printf("W! CSM has already been deprecated")
+	}
+
+	adapterReceivers, err := adapter.FindReceiversInConfig(conf, os)
+	if err != nil {
+		return nil, fmt.Errorf("unable to find receivers in config: %w", err)
+	}
+
+	// split out delta receiver types
+	deltaMetricsReceivers := common.NewTranslatorMap[component.Config]()
+	hostReceivers := common.NewTranslatorMap[component.Config]()
+	for k, v := range adapterReceivers {
+		if k.Type() == receiverAdapter.Type(common.DiskIOKey) || k.Type() == receiverAdapter.Type(common.NetKey) {
+			deltaMetricsReceivers.Set(v)
+		} else {
+			hostReceivers.Set(v)
+		}
+	}
+
+	translators := common.NewTranslatorMap(
+		host.NewTranslator(common.PipelineNameHost, hostReceivers),
+		host.NewTranslator(common.PipelineNameHostDeltaMetrics, deltaMetricsReceivers),
+		containerinsights.NewTranslator(),
+		prometheus.NewTranslator(),
+		emf_logs.NewTranslator(),
+		xray.NewTranslator(),
+	)
+	translators.Merge(registry)
+	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)
+	if err != nil {
+		return nil, err
+	}
+	cfg := &otelcol.Config{
+		Receivers:  map[component.ID]component.Config{},
+		Exporters:  map[component.ID]component.Config{},
+		Processors: map[component.ID]component.Config{},
+		Extensions: map[component.ID]component.Config{},
+		Service: service.Config{
+			Telemetry: telemetry.Config{
+				Logs:    getLoggingConfig(conf),
+				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
+			},
+			Pipelines:  pipelines.Pipelines,
+			Extensions: pipelines.Translators.Extensions.SortedKeys(),
+		},
+	}
+	if err = build(conf, cfg, pipelines.Translators); err != nil {
+		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
+	}
+	if err = cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid otel config: %w", err)
+	}
+	return cfg, nil
 }
 
 // parseAgentLogFile returns the log file path form the JSON config, or the
@@ -84,70 +147,8 @@ func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 	}
 }
 
-// Translate converts a JSON config into an OTEL config.
-func (t *Translator) Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
-	m, ok := jsonConfig.(map[string]interface{})
-	if !ok {
-		return nil, errors.New("invalid json config")
-	}
-	conf := confmap.NewFromStringMap(m)
-
-	if conf.IsSet("csm") {
-		log.Printf("W! CSM has already been deprecated")
-	}
-
-	adapterReceivers, err := adapter.FindReceiversInConfig(conf, os)
-	if err != nil {
-		return nil, fmt.Errorf("unable to find receivers in config: %w", err)
-	}
-
-	// split out delta receiver types
-	deltaMetricsReceivers := common.NewTranslatorMap[component.Config]()
-	hostReceivers := common.NewTranslatorMap[component.Config]()
-	for k, v := range adapterReceivers {
-		if k.Type() == receiverAdapter.Type(common.DiskIOKey) || k.Type() == receiverAdapter.Type(common.NetKey) {
-			deltaMetricsReceivers.Add(v)
-		} else {
-			hostReceivers.Add(v)
-		}
-	}
-
-	pipelines, err := pipeline.NewTranslator(
-		host.NewTranslator(common.PipelineNameHost, hostReceivers),
-		host.NewTranslator(common.PipelineNameHostDeltaMetrics, deltaMetricsReceivers),
-		containerinsights.NewTranslator(),
-		prometheus.NewTranslator(),
-		emf_logs.NewTranslator(),
-		xray.NewTranslator(),
-	).Translate(conf)
-	if err != nil {
-		return nil, err
-	}
-	cfg := &otelcol.Config{
-		Receivers:  map[component.ID]component.Config{},
-		Exporters:  map[component.ID]component.Config{},
-		Processors: map[component.ID]component.Config{},
-		Extensions: map[component.ID]component.Config{},
-		Service: service.Config{
-			Telemetry: telemetry.Config{
-				Logs:    getLoggingConfig(conf),
-				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
-			},
-			Pipelines:  pipelines.Pipelines,
-			Extensions: pipelines.Translators.Extensions.SortedKeys(),
-		},
-	}
-	if err = t.buildComponents(conf, cfg, pipelines.Translators); err != nil {
-		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
-	}
-	if err = cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid otel config: %w", err)
-	}
-	return cfg, nil
-}
-
-// buildComponents uses the pipelines and extensions defined in the config to build the components.
-func (t *Translator) buildComponents(conf *confmap.Conf, cfg *otelcol.Config, translators common.ComponentTranslators) error {
+// build uses the pipelines and extensions defined in the config to build the components.
+func build(conf *confmap.Conf, cfg *otelcol.Config, translators common.ComponentTranslators) error {
 	errs := buildComponents(conf, cfg.Service.Extensions, cfg.Extensions, translators.Extensions.Get)
 	for _, p := range cfg.Service.Pipelines {
 		errs = multierr.Append(errs, buildComponents(conf, p.Receivers, cfg.Receivers, translators.Receivers.Get))
