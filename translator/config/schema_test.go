@@ -13,10 +13,16 @@ import (
 
 func TestGetJsonSchema(t *testing.T) {
 	jsonFile, err := os.ReadFile("./schema.json")
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 	assert.Equal(t, string(jsonFile), GetJsonSchema(), "Json schema is inconsistent")
+}
+
+func TestOverwriteSchema(t *testing.T) {
+	originalSchema := GetJsonSchema()
+	newSchema := "new schema"
+	OverwriteSchema(newSchema)
+	assert.NotEqual(t, originalSchema, GetJsonSchema())
+	assert.Equal(t, newSchema, GetJsonSchema())
 }
 
 func TestGetFormattedPath(t *testing.T) {

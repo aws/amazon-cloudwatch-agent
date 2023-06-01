@@ -14,6 +14,8 @@ import (
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/files/collect_list"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/windows_events"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/windows_events/collect_list"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/ecs"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/kubernetes"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery/dockerlabel"

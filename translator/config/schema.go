@@ -16,6 +16,10 @@ func GetJsonSchema() string {
 	return schema
 }
 
+func OverwriteSchema(newSchema string) {
+	schema = newSchema
+}
+
 // Translate Sample:
 // (root).agent.metrics_collection_interval -> /agent/metrics_collection_interval
 // (root).metrics.metrics_collected.cpu.resources.1 -> /metrics/metrics_collected/cpu/resources/1

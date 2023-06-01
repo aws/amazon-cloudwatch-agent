@@ -30,7 +30,6 @@ var testDataList = []TestData{
 	{"MixedSection_CompleteLinuxConfig", 3, 3, false},
 	{"MixedSection_CompleteWindowsConfig", 4, 4, false},
 	{"CustomizedTest_PutWhateverYouWantToQuicklyTestHere", 5, 2, false},
-
 	{"FailureTest_AgentConflicts", 6, 2, true},
 	{"FailureTest_MetricsConflicts", 7, 2, true},
 	{"FailureTest_LogsConflicts", 8, 2, true},
