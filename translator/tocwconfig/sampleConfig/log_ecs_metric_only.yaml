@@ -27,6 +27,7 @@ exporters:
   awsemf/containerinsights:
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: false
     version: "0"
     retain_initial_value_of_delta_metric: false
     eks_fargate_container_insights_enabled: false
@@ -96,10 +97,22 @@ receivers:
     add_service_as_attribute: true
     collection_interval: 30s
     container_orchestrator: ecs
+    enable_control_plane_metrics: false
     prefer_full_pod_name: false
     cluster_name: ""
     leader_lock_name: "otel-container-insight-clusterleader"
     leader_lock_using_config_map_only: false
+    # Following are defaults for aws session
+    endpoint: ""
+    local_mode: false
+    max_retries: 0
+    no_verify_ssl: false
+    num_workers: 0
+    proxy_address: ""
+    region: ""
+    request_timeout_seconds: 0
+    resource_arn: ""
+    role_arn: ""
   tcplog/emf_logs:
     attributes: {}
     encoding: utf-8

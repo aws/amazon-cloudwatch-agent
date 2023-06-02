@@ -31,6 +31,7 @@ exporters:
     log_retention: 0
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: false
     version: "0"
     eks_fargate_container_insights_enabled: false
     endpoint: ""
@@ -140,10 +141,22 @@ receivers:
     add_service_as_attribute: true
     collection_interval: 30s
     container_orchestrator: eks
+    enable_control_plane_metrics: false
     prefer_full_pod_name: true
     cluster_name: "TestCluster"
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
+    # Following are defaults for aws session
+    endpoint: ""
+    local_mode: false
+    max_retries: 0
+    no_verify_ssl: false
+    num_workers: 0
+    proxy_address: ""
+    region: ""
+    request_timeout_seconds: 0
+    resource_arn: ""
+    role_arn: ""
   tcplog/emf_logs:
     attributes: { }
     encoding: utf-8
