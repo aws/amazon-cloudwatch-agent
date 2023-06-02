@@ -14,6 +14,11 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
+const (
+	defaultGrpcEndpoint = "127.0.0.1:4317"
+	defaultHttpEndpoint = "127.0.0.1:4318"
+)
+
 var (
 	configKeys = map[component.DataType]string{
 		component.DataTypeTraces: common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
@@ -67,6 +72,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
+	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
+	cfg.HTTP.Endpoint = defaultHttpEndpoint
 	if endpoint, ok := common.GetString(conf, common.ConfigKey(configKey, "grpc_endpoint")); ok {
 		cfg.GRPC.NetAddr.Endpoint = endpoint
 	}

@@ -158,6 +158,14 @@ func TestLogOnlyConfig(t *testing.T) {
 	checkTranslation(t, "log_only_config_windows", "windows", expectedEnvVars, "")
 }
 
+func TestTraceConfig(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "trace_config", "linux", expectedEnvVars, "_linux")
+	checkTranslation(t, "trace_config", "darwin", expectedEnvVars, "_linux")
+	checkTranslation(t, "trace_config", "windows", expectedEnvVars, "_windows")
+}
+
 func TestStandardConfigWithCommonConfig(t *testing.T) {
 	resetContext(t)
 	readCommonConfig(t)

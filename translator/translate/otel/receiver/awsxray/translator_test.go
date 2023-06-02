@@ -38,9 +38,10 @@ func TestTranslator(t *testing.T) {
 		"WithDefault": {
 			input: map[string]interface{}{"traces": map[string]interface{}{"traces_collected": map[string]interface{}{"xray": nil}}},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"endpoint":  "0.0.0.0:2000",
+				"endpoint":  "127.0.0.1:2000",
 				"transport": "udp",
 				"proxy_server": map[string]interface{}{
+					"endpoint": "127.0.0.1:2000",
 					"region":   "us-east-1",
 					"role_arn": "global_arn",
 				},

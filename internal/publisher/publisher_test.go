@@ -4,6 +4,9 @@
 package publisher
 
 import (
+	"io"
+	"log"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -82,6 +85,10 @@ func (c *testClientNoMutex) publish(req interface{}) {
 }
 
 func TestPublisher_ClientNoMutex(t *testing.T) {
+	log.SetOutput(io.Discard)
+	t.Cleanup(func() {
+		log.SetOutput(os.Stderr)
+	})
 	publishRequestNum := 100000
 	c := &testClientNoMutex{}
 	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(10), 1, 2*time.Second, c.publish)
@@ -105,6 +112,10 @@ func (c *testClientLongDelay) publish(req interface{}) {
 	time.Sleep(time.Minute)
 }
 func TestPublisher_ClientLongDelay(t *testing.T) {
+	log.SetOutput(io.Discard)
+	t.Cleanup(func() {
+		log.SetOutput(os.Stderr)
+	})
 	c := &testClientLongDelay{}
 	publisher, _ := NewPublisher(NewNonBlockingFifoQueue(20), 10, 5*time.Second, c.publish)
 	start := time.Now()

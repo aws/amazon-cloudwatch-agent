@@ -16,6 +16,8 @@ import (
 const (
 	bindAddressKey = "bind_address"
 	tcpProxyKey    = "tcp_proxy"
+
+	defaultEndpoint = "127.0.0.1:2000"
 )
 
 var (
@@ -46,6 +48,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: baseKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayreceiver.Config)
+	cfg.Endpoint = defaultEndpoint
+	cfg.ProxyServer.Endpoint = defaultEndpoint
 	cfg.ProxyServer.RoleARN = getRoleARN(conf)
 	cfg.ProxyServer.Region = getRegion(conf)
 	if endpoint, ok := common.GetString(conf, common.ConfigKey(baseKey, bindAddressKey)); ok {

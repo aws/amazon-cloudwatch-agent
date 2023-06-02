@@ -43,8 +43,12 @@ func TestTracesTranslator(t *testing.T) {
 			input: map[string]interface{}{"traces": map[string]interface{}{"traces_collected": map[string]interface{}{"otlp": nil}}},
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
-					"grpc": nil,
-					"http": nil,
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:4317",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:4318",
+					},
 				},
 			}),
 		},
