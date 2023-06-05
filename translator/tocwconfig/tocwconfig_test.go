@@ -44,6 +44,16 @@ const (
 //go:embed sampleConfig/prometheus_config.yaml
 var prometheusConfig string
 
+func TestBaseContainerInsightsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_container_insights_config", "darwin", nil, "")
+}
+
 func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -320,6 +330,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
+		// assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
 		require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 	}
 }

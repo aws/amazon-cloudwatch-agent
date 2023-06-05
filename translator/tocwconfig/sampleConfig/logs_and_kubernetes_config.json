@@ -9,10 +9,7 @@
       "kubernetes": {
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
-        "prefer_full_pod_name": true,
-        "enable_full_pod_metrics": true,
-        "enable_container_metrics": true,
-        "enable_node_detailed_metrics": true
+        "metric_granularity": 3
       }
     },
     "logs_collected": {

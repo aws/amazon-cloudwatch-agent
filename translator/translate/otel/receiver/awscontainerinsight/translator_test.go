@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -103,27 +104,6 @@ func TestTranslator(t *testing.T) {
 				TagService:                   true,
 			},
 		},
-		"WithKubernetes/FullPodMetrics": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{
-							"cluster_name":            "TestCluster",
-							"enable_full_pod_metrics": true,
-						},
-					},
-				},
-			},
-			want: &awscontainerinsightreceiver.Config{
-				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
-				ClusterName:                  "TestCluster",
-				LeaderLockName:               "cwagent-clusterleader",
-				LeaderLockUsingConfigMapOnly: true,
-				TagService:                   true,
-				AddFullPodNameMetricLabel:    true,
-			},
-		},
 		"WithKubernetes/WithoutClusterName": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
@@ -154,13 +134,60 @@ func TestTranslator(t *testing.T) {
 				ClusterName:                  "TestCluster",
 			},
 		},
-		"WithKubernetes/WithPrefFullPodName": {
+		"WithKubernetes/WithLevel1Granularity": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"kubernetes": map[string]interface{}{
-							"prefer_full_pod_name": true,
-							"cluster_name":         "TestCluster",
+							"metric_granularity": 1,
+							"cluster_name":       "TestCluster",
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				TagService:                   true,
+				EnableControlPlaneMetrics:    false,
+				AddFullPodNameMetricLabel:    false,
+				AddContainerNameMetricLabel:  false,
+			},
+		},
+		"WithKubernetes/WithLevel2Granularity": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"metric_granularity": 2,
+							"cluster_name":       "TestCluster",
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				PrefFullPodName:              false,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				TagService:                   true,
+				EnableControlPlaneMetrics:    true,
+				AddFullPodNameMetricLabel:    false,
+				AddContainerNameMetricLabel:  false,
+			},
+		},
+		"WithKubernetes/WithLevel3Granularity": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"metric_granularity": 3,
+							"cluster_name":       "TestCluster",
 						},
 					},
 				},
@@ -173,6 +200,9 @@ func TestTranslator(t *testing.T) {
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
 				TagService:                   true,
+				EnableControlPlaneMetrics:    true,
+				AddFullPodNameMetricLabel:    true,
+				AddContainerNameMetricLabel:  true,
 			},
 		},
 		"WithECSAndKubernetes": {
@@ -215,6 +245,7 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.TagService, gotCfg.TagService)
 				require.Equal(t, testCase.want.LeaderLockName, gotCfg.LeaderLockName)
 				require.Equal(t, testCase.want.LeaderLockUsingConfigMapOnly, gotCfg.LeaderLockUsingConfigMapOnly)
+				require.Equal(t, testCase.want.EnableControlPlaneMetrics, gotCfg.EnableControlPlaneMetrics)
 			}
 		})
 	}

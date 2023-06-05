@@ -36,17 +36,9 @@ exporters:
     log_stream_name: '{NodeName}'
     max_retries: 2
     metric_declarations:
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - PodName
-          - - ClusterName
-            - Namespace
-            - Service
-          - - ClusterName
-            - Namespace
-          - - ClusterName
-        label_matchers: []
+      # pod metrics
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - pod_cpu_utilization
           - pod_memory_utilization
@@ -54,28 +46,17 @@ exporters:
           - pod_network_tx_bytes
           - pod_cpu_utilization_over_pod_limit
           - pod_memory_utilization_over_pod_limit
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - PodName
-          - - ClusterName
-        label_matchers: []
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - pod_cpu_reserved_capacity
           - pod_memory_reserved_capacity
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - PodName
-        label_matchers: []
-        metric_name_selectors:
           - pod_number_of_container_restarts
-      - dimensions:
-          - - ClusterName
-            - InstanceId
-            - NodeName
-          - - ClusterName
-        label_matchers: []
+          - pod_number_of_containers
+          - pod_number_of_running_containers
+      # node metrics
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - node_cpu_utilization
           - node_memory_utilization
@@ -84,53 +65,63 @@ exporters:
           - node_memory_reserved_capacity
           - node_number_of_running_pods
           - node_number_of_running_containers
-      - dimensions:
-          - - ClusterName
-        label_matchers: []
-        metric_name_selectors:
           - node_cpu_usage_total
           - node_cpu_limit
           - node_memory_working_set
           - node_memory_limit
-      - dimensions:
-          - - ClusterName
-            - InstanceId
-            - NodeName
-          - - ClusterName
-        label_matchers: []
+          - node_status_condition_ready
+          - node_status_condition_disk_pressure
+          - node_status_condition_memory_pressure
+          - node_status_condition_pid_pressure
+          - node_status_condition_network_unavailable
+          - node_status_capacity_pods
+          - node_status_allocatable_pods
+      # node fs metrics
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - node_filesystem_utilization
-      - dimensions:
-          - - ClusterName
-            - Namespace
-            - Service
-          - - ClusterName
-        label_matchers: []
+          - node_filesystem_inodes
+          - node_filesystem_inodes_free
+      # service metrics
+      - dimensions: [ [ ClusterName, Namespace, Service ], [ ClusterName ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - service_number_of_running_pods
-      - dimensions:
-          - - ClusterName
-            - Namespace
-          - - ClusterName
-        label_matchers: []
+      # deployment metrics
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - deployment_spec_replicas
+          - deployment_status_replicas
+          - deployment_status_replicas_available
+          - deployment_status_replicas_unavailable
+      # daemonset metrics
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - daemonset_status_number_available
+          - daemonset_status_number_unavailable
+          - daemonset_status_desired_number_scheduled
+          - daemonset_status_current_number_scheduled
+      # namespace metrics
+      - dimensions: [ [ ClusterName, Namespace ], [ ClusterName ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - namespace_number_of_running_pods
-      - dimensions:
-          - - ClusterName
-        label_matchers: []
+      # cluster metrics
+      - dimensions: [ [ ClusterName ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - cluster_node_count
           - cluster_failed_node_count
-      - dimensions:
-          - - ClusterName
-            - endpoint
-          - - ClusterName
-        label_matchers: []
+      # control plane metrics
+      - dimensions: [ [ClusterName, endpoint], [ ClusterName ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - etcd_db_total_size_in_bytes
-      - dimensions:
-          - - ClusterName
-        label_matchers: []
+      - dimensions: [ [ ClusterName ] ]
+        label_matchers: [ ]
         metric_name_selectors:
           - apiserver_storage_objects
           - apiserver_request_total
@@ -174,7 +165,7 @@ receivers:
     cluster_name: TestCluster
     collection_interval: 30s
     container_orchestrator: eks
-    enable_control_plane_metrics: false
+    enable_control_plane_metrics: true
     endpoint: ""
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
@@ -182,7 +173,7 @@ receivers:
     max_retries: 0
     no_verify_ssl: false
     num_workers: 0
-    prefer_full_pod_name: true
+    prefer_full_pod_name: false
     proxy_address: ""
     region: ""
     request_timeout_seconds: 0

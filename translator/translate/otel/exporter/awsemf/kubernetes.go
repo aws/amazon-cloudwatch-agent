@@ -4,10 +4,10 @@
 package awsemf
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 )
 
 func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
@@ -44,7 +44,7 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getClusterMetricDeclarations()...)
 
 	// Setup control plane metrics
-	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getControlPlaneMetricDeclarations()...)
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getControlPlaneMetricDeclarations(conf)...)
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	return nil
@@ -52,8 +52,8 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 func getContainerMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var containerMetricDeclarations []*awsemfexporter.MetricDeclaration
-	enableContainerMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableContainerMetricsKey)
-	if common.GetOrDefaultBool(conf, enableContainerMetricsKey, false) {
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.IndividualPodContainerMetrics {
 		containerMetricDeclarations = append(containerMetricDeclarations, []*awsemfexporter.MetricDeclaration{
 			{
 				Dimensions: [][]string{{"ContainerName", "FullPodName", "Namespace", "ClusterName"}, {"ContainerName", "Namespace", "ClusterName"}},
@@ -77,53 +77,50 @@ func getContainerMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 }
 
 func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
-	enableFullPodMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableFullPodMetricsKey)
-	isEnableFullPodMetrics := common.GetOrDefaultBool(conf, enableFullPodMetricsKey, false)
+	selectors := []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity"}
+	dimensions := [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}}
 
 	podMetricDeclarations := []*awsemfexporter.MetricDeclaration{
 		{
-			Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"}, {"ClusterName"}},
+			Dimensions: append(dimensions, []string{"Service", "Namespace", "ClusterName"}, []string{"ClusterName", "Namespace"}),
 			MetricNameSelectors: []string{
 				"pod_cpu_utilization", "pod_memory_utilization", "pod_network_rx_bytes", "pod_network_tx_bytes",
 				"pod_cpu_utilization_over_pod_limit", "pod_memory_utilization_over_pod_limit",
 			},
 		},
 	}
+
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	switch containerInsightsGranularityLevel {
+	case awscontainerinsight.IndividualPodContainerMetrics:
+		dimensions = append(dimensions, []string{"FullPodName", "PodName", "Namespace", "ClusterName"})
+		podMetricDeclarations[0].Dimensions = append(podMetricDeclarations[0].Dimensions, []string{"FullPodName", "PodName", "Namespace", "ClusterName"})
+		fallthrough
+	case awscontainerinsight.EnhancedClusterMetrics:
+		selectors = append(selectors, []string{"pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers"}...)
+		dimensions = append(dimensions, []string{"Service", "Namespace", "ClusterName"})
+	default:
+		podMetricDeclarations = append(podMetricDeclarations, &awsemfexporter.MetricDeclaration{
+			Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}},
+			MetricNameSelectors: []string{"pod_number_of_container_restarts"},
+		})
+	}
+
 	metricDeclaration := awsemfexporter.MetricDeclaration{
-		Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
-		MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity"},
+		Dimensions:          dimensions,
+		MetricNameSelectors: selectors,
 	}
 
-	if !isEnableFullPodMetrics {
-		podMetricDeclarations = append(
-			podMetricDeclarations,
-			&metricDeclaration,
-			&awsemfexporter.MetricDeclaration{
-				Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}},
-				MetricNameSelectors: []string{"pod_number_of_container_restarts"},
-			},
-		)
-		return podMetricDeclarations
-	}
-
-	metricDeclaration.Dimensions = append(metricDeclaration.Dimensions, []string{"Service", "Namespace", "ClusterName"})
-	metricDeclaration.MetricNameSelectors = append(
-		metricDeclaration.MetricNameSelectors, "pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers")
 	podMetricDeclarations = append(
 		podMetricDeclarations,
-		&metricDeclaration,
-	)
-
-	for _, declaration := range podMetricDeclarations {
-		declaration.Dimensions = append([][]string{{"FullPodName", "PodName", "Namespace", "ClusterName"}}, declaration.Dimensions...)
-	}
+		&metricDeclaration)
 
 	return podMetricDeclarations
 }
 
 func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
-	enableNodeDetailedMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableNodeDetailedMetricsKey)
-	if common.GetOrDefaultBool(conf, enableNodeDetailedMetricsKey, false) {
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
 		return []*awsemfexporter.MetricDeclaration{
 			{
 				Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -158,8 +155,8 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 
 func getNodeFilesystemMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	metrics := []string{"node_filesystem_utilization"}
-	enableNodeDetailedMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableNodeDetailedMetricsKey)
-	if common.GetOrDefaultBool(conf, enableNodeDetailedMetricsKey, false) {
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
 		metrics = append(metrics, "node_filesystem_inodes", "node_filesystem_inodes_free")
 	}
 
@@ -186,9 +183,8 @@ func getServiceMetricDeclarations() []*awsemfexporter.MetricDeclaration {
 
 func getDeploymentMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var deploymentMetricDeclarations []*awsemfexporter.MetricDeclaration
-	// As a placeholder, using the enable_container_metrics flag for now. This will be replaced soon.
-	enableContainerMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableContainerMetricsKey)
-	if common.GetOrDefaultBool(conf, enableContainerMetricsKey, false) {
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
 		deploymentMetricDeclarations = append(deploymentMetricDeclarations, []*awsemfexporter.MetricDeclaration{
 			{
 				Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
@@ -203,9 +199,8 @@ func getDeploymentMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metri
 
 func getDaemonSetMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var daemonSetMetricDeclarations []*awsemfexporter.MetricDeclaration
-	// As a placeholder, using the enable_container_metrics flag for now. This will be replaced soon.
-	enableContainerMetricsKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableContainerMetricsKey)
-	if common.GetOrDefaultBool(conf, enableContainerMetricsKey, false) {
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
 		daemonSetMetricDeclarations = append(daemonSetMetricDeclarations, []*awsemfexporter.MetricDeclaration{
 			{
 				Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
@@ -241,25 +236,30 @@ func getClusterMetricDeclarations() []*awsemfexporter.MetricDeclaration {
 	}
 }
 
-func getControlPlaneMetricDeclarations() []*awsemfexporter.MetricDeclaration {
-	return []*awsemfexporter.MetricDeclaration{
-		{
-			Dimensions: [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
-			MetricNameSelectors: []string{
-				"etcd_db_total_size_in_bytes",
+func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
+		metricDeclarations = append(metricDeclarations, []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"etcd_db_total_size_in_bytes",
+				},
 			},
-		},
-		{
-			Dimensions: [][]string{{"ClusterName"}},
-			MetricNameSelectors: []string{
-				"apiserver_storage_objects",
-				"apiserver_request_total",
-				"apiserver_request_duration_seconds",
-				"apiserver_admission_controller_admission_duration_seconds",
-				"rest_client_request_duration_seconds",
-				"rest_client_requests_total",
-				"etcd_request_duration_seconds",
+			{
+				Dimensions: [][]string{{"ClusterName"}},
+				MetricNameSelectors: []string{
+					"apiserver_storage_objects",
+					"apiserver_request_total",
+					"apiserver_request_duration_seconds",
+					"apiserver_admission_controller_admission_duration_seconds",
+					"rest_client_request_duration_seconds",
+					"rest_client_requests_total",
+					"etcd_request_duration_seconds",
+				},
 			},
-		},
+		}...)
 	}
+	return metricDeclarations
 }

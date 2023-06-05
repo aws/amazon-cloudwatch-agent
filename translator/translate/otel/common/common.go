@@ -17,42 +17,41 @@ import (
 )
 
 const (
-	AgentKey                     = "agent"
-	MetricsKey                   = "metrics"
-	LogsKey                      = "logs"
-	TracesKey                    = "traces"
-	MetricsCollectedKey          = "metrics_collected"
-	LogsCollectedKey             = "logs_collected"
-	TracesCollectedKey           = "traces_collected"
-	ECSKey                       = "ecs"
-	KubernetesKey                = "kubernetes"
-	PrometheusKey                = "prometheus"
-	EMFProcessorKey              = "emf_processor"
-	DisableMetricExtraction      = "disable_metric_extraction"
-	XrayKey                      = "xray"
-	OtlpKey                      = "otlp"
-	EndpointOverrideKey          = "endpoint_override"
-	RegionOverrideKey            = "region_override"
-	ProxyOverrideKey             = "proxy_override"
-	InsecureKey                  = "insecure"
-	LocalModeKey                 = "local_mode"
-	CredentialsKey               = "credentials"
-	RoleARNKey                   = "role_arn"
-	MetricsCollectionIntervalKey = "metrics_collection_interval"
-	EnableFullPodMetricsKey      = "enable_full_pod_metrics"
-	EnableContainerMetricsKey    = "enable_container_metrics"
-	EnableNodeDetailedMetricsKey = "enable_node_detailed_metrics"
-	Console                      = "console"
-	DiskIOKey                    = "diskio"
-	NetKey                       = "net"
-	Emf                          = "emf"
-	StructuredLog                = "structuredlog"
-	ServiceAddress               = "service_address"
-	Udp                          = "udp"
-	Tcp                          = "tcp"
-	Region                       = "region"
-	LogGroupName                 = "log_group_name"
-	LogStreamName                = "log_stream_name"
+	AgentKey                           = "agent"
+	MetricsKey                         = "metrics"
+	LogsKey                            = "logs"
+	TracesKey                          = "traces"
+	MetricsCollectedKey                = "metrics_collected"
+	LogsCollectedKey                   = "logs_collected"
+	TracesCollectedKey                 = "traces_collected"
+	ECSKey                             = "ecs"
+	KubernetesKey                      = "kubernetes"
+	PrometheusKey                      = "prometheus"
+	EMFProcessorKey                    = "emf_processor"
+	DisableMetricExtraction            = "disable_metric_extraction"
+	XrayKey                            = "xray"
+	OtlpKey                            = "otlp"
+	EndpointOverrideKey                = "endpoint_override"
+	RegionOverrideKey                  = "region_override"
+	ProxyOverrideKey                   = "proxy_override"
+	InsecureKey                        = "insecure"
+	LocalModeKey                       = "local_mode"
+	CredentialsKey                     = "credentials"
+	RoleARNKey                         = "role_arn"
+	MetricsCollectionIntervalKey       = "metrics_collection_interval"
+	ContainerInsightsMetricGranularity = "metric_granularity"
+	PreferFullPodName                  = "prefer_full_pod_name"
+	Console                            = "console"
+	DiskIOKey                          = "diskio"
+	NetKey                             = "net"
+	Emf                                = "emf"
+	StructuredLog                      = "structuredlog"
+	ServiceAddress                     = "service_address"
+	Udp                                = "udp"
+	Tcp                                = "tcp"
+	Region                             = "region"
+	LogGroupName                       = "log_group_name"
+	LogStreamName                      = "log_stream_name"
 )
 
 const (
@@ -212,14 +211,41 @@ func GetOrDefaultBool(conf *confmap.Conf, key string, defaultVal bool) bool {
 	return defaultVal
 }
 
-// GetNumber gets the number value for the key. If the key is missing or
-// the value is not a float64 type (default JSON unmarshal maps number to
-// float64), then ok will be false.
-func GetNumber(conf *confmap.Conf, key string) (value float64, ok bool) {
+// GetNumber gets the number value for the key. The switch works through
+// all reasonable number types (the default is typically float64)
+func GetNumber(conf *confmap.Conf, key string) (float64, bool) {
 	if v := conf.Get(key); v != nil {
-		value, ok = v.(float64)
+		switch i := v.(type) {
+		case float64:
+			return i, true
+		case float32:
+			return float64(i), true
+		case int64:
+			return float64(i), true
+		case int32:
+			return float64(i), true
+		case int:
+			return float64(i), true
+		case uint64:
+			return float64(i), true
+		case uint32:
+			return float64(i), true
+		case uint:
+			return float64(i), true
+		case string:
+		}
 	}
-	return
+	return 0, false
+}
+
+// GetOrDefaultNumber gets the number value for the key. If the key is missing or the
+// value is not a number type, then the defaultVal is returned.
+func GetOrDefaultNumber(conf *confmap.Conf, key string, defaultVal float64) float64 {
+	value, ok := GetNumber(conf, key)
+	if !ok {
+		return defaultVal
+	}
+	return value
 }
 
 // GetDuration gets the value for the key and calls ParseDuration on it.
