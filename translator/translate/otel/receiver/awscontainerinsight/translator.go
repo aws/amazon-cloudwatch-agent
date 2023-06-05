@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/util"
@@ -84,14 +85,22 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.LeaderLockUsingConfigMapOnly = true
 		tagServiceKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "tag_service")
 		cfg.TagService = common.GetOrDefaultBool(conf, tagServiceKey, true)
-		prefFullPodNameKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "prefer_full_pod_name")
-		cfg.PrefFullPodName = common.GetOrDefaultBool(conf, prefFullPodNameKey, false)
 
-		enableFullPodMetrics := common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableFullPodMetricsKey), false)
-		enableContainerMetrics := common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableContainerMetricsKey), false)
-		cfg.AddFullPodNameMetricLabel = enableFullPodMetrics || enableContainerMetrics
-		cfg.AddContainerNameMetricLabel = enableContainerMetrics
+		metricGranularityLevel := GetGranularityLevel(conf)
+		switch metricGranularityLevel {
+		case IndividualPodContainerMetrics:
+			cfg.AddFullPodNameMetricLabel = true
+			cfg.AddContainerNameMetricLabel = true
+			cfg.PrefFullPodName = true
+			cfg.EnableControlPlaneMetrics = true
+		case EnhancedClusterMetrics:
+			cfg.EnableControlPlaneMetrics = true
+		default:
+			cfg.EnableControlPlaneMetrics = false
+		}
 	}
+
+	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
 
 	return cfg, nil
 }
