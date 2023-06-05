@@ -1077,6 +1077,8 @@ jobs:
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="cwagent_image_tag=${{ github.sha }}" \
+              -var="ami_type=${{ matrix.arrays.ami }}" \
+              -var="instance_type=${{ matrix.arrays.instanceType }}" \
               -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
               terraform destroy -auto-approve
             else
