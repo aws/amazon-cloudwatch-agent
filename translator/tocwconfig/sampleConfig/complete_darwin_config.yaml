@@ -39,7 +39,7 @@ exporters:
             randomization_factor: 0.5
         role_arn: ""
         sending_queue:
-            queue_size: 5000
+            queue_size: 1000
     awsxray:
         aws_log_groups: []
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
@@ -80,9 +80,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceId
             - InstanceType
             - ImageId
-            - InstanceId
         refresh_interval_seconds: 0s
     transform:
         error_mode: propagate
@@ -173,6 +173,11 @@ receivers:
         operators: []
         output: []
         resource: {}
+        retry_on_failure:
+            enabled: false
+            initial_interval: 0s
+            max_elapsed_time: 0s
+            max_interval: 0s
         storage: null
         type: udp_input
 service:
