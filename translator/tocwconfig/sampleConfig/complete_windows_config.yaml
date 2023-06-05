@@ -54,6 +54,9 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
+        telemetry:
+            enabled: true
+            include_metadata: true
 extensions: {}
 processors:
     batch/emf_logs:

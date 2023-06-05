@@ -4,6 +4,7 @@
 package awsxray
 
 import (
+	"fmt"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -45,6 +46,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.TracesKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
+	c := confmap.NewFromStringMap(map[string]interface{}{
+		"telemetry": map[string]interface{}{
+			"enabled":          true,
+			"include_metadata": true,
+		},
+	})
+	if err := c.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal into awsxrayexporter config: %w", err)
+	}
 	cfg.RoleARN = getRoleARN(conf)
 	cfg.Region = getRegion(conf)
 	if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {

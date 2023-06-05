@@ -37,7 +37,14 @@ func TestTranslator(t *testing.T) {
 		},
 		"WithDefault": {
 			input: map[string]interface{}{"traces": map[string]interface{}{}},
-			want:  confmap.NewFromStringMap(map[string]interface{}{"region": "us-east-1", "role_arn": "global_arn"}),
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"region":   "us-east-1",
+				"role_arn": "global_arn",
+				"telemetry": map[string]interface{}{
+					"enabled":          true,
+					"include_metadata": true,
+				},
+			}),
 		},
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
