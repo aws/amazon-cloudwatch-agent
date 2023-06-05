@@ -268,7 +268,12 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"Service", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts",
-							"pod_number_of_containers", "pod_number_of_running_containers"},
+							"pod_number_of_containers", "pod_number_of_running_containers",
+							"pod_status_ready", "pod_status_scheduled",
+							"pod_status_running", "pod_status_pending",
+							"pod_status_failed", "pod_status_unknown",
+							"pod_status_succeeded", "pod_status_initialized",
+						},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -362,7 +367,11 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts",
-							"pod_number_of_containers", "pod_number_of_running_containers"},
+							"pod_number_of_containers", "pod_number_of_running_containers",
+							"pod_status_ready", "pod_status_scheduled",
+							"pod_status_running", "pod_status_pending",
+							"pod_status_failed", "pod_status_unknown",
+							"pod_status_succeeded", "pod_status_initialized"},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},

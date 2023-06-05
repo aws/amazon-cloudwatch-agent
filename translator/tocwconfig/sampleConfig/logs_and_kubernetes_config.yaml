@@ -71,6 +71,14 @@ exporters:
           - pod_number_of_container_restarts
           - pod_number_of_containers
           - pod_number_of_running_containers
+          - pod_status_ready
+          - pod_status_scheduled
+          - pod_status_running
+          - pod_status_pending
+          - pod_status_failed
+          - pod_status_unknown
+          - pod_status_succeeded
+          - pod_status_initialized
       # node metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
