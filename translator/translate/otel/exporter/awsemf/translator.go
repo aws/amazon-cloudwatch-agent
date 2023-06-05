@@ -56,11 +56,11 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 
 	var defaultConfig string
-	if t.isEcs(c) {
+	if isEcs(c) {
 		defaultConfig = defaultEcsConfig
-	} else if t.isKubernetes(c) {
+	} else if isKubernetes(c) {
 		defaultConfig = defaultKubernetesConfig
-	} else if t.isPrometheus(c) {
+	} else if isPrometheus(c) {
 		defaultConfig = defaultPrometheusConfig
 	} else {
 		return cfg, nil
@@ -76,16 +76,16 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	if t.isEcs(c) {
-		if err := t.setEcsFields(c, cfg); err != nil {
+	if isEcs(c) {
+		if err := setEcsFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if t.isKubernetes(c) {
-		if err := t.setKubernetesFields(c, cfg); err != nil {
+	} else if isKubernetes(c) {
+		if err := setKubernetesFields(c, cfg); err != nil {
 			return nil, err
 		}
-	} else if t.isPrometheus(c) {
-		if err := t.setPrometheusFields(c, cfg); err != nil {
+	} else if isPrometheus(c) {
+		if err := setPrometheusFields(c, cfg); err != nil {
 			return nil, err
 		}
 	}
@@ -93,23 +93,25 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func (t *translator) isEcs(conf *confmap.Conf) bool {
+func isEcs(conf *confmap.Conf) bool {
 	return conf.IsSet(ecsBasePathKey)
 }
 
-func (t *translator) isKubernetes(conf *confmap.Conf) bool {
+func isKubernetes(conf *confmap.Conf) bool {
 	return conf.IsSet(kubernetesBasePathKey)
 }
 
-func (t *translator) isPrometheus(conf *confmap.Conf) bool {
+func isPrometheus(conf *confmap.Conf) bool {
 	return conf.IsSet(prometheusBasePathKey)
 }
 
-func (t *translator) setEcsFields(_ *confmap.Conf, _ *awsemfexporter.Config) error {
+func setEcsFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+	setDisableMetricExtraction(ecsBasePathKey, conf, cfg)
 	return nil
 }
 
-func (t *translator) setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+	setDisableMetricExtraction(kubernetesBasePathKey, conf, cfg)
 
 	if err := setKubernetesMetricDeclaration(conf, cfg); err != nil {
 		return err
@@ -117,7 +119,8 @@ func (t *translator) setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter
 	return nil
 }
 
-func (t *translator) setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+func setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
+	setDisableMetricExtraction(prometheusBasePathKey, conf, cfg)
 
 	if err := setPrometheusLogGroup(conf, cfg); err != nil {
 		return err
@@ -154,4 +157,8 @@ func (t *translator) setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter
 		}
 	}
 	return nil
+}
+
+func setDisableMetricExtraction(baseKey string, conf *confmap.Conf, cfg *awsemfexporter.Config) {
+	cfg.DisableMetricExtraction = common.GetOrDefaultBool(conf, common.ConfigKey(baseKey, common.DisableMetricExtraction), false)
 }

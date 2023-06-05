@@ -28,6 +28,7 @@ const (
 	KubernetesKey                = "kubernetes"
 	PrometheusKey                = "prometheus"
 	EMFProcessorKey              = "emf_processor"
+	DisableMetricExtraction      = "disable_metric_extraction"
 	XrayKey                      = "xray"
 	OtlpKey                      = "otlp"
 	EndpointOverrideKey          = "endpoint_override"

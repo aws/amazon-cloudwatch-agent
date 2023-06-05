@@ -516,6 +516,10 @@
               "properties": {
                 "metrics_collection_interval": {
                   "$ref": "#/definitions/timeIntervalDefinition"
+                },
+                "disable_metric_extraction": {
+                  "description": "Disable the extraction of metrics from EMF logs",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -530,6 +534,10 @@
                 },
                 "metrics_collection_interval": {
                   "$ref": "#/definitions/timeIntervalDefinition"
+                },
+                "disable_metric_extraction": {
+                  "description": "Disable the extraction of metrics from EMF logs",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": true
@@ -551,6 +559,10 @@
                 },
                 "ecs_service_discovery": {
                   "$ref": "#/definitions/ecsServiceDiscoveryDefinition"
+                },
+                "disable_metric_extraction": {
+                  "description": "Disable the extraction of metrics from EMF logs",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false

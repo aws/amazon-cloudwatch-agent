@@ -39,6 +39,47 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/aws/ecs/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"parse_json_encoded_attr_values":         []string{"Sources"},
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions: [][]string{{"ContainerInstanceId", "InstanceId", "ClusterName"}},
+						MetricNameSelectors: []string{"instance_cpu_reserved_capacity", "instance_cpu_utilization",
+							"instance_filesystem_utilization", "instance_memory_reserved_capacity",
+							"instance_memory_utilization", "instance_network_total_bytes", "instance_number_of_running_tasks"},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"instance_cpu_limit", "instance_cpu_reserved_capacity",
+							"instance_cpu_usage_total", "instance_cpu_utilization", "instance_filesystem_utilization",
+							"instance_memory_limit", "instance_memory_reserved_capacity", "instance_memory_utilization",
+							"instance_memory_working_set", "instance_network_total_bytes", "instance_number_of_running_tasks"},
+					},
+				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
+			},
+		},
+		"GenerateAwsEmfExporterConfigEcsDisableMetricExtraction": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"ecs": map[string]interface{}{
+							"disable_metric_extraction": true,
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"namespace":                              "ECS/ContainerInsights",
+				"log_group_name":                         "/aws/ecs/containerinsights/{ClusterName}/performance",
+				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              true,
 				"parse_json_encoded_attr_values":         []string{"Sources"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -76,6 +117,88 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"pod_cpu_utilization", "pod_memory_utilization",
+							"pod_network_rx_bytes", "pod_network_tx_bytes", "pod_cpu_utilization_over_pod_limit",
+							"pod_memory_utilization_over_pod_limit"},
+					},
+					{
+						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity"},
+					},
+					{
+						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{"pod_number_of_container_restarts"},
+					},
+					{
+						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_utilization", "node_memory_utilization",
+							"node_network_total_bytes", "node_cpu_reserved_capacity",
+							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit"},
+					},
+					{
+						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"node_filesystem_utilization"},
+					},
+					{
+						Dimensions:          [][]string{{"Service", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"service_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"namespace_number_of_running_pods"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_objects",
+							"apiserver_request_total",
+							"apiserver_request_duration_seconds",
+							"apiserver_admission_controller_admission_duration_seconds",
+							"rest_client_request_duration_seconds",
+							"rest_client_requests_total",
+							"etcd_request_duration_seconds"},
+					},
+				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
+			},
+		},
+		"GenerateAwsEmfExporterConfigKubernetesDisableMetricExtraction": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"disable_metric_extraction": true,
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"namespace":                              "ContainerInsights",
+				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
+				"log_stream_name":                        "{NodeName}",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              true,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -156,6 +279,7 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -234,6 +358,7 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -335,6 +460,7 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -432,6 +558,7 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -526,6 +653,7 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -573,6 +701,7 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -608,6 +737,39 @@ func TestTranslator(t *testing.T) {
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"parse_json_encoded_attr_values":         nilSlice,
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: true,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						MetricNameSelectors: []string{"$^"},
+					},
+				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
+			},
+		},
+		"GenerateAwsEmfExporterConfigPrometheusDisableMetricExtraction": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"prometheus": map[string]interface{}{
+							"disable_metric_extraction": true,
+							"log_group_name":            "/test/log/group",
+							"log_stream_name":           "{ServiceName}",
+						},
+					},
+				},
+			},
+			want: map[string]interface{}{
+				"namespace":                              "",
+				"log_group_name":                         "/test/log/group",
+				"log_stream_name":                        "{ServiceName}",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              true,
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -637,6 +799,7 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want["log_group_name"], gotCfg.LogGroupName)
 				require.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
 				require.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
+				require.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
 				require.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
 				require.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
 				require.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)

@@ -31,7 +31,7 @@ exporters:
     log_retention: 0
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
-    disable_metric_extraction: false
+    disable_metric_extraction: true
     version: "0"
     eks_fargate_container_insights_enabled: false
     endpoint: ""
