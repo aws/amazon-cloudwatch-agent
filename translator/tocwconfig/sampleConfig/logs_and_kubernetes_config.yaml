@@ -37,15 +37,18 @@ exporters:
     max_retries: 2
     metric_declarations:
       # container metrics
-      - dimensions: [ [ ClusterName, ContainerName, FullPodName, Namespace ], [ ClusterName, ContainerName, Namespace ] ]
-        label_matchers: [ ]
-        metric_name_selectors:
-          - container_cpu_utilization
-          - container_memory_utilization
-          - container_filesystem_usage
       - dimensions: [ [ ClusterName, ContainerName, FullPodName, Namespace, PodName ], [ ClusterName, ContainerName, Namespace, PodName ] ]
         label_matchers: [ ]
         metric_name_selectors:
+          - container_cpu_utilization
+          - container_cpu_utilization_over_container_limit
+          - container_memory_utilization
+          - container_memory_utilization_over_container_limit
+          - container_memory_failures_total
+          - container_filesystem_usage
+          - container_processes
+          - container_processes_threads
+          - container_processes_file_descriptors
           - container_status_running
           - container_status_terminated
           - container_status_waiting
