@@ -24,6 +24,8 @@ exporters:
     role_arn: ""
     sending_queue:
       queue_size: 1000
+    profile: ""
+    shared_credentials_file: []
   awsemf/containerinsights:
     namespace: ContainerInsights
     log_group_name: '/aws/containerinsights/{ClusterName}/performance'
@@ -105,10 +107,12 @@ exporters:
     num_workers: 8
     output_destination: cloudwatch
     proxy_address: ""
-    region: ""
+    region: "us-east-1"
     request_timeout_seconds: 30
     resource_arn: ""
     role_arn: ""
+    profile: ""
+    shared_credentials_file: [ ]
 extensions: {}
 processors:
   batch/emf_logs:
@@ -137,10 +141,12 @@ receivers:
     no_verify_ssl: false
     num_workers: 0
     proxy_address: ""
-    region: ""
+    region: "us-east-1"
     request_timeout_seconds: 0
     resource_arn: ""
     role_arn: ""
+    profile: ""
+    shared_credentials_file: [ ]
   tcplog/emf_logs:
     attributes: {}
     encoding: utf-8

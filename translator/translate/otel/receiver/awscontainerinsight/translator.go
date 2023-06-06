@@ -5,6 +5,9 @@ package awscontainerinsight
 
 import (
 	"errors"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"strings"
 	"time"
 
@@ -76,6 +79,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultMetricsCollectionInterval)
 	cfg.ContainerOrchestrator = configuredService.Value
+	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
 
 	if configuredService.Value == eks {
 		if err := t.setClusterName(conf, cfg); err != nil {
@@ -85,6 +89,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.LeaderLockUsingConfigMapOnly = true
 		tagServiceKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "tag_service")
 		cfg.TagService = common.GetOrDefaultBool(conf, tagServiceKey, true)
+
+		if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+			cfg.LocalMode = true
+		}
 
 		metricGranularityLevel := GetGranularityLevel(conf)
 		switch metricGranularityLevel {

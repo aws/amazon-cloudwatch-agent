@@ -119,6 +119,32 @@ build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
 
+# this is because we docker ignore our build dir
+# even if there is no dir rm -rf will not fail but if there already is a dir mkdir will
+# for local registery you may only load a single platform
+build-for-docker-fast: build-for-docker-amd64 build-for-docker-arm64
+	rm -rf tmp
+	mkdir -p tmp/amd64
+	mkdir -p tmp/arm64
+	cp build/bin/linux_amd64/* tmp/amd64
+	cp build/bin/linux_arm64/* tmp/arm64
+	docker buildx build --platform linux/amd64,linux/arm64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t amazon-cloudwatch-agent
+	rm -rf tmp
+
+build-for-docker-fast-amd64: build-for-docker-amd64
+	rm -rf tmp
+	mkdir -p tmp/amd64
+	cp build/bin/linux_amd64/* tmp/amd64
+	docker buildx build --platform linux/amd64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t amazon-cloudwatch-agent --load
+	rm -rf tmp
+
+build-for-docker-fast-arm64: build-for-docker-arm64
+	rm -rf tmp
+	mkdir -p tmp/arm64
+	cp build/bin/linux_arm64/* tmp/arm64
+	docker buildx build --platform linux/arm64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t amazon-cloudwatch-agent --load
+	rm -rf tmp
+
 install-goimports:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
 

@@ -9,6 +9,7 @@ exporters:
     max_retries: 2
     no_verify_ssl: false
     num_workers: 8
+    profile: ""
     proxy_address: ""
     raw_log: true
     region: us-east-1
@@ -24,6 +25,7 @@ exporters:
     role_arn: ""
     sending_queue:
       queue_size: 1000
+    shared_credentials_file: []
   awsemf/containerinsights:
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
@@ -147,13 +149,15 @@ exporters:
       - Sources
       - kubernetes
     proxy_address: ""
-    region: ""
+    region: us-east-1
     request_timeout_seconds: 30
     resource_arn: ""
     resource_to_telemetry_conversion:
       enabled: true
     retain_initial_value_of_delta_metric: false
     role_arn: ""
+    profile: ""
+    shared_credentials_file: [ ]
     version: "0"
 extensions: {}
 processors:
@@ -183,10 +187,12 @@ receivers:
     num_workers: 0
     prefer_full_pod_name: false
     proxy_address: ""
-    region: ""
+    region: "us-east-1"
     request_timeout_seconds: 0
     resource_arn: ""
     role_arn: ""
+    profile: ""
+    shared_credentials_file: []
   tcplog/emf_logs:
     attributes: {}
     encoding: utf-8

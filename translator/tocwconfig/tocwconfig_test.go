@@ -64,6 +64,16 @@ func TestEmfAndKubernetesConfig(t *testing.T) {
 	checkTranslation(t, "emf_and_kubernetes_config", "darwin", nil, "")
 }
 
+func TestKubernetesModeOnPremiseConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "kubernetes_on_prem_config", "linux", expectedEnvVars, "")
+}
+
 func TestLogsAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)

@@ -6,7 +6,9 @@ package awsemf
 import (
 	_ "embed"
 	"fmt"
-
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -73,6 +75,13 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		conf := confmap.NewFromStringMap(rawConf)
 		if err := conf.Unmarshal(&cfg); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal config: %w", err)
+		}
+	}
+	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+		if profile, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+			cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profile)
+			cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", agent.Global_Config.Credentials[agent.CredentialsFile_Key])}
 		}
 	}
 

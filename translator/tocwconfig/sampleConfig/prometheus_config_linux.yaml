@@ -58,12 +58,14 @@ exporters:
     output_destination: cloudwatch
     parse_json_encoded_attr_values: []
     proxy_address: ""
-    region: ""
+    region: us-east-1
     request_timeout_seconds: 30
     resource_arn: ""
     resource_to_telemetry_conversion:
       enabled: true
     role_arn: ""
+    profile: ""
+    shared_credentials_file: [ ]
 
 extensions: {}
 

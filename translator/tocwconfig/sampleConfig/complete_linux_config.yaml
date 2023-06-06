@@ -44,6 +44,8 @@ exporters:
         role_arn: ""
         sending_queue:
             queue_size: 1000
+        profile: ""
+        shared_credentials_file: [ ]
     awsxray:
         aws_log_groups: []
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
@@ -58,6 +60,8 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
+        profile: ""
+        shared_credentials_file: [ ]
         telemetry:
             enabled: true
             include_metadata: true
