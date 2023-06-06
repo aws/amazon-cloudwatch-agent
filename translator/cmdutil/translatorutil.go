@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
+	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
@@ -20,7 +21,6 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toenvconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig/encoder/mapstructure"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel"
 	translatorUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
@@ -220,12 +220,11 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
-	enc := mapstructure.NewEncoder()
-	var out map[string]interface{}
-	if err = enc.Encode(cfg, &out); err != nil {
+	conf := confmap.New()
+	if err = conf.Marshal(cfg); err != nil {
 		return nil, err
 	}
-	return out, nil
+	return conf.ToStringMap(), nil
 }
 
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
