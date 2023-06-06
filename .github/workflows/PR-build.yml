@@ -14,6 +14,13 @@ on:
       - 'LICENSE'
       - '.github/**'
       - '!.github/workflows/PR-build.yml'
+  workflow_dispatch:
+    inputs:
+      plugins:
+        description: 'Comma delimited list of plugins to test. Default is empty, and tests everything'
+        required: false
+        default: ''
+        type: string
 
   pull_request:
     branches: 
