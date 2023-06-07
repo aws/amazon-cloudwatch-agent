@@ -7,15 +7,9 @@
 package adapter
 
 import (
-	"context"
-	"fmt"
-	"net"
 	"testing"
-	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/agent"
-	"github.com/influxdata/telegraf/config"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disk"
 	_ "github.com/influxdata/telegraf/plugins/inputs/diskio"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
@@ -25,44 +19,14 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/socket_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/swap"
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/collector/pdata/pmetric"
-	"go.uber.org/zap"
-
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd"
 )
 
 const testCfg = "./testdata/all_plugins.toml"
 
-// Service Input differs from a regular plugin in that it operates a background service while Telegraf/CWAgent is running
-// https://github.com/influxdata/telegraf/blob/d67f75e55765d364ad0aabe99382656cb5b51014/docs/INPUTS.md#service-input-plugins
-type regularInputConfig struct {
-	scrapeCount int
-}
-
-type serviceInputConfig struct {
-	protocol      string
-	listeningPort string
-	metricSending []byte
-}
-
-/*
-sanityTestConfig struct
-@plugin               Telegraf input plugins
-@regularInputConfig   Telegraf Regular Input's Configuration including number of time scraping metrics
-@serviceInputConfig   Telegraf Service Input's Configuration including the port, protocol, metric's format sending
-*/
-
-type sanityTestConfig struct {
-	plugin               string
-	regularInputConfig   regularInputConfig
-	serviceInputConfig   serviceInputConfig
-	expectedMetrics      [][]string
-	numMetricsComparator assert.ComparisonAssertionFunc
-}
-
 func Test_CPUPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
-		plugin: "cpu",
+		testCfg: testCfg,
+		plugin:  "cpu",
 		// Scrape twice so that delta is detected and usage metrics are captured
 		regularInputConfig: regularInputConfig{scrapeCount: 2},
 		serviceInputConfig: serviceInputConfig{},
@@ -79,6 +43,7 @@ func Test_CPUPlugin(t *testing.T) {
 
 func Test_MemPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:            testCfg,
 		plugin:             "mem",
 		regularInputConfig: regularInputConfig{scrapeCount: 1},
 		serviceInputConfig: serviceInputConfig{},
@@ -90,6 +55,7 @@ func Test_MemPlugin(t *testing.T) {
 
 func Test_SwapPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:            testCfg,
 		plugin:             "swap",
 		regularInputConfig: regularInputConfig{scrapeCount: 1},
 		serviceInputConfig: serviceInputConfig{},
@@ -101,6 +67,7 @@ func Test_SwapPlugin(t *testing.T) {
 
 func Test_NetPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:            testCfg,
 		plugin:             "net",
 		regularInputConfig: regularInputConfig{scrapeCount: 1},
 		serviceInputConfig: serviceInputConfig{},
@@ -115,6 +82,7 @@ func Test_NetPlugin(t *testing.T) {
 
 func Test_DiskPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:            testCfg,
 		plugin:             "disk",
 		regularInputConfig: regularInputConfig{scrapeCount: 1},
 		// https://github.com/influxdata/telegraf/blob/8c49ddccc3cb8f8fe020dc4e1f38b93a0f2ad467/plugins/inputs/disk/disk.go#L72-L78
@@ -127,6 +95,7 @@ func Test_DiskPlugin(t *testing.T) {
 
 func Test_ProcessesPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:            testCfg,
 		plugin:             "processes",
 		regularInputConfig: regularInputConfig{scrapeCount: 1},
 		serviceInputConfig: serviceInputConfig{},
@@ -139,6 +108,7 @@ func Test_ProcessesPlugin(t *testing.T) {
 
 func Test_ProcStatPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:            testCfg,
 		plugin:             "procstat",
 		regularInputConfig: regularInputConfig{scrapeCount: 2},
 		serviceInputConfig: serviceInputConfig{},
@@ -154,6 +124,7 @@ func Test_ProcStatPlugin(t *testing.T) {
 
 func Test_NetStatPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:            testCfg,
 		plugin:             "netstat",
 		regularInputConfig: regularInputConfig{scrapeCount: 1},
 		serviceInputConfig: serviceInputConfig{},
@@ -169,6 +140,7 @@ func Test_NetStatPlugin(t *testing.T) {
 
 func Test_DiskIOPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:            testCfg,
 		plugin:             "diskio",
 		regularInputConfig: regularInputConfig{scrapeCount: 1},
 		serviceInputConfig: serviceInputConfig{},
@@ -198,100 +170,11 @@ func Test_StatsdPlugin(t *testing.T) {
 
 func Test_SocketListenerPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
+		testCfg:              testCfg,
 		plugin:               "socket_listener",
 		regularInputConfig:   regularInputConfig{},
 		serviceInputConfig:   serviceInputConfig{protocol: "tcp", listeningPort: "127.0.0.1:25826", metricSending: []byte("socket_listener,foo=bar time_idle=1i 123456789\n")},
 		expectedMetrics:      [][]string{{"time_idle"}},
 		numMetricsComparator: assert.Equal,
 	})
-}
-
-func scrapeAndValidateMetrics(t *testing.T, cfg *sanityTestConfig) {
-	as := assert.New(t)
-	receiver := getInitializedReceiver(as, cfg.plugin)
-
-	ctx := context.TODO()
-	err := receiver.start(ctx, nil)
-	as.NoError(err)
-
-	otelMetrics := scrapeMetrics(as, ctx, receiver, cfg)
-
-	err = receiver.shutdown(ctx)
-	as.NoError(err)
-
-	cfg.numMetricsComparator(t, len(cfg.expectedMetrics), otelMetrics.ResourceMetrics().Len())
-
-	var metrics pmetric.MetricSlice
-	for i := 0; i < len(cfg.expectedMetrics); i++ {
-		metrics = otelMetrics.ResourceMetrics().At(i).ScopeMetrics().At(0).Metrics()
-		validateMetricName(as, cfg.plugin, cfg.expectedMetrics[i], metrics)
-	}
-}
-
-func getInitializedReceiver(as *assert.Assertions, plugin string) *AdaptedReceiver {
-	c := config.NewConfig()
-	c.InputFilters = []string{plugin}
-	err := c.LoadConfig(testCfg)
-	as.NoError(err)
-
-	a, _ := agent.NewAgent(c)
-	as.Len(a.Config.Inputs, 1)
-
-	err = a.Config.Inputs[0].Init()
-	as.NoError(err)
-
-	return newAdaptedReceiver(a.Config.Inputs[0], zap.NewNop())
-}
-
-func scrapeMetrics(as *assert.Assertions, ctx context.Context, receiver *AdaptedReceiver, cfg *sanityTestConfig) pmetric.Metrics {
-
-	var err error
-	var otelMetrics pmetric.Metrics
-
-	if _, ok := receiver.input.Input.(telegraf.ServiceInput); ok {
-		conn, err := net.Dial(cfg.serviceInputConfig.protocol, cfg.serviceInputConfig.listeningPort)
-		as.NoError(err)
-		_, err = conn.Write(cfg.serviceInputConfig.metricSending)
-		as.NoError(err)
-		as.NoError(conn.Close())
-
-		for {
-			otelMetrics, err = receiver.scrape(ctx)
-			as.NoError(err)
-
-			time.Sleep(1 * time.Second)
-			if otelMetrics.ResourceMetrics().Len() > 0 {
-				break
-			}
-		}
-	} else {
-		for i := 0; i < cfg.regularInputConfig.scrapeCount; i++ {
-			if i != 0 {
-				time.Sleep(1 * time.Second)
-			}
-			otelMetrics, err = receiver.scrape(ctx)
-			as.NoError(err)
-		}
-	}
-
-	return otelMetrics
-}
-
-func validateMetricName(as *assert.Assertions, plugin string, expectedResourceMetricsName []string, actualOtelSlMetrics pmetric.MetricSlice) {
-	as.Equal(len(expectedResourceMetricsName), actualOtelSlMetrics.Len(), "Number of metrics did not match!")
-
-	matchMetrics := actualOtelSlMetrics.Len()
-	for _, expectedMetric := range expectedResourceMetricsName {
-		for metricIndex := 0; metricIndex < actualOtelSlMetrics.Len(); metricIndex++ {
-			metric := actualOtelSlMetrics.At(metricIndex)
-			// Check name to decrease the match metrics since metric name is the only unique attribute
-			// And ignore the rest checking
-			if fmt.Sprintf("%s_%s", plugin, expectedMetric) != metric.Name() {
-				continue
-			}
-			matchMetrics--
-		}
-	}
-
-	as.Equal(0, matchMetrics, "Metrics did not match!")
 }
