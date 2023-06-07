@@ -3,6 +3,7 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"testing"
 	"time"
@@ -53,6 +54,9 @@ func scrapeAndValidateMetrics(t *testing.T, cfg *sanityTestConfig) {
 
 	otelMetrics := scrapeMetrics(as, ctx, receiver, cfg)
 
+	log.Printf("otel metrics count %d ", otelMetrics.ResourceMetrics().Len())
+	log.Printf("expected metrics count %d", len(cfg.expectedMetrics))
+
 	err = receiver.shutdown(ctx)
 	as.NoError(err)
 
@@ -61,6 +65,8 @@ func scrapeAndValidateMetrics(t *testing.T, cfg *sanityTestConfig) {
 	var metrics pmetric.MetricSlice
 	for i := 0; i < len(cfg.expectedMetrics); i++ {
 		metrics = otelMetrics.ResourceMetrics().At(i).ScopeMetrics().At(0).Metrics()
+		log.Printf("otelMetrics metrics %v", metrics)
+		log.Printf("expected metrics %v", cfg.expectedMetrics[i])
 		validateMetricName(as, cfg.plugin, cfg.expectedMetrics[i], metrics)
 	}
 }
@@ -123,6 +129,8 @@ func validateMetricName(as *assert.Assertions, plugin string, expectedResourceMe
 			metric := actualOtelSlMetrics.At(metricIndex)
 			// Check name to decrease the match metrics since metric name is the only unique attribute
 			// And ignore the rest checking
+			log.Printf("actual metric %s", metric.Name())
+			log.Printf("expected metric %s", expectedMetric)
 			if plugin == "win_perf_counters" {
 				if expectedMetric != metric.Name() {
 					continue
