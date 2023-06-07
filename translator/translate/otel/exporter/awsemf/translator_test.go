@@ -355,8 +355,7 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{
 							"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
 							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
-							"container_filesystem_usage", "container_processes", "container_processes_threads", "container_processes_file_descriptors",
-							"container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed"},
+							"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed"},
 					},
 					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"ClusterName", "Namespace"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}},
