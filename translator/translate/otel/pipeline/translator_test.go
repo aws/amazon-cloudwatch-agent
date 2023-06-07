@@ -33,7 +33,12 @@ func TestTranslator(t *testing.T) {
 	require.Equal(t, ErrNoPipelines, err)
 	require.Nil(t, got)
 	pt = NewTranslator(common.NewTranslatorMap[*common.ComponentTranslators](&testTranslator{
-		result: &common.ComponentTranslators{},
+		result: &common.ComponentTranslators{
+			Receivers:  common.NewTranslatorMap[component.Config](),
+			Processors: common.NewTranslatorMap[component.Config](),
+			Exporters:  common.NewTranslatorMap[component.Config](),
+			Extensions: common.NewTranslatorMap[component.Config](),
+		},
 	}))
 	got, err = pt.Translate(confmap.New())
 	require.NoError(t, err)

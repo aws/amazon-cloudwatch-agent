@@ -4,10 +4,10 @@
 package awsemf
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
 )
 
 func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Config) error {

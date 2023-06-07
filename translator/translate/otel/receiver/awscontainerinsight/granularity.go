@@ -4,8 +4,9 @@
 package awscontainerinsight
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 const (

@@ -50,19 +50,19 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 			Extensions: common.NewTranslatorMap[component.Config](),
 		},
 	}
-	for id, pt := range t.translators {
+	t.translators.Range(func(pt common.Translator[*common.ComponentTranslators]) {
 		if pipeline, _ := pt.Translate(conf); pipeline != nil {
-			translation.Pipelines[id] = &service.PipelineConfig{
-				Receivers:  pipeline.Receivers.SortedKeys(),
-				Processors: pipeline.Processors.SortedKeys(),
-				Exporters:  pipeline.Exporters.SortedKeys(),
+			translation.Pipelines[pt.ID()] = &service.PipelineConfig{
+				Receivers:  pipeline.Receivers.Keys(),
+				Processors: pipeline.Processors.Keys(),
+				Exporters:  pipeline.Exporters.Keys(),
 			}
 			translation.Translators.Receivers.Merge(pipeline.Receivers)
 			translation.Translators.Processors.Merge(pipeline.Processors)
 			translation.Translators.Exporters.Merge(pipeline.Exporters)
 			translation.Translators.Extensions.Merge(pipeline.Extensions)
 		}
-	}
+	})
 	if len(translation.Pipelines) == 0 {
 		return nil, ErrNoPipelines
 	}

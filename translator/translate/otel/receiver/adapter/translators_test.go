@@ -161,7 +161,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := FindReceiversInConfig(conf, testCase.os)
 			require.Equal(t, testCase.wantErr, err)
-			require.Equal(t, len(testCase.want), len(got))
+			require.Equal(t, len(testCase.want), got.Len())
 			for wantKey, wantValue := range testCase.want {
 				gotTranslator, ok := got.Get(wantKey)
 				require.True(t, ok)
