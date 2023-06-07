@@ -19,7 +19,7 @@ func Test_WindowsPerfCountersPlugin(t *testing.T) {
 		regularInputConfig: regularInputConfig{scrapeCount: 1},
 		serviceInputConfig: serviceInputConfig{},
 
-		expectedMetrics:      [][]string{{"LogicalDisk % Free Space"}, {"Memory % Committed Bytes In Use"}},
+		expectedMetrics:      [][]string{{"Memory % Committed Bytes In Use"}, {"TCPv4 Connections Established"}},
 		numMetricsComparator: assert.Equal,
 	})
 }
