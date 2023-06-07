@@ -4,16 +4,15 @@
 package common
 
 import (
+	"container/list"
 	"fmt"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -73,43 +72,78 @@ type Translator[C any] interface {
 	ID() component.ID
 }
 
-// TranslatorMap is a map of translators by their types.
-type TranslatorMap[C any] map[component.ID]Translator[C]
-
-// Set is a convenience method to add a translator to the map.
-func (t TranslatorMap[C]) Set(translator Translator[C]) {
-	t[translator.ID()] = translator
+// TranslatorMap is a set of translators by their types.
+type TranslatorMap[C any] interface {
+	// Set a translator to the map. If the ID is already present, replaces the translator.
+	// Otherwise, adds it to the end of the list.
+	Set(Translator[C])
+	// Get the translator for the component.ID.
+	Get(component.ID) (Translator[C], bool)
+	// Merge another translator map in.
+	Merge(TranslatorMap[C])
+	// Keys is the ordered component.IDs.
+	Keys() []component.ID
+	// Range iterates over each translator in order and calls the callback function on each.
+	Range(func(Translator[C]))
+	// Len is the number of translators in the map.
+	Len() int
 }
 
-// Get is a convenience method to get the translator from the map.
-func (t TranslatorMap[C]) Get(id component.ID) (Translator[C], bool) {
-	translator, ok := t[id]
-	return translator, ok
+type translatorMap[C any] struct {
+	// list stores the ordered translators.
+	list *list.List
+	// lookup stores the list.Elements containing the translators by ID.
+	lookup map[component.ID]*list.Element
 }
 
-// Merge sets the translators in the input to the existing map.
-func (t TranslatorMap[C]) Merge(m TranslatorMap[C]) {
-	for _, v := range m {
-		t.Set(v)
+func (t translatorMap[C]) Set(translator Translator[C]) {
+	if element, ok := t.lookup[translator.ID()]; ok {
+		element.Value = translator
+	} else {
+		element = t.list.PushBack(translator)
+		t.lookup[translator.ID()] = element
 	}
 }
 
-// SortedKeys returns the sorted component.ID keys.
-func (t TranslatorMap[C]) SortedKeys() []component.ID {
-	keys := maps.Keys(t)
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i].String() < keys[j].String()
+func (t translatorMap[C]) Get(id component.ID) (Translator[C], bool) {
+	element, ok := t.lookup[id]
+	return element.Value.(Translator[C]), ok
+}
+
+func (t translatorMap[C]) Merge(other TranslatorMap[C]) {
+	if other != nil {
+		other.Range(t.Set)
+	}
+}
+
+func (t translatorMap[C]) Keys() []component.ID {
+	keys := make([]component.ID, 0, t.Len())
+	t.Range(func(translator Translator[C]) {
+		keys = append(keys, translator.ID())
 	})
 	return keys
 }
 
+func (t translatorMap[C]) Range(callback func(translator Translator[C])) {
+	for element := t.list.Front(); element != nil; element = element.Next() {
+		callback(element.Value.(Translator[C]))
+	}
+}
+
+func (t translatorMap[C]) Len() int {
+	return t.list.Len()
+}
+
 // NewTranslatorMap creates a TranslatorMap from the translators.
 func NewTranslatorMap[C any](translators ...Translator[C]) TranslatorMap[C] {
-	translatorMap := make(TranslatorMap[C], len(translators))
-	for _, translator := range translators {
-		translatorMap.Set(translator)
+	t := translatorMap[C]{
+		list:   list.New(),
+		lookup: make(map[component.ID]*list.Element, len(translators)),
 	}
-	return translatorMap
+	for _, translator := range translators {
+		t.Set(translator)
+	}
+	return t
 }
 
 // A MissingKeyError occurs when a translator is used for a JSON

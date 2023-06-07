@@ -41,7 +41,7 @@ func (t translator) ID() component.ID {
 func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	if conf == nil || !conf.IsSet(common.MetricsKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.MetricsKey}
-	} else if len(t.receivers) == 0 {
+	} else if t.receivers.Len() == 0 {
 		log.Printf("D! pipeline %s has no receivers", t.name)
 		return nil, nil
 	}

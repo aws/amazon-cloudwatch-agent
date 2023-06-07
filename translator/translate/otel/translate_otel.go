@@ -57,13 +57,13 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	// split out delta receiver types
 	deltaMetricsReceivers := common.NewTranslatorMap[component.Config]()
 	hostReceivers := common.NewTranslatorMap[component.Config]()
-	for k, v := range adapterReceivers {
-		if k.Type() == receiverAdapter.Type(common.DiskIOKey) || k.Type() == receiverAdapter.Type(common.NetKey) {
-			deltaMetricsReceivers.Set(v)
+	adapterReceivers.Range(func(translator common.Translator[component.Config]) {
+		if translator.ID().Type() == receiverAdapter.Type(common.DiskIOKey) || translator.ID().Type() == receiverAdapter.Type(common.NetKey) {
+			deltaMetricsReceivers.Set(translator)
 		} else {
-			hostReceivers.Set(v)
+			hostReceivers.Set(translator)
 		}
-	}
+	})
 
 	translators := common.NewTranslatorMap(
 		host.NewTranslator(common.PipelineNameHost, hostReceivers),
@@ -89,7 +89,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
 			},
 			Pipelines:  pipelines.Pipelines,
-			Extensions: pipelines.Translators.Extensions.SortedKeys(),
+			Extensions: pipelines.Translators.Extensions.Keys(),
 		},
 	}
 	if err = build(conf, cfg, pipelines.Translators); err != nil {

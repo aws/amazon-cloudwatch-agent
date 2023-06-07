@@ -168,22 +168,22 @@ func TestParseDuration(t *testing.T) {
 }
 
 func TestTranslatorMap(t *testing.T) {
-	got := NewTranslatorMap[int](&testTranslator{"test", 0}, &testTranslator{"other", 1})
-	require.Len(t, got, 2)
-	translator, ok := got.Get(component.NewID("test"))
+	got := NewTranslatorMap[int](&testTranslator{"first", 0}, &testTranslator{"middle", 1})
+	require.Equal(t, 2, got.Len())
+	translator, ok := got.Get(component.NewID("first"))
 	require.True(t, ok)
 	result, err := translator.Translate(nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, result)
-	other := NewTranslatorMap[int](&testTranslator{"test", 2})
+	other := NewTranslatorMap[int](&testTranslator{"first", 2}, &testTranslator{"last", 3})
 	got.Merge(other)
-	require.Len(t, got, 2)
-	translator, ok = got.Get(component.NewID("test"))
+	require.Equal(t, 3, got.Len())
+	translator, ok = got.Get(component.NewID("first"))
 	require.True(t, ok)
 	result, err = translator.Translate(nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, result)
-	require.Equal(t, []component.ID{component.NewID("other"), component.NewID("test")}, got.SortedKeys())
+	require.Equal(t, []component.ID{component.NewID("first"), component.NewID("middle"), component.NewID("last")}, got.Keys())
 }
 
 func TestMissingKeyError(t *testing.T) {

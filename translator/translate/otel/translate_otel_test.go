@@ -81,13 +81,15 @@ var _ common.Translator[*common.ComponentTranslators] = (*testTranslator)(nil)
 func TestRegisterPipeline(t *testing.T) {
 	original := &testTranslator{id: component.NewID("test"), version: 1}
 	tm := common.NewTranslatorMap[*common.ComponentTranslators](original)
-	assert.Len(t, registry, 0)
-	newTranslator := &testTranslator{id: component.NewID("test"), version: 2}
-	RegisterPipeline(newTranslator)
-	assert.Len(t, registry, 1)
+	assert.Equal(t, 0, registry.Len())
+	first := &testTranslator{id: component.NewID("test"), version: 2}
+	second := &testTranslator{id: component.NewID("test"), version: 3}
+	RegisterPipeline(first, second)
+	assert.Equal(t, 1, registry.Len())
 	tm.Merge(registry)
 	got, ok := tm.Get(component.NewID("test"))
 	assert.True(t, ok)
-	assert.Equal(t, newTranslator, got)
-	assert.NotEqual(t, original, got)
+	assert.Equal(t, second.version, got.(*testTranslator).version)
+	assert.NotEqual(t, first.version, got.(*testTranslator).version)
+	assert.NotEqual(t, original.version, got.(*testTranslator).version)
 }
