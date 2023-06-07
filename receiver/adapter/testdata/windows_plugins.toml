@@ -8,10 +8,3 @@
         Measurement = "Memory"
         ObjectName = "Memory"
         WarnOnMissing = true
-
-    [[inputs.win_perf_counters.object]]
-        Counters = ["Connections Established"]
-        Instances = ["------"]
-        Measurement = "TCPv4"
-        ObjectName = "TCPv4"
-        WarnOnMissing = true

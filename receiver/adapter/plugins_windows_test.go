@@ -23,7 +23,7 @@ func Test_WindowsPerfCountersPlugin(t *testing.T) {
 		// Observed an issue where some perf counters were intermittently retrievable.
 		// Therefore we choose 2 perf counters which seem to be available consistently.
 
-		expectedMetrics:      [][]string{{"Memory % Committed Bytes In Use"}, {"TCPv4 Connections Established"}},
+		expectedMetrics:      [][]string{{"Memory % Committed Bytes In Use"}},
 		numMetricsComparator: assert.Equal,
 	})
 }
