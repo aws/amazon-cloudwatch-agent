@@ -4,7 +4,6 @@
 package adapter
 
 import (
-	"log"
 	"testing"
 
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/win_perf_counters"
@@ -12,7 +11,6 @@ import (
 )
 
 func Test_WindowsPerfCountersPlugin(t *testing.T) {
-	log.Printf("windows perf counter plugin started")
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
 		testCfg:            "./testdata/windows_plugins.toml",
 		plugin:             "win_perf_counters",

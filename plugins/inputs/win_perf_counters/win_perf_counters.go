@@ -263,7 +263,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.gItemList {
-		log.Printf("metrics in itemList %v", *metric)
 		if !metric.initialized {
 			if err := metric.init(); err != nil {
 				log.Printf("D! metric init has error: %v", err)
@@ -272,11 +271,9 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 		// collect
 		ret := PdhCollectQueryData(metric.handle)
-		log.Printf("E! PdhCollectQueryData %d", ret)
 		if ret == ERROR_SUCCESS {
 			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
 				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
-			log.Printf("E! PdhGetFormattedCounterArrayDouble %v", ret)
 			if ret == PDH_MORE_DATA {
 				filledBuf := make([]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
 				if len(filledBuf) == 0 {
@@ -284,11 +281,10 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				}
 				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle,
 					&bufSize, &bufCount, &filledBuf[0])
-				log.Printf("E! PdhGetFormattedCounterArrayDouble 2 %v", ret)
-				log.Printf("E! bufCount %d", bufCount)
 				for i := 0; i < int(bufCount); i++ {
 					c := filledBuf[i]
 					var s string = UTF16PtrToString(c.SzName)
+
 					var add bool
 
 					if metric.include_total {
@@ -309,7 +305,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 						add = true
 					}
 
-					log.Printf("E! s: %v add: %v", s, add)
 					if add {
 						fields := make(map[string]interface{})
 						tags := make(map[string]string)
@@ -324,7 +319,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 						if measurement == "" {
 							measurement = "win_perf_counters"
 						}
-						log.Printf("E! measurement: %v fields: %v tags: %v", measurement, fields, tags)
 						acc.AddFields(measurement, fields, tags)
 					}
 				}
