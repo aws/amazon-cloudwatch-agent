@@ -1,0 +1,10 @@
+[[inputs.win_perf_counters]]
+    DisableReplacer = true
+    interval = "60s"
+
+    [[inputs.win_perf_counters.object]]
+        Counters = ["% Committed Bytes In Use"]
+        Instances = ["------"]
+        Measurement = "Memory"
+        ObjectName = "Memory"
+        WarnOnMissing = true
