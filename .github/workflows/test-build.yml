@@ -23,6 +23,10 @@ on:
         description: "S3 URI to upload artifacts into."
         required: true
         type: string
+      PackageBucketKey:
+        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
 
 jobs:
   MakeBinary:
@@ -254,9 +258,9 @@ jobs:
         run : |
           chmod +x create_pkg.sh
           chmod +x arm64/create_pkg.sh
-          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} "nosha" amd64
+          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} "nosha" amd64
           cd arm64
-          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} "nosha" arm64
+          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} "nosha" arm64
 
   BuildMSI:
     name: 'BuildMSI'
@@ -295,7 +299,7 @@ jobs:
           $env:PATH = $env:PATH + $wixToolsetBinPath
           Expand-Archive buildMSI.zip -Force
           cd buildMSI/msi_dep
-          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}
+          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
 
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:
@@ -326,9 +330,9 @@ jobs:
         run: |
           mkdir -p packages/amd64
           mkdir packages/arm64
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
       - name: Import GPG Key
         uses: crazy-max/ghaction-import-gpg@v5
         with:
@@ -341,6 +345,6 @@ jobs:
       - name: Upload to s3
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
         run: |
-          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/amazon-cloudwatch-agent.msi.sig
-          aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/amd64/amazon-cloudwatch-agent.pkg.sig
-          aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/arm64/amazon-cloudwatch-agent.pkg.sig
+          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi.sig
+          aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg.sig
+          aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg.sig

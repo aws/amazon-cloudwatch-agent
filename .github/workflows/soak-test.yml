@@ -32,6 +32,7 @@ jobs:
     with:
       ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
       BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/binary/${{ github.sha }}"
 
   DeploySoakTest:
     name: "DeploySoakTest"

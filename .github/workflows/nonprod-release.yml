@@ -14,3 +14,4 @@ jobs:
     with:
       ContainerRepositoryNameAndTag: "ccwa_nonprod:latest"
       BucketKey: "nonprod"
+      PackageBucketKey: "nonprod"
