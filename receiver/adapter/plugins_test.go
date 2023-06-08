@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package adapter
 
 import (
@@ -65,10 +68,10 @@ func scrapeAndValidateMetrics(t *testing.T, cfg *sanityTestConfig) {
 	}
 }
 
-func getInitializedReceiver(as *assert.Assertions, plugin string, testCfg string) *AdaptedReceiver {
+func getInitializedReceiver(as *assert.Assertions, plugin string, testConfig string) *AdaptedReceiver {
 	c := config.NewConfig()
 	c.InputFilters = []string{plugin}
-	err := c.LoadConfig(testCfg)
+	err := c.LoadConfig(testConfig)
 	as.NoError(err)
 
 	a, _ := agent.NewAgent(c)
