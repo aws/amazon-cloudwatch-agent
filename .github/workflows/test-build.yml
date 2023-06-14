@@ -7,25 +7,6 @@ env:
 
 on:
   workflow_dispatch:
-    inputs:
-      ContainerRepositoryNameAndTag:
-        # e.g. "cwagent-integration-test:SHA"
-        # e.g. "ccwa-release:latest"
-        # e.g. "ccwa_nonprod:latest"
-        description: "ECR repo name and tag"
-        required: true
-        type: string
-      BucketKey:
-        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
-        # e.g. s3://<bucket>/nonprod
-        # e.g. s3://<bucket>/release
-        description: "S3 URI to upload artifacts into."
-        required: true
-        type: string
-      PackageBucketKey:
-        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
-        required: true
-        type: string
   workflow_call:
     inputs:
       ContainerRepositoryNameAndTag:

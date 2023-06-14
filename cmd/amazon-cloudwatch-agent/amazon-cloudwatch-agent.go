@@ -156,6 +156,7 @@ func reloadLoop(
 							// Set AWS SDK logging
 							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
 							configaws.SetSDKLogLevel(sdkLogLevel)
+							configaws.SetSDKV2LogLevel(sdkLogLevel)
 							previousModTime = info.ModTime()
 						}
 					case <-ctx.Done():
@@ -262,6 +263,7 @@ func runAgent(ctx context.Context,
 	// For example CloudWatch.Connect().
 	sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
 	configaws.SetSDKLogLevel(sdkLogLevel)
+	configaws.SetSDKV2LogLevel(sdkLogLevel)
 	if sdkLogLevel == "" {
 		log.Printf("I! AWS SDK log level not set")
 	} else {

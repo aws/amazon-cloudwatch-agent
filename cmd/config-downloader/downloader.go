@@ -146,7 +146,11 @@ func main() {
 	region = util.DetectRegion(mode, cc.CredentialsMap())
 
 	if region == "" && downloadLocation != locationDefault {
+		// log.Println(..) is not working on windows due to a bug in powershell
+		// see https://github.com/golang/go/issues/3376 it says closed, but we still see this behavior
+		// fmt.Println(..) was not working on linux
 		fmt.Println("Unable to determine aws-region.")
+		log.Println("W! Unable to determine aws-region.")
 		if mode == config.ModeEC2 {
 			errorMessage = "E! Please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' "
 		} else {

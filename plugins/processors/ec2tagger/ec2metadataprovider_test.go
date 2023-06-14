@@ -5,11 +5,12 @@ package ec2tagger
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 	"os"
 	"reflect"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/awstesting/mock"
 	"github.com/stretchr/testify/assert"
@@ -20,18 +21,25 @@ func TestMetadataProvider_Get(t *testing.T) {
 		name      string
 		ctx       context.Context
 		sess      *session.Session
-		expectDoc ec2metadata.EC2InstanceIdentityDocument
+		expectDoc imds.InstanceIdentityDocument
 	}{
 		{
 			name:      "mock session",
 			ctx:       context.Background(),
 			sess:      mock.Session,
-			expectDoc: ec2metadata.EC2InstanceIdentityDocument{},
+			expectDoc: imds.InstanceIdentityDocument{},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			c := NewMetadataProvider(tc.sess)
+			c := NewMetadataProvider(&ec2util.Ec2Util{
+				Region:           "",
+				PrivateIP:        "",
+				InstanceID:       "",
+				Hostname:         "",
+				AccountID:        "",
+				InstanceDocument: nil,
+			})
 			gotDoc, err := c.Get(tc.ctx)
 			assert.NotNil(t, err)
 			assert.Truef(t, reflect.DeepEqual(gotDoc, tc.expectDoc), "get() gotDoc: %v, expected: %v", gotDoc, tc.expectDoc)
@@ -64,7 +72,14 @@ func TestMetadataProvider_available(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			c := NewMetadataProvider(tc.sess)
+			c := NewMetadataProvider(&ec2util.Ec2Util{
+				Region:           "",
+				PrivateIP:        "",
+				InstanceID:       "some instance",
+				Hostname:         "",
+				AccountID:        "",
+				InstanceDocument: nil,
+			})
 			_, err := c.InstanceID(tc.ctx)
 			assert.ErrorIs(t, err, tc.want)
 		})

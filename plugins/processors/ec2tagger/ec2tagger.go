@@ -5,14 +5,13 @@ package ec2tagger
 
 import (
 	"context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 	"hash/fnv"
-	"net/http"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"go.opentelemetry.io/collector/component"
@@ -63,20 +62,12 @@ type Tagger struct {
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
 
 	_, cancel := context.WithCancel(context.Background())
-	mdCredentialConfig := &configaws.CredentialConfig{}
 
 	p := &Tagger{
-		Config:     config,
-		logger:     logger,
-		cancelFunc: cancel,
-		metadataProvider: NewMetadataProvider(
-			mdCredentialConfig.Credentials(),
-			&aws.Config{
-				HTTPClient: &http.Client{Timeout: defaultIMDSTimeout},
-				LogLevel:   configaws.SDKLogLevel(),
-				Logger:     configaws.SDKLogger{},
-				Retryer:    client.DefaultRetryer{NumMaxRetries: allowedIMDSRetries},
-			}),
+		Config:           config,
+		logger:           logger,
+		cancelFunc:       cancel,
+		metadataProvider: NewMetadataProvider(ec2util.GetEC2UtilSingleton()),
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),
