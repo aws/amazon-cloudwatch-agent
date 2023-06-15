@@ -5,26 +5,23 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
-	"strings"
-
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-	sdkutil "github.com/aws/amazon-cloudwatch-agent/translator/util"
-
-	"fmt"
-
 	"path/filepath"
-
-	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	commonconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	sdkutil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
 )
 
 const (
@@ -149,12 +146,16 @@ func main() {
 	region = util.DetectRegion(mode, cc.CredentialsMap())
 
 	if region == "" && downloadLocation != locationDefault {
+		// log.Println(..) is not working on windows due to a bug in powershell
+		// see https://github.com/golang/go/issues/3376 it says closed, but we still see this behavior
+		// fmt.Println(..) was not working on linux
 		fmt.Println("Unable to determine aws-region.")
+		log.Println("W! Unable to determine aws-region.")
 		if mode == config.ModeEC2 {
-			errorMessage = fmt.Sprintf("E! Please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' ")
+			errorMessage = "E! Please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' "
 		} else {
-			errorMessage = fmt.Sprintf("E! Please make sure the credentials and region set correctly on your hosts.\n" +
-				"Refer to http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html")
+			errorMessage = "E! Please make sure the credentials and region set correctly on your hosts.\n" +
+				"Refer to http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html"
 		}
 		log.Panicf(errorMessage)
 	}

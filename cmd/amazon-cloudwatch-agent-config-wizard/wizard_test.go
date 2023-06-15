@@ -7,19 +7,19 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/agentconfig"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/basicInfo"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/collectd"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/migration"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/migration/windows"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/ssm"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/statsd"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/template"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/agentconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/basicInfo"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/collectd"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/migration"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/migration/windows"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/ssm"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/statsd"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/template"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 type MainProcessorMock struct {

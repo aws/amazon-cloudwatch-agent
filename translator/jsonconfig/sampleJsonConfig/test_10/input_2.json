@@ -1,8 +1,15 @@
 {
   "logs": {
-    "metrics_collected": {
-      "kubernetes": {
-        "cluster_name": "TestCluster"
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "timezone": "UTC"
+          }
+        ]
       }
     },
     "endpoint_override":"https://fake_endpoint"

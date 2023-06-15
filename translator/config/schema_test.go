@@ -5,19 +5,24 @@ package config
 
 import (
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetJsonSchema(t *testing.T) {
 	jsonFile, err := os.ReadFile("./schema.json")
-	if err != nil {
-		panic(err)
-	}
-	str := strings.ReplaceAll(string(jsonFile), "\r\n", "\n")
-	assert.Equal(t, str, GetJsonSchema(), "Json schema is inconsistent")
+	require.NoError(t, err)
+	assert.Equal(t, string(jsonFile), GetJsonSchema(), "Json schema is inconsistent")
+}
+
+func TestOverwriteSchema(t *testing.T) {
+	originalSchema := GetJsonSchema()
+	newSchema := "new schema"
+	OverwriteSchema(newSchema)
+	assert.NotEqual(t, originalSchema, GetJsonSchema())
+	assert.Equal(t, newSchema, GetJsonSchema())
 }
 
 func TestGetFormattedPath(t *testing.T) {

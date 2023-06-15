@@ -11,7 +11,7 @@ import (
 )
 
 func TestDropOriginal(t *testing.T) {
-	e := new(dropOrigin)
+	e := new(DropOrigin)
 	//Check whether override default config
 	var input interface{}
 	err := json.Unmarshal([]byte(`{
@@ -38,7 +38,7 @@ func TestDropOriginal(t *testing.T) {
 }
 
 func TestDropMultipleOriginal(t *testing.T) {
-	e := new(dropOrigin)
+	e := new(DropOrigin)
 	//Check whether override default config
 	var input interface{}
 	err := json.Unmarshal([]byte(`{
@@ -80,7 +80,7 @@ func TestDropMultipleOriginal(t *testing.T) {
 }
 
 func TestNotDropOriginal(t *testing.T) {
-	e := new(dropOrigin)
+	e := new(DropOrigin)
 	//Check whether override default config
 	var input interface{}
 	err := json.Unmarshal([]byte(`{
@@ -105,7 +105,7 @@ func TestNotDropOriginal(t *testing.T) {
 }
 
 func TestDefaultDropOriginal(t *testing.T) {
-	e := new(dropOrigin)
+	e := new(DropOrigin)
 	//Check whether override default config
 	var input interface{}
 	err := json.Unmarshal([]byte(`{

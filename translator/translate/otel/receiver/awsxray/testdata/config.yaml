@@ -1,0 +1,9 @@
+endpoint: 0.0.0.0:2001
+transport: udp
+proxy_server:
+  endpoint: 0.0.0.0:1234
+  region: us-west-2
+  role_arn: trace_role_arn
+  tls:
+    insecure: true
+  proxy_address: https://proxy.proxy.com

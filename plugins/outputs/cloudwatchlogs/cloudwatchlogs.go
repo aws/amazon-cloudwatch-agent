@@ -10,17 +10,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/handlers"
-	"github.com/aws/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 )
 
 const (
@@ -122,6 +123,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		Token:     c.Token,
 	}
 
+	agentInfo := agentinfo.New()
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
@@ -133,9 +135,9 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		},
 	)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
-	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentinfo.UserAgent(t.Group)))
+	client.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("User-Agent", agentInfo.UserAgent))
 
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup)
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, agentInfo)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd

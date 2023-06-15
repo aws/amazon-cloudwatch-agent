@@ -6,12 +6,12 @@ package metrics
 import (
 	"sort"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
 )
 
 type Rule translator.Rule
@@ -43,7 +43,6 @@ func (m *Metrics) ApplyRule(input interface{}) (returnKey string, returnVal inte
 	//Check if this plugin exist in the input instance
 	//If not, not process
 	if _, ok := im[SectionKey]; !ok {
-		translator.AddInfoMessages("", "No metric configuration found.")
 		returnKey = ""
 		returnVal = ""
 	} else {
@@ -63,9 +62,8 @@ func (m *Metrics) ApplyRule(input interface{}) (returnKey string, returnVal inte
 		}
 
 		cloudwatchInfo := map[string]interface{}{}
-		cloudwatchInfo["cloudwatch"] = []interface{}{outputPlugInfo}
+		cloudwatchInfo["cloudwatch"] = []interface{}{map[string]interface{}{}}
 		result["outputs"] = cloudwatchInfo
-		translator.SetMetricPath(result, SectionKey)
 		returnKey = SectionKey
 		returnVal = result
 	}

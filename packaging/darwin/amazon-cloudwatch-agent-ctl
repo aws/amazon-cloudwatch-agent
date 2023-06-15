@@ -26,6 +26,7 @@ readonly AGENT_LAUNCHD_NAME="com.amazon.cloudwatch.agent"
 readonly AGENT_LAUNCHD_CONFIG="/Library/LaunchDaemons/${AGENT_LAUNCHD_NAME}.plist"
 
 readonly TOML="${CONFDIR}/amazon-cloudwatch-agent.toml"
+readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-agent.yaml"
 readonly JSON="${CONFDIR}/amazon-cloudwatch-agent.json"
 readonly JSON_DIR="${CONFDIR}/amazon-cloudwatch-agent.d"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"
@@ -182,6 +183,7 @@ cwa_config() {
      if [ ! "$(ls ${JSON_DIR})" ]; then
           echo "all amazon-cloudwatch-agent configurations have been removed"
           rm -f "${TOML}"
+          rm -f "${OTEL_YAML}"
      else
           runTranslatorCommand=`"${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}`
           echo "${runTranslatorCommand}"
@@ -199,6 +201,9 @@ cwa_config() {
           echo "Configuration validation succeeded"
 
           chmod ug+rw "${TOML}"
+          if [ -f "${OTEL_YAML}" ]; then
+               chmod ug+rw "${OTEL_YAML}"
+          fi
 
           # for translator:
           #       default:    only process .tmp files

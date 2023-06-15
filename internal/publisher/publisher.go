@@ -96,7 +96,7 @@ func (p *Publisher) startRouting() {
 				p.publisherSem.Release(1)
 			}()
 		} else {
-			// if the publihser is closed along with no req returned from the queue, it means the queue has drained.
+			// if the publisher is closed along with no req returned from the queue, it means the queue has drained.
 			if p.isClosed() {
 				p.wg.Done()
 				return

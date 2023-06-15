@@ -1,0 +1,10 @@
+{
+  "traces": {
+    "traces_collected": {
+      "otlp": {
+      },
+      "xray": {
+      }
+    }
+  }
+}

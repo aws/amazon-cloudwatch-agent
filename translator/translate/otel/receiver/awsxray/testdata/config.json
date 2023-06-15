@@ -1,0 +1,18 @@
+{
+  "traces": {
+    "traces_collected": {
+      "xray": {
+        "bind_address": "0.0.0.0:2001",
+        "tcp_proxy": {
+          "bind_address": "0.0.0.0:1234"
+        }
+      }
+    },
+    "insecure": true,
+    "credentials": {
+      "role_arn": "trace_role_arn"
+    },
+    "region_override": "us-west-2",
+    "proxy_override": "https://proxy.proxy.com"
+  }
+}

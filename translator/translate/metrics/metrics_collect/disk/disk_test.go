@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//Check the case when the input is in "disk":{//specific configuration}
+// Check the case when the input is in "disk":{//specific configuration}
 func TestDiskSpecificConfig(t *testing.T) {
 	d := new(Disk)
 	//Check whether override default config

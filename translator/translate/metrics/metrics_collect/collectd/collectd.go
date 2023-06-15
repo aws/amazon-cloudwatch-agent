@@ -4,24 +4,22 @@
 package collected
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
 )
 
 //
-// Need to import new rule package in src/translator/totomlconfig/toTomlConfig.go
+// Need to import new rule package in src/translator/tocwconfig/totomlconfig/toTomlConfig.go
 //
 
-//
-//   "collectd" : {
-//       "service_address": "udp://127.0.0.1:25826",
-//       "name_prefix": "collectd_",
-//       "collectd_auth_file": "/etc/collectd/auth_file",
-//       "collectd_security_level": "encrypt",
-//       "collectd_typesdb": ["/usr/share/collectd/types.db"],
-//       "metrics_aggregation_interval": 60
-//   }
-//
+//	"collectd" : {
+//	    "service_address": "udp://127.0.0.1:25826",
+//	    "name_prefix": "collectd_",
+//	    "collectd_auth_file": "/etc/collectd/auth_file",
+//	    "collectd_security_level": "encrypt",
+//	    "collectd_typesdb": ["/usr/share/collectd/types.db"],
+//	    "metrics_aggregation_interval": 60
+//	}
 const (
 	SectionKey       = "collectd"
 	SectionMappedKey = "socket_listener"

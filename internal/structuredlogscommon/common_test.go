@@ -1,11 +1,13 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package structuredlogscommon
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
-
-	"reflect"
 
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
@@ -58,7 +60,7 @@ func TestAddVersion(t *testing.T) {
 }
 
 func TestAttachMetricRuleValidRules(t *testing.T) {
-	m := metric.New("prometheus_scraper",
+	m := metric.New("prometheus",
 		map[string]string{"tagA": "a"},
 		map[string]interface{}{"fieldA": 0.1},
 		time.Now())
@@ -75,7 +77,7 @@ func TestAttachMetricRuleValidRules(t *testing.T) {
 }
 
 func TestAttachMetricRuleInvalidRules(t *testing.T) {
-	m := metric.New("prometheus_scraper",
+	m := metric.New("prometheus",
 		map[string]string{"tagA": "a"},
 		map[string]interface{}{"fieldA": 0.1},
 		time.Now())
@@ -92,7 +94,7 @@ func TestAttachMetricRuleInvalidRules(t *testing.T) {
 }
 
 func TestAttachMetricRulewithDedupValidRules(t *testing.T) {
-	m := metric.New("prometheus_scraper",
+	m := metric.New("prometheus",
 		map[string]string{"tagA": "a", "tagB": "b"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2},
 		time.Now())
@@ -108,7 +110,7 @@ func TestAttachMetricRulewithDedupValidRules(t *testing.T) {
 	AttachMetricRuleWithDedup(m, rules)
 
 	assert.True(t, m.HasField(MetricRuleKey))
-	fields, _ := m.Fields()[MetricRuleKey]
+	fields := m.Fields()[MetricRuleKey]
 	filteredRule, _ := fields.([]MetricRule)
 	assert.Equal(t, 1, len(filteredRule))
 	assert.Equal(t, []MetricAttr{{Unit: "Bytes", Name: "fieldA"}}, filteredRule[0].Metrics)
@@ -116,7 +118,7 @@ func TestAttachMetricRulewithDedupValidRules(t *testing.T) {
 }
 
 func TestAttachMetricRulewithDedupDupRules(t *testing.T) {
-	m := metric.New("prometheus_scraper",
+	m := metric.New("prometheus",
 		map[string]string{"tagA": "a", "tagB": "b", "tagC": "c"},
 		map[string]interface{}{"fieldA": 0.1, "fieldB": 0.2, "fieldC": 0.3, "fieldD": 0.3},
 		time.Now())
@@ -144,7 +146,7 @@ func TestAttachMetricRulewithDedupDupRules(t *testing.T) {
 	AttachMetricRuleWithDedup(m, rules)
 
 	assert.True(t, m.HasField(MetricRuleKey))
-	fields, _ := m.Fields()[MetricRuleKey]
+	fields := m.Fields()[MetricRuleKey]
 	filteredRule, _ := fields.([]MetricRule)
 	assert.Equal(t, 3, len(filteredRule))
 

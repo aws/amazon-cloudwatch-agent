@@ -3,7 +3,7 @@
 
 package ecsservicediscovery
 
-import "github.com/aws/amazon-cloudwatch-agent/translator"
+import "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 
 const (
 	SectionKeySDResultFile = "sd_result_file"

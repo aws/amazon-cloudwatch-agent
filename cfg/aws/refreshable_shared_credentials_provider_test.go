@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSharedCrednetialsProviderExpiryWindowIsExpired(t *testing.T) {
+func TestSharedCredentialsProviderExpiryWindowIsExpired(t *testing.T) {
 	tmpFile, _ := os.CreateTemp(os.TempDir(), "credential")
 	defer os.Remove(tmpFile.Name())
 	bytes, _ := os.ReadFile("./testdata/credential_original")

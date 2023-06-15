@@ -97,7 +97,7 @@ func (t *DecoratedTask) getPrivateIp() string {
 }
 
 func (t *DecoratedTask) getPrometheusExporterPort(configuredPort int64, c *ecs.ContainerDefinition) int64 {
-	var mappedPort int64 = 0
+	var mappedPort int64
 	networkMode := aws.StringValue(t.TaskDefinition.NetworkMode)
 	if networkMode == ecs.NetworkModeNone {
 		// for network type: none, skipped directly
@@ -172,7 +172,7 @@ func (t *DecoratedTask) generatePrometheusTarget(
 			addExporterLabels(labels, k, v)
 		}
 	}
-	// handle customized job label at last, so the conflict job docker label is overriden
+	// handle customized job label at last, so the conflict job docker label is overridden
 	addExporterLabels(labels, taskJobNameLabel, &customizedJobName)
 
 	return &PrometheusTarget{
