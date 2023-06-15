@@ -831,7 +831,7 @@ jobs:
         if: steps.ec2-mac-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 1
+          max_attempts: 3
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
