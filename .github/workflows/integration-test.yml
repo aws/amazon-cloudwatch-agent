@@ -818,7 +818,7 @@ jobs:
           path: go.mod
           key: ec2-mac-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
-      - name: Echo Test Info
+      - name: Echo OS
         run: echo run on ec2 instance os ${{ matrix.arrays.os }}
 
       - name: Verify Terraform version
