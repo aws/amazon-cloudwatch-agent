@@ -1,6 +1,9 @@
 {
-  "csm": {
-    "memory_limit_in_mb": 50,
-    "port": 4000
+  "logs": {
+    "metrics_collected": {
+      "kubernetes": {
+      }
+    },
+    "force_flush_interval": 5
   }
 }

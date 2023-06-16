@@ -14,9 +14,9 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
 const (
@@ -33,7 +33,9 @@ func startAgent(writer io.WriteCloser) error {
 		// Use exec so PID 1 changes to agent from start-agent.
 		execArgs := []string{
 			agentBinaryPath, // when using syscall.Exec, must pass binary name as args[0]
-			"-config", tomlConfigPath, "-envconfig", envConfigPath,
+			"-config", tomlConfigPath,
+			"-envconfig", envConfigPath,
+			"-otelconfig", yamlConfigPath,
 			"-pidfile", AGENT_DIR_LINUX + "/var/amazon-cloudwatch-agent.pid",
 		}
 		if err := syscall.Exec(agentBinaryPath, execArgs, os.Environ()); err != nil {
@@ -67,8 +69,13 @@ func startAgent(writer io.WriteCloser) error {
 	}
 
 	// linux command has pid passed while windows does not
-	agentCmd := []string{agentBinaryPath, "-config", tomlConfigPath, "-envconfig", envConfigPath,
-		"-pidfile", AGENT_DIR_LINUX + "/var/amazon-cloudwatch-agent.pid"}
+	agentCmd := []string{
+		agentBinaryPath,
+		"-config", tomlConfigPath,
+		"-envconfig", envConfigPath,
+		"-otelconfig", yamlConfigPath,
+		"-pidfile", AGENT_DIR_LINUX + "/var/amazon-cloudwatch-agent.pid",
+	}
 	if err = syscall.Exec(name, agentCmd, os.Environ()); err != nil {
 		// log file is closed, so use fmt here
 		fmt.Printf("E! Exec failed: %v \n", err)
@@ -93,6 +100,7 @@ func init() {
 	envConfigPath = AGENT_DIR_LINUX + "/etc/" + ENV
 	tomlConfigPath = AGENT_DIR_LINUX + "/etc/" + TOML
 	commonConfigPath = AGENT_DIR_LINUX + "/etc/" + COMMON_CONFIG
+	yamlConfigPath = AGENT_DIR_LINUX + "/etc/" + YAML
 
 	agentLogFilePath = AGENT_DIR_LINUX + "/logs/" + AGENT_LOG_FILE
 

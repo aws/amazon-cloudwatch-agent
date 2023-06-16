@@ -1,0 +1,14 @@
+receivers:
+  nop: {}
+
+exporters:
+  awscloudwatch:
+    namespace: val1
+    region: val2
+    force_flush_interval: 60
+
+service:
+  pipelines:
+    metrics:
+      receivers: [nop]
+      exporters: [awscloudwatch]

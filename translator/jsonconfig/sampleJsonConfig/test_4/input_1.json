@@ -7,10 +7,6 @@
     "logfile": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
     "metrics_collection_interval": 60
   },
-  "csm": {
-    "memory_limit_in_mb": 50,
-    "port": 4000
-  },
   "logs": {
     "credentials": {
       "role_arn": "log_role_arn_value_test"

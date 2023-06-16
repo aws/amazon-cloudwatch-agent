@@ -4,10 +4,10 @@
 package files
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected"
 )
 
 var ChildRule = map[string]translator.Rule{}
@@ -15,7 +15,10 @@ var ChildRule = map[string]translator.Rule{}
 type Files struct {
 }
 
-const SectionKey = "files"
+const (
+	SectionKey       = "files"
+	SectionMappedKey = "logfile"
+)
 
 func GetCurPath() string {
 	return parent.GetCurPath() + SectionKey + "/"
@@ -44,8 +47,8 @@ func (f *Files) ApplyRule(input interface{}) (returnKey string, returnVal interf
 
 		// generate tail config only if file_config exists
 		tailInfo := map[string]interface{}{}
-		if _, ok := tailConfig["file_config"]; ok {
-			tailInfo["logfile"] = []interface{}{tailConfig}
+		if _, ok = tailConfig["file_config"]; ok {
+			tailInfo[SectionMappedKey] = []interface{}{tailConfig}
 			returnKey = "inputs"
 			returnVal = tailInfo
 		}

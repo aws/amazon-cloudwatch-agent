@@ -1,34 +1,32 @@
 {
-  "logs": {
+  "agent": {
+    "logfile": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+  },
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
     "metrics_collected": {
-      "emf": {
-      },
-      "prometheus": {
-        "prometheus_config_path": "/tmp/prometheus.yaml",
-        "emf_processor": {
-          "metric_declaration": [
-            {
-              "source_labels": ["Service"],
-              "regex": "nginx.*",
-              "dimensions": [["Service"]]
-            }
+      "procstat": [
+        {
+          "exe": "KAVFS",
+          "measurement": [
+            "pid_count"
+          ]
+        },
+        {
+          "exe": "W3SVC",
+          "measurement": [
+            "pid_count"
+          ]
+        },
+        {
+          "exe": "IISADMIN",
+          "measurement": [
+            "pid_count"
           ]
         }
-      }
-    },
-    "logs_collected": {
-      "files": {
-        "collect_list": [
-          {
-            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
-            "log_group_name": "amazon-cloudwatch-agent.log",
-            "log_stream_name": "amazon-cloudwatch-agent.log",
-            "timezone": "UTC"
-          }
-        ]
-      }
-    },
-    "force_flush_interval": 5,
-    "endpoint_override":"https://fake_endpoint"
+      ]
+    }
   }
 }

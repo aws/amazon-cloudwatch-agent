@@ -6,11 +6,11 @@ package metrics_collect
 import (
 	"sort"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics"
 )
 
 type Rule translator.Rule
@@ -66,10 +66,7 @@ func (c *CollectMetrics) ApplyRule(input interface{}) (returnKey string, returnV
 
 	//Check if this plugin exist in the input instance
 	//If not, not process
-	if _, ok := im[SectionKey]; !ok {
-		returnKey = ""
-		returnVal = ""
-	} else {
+	if _, ok := im[SectionKey]; ok {
 		//If yes, process it
 		for _, rule := range getOrderedRules(targetRuleMap) {
 			key, val := rule.ApplyRule(im[SectionKey])

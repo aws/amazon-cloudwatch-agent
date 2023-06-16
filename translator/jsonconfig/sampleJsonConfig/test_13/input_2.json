@@ -1,19 +1,22 @@
 {
-  "metrics": {
-    "metrics_collected": {
-      "procstat": [
-        {
-          "exe": "W3SVC",
-          "measurement": [
-            "pid_count"
-          ]
-        },
-        {
-          "exe": "IISADMIN",
-          "measurement": [
-            "pid_count"
-          ]
-        }]
+  "agent": {
+    "region": "us-east-1",
+    "credentials": {
+      "role_arn": "global_role_arn_value"
     }
+  },
+  "traces": {
+    "traces_collected": {
+      "xray": {
+        "bind_address": "0.0.0.0:1234",
+        "tcp_proxy": {
+          "bind_address": "0.0.0.0:1234"
+        }
+      }
+    },
+    "insecure": true,
+    "local_mode": true,
+    "resource_arn": "arn:aws:iam::account:resource",
+    "region_override": "us-west-2"
   }
 }

@@ -7,6 +7,7 @@
 package wineventlog
 
 import (
+	"encoding/xml"
 	"fmt"
 	"log"
 	"os"
@@ -16,10 +17,9 @@ import (
 	"syscall"
 	"time"
 
-	"encoding/xml"
-
-	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"golang.org/x/sys/windows"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 )
 
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385588(v=vs.85).aspx

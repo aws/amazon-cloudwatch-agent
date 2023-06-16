@@ -4,9 +4,9 @@
 package diskio
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/util"
 )
 
 var ChildRule = map[string]translator.Rule{}
@@ -47,9 +47,6 @@ func (d *DiskIO) ApplyRule(input interface{}) (returnKey string, returnVal inter
 		//Process common config, like measurement
 		hasValidMetric := util.ProcessLinuxCommonConfig(m[SectionKey_DiskIO_Linux], SectionKey_DiskIO_Linux, GetCurPath(), result)
 		if hasValidMetric {
-			//Process report_deltas
-			util.ProcessReportDeltasForDiskIO(m[SectionKey_DiskIO_Linux], result)
-
 			resArray = append(resArray, result)
 			returnKey = SectionKey_DiskIO_Linux
 			returnVal = resArray

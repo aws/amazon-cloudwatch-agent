@@ -6,24 +6,18 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 	"os"
 	"path"
 	"path/filepath"
 	sysruntime "runtime"
 	"strconv"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
-
-	"net/http"
-	"time"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/interfaze"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
 )
 
 const (
@@ -134,23 +128,7 @@ func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentia
 
 func DefaultEC2Region() (region string) {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
-	ses, err := session.NewSession(&aws.Config{
-		HTTPClient: &http.Client{Timeout: 1 * time.Second},
-		MaxRetries: aws.Int(0),
-		LogLevel:   configaws.SDKLogLevel(),
-		Logger:     configaws.SDKLogger{},
-	})
-	if err != nil {
-		return
-	}
-	md := ec2metadata.New(ses)
-	if !md.Available() {
-		return
-	}
-	if info, err := md.Region(); err == nil {
-		region = info
-	}
-	return
+	return ec2util.GetEC2UtilSingleton().Region
 }
 
 func AddToMap(ctx *runtime.Context, resultMap map[string]interface{}, obj interfaze.ConvertibleToMap) {
@@ -162,18 +140,12 @@ func AddToMap(ctx *runtime.Context, resultMap map[string]interface{}, obj interf
 
 func Yes(question string) bool {
 	answer := Choice(question, 1, []string{"yes", "no"})
-	if answer == "yes" {
-		return true
-	}
-	return false
+	return answer == "yes"
 }
 
 func No(question string) bool {
 	answer := Choice(question, 2, []string{"yes", "no"})
-	if answer == "yes" {
-		return true
-	}
-	return false
+	return answer == "yes"
 }
 
 func AskWithDefault(question, defaultValue string) string {

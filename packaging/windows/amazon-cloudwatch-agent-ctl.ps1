@@ -88,6 +88,7 @@ $CVLogFile="${CWALogDirectory}\configuration-validation.log"
 
 # The windows service registration assumes exactly this .toml file path and name
 $TOML="${CWAProgramData}\amazon-cloudwatch-agent.toml"
+$OTEL_YAML="${CWAProgramData}\amazon-cloudwatch-agent.yaml"
 $JSON="${CWAProgramData}\amazon-cloudwatch-agent.json"
 $JSON_DIR = "${CWAProgramData}\Configs"
 $COMMON_CONIG="${CWAProgramData}\common-config.toml"
@@ -309,6 +310,7 @@ Function CWAConfig() {
     if ($jsonDirContent.count -eq 0) {
         Write-Output "All amazon-cloudwatch-agent configurations have been removed"
         Remove-Item "${TOML}" -Force -ErrorAction SilentlyContinue
+        Remove-Item "${OTEL_YAML}" -Force -ErrorAction SilentlyContinue
     } else {
         Write-Output "Start configuration validation..."
         & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"

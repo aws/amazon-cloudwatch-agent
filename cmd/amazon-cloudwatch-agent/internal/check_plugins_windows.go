@@ -7,12 +7,12 @@
 package internal
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/security"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/security"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/util"
 )
 
 func CheckNvidiaSMIBinaryRights() error {
-	if err := security.CheckFileRights(util.Default_Windows_Smi_Path); err != nil{
+	if err := security.CheckFileRights(util.Default_Windows_Smi_Path); err != nil {
 		return err
 	}
 	return nil
