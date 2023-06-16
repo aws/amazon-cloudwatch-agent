@@ -4,6 +4,7 @@
 package cloudwatchlogs
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"math/rand"
 	"sort"
 	"sync"
@@ -56,9 +57,10 @@ type pusher struct {
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
+	agentInfo             agentinfo.AgentInfo
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, agentInfo agentinfo.AgentInfo) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
@@ -71,6 +73,7 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
+		agentInfo:       agentInfo,
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
@@ -226,7 +229,9 @@ func (p *pusher) send() {
 	retryCount := 0
 	for {
 		input.SequenceToken = p.sequenceToken
+		opStartTime := time.Now()
 		output, err := p.Service.PutLogEvents(input)
+		p.agentInfo.RecordOpData(time.Since(opStartTime), p.bufferredSize, err)
 		if err == nil {
 			if output.NextSequenceToken != nil {
 				p.sequenceToken = output.NextSequenceToken
@@ -325,10 +330,12 @@ func retryWait(n int) time.Duration {
 }
 
 func (p *pusher) createLogGroupAndStream() error {
+	opStartTime := time.Now()
 	_, err := p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,
 	})
+	p.agentInfo.RecordOpData(time.Since(opStartTime), 1, err)
 
 	if err == nil {
 		p.Log.Debugf("successfully created log stream %v", p.Stream)
@@ -337,17 +344,21 @@ func (p *pusher) createLogGroupAndStream() error {
 
 	p.Log.Debugf("creating stream fail due to : %v", err)
 	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
+		opStartTime = time.Now()
 		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName: &p.Group,
 		})
+		p.agentInfo.RecordOpData(time.Since(opStartTime), p.bufferredSize, err)
 
 		// attempt to create stream again if group created successfully.
 		if err == nil {
 			p.Log.Debugf("successfully created log group %v. Retrying log stream %v", p.Group, p.Stream)
+			opStartTime = time.Now()
 			_, err = p.Service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 				LogGroupName:  &p.Group,
 				LogStreamName: &p.Stream,
 			})
+			p.agentInfo.RecordOpData(time.Since(opStartTime), 1, err)
 			if err == nil {
 				p.Log.Debugf("successfully created log stream %v", p.Stream)
 			}
@@ -372,7 +383,9 @@ func (p *pusher) putRetentionPolicy() {
 			LogGroupName:    &p.Group,
 			RetentionInDays: i,
 		}
+		opStartTime := time.Now()
 		_, err := p.Service.PutRetentionPolicy(putRetentionInput)
+		p.agentInfo.RecordOpData(time.Since(opStartTime), 1, err)
 		if err != nil {
 			// since this gets called both before we start pushing logs, and after we first attempt
 			// to push a log to a non-existent log group, we don't want to dirty the log with an error
