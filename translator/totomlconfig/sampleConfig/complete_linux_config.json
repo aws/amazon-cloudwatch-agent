@@ -8,7 +8,8 @@
     "user_agent": "CUSTOM USER AGENT VALUE",
     "credentials": {
       "role_arn": "global_role_arn_value"
-    }
+    },
+    "max_cloudwatch_logs_buffer": 10485760
   },
   "metrics": {
     "metrics_collected": {

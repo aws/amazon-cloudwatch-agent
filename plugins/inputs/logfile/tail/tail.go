@@ -5,6 +5,7 @@ package tail
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aws/amazon-cloudwatch-agent/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
@@ -67,6 +69,7 @@ type Config struct {
 
 	// Special handling for utf16
 	IsUTF16 bool
+	LogBlocker *util.LogBlocker
 }
 
 type Tail struct {
@@ -219,6 +222,23 @@ func (tail *Tail) reopen() error {
 // before finding the end-of-line bytes(often io.EOF), it returns the data read
 // before the error and the error itself.
 func (tail *Tail) readLine() (string, error) {
+	block, bufferSize, maxBufferSize := tail.Config.LogBlocker.Block()
+	ctx, cancel := context.WithCancel(context.Background())
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+	defer cancel()
+	for block {
+		select {
+		case <-t.C:
+			tail.Logger.Infof("max buffer of logs size sending to cloudwatch "+
+				"blocking reading for one second for file %s max buffer %d current buffer %d",
+				tail.Filename, maxBufferSize, bufferSize)
+			block, bufferSize, maxBufferSize = tail.Config.LogBlocker.Block()
+		// on agent exit do not block
+		case <-ctx.Done():
+			block = false
+		}
+	}
 	if tail.Config.IsUTF16 {
 		return tail.readlineUtf16()
 	}

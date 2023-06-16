@@ -280,6 +280,10 @@ func (le LogEvent) Done() {
 	le.src.Done(le.offset)
 }
 
+func (le LogEvent) Size() int  {
+	return len(le.msg)
+}
+
 // getRecords attempts to render and format each of the given EvtHandles.
 // If one handle has an error, continue on because something is better than nothing.
 func (w *windowsEventLog) getRecords(handles []EvtHandle) (records []*windowsEventLogRecord) {

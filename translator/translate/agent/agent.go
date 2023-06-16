@@ -28,7 +28,8 @@ type Agent struct {
 	Credentials map[string]interface{}
 	Region      string
 	Internal    bool
-	Role_arn    string
+	Role_arn                string
+	MaxCloudwatchLogsBuffer int64
 }
 
 var Global_Config Agent = *new(Agent)

@@ -20,6 +20,7 @@ import (
 func TestLogs(t *testing.T) {
 	l := new(Logs)
 	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.MaxCloudwatchLogsBuffer = int64(-1)
 
 	var input interface{}
 	err := json.Unmarshal([]byte(`{"logs":{"log_stream_name":"LOG_STREAM_NAME"}}`), &input)
@@ -37,6 +38,7 @@ func TestLogs(t *testing.T) {
 					"force_flush_interval": "5s",
 					"tagexclude":           []string{"metricPath"},
 					"tagpass":              map[string][]string{"metricPath": {"logs"}},
+					"max_cloudwatch_logs_buffer": int64(-1),
 				},
 			},
 		},
@@ -47,6 +49,7 @@ func TestLogs(t *testing.T) {
 func TestLogs_LogStreamName(t *testing.T) {
 	l := new(Logs)
 	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.MaxCloudwatchLogsBuffer = int64(-1)
 
 	var input interface{}
 	err := json.Unmarshal([]byte(`{"logs":{}}`), &input)
@@ -68,6 +71,7 @@ func TestLogs_LogStreamName(t *testing.T) {
 					"force_flush_interval": "5s",
 					"tagexclude":           []string{"metricPath"},
 					"tagpass":              map[string][]string{"metricPath": {"logs"}},
+					"max_cloudwatch_logs_buffer": int64(-1),
 				},
 			},
 		},
@@ -95,6 +99,7 @@ func TestLogs_LogStreamName(t *testing.T) {
 					"force_flush_interval": "5s",
 					"tagexclude":           []string{"metricPath"},
 					"tagpass":              map[string][]string{"metricPath": {"logs"}},
+					"max_cloudwatch_logs_buffer": int64(-1),
 				},
 			},
 		},
@@ -119,6 +124,7 @@ func TestLogs_LogStreamName(t *testing.T) {
 					"force_flush_interval": "5s",
 					"tagexclude":           []string{"metricPath"},
 					"tagpass":              map[string][]string{"metricPath": {"logs"}},
+					"max_cloudwatch_logs_buffer": int64(-1),
 				},
 			},
 		},
@@ -132,6 +138,7 @@ func TestLogs_LogStreamName(t *testing.T) {
 func TestLogs_ForceFlushInterval(t *testing.T) {
 	l := new(Logs)
 	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.MaxCloudwatchLogsBuffer = int64(-1)
 
 	var input interface{}
 	err := json.Unmarshal([]byte(`{"logs":{"force_flush_interval":10}}`), &input)
@@ -153,6 +160,7 @@ func TestLogs_ForceFlushInterval(t *testing.T) {
 					"force_flush_interval": "10s",
 					"tagexclude":           []string{"metricPath"},
 					"tagpass":              map[string][]string{"metricPath": {"logs"}},
+					"max_cloudwatch_logs_buffer": int64(-1),
 				},
 			},
 		},
@@ -166,6 +174,7 @@ func TestLogs_ForceFlushInterval(t *testing.T) {
 func TestLogs_EndpointOverride(t *testing.T) {
 	l := new(Logs)
 	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.MaxCloudwatchLogsBuffer = int64(-1)
 
 	var input interface{}
 	err := json.Unmarshal([]byte(`{"logs":{"endpoint_override":"https://logs-fips.us-east-1.amazonaws.com"}}`), &input)
@@ -188,6 +197,7 @@ func TestLogs_EndpointOverride(t *testing.T) {
 					"force_flush_interval": "5s",
 					"tagexclude":           []string{"metricPath"},
 					"tagpass":              map[string][]string{"metricPath": {"logs"}},
+					"max_cloudwatch_logs_buffer": int64(-1),
 				},
 			},
 		},

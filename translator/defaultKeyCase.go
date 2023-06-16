@@ -57,6 +57,19 @@ func DefaultIntegralCase(key string, defaultVal, input interface{}) (returnKey s
 	return
 }
 
+func DefaultInteger64Case(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
+	returnKey, returnVal = DefaultCase(key, defaultVal, input)
+	// By default json unmarshal will store number as float64
+	if floatVal, ok := returnVal.(float64); ok {
+		returnVal = int64(floatVal)
+	} else {
+		AddErrorMessages(
+			fmt.Sprintf("integer 64 key: %s", key),
+			fmt.Sprintf("%s value (%v) in json is not valid as an 64 bit integer.", key, returnVal))
+	}
+	return
+}
+
 func DefaultStringArrayCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
 	returnKey, returnVal = DefaultCase(key, defaultVal, input)
 	if arrayVal, ok := returnVal.([]interface{}); ok {
@@ -82,6 +95,19 @@ func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (retu
 		AddErrorMessages(
 			fmt.Sprintf("Retention in Days key: %s", key),
 			fmt.Sprintf("%s value (%v) in is not valid retention in days.", key, returnVal))
+	}
+	return
+}
+
+func DefaultMaxCloudwatchLogsBuffer(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
+	returnKey, returnVal = DefaultInteger64Case(key, defaultVal, input)
+	if intVal, ok := returnVal.(int64); ok{
+		returnVal = intVal
+	} else {
+		returnVal = int64(-1)
+		AddErrorMessages(
+			fmt.Sprintf("Max cloudwatch logs buffer key: %s", key),
+			fmt.Sprintf("%s value (%v) in is not valid cloudwatch logs buffer.", key, returnVal))
 	}
 	return
 }

@@ -2,6 +2,7 @@ package tail
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/logs/util"
 	"log"
 	"os"
 	"strings"
@@ -117,6 +118,39 @@ func TestStopAtEOF(t *testing.T) {
 	verifyTailerExited(t, tail)
 }
 
+func TestLogBlocker(t *testing.T) {
+	tmpfile, tail, tlog := setup(t)
+	tail.LogBlocker = util.NewLogBlocker(int64(1000))
+	tail.LogBlocker.Add(1000)
+	defer tearDown(tmpfile)
+
+	go func() {
+		tail.StopAtEOF()
+	}()
+
+	// Try reading line
+	go func() {
+		// Read to EOF
+		for i := 0; i < linesWrittenToFile; i++ {
+			<-tail.Lines
+		}
+	}()
+
+	time.Sleep(2 * time.Second)
+	found := false
+	for _, info := range tlog.infos {
+		if strings.Contains(info, "max buffer of logs size sending to cloudwatch") {
+			found = true
+		}
+	}
+	assert.True(t, found)
+	tail.LogBlocker.Subtract(1000)
+
+	// Wait until the tailer should have been terminated
+	time.Sleep(2 * time.Second)
+	verifyTailerExited(t, tail)
+}
+
 func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
@@ -143,6 +177,7 @@ func setup(t *testing.T) (*os.File, *Tail, *testLogger) {
 		Logger: &tl,
 		ReOpen: false,
 		Follow: true,
+		LogBlocker: util.DefaultLogBlocker(),
 	})
 	if err != nil {
 		t.Fatalf("failed to tail file %v: %v", tmpfile.Name(), err)

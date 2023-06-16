@@ -4,6 +4,7 @@
 package cloudwatchlogs
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/logs/util"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -49,7 +50,7 @@ func TestCreateDestination(t *testing.T) {
 				pusherStopChan: make(chan struct{}),
 				cwDests:        make(map[Target]*cwDest),
 			}
-			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention).(*cwDest)
+			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention, util.DefaultLogBlocker()).(*cwDest)
 			require.Equal(t, testCase.expectedLogGroup, dest.pusher.Group)
 			require.Equal(t, testCase.expectedLogStream, dest.pusher.Stream)
 		})
@@ -64,8 +65,8 @@ func TestDuplicateDestination(t *testing.T) {
 		pusherStopChan: make(chan struct{}),
 	}
 	// Given the same log group, log stream and same retention
-	d1 := c.CreateDest("FILENAME", "", -1)
-	d2 := c.CreateDest("FILENAME", "", -1)
+	d1 := c.CreateDest("FILENAME", "", -1, util.DefaultLogBlocker())
+	d2 := c.CreateDest("FILENAME", "", -1, util.DefaultLogBlocker())
 
 	// Then the destination for cloudwatchlogs endpoint would be the same
 	require.Equal(t, d1, d2)
