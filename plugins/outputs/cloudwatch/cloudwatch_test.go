@@ -5,6 +5,7 @@ package cloudwatch
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"sort"
 	"testing"
 	"time"
@@ -334,6 +335,7 @@ func newCloudWatchClient(svc cloudwatchiface.CloudWatchAPI, forceFlushInterval t
 	cloudwatch := &CloudWatch{
 		svc:                svc,
 		ForceFlushInterval: internal.Duration{Duration: forceFlushInterval},
+		agentInfo:          agentinfo.New(""),
 	}
 	cloudwatch.startRoutines()
 	return cloudwatch
