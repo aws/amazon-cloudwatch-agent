@@ -40,6 +40,7 @@ jobs:
   MakeBinary:
     name: 'MakeBinary'
     runs-on: ubuntu-latest
+    if: false
     permissions:
       id-token: write
       contents: read
@@ -193,6 +194,7 @@ jobs:
     name: 'MakeMSIZip'
     runs-on: ubuntu-latest
     needs: [MakeBinary]
+    if: false
     permissions:
       id-token: write
       contents: read
