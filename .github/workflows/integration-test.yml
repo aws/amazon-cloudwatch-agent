@@ -819,7 +819,7 @@ jobs:
           key: ec2-mac-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }}
 
       - name: Verify Terraform version
         run: terraform --version
