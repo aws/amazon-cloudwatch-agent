@@ -8,9 +8,9 @@ env:
   S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  CWA_GITHUB_TEST_REPO_NAME: "zhihonl/amazon-cloudwatch-agent-test"
-  CWA_GITHUB_TEST_REPO_URL: "https://github.com/zhihonl/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "macos-test"
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
   push:
@@ -40,7 +40,6 @@ jobs:
   MakeBinary:
     name: 'MakeBinary'
     runs-on: ubuntu-latest
-    if: false
     permissions:
       id-token: write
       contents: read
@@ -194,7 +193,6 @@ jobs:
     name: 'MakeMSIZip'
     runs-on: ubuntu-latest
     needs: [MakeBinary]
-    if: false
     permissions:
       id-token: write
       contents: read
@@ -820,8 +818,8 @@ jobs:
           path: go.mod
           key: ec2-mac-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
-      - name: Echo OS
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }}
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
       - name: Verify Terraform version
         run: terraform --version
