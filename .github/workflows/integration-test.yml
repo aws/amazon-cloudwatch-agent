@@ -40,7 +40,6 @@ jobs:
   MakeBinary:
     name: 'MakeBinary'
     runs-on: ubuntu-latest
-    if: false
     permissions:
       id-token: write
       contents: read
