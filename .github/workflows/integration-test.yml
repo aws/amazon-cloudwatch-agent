@@ -1108,14 +1108,14 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/eks/deployment && terraform destroy --auto-approve
 
-  StressTrackingTest:
-    name: "StressTrackingTest"
-    needs: [MakeBinary, EC2LinuxIntegrationTest, ECSEC2IntegrationTest, ECSFargateIntegrationTest, GenerateTestMatrix]
+  PerformanceTrackingTest:
+    name: "PerformanceTrackingTest"
+    needs: [MakeBinary, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_stress_matrix) }}
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
     permissions:
       id-token: write
       contents: read
@@ -1132,18 +1132,18 @@ jobs:
           aws-region: us-west-2
 
       - name: Cache if success
-        id: stress-tracking
+        id: performance-tracking
         uses: actions/cache@v3
         with:
           path: go.mod
-          key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+          key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Verify Terraform version
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
       - name: Terraform apply
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
@@ -1155,7 +1155,6 @@ jobs:
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${GITHUB_SHA}" \
-              -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
