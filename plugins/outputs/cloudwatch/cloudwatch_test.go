@@ -330,7 +330,7 @@ func newCloudWatchClient(
 			MaxDatumsPerCall:   defaultMaxDatumsPerCall,
 			MaxValuesPerDatum:  defaultMaxValuesPerDatum,
 		},
-		agentInfo: agentinfo.New(),
+		agentInfo: agentinfo.New(""),
 	}
 	cloudwatch.startRoutines()
 	return cloudwatch

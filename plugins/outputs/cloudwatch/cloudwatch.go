@@ -70,6 +70,7 @@ type CloudWatch struct {
 	aggregatorShutdownChan chan struct{}
 	aggregatorWaitGroup    sync.WaitGroup
 	agentInfo              agentinfo.AgentInfo
+	lastRequestBytes       int
 }
 
 // Compile time interface check.
@@ -80,7 +81,7 @@ func (c *CloudWatch) Capabilities() consumer.Capabilities {
 }
 
 func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
-	c.agentInfo = agentinfo.New()
+	c.agentInfo = agentinfo.New("")
 	c.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
@@ -107,7 +108,8 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 			Logger:   configaws.SDKLogger{},
 		})
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
-	svc.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("User-Agent", c.agentInfo.UserAgent))
+	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", c.agentInfo.UserAgent()))
+	svc.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("X-Amz-Agent-Stats", c.agentInfo.StatsHeader))
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	c.svc = svc
@@ -183,6 +185,7 @@ func (c *CloudWatch) pushMetricDatum() {
 		case <-ticker.C:
 			if c.timeToPublish(c.metricDatumBatch) {
 				// if the time to publish comes
+				c.lastRequestBytes = c.metricDatumBatch.Size
 				c.datumBatchChan <- c.metricDatumBatch.Partition
 				c.metricDatumBatch.clear()
 			}
@@ -340,7 +343,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	for i := 0; i < defaultRetryCount; i++ {
 		startTime := time.Now()
 		_, err = c.svc.PutMetricData(params)
-		c.agentInfo.RecordOpData(time.Since(startTime), len(params.MetricData), err)
+		c.agentInfo.RecordOpData(time.Since(startTime), c.lastRequestBytes, err)
 		if err != nil {
 			awsErr, ok := err.(awserr.Error)
 			if !ok {

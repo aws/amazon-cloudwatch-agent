@@ -107,7 +107,7 @@ func reloadLoop(
 			select {
 			case sig := <-signals:
 				if sig == syscall.SIGHUP {
-					log.Printf("I! Reloading Telegraf config")
+					log.Println("I! Reloading Telegraf config")
 					<-reload
 					reload <- true
 				}
@@ -143,7 +143,7 @@ func reloadLoop(
 					case <-ticker.C:
 						if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
 							if err := loadEnvironmentVariables(envConfigPath); err != nil {
-								log.Printf("E! Unable to load env variables: %v", err)
+								log.Printf("E! Unable to load env variables: %v\n", err)
 							}
 							// Sets the log level based on environment variable
 							logLevel := os.Getenv(envconfig.CWAGENT_LOG_LEVEL)
@@ -151,7 +151,7 @@ func reloadLoop(
 								logLevel = "INFO"
 							}
 							if err := wlog.SetLevelFromName(logLevel); err != nil {
-								log.Printf("E! Unable to set log level: %v", err)
+								log.Printf("E! Unable to set log level: %v\n", err)
 							}
 							// Set AWS SDK logging
 							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
@@ -192,7 +192,7 @@ func loadEnvironmentVariables(path string) error {
 
 	for key, val := range envVars {
 		os.Setenv(key, val)
-		log.Printf("I! %s is set to \"%s\"", key, val)
+		log.Printf("I! %s is set to \"%s\"\n", key, val)
 	}
 	return nil
 }
@@ -219,7 +219,7 @@ func runAgent(ctx context.Context,
 	}
 	err = loadEnvironmentVariables(envConfigPath)
 	if err != nil && !*fSchemaTest {
-		log.Printf("W! Failed to load environment variables due to %s", err.Error())
+		log.Printf("W! Failed to load environment variables due to %s\n", err.Error())
 	}
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
@@ -254,9 +254,8 @@ func runAgent(ctx context.Context,
 	}
 
 	logger.SetupLogging(logConfig)
-	agentInfo := agentinfo.New()
 
-	log.Printf("I! Starting AmazonCloudWatchAgent %s", agentInfo.Version())
+	log.Printf("I! Starting AmazonCloudWatchAgent %s\n", agentinfo.FullVersion())
 	// Need to set SDK log level before plugins get loaded.
 	// Some aws.Config objects get created early and live forever which means
 	// we cannot change the sdk log level without restarting the Agent.
@@ -265,15 +264,15 @@ func runAgent(ctx context.Context,
 	configaws.SetSDKLogLevel(sdkLogLevel)
 	configaws.SetSDKV2LogLevel(sdkLogLevel)
 	if sdkLogLevel == "" {
-		log.Printf("I! AWS SDK log level not set")
+		log.Println("I! AWS SDK log level not set")
 	} else {
-		log.Printf("I! AWS SDK log level, %s", sdkLogLevel)
+		log.Printf("I! AWS SDK log level, %s\n", sdkLogLevel)
 	}
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Printf("E! Unable to create pidfile: %s", err)
+			log.Printf("E! Unable to create pidfile: %s\n", err)
 		} else {
 			fmt.Fprintf(f, "%d\n", os.Getpid())
 
@@ -282,7 +281,7 @@ func runAgent(ctx context.Context,
 			defer func() {
 				err := os.Remove(*fPidfile)
 				if err != nil {
-					log.Printf("E! Unable to remove pidfile: %s", err)
+					log.Printf("E! Unable to remove pidfile: %s\n", err)
 				}
 			}()
 		}
@@ -321,13 +320,13 @@ func runAgent(ctx context.Context,
 
 	factories, err := components(c)
 	if err != nil {
-		log.Printf("E! Error while adapting telegraf input plugins: %v", err)
+		log.Printf("E! Error while adapting telegraf input plugins: %v\n", err)
 		return err
 	}
 
 	provider, err := otelcol.NewConfigProvider(settings)
 	if err != nil {
-		log.Printf("E! Error while initializing config provider: %v", err)
+		log.Printf("E! Error while initializing config provider: %v\n", err)
 		return err
 	}
 
@@ -438,7 +437,7 @@ func main() {
 			}
 			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
 
-			log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
+			log.Printf("I! Starting pprof HTTP server at: %s\n", pprofHostPort)
 
 			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
 				log.Fatal("E! " + err.Error())
@@ -449,7 +448,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Println(agentinfo.New().FullVersion())
+			fmt.Println(agentinfo.FullVersion())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -627,7 +626,7 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error {
 
 	if *fSchemaTest {
 		//up to this point, the given config file must be valid
-		fmt.Println(agentinfo.New().FullVersion())
+		fmt.Println(agentinfo.FullVersion())
 		fmt.Printf("The given config: %v is valid\n", *fConfig)
 		os.Exit(0)
 	}

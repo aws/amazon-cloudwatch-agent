@@ -3,7 +3,9 @@
 
 package handlers
 
-import "github.com/aws/aws-sdk-go/aws/request"
+import (
+	"github.com/aws/aws-sdk-go/aws/request"
+)
 
 func NewCustomHeaderHandler(name, value string) request.NamedHandler {
 	return request.NamedHandler{
@@ -18,7 +20,9 @@ func NewDynamicCustomHeaderHandler(name string, fn func() string) request.NamedH
 	return request.NamedHandler{
 		Name: name + "HeaderHandler",
 		Fn: func(req *request.Request) {
-			req.HTTPRequest.Header.Set(name, fn())
+			if content := fn(); content != "" {
+				req.HTTPRequest.Header.Set(name, content)
+			}
 		},
 	}
 }
