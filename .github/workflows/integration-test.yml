@@ -227,10 +227,11 @@ jobs:
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
-              -var="github_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
               -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
