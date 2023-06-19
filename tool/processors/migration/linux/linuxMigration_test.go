@@ -91,9 +91,9 @@ func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
 	[general]
 		state_file = /var/lib/awslogs/agent-state
 
-	[/apollo/env/BaldrBifrost/var/output/log/audit_pusher.log]
-		file = /apollo/env/BaldrBifrost/var/output/log/audit_pusher.log
-		log_group_name = Bifrost/audit_pusher
+	[/var/output/log/audit_pusher.log]
+		file = /var/output/log/audit_pusher.log
+		log_group_name = service/audit_pusher
 		log_stream_name = hsm-bqvuwqn72vk
 		datetime_format = %b %d %H:%M:%S,%f
 		encoding = euc_jp
@@ -114,20 +114,20 @@ func TestProcessConfigFromPythonConfigParserFile(t *testing.T) {
 			"files": map[string]interface{}{
 				"collect_list": []map[string]interface{}{
 					{
-						"file_path":         "/apollo/env/BaldrBifrost/var/output/log/audit_pusher.log",
-						"log_group_name":    "Bifrost/audit_pusher",
-						"timestamp_format":  "%b %d %H:%M:%S,%f",
-						"log_stream_name":   "hsm-bqvuwqn72vk",
-						"encoding":          "euc-jp",
-						"retention_in_days": -1,
-					},
-					{
 						"file_path":                "/var/log/messages",
 						"log_group_name":           "/var/log/messages",
 						"timestamp_format":         "%b %d %H:%M:%S",
 						"multi_line_start_pattern": "{timestamp_format}",
 						"log_stream_name":          "{hostname}",
 						"retention_in_days":        -1,
+					},
+					{
+						"file_path":         "/var/output/log/audit_pusher.log",
+						"log_group_name":    "service/audit_pusher",
+						"timestamp_format":  "%b %d %H:%M:%S,%f",
+						"log_stream_name":   "hsm-bqvuwqn72vk",
+						"encoding":          "euc-jp",
+						"retention_in_days": -1,
 					},
 				},
 			},
