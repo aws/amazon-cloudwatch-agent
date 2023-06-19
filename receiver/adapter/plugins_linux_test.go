@@ -9,7 +9,6 @@ package adapter
 import (
 	"testing"
 
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disk"
 	_ "github.com/influxdata/telegraf/plugins/inputs/diskio"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
@@ -19,6 +18,8 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/socket_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/swap"
 	"github.com/stretchr/testify/assert"
+
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd"
 )
 
 const testCfg = "./testdata/all_plugins.toml"

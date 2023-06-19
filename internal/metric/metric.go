@@ -4,8 +4,17 @@
 package metric
 
 import (
+	"runtime"
+	"strings"
+
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
+)
+
+var serviceInputMeasurements = collections.NewSet[string](
+	"prometheus",
 )
 
 type Metrics struct {
@@ -65,4 +74,25 @@ func (metrics *Metrics) AddGaugeMetricDataPoint(
 	case int64:
 		dp.SetIntValue(v)
 	}
+}
+
+func DecorateMetricName(measurement, fieldKey string) string {
+	// Statsd sets field name as default when the field is empty
+	// https://github.com/aws/amazon-cloudwatch-agent/blob/6b3384ee44dcc07c1359b075eb9ea8e638126bc8/plugins/inputs/statsd/statsd.go#L492-L494
+	if fieldKey == "value" {
+		return measurement
+	}
+
+	// Honor metrics for service input (e.g prometheus)
+	if serviceInputMeasurements.Contains(measurement) {
+		return fieldKey
+	}
+
+	separator := "_"
+
+	if runtime.GOOS == "windows" {
+		separator = " "
+	}
+
+	return strings.Join([]string{measurement, fieldKey}, separator)
 }

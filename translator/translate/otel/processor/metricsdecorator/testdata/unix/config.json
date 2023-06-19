@@ -14,7 +14,7 @@
             "unit": "unit"
           },
           "cpu_usage_guest",
-          "time_active",
+          {"name": "time_active", "rename":"cpu_time_active_renamed"},
           "usage_active"
         ]
       },

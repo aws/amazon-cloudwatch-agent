@@ -5,11 +5,12 @@ package ec2tagger
 
 import (
 	"context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 	"hash/fnv"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"

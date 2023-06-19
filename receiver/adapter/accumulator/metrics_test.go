@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -56,7 +58,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 			),
 			expectedMetrics: []map[string]interface{}{
 				{
-					"name":       getMetricName("cpu", "usage_user"),
+					"name":       metric.DecorateMetricName("cpu", "usage_user"),
 					"value":      float64(42),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
@@ -80,7 +82,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 			),
 			expectedMetrics: []map[string]interface{}{
 				{
-					"name":       getMetricName("swap", "Sin"),
+					"name":       metric.DecorateMetricName("swap", "Sin"),
 					"value":      float64(3),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
@@ -106,7 +108,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 			),
 			expectedMetrics: []map[string]interface{}{
 				{
-					"name":       getMetricName("prometheus", "redis_tx"),
+					"name":       metric.DecorateMetricName("prometheus", "redis_tx"),
 					"value":      int64(4),
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),
@@ -114,7 +116,7 @@ func Test_ConvertToOtelMetrics_WithDifferentTypes(t *testing.T) {
 					"unit":       "",
 				},
 				{
-					"name":       getMetricName("prometheus", "redis_rx"),
+					"name":       metric.DecorateMetricName("prometheus", "redis_rx"),
 					"value":      2.3,
 					"attributes": generateExpectedAttributes(),
 					"timestamp":  pcommon.NewTimestampFromTime(now),

@@ -6,18 +6,20 @@ package ec2util
 import (
 	localContext "context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/retry"
-	awsConfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	loggerConfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"log"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+
+	loggerConfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
 // this is a singleton struct

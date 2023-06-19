@@ -6,14 +6,16 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 	"os"
 	"path"
 	"path/filepath"
 	sysruntime "runtime"
 	"strconv"
+
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/interfaze"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"

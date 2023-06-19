@@ -8,6 +8,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
+
 	"github.com/influxdata/telegraf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -71,14 +73,14 @@ func AddScopeMetricsIntoOtelMetrics(populateDataPoints dataPointPopulator, otelM
 // https://github.com/influxdata/influxdb-observability/blob/main/docs/metrics.md#gauge-metric
 func populateDataPointsForGauge(measurement string, metrics pmetric.MetricSlice, fields map[string]interface{}, tags map[string]string, timestamp pcommon.Timestamp) {
 	for field, value := range fields {
-		metric := metrics.AppendEmpty()
+		m := metrics.AppendEmpty()
 
-		name := getMetricName(measurement, field)
+		name := metric.DecorateMetricName(measurement, field)
 		unit := getDefaultUnit(measurement, field)
-		metric.SetName(name)
-		metric.SetUnit(unit)
+		m.SetName(name)
+		m.SetUnit(unit)
 
-		populateNumberDataPoint(metric.SetEmptyGauge().DataPoints().AppendEmpty(), value, tags, timestamp)
+		populateNumberDataPoint(m.SetEmptyGauge().DataPoints().AppendEmpty(), value, tags, timestamp)
 	}
 }
 
@@ -86,19 +88,19 @@ func populateDataPointsForGauge(measurement string, metrics pmetric.MetricSlice,
 // https://github.com/influxdata/influxdb-observability/blob/main/docs/metrics.md#sum-metric
 func populateDataPointsForSum(measurement string, metrics pmetric.MetricSlice, fields map[string]interface{}, tags map[string]string, timestamp pcommon.Timestamp) {
 	for field, value := range fields {
-		metric := metrics.AppendEmpty()
+		m := metrics.AppendEmpty()
 
-		name := getMetricName(measurement, field)
+		name := metric.DecorateMetricName(measurement, field)
 		unit := getDefaultUnit(measurement, field)
-		metric.SetName(name)
-		metric.SetUnit(unit)
+		m.SetName(name)
+		m.SetUnit(unit)
 
 		// Sum is an  OTEL Stream Model which consists of:
 		// * An Aggregation Temporality of delta or cumulative.
 		// * Monotonic, to signal the time series data is increasing
 		// For more information on OTEL Stream Model Sum, please following this document
 		// https://opentelemetry.io/docs/reference/specification/metrics/datamodel/#sums
-		sumMetric := metric.SetEmptySum()
+		sumMetric := m.SetEmptySum()
 		sumMetric.SetIsMonotonic(true)
 		sumMetric.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 		populateNumberDataPoint(sumMetric.DataPoints().AppendEmpty(), value, tags, timestamp)
@@ -117,10 +119,10 @@ func populateDataPointsForHistogram(
 		if !ok {
 			continue
 		}
-		metric := metrics.AppendEmpty()
-		metric.SetName(getMetricName(measurement, field))
-		metric.SetUnit(getDefaultUnit(measurement, field))
-		h := metric.SetEmptyHistogram().DataPoints().AppendEmpty()
+		m := metrics.AppendEmpty()
+		m.SetName(metric.DecorateMetricName(measurement, field))
+		m.SetUnit(getDefaultUnit(measurement, field))
+		h := m.SetEmptyHistogram().DataPoints().AppendEmpty()
 		h.SetTimestamp(timestamp)
 		d.ConvertToOtel(h)
 		addTagsToAttributes(h.Attributes(), tags)

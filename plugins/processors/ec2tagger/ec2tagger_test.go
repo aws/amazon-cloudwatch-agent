@@ -6,9 +6,10 @@ package ec2tagger
 import (
 	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"

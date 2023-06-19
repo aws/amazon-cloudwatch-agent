@@ -85,10 +85,10 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "PERCENT") where name == "% Idle Time"
-                  - set(name, "DISK_READ") where name == "% Disk Read Time"
-                  - set(unit, "PERCENT") where name == "% Idle Time"
-                  - set(name, "CPU_IDLE") where name == "% Idle Time"
+                  - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
+                  - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
+                  - set(unit, "PERCENT") where name == "Processor % Idle Time"
+                  - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
         trace_statements: []
 receivers:
     awsxray:

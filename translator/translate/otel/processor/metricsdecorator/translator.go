@@ -5,6 +5,9 @@ package metricsdecorator
 import (
 	"errors"
 	"fmt"
+	"strings"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -67,7 +70,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 func IsSet(conf *confmap.Conf) bool {
 	measurementMaps := getMeasurementMaps(conf)
 	for _, measurementMap := range measurementMaps {
-		for _, entry := range measurementMap.([]interface{}) {
+		for _, entry := range measurementMap {
 			switch val := entry.(type) {
 			case map[string]interface{}:
 				_, ok1 := val["rename"]
@@ -86,14 +89,22 @@ func IsSet(conf *confmap.Conf) bool {
 func (t *translator) getContextStatements(conf *confmap.Conf) (ContextStatement, error) {
 	var statements []string
 	measurementMaps := getMeasurementMaps(conf)
-	for _, measurementMap := range measurementMaps {
-		for _, entry := range measurementMap.([]interface{}) {
+	for plugin, measurementMap := range measurementMaps {
+		for _, entry := range measurementMap {
 			switch val := entry.(type) {
 			case map[string]interface{}:
 				name, ok := val["name"]
 				if !ok {
 					return ContextStatement{}, errors.New("name field is missing for one of your metrics")
 				}
+
+				// metrics at this point are all prefixed with their plugin category name.
+				// 1. The plain metric name without the plugin prefix will not properly decorate in CW
+				// 2. Without the prefix, there will be conflicting statements for metrics with the same name, but different plugins
+				if !strings.HasPrefix(name.(string), plugin) {
+					name = metric.DecorateMetricName(plugin, name.(string))
+				}
+
 				if newUnit, ok := val["unit"]; ok {
 					statement := fmt.Sprintf("set(unit, \"%s\") where name == \"%s\"", newUnit, name)
 					statements = append(statements, statement)
@@ -113,15 +124,15 @@ func (t *translator) getContextStatements(conf *confmap.Conf) (ContextStatement,
 	}, nil
 }
 
-func getMeasurementMaps(conf *confmap.Conf) []interface{} {
-	var measurementMapList []interface{}
+func getMeasurementMaps(conf *confmap.Conf) map[string][]interface{} {
+	measurementMap := make(map[string][]interface{})
 	metricsList := append(common.LinuxPluginKeys, common.WindowsPluginKeys...)
 	for _, metric := range metricsList {
 		path := common.ConfigKey(metricsKey, metric, "measurement")
 		if conf.IsSet(path) {
-			measurementMap := conf.Get(path).([]interface{})
-			measurementMapList = append(measurementMapList, measurementMap)
+			m := conf.Get(path).([]interface{})
+			measurementMap[metric] = m
 		}
 	}
-	return measurementMapList
+	return measurementMap
 }

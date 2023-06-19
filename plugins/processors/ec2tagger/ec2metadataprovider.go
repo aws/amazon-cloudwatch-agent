@@ -6,7 +6,9 @@ package ec2tagger
 import (
 	"context"
 	"errors"
+
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 )
 

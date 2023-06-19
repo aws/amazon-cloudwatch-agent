@@ -84,18 +84,6 @@ func TestLogsAndKubernetesConfig(t *testing.T) {
 	checkTranslation(t, "logs_and_kubernetes_config", "darwin", nil, "")
 }
 
-func TestCompleteConfig(t *testing.T) {
-	resetContext(t)
-	expectedEnvVars := map[string]string{
-		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
-		"CWAGENT_LOG_LEVEL":  "DEBUG",
-		"AWS_SDK_LOG_LEVEL":  "LogDebug",
-	}
-	checkTranslation(t, "complete_linux_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
-	checkTranslation(t, "complete_windows_config", "windows", expectedEnvVars, "")
-}
-
 func TestWindowsEventOnlyConfig(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}

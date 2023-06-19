@@ -9,8 +9,9 @@ package adapter
 import (
 	"testing"
 
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/win_perf_counters"
 	"github.com/stretchr/testify/assert"
+
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/win_perf_counters"
 )
 
 func Test_WindowsPerfCountersPlugin(t *testing.T) {

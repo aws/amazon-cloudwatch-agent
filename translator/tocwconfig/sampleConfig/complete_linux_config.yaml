@@ -104,8 +104,8 @@ processors:
                   - set(unit, "unit") where name == "cpu_usage_idle"
                   - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                   - set(unit, "unit") where name == "cpu_usage_nice"
-                  - set(unit, "unit") where name == "free"
-                  - set(name, "DISK_FREE") where name == "free"
+                  - set(unit, "unit") where name == "disk_free"
+                  - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
 receivers:
     awsxray:

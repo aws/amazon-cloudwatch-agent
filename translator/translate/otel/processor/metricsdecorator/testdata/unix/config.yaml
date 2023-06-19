@@ -4,5 +4,6 @@ metric_statements:
       - set(unit, "unit") where name == "cpu_usage_idle"
       - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
       - set(unit, "unit") where name == "cpu_usage_nice"
-      - set(unit, "unit") where name == "free"
-      - set(name, "DISK_FREE") where name == "free"
+      - set(name, "cpu_time_active_renamed") where name == "cpu_time_active"
+      - set(unit, "unit") where name == "disk_free"
+      - set(name, "DISK_FREE") where name == "disk_free"

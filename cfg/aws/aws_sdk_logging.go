@@ -4,9 +4,10 @@
 package aws
 
 import (
-	"github.com/aws/smithy-go/logging"
 	"log"
 	"strings"
+
+	"github.com/aws/smithy-go/logging"
 
 	awsSDKV2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go/aws"
