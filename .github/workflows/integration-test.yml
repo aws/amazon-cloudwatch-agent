@@ -289,7 +289,7 @@ jobs:
             ~/Library/Caches/go-build
             ~/go/pkg/mod
           key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-          
+
       - name: Build Binaries
         if: steps.cached_binaries.outputs.cache-hit != 'true'
         working-directory: cwa
@@ -407,7 +407,7 @@ jobs:
           aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amazon-cloudwatch-agent.msi.sig
           aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/amd64/amazon-cloudwatch-agent.pkg.sig
           aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${S3_INTEGRATION_BUCKET}/integration-test/packaging/${{ github.sha }}/arm64/amazon-cloudwatch-agent.pkg.sig
-  
+
   StartLocalStack:
     name: 'StartLocalStack'
     runs-on: ubuntu-latest
@@ -451,7 +451,7 @@ jobs:
           echo $LOCAL_STACK_HOST_NAME &&
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
-  
+
   EC2NvidiaGPUIntegrationTest:
     needs: [ MakeBinary, BuildMSI, StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
@@ -1173,3 +1173,69 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/performance && terraform destroy --auto-approve
+
+  StressTrackingTest:
+    name: "StressTrackingTest"
+    needs: [MakeBinary, GenerateTestMatrix]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_stress_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: stress-tracking
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
+      - name: Verify Terraform version
+        if: steps.stress-tracking.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.stress-tracking.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/stress
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${PRIVATE_KEY}"  \
+              -var="cwa_github_sha=${GITHUB_SHA}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/stress && terraform destroy --auto-approve
