@@ -115,7 +115,6 @@ func TestFindReceiversInConfig(t *testing.T) {
 			},
 			os: translatorconfig.OS_TYPE_WINDOWS,
 			want: map[component.ID]wantResult{
-				component.NewID("telegraf_logfile"):           {"logs::logs_collected::files", time.Minute},
 				component.NewID("telegraf_windows_event_log"): {"logs::logs_collected::windows_events", time.Minute},
 			},
 		},

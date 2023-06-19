@@ -150,8 +150,6 @@ receivers:
         collection_interval: 1m0s
     telegraf_diskio:
         collection_interval: 1m0s
-    telegraf_logfile:
-        collection_interval: 10s
     telegraf_mem:
         collection_interval: 1s
     telegraf_net:
@@ -206,7 +204,6 @@ service:
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
-                - telegraf_logfile
                 - telegraf_mem
                 - telegraf_netstat
                 - telegraf_processes

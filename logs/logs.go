@@ -6,6 +6,7 @@ package logs
 import (
 	"context"
 	"errors"
+	"github.com/influxdata/telegraf"
 	"log"
 	"time"
 
@@ -19,6 +20,7 @@ var ErrOutputStopped = errors.New("Output plugin stopped")
 // A LogCollection is a collection of LogSrc, a plugin which can provide many LogSrc
 type LogCollection interface {
 	FindLogSrc() []LogSrc
+	Start(acc telegraf.Accumulator) error
 }
 
 type LogEvent interface {
@@ -90,6 +92,10 @@ func (l *LogAgent) Run(ctx context.Context) {
 	for _, input := range l.Config.Inputs {
 		if collection, ok := input.Input.(LogCollection); ok {
 			log.Printf("I! [logagent] found plugin %v is a log collection", input.Config.Name)
+			err := collection.Start(nil)
+			if err != nil {
+				log.Printf("E! could not start log collection %v err %v", input.Config.Name, err)
+			}
 			l.collections = append(l.collections, collection)
 		}
 	}

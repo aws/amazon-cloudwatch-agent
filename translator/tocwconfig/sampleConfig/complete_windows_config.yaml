@@ -131,8 +131,6 @@ receivers:
                 include_metadata: false
                 max_request_body_size: 0
                 tls: null
-    telegraf_logfile:
-        collection_interval: 1m0s
     telegraf_nvidia_smi:
         collection_interval: 1m0s
     telegraf_procstat/1340600742:
@@ -195,7 +193,6 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_logfile
                 - telegraf_nvidia_smi
                 - telegraf_procstat/1340600742
                 - telegraf_statsd

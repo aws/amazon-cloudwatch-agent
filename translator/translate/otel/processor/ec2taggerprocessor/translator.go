@@ -4,6 +4,7 @@
 package ec2taggerprocessor
 
 import (
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -47,6 +48,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*ec2tagger.Config)
+	credentials := confmap.NewFromStringMap(agent.Global_Config.Credentials)
+	_ = credentials.Unmarshal(cfg)
 	for k, v := range ec2tagger.SupportedAppendDimensions {
 		value, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, AppendDimensionsKey, k))
 		if ok && v == value {

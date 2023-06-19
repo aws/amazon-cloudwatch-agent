@@ -31,7 +31,9 @@ processors:
             - ImageId
             - InstanceId
             - InstanceType
+        profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
+        shared_credential_file: fake-path
 receivers:
     telegraf_cpu:
         collection_interval: 1m0s

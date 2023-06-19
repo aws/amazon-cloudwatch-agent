@@ -70,7 +70,7 @@ copy-version-file: create-version-file
 amazon-cloudwatch-agent-linux: copy-version-file
 	@echo Building CloudWatchAgent for Linux,Debian with ARM64 and AMD64
 	$(LINUX_AMD64_BUILD)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
-	$(LINUX_ARM64_BUILD)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader	
+	$(LINUX_ARM64_BUILD)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
 	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
 	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent
@@ -83,7 +83,7 @@ amazon-cloudwatch-agent-linux: copy-version-file
 
 amazon-cloudwatch-agent-darwin: copy-version-file
 ifneq ($(OS),Windows_NT)
-ifeq ($(shell uname -s),Darwin)		
+ifeq ($(shell uname -s),Darwin)
 	@echo Building CloudWatchAgent for MacOS with ARM64 and AMD64
 	$(DARWIN_BUILD_AMD64)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
 	$(DARWIN_BUILD_ARM64)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
@@ -96,9 +96,9 @@ ifeq ($(shell uname -s),Darwin)
 	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent-config-wizard github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent-config-wizard
 	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent-config-wizard github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent-config-wizard
 endif
-endif 
-	
-amazon-cloudwatch-agent-windows: 
+endif
+
+amazon-cloudwatch-agent-windows:
 	@echo Building CloudWatchAgent for Windows with AMD64
 	$(WIN_BUILD)/config-downloader.exe github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
 	$(WIN_BUILD)/config-translator.exe github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator

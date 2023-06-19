@@ -30,6 +30,7 @@ var (
 	logKey       = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
 	logMetricKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 	metricKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
+	skipInputSet = map[string]bool{files.SectionKey: true}
 )
 
 var (
@@ -134,7 +135,10 @@ func fromInputs(conf *confmap.Conf, baseKey string) common.TranslatorMap[compone
 	if inputs, ok := conf.Get(baseKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
 			cfgKey := common.ConfigKey(baseKey, inputName)
-			if multipleInputSet.Contains(inputName) {
+			if skipInputSet[inputName] {
+				// logs agent is separate from otel agent
+				continue
+			} else if multipleInputSet.Contains(inputName) {
 				translators.Merge(fromMultipleInput(conf, inputName, ""))
 			} else {
 				translators.Set(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(

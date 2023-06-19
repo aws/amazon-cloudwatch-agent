@@ -19,7 +19,9 @@ processors:
             - ImageId
             - InstanceId
             - InstanceType
+        profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
+        shared_credential_file: fake-path
 receivers:
     telegraf_win_perf_counters/1492679118:
         alias_name:          Memory

@@ -104,6 +104,7 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 	// Create the log file state folder.
 	err := os.MkdirAll(t.FileStateFolder, 0755)
 	if err != nil {
+		t.Log.Errorf("failed to create state file directory %s: %v", t.FileStateFolder, err)
 		return fmt.Errorf("failed to create state file directory %s: %v", t.FileStateFolder, err)
 	}
 
@@ -125,11 +126,13 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 	// Initialize all the file configs
 	for i := range t.FileConfig {
 		if err := t.FileConfig[i].init(); err != nil {
+			t.Log.Errorf("Invalid file config init %v with err %v", t.FileConfig[i], err)
 			return err
 		}
 	}
 
 	t.started = true
+	t.Log.Infof("turned on logs plugin")
 	return nil
 }
 
@@ -142,7 +145,7 @@ func (t *LogFile) Stop() {
 // Try to find if there is any new file needs to be added for monitoring.
 func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	if !t.started {
-		t.Log.Warn("not started")
+		t.Log.Warn("not started with file state folder %s", t.FileStateFolder)
 		return nil
 	}
 

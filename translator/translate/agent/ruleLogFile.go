@@ -26,6 +26,9 @@ func GetDefaultValue() string {
 	if context.CurrentContext().RunInContainer() {
 		return ""
 	}
+	if context.CurrentContext().GetAgentLogFile() != "" {
+		return context.CurrentContext().GetAgentLogFile()
+	}
 	targetPlatform := translator.GetTargetPlatform()
 	switch targetPlatform {
 	case config.OS_TYPE_LINUX, config.OS_TYPE_DARWIN:
