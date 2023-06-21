@@ -387,7 +387,7 @@ jobs:
           command: cd terraform/ec2/win && terraform destroy --auto-approve
 
   EC2DarwinIntegrationTest:
-    needs: [BuildAndUpload, EC2LinuxIntegrationTest, GenerateTestMatrix]
+    needs: [BuildAndUpload, GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
