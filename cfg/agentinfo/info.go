@@ -61,13 +61,13 @@ type agentInfo struct {
 }
 
 type agentStats struct {
-	CpuPercent          *float64       `json:"cpu,omitempty"`
-	MemoryBytes         *uint64        `json:"mem,omitempty"`
-	FileDescriptorCount *int32         `json:"fd,omitempty"`
-	ThreadCount         *int32         `json:"th,omitempty"`
-	LatencyMillis       *time.Duration `json:"lat,omitempty"`
-	PayloadBytes        *int           `json:"load,omitempty"`
-	StatusCode          *int           `json:"code,omitempty"`
+	CpuPercent          *float64 `json:"cpu,omitempty"`
+	MemoryBytes         *uint64  `json:"mem,omitempty"`
+	FileDescriptorCount *int32   `json:"fd,omitempty"`
+	ThreadCount         *int32   `json:"th,omitempty"`
+	LatencyMillis       *int64   `json:"lat,omitempty"`
+	PayloadBytes        *int     `json:"load,omitempty"`
+	StatusCode          *int     `json:"code,omitempty"`
 }
 
 func New(groupName string) AgentInfo {
@@ -99,12 +99,12 @@ func (ai *agentInfo) UserAgent() string {
 	return ai.userAgent
 }
 
-func (ai *agentInfo) RecordOpData(latencyMillis time.Duration, payloadBytes int, err error) {
+func (ai *agentInfo) RecordOpData(latency time.Duration, payloadBytes int, err error) {
 	if ai.proc == nil {
 		return
 	}
 
-	ai.stats.LatencyMillis = &latencyMillis
+	ai.stats.LatencyMillis = aws.Int64(latency.Milliseconds())
 	ai.stats.PayloadBytes = aws.Int(payloadBytes)
 	ai.stats.StatusCode = getStatusCode(err)
 
