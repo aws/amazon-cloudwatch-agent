@@ -348,7 +348,7 @@ func (p *pusher) createLogGroupAndStream() error {
 		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName: &p.Group,
 		})
-		p.agentInfo.RecordOpData(time.Since(opStartTime), p.bufferredSize, err)
+		p.agentInfo.RecordOpData(time.Since(opStartTime), 1, err)
 
 		// attempt to create stream again if group created successfully.
 		if err == nil {

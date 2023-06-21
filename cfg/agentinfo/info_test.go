@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -41,7 +40,7 @@ func TestRecordOpData(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &expectedStats))
 	assert.Equal(t, expectedStats, ai.stats)
 
-	ai.RecordOpData(100, 10, nil)
+	ai.RecordOpData(100000000, 10, nil)
 	stats = ai.StatsHeader()
 	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &expectedStats))
 	assert.Equal(t, expectedStats, ai.stats)
@@ -49,14 +48,14 @@ func TestRecordOpData(t *testing.T) {
 	assert.EqualValues(t, 10, *ai.stats.PayloadBytes)
 	assert.EqualValues(t, http.StatusOK, *ai.stats.StatusCode)
 
-	ai.RecordOpData(200, 20, errors.New(""))
+	ai.RecordOpData(200000000, 20, errors.New(""))
 	stats = ai.StatsHeader()
 	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &expectedStats))
 	assert.EqualValues(t, 200, *ai.stats.LatencyMillis)
 	assert.EqualValues(t, 20, *ai.stats.PayloadBytes)
 	assert.Nil(t, ai.stats.StatusCode)
 
-	ai.RecordOpData(300, 30, awserr.NewRequestFailure(awserr.New("", "", errors.New("")), 500, ""))
+	ai.RecordOpData(300000000, 30, awserr.NewRequestFailure(awserr.New("", "", errors.New("")), 500, ""))
 	stats = ai.StatsHeader()
 	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &expectedStats))
 	assert.EqualValues(t, 300, *ai.stats.LatencyMillis)
@@ -88,13 +87,12 @@ func TestSetComponents(t *testing.T) {
 }
 
 func TestGetAgentStats(t *testing.T) {
-	latencyMillis := time.Duration(1234)
 	stats := agentStats{
 		CpuPercent:          aws.Float64(1.2),
 		MemoryBytes:         aws.Uint64(123),
 		FileDescriptorCount: aws.Int32(456),
 		ThreadCount:         aws.Int32(789),
-		LatencyMillis:       &latencyMillis,
+		LatencyMillis:       aws.Int64(1234),
 		PayloadBytes:        aws.Int(5678),
 		StatusCode:          aws.Int(200),
 	}
