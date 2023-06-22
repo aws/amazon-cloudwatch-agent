@@ -123,7 +123,6 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 		Token:     c.Token,
 	}
 
-	agentInfo := agentinfo.New(t.Group)
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
@@ -134,6 +133,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			Logger:   configaws.SDKLogger{},
 		},
 	)
+	agentInfo := agentinfo.New(t.Group)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentInfo.UserAgent()))
 	client.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("X-Amz-Agent-Stats", agentInfo.StatsHeader))

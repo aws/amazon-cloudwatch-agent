@@ -845,9 +845,75 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/eks/deployment && terraform destroy --auto-approve
 
+  PerformanceTrackingTest:
+    name: "PerformanceTrackingTest"
+    needs: [BuildAndUpload, GenerateTestMatrix]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: performance-tracking
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
+      - name: Verify Terraform version
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 30
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/performance
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${PRIVATE_KEY}"  \
+              -var="cwa_github_sha=${GITHUB_SHA}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/performance && terraform destroy --auto-approve
+
   StressTrackingTest:
     name: "StressTrackingTest"
-    needs: [BuildAndUpload, EC2LinuxIntegrationTest, ECSEC2IntegrationTest, ECSFargateIntegrationTest, GenerateTestMatrix]
+    needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -887,12 +953,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd terraform/performance
+            cd terraform/stress
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}"  \
               -var="cwa_github_sha=${GITHUB_SHA}" \
-              -var="user=${{ matrix.arrays.username }}" \
               -var="ami=${{ matrix.arrays.ami }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
@@ -910,4 +975,4 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/performance && terraform destroy --auto-approve
+          command: cd terraform/stress && terraform destroy --auto-approve
