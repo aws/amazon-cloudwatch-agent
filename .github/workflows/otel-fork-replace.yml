@@ -40,6 +40,10 @@ jobs:
           git checkout -b otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter@${{ steps.get-latest-commit.outputs.sha }}
           go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil@${{ steps.get-latest-commit.outputs.sha }}
           go mod tidy
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight@${{ steps.get-latest-commit.outputs.sha }}

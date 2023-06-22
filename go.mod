@@ -8,9 +8,9 @@ replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.2022
 // to be all replaced since there are some changes will always from upstream
 replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20230622153410-c74a7dcdec41
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20230619163825-f93fdbeee516
+replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20230622153410-c74a7dcdec41
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20230619163825-f93fdbeee516
+replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20230622153410-c74a7dcdec41
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230622153410-c74a7dcdec41
 
@@ -76,6 +76,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.255
 	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.25
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.3
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.25.7
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.99.0
 	github.com/aws/aws-sdk-go-v2/service/efs v1.19.7
@@ -139,8 +140,6 @@ require (
 	k8s.io/client-go v0.26.3
 	k8s.io/klog/v2 v2.90.1
 )
-
-require github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.3
 
 require (
 	cloud.google.com/go/compute v1.19.0 // indirect
