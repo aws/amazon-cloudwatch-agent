@@ -975,4 +975,4 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/performance && terraform destroy --auto-approve
+          command: cd terraform/stress && terraform destroy --auto-approve
