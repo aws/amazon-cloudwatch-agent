@@ -1,0 +1,53 @@
+[[inputs.cpu]]
+    collect_cpu_time = true
+    report_active = true
+    percpu = false
+    totalcpu = true
+    interval = "1s"
+    fieldpass = ["time_active", "time_user", "time_system", "time_idle", "time_nice", "time_iowait", "time_irq", "time_softirq", "time_steal", "time_guest", "time_guest_nice", "usage_active", "usage_user", "usage_system", "usage_idle", "usage_nice", "usage_iowait", "usage_irq", "usage_softirq", "usage_steal", "usage_guest", "usage_guest_nice"]
+
+[[inputs.swap]]
+    interval = "1s"
+    fieldpass = ["total","used", "free", "used_percent"]
+
+
+[[inputs.mem]]
+    interval = "1s"
+    fieldpass = ["total", "available", "used", "used_percent", "available_percent"]
+
+[[inputs.net]]
+    interval = "1s"
+    fieldpass = ["bytes_sent", "bytes_recv", "packets_sent", "packets_recv", "err_in", "err_out", "drop_in", "drop_out"]
+
+[[inputs.disk]]
+    interval = "1s"
+    mount_points = ["/"]
+    ignore_fs = []
+    fieldpass = ["total", "free", "used", "used_percent", "inodes_total", "inodes_free", "inodes_used"]
+    tagexclude = ["mode"]
+
+[[inputs.processes]]
+    interval = "1s"
+    fieldpass = ["blocked", "zombies", "stopped", "running", "sleeping", "total", "unknown"]
+
+[[inputs.procstat]]
+    pattern = " "
+    interval = "1s"
+    fieldpass = ["cpu_time_system", "cpu_time_user", "cpu_usage", "memory_data", "memory_locked", "memory_rss", "memory_stack", "memory_swap", "memory_vms"]
+    pid_finder = "native"
+
+[[inputs.diskio]]
+    interval = "1s"
+    fieldpass = ["iops_in_progress", "io_time", "reads", "read_bytes", "read_time", "writes", "write_bytes", "write_time"]
+
+[[inputs.netstat]]
+    interval = "1s"
+    fieldpass = ["tcp_close_wait", "tcp_closing", "tcp_fin_wait1", "tcp_fin_wait2", "tcp_last_ack", "tcp_listen", "tcp_none", "tcp_syn_recv", "tcp_time_wait", "udp_socket","tcp_established", "tcp_syn_sent", "tcp_close"]
+
+[[inputs.statsd]]
+    interval = "1s"
+    metric_separator = "_"
+    service_address = "127.0.0.1:14224"
+    
+[[inputs.socket_listener]]
+    service_address = "tcp://127.0.0.1:25826"

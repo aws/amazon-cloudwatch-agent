@@ -5,21 +5,22 @@ package procstat
 
 type Exe struct{}
 
-const keyExe = "exe"
+const ExeKey = "exe"
 
 func (t *Exe) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
-	if _, ok := m[keyExe]; !ok {
+	if _, ok := m[ExeKey]; !ok {
 		returnKey = ""
 		returnVal = ""
 	} else {
-		returnKey = keyExe
-		returnVal = m[keyExe]
+		returnKey = ExeKey
+		returnVal = m[ExeKey]
 	}
 	return
 }
 
 func init() {
 	e := new(Exe)
-	RegisterRule(keyExe, e)
+
+	RegisterRule(ExeKey, e)
 }

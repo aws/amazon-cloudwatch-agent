@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package cadvisor
 
 import (
@@ -13,12 +16,12 @@ func TestIsContainerInContainer(t *testing.T) {
 		dind bool
 	}{
 		{
-			"guranteed",
+			"guaranteed",
 			"/kubepods.slice/kubepods-podc8f7bb69_65f2_4b61_ae5a_9b19ac47a239.slice/docker-523b624a86a2a74c2bedf586d8448c86887ef7858a8dec037d6559e5ad3fccb5.scope",
 			false,
 		},
 		{
-			"guranteed-dind",
+			"guaranteed-dind",
 			"/kubepods.slice/kubepods-burstable-podc9adcee4_c874_4dad_8bc8_accdbd67ac3a.slice/docker-e58cfbc8b67f6e1af458efdd31cb2a8abdbf9f95db64f4c852b701285a09d40e.scope/docker/fb651068cfbd4bf3d45fb092ec9451f8d1a36b3753687bbaa0a9920617eae5b9",
 			true,
 		},

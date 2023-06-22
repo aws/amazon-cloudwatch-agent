@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//Check the case when the input is in "cpu":{//specific configuration}
+// Check the case when the input is in "cpu":{//specific configuration}
 func TestCpuSpecificConfig(t *testing.T) {
 	c := new(Cpu)
 	//Check whether override default config

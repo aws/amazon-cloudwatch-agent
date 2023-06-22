@@ -1,0 +1,9 @@
+metric_statements:
+  - context: metric
+    statements:
+      - set(unit, "unit") where name == "cpu_usage_idle"
+      - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+      - set(unit, "unit") where name == "cpu_usage_nice"
+      - set(name, "cpu_time_active_renamed") where name == "cpu_time_active"
+      - set(unit, "unit") where name == "disk_free"
+      - set(name, "DISK_FREE") where name == "disk_free"

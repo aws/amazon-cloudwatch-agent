@@ -1,0 +1,27 @@
+{
+  "traces": {
+    "traces_collected": {
+      "xray": {
+        "bind_address": "0.0.0.0:1234",
+        "tcp_proxy": {
+          "bind_address": "0.0.0.0:2345"
+        }
+      },
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:4321",
+        "http_endpoint": "0.0.0.0:5432"
+      }
+    },
+    "concurrency": 1,
+    "buffer_size_mb": 3,
+    "resource_arn": "arn:aws:iam::account:resource",
+    "local_mode": true,
+    "insecure": true,
+    "credentials": {
+      "role_arn": "arn:aws:iam::account:role"
+    },
+    "endpoint_override": "https://endpoint.us-west-2.amazonaws.com",
+    "region_override": "us-west-2",
+    "proxy_override": "https://proxy.proxy.com"
+  }
+}

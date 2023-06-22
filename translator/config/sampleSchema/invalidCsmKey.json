@@ -1,7 +1,0 @@
-{
-  "csm": {
-    "port" : 5000,
-    "memory_limit_in_mb" : 40,
-    "not_a_valid_key" : "error"
-  }
-}

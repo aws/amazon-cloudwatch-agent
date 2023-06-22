@@ -1,0 +1,13 @@
+receivers:
+  nop: {}
+
+exporters:
+  awscloudwatch:
+    namespace: mytestnamespace
+    region: us-yeast-99
+
+service:
+  pipelines:
+    metrics:
+      receivers: [nop]
+      exporters: [awscloudwatch]

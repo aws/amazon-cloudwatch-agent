@@ -1,0 +1,232 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "logfile": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
+    "internal": true,
+    "debug": true,
+    "aws_sdk_log_level": "LogDebug",
+    "user_agent": "CUSTOM USER AGENT VALUE",
+    "credentials": {
+      "role_arn": "global_role_arn_value"
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "nvidia_gpu": {
+        "measurement": [
+          "utilization_gpu",
+          "utilization_memory",
+          "power_draw",
+          "temperature_gpu"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "Processor": {
+        "measurement": [
+          {
+            "name": "% Idle Time",
+            "rename": "CPU_IDLE",
+            "unit": "PERCENT"
+          },
+          "% Interrupt Time",
+          "% User Time",
+          "% Processor Time"
+        ],
+        "resources": [
+          "*"
+        ],
+        "append_dimensions": {
+          "d1": "win_foo",
+          "d2": "win_bar"
+        }
+      },
+      "LogicalDisk": {
+        "measurement": [
+          {
+            "name": "% Idle Time",
+            "unit": "PERCENT"
+          },
+          {
+            "name": "% Disk Read Time",
+            "rename": "DISK_READ"
+          },
+          "% Disk Write Time",
+          "% User Time"
+        ],
+        "resources": [
+          "*"
+        ]
+      },
+      "customizedObjectName": {
+        "metrics_collection_interval": 60,
+        "customizedCounterName": [
+          "metric1",
+          "metric2"
+        ],
+        "resources": [
+          "customizedInstaces"
+        ],
+        "measurement": [
+          "customizedCounter1"
+        ]
+      },
+      "Memory": {
+        "metrics_collection_interval": 5,
+        "measurement": [
+          "Available Bytes",
+          "Cache Faults/sec",
+          "Page Faults/sec",
+          "Pages/sec"
+        ],
+        "append_dimensions": {
+          "d3": "win_bo"
+        }
+      },
+      "Network Interface": {
+        "metrics_collection_interval": 5,
+        "measurement": [
+          "Bytes Received/sec",
+          "Bytes Sent/sec",
+          "Packets Received/sec",
+          "Packets Sent/sec"
+        ],
+        "resources": [
+          "*"
+        ],
+        "append_dimensions": {
+          "d3": "win_bo"
+        }
+      },
+      "statsd": {
+        "service_address": ":8125",
+        "metrics_collection_interval": 10,
+        "metrics_aggregation_interval": 60,
+        "metric_separator": "_"
+      },
+      "System": {
+        "measurement": [
+          "Context Switches/sec",
+          "System Calls/sec",
+          "Processor Queue Length"
+        ],
+        "append_dimensions": {
+          "d1": "win_foo",
+          "d2": "win_bar"
+        }
+      },
+      "procstat": [
+        {
+          "exe": "agent",
+          "measurement": [
+            "cpu_time_system",
+            "cpu_time_user"
+          ]
+        }
+      ]
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions": [
+      [
+        "ImageId"
+      ],
+      [
+        "InstanceId",
+        "InstanceType"
+      ],
+      [
+        "d1"
+      ],
+      []
+    ],
+    "force_flush_interval": 60,
+    "credentials": {
+      "role_arn": "metrics_role_arn_value_test"
+    },
+    "endpoint_override": "https://monitoring-fips.us-west-2.amazonaws.com"
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": {
+        "service_address": "udp://127.0.0.1:25888"
+      }
+    },
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "timezone": "UTC",
+            "retention_in_days": 5
+          },
+          {
+            "file_path": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\test.log",
+            "log_group_name": "test.log",
+            "timezone": "UTC",
+            "auto_removal": true
+          }
+        ]
+      },
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_levels": [
+              "INFORMATION",
+              "ERROR"
+            ],
+            "log_group_name": "System",
+            "log_stream_name": "System",
+            "event_format": "xml"
+          },
+          {
+            "event_name": "CustomizedName",
+            "event_levels": [
+              "CRITICAL",
+              "VERBOSE"
+            ],
+            "log_group_name": "CustomizedLogGroup",
+            "log_stream_name": "CustomizedLogStream",
+            "event_format": "xml"
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME",
+    "force_flush_interval": 60,
+    "credentials": {
+      "role_arn": "log_role_arn_value_test"
+    },
+    "endpoint_override": "https://logs-fips.us-west-2.amazonaws.com"
+  },
+  "traces": {
+    "traces_collected": {
+      "xray": {
+        "bind_address": "0.0.0.0:2001",
+        "tcp_proxy": {
+          "bind_address": "0.0.0.0:1234"
+        }
+      },
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:1111",
+        "http_endpoint": "0.0.0.0:2222"
+      }
+    },
+    "concurrency": 1,
+    "buffer_size_mb": 3,
+    "resource_arn": "arn:aws:iam::account:resource",
+    "local_mode": true,
+    "insecure": true,
+    "credentials": {
+      "role_arn": "trace_role_arn_value_test"
+    },
+    "endpoint_override": "https://x-ray-endpoint.us-west-2.amazonaws.com",
+    "region_override": "us-west-2",
+    "proxy_override": "https://proxy.proxy.com"
+  }
+}

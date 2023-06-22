@@ -1,32 +1,31 @@
 {
   "agent": {
-    "logfile": "c:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
-  },
-  "metrics": {
-    "append_dimensions": {
-      "InstanceId": "${aws:InstanceId}"
-    },
-    "metrics_collected": {
-      "procstat": [
-        {
-          "exe": "KAVFS",
-          "measurement": [
-            "pid_count"
-          ]
-        },
-        {
-          "exe": "W3SVC",
-          "measurement": [
-            "pid_count"
-          ]
-        },
-        {
-          "exe": "IISADMIN",
-          "measurement": [
-            "pid_count"
-          ]
-        }
-      ]
+    "region": "us-east-1",
+    "credentials": {
+      "role_arn": "global_role_arn_value"
     }
+  },
+  "traces": {
+    "traces_collected": {
+      "xray": {
+        "bind_address": "0.0.0.0:1234",
+        "tcp_proxy": {
+          "bind_address": "0.0.0.0:1234"
+        }
+      },
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:2345",
+        "http_endpoint": "0.0.0.0:1234"
+      }
+    },
+    "local_mode": true,
+    "resource_arn": "arn:aws:iam::account:resource",
+    "insecure": true,
+    "credentials": {
+      "role_arn": "trace_role_arn_value_test"
+    },
+    "endpoint_override": "https://x-ray-endpoint.us-west-2.amazonaws.com",
+    "region_override": "us-west-2",
+    "proxy_override": "https://proxy.proxy.com"
   }
 }
