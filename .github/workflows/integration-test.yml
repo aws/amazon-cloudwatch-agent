@@ -104,7 +104,7 @@ jobs:
           echo "eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}"
 
   CloudformationTest:
-    needs: [MakeBinary, BuildMSI, GenerateTestMatrix]
+    needs: [BuildAndUpload, GenerateTestMatrix]
     name: 'CFTest'
     runs-on: ubuntu-latest
     strategy:
