@@ -72,5 +72,5 @@ func init() {
 	n := new(NvidiaSmi)
 	parent.RegisterLinuxRule(SectionKey, n)
 	parent.RegisterDarwinRule(SectionKey, n)
-	parent.RegisterWindowsRule(SectionKey, n)
+	//parent.RegisterWindowsRule(SectionKey, n)
 }
