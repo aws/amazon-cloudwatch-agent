@@ -913,7 +913,7 @@ jobs:
 
   StressTrackingTest:
     name: "StressTrackingTest"
-    needs: [BuildAndUpload, EC2LinuxIntegrationTest, ECSEC2IntegrationTest, ECSFargateIntegrationTest, GenerateTestMatrix]
+    needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
