@@ -60,6 +60,7 @@ func TestMetricDecorationWindows(t *testing.T) {
 	metrics.AddGaugeMetricDataPoint("LogicalDisk % Idle Time", "PERCENT", 0.0, 0, 0, nil)
 	metrics.AddGaugeMetricDataPoint("CPU_IDLE", "PERCENT", 0.0, 0, 0, nil)
 	metrics.AddGaugeMetricDataPoint("DISK_READ", "none", 0.0, 0, 0, nil)
+	metrics.AddGaugeMetricDataPoint("Connections_Established", "none", 0.0, 0, 0, nil)
 
 	ctx := context.Background()
 	proc, err := transl.factory.CreateMetricsProcessor(ctx, processortest.NewNopCreateSettings(), cfg, sink)
@@ -70,6 +71,7 @@ func TestMetricDecorationWindows(t *testing.T) {
 	metrics.AddGaugeMetricDataPoint("LogicalDisk % Idle Time", "PERCENT", 0.0, 0, 0, nil)
 	metrics.AddGaugeMetricDataPoint("Processor % Idle Time", "PERCENT", 0.0, 0, 0, nil)
 	metrics.AddGaugeMetricDataPoint("LogicalDisk % Disk Read Time", "none", 0.0, 0, 0, nil)
+	metrics.AddGaugeMetricDataPoint("TCPv4 Connections Established", "none", 0.0, 0, 0, nil)
 	err = proc.ConsumeMetrics(ctx, actualMetrics)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedMetrics, actualMetrics)

@@ -74,6 +74,24 @@
           "d1": "win_foo",
           "d2": "win_bar"
         }
+      },
+      "TCPv4": {
+        "measurement": [
+          {
+            "name": "Connections Established",
+            "rename": "Connections_Established"
+          }
+        ],
+        "metrics_collection_interval": 1
+      },
+      "TCPv6": {
+        "measurement": [
+          {
+            "name": "Connections Established",
+            "rename": "Connections_Established"
+          }
+        ],
+        "metrics_collection_interval": 1
       }
     },
     "aggregation_dimensions" : [["ImageId"], ["InstanceId", "InstanceType"], []]
