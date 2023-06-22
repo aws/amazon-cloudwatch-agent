@@ -884,7 +884,7 @@ jobs:
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
-          timeout_minutes: 30
+          timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
             cd terraform/performance
@@ -950,7 +950,7 @@ jobs:
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
-          timeout_minutes: 30
+          timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
             cd terraform/stress
