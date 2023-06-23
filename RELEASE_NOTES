@@ -1,4 +1,20 @@
 ========================================================================
+Amazon CloudWatch Agent 1.247360.0 (2023-06-23)
+========================================================================
+
+Enhancements:
+* Support for voluntary collection of product experience metrics  (#766) (#771)
+
+========================================================================
+Amazon CloudWatch Agent 1.247359.0 (2023-04-20)
+========================================================================
+
+Enhancements and bug fixes:
+* Add log output when log files are deleted with auto_removal feature #636 (#659)
+* Add config mode for ModeWithIRSA to support using default credential provider with RUN_WITH_IRSA environment variable as True (#682)
+* Add config option to disable extraction of metrics from EMF logs for kubernetes (#723)
+
+========================================================================
 Amazon CloudWatch Agent 1.247358.0 (2023-01-30)
 ========================================================================
 
