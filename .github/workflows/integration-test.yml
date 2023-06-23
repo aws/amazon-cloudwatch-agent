@@ -763,6 +763,7 @@ jobs:
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
             -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
+            -var="license_manager_arn"=${{ env.LICENSE_MANAGER_ARN }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
               terraform destroy -auto-approve
             else
