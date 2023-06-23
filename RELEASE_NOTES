@@ -12,11 +12,6 @@ Amazon CloudWatch Agent 1.247359.0 (2023-04-20)
 Enhancements and bug fixes:
 * Add log output when log files are deleted with auto_removal feature #636 (#659)
 * Add config mode for ModeWithIRSA to support using default credential provider with RUN_WITH_IRSA environment variable as True (#682)
-* Add -trimpath to go build command (#697)
-* Build Make Binary On Mac OS (#702)
-* CGO Enable 1 For Darwin arm64 (#714)
-* Only Enable CGO For Mac Build On Mac (#715)
-* Replace deprecated ioutil calls with os equivalent (#663)
 * Add config option to disable extraction of metrics from EMF logs for kubernetes (#723)
 
 ========================================================================
