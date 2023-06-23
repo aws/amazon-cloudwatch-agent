@@ -602,7 +602,7 @@ jobs:
         if: steps.ec2-linux-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
+          max_attempts: 1
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
