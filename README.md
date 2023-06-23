@@ -145,7 +145,7 @@ Nightly s3 release are not production ready and should be used at own risk
         * https://amazoncloudwatch-agent.s3.amazonaws.com/nightly-build/latest/darwin/amd64/amazon-cloudwatch-agent.tar.gz
 
 ## Usage data
-By default, the CloudWatch agent sends health and performance data about itself to CloudWatch whenever it publishes metrics or logs to CloudWatch. This data incurs no costs to you. You can prevent the agent from sending this data by specifying `false` for `usage_data` in the `agent` section of the configuration. If you omit this parameter, the default of true is used and the agent sends the health and performance data. Refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html#CloudWatch-Agent-Configuration-File-Agentsection)
+By default, the CloudWatch agent sends health and performance data about itself to CloudWatch whenever it publishes metrics or logs to CloudWatch. This data incurs no costs to you. You can prevent the agent from sending this data by specifying `false` for `usage_data` in the `agent` section of the configuration. If you omit this parameter, the default of true is used and the agent sends the health and performance data. Refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html#CloudWatch-Agent-Configuration-File-Agentsection).
 
 ## Security disclosures
 If you think you’ve found a potential security issue, please do not post it in the Issues.  Instead, please follow the instructions [here](https://aws.amazon.com/security/vulnerability-reporting/) or [email AWS security directly](mailto:aws-security@amazon.com).
