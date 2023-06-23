@@ -976,3 +976,76 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
+
+  TracesLinuxIntegrationTest:
+    needs: [BuildAndUpload]
+    name: 'TracesLinuxIntegrationTest'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout CWA Test
+        uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: traces-integration-test
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: traces-integration-test-${{ github.sha }}
+
+      # nick-fields/retry@v2 starts at base dir
+      - name: Terraform apply
+        if: steps.traces-integration-test.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        env:
+          TF_VAR_test_name: trace
+          TF_VAR_ssh_key_name: ${{ env.KEY_NAME }}
+          TF_VAR_ssh_key_value: ${{ env.PRIVATE_KEY }}
+          TF_VAR_user: ec2-user
+          TF_VAR_ami: cloudwatch-agent-integration-test-al2*
+          TF_VAR_arc: amd64
+          TF_VAR_ec2_instance_type: t3a.medium
+          TF_VAR_github_test_repo: ${{ env.CWA_GITHUB_TEST_REPO_URL }}
+          TF_VAR_github_test_repo_branch: ${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}
+          TF_VAR_cwa_github_sha: ${{ github.sha }}
+          TF_VAR_s3_bucket: ${{ env.S3_INTEGRATION_BUCKET }}
+          TF_VAR_binary_name: amazon-cloudwatch-agent.rpm
+          TF_VAR_install_agent: go run ./install/install_agent.go rpm
+          TF_VAR_pre_test_setup: |
+            git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/aws/private-amazon-cloudwatch-agent-staging.git ccwa
+            cd ccwa
+            git checkout ${{ github.sha }}
+            cd test
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/ec2/linux
+
+            terraform init
+            if terraform apply --auto-approve -var="test_dir=./trace" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/ec2/linux && terraform destroy --auto-approve
