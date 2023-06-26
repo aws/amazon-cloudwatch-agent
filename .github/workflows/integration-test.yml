@@ -530,7 +530,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd terraform/ec2/win
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
@@ -551,7 +555,9 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if "${{ matrix.arrays.os }}" == window
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            elif if "${{ matrix.arrays.os }}" == window; then
               cd terraform/ec2/win
             else
               cd terraform/ec2/linux
@@ -637,7 +643,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/linux && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi
+            terraform destroy --auto-approve
 
   EC2WinIntegrationTest:
     needs: [BuildMSI, GenerateTestMatrix]
@@ -684,7 +696,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd terraform/ec2/win
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
             terraform init
             if terraform apply --auto-approve \
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -707,7 +723,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/win && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+            terraform destroy --auto-approve
 
   EC2DarwinIntegrationTest:
     needs: [MakeMacPkg, GenerateTestMatrix]
@@ -754,7 +776,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd terraform/ec2/mac
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/mac
+            fi
             terraform init
             if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
@@ -777,7 +803,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/mac && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/mac
+            fi
+            terraform destroy --auto-approve
 
   StopLocalStack:
     name: 'StopLocalStack'
@@ -887,7 +919,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ecs_ec2/daemon && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ecs_ec2/daemon
+            fi
+            terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
@@ -958,7 +996,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ecs_fargate/linux
+            fi
+            terraform destroy --auto-approve
 
 
   EKSIntegrationTest:
@@ -1034,7 +1078,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/eks/daemon && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/daemon
+            fi
+            terraform destroy --auto-approve
 
   EKSPrometheusIntegrationTest:
     name: 'EKSPrometheusIntegrationTest'
@@ -1107,7 +1157,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/eks/deployment && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/deployment
+            fi
+            terraform destroy --auto-approve
 
   PerformanceTrackingTest:
     name: "PerformanceTrackingTest"
