@@ -4,14 +4,13 @@
 package util
 
 import (
+	"os"
 	"runtime"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
-
-	"os"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 )
 
 var expectResult = `{

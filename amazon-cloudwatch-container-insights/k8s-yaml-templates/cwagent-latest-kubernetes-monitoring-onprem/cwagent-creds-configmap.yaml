@@ -1,0 +1,12 @@
+# create configmap for cwagent creds
+apiVersion: v1
+data:
+  # Configuration is in aws creds format for on prem
+  credentials: |
+    [AmazonCloudWatchAgent]
+    aws_access_key_id = ${your aws_access_key_id}
+    aws_secret_access_key = ${enter you aws_secret_access_key here}
+kind: ConfigMap
+metadata:
+  name: creds
+  namespace: amazon-cloudwatch

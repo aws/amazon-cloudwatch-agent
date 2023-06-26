@@ -1,21 +1,19 @@
 {
-  "logs": {
+  "metrics": {
     "metrics_collected": {
-      "emf": {
-      }
-    },
-    "logs_collected": {
-      "files": {
-        "collect_list": [
-          {
-            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
-            "log_group_name": "amazon-cloudwatch-agent.log",
-            "log_stream_name": "amazon-cloudwatch-agent.log",
-            "timezone": "UTC"
-          }
-        ]
-      }
-    },
-    "endpoint_override":"https://fake_endpoint"
+      "procstat": [
+        {
+          "exe": "W3SVC",
+          "measurement": [
+            "pid_count"
+          ]
+        },
+        {
+          "exe": "IISADMIN",
+          "measurement": [
+            "pid_count"
+          ]
+        }]
+    }
   }
 }

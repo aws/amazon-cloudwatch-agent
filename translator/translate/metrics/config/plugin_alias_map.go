@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package config
 
 // pluginAliasMap This provides the real plugin name mapping to the measurement name in user config

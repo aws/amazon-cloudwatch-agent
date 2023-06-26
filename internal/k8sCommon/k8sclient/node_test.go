@@ -4,11 +4,11 @@
 package k8sclient
 
 import (
-	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -38,7 +38,6 @@ var nodeArray = []interface{}{
 				"node.alpha.kubernetes.io/ttl":                           "0",
 				"volumes.kubernetes.io/controller-managed-attach-detach": "true",
 			},
-			ClusterName: "",
 		},
 		Status: v1.NodeStatus{
 			Conditions: []v1.NodeCondition{
@@ -129,7 +128,6 @@ var nodeArray = []interface{}{
 				"node.alpha.kubernetes.io/ttl":                           "0",
 				"volumes.kubernetes.io/controller-managed-attach-detach": "true",
 			},
-			ClusterName: "",
 		},
 		Status: v1.NodeStatus{
 			Conditions: []v1.NodeCondition{
@@ -220,7 +218,6 @@ var nodeArray = []interface{}{
 				"node.alpha.kubernetes.io/ttl":                           "0",
 				"volumes.kubernetes.io/controller-managed-attach-detach": "true",
 			},
-			ClusterName: "",
 		},
 		Status: v1.NodeStatus{
 			Conditions: []v1.NodeCondition{

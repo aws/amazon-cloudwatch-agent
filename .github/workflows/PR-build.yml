@@ -14,6 +14,7 @@ on:
       - 'LICENSE'
       - '.github/**'
       - '!.github/workflows/PR-build.yml'
+  workflow_dispatch:
 
   pull_request:
     branches: 
@@ -43,14 +44,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-2019, windows-latest, macos-latest]
+        os: [ ubuntu-latest, windows-2019, windows-latest, macos-11]
         include:
           - os: ubuntu-latest
             family: linux
             cache-path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-          - os: macos-latest
+          - os: macos-11
             family: darwin
             cache-path: |
               ~/Library/Caches/go-build

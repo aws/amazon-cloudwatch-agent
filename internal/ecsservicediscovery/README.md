@@ -68,23 +68,23 @@ Two modes can be enabled together and CWAgent will de-dup the discovered targets
 #### Configuration Example
 Sample Configuration in TOML format:
 ```
-    [inputs.prometheus_scraper.ecs_service_discovery]
+    [inputs.prometheus.ecs_service_discovery]
       sd_cluster_region = "us-east-2"
       sd_frequency = "15s"
       sd_result_file = "/opt/aws/amazon-cloudwatch-agent/etc/ecs_sd_targets.yaml"
       sd_target_clusters = "EC2-Justin-Testing; Fargate-Justin-Testing"
-      [inputs.prometheus_scraper.ecs_service_discovery.docker_label]
+      [inputs.prometheus.ecs_service_discovery.docker_label]
         sd_job_name_label = "ECS_PROMETHEUS_JOB_NAME"
         sd_metrics_path_label = "ECS_PROMETHEUS_METRICS_PATH"
         sd_port_label = "ECS_PROMETHEUS_EXPORTER_PORT_SUBSET_A"
 
-      [[inputs.prometheus_scraper.ecs_service_discovery.task_definition_list]]
+      [[inputs.prometheus.ecs_service_discovery.task_definition_list]]
         sd_job_name = "task_def_1"
         sd_metrics_path = "/stats/metrics"
         sd_metrics_ports = "9901;9404;9406"
         sd_task_definition_arn_pattern = ".*:task-definition/bugbash-java-fargate-awsvpc-task-def-only:[0-9]+"
 
-      [[inputs.prometheus_scraper.ecs_service_discovery.task_definition_list]]
+      [[inputs.prometheus.ecs_service_discovery.task_definition_list]]
         sd_container_name_pattern = "^bugbash-jar.*$"
         sd_metrics_ports = "9902"
         sd_task_definition_arn_pattern = ".*:task-definition/nginx:[0-9]+"

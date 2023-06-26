@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 //go:build !windows
 // +build !windows
 
@@ -57,7 +60,7 @@ func TestChangeFileOwner(t *testing.T) {
 	createFile(t, filepath.Join(agentLogDir, "suid-file.log"), 0644|os.ModeSetuid)
 	/*
 		There is an issue in ibuild where g is not being set by chmod
-		Add this line back to the test when there is a solution see sim https://issues.amazon.com/iBuild-12664
+		Add this line back to the test when there is a solution
 		This commit does not have to be added to the open source cw agent test
 		createFile(t, filepath.Join(agentLogDir, "sgid-file.log"), 0644|os.ModeSetgid)
 	*/

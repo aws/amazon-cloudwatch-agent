@@ -53,7 +53,7 @@ func getOverlapMetrics(rules []MetricRule) map[MetricAttr][]*MetricRule {
 	duplicateMetrics := make(map[MetricAttr][]*MetricRule)
 	for k, v := range metrics {
 		if len(v) > 1 {
-			for rule, _ := range v {
+			for rule := range v {
 				duplicateMetrics[k] = append(duplicateMetrics[k], rule)
 			}
 		}

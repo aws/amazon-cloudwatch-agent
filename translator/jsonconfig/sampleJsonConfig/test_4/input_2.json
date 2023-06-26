@@ -1,7 +1,4 @@
 {
-  "csm": {
-    "memory_limit_in_mb": 50
-  },
   "logs": {
     "logs_collected": {
       "files": {

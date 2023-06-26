@@ -1,0 +1,24 @@
+# create configmap for cwagent config
+apiVersion: v1
+data:
+  # Configuration is in Json format. No matter what configure change you make,
+  # please keep the Json blob valid.
+  cwagentconfig.json: |
+    {
+      "agent": {
+        "region": "us-west-2",
+        "debug": true
+      },
+      "logs": {
+        "metrics_collected": {
+          "kubernetes": {
+            "cluster_name": "cwagent-latest-kubernetes-monitoring-onprem"
+          }
+        },
+        "force_flush_interval": 5
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: cwagentconfig
+  namespace: amazon-cloudwatch
