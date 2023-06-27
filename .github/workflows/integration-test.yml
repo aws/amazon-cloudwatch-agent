@@ -5,6 +5,7 @@ name: Run Integration Tests
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
@@ -129,6 +130,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: cf-integration-test
@@ -165,6 +167,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Verify Terraform version
         run: terraform --version
@@ -209,6 +212,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: ec2-linux-integration-test
@@ -265,7 +269,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd terraform/ec2/win
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
             terraform init
             if terraform apply --auto-approve \
               -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}" \
@@ -287,7 +295,9 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if "${{ matrix.arrays.os }}" == window
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            elif if "${{ matrix.arrays.os }}" == window; then
               cd terraform/ec2/win
             else
               cd terraform/ec2/linux
@@ -316,7 +326,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
-          role-duration-seconds: 14400
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: ec2-linux-integration-test
@@ -374,7 +384,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/linux && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/linux
+            fi 
+            terraform destroy --auto-approve
 
   EC2WinIntegrationTest:
     needs: [BuildAndUpload, GenerateTestMatrix]
@@ -398,6 +414,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: ec2-win-integration-test
@@ -421,7 +438,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd terraform/ec2/win
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
             terraform init
             if terraform apply --auto-approve \
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
@@ -445,7 +466,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/win && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/win
+            fi
+            terraform destroy --auto-approve
 
   EC2DarwinIntegrationTest:
     needs: [BuildAndUpload, GenerateTestMatrix]
@@ -469,6 +496,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: ec2-mac-integration-test
@@ -492,7 +520,11 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: 5
           command: |
-            cd terraform/ec2/mac
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/mac
+            fi
             terraform init
             if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" -var="ssh_key_name=${KEY_NAME}"  \
@@ -500,7 +532,6 @@ jobs:
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
             -var="cwa_github_sha=${GITHUB_SHA}" -var="ami=${{ matrix.arrays.ami }}" \
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="license_manager_arn=${{ env.LICENSE_MANAGER_ARN }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
               terraform destroy -auto-approve
             else
@@ -515,7 +546,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ec2/mac && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ec2/mac
+            fi
+            terraform destroy --auto-approve
 
   StopLocalStack:
     name: 'StopLocalStack'
@@ -539,6 +576,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Copy state
         run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
@@ -574,6 +612,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: ecs-ec2-integration-test
@@ -625,7 +664,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ecs_ec2/daemon && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ecs_ec2/daemon
+            fi
+            terraform destroy --auto-approve
 
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
@@ -649,6 +694,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: ecs-fargate-integration-test
@@ -696,7 +742,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/ecs_fargate/linux && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/ecs_fargate/linux
+            fi
+            terraform destroy --auto-approve
 
   EKSIntegrationTest:
     name: 'EKSIntegrationTest'
@@ -720,6 +772,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: eks-ec2-integration-test
@@ -771,7 +824,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/eks/daemon && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/daemon
+            fi
+            terraform destroy --auto-approve
 
   EKSPrometheusIntegrationTest:
     name: 'EKSPrometheusIntegrationTest'
@@ -795,6 +854,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: eks-ec2-integration-test
@@ -844,7 +904,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/eks/deployment && terraform destroy --auto-approve
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/deployment
+            fi
+            terraform destroy --auto-approve
 
   PerformanceTrackingTest:
     name: "PerformanceTrackingTest"
@@ -868,6 +934,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: performance-tracking
@@ -934,6 +1001,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: stress-tracking
@@ -997,6 +1065,7 @@ jobs:
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: traces-integration-test
