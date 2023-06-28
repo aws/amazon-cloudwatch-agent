@@ -21,8 +21,10 @@ processors:
 receivers:
     telegraf_disk:
         collection_interval: 1m0s
+        initial_delay: "1s"
     telegraf_mem:
         collection_interval: 1m0s
+        initial_delay: "1s"
 service:
     extensions: []
     pipelines:
@@ -50,6 +52,7 @@ service:
         metrics:
             address: ""
             level: None
+            metric_readers: []
         resource: {}
         traces:
             propagators: []

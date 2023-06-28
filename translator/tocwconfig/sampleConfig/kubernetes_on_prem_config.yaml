@@ -189,6 +189,7 @@ service:
     metrics:
       address: ""
       level: None
+      metric_readers: []
     resource: {}
     traces:
       propagators: []

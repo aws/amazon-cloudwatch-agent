@@ -133,31 +133,41 @@ receivers:
                 tls: null
     telegraf_nvidia_smi:
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_procstat/1340600742:
         alias_name: agent
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_statsd:
         collection_interval: 10s
+        initial_delay: 1s
     telegraf_win_perf_counters/1063858558:
         alias_name: Network Interface
         collection_interval: 5s
+        initial_delay: 1s
     telegraf_win_perf_counters/1492679118:
         alias_name: Memory
         collection_interval: 5s
+        initial_delay: 1s
     telegraf_win_perf_counters/2402387132:
         alias_name: System
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_win_perf_counters/3081249416:
         alias_name: customizedObjectName
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_win_perf_counters/3762679655:
         alias_name: Processor
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_win_perf_counters/4283769065:
         alias_name: LogicalDisk
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_windows_event_log:
         collection_interval: 1m0s
+        initial_delay: 1s
     udplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -228,6 +238,7 @@ service:
         metrics:
             address: ""
             level: None
+            metric_readers: []
         resource: {}
         traces:
             propagators: []

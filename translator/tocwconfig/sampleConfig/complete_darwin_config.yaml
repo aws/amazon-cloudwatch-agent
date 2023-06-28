@@ -146,27 +146,38 @@ receivers:
                 tls: null
     telegraf_cpu:
         collection_interval: 10s
+        initial_delay: 1s
     telegraf_disk:
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_diskio:
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_mem:
         collection_interval: 1s
+        initial_delay: 1s
     telegraf_net:
         collection_interval: 10s
+        initial_delay: 1s
     telegraf_netstat:
         collection_interval: 1m0s
+        initial_delay: 1s
     telegraf_processes:
         collection_interval: 10s
+        initial_delay: 1s
     telegraf_procstat/1917393364:
         alias_name: /var/run/example1.pid
         collection_interval: 10s
+        initial_delay: 1s
     telegraf_socket_listener:
         collection_interval: 10s
+        initial_delay: 1s
     telegraf_statsd:
         collection_interval: 10s
+        initial_delay: 1s
     telegraf_swap:
         collection_interval: 10s
+        initial_delay: 1s
     udplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -246,6 +257,7 @@ service:
         metrics:
             address: ""
             level: None
+            metric_readers: []
         resource: {}
         traces:
             propagators: []
