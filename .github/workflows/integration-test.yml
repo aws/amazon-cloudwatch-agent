@@ -1014,6 +1014,9 @@ jobs:
         if: steps.stress-tracking.outputs.cache-hit != 'true'
         run: terraform --version
 
+      - name: Echo Test Info
+        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
+
       - name: Terraform apply
         if: steps.stress-tracking.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
