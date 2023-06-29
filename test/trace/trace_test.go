@@ -26,15 +26,12 @@ const (
 	loadGeneratorInterval = 5 * time.Second
 )
 
-var (
-	envMetaDataStrings = &(environment.MetaDataStrings{})
-)
-
 func init() {
-	environment.RegisterEnvironmentMetaDataFlags(envMetaDataStrings)
+	environment.RegisterEnvironmentMetaDataFlags()
 }
 
 func TestTraces(t *testing.T) {
+	env := environment.GetEnvironmentMetaData()
 	t.Run("Basic configuration for X-Ray", func(t *testing.T) {
 		common.CopyFile(filepath.Join("testdata", "config.json"), common.ConfigOutputPath)
 		startTime := time.Now()
@@ -44,8 +41,8 @@ func TestTraces(t *testing.T) {
 			Interval: loadGeneratorInterval,
 			Annotations: map[string]interface{}{
 				"test_type":   "basic",
-				"instance_id": envMetaDataStrings.InstanceId,
-				"commit_sha":  envMetaDataStrings.CwaCommitSha,
+				"instance_id": env.InstanceId,
+				"commit_sha":  env.CwaCommitSha,
 			},
 			Metadata: map[string]map[string]interface{}{
 				"default": {
