@@ -6,6 +6,7 @@ package otel_aws_cloudwatch_logs
 import (
 	_ "embed"
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"go.opentelemetry.io/collector/component"
@@ -22,6 +23,7 @@ var defaultAwsCloudwatchLogsDefault string
 
 var (
 	emfBasePathKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.Emf)
+	roleArnPathKey = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 	regionKey      = common.ConfigKey(common.AgentKey, common.Region)
 	streamNameKey  = common.ConfigKey(common.LogsKey, common.LogStreamName)
 )
@@ -69,6 +71,15 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		if err := t.setEmfFields(c, cfg); err != nil {
 			return nil, err
 		}
+	}
+
+	if profile, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profile)
+		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", agent.Global_Config.Credentials[agent.CredentialsFile_Key])}
+	}
+	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
+	if c.IsSet(roleArnPathKey) {
+		cfg.AWSSessionSettings.RoleARN, _ = common.GetString(c, roleArnPathKey)
 	}
 
 	return cfg, nil

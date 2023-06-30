@@ -37,7 +37,7 @@ exporters:
             max_interval: 30s
             multiplier: 1.5
             randomization_factor: 0.5
-        role_arn: ""
+        role_arn: log_role_arn_value_test
         sending_queue:
             queue_size: 1000
         profile: ""
