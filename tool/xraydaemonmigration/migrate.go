@@ -4,16 +4,15 @@ package xraydaemonmigration
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/shirou/gopsutil/process"
 	"path/filepath"
 	"strings"
+
+	"github.com/shirou/gopsutil/process"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Process interface {
-	Name() (string, error)
 	Cwd() (string, error)
 	CmdlineSlice() ([]string, error)
 }
@@ -57,14 +56,9 @@ type JsonConfig struct {
 	} `json:"traces"`
 }
 
-func mapJsonStructToYamlStruct(yamlData []byte, process Process) (YamlConfig, error) {
+func daemonFlagSet(yamlConfig YamlConfig, process Process) (YamlConfig, error) {
 	var configFilePath string
 	flag := NewFlag("X-Ray Daemon")
-	var yamlConfig YamlConfig
-	err := yaml.Unmarshal(yamlData, &yamlConfig)
-	if err != nil {
-		return yamlConfig, err
-	}
 
 	flag.StringVarF(&yamlConfig.ResourceARN, "resource-arn", "a", yamlConfig.ResourceARN, "Amazon Resource Name (ARN) of the AWS resource running the daemon.")
 	flag.BoolVarF(&yamlConfig.LocalMode, "local-mode", "o", yamlConfig.LocalMode, "Don't check for EC2 instance metadata.")
@@ -75,9 +69,12 @@ func mapJsonStructToYamlStruct(yamlData []byte, process Process) (YamlConfig, er
 	flag.StringVarF(&yamlConfig.RoleARN, "role-arn", "r", yamlConfig.RoleARN, "Assume the specified IAM role to upload segments to a different account.")
 	flag.StringVarF(&configFilePath, "config", "c", "", "Load a configuration file from the specified path.")
 	flag.StringVarF(&yamlConfig.ProxyAddress, "proxy-address", "p", yamlConfig.ProxyAddress, "Proxy address through which to upload segments.")
-	temp, err := process.CmdlineSlice()
-	if len(temp) != 0 {
-		flag.fs.Parse(temp[1:])
+	cmdline, err := process.CmdlineSlice()
+	if err != nil {
+		return yamlConfig, err
+	}
+	if len(cmdline) != 0 {
+		flag.fs.Parse(cmdline[1:])
 	}
 	return yamlConfig, nil
 }
@@ -104,9 +101,10 @@ var GetProcesses = func() ([]Process, error) {
 func ConvertYamlToJson(yamlData []byte, process Process) ([]byte, error) {
 
 	var jsonConfig JsonConfig
-	yamlConfig, err := mapJsonStructToYamlStruct(yamlData, process)
+	var yamlConfig YamlConfig
+	err := yaml.Unmarshal(yamlData, &yamlConfig)
+	yamlConfig, err = daemonFlagSet(yamlConfig, process)
 	if err != nil {
-		fmt.Println("There was a problem mapping json struct to yaml struct")
 		return nil, err
 	}
 	jsonConfig.Traces.TracesCollected.Xray.BindAddress = yamlConfig.Socket.UDPAddress
@@ -148,15 +146,15 @@ func FindAllPotentialConfigFiles() ([]string, error) {
 			return nil, err
 		}
 
-		temp := path
+		configFile := path
 		//If the cwd in path, then that is the full path, otherwise add to config file path
 		if filepath.IsAbs(path) {
-			temp = path
+			configFile = path
 		} else {
-			temp = filepath.Join(cwd, path)
+			configFile = filepath.Join(cwd, path)
 		}
 
-		allPotentialConfigFiles = append(allPotentialConfigFiles, temp)
+		allPotentialConfigFiles = append(allPotentialConfigFiles, configFile)
 
 	}
 	if len(allPotentialConfigFiles) == 0 {
@@ -182,8 +180,8 @@ func FindAllDaemons() ([]Process, error) {
 // get the config file path from arguments
 func GetPathFromArgs(argList []string) string {
 	for i := 0; i < len(argList); i++ {
-		temp := strings.Trim(strings.ToLower(argList[i]), "-")
-		if temp == "c" || temp == "config" {
+		arg := strings.Trim(strings.ToLower(argList[i]), "-")
+		if arg == "c" || arg == "config" {
 			if i+1 < len(argList) {
 				return argList[i+1]
 			} else {

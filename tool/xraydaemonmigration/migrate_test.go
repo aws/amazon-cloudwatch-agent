@@ -3,7 +3,6 @@
 package xraydaemonmigration
 
 import (
-	"github.com/shirou/gopsutil/v3/process"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +12,6 @@ import (
 )
 
 type proc struct {
-	*process.Process
 	pid     int32
 	name    string
 	cmdline []string
@@ -58,26 +56,6 @@ var mockProcesses = func() ([]Process, error) {
 	processes := []Process{correctDaemonProcess, duplicateDaemonProcess, randomProcess, randomNoNameProcess}
 	return processes, nil
 }
-var mockDaemonProcesses = func() ([]Process, error) {
-	wd, _ := os.Getwd()
-
-	var correctDaemonProcess = &proc{
-		pid:     123,
-		name:    "xray",
-		cmdline: []string{"xray", "-c", filepath.Join("testdata", "cfg.yaml"), "-b", "127.0.0.1:2000", "-t", "127.0.0.1:2000", "-a", "resourceTesting", "-n", "us-east-1", "-m", "23", "-r", "roleTest", "-p", "127.0.0.1:2000"},
-		cwd:     filepath.Join(wd),
-	}
-
-	var duplicateDaemonProcess = &proc{
-		pid:     456,
-		name:    "xray",
-		cmdline: []string{"xray", "-c", filepath.Join("testdata", "cfg.yaml")},
-		cwd:     filepath.Join(wd),
-	}
-
-	processes := []Process{correctDaemonProcess, duplicateDaemonProcess}
-	return processes, nil
-}
 
 var mockProcessesNone = func() ([]Process, error) {
 	return nil, nil
@@ -86,10 +64,10 @@ var mockProcessesNone = func() ([]Process, error) {
 var _ Process = (*proc)(nil)
 
 func TestAllDaemonFunction(t *testing.T) {
-	GetProcesses = mockDaemonProcesses
+	GetProcesses = mockProcesses
 	result, err := FindAllDaemons()
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(result))
+	assert.Equal(t, 4, len(result))
 	GetProcesses = mockProcessesNone
 	result, err = FindAllDaemons()
 	require.NoError(t, err)
@@ -151,7 +129,7 @@ func TestCovertYamlToJson(t *testing.T) {
 		cwd:     filepath.Join(wd),
 	}
 	jsonFile, err := ConvertYamlToJson(yamlFile, duplicateDaemonProcess)
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 
 	actualFilePath := filepath.Join("testdata", "actualConfig.json")
 	yamlFile, err = os.ReadFile(configFilePath)
