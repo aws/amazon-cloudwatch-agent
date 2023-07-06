@@ -1244,6 +1244,7 @@ jobs:
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
               -var="ssh_key_name=${KEY_NAME}" \
               -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
+              -var="family=${{ matrix.arrays.family}}"\
               -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
