@@ -7,7 +7,7 @@ import { TRANSACTION_PER_MINUTE } from '../../common/Constant';
 import { usePageEffect } from '../../core/page';
 import { PerformanceTable } from '../../core/table';
 import { UseCaseData } from './data';
-import { GetLatestPerformanceReports, GetServiceLatestVersion, GetServicePRInformation } from './service';
+import { GetLatestPerformanceReports, GetServiceLatestVersion } from './service';
 import { PasswordDialog } from '../../common/Dialog';
 export default function PerformanceReport(props: { password: string; password_is_set: boolean; set_password_state: any }): JSX.Element {
     usePageEffect({ title: 'Amazon CloudWatch Agent' });

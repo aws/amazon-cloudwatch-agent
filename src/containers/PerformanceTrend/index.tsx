@@ -10,7 +10,7 @@ import Chart from 'react-apexcharts';
 import { CONVERT_REPORTED_METRICS_NAME, REPORTED_METRICS, TRANSACTION_PER_MINUTE, USE_CASE } from '../../common/Constant';
 import { usePageEffect } from '../../core/page';
 import { CommitInformation, PerformanceTrendData, ServiceCommitInformation, TrendData } from './data';
-import { GetPerformanceTrendData, GetServiceCommitInformation } from './service';
+import { GetPerformanceTrendData } from './service';
 import { PasswordDialog } from '../../common/Dialog';
 import { BasedOptionChart } from './styles';
 
