@@ -32,9 +32,9 @@ export async function GetLatestPerformanceReports(password: string): Promise<Per
 }
 
 async function GetPerformanceReports(password: string, params: PerformanceMetricReportParams): Promise<PerformanceMetricReport[]> {
+    AxiosConfig.defaults.headers['x-api-key'] = password;
     return AxiosConfig.post('/', {
         Action: 'Query',
-        SecretKey: password,
         Params: params,
     })
         .then(function (body: { data: { Items: PerformanceMetricReport[] } }) {
@@ -46,17 +46,17 @@ async function GetPerformanceReports(password: string, params: PerformanceMetric
 }
 
 export async function GetServiceLatestVersion(password: string): Promise<ServiceLatestVersion> {
+    AxiosConfig.defaults.headers['x-api-key'] = password;
     return AxiosConfig.post('/', {
         Action: 'Github',
-        SecretKey: password,
         URL: 'GET /repos/{owner}/{repo}/releases/latest',
         Params: {
             owner: OWNER_REPOSITORY,
             repo: process.env.REACT_APP_GITHUB_REPOSITORY,
         },
     })
-        .then(function (body: { data: any }) {
-            return body?.data;
+        .then(function (body: { data: { data:  any }}) {
+            return body?.data?.data;
         })
         .catch(function (error: unknown) {
             return Promise.reject(error);
@@ -64,9 +64,9 @@ export async function GetServiceLatestVersion(password: string): Promise<Service
 }
 
 export async function GetServicePRInformation(password: string, commit_sha: string): Promise<ServicePRInformation> {
+    AxiosConfig.defaults.headers['x-api-key'] = password;
     return AxiosConfig.post('/', {
         Action: 'Github',
-        SecretKey: password,
         URL: 'GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls',
         Params: {
             owner: OWNER_REPOSITORY,
