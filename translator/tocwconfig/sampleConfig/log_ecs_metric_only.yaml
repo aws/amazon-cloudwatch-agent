@@ -89,11 +89,11 @@ processors:
   batch/containerinsights:
     send_batch_max_size: 0
     send_batch_size: 8192
-    timeout: 200ms
+    timeout: 5s
   batch/emf_logs:
     send_batch_max_size: 0
     send_batch_size: 8192
-    timeout: 200ms
+    timeout: 5s
 receivers:
   awscontainerinsightreceiver:
     add_container_name_metric_label: false

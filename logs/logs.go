@@ -6,10 +6,10 @@ package logs
 import (
 	"context"
 	"errors"
-	"github.com/influxdata/telegraf"
 	"log"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"

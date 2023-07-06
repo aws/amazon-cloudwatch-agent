@@ -4,8 +4,9 @@
 package ec2taggerprocessor
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"time"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"

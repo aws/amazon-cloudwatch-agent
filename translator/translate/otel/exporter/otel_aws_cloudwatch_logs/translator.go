@@ -6,6 +6,7 @@ package otel_aws_cloudwatch_logs
 import (
 	_ "embed"
 	"fmt"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"

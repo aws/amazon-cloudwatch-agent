@@ -8,11 +8,10 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/processor/batchprocessor"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/otel_aws_cloudwatch_logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/tcp_logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/udp_logs"
 )
@@ -48,7 +47,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 	translators := common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config](),
-		Processors: common.NewTranslatorMap(processor.NewDefaultTranslatorWithName(common.PipelineNameEmfLogs, batchprocessor.NewFactory())),
+		Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(common.PipelineNameEmfLogs, common.LogsKey)), // EMF logs sit under metrics_collected in "logs"
 		Exporters:  common.NewTranslatorMap(otel_aws_cloudwatch_logs.NewTranslatorWithName(common.PipelineNameEmfLogs)),
 	}
 	if serviceAddress, ok := common.GetString(conf, serviceAddressEMFKey); ok {

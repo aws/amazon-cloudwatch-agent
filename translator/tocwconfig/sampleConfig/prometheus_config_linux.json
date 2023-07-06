@@ -83,7 +83,7 @@
         }
       }
     },
-    "force_flush_interval": 5,
+    "force_flush_interval": 30,
     "endpoint_override":"https://fake_endpoint"
   }
 }

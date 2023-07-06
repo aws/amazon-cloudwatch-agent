@@ -8,12 +8,11 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/processor/batchprocessor"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
 )
 
@@ -44,7 +43,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	return &common.ComponentTranslators{
 		Receivers: common.NewTranslatorMap(adapter.NewTranslator(prometheus.SectionKey, key, time.Minute)),
 		Processors: common.NewTranslatorMap(
-			processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory()),
+			batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 		),
 		Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
 	}, nil

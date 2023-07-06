@@ -73,7 +73,7 @@ processors:
   batch/prometheus:
     send_batch_max_size: 0
     send_batch_size: 8192
-    timeout: 200ms
+    timeout: 30s
 
 receivers:
   telegraf_prometheus:
