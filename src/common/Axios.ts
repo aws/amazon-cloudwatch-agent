@@ -7,7 +7,7 @@ export const AxiosConfig = axios.create({
     baseURL: process.env.REACT_APP_LAMBDA_URL,
     timeout: 3000,
     headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
     },
     responseType: 'json',
     maxRedirects: 21,

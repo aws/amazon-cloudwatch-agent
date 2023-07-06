@@ -55,7 +55,7 @@ export async function GetServiceLatestVersion(password: string): Promise<Service
             repo: process.env.REACT_APP_GITHUB_REPOSITORY,
         },
     })
-        .then(function (body: { data: { data:  any }}) {
+        .then(function (body: { data: { data: any } }) {
             return body?.data?.data;
         })
         .catch(function (error: unknown) {

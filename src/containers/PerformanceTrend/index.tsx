@@ -254,10 +254,10 @@ function useStatePerformanceTrend(password: string) {
             // const commits_information = await Promise.all(hash_categories.map((hash) => GetServiceCommitInformation(hash)));
             const commits_information: ServiceCommitInformation[] = hash_categories.map((hash) => {
                 return {
-                    author: { login: "Login" },
-                    commit: { message: "Message", committer: { date: "1/1/99" } },
-                    sha: hash
-                }
+                    author: { login: 'Login' },
+                    commit: { message: 'Message', committer: { date: '1/1/99' } },
+                    sha: hash,
+                };
             });
             const final_commits_information: CommitInformation[] = commits_information.map((c) => {
                 return {
@@ -267,7 +267,6 @@ function useStatePerformanceTrend(password: string) {
                     sha: c.sha.substring(0, 7),
                 };
             });
-
 
             /* Generate series of data that has the following format:
             data_rate: transaction per minute
@@ -289,10 +288,11 @@ function useStatePerformanceTrend(password: string) {
                                 .filter((d) => d.UseCase.S === use_case)
                                 .map((p) => {
                                     try {
-                                        return Number(Number(p.Results.M[tpm].M[metric].M.Average?.N).toFixed(2))
-                                    } catch(e) {
+                                        return Number(Number(p.Results.M[tpm].M[metric].M.Average?.N).toFixed(2));
+                                    } catch (e) {
                                         return -1;
-                                    } });
+                                    }
+                                });
                             if (data.length === 0) {
                                 continue;
                             }

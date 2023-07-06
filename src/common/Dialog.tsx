@@ -59,7 +59,7 @@ export function PasswordDialog(props: { password: string; password_is_set: boole
     const isValidateSuccess = async () => {
         setStateLoading({ loading: true, error: false });
 
-        const success = true
+        const success = true;
 
         setStateLoading({ loading: false, error: !success });
         set_password_state({
@@ -76,7 +76,7 @@ export function PasswordDialog(props: { password: string; password_is_set: boole
             }}
             PaperProps={{
                 style: {
-                    overflow: "hidden",
+                    overflow: 'hidden',
                     height: '320px',
                     width: '400px',
                     padding: '20px 0px 0px 25px',
