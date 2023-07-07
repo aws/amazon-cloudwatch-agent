@@ -1218,6 +1218,7 @@ jobs:
       - name: Cache if success
         id: performance-tracking
         uses: actions/cache@v3
+        if: false
         with:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
