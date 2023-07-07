@@ -52,11 +52,13 @@ func ConfigFilePath() string {
 
 func PermissionCheck() {
 	filePath := ConfigFilePath()
-	err := os.WriteFile(filePath, []byte(""), 0755)
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Printf("Make sure that you have write permission to %s\n", filePath)
 		os.Exit(1)
 	}
+	defer f.Close()
+	return
 }
 
 func ReadConfigFromJsonFile() string {
