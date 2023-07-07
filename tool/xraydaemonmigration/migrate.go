@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/shirou/gopsutil/process"
-
 	"gopkg.in/yaml.v3"
 )
 

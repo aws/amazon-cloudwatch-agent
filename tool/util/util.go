@@ -15,11 +15,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
-
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/interfaze"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 )
 
 const (

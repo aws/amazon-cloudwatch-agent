@@ -197,7 +197,9 @@ checklicense: install-addlicense
     			echo "Check License finished successfully"; \
     		fi
 
-lint: install-golangci-lint checklicense impi
+simple-lint: checklicense impi
+
+lint: install-golangci-lint simple-lint
 	${LINTER} run ./...
 
 test:

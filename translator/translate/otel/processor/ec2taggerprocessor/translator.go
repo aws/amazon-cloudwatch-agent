@@ -6,13 +6,12 @@ package ec2taggerprocessor
 import (
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 

@@ -8,12 +8,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
-
 	"github.com/influxdata/telegraf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
 )
 

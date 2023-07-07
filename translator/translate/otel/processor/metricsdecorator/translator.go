@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 

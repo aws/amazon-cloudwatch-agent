@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -22,6 +20,7 @@ import (
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	translatorCtx "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 )
 
 type ec2MetadataLookupType struct {

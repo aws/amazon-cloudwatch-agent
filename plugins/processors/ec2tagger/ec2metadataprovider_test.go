@@ -10,12 +10,11 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/awstesting/mock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 )
 
 func TestMetadataProvider_Get(t *testing.T) {
