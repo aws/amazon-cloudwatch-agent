@@ -7,12 +7,12 @@ import { TRANSACTION_PER_MINUTE } from '../../common/Constant';
 import { usePageEffect } from '../../core/page';
 import { PerformanceTable } from '../../core/table';
 import { UseCaseData } from './data';
-import { GetLatestPerformanceReports, GetServiceLatestVersion, GetServicePRInformation } from './service';
+import { GetLatestPerformanceReports, GetServiceLatestVersion } from './service';
 import { PasswordDialog } from '../../common/Dialog';
 export default function PerformanceReport(props: { password: string; password_is_set: boolean; set_password_state: any }): JSX.Element {
     usePageEffect({ title: 'Amazon CloudWatch Agent' });
     const { password, password_is_set, set_password_state } = props;
-    const [{ version, commit_date, commit_title, commit_url, use_cases, ami_id, collection_period }] = useStatePerformanceReport(password);
+    const [{ version, commit_date, commit_title, commit_hash, commit_url, use_cases, ami_id, collection_period }] = useStatePerformanceReport(password);
     const [{ data_type }, setDataTypeState] = useStateDataType();
 
     return (
@@ -56,7 +56,7 @@ export default function PerformanceReport(props: { password: string; password_is
                                 aria-label="a dense table"
                             >
                                 <TableBody>
-                                    {['Version', 'Architectural', 'Collection Period', 'Testing AMI', 'Commit Name', 'Commit Date', 'Data Type']?.map((name) => (
+                                    {['Version', 'Architectural', 'Collection Period', 'Testing AMI', 'Commit Hash', 'Commit Name', 'Commit Date', 'Data Type']?.map((name) => (
                                         <TableRow key={name}>
                                             <TableCell
                                                 sx={{
@@ -80,6 +80,8 @@ export default function PerformanceReport(props: { password: string; password_is
                                                     <Typography variant="h4">{collection_period}s</Typography>
                                                 ) : name === 'Testing AMI' ? (
                                                     <Typography variant="h4">{ami_id}</Typography>
+                                                ) : name === 'Commit Hash' ? (
+                                                    <Typography variant="h4">{commit_hash}</Typography>
                                                 ) : name === 'Commit Name' ? (
                                                     <Link href={commit_url} variant="h4">
                                                         {commit_title}
@@ -132,6 +134,7 @@ function useStatePerformanceReport(password: string) {
         version: undefined as string | undefined,
         commit_url: undefined as string | undefined,
         commit_date: undefined as string | undefined,
+        commit_hash: undefined as string | undefined,
         commit_title: undefined as string | undefined,
         use_cases: [] as UseCaseData[],
         ami_id: undefined as string | undefined,
@@ -183,8 +186,7 @@ function useStatePerformanceReport(password: string) {
                     ),
                 });
             }
-
-            const commit_info = await GetServicePRInformation(password, commit_hash);
+            // const commit_info = await GetServicePRInformation(password, commit_hash);
 
             setState((prev: any) => ({
                 ...prev,
@@ -192,13 +194,15 @@ function useStatePerformanceReport(password: string) {
                 ami_id: ami_id,
                 collection_period: collection_period,
                 use_cases: use_cases,
-                commit_title: `${commit_info?.title} (#${commit_info?.number})`,
-                commit_url: commit_info?.html_url,
+                // commit_title: `${commit_info?.title} (#${commit_info?.number})`,
+                // commit_url: commit_info?.html_url,
+                commit_hash: commit_hash,
+                commit_title: `PlaceHolder`,
+                commit_url: `www.github.com/aws/amazon-cloudwatch-agent`,
                 commit_date: moment.unix(Number(commit_date)).format('dddd, MMMM Do, YYYY h:mm:ss A'),
             }));
         })();
     }, [password, setState]);
-
     return [state, setState] as const;
 }
 

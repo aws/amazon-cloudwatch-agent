@@ -34,9 +34,9 @@ export async function GetPerformanceTrendData(password: string): Promise<Perform
 }
 
 async function GetPerformanceTrend(password: string, params: PerformanceTrendDataParams): Promise<PerformanceTrendData[]> {
+    AxiosConfig.defaults.headers['x-api-key'] = password;
     return AxiosConfig.post('/', {
         Action: 'Query',
-        SecretKey: password,
         Params: params,
     })
         .then(function (body: { data: { Items: any[] } }) {
@@ -48,9 +48,9 @@ async function GetPerformanceTrend(password: string, params: PerformanceTrendDat
 }
 
 export async function GetServiceCommitInformation(password: string, commit_sha: string): Promise<ServiceCommitInformation> {
+    AxiosConfig.defaults.headers['x-api-key'] = password;
     return AxiosConfig.post('/', {
         Action: 'Github',
-        SecretKey: password,
         URL: 'GET /repos/{owner}/{repo}/commits/{ref}',
         Params: {
             owner: OWNER_REPOSITORY,
@@ -59,7 +59,6 @@ export async function GetServiceCommitInformation(password: string, commit_sha: 
         },
     })
         .then(function (value: { data: any }) {
-            console.log(value);
             return Promise.resolve(value?.data);
         })
         .catch(function (error: unknown) {

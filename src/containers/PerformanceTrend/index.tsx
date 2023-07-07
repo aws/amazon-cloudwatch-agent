@@ -9,8 +9,8 @@ import * as React from 'react';
 import Chart from 'react-apexcharts';
 import { CONVERT_REPORTED_METRICS_NAME, REPORTED_METRICS, TRANSACTION_PER_MINUTE, USE_CASE } from '../../common/Constant';
 import { usePageEffect } from '../../core/page';
-import { CommitInformation, PerformanceTrendData, TrendData } from './data';
-import { GetPerformanceTrendData, GetServiceCommitInformation } from './service';
+import { CommitInformation, PerformanceTrendData, ServiceCommitInformation, TrendData } from './data';
+import { GetPerformanceTrendData } from './service';
 import { PasswordDialog } from '../../common/Dialog';
 import { BasedOptionChart } from './styles';
 
@@ -251,13 +251,20 @@ function useStatePerformanceTrend(password: string) {
             const commit_date = performances.at(0)?.CommitDate.N || '';
             const hash_categories = Array.from(new Set(performances.map((p) => p.CommitHash.S.substring(0, 6)))).reverse();
             // Get all the information for the hash categories in order to get the commiter name, the commit message, and the releveant information
-            const commits_informaton = await Promise.all(hash_categories.map((hash) => GetServiceCommitInformation(password, hash)));
-            const final_commits_information: CommitInformation[] = commits_informaton.map((c) => {
+            // const commits_information = await Promise.all(hash_categories.map((hash) => GetServiceCommitInformation(hash)));
+            const commits_information: ServiceCommitInformation[] = hash_categories.map((hash) => {
+                return {
+                    author: { login: 'Login' },
+                    commit: { message: 'Message', committer: { date: '1/1/99' } },
+                    sha: hash,
+                };
+            });
+            const final_commits_information: CommitInformation[] = commits_information.map((c) => {
                 return {
                     commiter_name: c.author.login,
                     commit_message: c.commit.message,
                     commit_date: c.commit.committer.date,
-                    sha: c.sha.substring(0, 6),
+                    sha: c.sha.substring(0, 7),
                 };
             });
 
@@ -279,7 +286,13 @@ function useStatePerformanceTrend(password: string) {
                             const data = typeGrouping
                                 .reverse()
                                 .filter((d) => d.UseCase.S === use_case)
-                                .map((p) => Number(Number(p.Results.M[tpm].M[metric].M.Average?.N).toFixed(2)));
+                                .map((p) => {
+                                    try {
+                                        return Number(Number(p.Results.M[tpm].M[metric].M.Average?.N).toFixed(2));
+                                    } catch (e) {
+                                        return -1;
+                                    }
+                                });
                             if (data.length === 0) {
                                 continue;
                             }

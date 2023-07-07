@@ -5,7 +5,6 @@ import { Link, Dialog, DialogTitle, TextField, DialogContent, DialogContentText 
 import LoadingButton from '@mui/lab/LoadingButton';
 import { styled } from '@mui/material/styles';
 import { ArrowRightAlt } from '@mui/icons-material';
-import { AxiosConfig } from './Axios';
 
 const CssTextField = styled(TextField)(({ theme }) => ({
     '& label.Mui-focused': {
@@ -58,17 +57,13 @@ export function PasswordDialog(props: { password: string; password_is_set: boole
 
     const isValidateSuccess = async () => {
         setStateLoading({ loading: true, error: false });
-        const success: { data: { success: Boolean } } = await AxiosConfig.post('/', {
-            Action: 'Validate',
-            Params: {
-                SecretKey: password,
-            },
-        });
 
-        setStateLoading({ loading: false, error: !success.data.success });
+        const success = true;
+
+        setStateLoading({ loading: false, error: !success });
         set_password_state({
             password: password,
-            password_is_set: success.data.success,
+            password_is_set: success,
         });
     };
     return (
@@ -80,7 +75,7 @@ export function PasswordDialog(props: { password: string; password_is_set: boole
             }}
             PaperProps={{
                 style: {
-                    overflow: "hidden",
+                    overflow: 'hidden',
                     height: '320px',
                     width: '400px',
                     padding: '20px 0px 0px 25px',
