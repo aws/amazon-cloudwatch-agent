@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -31,6 +32,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 		telegrafMetricType     telegraf.ValueType
 		expectedOtelMetricType pmetric.MetricType
 		expectedDPAttributes   pcommon.Map
+		isServiceInput         bool
 	}{
 		{
 			name:                   "OtelAccumulator with AddGauge",
@@ -39,6 +41,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricType:     telegraf.Gauge,
 			expectedOtelMetricType: pmetric.MetricTypeGauge,
 			expectedDPAttributes:   generateExpectedAttributes(),
+			isServiceInput:         false,
 		},
 		{
 			name:                   "OtelAccumulator with AddCounter",
@@ -47,6 +50,7 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricType:     telegraf.Counter,
 			expectedOtelMetricType: pmetric.MetricTypeSum,
 			expectedDPAttributes:   generateExpectedAttributes(),
+			isServiceInput:         false,
 		},
 		{
 			name:                   "OtelAccumulator with AddFields",
@@ -55,12 +59,41 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			telegrafMetricType:     telegraf.Untyped,
 			expectedOtelMetricType: pmetric.MetricTypeGauge,
 			expectedDPAttributes:   generateExpectedAttributes(),
+			isServiceInput:         false,
+		},
+		{
+			name:                   "OtelAccumulator with AddGauge For ServiceInput",
+			telegrafMetricName:     "acc_gauge_test",
+			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
+			telegrafMetricType:     telegraf.Gauge,
+			expectedOtelMetricType: pmetric.MetricTypeGauge,
+			expectedDPAttributes:   generateExpectedAttributes(),
+			isServiceInput:         true,
+		},
+		{
+			name:                   "OtelAccumulator with AddCounter For ServiceInput",
+			telegrafMetricName:     "acc_counter_test",
+			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
+			telegrafMetricType:     telegraf.Counter,
+			expectedOtelMetricType: pmetric.MetricTypeSum,
+			expectedDPAttributes:   generateExpectedAttributes(),
+			isServiceInput:         true,
+		},
+		{
+			name:                   "OtelAccumulator with AddFields For ServiceInput",
+			telegrafMetricName:     "acc_field_test",
+			telegrafMetricTags:     map[string]string{defaultInstanceId: defaultInstanceIdValue},
+			telegrafMetricType:     telegraf.Untyped,
+			expectedOtelMetricType: pmetric.MetricTypeGauge,
+			expectedDPAttributes:   generateExpectedAttributes(),
+			isServiceInput:         true,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(_ *testing.T) {
 
-			acc := newOtelAccumulatorWithTestRunningInputs(as)
+			sink := new(consumertest.MetricsSink)
+			acc := newOtelAccumulatorWithTestRunningInputs(as, sink, tc.isServiceInput)
 
 			now := time.Now()
 			telegrafMetricFields := map[string]interface{}{"time": float64(3.5), "error": false}
@@ -73,7 +106,14 @@ func Test_Accumulator_AddCounterGaugeFields(t *testing.T) {
 			case telegraf.Gauge:
 				acc.AddGauge(tc.telegrafMetricName, telegrafMetricFields, tc.telegrafMetricTags, now)
 			}
-			otelMetrics := acc.GetOtelMetrics()
+			var otelMetrics pmetric.Metrics
+			if tc.isServiceInput {
+				as.Len(sink.AllMetrics(), 1)
+				otelMetrics = sink.AllMetrics()[0]
+			} else {
+				as.Len(sink.AllMetrics(), 0)
+				otelMetrics = acc.GetOtelMetrics()
+			}
 
 			metrics := otelMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics()
 			as.Equal(2, metrics.Len())
@@ -107,7 +147,7 @@ func TestAddHistogram(t *testing.T) {
 	fields["peel"] = dist
 	tags := map[string]string{defaultInstanceId: defaultInstanceIdValue}
 	as := assert.New(t)
-	acc := newOtelAccumulatorWithTestRunningInputs(as)
+	acc := newOtelAccumulatorWithTestRunningInputs(as, nil, false)
 
 	acc.AddHistogram(name, fields, tags, now)
 
@@ -133,7 +173,7 @@ func Test_Accumulator_WithUnsupportedValueAndEmptyFields(t *testing.T) {
 
 	as := assert.New(t)
 
-	acc := newOtelAccumulatorWithTestRunningInputs(as)
+	acc := newOtelAccumulatorWithTestRunningInputs(as, nil, false)
 
 	//Unsupported fields - string value field
 	acc.AddFields("foo", map[string]interface{}{"client": "redis", "client2": "redis2"}, map[string]string{defaultInstanceId: defaultInstanceIdValue}, time.Now())
@@ -157,7 +197,7 @@ func Test_ModifyMetricandConvertMetricValue(t *testing.T) {
 
 	as := assert.New(t)
 
-	acc := newOtelAccumulatorWithTestRunningInputs(as)
+	acc := newOtelAccumulatorWithTestRunningInputs(as, nil, false)
 
 	metric := testutil.MustMetric(
 		"cpu",
@@ -199,7 +239,7 @@ func Test_Accumulator_AddMetric(t *testing.T) {
 
 	as := assert.New(t)
 
-	acc := newOtelAccumulatorWithTestRunningInputs(as)
+	acc := newOtelAccumulatorWithTestRunningInputs(as, nil, false)
 
 	telegrafMetric := testutil.MustMetric(
 		"acc_metric_test",
@@ -228,10 +268,51 @@ func Test_Accumulator_AddMetric(t *testing.T) {
 
 }
 
+func Test_Accumulator_AddMetric_ServiceInput(t *testing.T) {
+	t.Helper()
+
+	as := assert.New(t)
+
+	sink := new(consumertest.MetricsSink)
+	acc := newOtelAccumulatorWithTestRunningInputs(as, sink, true)
+
+	telegrafMetric := testutil.MustMetric(
+		"acc_metric_test",
+		map[string]string{defaultInstanceId: defaultInstanceIdValue},
+		map[string]interface{}{"sin": int32(4)}, time.Now().UTC(),
+		telegraf.Untyped)
+
+	acc.SetPrecision(time.Microsecond)
+	acc.AddMetric(telegrafMetric)
+	acc.AddMetric(telegrafMetric)
+
+	otelMetrics := sink.AllMetrics()
+	as.Len(otelMetrics, 2)
+	as.Equal(1, otelMetrics[0].ResourceMetrics().Len())
+	as.Equal(1, otelMetrics[0].ResourceMetrics().At(0).ScopeMetrics().Len())
+	as.Equal(1, otelMetrics[1].ResourceMetrics().Len())
+	as.Equal(1, otelMetrics[1].ResourceMetrics().At(0).ScopeMetrics().Len())
+
+	pMetrics := pmetric.NewMetricSlice()
+	otelMetrics[0].ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().MoveAndAppendTo(pMetrics)
+	otelMetrics[1].ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().MoveAndAppendTo(pMetrics)
+	as.Equal(2, pMetrics.Len())
+
+	for i := 0; i < pMetrics.Len(); i++ {
+		metric := pMetrics.At(i)
+		as.Equal(pmetric.MetricTypeGauge, metric.Type())
+	}
+
+	acc.AddMetric(telegrafMetric)
+	as.Len(sink.AllMetrics(), 3)
+
+	as.Equal(pmetric.NewMetrics(), acc.GetOtelMetrics())
+}
+
 func Test_Accumulator_AddSum(t *testing.T) {
 	t.Helper()
 	as := assert.New(t)
-	acc := newOtelAccumulatorWithTestRunningInputs(as)
+	acc := newOtelAccumulatorWithTestRunningInputs(as, nil, false)
 	now := time.Now()
 	telegrafMetricTags := map[string]string{defaultInstanceId: defaultInstanceIdValue}
 	telegrafMetricFields := map[string]interface{}{"usage": uint32(20)}
@@ -247,7 +328,7 @@ func Test_Accumulator_AddError(t *testing.T) {
 	t.Helper()
 	as := assert.New(t)
 
-	acc := newOtelAccumulatorWithTestRunningInputs(as)
+	acc := newOtelAccumulatorWithTestRunningInputs(as, nil, false)
 	acc.AddError(nil)
 	acc.AddError(fmt.Errorf("foo"))
 	acc.AddError(fmt.Errorf("bar"))

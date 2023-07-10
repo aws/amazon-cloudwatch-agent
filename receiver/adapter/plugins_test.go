@@ -14,6 +14,8 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 )
@@ -48,13 +50,14 @@ type sanityTestConfig struct {
 
 func scrapeAndValidateMetrics(t *testing.T, cfg *sanityTestConfig) {
 	as := assert.New(t)
-	receiver := getInitializedReceiver(as, cfg.plugin, cfg.testConfig)
-
 	ctx := context.TODO()
+	sink := new(consumertest.MetricsSink)
+	receiver := getInitializedReceiver(as, cfg.plugin, cfg.testConfig, ctx, sink)
+
 	err := receiver.start(ctx, nil)
 	as.NoError(err)
 
-	otelMetrics := scrapeMetrics(as, ctx, receiver, cfg)
+	otelMetrics := scrapeMetrics(as, ctx, receiver, sink, cfg)
 
 	err = receiver.shutdown(ctx)
 	as.NoError(err)
@@ -68,7 +71,7 @@ func scrapeAndValidateMetrics(t *testing.T, cfg *sanityTestConfig) {
 	}
 }
 
-func getInitializedReceiver(as *assert.Assertions, plugin string, testConfig string) *AdaptedReceiver {
+func getInitializedReceiver(as *assert.Assertions, plugin string, testConfig string, ctx context.Context, consumer consumer.Metrics) *AdaptedReceiver {
 	c := config.NewConfig()
 	c.InputFilters = []string{plugin}
 	err := c.LoadConfig(testConfig)
@@ -80,10 +83,10 @@ func getInitializedReceiver(as *assert.Assertions, plugin string, testConfig str
 	err = a.Config.Inputs[0].Init()
 	as.NoError(err)
 
-	return newAdaptedReceiver(a.Config.Inputs[0], zap.NewNop())
+	return newAdaptedReceiver(a.Config.Inputs[0], ctx, consumer, zap.NewNop())
 }
 
-func scrapeMetrics(as *assert.Assertions, ctx context.Context, receiver *AdaptedReceiver, cfg *sanityTestConfig) pmetric.Metrics {
+func scrapeMetrics(as *assert.Assertions, ctx context.Context, receiver *AdaptedReceiver, sink *consumertest.MetricsSink, cfg *sanityTestConfig) pmetric.Metrics {
 
 	var err error
 	var otelMetrics pmetric.Metrics
@@ -96,7 +99,10 @@ func scrapeMetrics(as *assert.Assertions, ctx context.Context, receiver *Adapted
 		as.NoError(conn.Close())
 
 		for {
-			otelMetrics, err = receiver.scrape(ctx)
+			otelMetrics = pmetric.NewMetrics()
+			for _, metric := range sink.AllMetrics() {
+				metric.ResourceMetrics().MoveAndAppendTo(otelMetrics.ResourceMetrics())
+			}
 			as.NoError(err)
 
 			time.Sleep(time.Second)

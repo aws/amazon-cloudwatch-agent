@@ -4,6 +4,7 @@
 package accumulator
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
+	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
@@ -29,26 +31,33 @@ type OtelAccumulator interface {
 
 /*
 otelAccumulator struct
-@input       Telegraf input plugins
+@input       Telegraf input plugin
 @logger      Zap Logger
 @precision   Round the timestamp during collection
 @metrics     Otel Metrics which stacks multiple metrics through AddCounter, AddGauge, etc before resetting
 */
 type otelAccumulator struct {
-	input     *models.RunningInput
-	logger    *zap.Logger
-	precision time.Duration
-	metrics   pmetric.Metrics
+	input          *models.RunningInput
+	isServiceInput bool
+	ctx            context.Context
+	consumer       consumer.Metrics
+	logger         *zap.Logger
+	precision      time.Duration
+	metrics        pmetric.Metrics
 
 	mutex sync.Mutex
 }
 
-func NewAccumulator(input *models.RunningInput, logger *zap.Logger) OtelAccumulator {
+func NewAccumulator(input *models.RunningInput, ctx context.Context, consumer consumer.Metrics, logger *zap.Logger) OtelAccumulator {
+	_, isServiceInput := input.Input.(telegraf.ServiceInput)
 	return &otelAccumulator{
-		input:     input,
-		logger:    logger,
-		precision: time.Nanosecond,
-		metrics:   pmetric.NewMetrics(),
+		input:          input,
+		isServiceInput: isServiceInput,
+		ctx:            ctx,
+		consumer:       consumer,
+		logger:         logger,
+		precision:      time.Nanosecond,
+		metrics:        pmetric.NewMetrics(),
 	}
 }
 
@@ -66,8 +75,6 @@ func (o *otelAccumulator) AddSummary(measurement string, fields map[string]inter
 	o.logger.Error("CloudWatchAgent's adapter does not support Telegraf Summary.")
 }
 
-// AddHistogram is only being used by OpenTelemetry and Prometheus. https://github.com/influxdata/telegraf/search?q=AddHistogram
-// Therefore, same no use case as AddSummary
 func (o *otelAccumulator) AddHistogram(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
 	o.addMetric(measurement, tags, fields, telegraf.Histogram, t...)
 }
@@ -130,12 +137,17 @@ func (o *otelAccumulator) convertToOtelMetricsAndAddMetric(m telegraf.Metric) {
 		return
 	}
 
-	// Gather and Start can add metrics concurrently. Therefore, adding mutex to having a safe-thread
-	// resource metris
+	// Gather and Start can add metrics concurrently. Therefore, a mutex ensures thread-safe access to the resource metrics
 	o.mutex.Lock()
 	defer o.mutex.Unlock()
-	oMetric.ResourceMetrics().MoveAndAppendTo(o.metrics.ResourceMetrics())
-
+	if o.isServiceInput {
+		err := o.consumer.ConsumeMetrics(o.ctx, oMetric)
+		if err != nil {
+			o.AddError(err)
+		}
+	} else {
+		oMetric.ResourceMetrics().MoveAndAppendTo(o.metrics.ResourceMetrics())
+	}
 }
 
 // GetOtelMetrics return the final OTEL metric that were gathered by scrape controller for each plugin

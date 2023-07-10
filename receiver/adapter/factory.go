@@ -59,7 +59,7 @@ func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.Cr
 		return nil, err
 	}
 
-	rcvr := newAdaptedReceiver(input, settings.Logger)
+	rcvr := newAdaptedReceiver(input, ctx, consumer, settings.Logger)
 
 	scraper, err := scraperhelper.NewScraper(
 		settings.ID.Name(),
