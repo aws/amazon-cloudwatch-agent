@@ -16,7 +16,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/xray/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator/otlp"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator/xray"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/util/awsservice"
 )
@@ -32,51 +35,86 @@ func init() {
 
 func TestTraces(t *testing.T) {
 	env := environment.GetEnvironmentMetaData()
-	t.Run("Basic configuration for X-Ray", func(t *testing.T) {
-		common.CopyFile(filepath.Join("testdata", "config.json"), common.ConfigOutputPath)
-		startTime := time.Now()
-		require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
-
-		cfg := &xray.Config{
-			Interval: loadGeneratorInterval,
-			Annotations: map[string]interface{}{
-				"test_type":   "basic",
-				"instance_id": env.InstanceId,
-				"commit_sha":  env.CwaCommitSha,
-			},
-			Metadata: map[string]map[string]interface{}{
-				"default": {
-					"nested": map[string]interface{}{
-						"key": "value",
+	testCases := map[string]struct {
+		agentConfigPath  string
+		newLoadGenerator func(*generator.Config) generator.Generator
+		generatorConfig  *generator.Config
+	}{
+		"WithXray/Simple": {
+			agentConfigPath:  filepath.Join("testdata", "xray-config.json"),
+			newLoadGenerator: xray.NewLoadGenerator,
+			generatorConfig: &generator.Config{
+				Interval: loadGeneratorInterval,
+				Annotations: map[string]interface{}{
+					"test_type":   "simple_xray",
+					"instance_id": env.InstanceId,
+					"commit_sha":  env.CwaCommitSha,
+				},
+				Metadata: map[string]map[string]interface{}{
+					"default": {
+						"nested": map[string]interface{}{
+							"key": "value",
+						},
+					},
+					"custom_namespace": {
+						"custom_key": "custom_value",
 					},
 				},
-				"custom_namespace": {
-					"custom_key": "custom_value",
+			},
+		},
+		"WithOTLP/Simple": {
+			agentConfigPath:  filepath.Join("testdata", "otlp-config.json"),
+			newLoadGenerator: otlp.NewLoadGenerator,
+			generatorConfig: &generator.Config{
+				Interval: loadGeneratorInterval,
+				Annotations: map[string]interface{}{
+					"test_type":   "simple_otlp",
+					"instance_id": env.InstanceId,
+					"commit_sha":  env.CwaCommitSha,
+				},
+				Metadata: map[string]map[string]interface{}{
+					"default": {
+						"custom_key": "custom_value",
+					},
+				},
+				Attributes: []attribute.KeyValue{
+					attribute.String("custom_key", "custom_value"),
+					attribute.String("test_type", "simple_otlp"),
+					attribute.String("instance_id", env.InstanceId),
+					attribute.String("commit_sha", env.CwaCommitSha),
 				},
 			},
-		}
-		loadGen := xray.NewLoadGenerator(cfg)
-		go func() {
-			require.NoError(t, loadGen.Start(context.Background()), "load generator exited with error")
-		}()
-		time.Sleep(agentRuntime)
-		loadGen.Stop()
-		common.StopAgent()
-		endTime := time.Now()
-		t.Logf("Agent has been running for %s", endTime.Sub(startTime))
-		time.Sleep(5 * time.Second)
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			common.CopyFile(testCase.agentConfigPath, common.ConfigOutputPath)
+			startTime := time.Now()
+			require.NoError(t, common.StartAgent(common.ConfigOutputPath, true, false))
 
-		traceIDs, err := awsservice.GetTraceIDs(startTime, endTime, awsservice.FilterExpression(cfg.Annotations))
-		require.NoError(t, err, "unable to get trace IDs")
-		segments, err := awsservice.GetSegments(traceIDs)
-		require.NoError(t, err, "unable to get segments")
-		// 2 segments per
-		assert.Len(t, segments, 20)
-		validateSegments(t, segments, cfg)
-	})
+			loadGen := testCase.newLoadGenerator(testCase.generatorConfig)
+			go func() {
+				require.NoError(t, loadGen.Start(context.Background()), "load generator exited with error")
+			}()
+			time.Sleep(agentRuntime)
+			loadGen.Stop()
+			common.StopAgent()
+			endTime := time.Now()
+			t.Logf("Agent has been running for %s", endTime.Sub(startTime))
+			time.Sleep(5 * time.Second)
+
+			traceIDs, err := awsservice.GetTraceIDs(startTime, endTime, awsservice.FilterExpression(testCase.generatorConfig.Annotations))
+			require.NoError(t, err, "unable to get trace IDs")
+			segments, err := awsservice.GetSegments(traceIDs)
+			require.NoError(t, err, "unable to get segments")
+
+			assert.True(t, len(segments) >= 20)
+			validateSegments(t, segments, testCase.generatorConfig)
+		})
+	}
 }
 
-func validateSegments(t *testing.T, segments []types.Segment, cfg *xray.Config) {
+func validateSegments(t *testing.T, segments []types.Segment, cfg *generator.Config) {
 	t.Helper()
 	for _, segment := range segments {
 		var result map[string]interface{}

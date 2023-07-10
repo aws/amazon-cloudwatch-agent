@@ -9,29 +9,25 @@ import (
 	"time"
 
 	"github.com/aws/aws-xray-sdk-go/xray"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/test/generator"
 )
 
 var testErr = errors.New("test error")
 
-type Config struct {
-	Interval    time.Duration
-	Annotations map[string]interface{}
-	Metadata    map[string]map[string]interface{}
-}
-
 type Generator struct {
-	cfg  *Config
+	cfg  *generator.Config
 	done chan struct{}
 }
 
-func NewLoadGenerator(cfg *Config) *Generator {
+func NewLoadGenerator(cfg *generator.Config) generator.Generator {
 	return &Generator{
 		cfg:  cfg,
 		done: make(chan struct{}),
 	}
 }
 
-func (g *Generator) Generate(ctx context.Context) error {
+func (g *Generator) generate(ctx context.Context) error {
 	rootCtx, root := xray.BeginSegment(ctx, "load-generator")
 	defer root.Close(nil)
 
@@ -67,7 +63,7 @@ func (g *Generator) Start(ctx context.Context) error {
 			ticker.Stop()
 			return nil
 		case <-ticker.C:
-			if err := g.Generate(ctx); err != nil {
+			if err := g.generate(ctx); err != nil {
 				return err
 			}
 		}
