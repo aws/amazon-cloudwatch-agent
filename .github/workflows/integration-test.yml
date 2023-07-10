@@ -585,17 +585,12 @@ jobs:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
           ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.19.6
-
       - name: SetOutputs
         id: set-outputs
         run: |
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> $GITHUB_OUTPUT
+          echo "CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> $GITHUB_OUTPUT
+          echo "CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}" >> $GITHUB_OUTPUT
 
       - name: Echo test variables
         run: |
