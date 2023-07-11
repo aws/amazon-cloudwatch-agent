@@ -6,6 +6,7 @@ package logs
 import (
 	"context"
 	"errors"
+	"github.com/aws/amazon-cloudwatch-agent/logs/util"
 	"log"
 	"time"
 
@@ -17,13 +18,14 @@ var ErrOutputStopped = errors.New("Output plugin stopped")
 
 // A LogCollection is a collection of LogSrc, a plugin which can provide many LogSrc
 type LogCollection interface {
-	FindLogSrc() []LogSrc
+	FindLogSrc(*util.LogBlocker) []LogSrc
 }
 
 type LogEvent interface {
 	Message() string
 	Time() time.Time
 	Done()
+	Size() int
 }
 
 // A LogSrc is a single source where log events are generated
@@ -41,7 +43,8 @@ type LogSrc interface {
 // A LogBackend is able to return a LogDest of a given name.
 // The same name should always return the same LogDest.
 type LogBackend interface {
-	CreateDest(string, string, int) LogDest
+	CreateDest(string, string, int, *util.LogBlocker) LogDest
+	BufferSize() int64
 }
 
 // A LogDest represents a final endpoint where log events are published to.
@@ -73,6 +76,7 @@ func NewLogAgent(c *config.Config) *LogAgent {
 // based on the configured "destination", and "name"
 func (l *LogAgent) Run(ctx context.Context) {
 	log.Printf("I! [logagent] starting")
+	var logBlocker *util.LogBlocker
 	for _, output := range l.Config.Outputs {
 		backend, ok := output.Output.(LogBackend)
 		if !ok {
@@ -84,6 +88,10 @@ func (l *LogAgent) Run(ctx context.Context) {
 			name = output.Config.Name
 		}
 		l.backends[name] = backend
+		// this will be the same value on all backends config
+		if logBlocker == nil {
+			logBlocker = util.NewLogBlocker(backend.BufferSize())
+		}
 	}
 
 	for _, input := range l.Config.Inputs {
@@ -99,8 +107,19 @@ func (l *LogAgent) Run(ctx context.Context) {
 		select {
 		case <-t.C:
 			log.Printf("D! [logagent] open file count, %v", tail.OpenFileCount.Load())
+			block, bufferSize, maxBufferSize := logBlocker.Block()
+			log.Printf("D! [logagent] total buffer size to cloudwatch %d", bufferSize)
+			// the buffer is not 100% accurate since it can continue reading until the next tick
+			// thus the buffer can be slightly larger
+			// the buffer also does not take into account the header size until it is added
+			if block {
+				log.Printf("I! [logagent] total buffer of logs being sent to cloudwatch %d " +
+					"max buffer size to send to cloudwatch allow %d " +
+					"blocking adding new files for one second", bufferSize, maxBufferSize)
+				break
+			}
 			for _, c := range l.collections {
-				srcs := c.FindLogSrc()
+				srcs := c.FindLogSrc(logBlocker)
 				for _, src := range srcs {
 					dname := src.Destination()
 					logGroup := src.Group()
@@ -113,7 +132,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 						continue
 					}
 					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
-					dest := backend.CreateDest(logGroup, logStream, retention)
+					dest := backend.CreateDest(logGroup, logStream, retention, logBlocker)
 					l.destNames[dest] = dname
 					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
 					go l.runSrcToDest(src, dest)

@@ -5,6 +5,7 @@ package logfile
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/logs/util"
 	"log"
 	"os"
 	"path/filepath"
@@ -62,7 +63,7 @@ func TestLogs(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when only 1 should be available", len(lsrcs))
 	}
@@ -106,7 +107,7 @@ func TestLogsEncoding(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when only 1 should be available", len(lsrcs))
 	}
@@ -154,7 +155,7 @@ func TestLogsEncodingUtf16(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when only 1 should be available", len(lsrcs))
 	}
@@ -255,7 +256,7 @@ func TestMultipleFilesForSameConfig(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -295,7 +296,7 @@ func TestLogsMultilineEvent(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -340,7 +341,7 @@ func TestLogsFileRemove(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -393,7 +394,7 @@ func makeTempFile(t *testing.T, prefix string) *os.File {
 // getLogSrc returns a LogSrc from the given LogFile, and the channel for output.
 // Verifies 1 and only 1 LogSrc is discovered.
 func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent) {
-	logSources := logFile.FindLogSrc()
+	logSources := logFile.FindLogSrc(util.DefaultLogBlocker())
 	require.Equal(t, 1, len(logSources))
 	logSource := logSources[0]
 	evts := make(chan logs.LogEvent)
@@ -510,7 +511,7 @@ append line`
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -557,7 +558,7 @@ func TestLogsMultilineTimeout(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -607,7 +608,7 @@ func TestLogsFileTruncate(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -674,7 +675,7 @@ func TestLogsFileWithOffset(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -724,7 +725,7 @@ func TestLogsFileWithInvalidOffset(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -780,7 +781,7 @@ func TestLogsFileRecreate(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -818,7 +819,7 @@ func TestLogsFileRecreate(t *testing.T) {
 
 	// Waiting 10 seconds for the recreated temp file to be detected is plenty sufficient on any OS.
 	for start := time.Now(); time.Since(start) < 10*time.Second; {
-		lsrcs = tt.FindLogSrc()
+		lsrcs = tt.FindLogSrc(util.DefaultLogBlocker())
 		if len(lsrcs) > 0 {
 			break
 		}
@@ -860,7 +861,7 @@ func TestLogsPartialLineReading(t *testing.T) {
 	tt.FileConfig[0].init()
 	tt.started = true
 
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
 	}
@@ -924,7 +925,7 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 	tt.started = true
 
 	var wg sync.WaitGroup
-	lsrcs := tt.FindLogSrc()
+	lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 	for _, lsrc := range lsrcs {
 		wg.Add(1)
 		switch lsrc.Group() {
@@ -999,7 +1000,7 @@ func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 	var wg sync.WaitGroup
 	c := 0
 	for c < 2 {
-		lsrcs := tt.FindLogSrc()
+		lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 		for _, lsrc := range lsrcs {
 			wg.Add(1)
 			switch lsrc.Group() {
@@ -1073,7 +1074,7 @@ func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
 	var wg sync.WaitGroup
 	c := 0
 	for c < 4 {
-		lsrcs := tt.FindLogSrc()
+		lsrcs := tt.FindLogSrc(util.DefaultLogBlocker())
 		for _, lsrc := range lsrcs {
 			switch lsrc.Group() {
 			case agentLog.Name():

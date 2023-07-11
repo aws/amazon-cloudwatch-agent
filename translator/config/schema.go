@@ -618,6 +618,10 @@ var schema = `{
         "endpoint_override": {
           "description": "The override endpoint to use to access cloudwatch logs",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "max_cloudwatch_logs_buffer": {
+          "description": "The max number of bytes buffer to send to cloudwatch logs",
+          "$ref": "#/definitions/maxCloudwatchLogsBufferDefinition"
         }
       },
       "additionalProperties": false,
@@ -880,6 +884,11 @@ var schema = `{
       "type": "string",
       "minLength": 4,
       "maxLength": 2048
+    },
+    "maxCloudwatchLogsBufferDefinition": {
+      "type": "integer",
+      "minimum": 1000000,
+      "maximum": 9223372036854775806
     },
     "ecsServiceDiscoveryDefinition": {
       "type": "object",

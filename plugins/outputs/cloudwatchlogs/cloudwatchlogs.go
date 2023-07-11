@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/logs/util"
 	"strings"
 	"sync"
 	"time"
@@ -59,6 +60,8 @@ type CloudWatchLogs struct {
 
 	ForceFlushInterval internal.Duration `toml:"force_flush_interval"` // unit is second
 
+	MaxCloudwatchLogsBuffer int64 `toml:"max_cloudwatch_logs_buffer"`
+
 	Log telegraf.Logger `toml:"-"`
 
 	pusherStopChan  chan struct{}
@@ -88,7 +91,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.LogDest {
+func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logBlock *util.LogBlocker) logs.LogDest {
 	if group == "" {
 		group = c.LogGroupName
 	}
@@ -104,10 +107,10 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.Lo
 		Stream:    stream,
 		Retention: retention,
 	}
-	return c.getDest(t)
+	return c.getDest(t, logBlock)
 }
 
-func (c *CloudWatchLogs) getDest(t Target) *cwDest {
+func (c *CloudWatchLogs) getDest(t Target, logBlocker *util.LogBlocker) *cwDest {
 	if cwd, ok := c.cwDests[t]; ok {
 		return cwd
 	}
@@ -137,18 +140,24 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentInfo.UserAgent()))
 	client.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("X-Amz-Agent-Stats", agentInfo.StatsHeader))
 
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, agentInfo)
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, agentInfo, logBlocker)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
 }
+
+func (c *CloudWatchLogs) BufferSize() int64 {
+	return c.MaxCloudwatchLogsBuffer
+}
+
 
 func (c *CloudWatchLogs) writeMetricAsStructuredLog(m telegraf.Metric) {
 	t, err := c.getTargetFromMetric(m)
 	if err != nil {
 		c.Log.Errorf("Failed to find target: %v", err)
 	}
-	cwd := c.getDest(t)
+	// emf logs are already bound by number of metrics
+	cwd := c.getDest(t, util.DefaultLogBlocker())
 	if cwd == nil {
 		c.Log.Warnf("unable to find log destination, group: %v, stream: %v", t.Group, t.Stream)
 		return
@@ -272,6 +281,10 @@ func (e *structuredLogEvent) Time() time.Time {
 }
 
 func (e *structuredLogEvent) Done() {}
+
+func (e *structuredLogEvent) Size() int  {
+	return len(e.msg)
+}
 
 type cwDest struct {
 	*pusher

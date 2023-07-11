@@ -55,6 +55,10 @@ func (le LogEvent) Done() {
 	le.src.Done(le.offset)
 }
 
+func (le LogEvent) Size() int  {
+	return len(le.msg)
+}
+
 type tailerSrc struct {
 	group, stream   string
 	destination     string

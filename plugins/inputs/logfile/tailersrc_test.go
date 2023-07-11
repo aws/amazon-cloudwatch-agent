@@ -6,6 +6,7 @@ package logfile
 import (
 	"bytes"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/logs/util"
 	"io"
 	"log"
 	"os"
@@ -53,6 +54,7 @@ func TestTailerSrc(t *testing.T) {
 			Poll:        true,
 			MaxLineSize: defaultMaxEventSize,
 			IsUTF16:     false,
+			LogBlocker:  util.DefaultLogBlocker(),
 		})
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
@@ -163,6 +165,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 			Poll:        true,
 			MaxLineSize: defaultMaxEventSize,
 			IsUTF16:     false,
+			LogBlocker:  util.DefaultLogBlocker(),
 		})
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
@@ -368,6 +371,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 			Poll:        true,
 			MaxLineSize: maxEventSize,
 			IsUTF16:     false,
+			LogBlocker:  util.DefaultLogBlocker(),
 		})
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
