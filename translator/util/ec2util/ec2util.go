@@ -4,54 +4,44 @@
 package ec2util
 
 import (
-	localContext "context"
+	"errors"
 	"fmt"
-	"log"
 	"net"
-	"net/http"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/retry"
-	awsConfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 
-	loggerConfig "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
 // this is a singleton struct
-type Ec2Util struct {
-	Region           string
-	PrivateIP        string
-	InstanceID       string
-	Hostname         string
-	AccountID        string
-	InstanceDocument *imds.InstanceIdentityDocument
+type ec2Util struct {
+	Region     string
+	PrivateIP  string
+	InstanceID string
+	Hostname   string
+	AccountID  string
 }
 
 var (
-	ec2UtilInstance *Ec2Util
+	ec2UtilInstance *ec2Util
 	once            sync.Once
 )
 
-const (
-	allowedRetries     = 5
-	hostname           = "hostname"
-	defaultIMDSTimeout = 1 * time.Second
-)
+const allowedRetries = 5
 
-func GetEC2UtilSingleton() *Ec2Util {
+func GetEC2UtilSingleton() *ec2Util {
 	once.Do(func() {
 		ec2UtilInstance = initEC2UtilSingleton()
 	})
 	return ec2UtilInstance
 }
 
-func initEC2UtilSingleton() (newInstance *Ec2Util) {
-	newInstance = &Ec2Util{Region: "", PrivateIP: ""}
+func initEC2UtilSingleton() (newInstance *ec2Util) {
+	newInstance = &ec2Util{Region: "", PrivateIP: ""}
 
 	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise) {
 		return
@@ -96,62 +86,35 @@ func initEC2UtilSingleton() (newInstance *Ec2Util) {
 	return
 }
 
-func (e *Ec2Util) deriveEC2MetadataFromIMDS() error {
-	cfg, err := awsConfig.LoadDefaultConfig(localContext.Background())
+func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
+	ses, err := session.NewSession()
+
 	if err != nil {
 		return err
 	}
-	cfg.Retryer = func() aws.Retryer {
-		return retry.NewStandard(func(options *retry.StandardOptions) {
-			options.MaxAttempts = allowedRetries
-		})
-	}
-	cfg.Logger = loggerConfig.SDKLogger{}
-	cfg.ClientLogMode = loggerConfig.SDKV2ClientMode()
-	cfg.HTTPClient = &http.Client{Timeout: defaultIMDSTimeout}
 
-	optionsIMDSV2Only := func(o *imds.Options) {
-		o.EnableFallback = aws.FalseTernary
-	}
-	optionsIMDSV1Fallback := func(o *imds.Options) {
-		o.EnableFallback = aws.TrueTernary
+	md := ec2metadata.New(ses)
+
+	if !md.Available() {
+		return errors.New("EC2 metadata is not available.")
 	}
 
-	clientIMDSV2Only := imds.NewFromConfig(cfg, optionsIMDSV2Only)
-	clientIMDSV1Fallback := imds.NewFromConfig(cfg, optionsIMDSV1Fallback)
-	err = e.callIMDSClient(clientIMDSV2Only)
-	if err != nil {
-		log.Printf("W! [EC2] Fetch EC2 metadata from imdsv2 fail: %v", err)
-		err := e.callIMDSClient(clientIMDSV1Fallback)
-		if err != nil {
-			log.Printf("W! [EC2] Fetch EC2 metadata from imdsv1 fail: %v", err)
-		}
+	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
+	if hostname, err := md.GetMetadata("hostname"); err == nil {
+		e.Hostname = hostname
+	} else {
+		fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
 	}
 
-	return nil
-}
+	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
+	if instanceIdentityDocument, err := md.GetInstanceIdentityDocument(); err == nil {
+		e.Region = instanceIdentityDocument.Region
+		e.AccountID = instanceIdentityDocument.AccountID
+		e.PrivateIP = instanceIdentityDocument.PrivateIP
+		e.InstanceID = instanceIdentityDocument.InstanceID
+	} else {
+		fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", err)
+	}
 
-func (e *Ec2Util) callIMDSClient(client *imds.Client) error {
-	getMetadataInput := imds.GetMetadataInput{
-		Path: hostname,
-	}
-	metadata, err := client.GetMetadata(localContext.Background(), &getMetadataInput)
-	if err != nil {
-		log.Printf("W! [EC2] Fetch hostname from EC2 metadata: %v", err)
-		return err
-	}
-	e.Hostname = fmt.Sprintf("%v", metadata.ResultMetadata.Get(hostname))
-
-	getInstanceDocumentInput := imds.GetInstanceIdentityDocumentInput{}
-	instanceDocument, err := client.GetInstanceIdentityDocument(localContext.Background(), &getInstanceDocumentInput)
-	if err != nil {
-		log.Printf("W! [EC2] Fetch identity document from EC2 metadata fail: %v", err)
-		return err
-	}
-	e.Region = instanceDocument.Region
-	e.AccountID = instanceDocument.AccountID
-	e.PrivateIP = instanceDocument.PrivateIP
-	e.InstanceID = instanceDocument.InstanceID
-	e.InstanceDocument = &instanceDocument.InstanceIdentityDocument
 	return nil
 }

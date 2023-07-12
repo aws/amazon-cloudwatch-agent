@@ -5,48 +5,38 @@ package ec2tagger
 
 import (
 	"context"
-	"errors"
 
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 )
 
 type MetadataProvider interface {
-	Get(ctx context.Context) (imds.InstanceIdentityDocument, error)
+	Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error)
 	Hostname(ctx context.Context) (string, error)
 	InstanceID(ctx context.Context) (string, error)
 }
 
 type metadataClient struct {
-	metadata *ec2util.Ec2Util
+	metadata *ec2metadata.EC2Metadata
 }
 
 var _ MetadataProvider = (*metadataClient)(nil)
 
-func NewMetadataProvider(metadata *ec2util.Ec2Util) MetadataProvider {
+func NewMetadataProvider(p client.ConfigProvider, cfgs ...*aws.Config) MetadataProvider {
 	return &metadataClient{
-		metadata: metadata,
+		metadata: ec2metadata.New(p, cfgs...),
 	}
 }
 
 func (c *metadataClient) InstanceID(ctx context.Context) (string, error) {
-	if c.metadata.InstanceID == "" {
-		return "", errors.New("could not get ec2 instance id")
-	}
-	return c.metadata.InstanceID, nil
+	return c.metadata.GetMetadataWithContext(ctx, "instance-id")
 }
 
 func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
-	if c.metadata.Hostname == "" {
-		return "", errors.New("could not get ec2 hostname")
-	}
-	return c.metadata.Hostname, nil
+	return c.metadata.GetMetadataWithContext(ctx, "hostname")
 }
 
-func (c *metadataClient) Get(ctx context.Context) (imds.InstanceIdentityDocument, error) {
-	if c.metadata.InstanceDocument == nil {
-		return imds.InstanceIdentityDocument{}, errors.New("could not get instance document")
-	}
-	return *c.metadata.InstanceDocument, nil
+func (c *metadataClient) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
+	return c.metadata.GetInstanceIdentityDocumentWithContext(ctx)
 }

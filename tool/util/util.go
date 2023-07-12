@@ -6,19 +6,23 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	sysruntime "runtime"
 	"strconv"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/interfaze"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 )
 
 const (
@@ -131,7 +135,23 @@ func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentia
 
 func DefaultEC2Region() (region string) {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
-	return ec2util.GetEC2UtilSingleton().Region
+	ses, err := session.NewSession(&aws.Config{
+		HTTPClient: &http.Client{Timeout: 1 * time.Second},
+		MaxRetries: aws.Int(0),
+		LogLevel:   configaws.SDKLogLevel(),
+		Logger:     configaws.SDKLogger{},
+	})
+	if err != nil {
+		return
+	}
+	md := ec2metadata.New(ses)
+	if !md.Available() {
+		return
+	}
+	if info, err := md.Region(); err == nil {
+		region = info
+	}
+	return
 }
 
 func AddToMap(ctx *runtime.Context, resultMap map[string]interface{}, obj interfaze.ConvertibleToMap) {

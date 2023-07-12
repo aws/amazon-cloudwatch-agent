@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/stretchr/testify/assert"
@@ -201,14 +201,14 @@ func (m *mockEC2Client) DescribeVolumes(*ec2.DescribeVolumesInput) (*ec2.Describ
 }
 
 type mockMetadataProvider struct {
-	InstanceIdentityDocument *imds.InstanceIdentityDocument
+	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
 }
 
-func (m *mockMetadataProvider) Get(ctx context.Context) (imds.InstanceIdentityDocument, error) {
+func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
 	if m.InstanceIdentityDocument != nil {
 		return *m.InstanceIdentityDocument, nil
 	}
-	return imds.InstanceIdentityDocument{}, errors.New("No instance identity document")
+	return ec2metadata.EC2InstanceIdentityDocument{}, errors.New("No instance identity document")
 }
 
 func (m *mockMetadataProvider) Hostname(ctx context.Context) (string, error) {
@@ -219,7 +219,7 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-var mockedInstanceIdentityDoc = &imds.InstanceIdentityDocument{
+var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 	InstanceID:   "i-01d2417c27a396e44",
 	Region:       "us-east-1",
 	InstanceType: "m5ad.large",
