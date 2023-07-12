@@ -28,7 +28,7 @@ type KubeClient struct {
 	tls.ClientConfig
 }
 
-var ErrKubeClientAccessFailure = errors.New("KubeClinet Access Failure")
+var ErrKubeClientAccessFailure = errors.New("KubeClient Access Failure")
 
 func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 	var result []corev1.Pod
