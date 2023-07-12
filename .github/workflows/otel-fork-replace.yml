@@ -56,6 +56,12 @@ jobs:
           go mod tidy
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus=github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus@${{ steps.get-latest-commit.outputs.sha }}
           go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver=github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
           git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}"
           git push -u origin HEAD
           git config --global --unset user.name
