@@ -60,7 +60,6 @@ type AgentInfo interface {
 type agentInfo struct {
 	proc        *process.Process
 	nextUpdate  time.Time
-	stats       agentStats
 	statsHeader string
 	userAgent   string
 }
@@ -87,13 +86,13 @@ func newAgentInfo(groupName string) *agentInfo {
 		if ai.proc == nil {
 			return ai
 		}
-		ai.stats = agentStats{
+		stats := agentStats{
 			CpuPercent:          ai.cpuPercent(),
 			MemoryBytes:         ai.memoryBytes(),
 			FileDescriptorCount: ai.fileDescriptorCount(),
 			ThreadCount:         ai.threadCount(),
 		}
-		ai.statsHeader = getAgentStats(ai.stats)
+		ai.statsHeader = getAgentStats(stats)
 		ai.nextUpdate = time.Now().Add(updateInterval)
 	}
 
@@ -109,19 +108,21 @@ func (ai *agentInfo) RecordOpData(latency time.Duration, payloadBytes int, err e
 		return
 	}
 
-	ai.stats.LatencyMillis = aws.Int64(latency.Milliseconds())
-	ai.stats.PayloadBytes = aws.Int(payloadBytes)
-	ai.stats.StatusCode = getStatusCode(err)
+	stats := agentStats{
+		LatencyMillis: aws.Int64(latency.Milliseconds()),
+		PayloadBytes:  aws.Int(payloadBytes),
+		StatusCode:    getStatusCode(err),
+	}
 
 	if now := time.Now(); now.After(ai.nextUpdate) {
-		ai.stats.CpuPercent = ai.cpuPercent()
-		ai.stats.MemoryBytes = ai.memoryBytes()
-		ai.stats.FileDescriptorCount = ai.fileDescriptorCount()
-		ai.stats.ThreadCount = ai.threadCount()
+		stats.CpuPercent = ai.cpuPercent()
+		stats.MemoryBytes = ai.memoryBytes()
+		stats.FileDescriptorCount = ai.fileDescriptorCount()
+		stats.ThreadCount = ai.threadCount()
 		ai.nextUpdate = now.Add(updateInterval)
 	}
 
-	ai.statsHeader = getAgentStats(ai.stats)
+	ai.statsHeader = getAgentStats(stats)
 }
 
 func (ai *agentInfo) StatsHeader() string {

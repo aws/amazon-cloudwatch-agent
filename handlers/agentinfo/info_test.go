@@ -37,34 +37,38 @@ func TestNew(t *testing.T) {
 }
 
 func TestRecordOpData(t *testing.T) {
-	var expectedStats agentStats
 	ai := newAgentInfo("")
 
 	stats := ai.StatsHeader()
-	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &expectedStats))
-	assert.Equal(t, expectedStats, ai.stats)
+	actual := agentStats{}
+	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &actual))
+	assert.Nil(t, actual.LatencyMillis)
+	assert.Nil(t, actual.PayloadBytes)
+	assert.Nil(t, actual.StatusCode)
 
 	ai.RecordOpData(100000000, 10, nil)
 	stats = ai.StatsHeader()
-	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &expectedStats))
-	assert.Equal(t, expectedStats, ai.stats)
-	assert.EqualValues(t, 100, *ai.stats.LatencyMillis)
-	assert.EqualValues(t, 10, *ai.stats.PayloadBytes)
-	assert.EqualValues(t, http.StatusOK, *ai.stats.StatusCode)
+	actual = agentStats{}
+	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &actual))
+	assert.EqualValues(t, 100, *actual.LatencyMillis)
+	assert.EqualValues(t, 10, *actual.PayloadBytes)
+	assert.EqualValues(t, http.StatusOK, *actual.StatusCode)
 
 	ai.RecordOpData(200000000, 20, errors.New(""))
 	stats = ai.StatsHeader()
-	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &expectedStats))
-	assert.EqualValues(t, 200, *ai.stats.LatencyMillis)
-	assert.EqualValues(t, 20, *ai.stats.PayloadBytes)
-	assert.Nil(t, ai.stats.StatusCode)
+	actual = agentStats{}
+	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &actual))
+	assert.EqualValues(t, 200, *actual.LatencyMillis)
+	assert.EqualValues(t, 20, *actual.PayloadBytes)
+	assert.Nil(t, actual.StatusCode)
 
 	ai.RecordOpData(300000000, 30, awserr.NewRequestFailure(awserr.New("", "", errors.New("")), 500, ""))
 	stats = ai.StatsHeader()
-	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &expectedStats))
-	assert.EqualValues(t, 300, *ai.stats.LatencyMillis)
-	assert.EqualValues(t, 30, *ai.stats.PayloadBytes)
-	assert.EqualValues(t, 500, *ai.stats.StatusCode)
+	actual = agentStats{}
+	require.NoError(t, json.Unmarshal([]byte("{"+stats+"}"), &actual))
+	assert.EqualValues(t, 300, *actual.LatencyMillis)
+	assert.EqualValues(t, 30, *actual.PayloadBytes)
+	assert.EqualValues(t, 500, *actual.StatusCode)
 }
 
 func TestSetComponents(t *testing.T) {
