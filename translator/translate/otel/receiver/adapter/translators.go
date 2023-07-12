@@ -5,6 +5,7 @@ package adapter
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -14,6 +15,7 @@ import (
 	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/files"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/windows_events"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
 	collectd "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/collectd"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/customizedmetrics"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/gpu"
@@ -96,7 +98,13 @@ func fromMetrics(conf *confmap.Conf, os string) (common.TranslatorMap[component.
 // fromLinuxMetrics creates a translator for each subsection within the
 // metrics::metrics_collected section of the config. Can be anything.
 func fromLinuxMetrics(conf *confmap.Conf) common.TranslatorMap[component.Config] {
-	return fromInputs(conf, metricKey)
+	var validInputs map[string]bool
+	if _, ok := conf.Get(common.ConfigKey(metricKey)).(map[string]interface{}); ok {
+		rule := &metrics_collect.CollectMetrics{}
+		rule.ApplyRule(conf.Get(common.ConfigKey(common.MetricsKey)))
+		validInputs = rule.GetRegisteredMetrics()
+	}
+	return fromInputs(conf, validInputs, metricKey)
 }
 
 // fromWindowsMetrics creates a translator for each allow listed subsection
@@ -126,14 +134,20 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 // along with a socket listener translator if "emf" or "structuredlog" are present
 // within the logs:metrics_collected section.
 func fromLogs(conf *confmap.Conf) common.TranslatorMap[component.Config] {
-	return fromInputs(conf, logKey)
+	return fromInputs(conf, nil, logKey)
 }
 
 // fromInputs converts all the keys in the section into adapter translators.
-func fromInputs(conf *confmap.Conf, baseKey string) common.TranslatorMap[component.Config] {
+func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string) common.TranslatorMap[component.Config] {
 	translators := common.NewTranslatorMap[component.Config]()
 	if inputs, ok := conf.Get(baseKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
+			if validInputs != nil {
+				if _, ok := validInputs[inputName]; !ok {
+					log.Printf("W! Ignoring unrecognized input %s", inputName)
+					continue
+				}
+			}
 			cfgKey := common.ConfigKey(baseKey, inputName)
 			if skipInputSet[inputName] {
 				// logs agent is separate from otel agent

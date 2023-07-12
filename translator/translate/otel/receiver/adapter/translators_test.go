@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/registerrules"
 )
 
 // TestFindReceiversInConfig confirms whether the given the agent json configuration
@@ -36,11 +37,11 @@ func TestFindReceiversInConfig(t *testing.T) {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"collectd":   nil,
-						"cpu":        nil,
-						"ethtool":    nil,
-						"nvidia_gpu": nil,
-						"statsd":     nil,
+						"collectd":   map[string]interface{}{},
+						"cpu":        map[string]interface{}{},
+						"ethtool":    map[string]interface{}{},
+						"nvidia_gpu": map[string]interface{}{},
+						"statsd":     map[string]interface{}{},
 						"procstat": []interface{}{
 							map[string]interface{}{
 								"exe":                         "amazon-cloudwatch-agent",
@@ -72,10 +73,10 @@ func TestFindReceiversInConfig(t *testing.T) {
 							"measurement":                 []string{"% Free Space"},
 							"metrics_collection_interval": 10,
 						},
-						"Memory":       nil,
-						"Paging File":  nil,
-						"PhysicalDisk": nil,
-						"nvidia_gpu":   nil,
+						"Memory":       map[string]interface{}{},
+						"Paging File":  map[string]interface{}{},
+						"PhysicalDisk": map[string]interface{}{},
+						"nvidia_gpu":   map[string]interface{}{},
 						"procstat": []interface{}{
 							map[string]interface{}{
 								"exe":                         "amazon-cloudwatch-agent",
@@ -104,12 +105,12 @@ func TestFindReceiversInConfig(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"emf":           nil,
-						"structuredlog": nil,
+						"emf":           map[string]interface{}{},
+						"structuredlog": map[string]interface{}{},
 					},
 					"logs_collected": map[string]interface{}{
-						"files":          nil,
-						"windows_events": nil,
+						"files":          map[string]interface{}{},
+						"windows_events": map[string]interface{}{},
 					},
 				},
 			},
@@ -122,8 +123,8 @@ func TestFindReceiversInConfig(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"emf":           nil,
-						"structuredlog": nil,
+						"emf":           map[string]interface{}{},
+						"structuredlog": map[string]interface{}{},
 					},
 				},
 			},
@@ -134,13 +135,13 @@ func TestFindReceiversInConfig(t *testing.T) {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"collectd": nil,
+						"collectd": map[string]interface{}{},
 					},
 				},
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"emf":           nil,
-						"structuredlog": nil,
+						"emf":           map[string]interface{}{},
+						"structuredlog": map[string]interface{}{},
 					},
 				},
 			},

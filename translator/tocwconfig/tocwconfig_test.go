@@ -138,6 +138,12 @@ func TestBasicConfig(t *testing.T) {
 	checkTranslation(t, "basic_config_windows", "windows", expectedEnvVars, "")
 }
 
+func TestInvalidInputConfig(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "invalid_input_linux", "linux", expectedEnvVars, "")
+}
+
 func TestStandardConfig(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}

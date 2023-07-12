@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/registerrules"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
