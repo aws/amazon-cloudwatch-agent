@@ -11,7 +11,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "bryce-carey/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/bryce-carey/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "stress-windows"
 
 on:
   push:
