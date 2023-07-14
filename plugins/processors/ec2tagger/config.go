@@ -4,7 +4,6 @@
 package ec2tagger
 
 import (
-	"fmt"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -38,20 +37,8 @@ type Config struct {
 // Verify Config implements Processor interface.
 var _ component.Config = (*Config)(nil)
 
-// Validate checks if the processor configuration is valid
+// Validate does not check for unsupported dimension key-value pairs, because those
+// get silently dropped and ignored during translation.
 func (cfg *Config) Validate() error {
-	if len(cfg.EC2MetadataTags) == 0 && len(cfg.EC2InstanceTagKeys) == 0 {
-		return fmt.Errorf("append_dimensions set without any supported key-value pairs")
-	}
-	for _, t := range cfg.EC2MetadataTags {
-		if _, ok := SupportedAppendDimensions[t]; !ok {
-			return fmt.Errorf("Unsupported Dimension: %s", t)
-		}
-	}
-	for _, k := range cfg.EC2InstanceTagKeys {
-		if _, ok := SupportedAppendDimensions[k]; !ok {
-			return fmt.Errorf("Unsupported Dimension: %s", k)
-		}
-	}
 	return nil
 }
