@@ -10,12 +10,13 @@ import (
 	"path/filepath"
 	"runtime"
 
-	commonconfig "github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/aws-sdk-go/aws/session"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ecsutil"
 )
 
 const (

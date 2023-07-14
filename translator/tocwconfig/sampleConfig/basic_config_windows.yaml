@@ -1,0 +1,60 @@
+connectors: {}
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+extensions: {}
+processors:
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        refresh_interval_seconds: 0s
+receivers:
+    telegraf_win_perf_counters/1492679118:
+        alias_name         : Memory
+        collection_interval: 1m0s
+        initial_delay: "1s"
+    telegraf_win_perf_counters/4283769065:
+        alias_name         : LogicalDisk
+        collection_interval: 1m0s
+        initial_delay: "1s"
+service:
+    extensions: []
+    pipelines:
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+            receivers:
+                - telegraf_win_perf_counters/1492679118
+                - telegraf_win_perf_counters/4283769065
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: [c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log]
+            sampling:
+                initial: 2
+                thereafter: 500
+        metrics:
+            address: ""
+            level: None
+            metric_readers: []
+        resource: {}
+        traces:
+            propagators: []

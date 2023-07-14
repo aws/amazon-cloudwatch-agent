@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/httpclient"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/httpclient"
 )
 
 const (
@@ -82,7 +82,7 @@ func (e *ecsUtil) getECSMetadata() (em *ecsMetadataResponse, err error) {
 func (e *ecsUtil) getMetadataResponse(endpoint string) (em *ecsMetadataResponse, err error) {
 	em = &ecsMetadataResponse{}
 	resp, err := e.httpClient.Request(endpoint)
-	
+
 	if err != nil {
 		return
 	}

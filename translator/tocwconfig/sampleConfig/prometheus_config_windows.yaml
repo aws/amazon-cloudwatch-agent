@@ -1,0 +1,96 @@
+connectors: {}
+exporters:
+  awsemf/prometheus:
+    detailed_metrics: false
+    dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: false
+    version: "0"
+    retain_initial_value_of_delta_metric: false
+    eks_fargate_container_insights_enabled: false
+    endpoint: ""
+    local_mode: false
+    log_group_name: /aws/ecs/containerinsights/TestCluster/prometheus
+    log_retention: 0
+    log_stream_name: '{ServiceName}'
+    max_retries: 2
+    metric_descriptors:
+      - metric_name: "nginx_request_count"
+        overwrite: false
+        unit: "Count"
+    metric_declarations:
+      - dimensions:
+          - - Service
+        label_matchers:
+          - label_names:
+              - Service
+            regex: nginx.*
+            separator: ;
+        metric_name_selectors:
+          - ^nginx_request_count$
+      - dimensions: []
+        label_matchers:
+          - label_names:
+              - Namespace
+            regex: default
+            separator: ;
+        metric_name_selectors:
+          - .*
+    namespace: CustomizedNamespace
+    no_verify_ssl: false
+    num_workers: 8
+    output_destination: cloudwatch
+    parse_json_encoded_attr_values: []
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    resource_to_telemetry_conversion:
+      enabled: true
+    role_arn: ""
+    profile: ""
+    shared_credentials_file: [ ]
+
+extensions: {} 
+
+processors:
+  batch/prometheus:
+    send_batch_max_size: 0
+    send_batch_size: 8192
+    timeout: 5s
+  
+receivers:
+  telegraf_prometheus:
+    collection_interval: 1m0s
+    initial_delay: "1s"
+
+service:
+  extensions: []
+  pipelines:
+    metrics/prometheus:
+      exporters:
+        - awsemf/prometheus
+      processors:
+        - batch/prometheus
+      receivers:
+        - telegraf_prometheus
+
+  telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: []
+            sampling:
+                initial: 2
+                thereafter: 500
+        metrics:
+            address: ""
+            level: None
+            metric_readers: []
+        resource: {}
+        traces:
+            propagators: []

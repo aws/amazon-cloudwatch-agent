@@ -4,9 +4,9 @@
 package agent
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
 )
 
 var ChildRule = map[string]translator.Rule{}

@@ -69,7 +69,7 @@ const (
 )
 
 const (
-	allowedIMDSRetries = 2
+	allowedIMDSRetries = 5
 )
 
 var (

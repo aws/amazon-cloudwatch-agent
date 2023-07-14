@@ -1,0 +1,91 @@
+name: Update OTel fork components version
+
+env:
+  UPSTREAM: https://github.com/amazon-contributing/opentelemetry-collector-contrib.git
+  UPSTREAM_BRANCH: aws-cwa-dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      CommitSha:
+        description: "Commit sha to point the OTel fork components to"
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  update-components:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get latest commit sha
+        id: get-latest-commit
+        run: |
+          if ["${{ inputs.CommitSha }}" == ""]; then
+            echo "sha=$(git ls-remote ${{ env.UPSTREAM }} ${{ env.UPSTREAM_BRANCH }} | awk '{print $1;}')" >> $GITHUB_OUTPUT
+          else
+            echo "sha=${{ inputs.CommitSha }}" >> $GITHUB_OUTPUT
+          fi
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.19.6
+          cache: false
+      - name: Update OTel fork components version
+        id: set-matrix
+        run: |
+          git config --global user.name 'Github Action'
+          git config --global user.email 'action@github.com'
+          git checkout -b otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver=github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver=github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus=github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs=github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver=github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws=github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}"
+          git push -u origin HEAD
+          git config --global --unset user.name
+          git config --global --unset user.email
+      - name: Create pull request
+        uses: repo-sync/pull-request@v2
+        with:
+          source_branch: otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
+          destination_branch: main
+          pr_title: "Update OTel fork components to ${{ steps.get-latest-commit.outputs.sha }}"
+          pr_allow_empty: false
+          pr_body: |
+            # Description of the issue
+            An automated PR to update the OTel fork components to point to [${{ steps.get-latest-commit.outputs.sha }}](https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}).
+            
+            # License
+            By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of your choice.
+            
+            # Tests
+            n/a
+            
+            # Requirements
+            _Before commit the code, please do the following steps._
+            1. Run `make fmt` and `make fmt-sh`
+            2. Run `make lint`

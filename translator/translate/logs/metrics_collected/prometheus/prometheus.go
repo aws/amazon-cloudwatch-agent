@@ -1,13 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package emfprocessor
+package prometheus
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected"
 )
 
 const SectionKey = "prometheus"
@@ -32,7 +32,6 @@ func (p *Prometheus) ApplyRule(input interface{}) (returnKey string, returnVal i
 	im := input.(map[string]interface{})
 	result := map[string]map[string]interface{}{}
 	inputs := map[string]interface{}{}
-	processors := map[string]interface{}{}
 	promScaper := map[string]interface{}{}
 
 	//Check if this plugin exist in the input instance
@@ -42,25 +41,14 @@ func (p *Prometheus) ApplyRule(input interface{}) (returnKey string, returnVal i
 		returnVal = ""
 	} else {
 		for _, rule := range ChildRule {
-			key, val := rule.ApplyRule(im[SectionKey])
-			if key == "emf_processor" {
-				processors["emfProcessor"] = []interface{}{val}
-			} else if key == SectionKeyLogGroupName {
-				if v, ok := promScaper["tags"]; ok {
-					m := v.(map[string]interface{})
-					m[key] = val
-				} else {
-					promScaper["tags"] = map[string]interface{}{key: val}
-				}
-			} else if key != "" {
+			if key, val := rule.ApplyRule(im[SectionKey]); key != "" {
 				promScaper[key] = val
 			}
 		}
 
-		inputs["prometheus_scraper"] = []interface{}{promScaper}
+		inputs[SectionKey] = []interface{}{promScaper}
 
 		result["inputs"] = inputs
-		result["processors"] = processors
 
 		returnKey = SectionKey
 		returnVal = result

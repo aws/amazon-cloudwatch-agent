@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ec2util"
 )
 
 type Metadata struct {
@@ -49,7 +49,7 @@ const (
 	unknownAccountId  = "UNKNOWN-ACCOUNT"
 )
 
-//resolve place holder for log group and log stream.
+// resolve place holder for log group and log stream.
 func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	tmpString := placeholder
 	if tmpString == "" {

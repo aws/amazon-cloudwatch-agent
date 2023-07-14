@@ -1,0 +1,5 @@
+protocols:
+  grpc:
+    endpoint: 0.0.0.0:1234
+  http:
+    endpoint: 0.0.0.0:2345

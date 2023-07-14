@@ -1,0 +1,34 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "drop_original_metrics": ["cpu_usage_idle", "time_active"],
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_USAGE_IDLE",
+            "unit": "unit"
+          },
+          {
+            "name": "cpu_usage_nice",
+            "unit": "unit"
+          },
+          "cpu_usage_guest",
+          "time_active",
+          "usage_active"
+        ]
+      },
+      "disk": {},
+      "nvidia_gpu": {
+        "drop_original_metrics": ["utilization_gpu", "temperature_gpu"]
+      }
+    },
+    "aggregation_dimensions" : [["ImageId"], ["InstanceId", "InstanceType"], ["d1"], []],
+    "namespace": "namespace",
+    "force_flush_interval": 30,
+    "credentials": {
+      "role_arn": "metrics_role_arn_value_test"
+    },
+    "endpoint_override": "https://monitoring-fips.us-west-2.amazonaws.com"
+  }
+}

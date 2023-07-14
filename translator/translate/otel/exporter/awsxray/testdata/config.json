@@ -1,0 +1,14 @@
+{
+  "traces": {
+    "concurrency": 1,
+    "resource_arn": "arn:aws:iam::account:resource",
+    "local_mode": true,
+    "insecure": true,
+    "credentials": {
+      "role_arn": "trace_role_arn"
+    },
+    "endpoint_override": "https://x-ray-endpoint.us-west-2.amazonaws.com",
+    "region_override": "us-west-2",
+    "proxy_override": "https://proxy.proxy.com"
+  }
+}

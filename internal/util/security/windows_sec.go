@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 // go:build windows
+//go:build windows
 // +build windows
 
 package security

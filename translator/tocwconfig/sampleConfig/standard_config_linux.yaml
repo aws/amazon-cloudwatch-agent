@@ -1,0 +1,89 @@
+connectors: {}
+exporters:
+    awscloudwatch:
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 150
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+extensions: {}
+processors:
+    cumulativetodelta/hostDeltaMetrics:
+        exclude:
+            match_type: strict
+            metrics:
+                - iops_in_progress
+                - diskio_iops_in_progress
+            regexp: null
+        include:
+            match_type: ""
+            metrics: []
+            regexp: null
+        max_staleness: 0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        refresh_interval_seconds: 0s
+receivers:
+    telegraf_cpu:
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_disk:
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_diskio:
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_mem:
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_swap:
+        collection_interval: 1m0s
+        initial_delay: 1s
+service:
+    extensions: []
+    pipelines:
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+            receivers:
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_mem
+                - telegraf_swap
+        metrics/hostDeltaMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - cumulativetodelta/hostDeltaMetrics
+                - ec2tagger
+            receivers:
+                - telegraf_diskio
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            error_output_paths: []
+            initial_fields: {}
+            level: info
+            output_paths: [/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log]
+            sampling:
+                initial: 2
+                thereafter: 500
+        metrics:
+            address: ""
+            level: None
+            metric_readers: []
+        resource: {}
+        traces:
+            propagators: []

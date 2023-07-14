@@ -6,8 +6,8 @@ package cadvisor
 import (
 	"fmt"
 
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor/extractors"
+	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/cadvisor/extractors"
 )
 
 func mergeMetrics(metrics []*extractors.CAdvisorMetric) []*extractors.CAdvisorMetric {

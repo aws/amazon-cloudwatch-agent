@@ -1,0 +1,7 @@
+# create amazon-cloudwatch namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: amazon-cloudwatch-dev
+  labels:
+    name: amazon-cloudwatch-dev

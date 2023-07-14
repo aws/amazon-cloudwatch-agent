@@ -1,0 +1,33 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: NonProd Test Build Binaries Configurable
+on:
+  workflow_dispatch:
+    inputs:
+      ContainerPostfixTag:
+        # e.g. "ccwa_nonprod:test-${input goes here}"
+        description: "ECR repo name and tag"
+        required: true
+        type: string
+      BucketPostfixPath:
+        # e.g. s3://<bucket>/nonprod/test/${input goes here}
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+      PackageBucketPostfixPath:
+        # e.g. s3://<bucket>/nonprod/test/${input goes here}
+        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "ccwa_nonprod:test-${{ inputs.ContainerPostfixTag }}"
+      BucketKey: "nonprod/test/${{ inputs.BucketPostfixPath }}"
+      PackageBucketKey: "nonprod/test/${{ github.PackageBucketPostfixPath }}"

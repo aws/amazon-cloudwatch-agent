@@ -1,0 +1,4 @@
+[[inputs.cpu]]
+    fieldpass = ["usage_idle", "usage_iowait", "usage_user", "usage_system"]
+    percpu = false
+    totalcpu = false

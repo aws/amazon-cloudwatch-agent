@@ -1,0 +1,33 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "metrics": {
+    "append_dimensions": {
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}"
+    },
+    "metrics_collected": {
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ]
+      },
+      "disk": {
+        "measurement": [
+          "used_percent"
+        ],
+        "resources": [
+          "*"
+        ]
+      },
+      "system": {
+        "measurement": [
+          "system_load1", "system_load5", "system_load15", "system_n_users", "system_uptime"
+        ]
+      }
+    }
+  }
+}

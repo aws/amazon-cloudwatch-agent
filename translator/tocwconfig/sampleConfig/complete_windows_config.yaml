@@ -1,0 +1,244 @@
+connectors: {}
+exporters:
+    awscloudwatch:
+        endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 5000
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+        role_arn: metrics_role_arn_value_test
+        rollup_dimensions:
+            - - ImageId
+            - - InstanceId
+              - InstanceType
+            - - d1
+            - []
+    awscloudwatchlogs/emf_logs:
+        endpoint: ""
+        local_mode: false
+        log_group_name: emf/logs/default
+        log_retention: 0
+        log_stream_name: LOG_STREAM_NAME
+        max_retries: 2
+        no_verify_ssl: false
+        num_workers: 8
+        proxy_address: ""
+        raw_log: true
+        region: ""
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: log_role_arn_value_test
+        sending_queue:
+            queue_size: 1000
+        profile: ""
+        shared_credentials_file: [ ]
+    awsxray:
+        aws_log_groups: []
+        endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+        index_all_attributes: false
+        indexed_attributes: []
+        local_mode: true
+        max_retries: 2
+        no_verify_ssl: true
+        num_workers: 1
+        proxy_address: https://proxy.proxy.com
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: arn:aws:iam::account:resource
+        role_arn: trace_role_arn_value_test
+        profile: ""
+        shared_credentials_file: [ ]
+        telemetry:
+            enabled: true
+            include_metadata: true
+extensions: {}
+processors:
+    batch/emf_logs:
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    batch/xray:
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - InstanceId
+            - InstanceType
+            - ImageId
+        refresh_interval_seconds: 0s
+    transform:
+        error_mode: propagate
+        log_statements: []
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
+                  - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
+                  - set(unit, "PERCENT") where name == "Processor % Idle Time"
+                  - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
+        trace_statements: []
+receivers:
+    awsxray:
+        endpoint: 0.0.0.0:2001
+        proxy_server:
+            aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+            endpoint: 0.0.0.0:1234
+            local_mode: true
+            proxy_address: https://proxy.proxy.com
+            region: us-west-2
+            role_arn: trace_role_arn_value_test
+            tls:
+                ca_file: ""
+                cert_file: ""
+                insecure: true
+                insecure_skip_verify: false
+                key_file: ""
+                max_version: ""
+                min_version: ""
+                reload_interval: 0s
+                server_name_override: ""
+        transport: udp
+    otlp:
+        protocols:
+            grpc:
+                auth: null
+                endpoint: 0.0.0.0:1111
+                include_metadata: false
+                keepalive: null
+                max_concurrent_streams: 0
+                max_recv_msg_size_mib: 0
+                read_buffer_size: 524288
+                tls: null
+                transport: tcp
+                write_buffer_size: 0
+            http:
+                auth: null
+                cors: null
+                endpoint: 0.0.0.0:2222
+                include_metadata: false
+                max_request_body_size: 0
+                tls: null
+    telegraf_nvidia_smi:
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_procstat/1340600742:
+        alias_name: agent
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_statsd:
+        collection_interval: 10s
+        initial_delay: 1s
+    telegraf_win_perf_counters/1063858558:
+        alias_name: Network Interface
+        collection_interval: 5s
+        initial_delay: 1s
+    telegraf_win_perf_counters/1492679118:
+        alias_name: Memory
+        collection_interval: 5s
+        initial_delay: 1s
+    telegraf_win_perf_counters/2402387132:
+        alias_name: System
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_win_perf_counters/3081249416:
+        alias_name: customizedObjectName
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_win_perf_counters/3762679655:
+        alias_name: Processor
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_win_perf_counters/4283769065:
+        alias_name: LogicalDisk
+        collection_interval: 1m0s
+        initial_delay: 1s
+    telegraf_windows_event_log:
+        collection_interval: 1m0s
+        initial_delay: 1s
+    udplog/emf_logs:
+        attributes: {}
+        encoding: utf-8
+        id: udp_input
+        listen_address: 127.0.0.1:25888
+        multiline:
+            line_end_pattern: .^
+            line_start_pattern: ""
+        operators: []
+        output: []
+        resource: {}
+        retry_on_failure:
+            enabled: false
+            initial_interval: 0s
+            max_elapsed_time: 0s
+            max_interval: 0s
+        storage: null
+        type: udp_input
+service:
+    extensions: []
+    pipelines:
+        logs/emf_logs:
+            exporters:
+                - awscloudwatchlogs/emf_logs
+            processors:
+                - batch/emf_logs
+            receivers:
+                - udplog/emf_logs
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+                - transform
+            receivers:
+                - telegraf_nvidia_smi
+                - telegraf_procstat/1340600742
+                - telegraf_statsd
+                - telegraf_win_perf_counters/1063858558
+                - telegraf_win_perf_counters/1492679118
+                - telegraf_win_perf_counters/2402387132
+                - telegraf_win_perf_counters/3081249416
+                - telegraf_win_perf_counters/3762679655
+                - telegraf_win_perf_counters/4283769065
+                - telegraf_windows_event_log
+        traces/xray:
+            exporters:
+                - awsxray
+            processors:
+                - batch/xray
+            receivers:
+                - awsxray
+                - otlp
+    telemetry:
+        logs:
+            development: false
+            disable_caller: false
+            disable_stacktrace: false
+            encoding: console
+            error_output_paths: []
+            initial_fields: {}
+            level: debug
+            output_paths:
+                - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
+            sampling:
+                initial: 2
+                thereafter: 500
+        metrics:
+            address: ""
+            level: None
+            metric_readers: []
+        resource: {}
+        traces:
+            propagators: []

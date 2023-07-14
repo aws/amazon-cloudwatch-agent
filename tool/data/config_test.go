@@ -6,13 +6,13 @@ package data
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
-//more detailed internal content should be already tested in the individual struct unit tests
+// more detailed internal content should be already tested in the individual struct unit tests
 func TestConfig_ToMap(t *testing.T) {
 	expectedKey := ""
 	expectedValue := map[string]interface{}{

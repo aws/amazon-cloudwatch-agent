@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//Check the case when the input is in "mem":{//specific configuration}
+// Check the case when the input is in "mem":{//specific configuration}
 func TestMemSpecificConfig(t *testing.T) {
 	m := new(Mem)
 	//Check whether provide specific config

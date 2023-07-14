@@ -1,0 +1,18 @@
+receivers:
+  nop: {}
+
+exporters:
+  awscloudwatch:
+    region: us-yeast-99
+    drop_original_metrics:
+      cpu:
+        - time
+        - usage
+      foo:
+        - bar
+
+service:
+  pipelines:
+    metrics:
+      receivers: [nop]
+      exporters: [awscloudwatch]

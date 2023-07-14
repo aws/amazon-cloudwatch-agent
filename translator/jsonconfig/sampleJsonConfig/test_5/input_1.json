@@ -12,6 +12,8 @@
     "metrics_collected": {
       "kubernetes": {
         "cluster_name": "TestCluster"
+      },
+      "ecs": {
       }
     }
   },

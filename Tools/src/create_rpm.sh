@@ -10,7 +10,6 @@ AGENT_VERSION=$(cat ${PREPKGPATH}/CWAGENT_VERSION | sed -e "s/-/+/g")
 
 echo "BUILD_SPACE: ${BUILD_SPACE}  agent_version: ${AGENT_VERSION}  pre-package location:${PREPKGPATH}"
 
-
 echo "Creating rpm-build workspace"
 
 mkdir -p ${BUILD_SPACE}/bin/linux/${ARCH}/

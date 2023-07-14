@@ -14,6 +14,7 @@ on:
       - 'LICENSE'
       - '.github/**'
       - '!.github/workflows/PR-build.yml'
+  workflow_dispatch:
 
   pull_request:
     branches: 
@@ -37,20 +38,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Check lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.19.6
+          cache: false
+
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Check format
+        run: |
+          make fmt fmt-sh
+          if [ ! -z "`git status --porcelain`" ]; then
+            echo "make fmt changed files"
+            git status
+            exit 1
+          fi
+
+      - name: Check license and imports
+        run: make simple-lint
+
   build:
+    needs: [lint]
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-2019, windows-latest, macos-latest]
+        os: [ ubuntu-latest, windows-2019, windows-latest, macos-11]
         include:
           - os: ubuntu-latest
             family: linux
             cache-path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-          - os: macos-latest
+          - os: macos-11
             family: darwin
             cache-path: |
               ~/Library/Caches/go-build
