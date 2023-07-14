@@ -20,21 +20,18 @@ func TestUnmarshalDefaultConfig(t *testing.T) {
 
 func TestValidateConfig(t *testing.T) {
 	tests := []struct {
-		name         string
-		cfg          component.Config
-		errorMessage string
+		name string
+		cfg  component.Config
 	}{
 		{
-			name:         "Without_supported_kv",
-			cfg:          &Config{},
-			errorMessage: "append_dimensions set without any supported key-value pairs",
+			name: "Without_supported_kv",
+			cfg:  &Config{},
 		},
 		{
 			name: "Invalid_dimension",
 			cfg: &Config{
 				EC2MetadataTags: []string{"ImageId", "foo"},
 			},
-			errorMessage: "Unsupported Dimension: foo",
 		},
 		{
 			name: "Valid_config",
@@ -49,11 +46,7 @@ func TestValidateConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.NoError(t, component.UnmarshalConfig(confmap.New(), tt.cfg))
 			err := tt.cfg.(*Config).Validate()
-			if tt.errorMessage == "" {
-				assert.Nil(t, err)
-			} else {
-				assert.EqualError(t, err, tt.errorMessage)
-			}
+			assert.Nil(t, err, "Empty or invalid dimension tags should be silently ignored")
 		})
 	}
 }

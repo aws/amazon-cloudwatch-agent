@@ -224,6 +224,12 @@ func TestLogFilterConfig(t *testing.T) {
 	checkTranslation(t, "log_filter", "darwin", nil, "")
 }
 
+func TestIgnoreInvalidAppendDimensions(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "ignore_append_dimensions", "linux", expectedEnvVars, "")
+}
+
 func TestTomlToTomlComparison(t *testing.T) {
 	resetContext(t)
 	var jsonFilePath = "./totomlconfig/tomlConfigTemplate/agentToml.json"
