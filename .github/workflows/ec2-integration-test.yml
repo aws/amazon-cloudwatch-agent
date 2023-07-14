@@ -1,0 +1,118 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Reusable EC2 Integration Test
+
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+
+on:
+  workflow_call:
+    inputs:
+      github_sha:
+        required: true
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_url:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      test_dir:
+        required: true
+        type: string
+      job_id:
+        required: true
+        type: string
+      test_props:
+        required: true
+        type: string
+
+jobs:
+  EC2IntegrationTest:
+    name: 'Test'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(inputs.test_props) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{env.TERRAFORM_AWS_ASSUME_ROLE}}
+          aws-region: us-west-2
+
+      - name: Cache if success
+        id: cache_if_success
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: cache_if_success-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
+      - name: Echo Test Info
+        run: echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      # nick-fields/retry@v2 starts at base dir
+      - name: Terraform apply
+        if: steps.cache_if_success.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd ${{inputs.test_dir}}
+            fi
+            
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${{env.PRIVATE_KEY}}" -var="github_test_repo=${{ inputs.test_repo_url }}" \
+              -var="test_name=${{ matrix.arrays.os }}" \
+              -var="cwa_github_sha=${{inputs.github_sha}}" -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+              -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
+              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="user=${{ matrix.arrays.username }}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="binary_name=${{ matrix.arrays.binaryName }}" \
+              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="s3_bucket=${{env.S3_INTEGRATION_BUCKET}}" \
+              -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
+              -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
+              -var="ssh_key_name=${{env.KEY_NAME}}" \
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
+              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd ${{ inputs.test_dir }} && terraform destroy --auto-approve
