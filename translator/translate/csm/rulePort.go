@@ -29,7 +29,7 @@ func applyServiceAddressesRule(input interface{}) (returnKey string, returnVal i
 	}
 
 	if len(addresses) < 1 {
-		translator.AddErrorMessages(GetCurPath(), fmt.Sprintf("Client-side monitoring requires at least one value for service_addresses."))
+		translator.AddErrorMessages(GetCurPath(), "Client-side monitoring requires at least one value for service_addresses.")
 		return "", nil
 	}
 

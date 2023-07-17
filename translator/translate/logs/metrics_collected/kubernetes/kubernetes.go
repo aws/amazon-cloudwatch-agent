@@ -46,7 +46,7 @@ func (k *Kubernetes) ApplyRule(input interface{}) (returnKey string, returnVal i
 	} else {
 		//If yes, process it
 		if !context.CurrentContext().RunInContainer() {
-			translator.AddErrorMessages(GetCurPath(), fmt.Sprintf("kubernetes is configured in a non-containerized environment"))
+			translator.AddErrorMessages(GetCurPath(), "kubernetes is configured in a non-containerized environment")
 			return
 		}
 		for _, rule := range ChildRule {

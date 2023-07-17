@@ -139,7 +139,7 @@ func main() {
 		if err == nil {
 			errorMessage = fmt.Sprintf("E! usage: " + filepath.Base(executable) + " --output-dir <path> --download-source ssm:<parameter-store-name> ")
 		} else {
-			errorMessage = fmt.Sprintf("E! usage: --output-dir <path> --download-source ssm:<parameter-store-name> ")
+			errorMessage = "E! usage: --output-dir <path> --download-source ssm:<parameter-store-name> "
 		}
 		log.Panicf(errorMessage)
 	}
@@ -151,7 +151,7 @@ func main() {
 	if region == "" && downloadLocation != locationDefault {
 		fmt.Println("Unable to determine aws-region.")
 		if mode == config.ModeEC2 {
-			errorMessage = fmt.Sprintf("E! Please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' ")
+			errorMessage = "E! Please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' "
 		} else {
 			errorMessage = fmt.Sprintf("E! Please make sure the credentials and region set correctly on your hosts.\n" +
 				"Refer to http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html")

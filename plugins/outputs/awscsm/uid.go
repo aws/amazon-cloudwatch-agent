@@ -37,13 +37,13 @@ func serialize(v reflect.Value) []byte {
 	case reflect.Map:
 		keys := v.MapKeys()
 		sort.Sort(sortReflectValues(keys))
-		buf.WriteString(fmt.Sprintf("<map>"))
+		buf.WriteString("<map>")
 		for _, key := range keys {
 			buf.WriteString(fmt.Sprintf("%s<%s>:", key.String(), key.Kind()))
 			buf.Write(serialize(v.MapIndex(key)))
 		}
 	case reflect.Array, reflect.Slice:
-		buf.WriteString(fmt.Sprintf("<array>"))
+		buf.WriteString("<array>")
 		for i := 0; i < v.Len(); i++ {
 			buf.WriteString(fmt.Sprintf("%d:", i))
 			buf.Write(serialize(v.Index(i)))
