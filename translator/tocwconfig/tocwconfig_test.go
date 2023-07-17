@@ -24,6 +24,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
@@ -287,6 +288,7 @@ func resetContext(t *testing.T) {
 	context.ResetContext()
 
 	t.Setenv("ProgramData", "c:\\ProgramData")
+	retryer.IMDSRetryer = nil
 }
 
 // toml files in the given path will be parsed into the config toml struct and be compared as struct

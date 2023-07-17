@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
@@ -17,6 +18,7 @@ import (
 )
 
 func TestLogs(t *testing.T) {
+	retryer.IMDSRetryer = nil
 	l := new(Logs)
 	agent.Global_Config.Region = "us-east-1"
 
