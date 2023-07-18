@@ -47,9 +47,8 @@ const (
 )
 
 const (
-	opPutLogEvents       = "PutLogEvents"
-	opPutMetricData      = "PutMetricData"
-	dropOriginalWildcard = "*"
+	opPutLogEvents  = "PutLogEvents"
+	opPutMetricData = "PutMetricData"
 )
 
 type CloudWatch struct {
@@ -392,9 +391,12 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 	}
 
 	dimensionsList := c.ProcessRollup(metric.Dimensions)
-	for _, dimensions := range dimensionsList {
+	for index, dimensions := range dimensionsList {
 		//index == 0 means it's the original metrics, and if the metric name and dimension matches, skip creating
 		//metric datum
+		if index == 0 && c.IsDropping(*metric.MetricDatum.MetricName) {
+			continue
+		}
 		if len(distList) == 0 {
 			// Not a distribution.
 			datum := &cloudwatch.MetricDatum{
@@ -432,6 +434,17 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 		}
 	}
 	return datums
+}
+
+func (c *CloudWatch) IsDropping(metricName string) bool {
+	// Check if any metrics are provided in drop_original_metrics
+	if len(c.config.DropOriginalConfigs) == 0 {
+		return false
+	}
+	if _, ok := c.config.DropOriginalConfigs[metricName]; ok {
+		return true
+	}
+	return false
 }
 
 // sortedTagKeys returns a sorted list of keys in the map.

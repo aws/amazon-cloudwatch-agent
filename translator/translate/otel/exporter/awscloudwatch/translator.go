@@ -4,13 +4,16 @@
 package awscloudwatch
 
 import (
+	"strings"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/drop_origin"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/rollup_dimensions"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
@@ -18,6 +21,7 @@ import (
 const (
 	namespaceKey          = "namespace"
 	forceFlushIntervalKey = "force_flush_interval"
+	dropOriginalWildcard  = "*"
 
 	internalMaxValuesPerDatum = 5000
 )
@@ -65,8 +69,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if agent.Global_Config.Internal {
 		cfg.MaxValuesPerDatum = internalMaxValuesPerDatum
 	}
-	cfg.RollupDimensions = getRollupDimensions(conf)
-	cfg.DropOriginConfigs = getDropOriginalMetrics(conf)
+	if rollupDimensions := getRollupDimensions(conf); rollupDimensions != nil {
+		cfg.RollupDimensions = rollupDimensions
+	}
+	if dropOriginalMetrics := getDropOriginalMetrics(conf); len(dropOriginalMetrics) != 0 {
+		cfg.DropOriginalConfigs = dropOriginalMetrics
+	}
 	return cfg, nil
 }
 
@@ -83,10 +91,13 @@ func getRoleARN(conf *confmap.Conf) string {
 func getRollupDimensions(conf *confmap.Conf) [][]string {
 	key := common.ConfigKey(common.MetricsKey, rollup_dimensions.SectionKey)
 	value := conf.Get(key)
-	if value == nil || !rollup_dimensions.IsValidRollupList(value) {
+	if value == nil {
 		return nil
 	}
-	aggregates := value.([]interface{})
+	aggregates, ok := value.([]interface{})
+	if !ok || !isValidRollupList(aggregates) {
+		return nil
+	}
 	rollup := make([][]string, len(aggregates))
 	for i, aggregate := range aggregates {
 		dimensions := aggregate.([]interface{})
@@ -98,14 +109,129 @@ func getRollupDimensions(conf *confmap.Conf) [][]string {
 	return rollup
 }
 
-// TODO: remove dependency on rule.
-func getDropOriginalMetrics(conf *confmap.Conf) map[string][]string {
-	_, result := new(drop_origin.DropOrigin).ApplyRule(conf.Get(common.MetricsKey))
-	dom, ok := result.(map[string][]string)
-	if ok {
-		return dom
+// isValidRollupList confirms whether the supplied aggregate_dimension is a valid type ([][]string)
+func isValidRollupList(aggregates []interface{}) bool {
+	if len(aggregates) == 0 {
+		return false
 	}
-	return nil
+	for _, aggregate := range aggregates {
+		if dimensions, ok := aggregate.([]interface{}); ok {
+			if len(dimensions) != 0 {
+				for _, dimension := range dimensions {
+					if _, ok := dimension.(string); !ok {
+						return false
+					}
+				}
+			}
+		} else {
+			return false
+		}
+	}
+
+	return true
 }
 
-// TODO: remove dependency on rule.
+func getDropOriginalMetrics(conf *confmap.Conf) map[string]bool {
+	key := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
+	value := conf.Get(key)
+	if value == nil {
+		return nil
+	}
+	categories := value.(map[string]interface{})
+	dropOriginalMetrics := make(map[string]bool)
+	for category := range categories {
+		realCategoryName := config.GetRealPluginName(category)
+		measurementCfgKey := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, category, common.MeasurementKey)
+		dropOriginalCfgKey := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, category, common.DropOriginalMetricsKey)
+		/* Drop original metrics does not support procstat since procstat can monitor multiple process
+				"procstat": [
+		        {
+		          "exe": "W3SVC",
+		          "measurement": [
+		            "pid_count"
+		          ]
+		        },
+		        {
+		          "exe": "IISADMIN",
+		          "measurement": [
+		            "pid_count"
+		          ]
+		        }]
+			Therefore, dropping the original metrics can conflict between these two processes (e.g customers can drop pid_count with the first
+			process but not the second process)
+		*/
+		if dropMetrics := common.GetArray[any](conf, dropOriginalCfgKey); dropMetrics != nil {
+			for _, dropMetric := range dropMetrics {
+				measurements := common.GetArray[any](conf, measurementCfgKey)
+				if measurements == nil {
+					continue
+				}
+
+				dropMetric, ok := dropMetric.(string)
+				if !ok {
+					continue
+				}
+
+				if !strings.Contains(dropMetric, category) && dropMetric != dropOriginalWildcard {
+					dropMetric = metric.DecorateMetricName(realCategoryName, dropMetric)
+				}
+				isMetricDecoration := false
+				for _, measurement := range measurements {
+					switch val := measurement.(type) {
+					/*
+						 "disk": {
+							"measurement": [
+								{
+									"name": "free",
+									"rename": "DISK_FREE",
+									"unit": "unit"
+								}
+							]
+						}
+					*/
+					case map[string]interface{}:
+						metricName, ok := val["name"].(string)
+						if !ok {
+							continue
+						}
+						if !strings.Contains(metricName, category) {
+							metricName = metric.DecorateMetricName(realCategoryName, metricName)
+						}
+						// If customers provides drop_original_metrics with a wildcard (*), adding the renamed metric or add the original metric
+						// if customers only re-unit the metric
+						if strings.Contains(dropMetric, metricName) || dropMetric == dropOriginalWildcard {
+							isMetricDecoration = true
+							if newMetricName, ok := val["rename"].(string); ok {
+								dropOriginalMetrics[newMetricName] = true
+							} else {
+								dropOriginalMetrics[metricName] = true
+							}
+						}
+
+					/*
+						"measurement": ["free"]
+					*/
+					case string:
+						if dropMetric != dropOriginalWildcard {
+							continue
+						}
+						metricName := val
+						if !strings.Contains(metricName, category) {
+							metricName = metric.DecorateMetricName(realCategoryName, metricName)
+						}
+
+						dropOriginalMetrics[metricName] = true
+					default:
+						continue
+					}
+				}
+
+				if !isMetricDecoration && dropMetric != dropOriginalWildcard {
+					dropOriginalMetrics[dropMetric] = true
+				}
+
+			}
+		}
+	}
+	return dropOriginalMetrics
+}

@@ -2,12 +2,10 @@ connectors: {}
 exporters:
     awscloudwatch:
         drop_original_metrics:
-            cpu:
-                - cpu_usage_idle
-                - time_active
-            nvidia_smi:
-                - utilization_gpu
-                - temperature_gpu
+            CPU_USAGE_IDLE: true
+            cpu_time_active: true
+            nvidia_smi_utilization_gpu: true
+            nvidia_smi_temperature_gpu: true
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 150

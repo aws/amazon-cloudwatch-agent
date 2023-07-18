@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/publisher"
@@ -253,6 +254,66 @@ func TestGetUniqueRollupList(t *testing.T) {
 	actualLists = GetUniqueRollupList(inputLists)
 	expectedLists = [][]string{}
 	assert.EqualValues(t, expectedLists, actualLists, "Unique list result should be empty")
+}
+
+func TestIsDropping(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+
+	testCases := map[string]struct {
+		dropMetricsConfig    map[string]bool
+		expectMetricsDropped map[string]bool
+	}{
+		"TestIsDroppingWithMultipleCategoryLinux": {
+			dropMetricsConfig: map[string]bool{
+				"cpu_usage_idle":             true,
+				"cpu_time_active":            true,
+				"nvidia_smi_utilization_gpu": true,
+			},
+			expectMetricsDropped: map[string]bool{
+				"cpu_usage_idle":  true,
+				"cpu_time_active": true,
+				"nvidia_smi":      false,
+				"cpu_usage_guest": false,
+			},
+		},
+		"TestIsDroppingWithMultipleCategoryWindows": {
+			dropMetricsConfig: map[string]bool{
+				"cpu usage_idle":             true,
+				"cpu time_active":            true,
+				"nvidia_smi utilization_gpu": true,
+			},
+			expectMetricsDropped: map[string]bool{
+				"cpu usage_idle":  true,
+				"cpu time_active": true,
+				"nvidia_smi":      false,
+				"cpu usage_guest": false,
+			},
+		},
+		"TestIsDroppingWithMetricDecoration": {
+			dropMetricsConfig: map[string]bool{
+				"CPU_USAGE_IDLE":             true,
+				"cpu_time_active":            true,
+				"nvidia_smi_utilization_gpu": true,
+			},
+			expectMetricsDropped: map[string]bool{
+				"cpu_usage_idle":             false,
+				"CPU_USAGE_IDLE":             true,
+				"nvidia_smi":                 false,
+				"nvidia_smi_utilization_gpu": true,
+				"cpu":                        false,
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			cw.config.DropOriginalConfigs = testCase.dropMetricsConfig
+			for metricName, expectMetricDropped := range testCase.expectMetricsDropped {
+				actualMetricDropped := cw.IsDropping(metricName)
+				require.Equal(t, expectMetricDropped, actualMetricDropped)
+			}
+		})
+	}
 }
 
 func TestIsFlushable(t *testing.T) {

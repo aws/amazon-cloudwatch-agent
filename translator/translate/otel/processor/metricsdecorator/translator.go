@@ -127,7 +127,7 @@ func getMeasurementMaps(conf *confmap.Conf) map[string][]interface{} {
 	measurementMap := make(map[string][]interface{})
 	metricsList := append(common.LinuxPluginKeys, common.WindowsPluginKeys...)
 	for _, metric := range metricsList {
-		path := common.ConfigKey(metricsKey, metric, "measurement")
+		path := common.ConfigKey(metricsKey, metric, common.MeasurementKey)
 		if conf.IsSet(path) {
 			m := conf.Get(path).([]interface{})
 			measurementMap[metric] = m

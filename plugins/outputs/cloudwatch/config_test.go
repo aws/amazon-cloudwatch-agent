@@ -104,12 +104,10 @@ func TestConfigDropOriginConfigs(t *testing.T) {
 	assert.Equal(t, 1, len(c.Exporters))
 	c2, ok := c.Exporters[component.NewID(TypeStr)].(*Config)
 	assert.True(t, ok)
-	drop := c2.DropOriginConfigs
+	drop := c2.DropOriginalConfigs
 	assert.NotEmpty(t, drop)
-	assert.Len(t, drop, 2)
-	assert.NotNil(t, drop["cpu"])
-	assert.Equal(t, []string{"time", "usage"}, drop["cpu"])
-	assert.NotNil(t, drop["foo"])
-	assert.Nil(t, drop["bar"])
-	assert.Equal(t, []string{"bar"}, drop["foo"])
+	assert.Len(t, drop, 3)
+	assert.True(t, drop["cpu_time"])
+	assert.True(t, drop["cpu_usage"])
+	assert.True(t, drop["foo_bar"])
 }

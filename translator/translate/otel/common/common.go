@@ -38,6 +38,8 @@ const (
 	CredentialsKey                     = "credentials"
 	RoleARNKey                         = "role_arn"
 	MetricsCollectionIntervalKey       = "metrics_collection_interval"
+	MeasurementKey                     = "measurement"
+	DropOriginalMetricsKey             = "drop_original_metrics"
 	ForceFlushIntervalKey              = "force_flush_interval"
 	ContainerInsightsMetricGranularity = "metric_granularity"
 	PreferFullPodName                  = "prefer_full_pod_name"

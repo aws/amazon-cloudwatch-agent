@@ -13,20 +13,20 @@ import (
 
 // Config represent a configuration for the CloudWatch logs exporter.
 type Config struct {
-	Region                   string              `mapstructure:"region"`
-	EndpointOverride         string              `mapstructure:"endpoint_override,omitempty"`
-	AccessKey                string              `mapstructure:"access_key,omitempty"`
-	SecretKey                string              `mapstructure:"secret_key,omitempty"`
-	RoleARN                  string              `mapstructure:"role_arn,omitempty"`
-	Profile                  string              `mapstructure:"profile,omitempty"`
-	SharedCredentialFilename string              `mapstructure:"shared_credential_file,omitempty"`
-	Token                    string              `mapstructure:"token,omitempty"`
-	ForceFlushInterval       time.Duration       `mapstructure:"force_flush_interval"`
-	MaxDatumsPerCall         int                 `mapstructure:"max_datums_per_call"`
-	MaxValuesPerDatum        int                 `mapstructure:"max_values_per_datum"`
-	RollupDimensions         [][]string          `mapstructure:"rollup_dimensions,omitempty"`
-	DropOriginConfigs        map[string][]string `mapstructure:"drop_original_metrics,omitempty"`
-	Namespace                string              `mapstructure:"namespace"`
+	Region                   string          `mapstructure:"region"`
+	EndpointOverride         string          `mapstructure:"endpoint_override,omitempty"`
+	AccessKey                string          `mapstructure:"access_key,omitempty"`
+	SecretKey                string          `mapstructure:"secret_key,omitempty"`
+	RoleARN                  string          `mapstructure:"role_arn,omitempty"`
+	Profile                  string          `mapstructure:"profile,omitempty"`
+	SharedCredentialFilename string          `mapstructure:"shared_credential_file,omitempty"`
+	Token                    string          `mapstructure:"token,omitempty"`
+	ForceFlushInterval       time.Duration   `mapstructure:"force_flush_interval"`
+	MaxDatumsPerCall         int             `mapstructure:"max_datums_per_call"`
+	MaxValuesPerDatum        int             `mapstructure:"max_values_per_datum"`
+	RollupDimensions         [][]string      `mapstructure:"rollup_dimensions,omitempty"`
+	DropOriginalConfigs      map[string]bool `mapstructure:"drop_original_metrics,omitempty"`
+	Namespace                string          `mapstructure:"namespace"`
 
 	// ResourceToTelemetrySettings is the option for converting resource
 	// attributes to telemetry attributes.

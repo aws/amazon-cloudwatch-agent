@@ -160,12 +160,6 @@ func TestAdvancedConfig(t *testing.T) {
 	checkTranslation(t, "advanced_config_windows", "windows", expectedEnvVars, "")
 }
 
-func TestDropOriginConfig(t *testing.T) {
-	resetContext(t)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "drop_origin_linux", "linux", expectedEnvVars, "")
-}
-
 func TestLogOnlyConfig(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}

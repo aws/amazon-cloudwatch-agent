@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ func TestTranslator(t *testing.T) {
 		internal    bool
 		credentials map[string]interface{}
 		want        *cloudwatch.Config
+		wantWindows *cloudwatch.Config
 		wantErr     error
 	}{
 		"WithMissingKey": {
@@ -113,9 +115,22 @@ func TestTranslator(t *testing.T) {
 				EndpointOverride:   "https://monitoring-fips.us-west-2.amazonaws.com",
 				RoleARN:            "metrics_role_arn_value_test",
 				RollupDimensions:   [][]string{{"ImageId"}, {"InstanceId", "InstanceType"}, {"d1"}, {}},
-				DropOriginConfigs: map[string][]string{
-					"cpu":        {"cpu_usage_idle", "time_active"},
-					"nvidia_smi": {"utilization_gpu", "temperature_gpu"},
+				DropOriginalConfigs: map[string]bool{
+					"CPU_USAGE_IDLE":  true,
+					"cpu_time_active": true,
+				},
+			},
+			wantWindows: &cloudwatch.Config{
+				Namespace:          "namespace",
+				Region:             "us-east-1",
+				ForceFlushInterval: 30 * time.Second,
+				MaxValuesPerDatum:  5000,
+				EndpointOverride:   "https://monitoring-fips.us-west-2.amazonaws.com",
+				RoleARN:            "metrics_role_arn_value_test",
+				RollupDimensions:   [][]string{{"ImageId"}, {"InstanceId", "InstanceType"}, {"d1"}, {}},
+				DropOriginalConfigs: map[string]bool{
+					"CPU_USAGE_IDLE":  true,
+					"cpu time_active": true,
 				},
 			},
 		},
@@ -143,7 +158,11 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.SharedCredentialFilename, gotCfg.SharedCredentialFilename)
 				require.Equal(t, testCase.want.MaxValuesPerDatum, gotCfg.MaxValuesPerDatum)
 				require.Equal(t, testCase.want.RollupDimensions, gotCfg.RollupDimensions)
-				require.Equal(t, testCase.want.DropOriginConfigs, gotCfg.DropOriginConfigs)
+				if testCase.wantWindows != nil && runtime.GOOS == "windows" {
+					require.Equal(t, testCase.wantWindows.DropOriginalConfigs, gotCfg.DropOriginalConfigs)
+				} else {
+					require.Equal(t, testCase.want.DropOriginalConfigs, gotCfg.DropOriginalConfigs)
+				}
 			}
 		})
 	}

@@ -21,3 +21,9 @@ func TestCompleteConfigUnix(t *testing.T) {
 	checkTranslation(t, "complete_linux_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
 }
+
+func TestDropOriginConfig(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "drop_origin_linux", "linux", expectedEnvVars, "")
+}
