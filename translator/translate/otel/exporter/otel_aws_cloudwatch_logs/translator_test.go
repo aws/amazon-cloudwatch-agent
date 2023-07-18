@@ -10,13 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	legacytranslator "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
-	retryer.IMDSRetryer = nil
 	tt := NewTranslatorWithName(common.PipelineNameEmfLogs)
 	require.EqualValues(t, "awscloudwatchlogs/emf_logs", tt.ID().String())
 	testCases := map[string]struct {

@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logger"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
@@ -121,7 +120,6 @@ func noAgentConfig(t *testing.T, osType string) {
 }
 
 func TestInternal(t *testing.T) {
-	retryer.IMDSRetryer = nil
 	internal(t, config.OS_TYPE_LINUX)
 	internal(t, config.OS_TYPE_DARWIN)
 }

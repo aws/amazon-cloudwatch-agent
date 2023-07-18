@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"go.opentelemetry.io/collector/component"
@@ -20,7 +21,6 @@ import (
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	translatorCtx "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
@@ -75,7 +75,7 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 				HTTPClient: &http.Client{Timeout: defaultIMDSTimeout},
 				LogLevel:   configaws.SDKLogLevel(),
 				Logger:     configaws.SDKLogger{},
-				Retryer:    retryer.IMDSRetryer,
+				Retryer:    client.DefaultRetryer{NumMaxRetries: allowedIMDSRetries},
 			}),
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(

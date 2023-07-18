@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
@@ -98,7 +98,7 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	md := ec2metadata.New(ses, &aws.Config{
 		LogLevel: configaws.SDKLogLevel(),
 		Logger:   configaws.SDKLogger{},
-		Retryer:  retryer.IMDSRetryer,
+		Retryer:  client.DefaultRetryer{NumMaxRetries: allowedRetries},
 	})
 
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
