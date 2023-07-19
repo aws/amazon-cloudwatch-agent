@@ -68,10 +68,6 @@ const (
 	ebsVolumeId          = "EBSVolumeId"
 )
 
-const (
-	allowedIMDSRetries = 5
-)
-
 var (
 	defaultIMDSTimeout     = 1 * time.Second
 	defaultRefreshInterval = 180 * time.Second

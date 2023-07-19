@@ -4,17 +4,18 @@
 package ec2util
 
 import (
+	goContext "context"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
@@ -98,18 +99,24 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	md := ec2metadata.New(ses, &aws.Config{
 		LogLevel: configaws.SDKLogLevel(),
 		Logger:   configaws.SDKLogger{},
-		Retryer:  client.DefaultRetryer{NumMaxRetries: allowedRetries},
+		Retryer:  retryer.IMDSRetryer,
 	})
 
+	// ec2 and ecs treats retries for getting host name differently
+	// ec2 will try the method 5 times = about 2 minutes = about 2 minutes
+	// ecs will try the underlying endpoints. Get token 5 times then call ec2 metadata then token 5 times then ec2 metadata ... = about 10 minutes
+	ctx, cancelFn := goContext.WithTimeout(goContext.Background(), 4*time.Minute)
+	defer cancelFn()
+
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
-	if hostname, err := md.GetMetadata("hostname"); err == nil {
+	if hostname, err := md.GetMetadataWithContext(ctx, "hostname"); err == nil {
 		e.Hostname = hostname
 	} else {
 		fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
 	}
 
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-	if instanceIdentityDocument, err := md.GetInstanceIdentityDocument(); err == nil {
+	if instanceIdentityDocument, err := md.GetInstanceIdentityDocumentWithContext(ctx); err == nil {
 		e.Region = instanceIdentityDocument.Region
 		e.AccountID = instanceIdentityDocument.AccountID
 		e.PrivateIP = instanceIdentityDocument.PrivateIP

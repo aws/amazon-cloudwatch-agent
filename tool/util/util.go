@@ -135,6 +135,8 @@ func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentia
 
 func DefaultEC2Region() (region string) {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
+	// imds does not need to retry here since this is config wizard
+	// by the time user can run the wizard imds should be up
 	ses, err := session.NewSession(&aws.Config{
 		HTTPClient: &http.Client{Timeout: 1 * time.Second},
 		MaxRetries: aws.Int(0),
@@ -145,11 +147,10 @@ func DefaultEC2Region() (region string) {
 		return
 	}
 	md := ec2metadata.New(ses)
-	if !md.Available() {
-		return
-	}
 	if info, err := md.Region(); err == nil {
 		region = info
+	} else {
+		fmt.Println("Could not get region from ec2 metadata...")
 	}
 	return
 }
