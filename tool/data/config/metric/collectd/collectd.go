@@ -4,7 +4,7 @@
 package collectd
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 )
 
 type CollectD struct {

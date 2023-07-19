@@ -17,26 +17,18 @@ endif
 
 BUILD := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS = -s -w
-LDFLAGS +=  -X github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo.VersionStr=${VERSION}
-LDFLAGS +=  -X github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/agentinfo.BuildStr=${BUILD}
+LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.VersionStr=${VERSION}
+LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.BuildStr=${BUILD}
 LINUX_AMD64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64
 LINUX_ARM64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64
 WIN_BUILD = GOOS=windows GOARCH=amd64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64
 DARWIN_BUILD_AMD64 = CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_amd64
-DARWIN_ARM_BUILD_FLAG = CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=arm64
-ifeq ($(OS),Windows_NT)
-else
-	UNAME_S := $(shell uname -s)
-	ifeq ($(UNAME_S),Darwin)
-		DARWIN_ARM_BUILD_FLAG += CGO_ENABLED=1
-	endif
-endif
-DARWIN_BUILD_ARM64 = ${DARWIN_ARM_BUILD_FLAG} go build -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_arm64
+DARWIN_BUILD_ARM64 = CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_arm64
 
 IMAGE = amazon/cloudwatch-agent:$(VERSION)
 DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
 
-CW_AGENT_IMPORT_PATH=github.com/aws/private-amazon-cloudwatch-agent-staging
+CW_AGENT_IMPORT_PATH=github.com/aws/amazon-cloudwatch-agent
 ALL_SRC := $(shell find . -name '*.go' -type f | sort)
 TOOLS_BIN_DIR := $(abspath ./build/tools)
 
@@ -69,55 +61,55 @@ copy-version-file: create-version-file
 
 amazon-cloudwatch-agent-linux: copy-version-file
 	@echo Building CloudWatchAgent for Linux,Debian with ARM64 and AMD64
-	$(LINUX_AMD64_BUILD)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
-	$(LINUX_ARM64_BUILD)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
-	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
-	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
-	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent
-	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent
-	$(LINUX_AMD64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/start-amazon-cloudwatch-agent
-	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/start-amazon-cloudwatch-agent
-	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent-config-wizard
-	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent-config-wizard
+	$(LINUX_AMD64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	$(LINUX_ARM64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(LINUX_AMD64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 
 
 amazon-cloudwatch-agent-darwin: copy-version-file
 ifneq ($(OS),Windows_NT)
 ifeq ($(shell uname -s),Darwin)
 	@echo Building CloudWatchAgent for MacOS with ARM64 and AMD64
-	$(DARWIN_BUILD_AMD64)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
-	$(DARWIN_BUILD_ARM64)/config-downloader github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
-	$(DARWIN_BUILD_AMD64)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
-	$(DARWIN_BUILD_ARM64)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
-	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent
-	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent
-	$(DARWIN_BUILD_AMD64)/start-amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/start-amazon-cloudwatch-agent
-	$(DARWIN_BUILD_ARM64)/start-amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/start-amazon-cloudwatch-agent
-	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent-config-wizard github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent-config-wizard
-	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent-config-wizard github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent-config-wizard
+	$(DARWIN_BUILD_AMD64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	$(DARWIN_BUILD_ARM64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	$(DARWIN_BUILD_AMD64)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	$(DARWIN_BUILD_ARM64)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(DARWIN_BUILD_AMD64)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(DARWIN_BUILD_ARM64)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
+	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 endif
 endif
 
 amazon-cloudwatch-agent-windows:
 	@echo Building CloudWatchAgent for Windows with AMD64
-	$(WIN_BUILD)/config-downloader.exe github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-downloader
-	$(WIN_BUILD)/config-translator.exe github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
-	$(WIN_BUILD)/amazon-cloudwatch-agent.exe github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent
-	$(WIN_BUILD)/start-amazon-cloudwatch-agent.exe github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/start-amazon-cloudwatch-agent
-	$(WIN_BUILD)/amazon-cloudwatch-agent-config-wizard.exe github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent-config-wizard
+	$(WIN_BUILD)/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
+	$(WIN_BUILD)/config-translator.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+	$(WIN_BUILD)/amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(WIN_BUILD)/start-amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(WIN_BUILD)/amazon-cloudwatch-agent-config-wizard.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 
 # A fast build that only builds amd64, we don't need wizard and config downloader
 build-for-docker: build-for-docker-amd64
 
 build-for-docker-amd64:
-	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent
-	$(LINUX_AMD64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/start-amazon-cloudwatch-agent
-	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
+	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(LINUX_AMD64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
 build-for-docker-arm64:
-	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent
-	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/start-amazon-cloudwatch-agent
-	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/config-translator
+	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
 # this is because we docker ignore our build dir
 # even if there is no dir rm -rf will not fail but if there already is a dir mkdir will

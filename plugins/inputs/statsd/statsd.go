@@ -18,8 +18,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd/graphite"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd/graphite"
 )
 
 const (

@@ -3,8 +3,6 @@
 # Amazon CloudWatch Agent
 The Amazon CloudWatch Agent is software developed for the [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)
 
-This repo is for the effort to port CloudWatch Agent to run on the OpenTelemetry framework.
-
 ## Overview
 The Amazon CloudWatch Agent enables you to do the following:
 

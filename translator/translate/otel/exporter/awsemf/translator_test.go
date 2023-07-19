@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
-	legacytranslator "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 var nilSlice []string

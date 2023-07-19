@@ -19,7 +19,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/swap"
 	"github.com/stretchr/testify/assert"
 
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd"
 )
 
 const testCfg = "./testdata/all_plugins.toml"
@@ -161,7 +161,7 @@ func Test_StatsdPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
 		plugin:             "statsd",
 		regularInputConfig: regularInputConfig{},
-		//StatsD Format: https://github.com/aws/private-amazon-cloudwatch-agent-staging/tree/a136be274bc35947fe7c92f9f4fd1f338de62aee/plugins/inputs/statsd#influx-statsd
+		//StatsD Format: https://github.com/aws/amazon-cloudwatch-agent/tree/v1.247360.0/plugins/inputs/statsd#influx-statsd
 		serviceInputConfig:   serviceInputConfig{protocol: "udp", listeningPort: "127.0.0.1:14224", metricSending: []byte("statsd_time_idle:42|c\n")},
 		expectedMetrics:      [][]string{{"time_idle"}},
 		numMetricsComparator: assert.Equal,

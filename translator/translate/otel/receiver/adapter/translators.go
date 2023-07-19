@@ -11,17 +11,17 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/files"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/windows_events"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
-	collectd "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/collectd"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/customizedmetrics"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/gpu"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/procstat"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect/statsd"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
+	collectd "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/collectd"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/customizedmetrics"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/gpu"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/procstat"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 const (

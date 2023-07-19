@@ -7,18 +7,17 @@ FROM $GO_IMAGE as builder
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 ARG TARGETARCH
 ENV GOPROXY=direct
-RUN mkdir -p /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
-WORKDIR /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
+RUN mkdir -p /go/src/github.com/aws/amazon-cloudwatch-agent/
+WORKDIR /go/src/github.com/aws/amazon-cloudwatch-agent/
 
 ARG GO111MODULE="on"
 ENV GO111MODULE=${GO111MODULE}
 
-COPY go.mod /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
-COPY go.sum /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
+COPY go.mod /go/src/github.com/aws/amazon-cloudwatch-agent/
+COPY go.sum /go/src/github.com/aws/amazon-cloudwatch-agent/
 RUN go mod download -x
 
-COPY . /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/
-
+COPY . /go/src/github.com/aws/amazon-cloudwatch-agent/
 RUN make build-for-docker-${TARGETARCH}
 
 # Install cert and binaries
@@ -31,7 +30,7 @@ RUN mkdir -p /opt/aws/amazon-cloudwatch-agent/var
 RUN apt-get update &&  \
     apt-get install -y ca-certificates && \
     rm -rf /var/lib/apt/lists/*
-COPY --from=builder /go/src/github.com/aws/private-amazon-cloudwatch-agent-staging/build/bin/linux_${TARGETARCH}/ /opt/aws/amazon-cloudwatch-agent/bin
+COPY --from=builder /go/src/github.com/aws/amazon-cloudwatch-agent/build/bin/linux_${TARGETARCH}/ /opt/aws/amazon-cloudwatch-agent/bin
 
 FROM scratch
 

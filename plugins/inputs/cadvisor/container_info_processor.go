@@ -12,8 +12,8 @@ import (
 
 	cinfo "github.com/google/cadvisor/info/v1"
 
-	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/cadvisor/extractors"
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor/extractors"
 )
 
 const (
@@ -71,7 +71,7 @@ func processContainers(cInfos []*cinfo.ContainerInfo, detailMode bool, container
 	// contained https://github.com/aws/amazon-cloudwatch-agent/issues/188
 	// docker systemd https://github.com/aws/amazon-cloudwatch-agent/pull/171
 	if len(metrics) == beforePod {
-		log.Printf("W! No pod metric collected, metrics count is still %d is containerd socket mounted? https://github.com/aws/private-amazon-cloudwatch-agent-staging/issues/188", beforePod)
+		log.Printf("W! No pod metric collected, metrics count is still %d is containerd socket mounted? https://github.com/aws/amazon-cloudwatch-agent/issues/188", beforePod)
 	}
 
 	metrics = mergeMetrics(metrics)
@@ -197,7 +197,7 @@ func processPod(info *cinfo.ContainerInfo, podKeys map[string]podKey) []*extract
 
 // Check if it's a container running inside container, caller will drop the metric when return value is true.
 // The validation is based on ContainerReference.Name, which is essentially cgroup path.
-// The first version is from https://github.com/aws/private-amazon-cloudwatch-agent-staging/commit/e8daa5f5926c5a5f38e0ceb746c141be463e11e4#diff-599185154c116b295172b56311729990d20672f6659500870997c018ce072100
+// The first version is from https://github.com/aws/amazon-cloudwatch-agent/commit/e8daa5f5926c5a5f38e0ceb746c141be463e11e4#diff-599185154c116b295172b56311729990d20672f6659500870997c018ce072100
 // But the logic no longer works when docker is using systemd as cgroup driver, because a prefix like `kubepods` is attached to each segment.
 // The new name pattern with systemd is
 // - Guaranteed /kubepods.slice/kubepods-podc8f7bb69_65f2_4b61_ae5a_9b19ac47a239.slice/docker-523b624a86a2a74c2bedf586d8448c86887ef7858a8dec037d6559e5ad3fccb5.scope

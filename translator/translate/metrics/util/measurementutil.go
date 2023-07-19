@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	translatorConfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	translatorConfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 )
 
 const (

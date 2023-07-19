@@ -4,8 +4,8 @@
 package config
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 const RUNASUSER = "run_as_user"

@@ -6,9 +6,9 @@ package data
 import (
 	"fmt"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 type Config struct {

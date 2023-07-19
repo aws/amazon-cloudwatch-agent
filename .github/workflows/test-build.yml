@@ -10,8 +10,8 @@ on:
     inputs:
       ContainerRepositoryNameAndTag:
         # e.g. "cwagent-integration-test:SHA"
-        # e.g. "ccwa-release:latest"
-        # e.g. "ccwa_nonprod:latest"
+        # e.g. "cwa-release:latest"
+        # e.g. "cwa_nonprod:latest"
         description: "ECR repo name and tag"
         required: true
         type: string
@@ -30,8 +30,8 @@ on:
     inputs:
       ContainerRepositoryNameAndTag:
         # e.g. "cwagent-integration-test:SHA"
-        # e.g. "ccwa-release:latest"
-        # e.g. "ccwa_nonprod:latest"
+        # e.g. "cwa-release:latest"
+        # e.g. "cwa_nonprod:latest"
         description: "ECR repo name and tag"
         required: true
         type: string

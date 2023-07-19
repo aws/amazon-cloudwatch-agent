@@ -16,7 +16,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/tls"
+	"github.com/aws/amazon-cloudwatch-agent/internal/tls"
 )
 
 type KubeClient struct {

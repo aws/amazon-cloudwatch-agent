@@ -13,9 +13,9 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/testutil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {

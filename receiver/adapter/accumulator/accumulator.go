@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util"
 )
 
 // OtelAccumulator implements the telegraf.Accumulator interface, but works as an OTel plugin by passing the metrics

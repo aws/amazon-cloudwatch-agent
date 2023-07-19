@@ -6,9 +6,9 @@ package customizedmetrics
 import (
 	"sort"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
-	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
+	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
 )
 
 type customizedMetric struct {

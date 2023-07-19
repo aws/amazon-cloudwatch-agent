@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/processor/processortest"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 )
 
 func TestTranslateWindows(t *testing.T) {

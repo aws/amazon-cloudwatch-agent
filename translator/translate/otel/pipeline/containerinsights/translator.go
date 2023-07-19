@@ -9,10 +9,10 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsemf"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor/batchprocessor"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
 const (

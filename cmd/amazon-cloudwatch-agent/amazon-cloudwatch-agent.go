@@ -32,16 +32,16 @@ import (
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/otelcol"
 
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/defaultcomponents"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/registry"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
+	"github.com/aws/amazon-cloudwatch-agent/service/registry"
 )
 
 const (
@@ -280,7 +280,7 @@ func runAgent(ctx context.Context,
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Printf("E! Unable to create pidfile: %s\n", err)
+			log.Printf("E! Unable to create pidfile: %s", err)
 		} else {
 			fmt.Fprintf(f, "%d\n", os.Getpid())
 
@@ -311,12 +311,6 @@ func runAgent(ctx context.Context,
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
 
-	// TODO: Update BuildInfo with agentinfo
-	// info := component.BuildInfo{
-	// 	Command:     "telegraf-otel-poc",
-	// 	Description: "My POC",
-	// 	Version:     "0.0",
-	// }
 	yamlConfigPath := *fOtelConfig
 	fprovider := fileprovider.New()
 	settings := otelcol.ConfigProviderSettings{
@@ -346,9 +340,7 @@ func runAgent(ctx context.Context,
 	agentinfo.SetComponents(cfg, c)
 
 	params := otelcol.CollectorSettings{
-		Factories: factories,
-		// TODO: Update BuildInfo with agentinfo
-		// BuildInfo: info,
+		Factories:      factories,
 		ConfigProvider: provider,
 	}
 

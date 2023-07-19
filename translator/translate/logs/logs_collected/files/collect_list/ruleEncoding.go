@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding/ianaindex"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 const EncodingSectionKey = "encoding"

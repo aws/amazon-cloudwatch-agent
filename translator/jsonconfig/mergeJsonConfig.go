@@ -8,12 +8,12 @@ import (
 	"os"
 	"sort"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/registerrules"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ecsutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, defaultJsonConfigMap map[string]interface{}, multiConfig string) (map[string]interface{}, error) {

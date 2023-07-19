@@ -11,12 +11,12 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline"
-	translatorUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
+	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 const (

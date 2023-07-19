@@ -4,7 +4,7 @@
 package util
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/ecsutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 func GetECSClusterName(sectionKey string, input map[string]interface{}) string {

@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/outputs/cloudwatch"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/processors/ec2tagger"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
 
 func Factories() (otelcol.Factories, error) {

@@ -16,7 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
 // Clean integration hosts if they have been open longer than 1 day

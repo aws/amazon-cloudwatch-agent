@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail/winfile"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/winfile"
 )
 
 func createTempFile(dir, prefix string) (*os.File, error) {

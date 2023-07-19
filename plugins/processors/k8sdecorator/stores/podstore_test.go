@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 
-	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/k8sCommon/k8sclient"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/mapWithExpiry"
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 )
 
 func getBaseTestPodInfo() *corev1.Pod {

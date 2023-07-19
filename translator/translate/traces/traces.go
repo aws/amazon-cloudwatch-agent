@@ -6,8 +6,8 @@ package traces
 import (
 	"fmt"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 )
 
 type mergeRule struct {
