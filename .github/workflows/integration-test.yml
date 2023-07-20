@@ -13,6 +13,7 @@ env:
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
+
 on:
   push:
     branches:
@@ -144,6 +145,8 @@ jobs:
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
+      ec2_windows_performance_matrix: ${{steps.set-matrix.outputs.ec2_windows_performance_matrix}}
+      ec2_windows_stress_matrix: ${{steps.set-matrix.outputs.ec2_windows_windows_matrix}}
       ec2_stress_matrix: ${{steps.set-matrix.outputs.ec2_stress_matrix}}
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
@@ -169,6 +172,7 @@ jobs:
           echo "::set-output name=ec2_windows_matrix::$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))"
           echo "::set-output name=ec2_mac_matrix::$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))"
           echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
+          echo "::set-output name=ec2_windows_performance_matrix::$(echo $(cat generator/resources/ec2_windows_performance_complete_test_matrix.json))"
           echo "::set-output name=ec2_stress_matrix::$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))"
           echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
@@ -182,6 +186,7 @@ jobs:
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
           echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
+          echo "ec2_windows_performance_matrix: ${{ steps.set-matrix.outputs.ec2_windows_performance_matrix}}"
           echo "ec2_stress_matrix: ${{ steps.set-matrix.outputs.ec2_stress_matrix}}"
           echo "ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
           echo "ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
@@ -1190,6 +1195,74 @@ jobs:
       fail-fast: false
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Cache if success
+        id: performance-tracking
+        uses: actions/cache@v3
+        with:
+          path: go.mod
+          key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+
+      - name: Verify Terraform version
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
+        run: terraform --version
+
+      - name: Terraform apply
+        if: steps.performance-tracking.outputs.cache-hit != 'true'
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 1
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/performance
+            terraform init
+            if terraform apply --auto-approve \
+              -var="ssh_key_value=${PRIVATE_KEY}"  \
+              -var="cwa_github_sha=${GITHUB_SHA}" \
+              -var="ami=${{ matrix.arrays.ami }}" \
+              -var="arc=${{ matrix.arrays.arc }}" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
+              -var="family=${{ matrix.arrays.family}}"\
+              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/performance && terraform destroy --auto-approve
+
+  EC2WinPerformanceTest:
+    name: "EC2WinPerformanceTest"
+    needs: [ BuildMSI, GenerateTestMatrix ]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_performance_matrix) }}
     permissions:
       id-token: write
       contents: read
