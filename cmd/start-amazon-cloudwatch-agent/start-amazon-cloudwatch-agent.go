@@ -49,14 +49,20 @@ var runInContainer = os.Getenv(config.RUN_IN_CONTAINER)
 
 func translateConfig() error {
 	args := []string{"--output", tomlConfigPath, "--mode", "auto"}
+	var stdoutIOWriter io.Writer
+	var stderrIOWriter io.Writer
 	if runInContainer == config.RUN_IN_CONTAINER_TRUE {
 		args = append(args, "--input-dir", CONFIG_DIR_IN_CONTAINER)
+		stdoutIOWriter = os.Stdout
+		stderrIOWriter = os.Stderr
 	} else {
 		args = append(args, "--input", jsonConfigPath, "--input-dir", jsonDirPath, "--config", commonConfigPath)
+		stdoutIOWriter = io.MultiWriter(log.Writer(), os.Stdout)
+		stderrIOWriter = io.MultiWriter(log.Writer(), os.Stderr)
 	}
 	cmd := exec.Command(translatorBinaryPath, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stdout
+	cmd.Stdout = stdoutIOWriter
+	cmd.Stderr = stderrIOWriter
 	err := cmd.Run()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
