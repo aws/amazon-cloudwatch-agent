@@ -11,7 +11,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/question/events"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/serialization"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/tracesconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
@@ -29,7 +29,7 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 	if ctx.OsParameter == util.OsTypeWindows {
 		return events.Processor
 	}
-	return serialization.Processor
+	return tracesconfig.Processor
 }
 
 func monitorLogs(ctx *runtime.Context, config *data.Config) {

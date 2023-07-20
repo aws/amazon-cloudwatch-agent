@@ -27,10 +27,9 @@ import (
 
 const (
 	configJsonFileName = "config.json"
-
-	OsTypeLinux   = "linux"
-	OsTypeWindows = "windows"
-	OsTypeDarwin  = "darwin"
+	OsTypeLinux        = "linux"
+	OsTypeWindows      = "windows"
+	OsTypeDarwin       = "darwin"
 
 	MapKeyMetricsCollectionInterval = "metrics_collection_interval"
 	MapKeyInstances                 = "resources"
@@ -83,8 +82,7 @@ func SerializeResultMapToJsonByteArray(resultMap map[string]interface{}) []byte 
 	return resultByteArray
 }
 
-func SaveResultByteArrayToJsonFile(resultByteArray []byte) string {
-	filePath := ConfigFilePath()
+func SaveResultByteArrayToJsonFile(resultByteArray []byte, filePath string) string {
 	err := os.WriteFile(filePath, resultByteArray, 0755)
 	if err != nil {
 		fmt.Printf("Error in writing file to %s: %v\nMake sure that you have write permission to %s.", filePath, err, filePath)
@@ -224,6 +222,31 @@ func Choice(question string, defaultOption int, validValues []string) string {
 	}
 }
 
+// ChoiceIndex returns index of choice chosen
+func ChoiceIndex(question string, defaultOption int, validValues []string) int {
+	for {
+		var answer string
+		options := ""
+		if validValues != nil {
+			for i := range validValues {
+				options = fmt.Sprintf("%s%s. %s\n", options, strconv.Itoa(i+1), validValues[i])
+			}
+			fmt.Printf("%s\n%sdefault choice: [%d]:\n\r", question, options, defaultOption)
+		}
+		stdin.Scanln(&answer)
+		var option int
+		var err error
+		if answer == "" {
+			option = defaultOption
+		} else {
+			option, err = strconv.Atoi(answer)
+		}
+		if err == nil && option > 0 && option <= len(validValues) {
+			return option - 1
+		}
+		fmt.Printf("The value %s is not valid to this question.\nPlease retry to answer:\n", answer)
+	}
+}
 func EnterToExit() {
 	fmt.Println("Please press Enter to exit...")
 	stdin.Scanln()

@@ -20,14 +20,19 @@ type processor struct{}
 func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
 	_, resultMap := config.ToMap(ctx)
 	byteArray := util.SerializeResultMapToJsonByteArray(resultMap)
-	util.SaveResultByteArrayToJsonFile(byteArray)
+	var filepath string
+	filepath = ctx.ConfigOutputPath
+	if filepath == "" {
+		filepath = util.ConfigFilePath()
+	}
+	util.SaveResultByteArrayToJsonFile(byteArray, filepath)
 	fmt.Printf("Current config as follows:\n"+
 		"%s\n"+
 		"Please check the above content of the config.\n"+
 		"The config file is also located at %s.\n"+
 		"Edit it manually if needed.\n",
 		string(byteArray),
-		util.ConfigFilePath())
+		filepath)
 }
 
 func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) interface{} {

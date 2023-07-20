@@ -3,19 +3,27 @@
 package xraydaemonmigration
 
 import (
-	"encoding/json"
+	_ "embed"
+	"errors"
+	"flag"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/shirou/gopsutil/process"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
 )
 
 type Process interface {
 	Cwd() (string, error)
 	CmdlineSlice() ([]string, error)
+	Cmdline() (string, error)
 }
 
+// Daemon Yaml Configuration struct
 type YamlConfig struct {
 	TotalBufferSizeMB int    `yaml:"TotalBufferSizeMB"`
 	Concurrency       int    `yaml:"Concurrency"`
@@ -26,58 +34,51 @@ type YamlConfig struct {
 	} `yaml:"Socket"`
 	LocalMode    bool   `yaml:"LocalMode"`
 	ResourceARN  string `yaml:"ResourceARN"`
-	RoleARN      string `yaml:"string"`
+	RoleARN      string `yaml:"RoleARN"`
 	ProxyAddress string `yaml:"ProxyAddress"`
 	Endpoint     string `yaml:"Endpoint"`
 	NoVerifySSL  bool   `yaml:"NoVerifySSL"`
 }
-type JsonConfig struct {
-	Traces struct {
-		TracesCollected struct {
-			Xray struct {
-				BindAddress string `json:"bind_address"`
-				TcpProxy    struct {
-					BindAddress string `json:"bind_address"`
-				} `json:"tcp_proxy"`
-			} `json:"xray"`
-		} `json:"traces_collected"`
-		Concurrency  int    `json:"concurrency"`
-		BufferSizeMB int    `json:"buffer_size_mb"`
-		ResourceArn  string `json:"resource_arn"`
-		LocalMode    bool   `json:"local_mode"` //local
-		Insecure     bool   `json:"insecure"`   //noverifyssl
-		Credentials  struct {
-			RoleArn string `json:"role_arn"`
-		} `json:"credentials"`
-		EndpointOverride string `json:"endpoint_override"` //endpoint
-		RegionOverride   string `json:"region_override"`   //region
-		ProxyOverride    string `json:"proxy_override"`
-	} `json:"traces"`
-}
 
-func daemonFlagSet(yamlConfig YamlConfig, process Process) (YamlConfig, error) {
+// Setting flags for Daemon
+func daemonFlagSet(yamlConfig *YamlConfig, process Process) error {
+	newFlag := NewFlag("X-Ray Daemon")
 	var configFilePath string
-	flag := NewFlag("X-Ray Daemon")
-
-	flag.StringVarF(&yamlConfig.ResourceARN, "resource-arn", "a", yamlConfig.ResourceARN, "Amazon Resource Name (ARN) of the AWS resource running the daemon.")
-	flag.BoolVarF(&yamlConfig.LocalMode, "local-mode", "o", yamlConfig.LocalMode, "Don't check for EC2 instance metadata.")
-	flag.IntVarF(&yamlConfig.TotalBufferSizeMB, "buffer-memory", "m", yamlConfig.TotalBufferSizeMB, "Change the amount of memory in MB that buffers can use (minimum 3).")
-	flag.StringVarF(&yamlConfig.Region, "region", "n", yamlConfig.Region, "Send segments to X-Ray service in a specific region.")
-	flag.StringVarF(&yamlConfig.Socket.UDPAddress, "bind", "b", yamlConfig.Socket.UDPAddress, "Overrides default UDP address (127.0.0.1:2000).")
-	flag.StringVarF(&yamlConfig.Socket.TCPAddress, "bind-tcp", "t", yamlConfig.Socket.TCPAddress, "Overrides default TCP address (127.0.0.1:2000).")
-	flag.StringVarF(&yamlConfig.RoleARN, "role-arn", "r", yamlConfig.RoleARN, "Assume the specified IAM role to upload segments to a different account.")
-	flag.StringVarF(&configFilePath, "config", "c", "", "Load a configuration file from the specified path.")
-	flag.StringVarF(&yamlConfig.ProxyAddress, "proxy-address", "p", yamlConfig.ProxyAddress, "Proxy address through which to upload segments.")
+	newFlag.StringVarF(&yamlConfig.ResourceARN, "resource-arn", "a", yamlConfig.ResourceARN, "Amazon Resource Name (ARN) of the AWS resource running the daemon.")
+	newFlag.BoolVarF(&yamlConfig.LocalMode, "local-mode", "o", yamlConfig.LocalMode, "Don't check for EC2 instance metadata.")
+	newFlag.IntVarF(&yamlConfig.TotalBufferSizeMB, "buffer-memory", "m", yamlConfig.TotalBufferSizeMB, "Change the amount of memory in MB that buffers can use (minimum 3).")
+	newFlag.StringVarF(&yamlConfig.Region, "region", "n", yamlConfig.Region, "Send segments to X-Ray service in a specific region.")
+	newFlag.StringVarF(&yamlConfig.Socket.UDPAddress, "bind", "b", yamlConfig.Socket.UDPAddress, "Overrides default UDP address (127.0.0.1:2000).")
+	newFlag.StringVarF(&yamlConfig.Socket.TCPAddress, "bind-tcp", "t", yamlConfig.Socket.TCPAddress, "Overrides default TCP address (127.0.0.1:2000).")
+	newFlag.StringVarF(&yamlConfig.RoleARN, "role-arn", "r", yamlConfig.RoleARN, "Assume the specified IAM role to upload segments to a different account.")
+	newFlag.StringVarF(&configFilePath, "config", "c", "", "Load a configuration file from the specified path.")
+	newFlag.StringVarF(&yamlConfig.ProxyAddress, "proxy-address", "p", yamlConfig.ProxyAddress, "Proxy address through which to upload segments.")
 	cmdline, err := process.CmdlineSlice()
 	if err != nil {
-		return yamlConfig, err
+		return err
 	}
+
 	if len(cmdline) != 0 {
-		flag.fs.Parse(cmdline[1:])
+		//if fails because of service we do not want user to see unnecessary logs.
+		newFlag.fs.SetOutput(io.Discard)
+		err = newFlag.fs.Parse(cmdline[1:])
+		if err != nil {
+			return err
+		}
+		//checking num of flag were passed through command line
+		count := 0
+		newFlag.fs.Visit(func(fl *flag.Flag) {
+			count++
+		})
+		//xray is service or just use default config
+		if count == 0 {
+			return errors.New("no flags were passed")
+		}
 	}
-	return yamlConfig, nil
+	return nil
 }
 
+// Process Wrapper function
 var GetProcesses = func() ([]Process, error) {
 	processList, err := process.Processes()
 	if err != nil {
@@ -96,71 +97,82 @@ var GetProcesses = func() ([]Process, error) {
 	return xrayProcesses, nil
 }
 
-// Converting yaml Data to Json File. Pid is needed to get command line arguments of the process (if Daemon is running as a process and not a service).
-func ConvertYamlToJson(yamlData []byte, process Process) ([]byte, error) {
+// Converting yaml Data to Json File. Process is needed to get command line arguments.
+func ConvertYamlToJson(yamlData []byte, process Process) (*config.Traces, error) {
 
-	var jsonConfig JsonConfig
+	//Defining JSON and YAML struct
+	var jsonConfig config.Traces
 	var yamlConfig YamlConfig
+	//Add data to yaml and set flags
 	err := yaml.Unmarshal(yamlData, &yamlConfig)
-	yamlConfig, err = daemonFlagSet(yamlConfig, process)
 	if err != nil {
 		return nil, err
 	}
-	jsonConfig.Traces.TracesCollected.Xray.BindAddress = yamlConfig.Socket.UDPAddress
-	jsonConfig.Traces.TracesCollected.Xray.TcpProxy.BindAddress = yamlConfig.Socket.TCPAddress
-	jsonConfig.Traces.BufferSizeMB = yamlConfig.TotalBufferSizeMB
-	jsonConfig.Traces.Concurrency = yamlConfig.Concurrency
-	jsonConfig.Traces.RegionOverride = yamlConfig.Region
-	jsonConfig.Traces.LocalMode = yamlConfig.LocalMode
-	jsonConfig.Traces.ResourceArn = yamlConfig.ResourceARN
-	jsonConfig.Traces.Credentials.RoleArn = yamlConfig.RoleARN
-	jsonConfig.Traces.ProxyOverride = yamlConfig.ProxyAddress
-	jsonConfig.Traces.EndpointOverride = yamlConfig.Endpoint
-	jsonConfig.Traces.Insecure = yamlConfig.NoVerifySSL
-	//converts to JSON adding indentation to make output look nicer
-	jsonData, _ := json.MarshalIndent(jsonConfig, "", "\t")
+	if process != nil {
+		err = daemonFlagSet(&yamlConfig, process)
+	}
 
-	return jsonData, nil
+	if err != nil {
+		return nil, err
+	}
+
+	//mapping YAML to JSON
+	jsonConfig.TracesCollected.Xray.BindAddress = yamlConfig.Socket.UDPAddress
+	jsonConfig.TracesCollected.Xray.TcpProxy.BindAddress = yamlConfig.Socket.TCPAddress
+	jsonConfig.BufferSizeMB = yamlConfig.TotalBufferSizeMB
+	jsonConfig.Concurrency = yamlConfig.Concurrency
+	jsonConfig.RegionOverride = yamlConfig.Region
+	jsonConfig.LocalMode = yamlConfig.LocalMode
+	jsonConfig.ResourceArn = yamlConfig.ResourceARN
+	if yamlConfig.RoleARN != "" {
+		if jsonConfig.Credentials == nil {
+			jsonConfig.Credentials = &struct {
+				RoleArn string `json:"role_arn,omitempty"`
+			}{}
+		}
+
+		jsonConfig.Credentials.RoleArn = yamlConfig.RoleARN
+	}
+	jsonConfig.ProxyOverride = yamlConfig.ProxyAddress
+	jsonConfig.EndpointOverride = yamlConfig.Endpoint
+	jsonConfig.Insecure = yamlConfig.NoVerifySSL
+
+	//converts to JSON adding indentation to make output look nicer
+	return &jsonConfig, nil
 }
 
-func FindAllPotentialConfigFiles() ([]string, error) {
-	var allPotentialConfigFiles []string
-	//loop through all Daemons
-	processes, err := GetProcesses()
+// Finds config file from cmdline
+func FindConfigFile(process Process) (string, error) {
+
+	argList, err := process.CmdlineSlice()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	if len(processes) == 0 || processes == nil {
-		return nil, nil
+	//got the path from command line (might not be exact path)
+	path := GetPathFromArgs(argList)
+	cwd, err := process.Cwd()
+	if err != nil {
+		return "", err
 	}
-	for i := 0; i < len(processes); i++ {
-		argList, err := processes[i].CmdlineSlice()
-		if err != nil || len(argList) == 0 {
-			continue
-		}
-		//got the path from command line (might not be exact path)
-		path := GetPathFromArgs(argList)
-		cwd, err := processes[i].Cwd()
-		if err != nil {
-			return nil, err
-		}
+	configFile := path
+	if configFile == "" {
+		return "", nil
+	}
+	//If the cwd in path, then that is the full path, otherwise add to config file path
+	if filepath.IsAbs(path) {
+		configFile = path
+	} else {
+		configFile = filepath.Join(cwd, path)
+	}
+	fileInfo, err := os.Stat(configFile)
+	if err != nil {
+		return "", err
+	}
+	if !fileInfo.IsDir() {
+		return configFile, nil
+	}
+	return "", nil
 
-		configFile := path
-		//If the cwd in path, then that is the full path, otherwise add to config file path
-		if filepath.IsAbs(path) {
-			configFile = path
-		} else {
-			configFile = filepath.Join(cwd, path)
-		}
-
-		allPotentialConfigFiles = append(allPotentialConfigFiles, configFile)
-
-	}
-	if len(allPotentialConfigFiles) == 0 {
-		return nil, nil
-	}
-	//printing the config file the user has access too.
-	return allPotentialConfigFiles, nil
 }
 
 // Finds all Daemons and returns their pid
@@ -176,7 +188,7 @@ func FindAllDaemons() ([]Process, error) {
 	return returnList, nil
 }
 
-// get the config file path from arguments
+// Get the config file path from arguments
 func GetPathFromArgs(argList []string) string {
 	for i := 0; i < len(argList); i++ {
 		arg := strings.Trim(strings.ToLower(argList[i]), "-")

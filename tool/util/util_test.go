@@ -55,7 +55,7 @@ func TestSerializeResultMapToJsonByteArray(t *testing.T) {
 }
 
 func TestSaveResultByteArrayToJsonFile(t *testing.T) {
-	filePath := SaveResultByteArrayToJsonFile([]byte(expectResult))
+	filePath := SaveResultByteArrayToJsonFile([]byte(expectResult), ConfigFilePath())
 	bytes, err := os.ReadFile(filePath)
 	assert.NoError(t, err)
 	actualResult := string(bytes)
@@ -122,4 +122,20 @@ func TestChoice(t *testing.T) {
 	parsedAnswer = Choice("Question", 1, []string{"validValue1", "validValue2"})
 
 	assert.Equal(t, "validValue2", parsedAnswer)
+}
+
+func TestChoiceIndex(t *testing.T) {
+	inputChan := testutil.SetUpTestInputStream()
+
+	testutil.Type(inputChan, "")
+
+	parsedAnswer := ChoiceIndex("Question", 1, []string{"validValue1", "validValue2"})
+
+	assert.Equal(t, 0, parsedAnswer)
+
+	testutil.Type(inputChan, "InvalidAnswer", "2")
+
+	parsedAnswer = ChoiceIndex("Question", 1, []string{"validValue1", "validValue2"})
+
+	assert.Equal(t, 1, parsedAnswer)
 }

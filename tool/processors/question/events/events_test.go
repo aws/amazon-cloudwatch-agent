@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/serialization"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/tracesconfig"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
@@ -36,5 +36,5 @@ func TestProcessor_Process(t *testing.T) {
 
 func TestProcessor_NextProcessor(t *testing.T) {
 	nextProcessor := Processor.NextProcessor(nil, nil)
-	assert.Equal(t, serialization.Processor, nextProcessor)
+	assert.Equal(t, tracesconfig.Processor, nextProcessor)
 }

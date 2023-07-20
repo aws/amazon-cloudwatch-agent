@@ -52,7 +52,7 @@ func (f *Flag) BoolVarF(ptr *bool, name string, shortName string, value bool, us
 func NewFlag(name string) *Flag {
 	flag := &Flag{
 		cliStrings: make([]string, 0, 19),
-		fs:         flag.NewFlagSet(name, flag.ExitOnError),
+		fs:         flag.NewFlagSet(name, flag.ContinueOnError),
 	}
 	return flag
 }

@@ -12,9 +12,9 @@
   "resource_arn": "resourceTesting",
   "local_mode": true,
   "insecure": false,
+  "region_override": "us-east-1",
+  "proxy_override": "127.0.0.1:2000",
   "credentials": {
     "role_arn": "roleTest"
-  },
-  "region_override": "us-east-1",
-  "proxy_override": "127.0.0.1:2000"
+  }
 }
