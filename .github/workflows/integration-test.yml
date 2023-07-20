@@ -1199,7 +1199,6 @@ jobs:
     name: "PerformanceTrackingTest"
     needs: [MakeBinary, GenerateTestMatrix]
     runs-on: ubuntu-latest
-    if: false
     strategy:
       fail-fast: false
       matrix:
