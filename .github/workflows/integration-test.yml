@@ -256,7 +256,6 @@ jobs:
   MakeMacPkg:
     name: 'MakeMacPkg'
     runs-on: macos-11
-    if: false
     permissions:
       id-token: write
       contents: read
@@ -468,7 +467,6 @@ jobs:
     needs: [ MakeBinary, BuildMSI, StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
     runs-on: ubuntu-latest
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -582,7 +580,6 @@ jobs:
     needs: [MakeBinary, StartLocalStack, GenerateTestMatrix]
     name: 'Test'
     runs-on: ubuntu-latest
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -672,7 +669,6 @@ jobs:
     needs: [BuildMSI, GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -754,7 +750,6 @@ jobs:
     needs: [MakeMacPkg, GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -872,7 +867,6 @@ jobs:
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
     needs: [ MakeBinary, GenerateTestMatrix ]
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -955,7 +949,6 @@ jobs:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
     needs: [MakeBinary, GenerateTestMatrix]
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1035,7 +1028,6 @@ jobs:
     name: 'EKSIntegrationTest'
     runs-on: ubuntu-latest
     needs: [ MakeBinary, GenerateTestMatrix ]
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1118,7 +1110,6 @@ jobs:
     name: 'EKSPrometheusIntegrationTest'
     runs-on: ubuntu-latest
     needs: [ MakeBinary, GenerateTestMatrix ]
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1222,7 +1213,6 @@ jobs:
       - name: Cache if success
         id: performance-tracking
         uses: actions/cache@v3
-        if: false
         with:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -1291,7 +1281,6 @@ jobs:
       - name: Cache if success
         id: performance-tracking
         uses: actions/cache@v3
-        if: false
         with:
           path: go.mod
           key: performance-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
@@ -1337,7 +1326,6 @@ jobs:
     name: "StressTrackingTest"
     needs: [MakeBinary, GenerateTestMatrix]
     runs-on: ubuntu-latest
-    if: false
     strategy:
       fail-fast: false
       matrix:
