@@ -144,6 +144,7 @@ jobs:
       ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
       ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
       ec2_performance_matrix: ${{steps.set-matrix.outputs.ec2_performance_matrix}}
+      ec2_windows_performance_matrix: ${{steps.set-matrix.outputs.ec2_windows_performance_matrix}}
       ec2_windows_stress_matrix: ${{steps.set-matrix.outputs.ec2_windows_windows_matrix}}
       ec2_stress_matrix: ${{steps.set-matrix.outputs.ec2_stress_matrix}}
       ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
