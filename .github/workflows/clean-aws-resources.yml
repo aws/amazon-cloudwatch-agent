@@ -134,3 +134,21 @@ jobs:
 
       - name: Clean old dedicated host
         run: go run ./tool/clean/clean_host/clean_host.go --tags=clean
+
+  clean-ecs-clusters:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old ecs cluster
+        run: go run ./tool/clean/clean_ecs/clean_ecs.go --tags=clean
