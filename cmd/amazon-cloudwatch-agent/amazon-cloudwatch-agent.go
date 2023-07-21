@@ -280,7 +280,7 @@ func runAgent(ctx context.Context,
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Printf("E! Unable to create pidfile: %s\n", err)
+			log.Printf("E! Unable to create pidfile: %s", err)
 		} else {
 			fmt.Fprintf(f, "%d\n", os.Getpid())
 
@@ -311,12 +311,6 @@ func runAgent(ctx context.Context,
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
 
-	// TODO: Update BuildInfo with agentinfo
-	// info := component.BuildInfo{
-	// 	Command:     "telegraf-otel-poc",
-	// 	Description: "My POC",
-	// 	Version:     "0.0",
-	// }
 	yamlConfigPath := *fOtelConfig
 	fprovider := fileprovider.New()
 	settings := otelcol.ConfigProviderSettings{
@@ -346,9 +340,7 @@ func runAgent(ctx context.Context,
 	agentinfo.SetComponents(cfg, c)
 
 	params := otelcol.CollectorSettings{
-		Factories: factories,
-		// TODO: Update BuildInfo with agentinfo
-		// BuildInfo: info,
+		Factories:      factories,
 		ConfigProvider: provider,
 	}
 

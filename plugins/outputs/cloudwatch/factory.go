@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 // Package cloudwatch provides a metric exporter for the OpenTelemetry collector.
-// todo: Once the private and public repositories are merged it would be good
-// to move this package to .../exporter/awscloudwatch and rename it.
 package cloudwatch
 
 import (

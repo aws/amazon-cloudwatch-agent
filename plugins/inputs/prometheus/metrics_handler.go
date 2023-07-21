@@ -77,7 +77,7 @@ func (mh *metricsHandler) setEmfMetadata(mms []*metricMaterial) {
 		// Prometheus will use the "job" corresponding to the target in prometheus as a log stream
 		// https://github.com/aws/amazon-cloudwatch-agent/blob/59cfe656152e31ca27e7983fac4682d0c33d3316/plugins/inputs/prometheus_scraper/metrics_handler.go#L80-L84
 		// While determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml as per
-		// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/outputs/cloudwatchlogs/cloudwatchlogs.go#L175-L180.
+		// https://github.com/aws/amazon-cloudwatch-agent/blob/60ca11244badf0cb3ae9dd9984c29f41d7a69302/plugins/outputs/cloudwatchlogs/cloudwatchlogs.go#L175-L180.
 
 		// However, since we are using awsemfexport, we can leverage the token replacement with the log stream name
 		// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/897db04f747f0bda1707c916b1ec9f6c79a0c678/exporter/awsemfexporter/util.go#L29-L37

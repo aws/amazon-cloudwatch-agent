@@ -53,7 +53,7 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
-      # @TODO we can add a matrix in the future but for alpha we will only deploy to AL2.
+      # @TODO we can add a matrix in the future but for for now, we will only deploy to AL2.
       - name: Terraform apply
         uses: nick-fields/retry@v2
         with:

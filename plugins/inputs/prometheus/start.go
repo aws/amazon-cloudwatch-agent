@@ -62,7 +62,7 @@ var (
 	// https://github.com/aws/amazon-cloudwatch-agent/issues/190
 	// and we would not able to get the metric type for the metric
 	// and result in dropping the metrics if it is unknown
-	// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/main/plugins/inputs/prometheus_scraper/metrics_filter.go#L23
+	// https://github.com/aws/amazon-cloudwatch-agent/blob/main/plugins/inputs/prometheus_scraper/metrics_filter.go#L23
 	metricNameRelabelConfigs = []*relabel.Config{
 		{
 			Action:       relabel.Replace,
