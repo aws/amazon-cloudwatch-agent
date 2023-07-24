@@ -6,12 +6,15 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	sysruntime "runtime"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -39,7 +42,23 @@ const (
 func CurOS() string {
 	return sysruntime.GOOS
 }
-
+func getBackupDir() string {
+	switch sysruntime.GOOS {
+	case "windows":
+		return filepath.Join(os.Getenv("APPDATA"), "Amazon", "CloudWatchAgent", "etc", "backup-configs")
+	default:
+		return "/opt/aws/amazon-cloudwatch-agent/etc/backup-configs"
+	}
+}
+func FileBackup(filePath string, dirPath string) error {
+	fileInfo, err := os.Stat(filePath)
+	if os.IsNotExist(err) || fileInfo.Size() == 0 {
+		return nil
+	} else if err = backupConfigFile(filePath, dirPath); err != nil {
+		return err
+	}
+	return nil
+}
 func CurPath() string {
 	ex, err := os.Executable()
 	if err != nil {
@@ -83,13 +102,68 @@ func SerializeResultMapToJsonByteArray(resultMap map[string]interface{}) []byte 
 }
 
 func SaveResultByteArrayToJsonFile(resultByteArray []byte, filePath string) string {
-	err := os.WriteFile(filePath, resultByteArray, 0755)
+	//make a backup of file if it exists
+	dirPath := getBackupDir()
+	err := FileBackup(filePath, dirPath)
+	if err != nil {
+		fmt.Println("There was an error trying to backup your file: ", err)
+	} else {
+		fmt.Println("Existing config JSON identified and copied to: ", dirPath)
+	}
+	err = os.WriteFile(filePath, resultByteArray, 0755)
 	if err != nil {
 		fmt.Printf("Error in writing file to %s: %v\nMake sure that you have write permission to %s.", filePath, err, filePath)
 		os.Exit(1)
 	}
 	fmt.Printf("Saved config file to %s successfully.\n", filePath)
 	return filePath
+}
+func backupConfigFile(configFilePath, backupDirPath string) error {
+
+	err := os.MkdirAll(backupDirPath, 0755)
+	if err != nil {
+		return err
+	}
+	files, err := os.ReadDir(backupDirPath)
+	if err != nil {
+		return err
+	}
+
+	newBackupNumber := len(files) + 1
+	if len(files) >= 10 {
+		sort.Slice(files, func(i, j int) bool {
+			infoI, _ := files[i].Info()
+			infoJ, _ := files[j].Info()
+			return infoI.ModTime().Before(infoJ.ModTime())
+		})
+
+		removedFileName := files[0].Name()
+		removedNumberStr := strings.TrimSuffix(strings.TrimPrefix(removedFileName, "config-"), ".json")
+		removedNumber, err := strconv.Atoi(removedNumberStr)
+		if err != nil {
+			return err
+		}
+		err = os.Remove(filepath.Join(backupDirPath, files[0].Name()))
+		if err != nil {
+			return err
+		}
+		newBackupNumber = removedNumber + 10
+	}
+	backupFilePath := filepath.Join(backupDirPath, fmt.Sprintf("config-%d.json", newBackupNumber))
+
+	backUpFile, err := os.Create(backupFilePath)
+	defer backUpFile.Close()
+	if err != nil {
+		return err
+	}
+	configFile, err := os.Open(configFilePath)
+	defer configFile.Close()
+	if err != nil {
+		return err
+	}
+	//copying file to backup
+	_, err = io.Copy(backUpFile, configFile)
+	return err
 }
 
 func SDKRegion() (region string) {

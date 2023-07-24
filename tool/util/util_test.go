@@ -5,8 +5,10 @@ package util
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -138,4 +140,29 @@ func TestChoiceIndex(t *testing.T) {
 	parsedAnswer = ChoiceIndex("Question", 1, []string{"validValue1", "validValue2"})
 
 	assert.Equal(t, 1, parsedAnswer)
+}
+
+func TestBackupConfigFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFilePath := filepath.Join(tmpDir, "testConfig.json")
+	err := os.WriteFile(configFilePath, []byte(`{"key":"value"}`), 0644)
+	assert.Nil(t, err)
+
+	backupDirPath := filepath.Join(tmpDir, "backup")
+	for i := 0; i < 16; i++ {
+		err = backupConfigFile(configFilePath, backupDirPath)
+		assert.Nil(t, err)
+
+		files, err := os.ReadDir(backupDirPath)
+		assert.Nil(t, err)
+
+		backupFileContents, err := os.ReadFile(filepath.Join(backupDirPath, files[0].Name()))
+		assert.Nil(t, err)
+		assert.Equal(t, `{"key":"value"}`, string(backupFileContents))
+		time.Sleep(time.Second)
+	}
+	files, err := os.ReadDir(backupDirPath)
+	assert.Nil(t, err)
+	assert.Equal(t, 10, len(files))
+
 }
