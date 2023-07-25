@@ -153,8 +153,8 @@ func main() {
 		if mode == config.ModeEC2 {
 			errorMessage = "E! Please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo' "
 		} else {
-			errorMessage = fmt.Sprintf("E! Please make sure the credentials and region set correctly on your hosts.\n" +
-				"Refer to http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html")
+			errorMessage = "E! Please make sure the credentials and region set correctly on your hosts.\n" +
+				"Refer to http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html"
 		}
 		log.Panicf(errorMessage)
 	}
