@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 )
 
 func TestTagMetricSourceForTypeInstance(t *testing.T) {

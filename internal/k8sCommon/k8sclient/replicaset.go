@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 type ReplicaSetClient interface {

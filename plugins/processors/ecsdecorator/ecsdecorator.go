@@ -6,11 +6,12 @@ package ecsdecorator
 import (
 	"fmt"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
+
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 const (
@@ -92,7 +93,6 @@ func (e *ECSDecorator) decorateCPU(metric telegraf.Metric, fields map[string]int
 		metric.AddField(MetricName(TypeInstance, CpuUtilization), cpuTotal.(float64)/float64(e.getCPUCapacityInCadvisorStandard())*100)
 		metric.AddField(MetricName(TypeInstance, CpuReservedCapacity), float64(e.ecsInfo.getCpuReserved())/float64(e.getCPUCapacityInCgroupStandard())*100)
 	}
-	return
 }
 
 func (e *ECSDecorator) decorateMem(metric telegraf.Metric, fields map[string]interface{}) {
@@ -101,15 +101,12 @@ func (e *ECSDecorator) decorateMem(metric telegraf.Metric, fields map[string]int
 		metric.AddField(MetricName(TypeInstance, MemUtilization), float64(memWorkingset.(uint64))/float64(e.getMemCapacity())*100)
 		metric.AddField(MetricName(TypeInstance, MemReservedCapacity), float64(e.ecsInfo.getMemReserved())/float64(e.getMemCapacity())*100)
 	}
-	return
 }
 
 func (e *ECSDecorator) decorateTaskCount(metric telegraf.Metric, tags map[string]string) {
-	if metricType, _ := tags[MetricType]; metricType == TypeInstance {
+	if metricType := tags[MetricType]; metricType == TypeInstance {
 		metric.AddField(MetricName(TypeInstance, RunningTaskCount), e.ecsInfo.getRunningTaskCount())
 	}
-	return
-
 }
 
 func (e *ECSDecorator) tagMetricRule(metric telegraf.Metric) {

@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
-
 	"strings"
 
 	"github.com/bigkevmcd/go-configparser"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
 )
 
 var knownConfigKeys = []string{

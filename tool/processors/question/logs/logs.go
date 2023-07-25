@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/serialization"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 

@@ -14,6 +14,7 @@ readonly VERSION_FILE="${CMDDIR}/CWAGENT_VERSION"
 
 # The systemd and upstart scripts assume exactly this .toml file name
 readonly TOML="${CONFDIR}/amazon-cloudwatch-agent.toml"
+readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-agent.yaml"
 readonly JSON="${CONFDIR}/amazon-cloudwatch-agent.json"
 readonly JSON_DIR="${CONFDIR}/amazon-cloudwatch-agent.d"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"
@@ -262,16 +263,17 @@ cwa_config() {
      if [ "${cwa_config_location}" = "${ALL_CONFIG}" ]; then
           rm -rf "${JSON_DIR}"/*
      else
-          runDownloaderCommand=`"${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${cwa_config_location}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}`
+          runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${cwa_config_location}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
           echo ${runDownloaderCommand} || return
      fi
 
      if [ ! "$(ls ${JSON_DIR})" ]; then
           echo "all amazon-cloudwatch-agent configurations have been removed"
           rm -f "${TOML}"
+          rm -f "${OTEL_YAML}"
      else
           echo "Start configuration validation..."
-          runTranslatorCommand=`"${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}`
+          runTranslatorCommand=$("${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
           echo "${runTranslatorCommand}" || return
 
           runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
@@ -287,6 +289,9 @@ cwa_config() {
           echo "Configuration validation succeeded"
 
           chmod ug+rw "${TOML}"
+          if [ -f "${OTEL_YAML}" ]; then
+               chmod ug+rw "${OTEL_YAML}"
+          fi
 
           # for translator:
           #       default:    only process .tmp files
@@ -339,7 +344,7 @@ set_log_level_all() {
           ;;
      esac
 
-     runEnvConfigCommand=`"${CMDDIR}/amazon-cloudwatch-agent" -setenv CWAGENT_LOG_LEVEL=${log_level} -envconfig "${ENV_CONFIG}"`
+     runEnvConfigCommand=$("${CMDDIR}/amazon-cloudwatch-agent" -setenv CWAGENT_LOG_LEVEL=${log_level} -envconfig "${ENV_CONFIG}")
      echo "${runEnvConfigCommand}" || return
      echo "Set CWAGENT_LOG_LEVEL to ${log_level}"
 }
@@ -402,7 +407,7 @@ main() {
      start) start_all "${mode}" ;;
      fetch-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'default' ;;
      append-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'append' ;;
-     remove-config) config_all "${cwa_config_location}"  "${restart}" "${mode}" 'remove' ;;
+     remove-config) config_all "${cwa_config_location}" "${restart}" "${mode}" 'remove' ;;
      status) status_all ;;
           # helpers for ssm package scripts to workaround fact that it can't determine if invocation is due to
           # upgrade or install

@@ -82,7 +82,7 @@ func (e *ecsUtil) getECSMetadata() (em *ecsMetadataResponse, err error) {
 func (e *ecsUtil) getMetadataResponse(endpoint string) (em *ecsMetadataResponse, err error) {
 	em = &ecsMetadataResponse{}
 	resp, err := e.httpClient.Request(endpoint)
-	
+
 	if err != nil {
 		return
 	}

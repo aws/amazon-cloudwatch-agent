@@ -11,9 +11,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
 )
 
-
 func CheckNvidiaSMIBinaryRights() error {
-	if err := security.CheckFileRights(util.Default_Unix_Smi_Path); err != nil{
+	if err := security.CheckFileRights(util.Default_Unix_Smi_Path); err != nil {
 		return err
 	}
 	return nil

@@ -6,8 +6,9 @@ package extractors
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 func TestCAdvisorMetric_Merge(t *testing.T) {

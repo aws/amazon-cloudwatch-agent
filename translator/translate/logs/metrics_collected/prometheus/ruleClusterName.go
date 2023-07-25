@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package emfprocessor
+package prometheus
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"

@@ -4,7 +4,6 @@
 package metrics_collected
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -79,7 +78,7 @@ func (c *CollectMetrics) ApplyRule(input interface{}) (returnKey string, returnV
 			key, val := rule.ApplyRule(im[SectionKey])
 			if key == "kubernetes" || key == "ecs" || key == "prometheus" {
 				if featureInited {
-					translator.AddErrorMessages(GetCurPath(), fmt.Sprint("Feature kubernetes, ecs, prometheus are mutually exclusive"))
+					translator.AddErrorMessages(GetCurPath(), "Feature kubernetes, ecs, prometheus are mutually exclusive")
 					return
 				} else {
 					featureInited = true

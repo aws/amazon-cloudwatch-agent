@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
-
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 )
 
 func getBaseTestPodInfo() *corev1.Pod {
@@ -340,9 +340,7 @@ func TestPodStore_addLabel(t *testing.T) {
 	assert.Equal(t, expected, kubernetesBlob)
 }
 
-//
 // Mock client start
-//
 var mockClient = new(MockClient)
 
 var mockK8sClient = &k8sclient.K8sClient{
@@ -375,9 +373,7 @@ func (client *MockClient) Shutdown() {
 // Mock client end
 //
 
-//
 // Mock client 2 start
-//
 var mockClient2 = new(MockClient2)
 
 var mockK8sClient2 = &k8sclient.K8sClient{
@@ -430,10 +426,9 @@ func TestPodStore_addPodOwnersAndPodNameFallback(t *testing.T) {
 	podStore := &PodStore{}
 	pod := getBaseTestPodInfo()
 	tags := map[string]string{MetricType: TypePod, ContainerNamekey: "ubuntu"}
-	m := metric.New("test", tags, map[string]interface{}{}, time.Now())
 
 	// Test ReplicaSet
-	m = metric.New("test", tags, map[string]interface{}{}, time.Now())
+	m := metric.New("test", tags, map[string]interface{}{}, time.Now())
 	rsName := "ReplicaSetTest"
 	suffix := "-42kcz"
 	pod.OwnerReferences[0].Kind = ReplicaSet

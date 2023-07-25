@@ -5,21 +5,21 @@ package procstat
 
 type PidFile struct{}
 
-const keyPidFile = "pid_file"
+const PidFileKey = "pid_file"
 
 func (p *PidFile) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
-	if _, ok := m[keyPidFile]; !ok {
+	if _, ok := m[PidFileKey]; !ok {
 		returnKey = ""
 		returnVal = ""
 	} else {
-		returnKey = keyPidFile
-		returnVal = m[keyPidFile]
+		returnKey = PidFileKey
+		returnVal = m[PidFileKey]
 	}
 	return
 }
 
 func init() {
 	p := new(PidFile)
-	RegisterRule(keyPidFile, p)
+	RegisterRule(PidFileKey, p)
 }

@@ -8,6 +8,8 @@ import (
 	"log"
 	"math"
 
+	"go.opentelemetry.io/collector/pdata/pmetric"
+
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
@@ -142,6 +144,33 @@ func (regularDist *RegularDistribution) AddDistributionWithWeight(distribution d
 		}
 	} else {
 		log.Printf("D! SampleCount * Weight should be larger than 0: %v, %v", distribution.SampleCount(), weight)
+	}
+}
+
+func (rd *RegularDistribution) ConvertToOtel(dp pmetric.HistogramDataPoint) {
+	dp.SetMax(rd.maximum)
+	dp.SetMin(rd.minimum)
+	dp.SetCount(uint64(rd.sampleCount))
+	dp.SetSum(rd.sum)
+	dp.ExplicitBounds().EnsureCapacity(len(rd.buckets))
+	dp.BucketCounts().EnsureCapacity(len(rd.buckets))
+	for k, v := range rd.buckets {
+		dp.ExplicitBounds().Append(k)
+		// Beware of potential loss of precision due to type conversion.
+		dp.BucketCounts().Append(uint64(v))
+	}
+}
+
+func (rd *RegularDistribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string) {
+	rd.maximum = dp.Max()
+	rd.minimum = dp.Min()
+	rd.sampleCount = float64(dp.Count())
+	rd.sum = dp.Sum()
+	rd.unit = unit
+	for i := 0; i < dp.ExplicitBounds().Len(); i++ {
+		k := dp.ExplicitBounds().At(i)
+		v := dp.BucketCounts().At(i)
+		rd.buckets[k] = float64(v)
 	}
 }
 

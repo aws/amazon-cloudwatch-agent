@@ -6,9 +6,10 @@ package extractors
 import (
 	"time"
 
+	cInfo "github.com/google/cadvisor/info/v1"
+
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
-	cInfo "github.com/google/cadvisor/info/v1"
 )
 
 const (

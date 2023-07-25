@@ -6,14 +6,13 @@ package cloudwatch
 import (
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
+
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 )
 
 const (
@@ -21,18 +20,30 @@ const (
 	durationAggregationChanBufferSize = 10000
 )
 
-type Aggregator interface {
-	AddMetric(m telegraf.Metric)
+// aggregationDatum just adds a few extra fields to the MetricDatum.
+// If aggregationInterval is 0, then no aggregation is done.
+// If receivers set the special attribute "aws:AggregationInterval", then
+// this exporter will remove it and do aggregation.
+type aggregationDatum struct {
+	cloudwatch.MetricDatum
+	aggregationInterval time.Duration
+	distribution        distribution.Distribution
 }
+
+type Aggregator interface {
+	AddMetric(m *aggregationDatum)
+}
+
+var _ Aggregator = (*aggregator)(nil)
 
 type aggregator struct {
 	durationMap  map[time.Duration]*durationAggregator
-	metricChan   chan<- telegraf.Metric
+	metricChan   chan<- *aggregationDatum
 	shutdownChan <-chan struct{}
 	wg           *sync.WaitGroup
 }
 
-func NewAggregator(metricChan chan<- telegraf.Metric, shutdownChan <-chan struct{}, wg *sync.WaitGroup) Aggregator {
+func NewAggregator(metricChan chan<- *aggregationDatum, shutdownChan <-chan struct{}, wg *sync.WaitGroup) Aggregator {
 	return &aggregator{
 		durationMap:  make(map[time.Duration]*durationAggregator),
 		metricChan:   metricChan,
@@ -41,65 +52,51 @@ func NewAggregator(metricChan chan<- telegraf.Metric, shutdownChan <-chan struct
 	}
 }
 
-func computeHash(m telegraf.Metric) string {
-	tmp := make([]string, len(m.Tags()))
-	i := 0
-	for k, v := range m.Tags() {
-		tmp[i] = fmt.Sprintf("%s=%s", k, v)
-		i++
+func getAggregationKey(m *aggregationDatum, unixTime int64) string {
+	tmp := make([]string, len(m.Dimensions))
+	for i, d := range m.Dimensions {
+		if d.Name == nil || d.Value == nil {
+			log.Printf("E! dimentions key and/or val is nil")
+			continue
+		}
+		tmp[i] = fmt.Sprintf("%s=%s", *d.Name, *d.Value)
 	}
-	sort.Strings(tmp)
-	return fmt.Sprintf("%s:%s", m.Name(), strings.Join(tmp, ","))
+	// Assume m.Dimensions was already sorted.
+	return fmt.Sprintf("%s:%s:%v", *m.MetricName, strings.Join(tmp, ","), unixTime)
 }
 
-func (agg *aggregator) AddMetric(m telegraf.Metric) {
-	var aggregationInterval string
-	var ok bool
-	if aggregationInterval, ok = m.Tags()[aggregationIntervalTagKey]; !ok {
+func (agg *aggregator) AddMetric(m *aggregationDatum) {
+	if m.aggregationInterval == 0 {
 		// no aggregation interval field key, pass through directly.
 		agg.metricChan <- m
 		return
 	}
-
-	// remove aggregation interval field key since it is irrelevant any more
-	m.RemoveTag(aggregationIntervalTagKey)
-
-	var aggregationDuration time.Duration
-	var err error
-	if aggregationDuration, err = time.ParseDuration(aggregationInterval); err != nil {
-		log.Printf("W! aggregation interval string value %v cannot be parsed into time.Duration type. No aggregation will be performed. %v",
-			aggregationInterval, err)
-		agg.metricChan <- m
-		return
-	}
-
-	aggDurationMapKey := aggregationDuration.Truncate(time.Second)
-	var durationAgg *durationAggregator
-	if durationAgg, ok = agg.durationMap[aggDurationMapKey]; !ok {
+	aggDurationMapKey := m.aggregationInterval.Truncate(time.Second)
+	durationAgg, ok := agg.durationMap[aggDurationMapKey]
+	if !ok {
 		durationAgg = newDurationAggregator(aggDurationMapKey, agg.metricChan, agg.shutdownChan, agg.wg)
 		agg.durationMap[aggDurationMapKey] = durationAgg
 	}
-
-	//auto configure high resolution
+	// auto configure high resolution
 	if aggDurationMapKey < time.Minute {
-		m.AddTag(highResolutionTagKey, "true")
+		m.SetStorageResolution(1)
 	}
-
 	durationAgg.addMetric(m)
 }
 
 type durationAggregator struct {
 	aggregationDuration time.Duration
-	metricChan          chan<- telegraf.Metric
+	metricChan          chan<- *aggregationDatum
 	shutdownChan        <-chan struct{}
 	wg                  *sync.WaitGroup
 	ticker              *time.Ticker
-	metricMap           map[string]telegraf.Metric //metric hash string + time sec int64 -> Metric object
-	aggregationChan     chan telegraf.Metric
+	// metric hash string + time sec int64 -> Metric object
+	metricMap       map[string]*aggregationDatum
+	aggregationChan chan *aggregationDatum
 }
 
 func newDurationAggregator(durationInSeconds time.Duration,
-	metricChan chan<- telegraf.Metric,
+	metricChan chan<- *aggregationDatum,
 	shutdownChan <-chan struct{},
 	wg *sync.WaitGroup) *durationAggregator {
 
@@ -108,8 +105,8 @@ func newDurationAggregator(durationInSeconds time.Duration,
 		metricChan:          metricChan,
 		shutdownChan:        shutdownChan,
 		wg:                  wg,
-		metricMap:           make(map[string]telegraf.Metric),
-		aggregationChan:     make(chan telegraf.Metric, durationAggregationChanBufferSize),
+		metricMap:           make(map[string]*aggregationDatum),
+		aggregationChan:     make(chan *aggregationDatum, durationAggregationChanBufferSize),
 	}
 
 	go durationAgg.aggregating()
@@ -131,56 +128,35 @@ func (durationAgg *durationAggregator) aggregating() {
 		// loop begins, then the behavior is random.
 		select {
 		case m := <-durationAgg.aggregationChan:
-			// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
-			aggregatedTime := m.Time().Truncate(durationAgg.aggregationDuration)
-			metricMapKey := fmt.Sprint(computeHash(m), aggregatedTime.Unix())
-			var aggregatedMetric telegraf.Metric
-			var ok bool
-			if aggregatedMetric, ok = durationAgg.metricMap[metricMapKey]; !ok {
-				aggregatedMetric = metric.New(m.Name(), m.Tags(), map[string]interface{}{}, aggregatedTime)
-				durationAgg.metricMap[metricMapKey] = aggregatedMetric
+			if m == nil || m.Timestamp == nil || m.MetricName == nil || m.Unit == nil {
+				log.Printf("E! cannot aggregate nil or partial datum")
+				continue
 			}
-			//When the code comes here, it means the aggregatedMetric object has the same metric name, tags and aggregated time.
-			//We just need to aggregate the additional fields if any and the values for the fields.
-			for k, v := range m.Fields() {
-				var value float64
-				var dist distribution.Distribution
-				switch t := v.(type) {
-				case int:
-					value = float64(t)
-				case int32:
-					value = float64(t)
-				case int64:
-					value = float64(t)
-				case float64:
-					value = t
-				case bool:
-					if t {
-						value = 1
-					} else {
-						value = 0
-					}
-				case time.Time:
-					value = float64(t.Unix())
-				case distribution.Distribution:
-					dist = t
-				default:
-					// Skip unsupported type.
-					continue
-				}
-				var existingValue interface{}
-				if existingValue, ok = aggregatedMetric.Fields()[k]; !ok {
-					existingValue = distribution.NewDistribution()
-					aggregatedMetric.AddField(k, existingValue)
-				}
-				existingDist := existingValue.(distribution.Distribution)
-				if dist != nil {
-					existingDist.AddDistribution(dist)
-				} else {
-					err := existingDist.AddEntry(value, 1)
+			// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
+			aggregatedTime := m.Timestamp.Truncate(durationAgg.aggregationDuration)
+			metricMapKey := getAggregationKey(m, aggregatedTime.Unix())
+			aggregatedMetric, ok := durationAgg.metricMap[metricMapKey]
+			if !ok {
+				// First entry. Initialize it.
+				durationAgg.metricMap[metricMapKey] = m
+				if m.distribution == nil {
+					// Assume function pointer is always valid.
+					m.distribution = distribution.NewDistribution()
+					err := m.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
 					if err != nil {
-						log.Printf("W! error: %s, metric %s, value %v", err, m.Name(), value)
+						log.Printf("W! err %s, metric %s", err, *m.MetricName)
 					}
+				}
+				// Else the first entry has a distribution, so do nothing.
+			} else {
+				// Update an existing entry.
+				if m.distribution == nil {
+					err := aggregatedMetric.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
+					if err != nil {
+						log.Printf("W! err %s, metric %s", err, *m.MetricName)
+					}
+				} else {
+					aggregatedMetric.distribution.AddDistribution(m.distribution)
 				}
 			}
 		case <-durationAgg.ticker.C:
@@ -195,7 +171,7 @@ func (durationAgg *durationAggregator) aggregating() {
 	}
 }
 
-func (durationAgg *durationAggregator) addMetric(m telegraf.Metric) {
+func (durationAgg *durationAggregator) addMetric(m *aggregationDatum) {
 	durationAgg.aggregationChan <- m
 }
 
@@ -203,5 +179,5 @@ func (durationAgg *durationAggregator) flush() {
 	for _, v := range durationAgg.metricMap {
 		durationAgg.metricChan <- v
 	}
-	durationAgg.metricMap = make(map[string]telegraf.Metric)
+	durationAgg.metricMap = make(map[string]*aggregationDatum)
 }

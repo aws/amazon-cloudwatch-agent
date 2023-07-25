@@ -6,9 +6,9 @@ package linux
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 )
 
 func TestMemory_ToMap(t *testing.T) {

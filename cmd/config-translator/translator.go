@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"os"
@@ -14,13 +15,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 const (
-	exitErrorMessage  = "Configuration validation first phase failed. Agent version: %v. Verify the JSON input is only using features supported by this version.\n"
-	version           = "1.0"
-	envConfigFileName = "env-config.json"
+	exitErrorMessage   = "Configuration validation first phase failed. Agent version: %v. Verify the JSON input is only using features supported by this version.\n"
+	exitSuccessMessage = "Configuration validation first phase succeeded"
+	version            = "1.0"
+	envConfigFileName  = "env-config.json"
+	yamlConfigFileName = "amazon-cloudwatch-agent.yaml"
 )
 
 func initFlags() {
@@ -105,8 +109,24 @@ func main() {
 	}
 
 	tomlConfigPath := cmdutil.GetTomlConfigPath(ctx.OutputTomlFilePath())
-	cmdutil.TranslateJsonMapToTomlFile(mergedJsonConfigMap, tomlConfigPath)
-	// Put env config into the same folder as the toml config.
-	envConfigPath := filepath.Join(filepath.Dir(tomlConfigPath), envConfigFileName)
+	tomlConfigDir := filepath.Dir(tomlConfigPath)
+	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
+	tomlConfig, err := cmdutil.TranslateJsonMapToTomlConfig(mergedJsonConfigMap)
+	if err != nil {
+		log.Panicf("E! Failed to generate TOML configuration validation content: %v", err)
+	}
+	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(mergedJsonConfigMap)
+	if err != nil && !errors.Is(err, pipeline.ErrNoPipelines) {
+		log.Panicf("E! Failed to generate YAML configuration validation content: %v", err)
+	}
+	if err = cmdutil.ConfigToTomlFile(tomlConfig, tomlConfigPath); err != nil {
+		log.Panicf("E! Failed to create the configuration TOML validation file: %v", err)
+	}
+	if err = cmdutil.ConfigToYamlFile(yamlConfig, yamlConfigPath); err != nil {
+		log.Panicf("E! Failed to create the configuration YAML validation file: %v", err)
+	}
+	log.Println(exitSuccessMessage)
+	// Put env config into the same folder as the toml config
+	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
 	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJsonConfigMap, envConfigPath)
 }

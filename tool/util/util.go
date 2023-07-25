@@ -6,24 +6,23 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	sysruntime "runtime"
 	"strconv"
-
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
-
-	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
 )
 
 const (
@@ -56,11 +55,13 @@ func ConfigFilePath() string {
 
 func PermissionCheck() {
 	filePath := ConfigFilePath()
-	err := os.WriteFile(filePath, []byte(""), 0755)
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Printf("Make sure that you have write permission to %s\n", filePath)
 		os.Exit(1)
 	}
+	defer f.Close()
+	return
 }
 
 func ReadConfigFromJsonFile() string {
@@ -162,18 +163,12 @@ func AddToMap(ctx *runtime.Context, resultMap map[string]interface{}, obj interf
 
 func Yes(question string) bool {
 	answer := Choice(question, 1, []string{"yes", "no"})
-	if answer == "yes" {
-		return true
-	}
-	return false
+	return answer == "yes"
 }
 
 func No(question string) bool {
 	answer := Choice(question, 2, []string{"yes", "no"})
-	if answer == "yes" {
-		return true
-	}
-	return false
+	return answer == "yes"
 }
 
 func AskWithDefault(question, defaultValue string) string {

@@ -9,11 +9,11 @@ import (
 	"math"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
-
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
 )
 
 func NewTestStatsd() *Statsd {

@@ -14,13 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd/graphite"
-
 	//"github.com/influxdata/telegraf/plugins/parsers/graphite"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd/graphite"
 )
 
 const (
@@ -53,7 +52,7 @@ type Statsd struct {
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
-	// This flag enables parsing of tags in the dogstatsd extention to the
+	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool
 
@@ -179,7 +178,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	for _, metric := range s.timings {
-		acc.AddFields(metric.name, metric.fields, metric.tags, now)
+		acc.AddHistogram(metric.name, metric.fields, metric.tags, now)
 	}
 	if s.DeleteTimings {
 		s.timings = make(map[string]cachedtimings)
@@ -534,6 +533,7 @@ func (s *Statsd) aggregate(m metric) {
 		// this will be the default field name, eg. "value"
 		field, ok := cached.fields[m.field]
 		if !ok {
+			// Assume function pointer is valid.
 			field = distribution.NewDistribution()
 		}
 		weight := 1.0

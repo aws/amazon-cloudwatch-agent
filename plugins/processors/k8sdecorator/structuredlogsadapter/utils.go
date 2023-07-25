@@ -6,10 +6,11 @@ package structuredlogsadapter
 import (
 	"fmt"
 
+	"github.com/influxdata/telegraf"
+
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
-	"github.com/influxdata/telegraf"
 )
 
 func TagMetricSource(metric telegraf.Metric) {

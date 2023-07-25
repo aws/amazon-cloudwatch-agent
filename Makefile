@@ -28,7 +28,7 @@ DARWIN_BUILD_ARM64 = CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=arm64 go bu
 IMAGE = amazon/cloudwatch-agent:$(VERSION)
 DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
 
-CW_AGENT_IMPORT_PATH=https://github.com/aws/amazon-cloudwatch-agent.git
+CW_AGENT_IMPORT_PATH=github.com/aws/amazon-cloudwatch-agent
 ALL_SRC := $(shell find . -name '*.go' -type f | sort)
 TOOLS_BIN_DIR := $(abspath ./build/tools)
 
@@ -37,6 +37,8 @@ GOIMPORTS_OPT?= -w -local $(CW_AGENT_IMPORT_PATH)
 GOIMPORTS = $(TOOLS_BIN_DIR)/goimports
 SHFMT = $(TOOLS_BIN_DIR)/shfmt
 LINTER = $(TOOLS_BIN_DIR)/golangci-lint
+IMPI = $(TOOLS_BIN_DIR)/impi
+ADDLICENSE = $(TOOLS_BIN_DIR)/addlicense
 
 prepackage: clean test build
 release: prepackage package-rpm package-deb package-win package-darwin
@@ -60,7 +62,7 @@ copy-version-file: create-version-file
 amazon-cloudwatch-agent-linux: copy-version-file
 	@echo Building CloudWatchAgent for Linux,Debian with ARM64 and AMD64
 	$(LINUX_AMD64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
-	$(LINUX_ARM64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader	
+	$(LINUX_ARM64_BUILD)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 	$(LINUX_AMD64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
@@ -73,7 +75,7 @@ amazon-cloudwatch-agent-linux: copy-version-file
 
 amazon-cloudwatch-agent-darwin: copy-version-file
 ifneq ($(OS),Windows_NT)
-ifeq ($(shell uname -s),Darwin)		
+ifeq ($(shell uname -s),Darwin)
 	@echo Building CloudWatchAgent for MacOS with ARM64 and AMD64
 	$(DARWIN_BUILD_AMD64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(DARWIN_BUILD_ARM64)/config-downloader github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
@@ -86,9 +88,9 @@ ifeq ($(shell uname -s),Darwin)
 	$(DARWIN_BUILD_AMD64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 	$(DARWIN_BUILD_ARM64)/amazon-cloudwatch-agent-config-wizard github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent-config-wizard
 endif
-endif 
-	
-amazon-cloudwatch-agent-windows: 
+endif
+
+amazon-cloudwatch-agent-windows:
 	@echo Building CloudWatchAgent for Windows with AMD64
 	$(WIN_BUILD)/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(WIN_BUILD)/config-translator.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
@@ -109,25 +111,91 @@ build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
-#Install from source for golangci-lint is not recommended based on https://golangci-lint.run/usage/install/#install-from-source so using binary
-#installation
-install-tools:
+# this is because we docker ignore our build dir
+# even if there is no dir rm -rf will not fail but if there already is a dir mkdir will
+# for local registery you may only load a single platform
+build-for-docker-fast: build-for-docker-amd64 build-for-docker-arm64
+	rm -rf tmp
+	mkdir -p tmp/amd64
+	mkdir -p tmp/arm64
+	cp build/bin/linux_amd64/* tmp/amd64
+	cp build/bin/linux_arm64/* tmp/arm64
+	docker buildx build --platform linux/amd64,linux/arm64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t amazon-cloudwatch-agent
+	rm -rf tmp
+
+build-for-docker-fast-amd64: build-for-docker-amd64
+	rm -rf tmp
+	mkdir -p tmp/amd64
+	cp build/bin/linux_amd64/* tmp/amd64
+	docker buildx build --platform linux/amd64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t amazon-cloudwatch-agent --load
+	rm -rf tmp
+
+build-for-docker-fast-arm64: build-for-docker-arm64
+	rm -rf tmp
+	mkdir -p tmp/arm64
+	cp build/bin/linux_arm64/* tmp/arm64
+	docker buildx build --platform linux/arm64 . -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile -t amazon-cloudwatch-agent --load
+	rm -rf tmp
+
+install-goimports:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
+
+install-shfmt:
 	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@latest
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.45.2
 
-fmt: install-tools
+install-impi:
+	GOBIN=$(TOOLS_BIN_DIR) go install github.com/pavius/impi/cmd/impi@v0.0.3
+
+install-addlicense:
+	# Using 04bfe4e to get SPDX template changes that are not present in the most recent tag v1.0.0
+	# This is required to be able to easily omit the year in our license header.
+	GOBIN=$(TOOLS_BIN_DIR) go install github.com/google/addlicense@04bfe4e
+
+install-golangci-lint:
+	#Install from source for golangci-lint is not recommended based on https://golangci-lint.run/usage/install/#install-from-source so using binary
+	#installation
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.50.1
+
+fmt: install-goimports addlicense
 	go fmt ./...
-	echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
+	@echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
 
-fmt-sh: install-tools
+fmt-sh: install-shfmt
 	${SHFMT} -w -d -i 5 .
 
-lint: install-tools
+impi: install-impi
+	# Skip plugins/plugins.go
+	@echo $(ALL_SRC) | xargs -n 10 $(IMPI) --local $(CW_AGENT_IMPORT_PATH) --scheme stdThirdPartyLocal --skip plugins/plugins.go
+	@echo "Check import order/grouping finished"
+
+addlicense: install-addlicense
+	@ADDLICENSEOUT=`$(ADDLICENSE) -y="" -s=only -l="mit" -c="Amazon.com, Inc. or its affiliates. All Rights Reserved." $(ALL_SRC) 2>&1`; \
+    		if [ "$$ADDLICENSEOUT" ]; then \
+    			echo "$(ADDLICENSE) FAILED => add License errors:\n"; \
+    			echo "$$ADDLICENSEOUT\n"; \
+    			exit 1; \
+    		else \
+    			echo "Add License finished successfully"; \
+    		fi
+
+checklicense: install-addlicense
+	@ADDLICENSEOUT=`$(ADDLICENSE) -check $(ALL_SRC) 2>&1`; \
+    		if [ "$$ADDLICENSEOUT" ]; then \
+    			echo "$(ADDLICENSE) FAILED => add License errors:\n"; \
+    			echo "$$ADDLICENSEOUT\n"; \
+    			echo "Use 'make addlicense' to fix this."; \
+    			exit 1; \
+    		else \
+    			echo "Check License finished successfully"; \
+    		fi
+
+simple-lint: checklicense impi
+
+lint: install-golangci-lint simple-lint
 	${LINTER} run ./...
 
 test:
-	CGO_ENABLED=0 go test -coverprofile coverage.txt -failfast ./awscsm/... ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./plugins/... ./profiler/... ./tool/... ./translator/...
+	CGO_ENABLED=0 go test -timeout 15m -coverprofile coverage.txt -failfast ./cfg/... ./cmd/... ./handlers/... ./internal/... ./logger/... ./logs/... ./metric/... ./receiver/... ./plugins/... ./profiler/... ./tool/... ./translator/...
 
 clean::
 	rm -rf release/ build/

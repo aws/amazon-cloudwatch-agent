@@ -4,16 +4,19 @@
 package ec2util
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 // this is a singleton struct
@@ -42,7 +45,7 @@ func GetEC2UtilSingleton() *ec2Util {
 func initEC2UtilSingleton() (newInstance *ec2Util) {
 	newInstance = &ec2Util{Region: "", PrivateIP: ""}
 
-	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise){
+	if (context.CurrentContext().Mode() == config.ModeOnPrem) || (context.CurrentContext().Mode() == config.ModeOnPremise) {
 		return
 	}
 
@@ -92,11 +95,11 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		return err
 	}
 
-	md := ec2metadata.New(ses)
-
-	if !md.Available() {
-		return errors.New("EC2 metadata is not available.")
-	}
+	md := ec2metadata.New(ses, &aws.Config{
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
+		Retryer:  client.DefaultRetryer{NumMaxRetries: allowedRetries},
+	})
 
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
 	if hostname, err := md.GetMetadata("hostname"); err == nil {

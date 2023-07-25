@@ -10,13 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
+	corev1 "k8s.io/api/core/v1"
+
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/kubeletutil"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
-	"github.com/influxdata/telegraf"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const (

@@ -5,31 +5,21 @@ package plugins
 
 import (
 	//Enable cloudwatch-agent process plugins
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/delta"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ecsdecorator"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/emfProcessor"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/k8sdecorator"
 
-	// Enabled parsers registry
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/parsers"
-
 	// Enabled cloudwatch-agent input plugins
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/awscsm"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/demo"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/k8sapiserver"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus_scraper"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/win_perf_counters"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/windows_event_log"
 
 	// Enabled cloudwatch-agent output plugins
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/awscsm"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatchlogs"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/outputs/console"
 
 	// Enabled telegraf input plugins
 	// NOTE: any plugins that are dependencies of the plugins enabled will be enabled too

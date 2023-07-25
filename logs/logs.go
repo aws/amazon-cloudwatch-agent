@@ -9,8 +9,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
 
 var ErrOutputStopped = errors.New("Output plugin stopped")
@@ -18,6 +20,7 @@ var ErrOutputStopped = errors.New("Output plugin stopped")
 // A LogCollection is a collection of LogSrc, a plugin which can provide many LogSrc
 type LogCollection interface {
 	FindLogSrc() []LogSrc
+	Start(acc telegraf.Accumulator) error
 }
 
 type LogEvent interface {
@@ -45,7 +48,7 @@ type LogBackend interface {
 }
 
 // A LogDest represents a final endpoint where log events are published to.
-// e.g. a particualr log stream in cloudwatchlogs.
+// e.g. a particular log stream in cloudwatchlogs.
 type LogDest interface {
 	Publish(events []LogEvent) error
 }
@@ -89,6 +92,10 @@ func (l *LogAgent) Run(ctx context.Context) {
 	for _, input := range l.Config.Inputs {
 		if collection, ok := input.Input.(LogCollection); ok {
 			log.Printf("I! [logagent] found plugin %v is a log collection", input.Config.Name)
+			err := collection.Start(nil)
+			if err != nil {
+				log.Printf("E! could not start log collection %v err %v", input.Config.Name, err)
+			}
 			l.collections = append(l.collections, collection)
 		}
 	}

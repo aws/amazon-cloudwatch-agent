@@ -9,7 +9,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 	"log"
 	"time"
 
@@ -18,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	smithyTime "github.com/aws/smithy-go/time"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
 func main() {

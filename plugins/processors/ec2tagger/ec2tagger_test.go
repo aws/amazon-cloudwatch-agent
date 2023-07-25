@@ -4,18 +4,22 @@
 package ec2tagger
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/collector/pdata/pcommon"
+	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/processor/processortest"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 )
 
 type mockEC2Client struct {
@@ -196,9 +200,23 @@ func (m *mockEC2Client) DescribeVolumes(*ec2.DescribeVolumesInput) (*ec2.Describ
 	return nil, nil
 }
 
-type mockEC2Metadata struct {
-	EC2MetadataAPI
+type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
+}
+
+func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
+	if m.InstanceIdentityDocument != nil {
+		return *m.InstanceIdentityDocument, nil
+	}
+	return ec2metadata.EC2InstanceIdentityDocument{}, errors.New("No instance identity document")
+}
+
+func (m *mockMetadataProvider) Hostname(ctx context.Context) (string, error) {
+	return "MockHostName", nil
+}
+
+func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
+	return "MockInstanceID", nil
 }
 
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
@@ -208,44 +226,93 @@ var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 	ImageID:      "ami-09edd32d9b0990d49",
 }
 
-func (m *mockEC2Metadata) GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error) {
-	if m.InstanceIdentityDocument != nil {
-		return *m.InstanceIdentityDocument, nil
+// createTestMetrics create new pmetric.Metrics pm that satisfies:
+//
+//	pm.ResourceMetrics().Len() == 1
+//	pm.ResourceMetrics().At(0).ScopeMetrics().Len() == 1
+//	pm.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len() == len(metrics)
+//
+// and for each metric from metrics it create one single datapoint that appy all tags/attributes from metric
+func createTestMetrics(metrics []map[string]string) pmetric.Metrics {
+	pm := pmetric.NewMetrics()
+	rm := pm.ResourceMetrics().AppendEmpty()
+	sm := rm.ScopeMetrics().AppendEmpty()
+	for i, metric := range metrics {
+		m := sm.Metrics().AppendEmpty()
+		var dp pmetric.NumberDataPoint
+		if i%2 == 0 {
+			m.SetEmptyGauge()
+			dp = m.Gauge().DataPoints().AppendEmpty()
+		} else {
+			m.SetEmptySum()
+			dp = m.Sum().DataPoints().AppendEmpty()
+		}
+
+		for attrKey, attrValue := range metric {
+			dp.Attributes().PutStr(attrKey, attrValue)
+		}
 	}
-	return ec2metadata.EC2InstanceIdentityDocument{}, errors.New("No instance identity document")
+	return pm
 }
 
-func TestInitFailWithNoMetadata(t *testing.T) {
-	assert := assert.New(t)
+func checkAttributes(t *testing.T, expected, actual pmetric.Metrics) {
+	expRMs := expected.ResourceMetrics()
+	actualRMs := actual.ResourceMetrics()
+	require.Equal(t, expRMs.Len(), actualRMs.Len())
+	for i := 0; i < expRMs.Len(); i++ {
+		expSMs := expRMs.At(i).ScopeMetrics()
+		actualSMs := actualRMs.At(i).ScopeMetrics()
+		require.Equal(t, expSMs.Len(), actualSMs.Len())
+		for j := 0; j < expSMs.Len(); j++ {
+			expMs := expSMs.At(j).Metrics()
+			actualMs := actualSMs.At(j).Metrics()
+			require.Equal(t, expMs.Len(), actualMs.Len())
+			for k := 0; k < expMs.Len(); k++ {
+				expM := expMs.At(k)
+				actualM := actualMs.At(k)
+				require.Equal(t, expM.Type(), actualM.Type())
 
-	metadataClient := &mockEC2Metadata{
-		InstanceIdentityDocument: nil,
+				expAttrs := getOtelAttributes(expM)
+				actualAttrs := getOtelAttributes(actualM)
+
+				require.Equal(t, len(expAttrs), len(actualAttrs))
+				for l := 0; l < len(expAttrs); l++ {
+					expected := expAttrs[l]
+					actual := actualAttrs[l]
+					expected.Range(func(k string, v pcommon.Value) bool {
+						got, found := actual.Get(k)
+						assert.True(t, found)
+						assert.Equal(t, v, got)
+						return true
+					})
+				}
+			}
+		}
 	}
-	ec2MetadataProvider := func() EC2MetadataAPI {
-		return metadataClient
+}
+func TestStartFailWithNoMetadata(t *testing.T) {
+	cfg := createDefaultConfig().(*Config)
+	_, cancel := context.WithCancel(context.Background())
+	tagger := &Tagger{
+		Config:           cfg,
+		logger:           processortest.NewNopCreateSettings().Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: nil},
 	}
 
-	tagger := Tagger{
-		Log:                 testutil.Logger{},
-		ec2MetadataProvider: ec2MetadataProvider,
-	}
-	err := tagger.Init()
-
-	assert.NotNil(err)
-	assert.Contains(err.Error(), "No instance identity document")
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "No instance identity document")
 }
 
-//run Init() and check all tags/volumes are retrieved and saved
-func TestInitSuccessWithNoTagsVolumesUpdate(t *testing.T) {
-	assert := assert.New(t)
-
-	metadataClient := &mockEC2Metadata{
-		InstanceIdentityDocument: mockedInstanceIdentityDoc,
-	}
-	ec2MetadataProvider := func() EC2MetadataAPI {
-		return metadataClient
-	}
-
+// run Start() and check all tags/volumes are retrieved and saved
+func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
+	cfg := createDefaultConfig().(*Config)
+	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
+	cfg.EBSDeviceKeys = []string{device1, device2}
+	_, cancel := context.WithCancel(context.Background())
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -259,40 +326,38 @@ func TestInitSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
+
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
-	tagger := Tagger{
-		Log:                    testutil.Logger{},
-		RefreshIntervalSeconds: internal.Duration{Duration: 0},
-		ec2Provider:            ec2Provider,
-		ec2API:                 ec2Client,
-		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
-		EC2InstanceTagKeys:     []string{tagKey1, tagKey2, "AutoScalingGroupName"},
-		EBSDeviceKeys:          []string{device1, device2},
+	tagger := &Tagger{
+		Config:           cfg,
+		logger:           processortest.NewNopCreateSettings().Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
-	err := tagger.Init()
-	assert.Nil(err)
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.Nil(t, err)
 	//assume one second is long enough for the api to be called many times so that all tags/volumes are retrieved
 	time.Sleep(time.Second)
-	assert.Equal(3, ec2Client.tagsCallCount)
-	assert.Equal(2, ec2Client.volumesCallCount)
+	assert.Equal(t, 3, ec2Client.tagsCallCount)
+	assert.Equal(t, 2, ec2Client.volumesCallCount)
 	//check tags and volumes
 	expectedTags := map[string]string{tagKey1: tagVal1, tagKey2: tagVal2, "AutoScalingGroupName": tagVal3}
-	assert.Equal(expectedTags, tagger.ec2TagCache)
+	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes := map[string]string{device1: volumeAttachmentId1, device2: volumeAttachmentId2}
-	assert.Equal(expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
 }
 
-//run Init() and check all tags/volumes are retrieved and saved and then updated
-func TestInitSuccessWithTagsVolumesUpdate(t *testing.T) {
-	assert := assert.New(t)
-	metadataClient := &mockEC2Metadata{
-		InstanceIdentityDocument: mockedInstanceIdentityDoc,
-	}
-	ec2MetadataProvider := func() EC2MetadataAPI {
-		return metadataClient
-	}
+// run Start() and check all tags/volumes are retrieved and saved and then updated
+func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
+	cfg := createDefaultConfig().(*Config)
+	//use millisecond rather than second to speed up test execution
+	cfg.RefreshIntervalSeconds = 20 * time.Millisecond
+	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
+	cfg.EBSDeviceKeys = []string{device1, device2}
+	_, cancel := context.WithCancel(context.Background())
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       1,
@@ -308,27 +373,25 @@ func TestInitSuccessWithTagsVolumesUpdate(t *testing.T) {
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 10 * time.Millisecond
-	tagger := Tagger{
-		Log: testutil.Logger{},
-		//use millisecond rather than second to speed up test execution
-		RefreshIntervalSeconds: internal.Duration{Duration: 20 * time.Millisecond},
-		ec2Provider:            ec2Provider,
-		ec2API:                 ec2Client,
-		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
-		EC2InstanceTagKeys:     []string{tagKey1, tagKey2, "AutoScalingGroupName"},
-		EBSDeviceKeys:          []string{device1, device2},
+
+	tagger := &Tagger{
+		Config:           cfg,
+		logger:           processortest.NewNopCreateSettings().Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
-	err := tagger.Init()
-	assert.Nil(err)
+
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.Nil(t, err)
 	//assume one second is long enough for the api to be called many times
 	//so that all tags/volumes are retrieved
 	time.Sleep(time.Second)
 	//check tags and volumes
 	expectedTags := map[string]string{tagKey1: tagVal1, tagKey2: tagVal2, "AutoScalingGroupName": tagVal3}
-	assert.Equal(expectedTags, tagger.ec2TagCache)
+	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes := map[string]string{device1: volumeAttachmentId1, device2: volumeAttachmentId2}
-	assert.Equal(expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
 
 	//update the tags and volumes
 	ec2Client.UseUpdatedTags = true
@@ -337,23 +400,20 @@ func TestInitSuccessWithTagsVolumesUpdate(t *testing.T) {
 	//so that all tags/volumes are updated
 	time.Sleep(time.Second)
 	expectedTags = map[string]string{tagKey1: tagVal1, tagKey2: updatedTagVal2, "AutoScalingGroupName": tagVal3}
-	assert.Equal(expectedTags, tagger.ec2TagCache)
+	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes = map[string]string{device1: volumeAttachmentId1, device2: volumeAttachmentUpdatedId2}
-	assert.Equal(expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
 }
 
-//run Init() with ec2_instance_tag_keys = ["*"] and ebs_device_keys = ["*"]
-//check there is no attempt to fetch all tags/volumes
-func TestInitSuccessWithWildcardTagVolumeKey(t *testing.T) {
-	assert := assert.New(t)
-
-	metadataClient := &mockEC2Metadata{
-		InstanceIdentityDocument: mockedInstanceIdentityDoc,
-	}
-	ec2MetadataProvider := func() EC2MetadataAPI {
-		return metadataClient
-	}
-
+// run Start() with ec2_instance_tag_keys = ["*"] and ebs_device_keys = ["*"]
+// check there is no attempt to fetch all tags/volumes
+func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
+	cfg := createDefaultConfig().(*Config)
+	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2InstanceTagKeys = []string{"*"}
+	cfg.EBSDeviceKeys = []string{"*"}
+	_, cancel := context.WithCancel(context.Background())
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -369,41 +429,38 @@ func TestInitSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
-	tagger := Tagger{
-		Log:                    testutil.Logger{},
-		RefreshIntervalSeconds: internal.Duration{Duration: 0},
-		ec2Provider:            ec2Provider,
-		ec2API:                 ec2Client,
-		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
-		EC2InstanceTagKeys:     []string{"*"},
-		EBSDeviceKeys:          []string{"*"},
+	tagger := &Tagger{
+		Config:           cfg,
+		logger:           processortest.NewNopCreateSettings().Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
-	err := tagger.Init()
-	assert.Nil(err)
+
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.Nil(t, err)
 	//assume one second is long enough for the api to be called many times (potentially)
 	time.Sleep(time.Second)
 	//check only partial tags/volumes are returned
-	assert.Equal(2, ec2Client.tagsCallCount)
-	assert.Equal(1, ec2Client.volumesCallCount)
+	assert.Equal(t, 2, ec2Client.tagsCallCount)
+	assert.Equal(t, 1, ec2Client.volumesCallCount)
 	//check partial tags/volumes are saved
 	expectedTags := map[string]string{tagKey1: tagVal1}
-	assert.Equal(expectedTags, tagger.ec2TagCache)
+	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes := map[string]string{device1: volumeAttachmentId1}
-	assert.Equal(expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
 }
 
-//run Init() and then Apply() and check the output metrics contain expected tags
+// run Start() and then processMetrics and check the output metrics contain expected tags
 func TestApplyWithTagsVolumesUpdate(t *testing.T) {
-	assert := assert.New(t)
-
-	metadataClient := &mockEC2Metadata{
-		InstanceIdentityDocument: mockedInstanceIdentityDoc,
-	}
-	ec2MetadataProvider := func() EC2MetadataAPI {
-		return metadataClient
-	}
-
+	cfg := createDefaultConfig().(*Config)
+	//use millisecond rather than second to speed up test execution
+	cfg.RefreshIntervalSeconds = 20 * time.Millisecond
+	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2InstanceTagKeys = []string{tagKey1, tagKey2, "AutoScalingGroupName"}
+	cfg.EBSDeviceKeys = []string{device1, device2}
+	cfg.DiskDeviceTagKey = "device"
+	_, cancel := context.WithCancel(context.Background())
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -419,79 +476,48 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
-	tagger := Tagger{
-		Log: testutil.Logger{},
-		//use millisecond rather than second to speed up test execution
-		RefreshIntervalSeconds: internal.Duration{Duration: 20 * time.Millisecond},
-		ec2Provider:            ec2Provider,
-		ec2API:                 ec2Client,
-		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyInstanceType},
-		EC2InstanceTagKeys:     []string{tagKey1, tagKey2, "AutoScalingGroupName"},
-		EBSDeviceKeys:          []string{device1, device2},
-		DiskDeviceTagKey:       "device",
+	tagger := &Tagger{
+		Config:           cfg,
+		logger:           processortest.NewNopCreateSettings().Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
-	err := tagger.Init()
-	assert.Nil(err)
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.Nil(t, err)
+
 	//assume one second is long enough for the api to be called many times
 	//so that all tags/volumes are retrieved
 	time.Sleep(time.Second)
-	input := []telegraf.Metric{
-		testutil.MustMetric(
-			"cpu",
-			map[string]string{
-				"host": "example.org",
-			},
-			map[string]interface{}{
-				"cpu": 0.11,
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"disk",
-			map[string]string{
-				"device": device2,
-			},
-			map[string]interface{}{
-				"write_bytes": 135,
-			},
-			time.Unix(0, 0)),
-	}
-	output := tagger.Apply(input...)
-	expectedOutput := []telegraf.Metric{
-		testutil.MustMetric(
-			"cpu",
-			map[string]string{
-				"host":                 "example.org",
-				"AutoScalingGroupName": "ASG-1",
-				"InstanceId":           "i-01d2417c27a396e44",
-				"InstanceType":         "m5ad.large",
-				tagKey1:                tagVal1,
-				tagKey2:                tagVal2,
-			},
-			map[string]interface{}{
-				"cpu": 0.11,
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"disk",
-			map[string]string{
-				"AutoScalingGroupName": "ASG-1",
-				"EBSVolumeId":          "aws://us-east-1a/vol-0c241693efb58734a",
-				"InstanceId":           "i-01d2417c27a396e44",
-				"InstanceType":         "m5ad.large",
-				tagKey1:                tagVal1,
-				tagKey2:                tagVal2,
-				"device":               device2,
-			},
-			map[string]interface{}{
-				"write_bytes": 135,
-			},
-			time.Unix(0, 0),
-		),
-	}
-	testutil.RequireMetricsEqual(t, expectedOutput, output)
+	md := createTestMetrics([]map[string]string{
+		map[string]string{
+			"host": "example.org",
+		},
+		map[string]string{
+			"device": device2,
+		},
+	})
+	output, err := tagger.processMetrics(context.Background(), md)
+	assert.Nil(t, err)
+	expectedOutput := createTestMetrics([]map[string]string{
+		map[string]string{
+			"AutoScalingGroupName": tagVal3,
+			"InstanceId":           "i-01d2417c27a396e44",
+			"InstanceType":         "m5ad.large",
+			tagKey1:                tagVal1,
+			tagKey2:                tagVal2,
+		},
+		map[string]string{
+			"AutoScalingGroupName": tagVal3,
+			"EBSVolumeId":          volumeAttachmentId2,
+			"InstanceId":           "i-01d2417c27a396e44",
+			"InstanceType":         "m5ad.large",
+			tagKey1:                tagVal1,
+			tagKey2:                tagVal2,
+			"device":               device2,
+		},
+	})
+	checkAttributes(t, expectedOutput, output)
 
 	//update tags and volumes and check metrics are updated as well
 	ec2Client.UseUpdatedTags = true
@@ -499,54 +525,37 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	//assume one second is long enough for the api to be called many times
 	//so that all tags/volumes are updated
 	time.Sleep(time.Second)
-	outputUpdated := tagger.Apply(input...)
-	expectedOutputUpdated := []telegraf.Metric{
-		testutil.MustMetric(
-			"cpu",
-			map[string]string{
-				"host":                 "example.org",
-				"AutoScalingGroupName": "ASG-1",
-				"InstanceId":           "i-01d2417c27a396e44",
-				"InstanceType":         "m5ad.large",
-				tagKey1:                tagVal1,
-				tagKey2:                updatedTagVal2,
-			},
-			map[string]interface{}{
-				"cpu": 0.11,
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"disk",
-			map[string]string{
-				"AutoScalingGroupName": "ASG-1",
-				"EBSVolumeId":          "aws://us-east-1a/vol-0459607897eaa8148",
-				"InstanceId":           "i-01d2417c27a396e44",
-				"InstanceType":         "m5ad.large",
-				tagKey1:                tagVal1,
-				tagKey2:                updatedTagVal2,
-				"device":               device2,
-			},
-			map[string]interface{}{
-				"write_bytes": 135,
-			},
-			time.Unix(0, 0),
-		),
-	}
-	testutil.RequireMetricsEqual(t, expectedOutputUpdated, outputUpdated)
+	updatedOutput, err := tagger.processMetrics(context.Background(), md)
+	assert.Nil(t, err)
+	expectedUpdatedOutput := createTestMetrics([]map[string]string{
+		map[string]string{
+			"AutoScalingGroupName": tagVal3,
+			"InstanceId":           "i-01d2417c27a396e44",
+			"InstanceType":         "m5ad.large",
+			tagKey1:                tagVal1,
+			tagKey2:                updatedTagVal2,
+		},
+		map[string]string{
+			"AutoScalingGroupName": tagVal3,
+			"EBSVolumeId":          volumeAttachmentUpdatedId2,
+			"InstanceId":           "i-01d2417c27a396e44",
+			"InstanceType":         "m5ad.large",
+			tagKey1:                tagVal1,
+			tagKey2:                updatedTagVal2,
+			"device":               device2,
+		},
+	})
+	checkAttributes(t, expectedUpdatedOutput, updatedOutput)
 }
 
 // Test metrics are dropped before the initial retrieval is done
 func TestMetricsDroppedBeforeStarted(t *testing.T) {
-	assert := assert.New(t)
-
-	metadataClient := &mockEC2Metadata{
-		InstanceIdentityDocument: mockedInstanceIdentityDoc,
-	}
-	ec2MetadataProvider := func() EC2MetadataAPI {
-		return metadataClient
-	}
-
+	cfg := createDefaultConfig().(*Config)
+	cfg.RefreshIntervalSeconds = 0 * time.Millisecond
+	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2InstanceTagKeys = []string{"*"}
+	cfg.EBSDeviceKeys = []string{"*"}
+	_, cancel := context.WithCancel(context.Background())
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -562,86 +571,59 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	}
 	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
-	tagger := Tagger{
-		Log:                    testutil.Logger{},
-		RefreshIntervalSeconds: internal.Duration{Duration: 0},
-		ec2Provider:            ec2Provider,
-		ec2API:                 ec2Client,
-		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
-		EC2InstanceTagKeys:     []string{"*"},
-		EBSDeviceKeys:          []string{"*"},
+	tagger := &Tagger{
+		Config:           cfg,
+		logger:           processortest.NewNopCreateSettings().Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
 
-	input := []telegraf.Metric{
-		testutil.MustMetric(
-			"cpu",
-			map[string]string{
-				"host": "example.org",
-			},
-			map[string]interface{}{
-				"cpu": 0.11,
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"disk",
-			map[string]string{
-				"device": device1,
-			},
-			map[string]interface{}{
-				"write_bytes": 200,
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"disk",
-			map[string]string{
-				"device": device2,
-			},
-			map[string]interface{}{
-				"write_bytes": 135,
-			},
-			time.Unix(0, 0),
-		),
-	}
+	md := createTestMetrics([]map[string]string{
+		map[string]string{
+			"host": "example.org",
+		},
+		map[string]string{
+			"device": device1,
+		},
+		map[string]string{
+			"device": device2,
+		},
+	})
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.Nil(t, err)
+	assert.Equal(t, tagger.started, false)
 
-	err := tagger.Init()
-	assert.Nil(err)
-	assert.Equal(tagger.started, false)
-
-	results := tagger.Apply(input...)
-	assert.Equal(len(results), 0)
+	output, err := tagger.processMetrics(context.Background(), md)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, output.ResourceMetrics().Len())
 
 	//assume one second is long enough for the api to be called many times (potentially)
 	time.Sleep(time.Second)
 	//check only partial tags/volumes are returned
-	assert.Equal(2, ec2Client.tagsCallCount)
-	assert.Equal(1, ec2Client.volumesCallCount)
+	assert.Equal(t, 2, ec2Client.tagsCallCount)
+	assert.Equal(t, 1, ec2Client.volumesCallCount)
 
 	//check partial tags/volumes are saved
 	expectedTags := map[string]string{tagKey1: tagVal1}
-	assert.Equal(expectedTags, tagger.ec2TagCache)
+	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes := map[string]string{device1: volumeAttachmentId1}
-	assert.Equal(expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
 
-	assert.Equal(tagger.started, true)
-	results = tagger.Apply(input...)
-
-	assert.Equal(len(results), 3)
+	assert.Equal(t, tagger.started, true)
+	output, err = tagger.processMetrics(context.Background(), md)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, output.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
 }
 
-// Test ec2tagger init does not block for a long time
-func TestTaggerInitDoesNotBlock(t *testing.T) {
-	assert := assert.New(t)
-
-	metadataClient := &mockEC2Metadata{
-		InstanceIdentityDocument: mockedInstanceIdentityDoc,
-	}
-	ec2MetadataProvider := func() EC2MetadataAPI {
-		return metadataClient
-	}
-
+// Test ec2tagger Start does not block for a long time
+func TestTaggerStartDoesNotBlock(t *testing.T) {
+	cfg := createDefaultConfig().(*Config)
+	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	cfg.EC2InstanceTagKeys = []string{"*"}
+	cfg.EBSDeviceKeys = []string{"*"}
+	_, cancel := context.WithCancel(context.Background())
 	ec2Client := &mockEC2Client{
 		tagsCallCount:       0,
 		tagsFailLimit:       0,
@@ -657,15 +639,12 @@ func TestTaggerInitDoesNotBlock(t *testing.T) {
 	}
 	backoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
 	defaultRefreshInterval = 180 * time.Second
-	tagger := Tagger{
-		Log:                    testutil.Logger{},
-		RefreshIntervalSeconds: internal.Duration{Duration: 0},
-		ec2Provider:            ec2Provider,
-		ec2API:                 ec2Client,
-		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
-		EC2InstanceTagKeys:     []string{"*"},
-		EBSDeviceKeys:          []string{"*"},
+	tagger := &Tagger{
+		Config:           cfg,
+		logger:           processortest.NewNopCreateSettings().Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		ec2Provider:      ec2Provider,
 	}
 
 	deadline := time.NewTimer(1 * time.Second)
@@ -677,29 +656,24 @@ func TestTaggerInitDoesNotBlock(t *testing.T) {
 		case <-inited:
 		}
 	}()
-	err := tagger.Init()
-	assert.Nil(err)
-	assert.Equal(tagger.started, false)
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.Nil(t, err)
+	assert.Equal(t, tagger.started, false)
 	close(inited)
-
 }
 
-// Test ec2tagger init does not block for a long time
+// Test ec2tagger Start does not block for a long time
 func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
-	assert := assert.New(t)
+	cfg := createDefaultConfig().(*Config)
+	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.EC2MetadataTags = []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType}
+	_, cancel := context.WithCancel(context.Background())
 
-	metadataClient := &mockEC2Metadata{
-		InstanceIdentityDocument: mockedInstanceIdentityDoc,
-	}
-	ec2MetadataProvider := func() EC2MetadataAPI {
-		return metadataClient
-	}
-
-	tagger := Tagger{
-		Log:                    testutil.Logger{},
-		RefreshIntervalSeconds: internal.Duration{Duration: 0},
-		ec2MetadataProvider:    ec2MetadataProvider,
-		EC2MetadataTags:        []string{mdKeyInstanceId, mdKeyImageId, mdKeyInstanceType},
+	tagger := &Tagger{
+		Config:           cfg,
+		logger:           processortest.NewNopCreateSettings().Logger,
+		cancelFunc:       cancel,
+		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
 	}
 
 	deadline := time.NewTimer(1 * time.Second)
@@ -711,8 +685,8 @@ func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 		case <-inited:
 		}
 	}()
-	err := tagger.Init()
-	assert.Nil(err)
-	assert.Equal(tagger.started, true)
+	err := tagger.Start(context.Background(), componenttest.NewNopHost())
+	assert.Nil(t, err)
+	assert.Equal(t, tagger.started, true)
 	close(inited)
 }

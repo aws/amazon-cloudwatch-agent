@@ -8,13 +8,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 func TestLogs(t *testing.T) {
@@ -35,8 +34,6 @@ func TestLogs(t *testing.T) {
 					"region":               "us-east-1",
 					"log_stream_name":      "LOG_STREAM_NAME",
 					"force_flush_interval": "5s",
-					"tagexclude":           []string{"metricPath"},
-					"tagpass":              map[string][]string{"metricPath": {"logs"}},
 				},
 			},
 		},
@@ -66,8 +63,6 @@ func TestLogs_LogStreamName(t *testing.T) {
 					"region":               "us-east-1",
 					"log_stream_name":      hostname,
 					"force_flush_interval": "5s",
-					"tagexclude":           []string{"metricPath"},
-					"tagpass":              map[string][]string{"metricPath": {"logs"}},
 				},
 			},
 		},
@@ -93,8 +88,6 @@ func TestLogs_LogStreamName(t *testing.T) {
 					"region":               "us-east-1",
 					"log_stream_name":      "arn_aws_ecs_us-east-2_012345678910_task/cluster-name/9781c248-0edd-4cdb-9a93-f63cb662a5d3",
 					"force_flush_interval": "5s",
-					"tagexclude":           []string{"metricPath"},
-					"tagpass":              map[string][]string{"metricPath": {"logs"}},
 				},
 			},
 		},
@@ -117,8 +110,6 @@ func TestLogs_LogStreamName(t *testing.T) {
 					"region":               "us-east-1",
 					"log_stream_name":      "demo-app-5ffc89b95c-jgnf6",
 					"force_flush_interval": "5s",
-					"tagexclude":           []string{"metricPath"},
-					"tagpass":              map[string][]string{"metricPath": {"logs"}},
 				},
 			},
 		},
@@ -151,8 +142,6 @@ func TestLogs_ForceFlushInterval(t *testing.T) {
 					"region":               "us-east-1",
 					"log_stream_name":      hostname,
 					"force_flush_interval": "10s",
-					"tagexclude":           []string{"metricPath"},
-					"tagpass":              map[string][]string{"metricPath": {"logs"}},
 				},
 			},
 		},
@@ -186,8 +175,6 @@ func TestLogs_EndpointOverride(t *testing.T) {
 					"endpoint_override":    "https://logs-fips.us-east-1.amazonaws.com",
 					"log_stream_name":      hostname,
 					"force_flush_interval": "5s",
-					"tagexclude":           []string{"metricPath"},
-					"tagpass":              map[string][]string{"metricPath": {"logs"}},
 				},
 			},
 		},

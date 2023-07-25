@@ -53,7 +53,6 @@ stdNumColonTZ                                  // "-07:00" // always numeric
 stdNumColonSecondsTZ                           // "-07:00:00"
 stdFracSecond0                                 // ".0", ".00", ... , trailing zeros included
 stdFracSecond9                                 // ".9", ".99", ..., trailing zeros omitted
-
 */
 var TimeFormatMap = map[string]string{
 	"%B":  "January",

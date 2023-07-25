@@ -8,6 +8,13 @@
           }
         ]
       }
+    },
+    "metrics_collected": {
+      "kubernetes": {
+      },
+      "ecs": {
+        "metrics_collection_interval": 30
+      }
     }
   },
   "metrics": {

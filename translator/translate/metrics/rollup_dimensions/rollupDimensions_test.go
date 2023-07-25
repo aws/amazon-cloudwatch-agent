@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 func TestRollupDimensions(t *testing.T) {
@@ -66,7 +66,7 @@ func TestInvalidRollupList(t *testing.T) {
 		} else {
 			t.FailNow()
 		}
-		assert.Equal(t, false, isValidRollupList(actualVal), "Expect to be false")
+		assert.Equal(t, false, IsValidRollupList(actualVal), "Expect to be false")
 	}
 	assert.Equal(t, len(testInputs), len(translator.ErrorMessages), "Expect one Error message")
 }
@@ -86,7 +86,7 @@ func TestValidRollupList(t *testing.T) {
 	}
 
 	if err == nil {
-		assert.Equal(t, true, isValidRollupList(actualVal), "Expect to be true")
+		assert.Equal(t, true, IsValidRollupList(actualVal), "Expect to be true")
 	} else {
 		panic(err)
 	}

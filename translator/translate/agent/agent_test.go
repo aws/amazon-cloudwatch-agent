@@ -5,17 +5,14 @@ package agent
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/logger"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-
-	"os"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/logger"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 var httpProxy string

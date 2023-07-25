@@ -6,10 +6,10 @@ package collect_list
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding/ianaindex"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 const EncodingSectionKey = "encoding"

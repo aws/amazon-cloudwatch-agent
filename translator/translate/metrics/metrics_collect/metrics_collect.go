@@ -44,34 +44,31 @@ func RegisterWindowsRule(ruleName string, r Rule) {
 }
 
 type CollectMetrics struct {
+	targetRuleMap map[string]Rule
 }
 
 func (c *CollectMetrics) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	im := input.(map[string]interface{})
 	result := map[string]interface{}{}
 
-	var targetRuleMap map[string]Rule
 	switch translator.GetTargetPlatform() {
 	case config.OS_TYPE_LINUX:
-		targetRuleMap = linuxMetricCollectRule
+		c.targetRuleMap = linuxMetricCollectRule
 	case config.OS_TYPE_DARWIN:
-		targetRuleMap = darwinMetricCollectRule
+		c.targetRuleMap = darwinMetricCollectRule
 	case config.OS_TYPE_WINDOWS:
-		targetRuleMap = windowsMetricCollectRule
+		c.targetRuleMap = windowsMetricCollectRule
 	default:
 		// NOTE: we should panic but now there are many unit tests not setting the global var
-		targetRuleMap = linuxMetricCollectRule
+		c.targetRuleMap = linuxMetricCollectRule
 		//panic("unknown target platform " + translator.GetTargetPlatform())
 	}
 
 	//Check if this plugin exist in the input instance
 	//If not, not process
-	if _, ok := im[SectionKey]; !ok {
-		returnKey = ""
-		returnVal = ""
-	} else {
+	if _, ok := im[SectionKey]; ok {
 		//If yes, process it
-		for _, rule := range getOrderedRules(targetRuleMap) {
+		for _, rule := range getOrderedRules(c.targetRuleMap) {
 			key, val := rule.ApplyRule(im[SectionKey])
 
 			//If key == "", then no instance of this class in input
@@ -83,6 +80,14 @@ func (c *CollectMetrics) ApplyRule(input interface{}) (returnKey string, returnV
 	returnKey = "inputs"
 	returnVal = result
 	return
+}
+
+func (c *CollectMetrics) GetRegisteredMetrics() map[string]bool {
+	set := make(map[string]bool)
+	for plugin := range c.targetRuleMap {
+		set[plugin] = true
+	}
+	return set
 }
 
 // Adding alphabet order to the Rules

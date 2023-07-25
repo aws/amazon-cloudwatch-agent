@@ -8,10 +8,11 @@ import (
 	"sync"
 	"time"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 )
 
 type ServiceDiscovery struct {

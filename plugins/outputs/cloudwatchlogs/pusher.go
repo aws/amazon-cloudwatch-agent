@@ -4,18 +4,19 @@
 package cloudwatchlogs
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"math/rand"
 	"sort"
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
+
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
 const (
@@ -353,6 +354,7 @@ func (p *pusher) createLogGroupAndStream() error {
 				LogGroupName:  &p.Group,
 				LogStreamName: &p.Stream,
 			})
+
 			if err == nil {
 				p.Log.Debugf("successfully created log stream %v", p.Stream)
 			}

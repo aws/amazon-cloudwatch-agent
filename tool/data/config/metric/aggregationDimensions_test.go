@@ -6,9 +6,9 @@ package metric
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 )
 
 func TestAggregationDimension_ToMap(t *testing.T) {

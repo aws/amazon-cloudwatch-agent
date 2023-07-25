@@ -3,18 +3,7 @@
 
 name: PR Build
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**/*.md'
-      - 'NOTICE'
-      - 'RELEASE_NOTES'
-      - 'THIRD-PARTY'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/PR-build.yml'
-
+  workflow_dispatch:
   pull_request:
     branches: 
       - main 
@@ -23,34 +12,77 @@ on:
       - synchronize
       - reopened
       - ready_for_review
-    paths-ignore:
-      - '**/*.md'
-      - 'NOTICE'
-      - 'RELEASE_NOTES'
-      - 'THIRD-PARTY'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/PR-build.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Check changes
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.filter.outputs.build }}
+      lint: ${{ steps.filter.outputs.lint }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          list-files: shell
+          filters: .github/config/file-filters.yml
+
+      - name: List all updated files
+        run: |
+          for file in ${{ steps.filter.outputs.build_files }}; do
+            echo "$file"
+          done
+
+  lint:
+    needs: [changes]
+    name: Check lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.x
+        if: needs.changes.outputs.lint == 'true'
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.19.6
+          cache: false
+
+      - name: Check out code
+        if: needs.changes.outputs.lint == 'true'
+        uses: actions/checkout@v3
+
+      - name: Check format
+        if: needs.changes.outputs.lint == 'true'
+        run: |
+          make fmt fmt-sh
+          if [ ! -z "`git status --porcelain`" ]; then
+            echo "make fmt changed files"
+            git status
+            exit 1
+          fi
+
+      - name: Check license and imports
+        if: needs.changes.outputs.lint == 'true'
+        run: make simple-lint
+
   build:
+    needs: [lint, changes]
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-2019, windows-latest, macos-latest]
+        os: [ ubuntu-latest, windows-2019, windows-latest, macos-11]
         include:
           - os: ubuntu-latest
             family: linux
             cache-path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-          - os: macos-latest
+          - os: macos-11
             family: darwin
             cache-path: |
               ~/Library/Caches/go-build
@@ -67,43 +99,46 @@ jobs:
               ~\go\pkg\mod
     steps:
       - name: Set up Go 1.x
+        if: needs.changes.outputs.build == 'true'
         uses: actions/setup-go@v4
         with:
           go-version: ~1.19.6
           cache: false
 
       - name: Check out code
+        if: needs.changes.outputs.build == 'true'
         uses: actions/checkout@v3
 
       - name: Cache binaries
         id: cached_binaries
+        if: needs.changes.outputs.build == 'true'
         uses: actions/cache@v3
         with:
           key: "cached-binaries-${{ matrix.os }}-${{ github.sha }}"
           path: go.mod
 
       - name: Cache build output
-        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         uses: actions/cache@v3
         with:
           path: ${{ matrix.cache-path }}
           key: v1-go-pkg-mod-${{ matrix.os }}-${{ hashFiles('**/go.sum') }}
 
       - name: Install make
-        if: matrix.family == 'windows' && steps.cached_binaries.outputs.cache-hit != 'true'
+        if: matrix.family == 'windows' && steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: choco install make
 
       - name: Unit Test
-        if:  steps.cached_binaries.outputs.cache-hit != 'true'
+        if:  steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make test
 
       - name: Upload coverage to Codecov
-        if: steps.cached_binaries.outputs.cache-hit != 'true'
+        if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         uses: codecov/codecov-action@v3
         with:
           verbose: true
 
-      - name: Build 
-        if: steps.cached_binaries.outputs.cache-hit != 'true'
+      - name: Build
+        if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make amazon-cloudwatch-agent-${{ matrix.family }}
   

@@ -7,9 +7,12 @@
 package main
 
 import (
-	lumberjack "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/influxdata/telegraf/logger"
+
+	lumberjack "github.com/aws/amazon-cloudwatch-agent/logger"
 )
+
+const LogTargetEventLog = "eventlog"
 
 // RegisterEventLogger is for supporting Windows Event
 func RegisterEventLogger() error {

@@ -6,11 +6,10 @@ package config
 import (
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 func TestAgent_ToMap(t *testing.T) {

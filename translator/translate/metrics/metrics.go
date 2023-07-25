@@ -43,7 +43,6 @@ func (m *Metrics) ApplyRule(input interface{}) (returnKey string, returnVal inte
 	//Check if this plugin exist in the input instance
 	//If not, not process
 	if _, ok := im[SectionKey]; !ok {
-		translator.AddInfoMessages("", "No metric configuration found.")
 		returnKey = ""
 		returnVal = ""
 	} else {
@@ -63,9 +62,8 @@ func (m *Metrics) ApplyRule(input interface{}) (returnKey string, returnVal inte
 		}
 
 		cloudwatchInfo := map[string]interface{}{}
-		cloudwatchInfo["cloudwatch"] = []interface{}{outputPlugInfo}
+		cloudwatchInfo["cloudwatch"] = []interface{}{map[string]interface{}{}}
 		result["outputs"] = cloudwatchInfo
-		translator.SetMetricPath(result, SectionKey)
 		returnKey = SectionKey
 		returnVal = result
 	}

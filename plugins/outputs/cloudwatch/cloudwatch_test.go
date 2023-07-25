@@ -4,9 +4,10 @@
 package cloudwatch
 
 import (
-	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
-	"sort"
+	"context"
+	"log"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,105 +17,89 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
-	"github.com/influxdata/toml/ast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 )
 
-// Test that each tag becomes one dimension
-func TestBuildDimensions(t *testing.T) {
-	assert := assert.New(t)
-
-	testPoint := testutil.TestMetric(1)
-	dimensions := BuildDimensions(testPoint.Tags())
-
-	tagKeys := make([]string, len(testPoint.Tags()))
-	i := 0
-	for k, _ := range testPoint.Tags() {
-		tagKeys[i] = k
-		i += 1
-	}
-
-	sort.Strings(tagKeys)
-
-	if len(testPoint.Tags()) >= MaxDimensions {
-		assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
-	} else {
-		assert.Equal(len(testPoint.Tags()), len(dimensions), "Number of dimensions should be equal to number of tags")
-	}
-
-	for i, key := range tagKeys {
-		if i >= 10 {
-			break
+// Return true if found.
+func contains(dimensions []*cloudwatch.Dimension, key string, val string) bool {
+	for _, d := range dimensions {
+		if *d.Name == key && *d.Value == val {
+			return true
 		}
-		assert.Equal(key, *dimensions[i].Name, "Key should be equal")
-		assert.Equal(testPoint.Tags()[key], *dimensions[i].Value, "Value should be equal")
 	}
+	return false
 }
 
-// Test that metrics with valid values have a MetricDatum created where as non valid do not.
-// Skips "time.Time" type as something is converting the value to string.
-func TestBuildMetricDatums(t *testing.T) {
+// Test that each tag becomes one dimension.
+// Test that no more than 30 dimensions will get returned.
+// Test that if "host" dimension exists, it is always included.
+func TestBuildDimensions(t *testing.T) {
 	assert := assert.New(t)
+	// nil
+	dims := BuildDimensions(nil)
+	assert.Equal(0, len(dims))
+	// empty
+	dims = BuildDimensions(make(map[string]string))
+	assert.Equal(0, len(dims))
+	// Always expect "host". Expect no more than 30.
+	for i := 1; i < 40; i++ {
+		tags := make(map[string]string, i)
+		for j := 0; j < i; j++ {
+			key := "key" + strconv.Itoa(j)
+			val := "val" + strconv.Itoa(j)
+			tags[key] = val
+		}
+		expectedLen := i
+		// Test with and without host
+		if i%2 == 0 {
+			tags["host"] = "valhost"
+			expectedLen++
+		}
+		if expectedLen > 30 {
+			expectedLen = 30
+		}
+		dims = BuildDimensions(tags)
+		hostCount := 0
+		keyCount := 0
+		valCount := 0
+		for _, d := range dims {
+			if strings.HasPrefix(*d.Name, "host") {
+				hostCount++
+			}
+			if strings.HasPrefix(*d.Name, "key") {
+				keyCount++
+			}
+			if strings.HasPrefix(*d.Value, "val") {
+				valCount++
+			}
+		}
 
-	c := &CloudWatch{MaxValuesPerDatum: 3}
+		assert.Equal(expectedLen, valCount)
+		if i%2 == 0 {
+			assert.Equal(1, hostCount)
+			assert.Equal(expectedLen-1, keyCount)
+		} else {
+			assert.Equal(0, hostCount)
+			assert.Equal(expectedLen, keyCount)
+		}
 
-	highResolutionMetric := testutil.TestMetric(0)
-	highResolutionMetric.RemoveTag("tag1")
-	highResolutionMetric.AddTag(highResolutionTagKey, "true")
-
-	hdatums := c.BuildMetricDatum(highResolutionMetric)
-	assert.Equal(1, len(hdatums), "Should be able to create one high resolution Datum")
-	assert.Equal(0, len(hdatums[0].Dimensions), "The high resolution tags shouldn't be build into metric")
-
-	distribution.NewDistribution = regular.NewRegularDistribution
-
-	validDistribution := distribution.NewDistribution()
-	validDistribution.AddEntry(1, 1)
-	validMetrics := []telegraf.Metric{
-		testutil.TestMetric(1),
-		testutil.TestMetric(int32(1)),
-		testutil.TestMetric(int64(1)),
-		testutil.TestMetric(float64(1)),
-		testutil.TestMetric(true),
-		testutil.TestMetric(validDistribution),
-	}
-
-	for _, point := range validMetrics {
-		datums := c.BuildMetricDatum(point)
-		assert.Equal(1, len(datums), "Valid type should create a Datum")
-	}
-
-	invalidDistribution := distribution.NewDistribution()
-	err := invalidDistribution.AddEntry(-1, 1)
-	expectedErrMsg := "negative value"
-	assert.EqualError(err, expectedErrMsg)
-	invalidMetrics := []telegraf.Metric{
-		testutil.TestMetric("Foo"),
-		testutil.TestMetric(invalidDistribution),
-	}
-
-	for _, point := range invalidMetrics {
-		datums := c.BuildMetricDatum(point)
-		assert.Equal(0, len(datums), "Invalid type/value should not create a Datum")
 	}
 }
 
 func TestProcessRollup(t *testing.T) {
 	svc := new(mockCloudWatchClient)
-	cloudWatchOutput := newCloudWatchClient(svc, time.Second)
-	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
-		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
-		cloudWatchOutput.WriteToCloudWatch)
-	cloudWatchOutput.RollupDimensions = [][]string{{"d1", "d2"}, {"d1"}, {}, {"d4"}}
+	cw := newCloudWatchClient(svc, time.Second)
+	cw.publisher, _ = publisher.NewPublisher(
+		publisher.NewNonBlockingFifoQueue(10),
+		10,
+		2*time.Second,
+		cw.WriteToCloudWatch)
+	cw.config.RollupDimensions = [][]string{{"d1", "d2"}, {"d1"}, {}, {"d4"}}
 
 	rawDimension := []*cloudwatch.Dimension{
 		{
@@ -131,7 +116,7 @@ func TestProcessRollup(t *testing.T) {
 		},
 	}
 
-	actualDimensionList := cloudWatchOutput.ProcessRollup(rawDimension)
+	actualDimensionList := cw.ProcessRollup(rawDimension)
 	expectedDimensionList := [][]*cloudwatch.Dimension{
 		{
 			{
@@ -167,7 +152,7 @@ func TestProcessRollup(t *testing.T) {
 	}
 	assert.EqualValues(t, expectedDimensionList, actualDimensionList, "Unexpected dimension roll up list")
 
-	cloudWatchOutput.RollupDimensions = [][]string{}
+	cw.config.RollupDimensions = [][]string{}
 	rawDimension = []*cloudwatch.Dimension{
 		{
 			Name:  aws.String("d1"),
@@ -183,7 +168,7 @@ func TestProcessRollup(t *testing.T) {
 		},
 	}
 
-	actualDimensionList = cloudWatchOutput.ProcessRollup(rawDimension)
+	actualDimensionList = cw.ProcessRollup(rawDimension)
 	expectedDimensionList = [][]*cloudwatch.Dimension{
 		{
 			{
@@ -202,16 +187,16 @@ func TestProcessRollup(t *testing.T) {
 	}
 	assert.EqualValues(t, expectedDimensionList, actualDimensionList, "Unexpected dimension roll up list without rollup setting")
 
-	cloudWatchOutput.RollupDimensions = [][]string{{"d1", "d2"}, {"d1"}, {}}
+	cw.config.RollupDimensions = [][]string{{"d1", "d2"}, {"d1"}, {}}
 	rawDimension = []*cloudwatch.Dimension{}
 
-	actualDimensionList = cloudWatchOutput.ProcessRollup(rawDimension)
+	actualDimensionList = cw.ProcessRollup(rawDimension)
 	expectedDimensionList = [][]*cloudwatch.Dimension{
 		{},
 	}
 	assert.EqualValues(t, expectedDimensionList, actualDimensionList, "Unexpected dimension roll up list with no raw dimensions")
 
-	cloudWatchOutput.RollupDimensions = [][]string{{"d1", "d2", "d3"}}
+	cw.config.RollupDimensions = [][]string{{"d1", "d2", "d3"}}
 	rawDimension = []*cloudwatch.Dimension{
 		{
 			Name:  aws.String("d1"),
@@ -227,7 +212,7 @@ func TestProcessRollup(t *testing.T) {
 		},
 	}
 
-	actualDimensionList = cloudWatchOutput.ProcessRollup(rawDimension)
+	actualDimensionList = cw.ProcessRollup(rawDimension)
 	expectedDimensionList = [][]*cloudwatch.Dimension{
 		{
 			{
@@ -246,7 +231,7 @@ func TestProcessRollup(t *testing.T) {
 	}
 	assert.EqualValues(t, expectedDimensionList, actualDimensionList,
 		"Unexpected dimension roll up list with duplicate roll up")
-	cloudWatchOutput.Close()
+	cw.Shutdown(context.Background())
 }
 
 func TestGetUniqueRollupList(t *testing.T) {
@@ -271,16 +256,78 @@ func TestGetUniqueRollupList(t *testing.T) {
 	assert.EqualValues(t, expectedLists, actualLists, "Unique list result should be empty")
 }
 
+func TestIsDropping(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+
+	testCases := map[string]struct {
+		dropMetricsConfig    map[string]bool
+		expectMetricsDropped map[string]bool
+	}{
+		"TestIsDroppingWithMultipleCategoryLinux": {
+			dropMetricsConfig: map[string]bool{
+				"cpu_usage_idle":             true,
+				"cpu_time_active":            true,
+				"nvidia_smi_utilization_gpu": true,
+			},
+			expectMetricsDropped: map[string]bool{
+				"cpu_usage_idle":  true,
+				"cpu_time_active": true,
+				"nvidia_smi":      false,
+				"cpu_usage_guest": false,
+			},
+		},
+		"TestIsDroppingWithMultipleCategoryWindows": {
+			dropMetricsConfig: map[string]bool{
+				"cpu usage_idle":             true,
+				"cpu time_active":            true,
+				"nvidia_smi utilization_gpu": true,
+			},
+			expectMetricsDropped: map[string]bool{
+				"cpu usage_idle":  true,
+				"cpu time_active": true,
+				"nvidia_smi":      false,
+				"cpu usage_guest": false,
+			},
+		},
+		"TestIsDroppingWithMetricDecoration": {
+			dropMetricsConfig: map[string]bool{
+				"CPU_USAGE_IDLE":             true,
+				"cpu_time_active":            true,
+				"nvidia_smi_utilization_gpu": true,
+			},
+			expectMetricsDropped: map[string]bool{
+				"cpu_usage_idle":             false,
+				"CPU_USAGE_IDLE":             true,
+				"nvidia_smi":                 false,
+				"nvidia_smi_utilization_gpu": true,
+				"cpu":                        false,
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			cw.config.DropOriginalConfigs = testCase.dropMetricsConfig
+			for metricName, expectMetricDropped := range testCase.expectMetricsDropped {
+				actualMetricDropped := cw.IsDropping(metricName)
+				require.Equal(t, expectMetricDropped, actualMetricDropped)
+			}
+		})
+	}
+}
+
 func TestIsFlushable(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
 	svc.On("PutMetricData", mock.Anything).Return(
 		&res,
 		nil)
-	cloudWatchOutput := newCloudWatchClient(svc, time.Second)
-	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
-		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
-		cloudWatchOutput.WriteToCloudWatch)
+	cw := newCloudWatchClient(svc, time.Second)
+	cw.publisher, _ = publisher.NewPublisher(
+		publisher.NewNonBlockingFifoQueue(10),
+		10,
+		2*time.Second,
+		cw.WriteToCloudWatch)
 	assert := assert.New(t)
 	perRequestConstSize := overallConstPerRequestSize + len("CWAgent") + namespaceOverheads
 	batch := newMetricDatumBatch(defaultMaxDatumsPerCall, perRequestConstSize)
@@ -292,10 +339,10 @@ func TestIsFlushable(t *testing.T) {
 		Timestamp:  aws.Time(time.Now()),
 	}
 	batch.Partition = append(batch.Partition, &datum)
-	assert.False(cloudWatchOutput.timeToPublish(batch))
-	time.Sleep(time.Second + cloudWatchOutput.ForceFlushInterval.Duration)
-	assert.True(cloudWatchOutput.timeToPublish(batch))
-	cloudWatchOutput.Close()
+	assert.False(cw.timeToPublish(batch))
+	time.Sleep(time.Second + cw.config.ForceFlushInterval)
+	assert.True(cw.timeToPublish(batch))
+	cw.Shutdown(context.Background())
 }
 
 func TestIsFull(t *testing.T) {
@@ -326,16 +373,25 @@ type mockCloudWatchClient struct {
 	mock.Mock
 }
 
-func (svc *mockCloudWatchClient) PutMetricData(input *cloudwatch.PutMetricDataInput) (*cloudwatch.PutMetricDataOutput, error) {
+func (svc *mockCloudWatchClient) PutMetricData(
+	input *cloudwatch.PutMetricDataInput,
+) (*cloudwatch.PutMetricDataOutput, error) {
 	args := svc.Called(input)
 	return args.Get(0).(*cloudwatch.PutMetricDataOutput), args.Error(1)
 }
 
-func newCloudWatchClient(svc cloudwatchiface.CloudWatchAPI, forceFlushInterval time.Duration) *CloudWatch {
+func newCloudWatchClient(
+	svc cloudwatchiface.CloudWatchAPI,
+	forceFlushInterval time.Duration,
+) *CloudWatch {
 	cloudwatch := &CloudWatch{
-		svc:                svc,
-		ForceFlushInterval: internal.Duration{Duration: forceFlushInterval},
-		agentInfo:          agentinfo.New(""),
+		svc: svc,
+		config: &Config{
+			ForceFlushInterval: forceFlushInterval,
+			MaxDatumsPerCall:   defaultMaxDatumsPerCall,
+			MaxValuesPerDatum:  defaultMaxValuesPerDatum,
+		},
+		agentInfo: agentinfo.New(""),
 	}
 	cloudwatch.startRoutines()
 	return cloudwatch
@@ -357,7 +413,7 @@ func makeMetrics(count int) []telegraf.Metric {
 	return metrics
 }
 
-func TestWrite(t *testing.T) {
+func TestConsumeMetrics(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	res := cloudwatch.PutMetricDataOutput{}
 	svc.On("PutMetricData", mock.Anything).Return(
@@ -369,9 +425,21 @@ func TestWrite(t *testing.T) {
 		cloudWatchOutput.WriteToCloudWatch)
 	metrics := makeMetrics(1500)
 	cloudWatchOutput.Write(metrics)
-	time.Sleep(2*time.Second + 2*cloudWatchOutput.ForceFlushInterval.Duration)
+	time.Sleep(2*time.Second + 2*cloudWatchOutput.config.ForceFlushInterval)
+	svc.On("PutMetricData", mock.Anything).Return(&res, nil)
+	cw := newCloudWatchClient(svc, time.Second)
+	cw.publisher, _ = publisher.NewPublisher(
+		publisher.NewNonBlockingFifoQueue(10),
+		10,
+		2*time.Second,
+		cw.WriteToCloudWatch)
+	// Expect 1500 metrics batched in 2 API calls.
+	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
+	ctx := context.Background()
+	cw.ConsumeMetrics(ctx, pmetrics)
+	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 2))
-	cloudWatchOutput.Close()
+	cw.Shutdown(ctx)
 }
 
 func TestWriteError(t *testing.T) {
@@ -381,12 +449,15 @@ func TestWriteError(t *testing.T) {
 	svc.On("PutMetricData", mock.Anything).Return(
 		&res,
 		serverInternalErr)
-	cloudWatchOutput := newCloudWatchClient(svc, time.Second)
-	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
-		publisher.NewNonBlockingFifoQueue(10), 10, 2*time.Second,
-		cloudWatchOutput.WriteToCloudWatch)
-	metrics := makeMetrics(20)
-	cloudWatchOutput.Write(metrics)
+	cw := newCloudWatchClient(svc, time.Second)
+	cw.publisher, _ = publisher.NewPublisher(
+		publisher.NewNonBlockingFifoQueue(10),
+		10,
+		2*time.Second,
+		cw.WriteToCloudWatch)
+	metrics := createTestMetrics(20, 1, 10, "")
+	ctx := context.Background()
+	cw.ConsumeMetrics(ctx, metrics)
 
 	// Sum time for all retries.
 	var sum int
@@ -395,7 +466,7 @@ func TestWriteError(t *testing.T) {
 	}
 	time.Sleep(backoffRetryBase * time.Duration(sum))
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 5))
-	cloudWatchOutput.Close()
+	cw.Shutdown(ctx)
 }
 
 // TestPublish verifies metric batches do not get pushed immediately when
@@ -410,15 +481,18 @@ func TestPublish(t *testing.T) {
 	// The buffer holds 50 batches of 1,000 metrics. So choose 5x.
 	numMetrics := 5 * datumBatchChanBufferSize * defaultMaxDatumsPerCall
 	expectedCalls := numMetrics / defaultMaxDatumsPerCall
-	cloudWatchOutput := newCloudWatchClient(svc, interval)
-	cloudWatchOutput.publisher, _ = publisher.NewPublisher(
+	log.Printf("I! interval %v, numMetrics %v, expectedCalls %v",
+		interval, numMetrics, expectedCalls)
+	cw := newCloudWatchClient(svc, interval)
+	cw.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
 		2*time.Second,
-		cloudWatchOutput.WriteToCloudWatch)
-	metrics := makeMetrics(numMetrics)
-	// Use goroutine since Write() could block if len(metrics) >metricChanBufferSize.
-	go cloudWatchOutput.Write(metrics)
+		cw.WriteToCloudWatch)
+	metrics := createTestMetrics(numMetrics, 1, 1, "")
+	ctx := context.Background()
+	// Use goroutine since it could block if len(metrics) >metricChanBufferSize.
+	go cw.ConsumeMetrics(ctx, metrics)
 	// Expect some, but not all API calls after half the original interval.
 	time.Sleep(interval/2 + 2*time.Second)
 	assert.Less(t, 0, len(svc.Calls))
@@ -427,126 +501,18 @@ func TestPublish(t *testing.T) {
 	// 10K metrics in batches of 20...
 	time.Sleep(interval)
 	assert.Equal(t, expectedCalls, len(svc.Calls))
-	cloudWatchOutput.Close()
-}
-
-func TestMetricConfigsRead(t *testing.T) {
-	contents := `[[outputs.cloudwatch.metric_decoration]]
-                     category = "cpu"
-                     name     = "cpu"
-                     rename   = "CPU"
-                     unit     = "Percent"
-                 [[outputs.cloudwatch.metric_decoration]]
-                     category = "mem"
-                     name     = "mem"
-                     unit     = "Megabytes"
-                 [[outputs.cloudwatch.metric_decoration]]
-                     category = "disk"
-                     name     = "disk"
-                     rename   = "DISK"
-                 `
-
-	c, err := buildCloudWatchFromToml(contents)
-
-	assert.True(t, err == nil)
-
-	expected := make([]MetricDecorationConfig, 0)
-
-	mdc := MetricDecorationConfig{
-		Category: "cpu",
-		Metric:   "cpu",
-		Rename:   "CPU",
-		Unit:     "Percent",
-	}
-	expected = append(expected, mdc)
-
-	mdc = MetricDecorationConfig{
-		Category: "mem",
-		Metric:   "mem",
-		Unit:     "Megabytes",
-	}
-	expected = append(expected, mdc)
-
-	mdc = MetricDecorationConfig{
-		Category: "disk",
-		Metric:   "disk",
-		Rename:   "DISK",
-	}
-	expected = append(expected, mdc)
-
-	assert.Equal(t, expected, c.MetricConfigs)
-}
-
-func TestDroppingOriginMetrics(t *testing.T) {
-	contents := `[outputs.cloudwatch.drop_original_metrics]
-	 					cpu = ["cpu_usage_idle", "time_active"]
-      					nvidia_smi = ["temperature_gpu", "utilization_gpu"]
-	 				`
-	c, err := buildCloudWatchFromToml(contents)
-
-	assert.NoError(t, err)
-
-	expected := make(map[string][]string)
-	expected["cpu"] = []string{"cpu_usage_idle", "time_active"}
-	expected["nvidia_smi"] = []string{"temperature_gpu", "utilization_gpu"}
-
-	assert.Equal(t, expected, c.DropOriginConfigs)
-
-	expectedMap := make(map[string]map[string]struct{})
-	expectedMap["cpu"] = map[string]struct{}{"cpu_usage_idle": {}, "time_active": {}}
-	expectedMap["nvidia_smi"] = map[string]struct{}{"temperature_gpu": {}, "utilization_gpu": {}}
-
-	actual := GetDroppingDimensionMap(c.DropOriginConfigs)
-	assert.Equal(t, expectedMap, actual)
-}
-
-func TestMissMetricConfig(t *testing.T) {
-	contents := `[outputs.cloudwatch]
-                     access_key = "metric_access_key"
-                     force_flush_interval = "30s"
-                `
-	c, err := buildCloudWatchFromToml(contents)
-
-	assert.True(t, err == nil)
-
-	assert.True(t, c.MetricConfigs == nil)
-}
-
-func buildCloudWatchFromToml(contents string) (*CloudWatch, error) {
-	c := &CloudWatch{}
-
-	tbl, err := toml.Parse([]byte(contents))
-
-	if err != nil {
-		return c, err
-	}
-
-	if outputsVal, ok := tbl.Fields["outputs"]; ok {
-		outputsTbl, ok := outputsVal.(*ast.Table)
-		if !ok {
-			return c, fmt.Errorf("unexpected outputs field")
-		}
-		cloudWatchVal, ok := outputsTbl.Fields["cloudwatch"]
-		if !ok {
-			return c, fmt.Errorf("miss cloudwatch field")
-		}
-		cloudWatchTbl, ok := cloudWatchVal.(*ast.Table)
-		if !ok {
-			return c, fmt.Errorf("unexpected cloudwatch field")
-		}
-
-		if err := toml.UnmarshalTable(cloudWatchTbl, c); err != nil {
-			return c, err
-		}
-	}
-
-	return c, nil
+	cw.Shutdown(ctx)
 }
 
 func TestBackoffRetries(t *testing.T) {
 	c := &CloudWatch{}
-	sleeps := []time.Duration{time.Millisecond * 200, time.Millisecond * 400, time.Millisecond * 800,
-		time.Millisecond * 1600, time.Millisecond * 3200, time.Millisecond * 6400}
+	sleeps := []time.Duration{
+		time.Millisecond * 200,
+		time.Millisecond * 400,
+		time.Millisecond * 800,
+		time.Millisecond * 1600,
+		time.Millisecond * 3200,
+		time.Millisecond * 6400}
 	assert := assert.New(t)
 	leniency := 200 * time.Millisecond
 	for i := 0; i <= defaultRetryCount; i++ {
@@ -581,54 +547,4 @@ func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 	assert.True(t, c.metricDatumBatchFull())
 	<-c.datumBatchChan
 	assert.False(t, c.metricDatumBatchFull())
-}
-
-func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
-	c := &CloudWatch{
-		datumBatchChan: make(chan []*cloudwatch.MetricDatum, 0),
-	}
-	input := testutil.MustMetric(
-		"cpu",
-		map[string]string{
-			"host": "example.org",
-			"foo":  "",
-		},
-		map[string]interface{}{
-			"value": int64(42),
-		},
-		time.Unix(0, 0),
-	)
-
-	datums := c.BuildMetricDatum(input)
-	require.Len(t, datums[0].Dimensions, 1)
-}
-
-func TestIsDropping(t *testing.T) {
-	contents := `[outputs.cloudwatch.drop_original_metrics]
-	 					cpu = ["cpu_usage_idle", "time_active"]
-	 				`
-	c, err := buildCloudWatchFromToml(contents)
-
-	assert.NoError(t, err)
-
-	c.droppingOriginMetrics = GetDroppingDimensionMap(c.DropOriginConfigs)
-
-	assert.True(t, c.IsDropping("cpu", "cpu_usage_idle"))
-	assert.True(t, c.IsDropping("cpu", "time_active"))
-	assert.False(t, c.IsDropping("cpu", "usage_guest"))
-
-}
-
-func TestIsDroppingWildCard(t *testing.T) {
-	contents := `[outputs.cloudwatch.drop_original_metrics]
-      					nvidia_smi = ["*"]
-	 				`
-	c, err := buildCloudWatchFromToml(contents)
-
-	assert.NoError(t, err)
-
-	c.droppingOriginMetrics = GetDroppingDimensionMap(c.DropOriginConfigs)
-
-	assert.True(t, c.IsDropping("nvidia_smi", "any_metric_name"))
-	assert.True(t, c.IsDropping("nvidia_smi", "utilization_gpu"))
 }

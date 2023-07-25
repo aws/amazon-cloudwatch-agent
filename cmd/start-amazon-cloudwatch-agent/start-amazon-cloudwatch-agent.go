@@ -4,26 +4,30 @@
 package main
 
 import (
+	"errors"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
 	"syscall"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 const (
 	COMMON_CONFIG = "common-config.toml"
 	JSON          = "amazon-cloudwatch-agent.json"
 	TOML          = "amazon-cloudwatch-agent.toml"
+	YAML          = "amazon-cloudwatch-agent.yaml"
 	ENV           = "env-config.json"
 
 	AGENT_LOG_FILE = "amazon-cloudwatch-agent.log"
 
-	//TODO this CONFIG_DIR_IN_CONTAINE should change to something indicate dir, keep it for now to avoid break testing
-	CONFIG_DIR_IN_CONTAINE = "/etc/cwagentconfig"
+	//TODO this CONFIG_DIR_IN_CONTAINER should change to something indicate dir, keep it for now to avoid break testing
+	CONFIG_DIR_IN_CONTAINER = "/etc/cwagentconfig"
 )
 
 var (
@@ -32,6 +36,7 @@ var (
 	envConfigPath    string
 	tomlConfigPath   string
 	commonConfigPath string
+	yamlConfigPath   string
 
 	agentLogFilePath string
 
@@ -45,7 +50,7 @@ var runInContainer = os.Getenv(config.RUN_IN_CONTAINER)
 func translateConfig() error {
 	args := []string{"--output", tomlConfigPath, "--mode", "auto"}
 	if runInContainer == config.RUN_IN_CONTAINER_TRUE {
-		args = append(args, "--input-dir", CONFIG_DIR_IN_CONTAINE)
+		args = append(args, "--input-dir", CONFIG_DIR_IN_CONTAINER)
 	} else {
 		args = append(args, "--input", jsonConfigPath, "--input-dir", jsonDirPath, "--config", commonConfigPath)
 	}
@@ -89,10 +94,12 @@ func main() {
 	}
 
 	if err := translateConfig(); err != nil {
-		log.Fatalf("E! Cannot translate JSON config into TOML, ERROR is %v \n", err)
+		log.Fatalf("E! Cannot translate JSON, ERROR is %v \n", err)
 	}
 	log.Printf("I! Config has been translated into TOML %s \n", tomlConfigPath)
 	printFileContents(tomlConfigPath)
+	log.Printf("I! Config has been translated into YAML %s \n", yamlConfigPath)
+	printFileContents(yamlConfigPath)
 
 	if err := startAgent(writer); err != nil {
 		log.Printf("E! Error when starting Agent, Error is %v \n", err)
@@ -103,12 +110,15 @@ func main() {
 func printFileContents(path string) {
 	file, err := os.Open(path)
 	if err != nil {
-		log.Printf("E! Error when printing file(%s) contents, Error is %v \n", path, err)
-		os.Exit(1)
+		// YAML file may or may not exist and that is okay.
+		if !errors.Is(err, fs.ErrNotExist) {
+			log.Printf("E! Error when printing file(%s) contents, Error is %v \n", path, err)
+		}
+		return
 	}
 	defer func() {
 		if err = file.Close(); err != nil {
-			log.Printf("E! Error when closing file,  Error is %v \n", err)
+			log.Printf("E! Error when closing file, Error is %v \n", err)
 		}
 	}()
 
@@ -116,5 +126,5 @@ func printFileContents(path string) {
 	if err != nil {
 		log.Printf("E! Error when reading file(%s), Error is %v \n", path, err)
 	}
-	log.Printf("D! toml config %v", string(b))
+	log.Printf("D! config %v", string(b))
 }

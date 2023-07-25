@@ -12,8 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor/mesos"
 	"github.com/google/cadvisor/cache/memory"
 	cadvisormetrics "github.com/google/cadvisor/container"
 	"github.com/google/cadvisor/container/containerd"
@@ -25,6 +23,9 @@ import (
 	"github.com/google/cadvisor/utils/sysfs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor/mesos"
 )
 
 // The amount of time for which to keep stats in memory.

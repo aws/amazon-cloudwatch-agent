@@ -6,12 +6,13 @@ package k8sdecorator
 import (
 	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
+
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/k8sdecorator/stores"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/k8sdecorator/structuredlogsadapter"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type K8sDecorator struct {

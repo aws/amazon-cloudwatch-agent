@@ -6,6 +6,7 @@ package util
 import (
 	"fmt"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -13,6 +14,7 @@ import (
 )
 
 const (
+	Alias_Key                    = "alias"
 	Measurement_Key              = "measurement"
 	Collect_Interval_Key         = "metrics_collection_interval"
 	Collect_Interval_Mapped_Key  = "interval"
@@ -50,13 +52,13 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 	// Set input plugin specific interval
 	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
 
-	//Set append_dimensions as tags
+	// Set append_dimensions as tags
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
 		result[Append_Dimensions_Mapped_Key] = val
 		util.Cleanup(val)
 	}
 
-	// apply any specific rules for the plugin
+	// Apply any specific rules for the plugin
 	if m, ok := ApplyPluginSpecificRules(pluginName); ok {
 		for key, val := range m {
 			result[key] = val
@@ -95,7 +97,6 @@ func ProcessWindowsCommonConfig(input interface{}, pluginName string, path strin
 	}
 
 	// 3. object config
-
 	// Generate allowlisted metric list, process only if Measurement_Key exist
 	if translator.IsValid(inputMap, Measurement_Key, path) {
 		returnKey, returnVal := ApplyMeasurementRule(inputMap[Measurement_Key], pluginName, config.OS_TYPE_WINDOWS, path)
@@ -103,6 +104,11 @@ func ProcessWindowsCommonConfig(input interface{}, pluginName string, path strin
 			objectConfig[returnKey] = returnVal
 		}
 	}
+
+	// 4. Generate a alias name for each windows plugin since every win performance counter plugin will generate
+	// a duplicate plugin but with different configuration https://github.com/aws/amazon-cloudwatch-agent/blob/a791b1484fbc0611e515ccbb9bd24bea469cb9fb/translator/translate/metrics/metrics_collect/customizedmetrics/customizedmetric.go#L39-L40
+	// and being merged later on if have the same interval,tags, objects https://github.com/aws/amazon-cloudwatch-agent/blob/a791b1484fbc0611e515ccbb9bd24bea469cb9fb/translator/translate/metrics/metrics_collect/customizedmetrics/customizedmetric.go#L58-L86
+	returnVal[Alias_Key] = hash.HashName(pluginName)
 
 	// Add common field ObjectName
 	objectConfig[Windows_Object_Name_Key] = pluginName

@@ -1,0 +1,90 @@
+connectors: {}
+exporters:
+  awsxray:
+    aws_log_groups: []
+    endpoint: ""
+    index_all_attributes: false
+    indexed_attributes: []
+    local_mode: false
+    max_retries: 2
+    no_verify_ssl: false
+    num_workers: 8
+    proxy_address: ""
+    region: us-west-2
+    request_timeout_seconds: 30
+    resource_arn: ""
+    role_arn: ""
+    profile: ""
+    shared_credentials_file: []
+    telemetry:
+      enabled: true
+      include_metadata: true
+extensions: {}
+processors:
+  batch/xray:
+    send_batch_max_size: 0
+    send_batch_size: 8192
+    timeout: 200ms
+receivers:
+  awsxray:
+    endpoint: 127.0.0.1:2000
+    proxy_server:
+      aws_endpoint: ""
+      endpoint: 127.0.0.1:2000
+      local_mode: false
+      proxy_address: ""
+      region: us-west-2
+      role_arn: ""
+    transport: udp
+  otlp:
+    protocols:
+      grpc:
+        auth: null
+        endpoint: 127.0.0.1:4317
+        include_metadata: false
+        keepalive: null
+        max_concurrent_streams: 0
+        max_recv_msg_size_mib: 0
+        read_buffer_size: 524288
+        tls: null
+        transport: tcp
+        write_buffer_size: 0
+      http:
+        auth: null
+        cors: null
+        endpoint: 127.0.0.1:4318
+        include_metadata: false
+        max_request_body_size: 0
+        tls: null
+service:
+  extensions: []
+  pipelines:
+    traces/xray:
+      exporters:
+        - awsxray
+      processors:
+        - batch/xray
+      receivers:
+        - awsxray
+        - otlp
+  telemetry:
+    logs:
+      development: false
+      disable_caller: false
+      disable_stacktrace: false
+      encoding: console
+      error_output_paths: []
+      initial_fields: {}
+      level: info
+      output_paths:
+        - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+      sampling:
+        initial: 2
+        thereafter: 500
+    metrics:
+      address: ""
+      level: None
+      metric_readers: []
+    resource: {}
+    traces:
+      propagators: []

@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 func TestUtils_addKubernetesInfo(t *testing.T) {

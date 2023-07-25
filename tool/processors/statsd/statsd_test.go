@@ -6,13 +6,13 @@ package statsd
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/collectd"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestProcessor_Process(t *testing.T) {

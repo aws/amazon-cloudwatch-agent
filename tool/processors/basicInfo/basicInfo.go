@@ -6,10 +6,9 @@ package basicInfo
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/agentconfig"
-
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/agentconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )

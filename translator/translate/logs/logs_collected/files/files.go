@@ -15,7 +15,10 @@ var ChildRule = map[string]translator.Rule{}
 type Files struct {
 }
 
-const SectionKey = "files"
+const (
+	SectionKey       = "files"
+	SectionMappedKey = "logfile"
+)
 
 func GetCurPath() string {
 	return parent.GetCurPath() + SectionKey + "/"
@@ -44,8 +47,8 @@ func (f *Files) ApplyRule(input interface{}) (returnKey string, returnVal interf
 
 		// generate tail config only if file_config exists
 		tailInfo := map[string]interface{}{}
-		if _, ok := tailConfig["file_config"]; ok {
-			tailInfo["logfile"] = []interface{}{tailConfig}
+		if _, ok = tailConfig["file_config"]; ok {
+			tailInfo[SectionMappedKey] = []interface{}{tailConfig}
 			returnKey = "inputs"
 			returnVal = tailInfo
 		}

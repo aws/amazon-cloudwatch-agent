@@ -13,12 +13,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
+
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type LogFile struct {
@@ -124,11 +125,12 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 	// Initialize all the file configs
 	for i := range t.FileConfig {
 		if err := t.FileConfig[i].init(); err != nil {
-			return err
+			return fmt.Errorf("invalid file config init %v with err %v", t.FileConfig[i], err)
 		}
 	}
 
 	t.started = true
+	t.Log.Infof("turned on logs plugin")
 	return nil
 }
 
@@ -141,6 +143,7 @@ func (t *LogFile) Stop() {
 // Try to find if there is any new file needs to be added for monitoring.
 func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	if !t.started {
+		t.Log.Warn("not started with file state folder %s", t.FileStateFolder)
 		return nil
 	}
 
@@ -151,12 +154,10 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
-
 		targetFiles, err := t.getTargetFiles(fileconfig)
 		if err != nil {
 			t.Log.Errorf("Failed to find target files for file config %v, with error: %v", fileconfig.FilePath, err)
 		}
-
 		for _, filename := range targetFiles {
 			dests, ok := t.configs[fileconfig]
 			if !ok {

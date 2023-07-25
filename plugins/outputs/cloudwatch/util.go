@@ -9,10 +9,11 @@ import (
 	"sort"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
+
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
 )
 
 const (

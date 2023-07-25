@@ -6,7 +6,6 @@ package defaultConfig
 import (
 	"encoding/json"
 	"fmt"
-
 	"log"
 	"strconv"
 
@@ -45,11 +44,11 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 
 	backupCtx, err := json.Marshal(ctx)
 	if err != nil {
-		fmt.Printf("Error occured when marshal context object into json:\n %v\n", err)
+		fmt.Printf("Error occurred when marshal context object into json:\n %v\n", err)
 	}
 	backupConfig, err := json.Marshal(config)
 	if err != nil {
-		fmt.Printf("Error occured when marshal config object into json:\n %v\n", err)
+		fmt.Printf("Error occurred when marshal config object into json:\n %v\n", err)
 	}
 	for {
 		//This is to avoid golang import cycle not allowed issue, we need to go back to the parent if the user is not satisfied with the config.
@@ -75,11 +74,11 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 		} else {
 			err := json.Unmarshal(backupCtx, ctx)
 			if err != nil {
-				fmt.Printf("Error occured when unmarshal context object into json:\n %v\n", err)
+				fmt.Printf("Error occurred when unmarshal context object into json:\n %v\n", err)
 			}
 			err = json.Unmarshal(backupConfig, config)
 			if err != nil {
-				fmt.Printf("Error occured when unmarshal config object into json:\n %v\n", err)
+				fmt.Printf("Error occurred when unmarshal config object into json:\n %v\n", err)
 			}
 		}
 	}

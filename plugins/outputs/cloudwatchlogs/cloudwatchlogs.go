@@ -10,17 +10,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/handlers"
-	"github.com/aws/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/handlers"
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
 const (

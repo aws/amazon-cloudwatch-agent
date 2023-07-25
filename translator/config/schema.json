@@ -12,8 +12,8 @@
     "logs": {
       "$ref": "#/definitions/logsDefinition"
     },
-    "csm": {
-      "$ref": "#/definitions/csmDefinition"
+    "traces": {
+      "$ref": "#/definitions/tracesDefinition"
     }
   },
   "additionalProperties": true,
@@ -55,40 +55,6 @@
         }
       },
       "additionalProperties": true
-    },
-    "csmDefinition": {
-      "type": "object",
-      "description": "Configuration for AWS SDK client-side monitoring",
-      "properties": {
-        "service_addresses": {
-          "description": "List of addresses and ports to listen for UDP events on",
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-          }
-        },
-        "port": {
-          "description": "Localhost UDP port to listen to client-side monitoring events on",
-          "$ref": "#/definitions/userPortDefinition"
-        },
-        "log_level": {
-          "description": "Determines the verbosity of logging with 0 being disabled.",
-          "type": "integer"
-        },
-        "memory_limit_in_mb": {
-          "description": "Approximate amount of memory, in MB, to use for unpublished monitoring records",
-          "type": "integer"
-        },
-        "endpoint_override": {
-          "description": "Override CSM service endpoint.",
-          "type": "string",
-          "format": "uri"
-        }
-      },
-      "additionalProperties": false
     },
     "metricsDefinition": {
       "type": "object",
@@ -550,6 +516,10 @@
               "properties": {
                 "metrics_collection_interval": {
                   "$ref": "#/definitions/timeIntervalDefinition"
+                },
+                "disable_metric_extraction": {
+                  "description": "Disable the extraction of metrics from EMF logs",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -564,6 +534,10 @@
                 },
                 "metrics_collection_interval": {
                   "$ref": "#/definitions/timeIntervalDefinition"
+                },
+                "disable_metric_extraction": {
+                  "description": "Disable the extraction of metrics from EMF logs",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": true
@@ -585,6 +559,10 @@
                 },
                 "ecs_service_discovery": {
                   "$ref": "#/definitions/ecsServiceDiscoveryDefinition"
+                },
+                "disable_metric_extraction": {
+                  "description": "Disable the extraction of metrics from EMF logs",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
@@ -827,6 +805,97 @@
         }
       }
     },
+    "tracesDefinition": {
+      "type": "object",
+      "descriptions": "configuration for collecting traces and uploading to x-ray service",
+      "properties": {
+        "traces_collected": {
+          "type": "object",
+          "properties": {
+            "xray": {
+              "$ref": "#/definitions/tracesDefinition/definitions/xrayDefinition"
+            },
+            "otlp": {
+              "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinition"
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "concurrency": {
+          "description": "Maximum number of concurrent calls to AWS X-Ray to upload documents",
+          "type": "integer",
+          "minimum": 1
+        },
+        "buffer_size_mb": {
+          "description": "Memory limit for traces in MB",
+          "type": "integer",
+          "minimum": 3
+        },
+        "resource_arn": {
+          "description": "Amazon Resource Name (ARN) of the AWS resource running the agent",
+          "type": "string"
+        },
+        "local_mode": {
+          "description": "Disable EC2 instance metadata check",
+          "type": "boolean"
+        },
+        "insecure": {
+          "description": "Disable TLS certification verification",
+          "type": "boolean"
+        },
+        "credentials": {
+          "description": "The credentials with which agent can access aws resources",
+          "$ref": "#/definitions/credentialsDefinition"
+        },
+        "proxy_override": {
+          "description": "The override proxy address to upload segments to",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "endpoint_override": {
+          "description": "The override endpoint to use to access x-ray",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "region_override": {
+          "description": "The override region",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "traces_collected"
+      ],
+      "definitions": {
+        "xrayDefinition": {
+          "type": "object",
+          "properties": {
+            "bind_address": {
+              "description": "UDP endpoint to use to listen for X-Ray segments",
+              "$ref": "#/definitions/endpointOverrideDefinition"
+            },
+            "tcp_proxy": {
+              "description": "TCP proxy server used by the X-Ray SDK to update sampling rules",
+              "$ref": "#/definitions/tcpProxyDefinition"
+            }
+          },
+          "additionalProperties": false
+        },
+        "otlpDefinition": {
+          "type": "object",
+          "properties": {
+            "grpc_endpoint": {
+              "description": "gRPC endpoint to use to listen for OTLP protobuf traces",
+              "$ref": "#/definitions/endpointOverrideDefinition"
+            },
+            "http_endpoint": {
+              "description": "HTTP endpoint to use to listen for OTLP JSON traces",
+              "$ref": "#/definitions/endpointOverrideDefinition"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
     "timeIntervalDefinition": {
       "type": "integer",
       "minimum": 1,
@@ -868,6 +937,16 @@
       "type": "string",
       "minLength": 4,
       "maxLength": 2048
+    },
+    "tcpProxyDefinition": {
+      "type": "object",
+      "properties": {
+        "bind_address": {
+          "description": "TCP endpoint for proxy server",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        }
+      },
+      "additionalProperties": false
     },
     "ecsServiceDiscoveryDefinition": {
       "type": "object",

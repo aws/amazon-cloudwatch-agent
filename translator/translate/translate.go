@@ -70,16 +70,15 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 		sortedRuleKey = append(sortedRuleKey, k)
 	}
 	sort.Strings(sortedRuleKey)
-	for _, key := range sortedRuleKey {
+	for _, key = range sortedRuleKey {
 		rule := targetRuleMap[key]
-		key, val := rule.ApplyRule(m)
+		key, val = rule.ApplyRule(m)
 		//Only output the result that the class instance is processed
 		//If it is not processed, it key will return ""
 		if key != "" {
 			if key == "agent" || key == "global_tags" {
 				result[key] = val
 			} else {
-
 				valMap := val.(map[string]interface{})
 				if inputs, ok := valMap["inputs"]; ok {
 					allInputPlugin = translator.MergePlugins(allInputPlugin, inputs.(map[string]interface{}))
@@ -96,19 +95,12 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 			}
 		}
 	}
-	result["inputs"] = allInputPlugin
-	result["outputs"] = allOutputPlugin
-
-	//we need to add delta processor because (only) diskio and net input plugins report delta metric
-	if allInputPlugin["diskio"] != nil || allInputPlugin["net"] != nil {
-		if allProcessorPlugin == nil {
-			allProcessorPlugin = make(map[string]interface{})
-		}
-		deltaProcessorSettings := make([]interface{}, 0)
-		deltaProcessorSettings = append(deltaProcessorSettings, make(map[string]interface{}))
-		allProcessorPlugin["delta"] = deltaProcessorSettings
+	if len(allInputPlugin) != 0 {
+		result["inputs"] = allInputPlugin
 	}
-
+	if len(allOutputPlugin) != 0 {
+		result["outputs"] = allOutputPlugin
+	}
 	if allProcessorPlugin != nil {
 		result["processors"] = allProcessorPlugin
 	}

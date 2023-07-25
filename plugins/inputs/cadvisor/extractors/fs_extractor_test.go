@@ -9,9 +9,10 @@ import (
 	"log"
 	"testing"
 
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	cinfo "github.com/google/cadvisor/info/v1"
 	"github.com/stretchr/testify/assert"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 const (

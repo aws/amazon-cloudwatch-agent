@@ -102,9 +102,9 @@ func AttachMetricRule(metric telegraf.Metric, rules []MetricRule) {
 	}
 }
 
-// Append dedupped EMF rules
-// Prerequsite: 1) Rules are with same namespace
-//              2) Dimensions are pre-sorted
+// Append dedupped EMF rules. Prerequsites:
+// 1. Rules are with same namespace
+// 2. Dimensions are pre-sorted
 func AttachMetricRuleWithDedup(metric telegraf.Metric, rules []MetricRule) {
 	filteredRules := dedupRules(cleanupRules(metric, rules))
 

@@ -23,6 +23,7 @@ func CurrentContext() *Context {
 			proxy:               make(map[string]string),
 			cloudWatchLogConfig: make(map[string]interface{}),
 			runInContainer:      os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE,
+			agentLogFile:        "",
 		}
 	}
 	return ctx
@@ -45,6 +46,7 @@ type Context struct {
 	ssl                 map[string]string
 	cloudWatchLogConfig map[string]interface{}
 	runInContainer      bool
+	agentLogFile        string
 }
 
 func (ctx *Context) Os() string {
@@ -147,4 +149,12 @@ func (ctx *Context) RunInContainer() bool {
 
 func (ctx *Context) SetRunInContainer(runInContainer bool) {
 	ctx.runInContainer = runInContainer
+}
+
+func (ctx *Context) GetAgentLogFile() string {
+	return ctx.agentLogFile
+}
+
+func (ctx *Context) SetAgentLogFile(agentLogFile string) {
+	ctx.agentLogFile = agentLogFile
 }

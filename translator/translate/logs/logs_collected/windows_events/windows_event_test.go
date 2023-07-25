@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestApplyRule(t *testing.T) {

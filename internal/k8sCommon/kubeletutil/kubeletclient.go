@@ -5,6 +5,7 @@ package kubeletutil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -13,10 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"errors"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/tls"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type KubeClient struct {
@@ -28,13 +28,13 @@ type KubeClient struct {
 	tls.ClientConfig
 }
 
-var ErrKubeClientAccessFailure = errors.New("KubeClinet Access Failure")
+var ErrKubeClientAccessFailure = errors.New("KubeClient Access Failure")
 
 func (k *KubeClient) ListPods() ([]corev1.Pod, error) {
 	var result []corev1.Pod
 	url := fmt.Sprintf("https://%s:%s/pods", k.KubeIP, k.Port)
 
-	var req, err = http.NewRequest("GET", url, nil)
+	var req, _ = http.NewRequest("GET", url, nil)
 	var resp *http.Response
 
 	k.InsecureSkipVerify = true

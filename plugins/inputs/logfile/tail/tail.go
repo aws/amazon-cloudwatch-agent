@@ -13,10 +13,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"gopkg.in/tomb.v1"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail/watch"
 )
 
 var (

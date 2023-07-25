@@ -18,13 +18,16 @@ type Logfile struct {
 }
 
 func (l *Logfile) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
-	returnKey, returnVal = translator.DefaultCase("logfile", getDefaultValue(), input)
+	returnKey, returnVal = translator.DefaultCase("logfile", GetDefaultValue(), input)
 	return
 }
 
-func getDefaultValue() string {
+func GetDefaultValue() string {
 	if context.CurrentContext().RunInContainer() {
 		return ""
+	}
+	if context.CurrentContext().GetAgentLogFile() != "" {
+		return context.CurrentContext().GetAgentLogFile()
 	}
 	targetPlatform := translator.GetTargetPlatform()
 	switch targetPlatform {

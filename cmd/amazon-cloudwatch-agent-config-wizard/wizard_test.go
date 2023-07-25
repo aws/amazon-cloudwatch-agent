@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/agentconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/basicInfo"
@@ -17,9 +20,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/template"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 type MainProcessorMock struct {

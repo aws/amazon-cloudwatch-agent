@@ -1,0 +1,195 @@
+connectors: {}
+exporters:
+  awsemf/containerinsights:
+    detailed_metrics: false
+    dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: true
+    eks_fargate_container_insights_enabled: false
+    endpoint: ""
+    local_mode: false
+    log_group_name: /aws/containerinsights/{ClusterName}/performance
+    log_retention: 0
+    log_stream_name: '{NodeName}'
+    max_retries: 2
+    metric_declarations:
+      # pod metrics
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - pod_cpu_utilization
+          - pod_memory_utilization
+          - pod_network_rx_bytes
+          - pod_network_tx_bytes
+          - pod_cpu_utilization_over_pod_limit
+          - pod_memory_utilization_over_pod_limit
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - pod_cpu_reserved_capacity
+          - pod_memory_reserved_capacity
+          - pod_number_of_container_restarts
+          - pod_number_of_containers
+          - pod_number_of_running_containers
+          - pod_status_ready
+          - pod_status_scheduled
+          - pod_status_running
+          - pod_status_pending
+          - pod_status_failed
+          - pod_status_unknown
+          - pod_status_succeeded
+          - pod_status_initialized
+      # node metrics
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - node_cpu_utilization
+          - node_memory_utilization
+          - node_network_total_bytes
+          - node_cpu_reserved_capacity
+          - node_memory_reserved_capacity
+          - node_number_of_running_pods
+          - node_number_of_running_containers
+          - node_cpu_usage_total
+          - node_cpu_limit
+          - node_memory_working_set
+          - node_memory_limit
+          - node_status_condition_ready
+          - node_status_condition_disk_pressure
+          - node_status_condition_memory_pressure
+          - node_status_condition_pid_pressure
+          - node_status_condition_network_unavailable
+          - node_status_capacity_pods
+          - node_status_allocatable_pods
+      # node fs metrics
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - node_filesystem_utilization
+          - node_filesystem_inodes
+          - node_filesystem_inodes_free
+      # service metrics
+      - dimensions: [ [ ClusterName, Namespace, Service ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - service_number_of_running_pods
+      # deployment metrics
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - deployment_spec_replicas
+          - deployment_status_replicas
+          - deployment_status_replicas_available
+          - deployment_status_replicas_unavailable
+      # daemonset metrics
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - daemonset_status_number_available
+          - daemonset_status_number_unavailable
+          - daemonset_status_desired_number_scheduled
+          - daemonset_status_current_number_scheduled
+      # namespace metrics
+      - dimensions: [ [ ClusterName, Namespace ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - namespace_number_of_running_pods
+      # cluster metrics
+      - dimensions: [ [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - cluster_node_count
+          - cluster_failed_node_count
+      # control plane metrics
+      - dimensions: [ [ClusterName, endpoint], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - etcd_db_total_size_in_bytes
+      - dimensions: [ [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_storage_objects
+          - apiserver_request_total
+          - apiserver_request_duration_seconds
+          - apiserver_admission_controller_admission_duration_seconds
+          - rest_client_request_duration_seconds
+          - rest_client_requests_total
+          - etcd_request_duration_seconds
+    metric_descriptors: []
+    namespace: ContainerInsights
+    no_verify_ssl: false
+    num_workers: 8
+    output_destination: cloudwatch
+    parse_json_encoded_attr_values:
+      - Sources
+      - kubernetes
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    resource_to_telemetry_conversion:
+      enabled: true
+    retain_initial_value_of_delta_metric: false
+    role_arn: ""
+    profile: "AmazonCloudWatchAgent"
+    shared_credentials_file: ["fake-path"]
+    version: "0"
+extensions: {}
+processors:
+  batch/containerinsights:
+    send_batch_max_size: 0
+    send_batch_size: 8192
+    timeout: 5s
+receivers:
+  awscontainerinsightreceiver:
+    add_container_name_metric_label: false
+    add_full_pod_name_metric_label: false
+    add_service_as_attribute: true
+    cluster_name: TestCluster
+    collection_interval: 30s
+    container_orchestrator: eks
+    enable_control_plane_metrics: true
+    endpoint: ""
+    leader_lock_name: cwagent-clusterleader
+    leader_lock_using_config_map_only: true
+    local_mode: true
+    max_retries: 0
+    no_verify_ssl: false
+    num_workers: 0
+    prefer_full_pod_name: false
+    proxy_address: ""
+    region: "us-east-1"
+    request_timeout_seconds: 0
+    resource_arn: ""
+    role_arn: ""
+    profile: ""
+    shared_credentials_file: []
+service:
+  extensions: []
+  pipelines:
+    metrics/containerinsights:
+      exporters:
+        - awsemf/containerinsights
+      processors:
+        - batch/containerinsights
+      receivers:
+        - awscontainerinsightreceiver
+  telemetry:
+    logs:
+      development: false
+      disable_caller: false
+      disable_stacktrace: false
+      encoding: console
+      error_output_paths: []
+      initial_fields: {}
+      level: info
+      output_paths: []
+      sampling:
+        initial: 2
+        thereafter: 500
+    metrics:
+      address: ""
+      level: None
+      metric_readers: []
+    resource: {}
+    traces:
+      propagators: []

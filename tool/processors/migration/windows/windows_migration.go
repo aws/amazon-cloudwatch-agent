@@ -5,7 +5,6 @@ package windows
 
 import (
 	"encoding/json"
-
 	"fmt"
 	"os"
 

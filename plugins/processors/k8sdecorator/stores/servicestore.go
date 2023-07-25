@@ -8,9 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
+
 	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
-	"github.com/influxdata/telegraf"
 )
 
 const (

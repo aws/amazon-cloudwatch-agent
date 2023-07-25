@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//Check the case when the input is in "swap":{//specific configuration}
+// Check the case when the input is in "swap":{//specific configuration}
 func TestSwapSpecificConfig(t *testing.T) {
 	s := new(Swap)
 	var input interface{}

@@ -33,6 +33,8 @@ on:
       test_props:
         required: true
         type: string
+      localstack_host:
+        type: string
 
 jobs:
   EC2IntegrationTest:
@@ -97,9 +99,10 @@ jobs:
               -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
-              -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+              -var="local_stack_host_name=${{ inputs.localstack_host }}" \
               -var="s3_bucket=${{env.S3_INTEGRATION_BUCKET}}" \
               -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
+              -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -auto-approve

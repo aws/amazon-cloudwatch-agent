@@ -12,12 +12,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 )
 
-type dropOrigin struct {
+type DropOrigin struct {
 }
 
 const SectionKey = "drop_original_metrics"
 
-func (do *dropOrigin) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (do *DropOrigin) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	im := input.(map[string]interface{})
 
 	returnKey = ""
@@ -51,6 +51,6 @@ func (do *dropOrigin) ApplyRule(input interface{}) (returnKey string, returnVal 
 }
 
 func init() {
-	do := new(dropOrigin)
+	do := new(DropOrigin)
 	parent.RegisterRule(SectionKey, do)
 }

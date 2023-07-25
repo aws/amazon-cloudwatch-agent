@@ -4,12 +4,14 @@
 package k8sdecorator
 
 import (
-	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/metric"
+	"github.com/stretchr/testify/assert"
+
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/structuredlogscommon"
 )
 
 func TestDisableMetricExtraction(t *testing.T) {

@@ -4,11 +4,10 @@
 package windows
 
 import (
-	"log"
-	"strings"
-
 	"fmt"
+	"log"
 	"os"
+	"strings"
 
 	"github.com/Jeffail/gabs"
 )

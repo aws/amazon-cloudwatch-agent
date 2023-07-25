@@ -7,14 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"k8s.io/klog/v2"
-	"k8s.io/klog/v2/klogr"
 	"log"
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sutil"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,6 +18,11 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sutil"
 )
 
 type Service struct {
@@ -100,7 +101,7 @@ func (c *epClient) refresh() {
 		for _, podKey := range ep.podKeyList {
 			var serviceNamesMap map[string]struct{}
 			var ok bool
-			if serviceNamesMap, ok = tmpMap[podKey]; !ok {
+			if _, ok = tmpMap[podKey]; !ok {
 				tmpMap[podKey] = make(map[string]struct{})
 			}
 			serviceNamesMap = tmpMap[podKey]

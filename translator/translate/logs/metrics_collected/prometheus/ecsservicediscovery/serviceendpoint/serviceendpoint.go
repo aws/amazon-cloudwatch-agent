@@ -5,7 +5,6 @@ package serviceendpoint
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
-
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
 )
 

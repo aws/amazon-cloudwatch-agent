@@ -9,11 +9,12 @@ import (
 	"strings"
 	"time"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 )
 
 const (
@@ -97,7 +98,7 @@ func GetClusterNameFromEc2Tagger() string {
 	return ""
 }
 
-//encapsulate the retry logic in this separate method.
+// encapsulate the retry logic in this separate method.
 func callFuncWithRetries(fn func(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error), input *ec2.DescribeTagsInput, errorMsg string) (result *ec2.DescribeTagsOutput, err error) {
 	for i := 0; i <= defaultRetryCount; i++ {
 		result, err = fn(input)
@@ -110,7 +111,7 @@ func callFuncWithRetries(fn func(input *ec2.DescribeTagsInput) (*ec2.DescribeTag
 	return
 }
 
-//sleep some back off time before retries.
+// sleep some back off time before retries.
 func backoffSleep(i int) {
 	//save the sleep time for the last occurrence since it will exit the loop immediately after the sleep
 	backoffDuration := time.Duration(time.Minute * 1)

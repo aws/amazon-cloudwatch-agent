@@ -7,45 +7,32 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/xeipuuv/gojsonschema"
+	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig"
-	"github.com/aws/amazon-cloudwatch-agent/translator/toenvconfig"
-	"github.com/aws/amazon-cloudwatch-agent/translator/totomlconfig"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toenvconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
 	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
-
-	"github.com/xeipuuv/gojsonschema"
 )
 
 const (
-	tomlFileMode             = 0644
+	fileMode                 = 0644
 	jsonTemplateName_Linux   = "default_linux_config.json"
 	jsonTemplateName_Windows = "default_windows_config.json"
 	jsonTemplateName_Darwin  = "default_darwin_config.json"
 	defaultTomlConfigName    = "CWAgent.conf"
-	exitSuccessMessage       = "Configuration validation first phase succeeded"
 )
-
-func TranslateJsonMapToTomlFile(jsonConfigValue map[string]interface{}, tomlConfigFilePath string) {
-	res := totomlconfig.ToTomlConfig(jsonConfigValue)
-	if translator.IsTranslateSuccess() {
-		if err := os.WriteFile(tomlConfigFilePath, []byte(res), tomlFileMode); err != nil {
-			log.Panicf("E! Failed to create the configuration validation file. Reason: %s", err.Error())
-		} else {
-			for _, infoMessage := range translator.InfoMessages {
-				fmt.Println(infoMessage)
-			}
-			fmt.Println(exitSuccessMessage)
-		}
-	} else {
-		log.Panic("E! Failed to generate configuration validation content.")
-	}
-}
 
 // TranslateJsonMapToEnvConfigFile populates env-config.json based on the input json config.
 func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]interface{}, envConfigPath string) {
@@ -63,7 +50,7 @@ func getCurBinaryPath() string {
 	if err != nil {
 		log.Panicf("E! Failed to get executable path because of %v", err)
 	}
-	return path.Dir(ex)
+	return filepath.Dir(ex)
 }
 
 func getJsonConfigMap(jsonConfigFilePath, osType string) (map[string]interface{}, error) {
@@ -213,4 +200,45 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 	// Json Schema Validation by gojsonschema
 	checkSchema(mergedJsonConfigMap)
 	return mergedJsonConfigMap, nil
+}
+
+func TranslateJsonMapToTomlConfig(jsonConfigValue interface{}) (interface{}, error) {
+	r := new(translate.Translator)
+	_, val := r.ApplyRule(jsonConfigValue)
+	if !translator.IsTranslateSuccess() {
+		return nil, fmt.Errorf("%v", translator.ErrorMessages)
+	}
+	// Translation is valid, log info messages and continue to convert/write to toml
+	for _, infoMessage := range translator.InfoMessages {
+		log.Println(infoMessage)
+	}
+	return val, nil
+}
+
+func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, error) {
+	cfg, err := otel.Translate(jsonConfigValue, context.CurrentContext().Os())
+	if err != nil {
+		return nil, err
+	}
+	conf := confmap.New()
+	if err = conf.Marshal(cfg); err != nil {
+		return nil, err
+	}
+	return conf.ToStringMap(), nil
+}
+
+func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
+	res := totomlconfig.ToTomlConfig(config)
+	return os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
+}
+
+func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
+	res := toyamlconfig.ToYamlConfig(config)
+	// If YAML just contains the word null, then remove the file.
+	if strings.TrimSpace(res) == "null" {
+		// Intentionally not checking return value.
+		_ = os.Remove(yamlConfigFilePath)
+		return nil
+	}
+	return os.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
 }

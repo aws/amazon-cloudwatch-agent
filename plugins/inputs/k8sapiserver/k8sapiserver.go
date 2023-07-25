@@ -11,8 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	v1 "k8s.io/api/core/v1"
@@ -24,6 +22,9 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
 )
 
 const (
@@ -46,12 +47,12 @@ func init() {
 	})
 }
 
-//SampleConfig returns a sample config
+// SampleConfig returns a sample config
 func (k *K8sAPIServer) SampleConfig() string {
 	return sampleConfig
 }
 
-//Description returns the description of this plugin
+// Description returns the description of this plugin
 func (k *K8sAPIServer) Description() string {
 	return "Calculate cluster level metrics from the k8s api server"
 }
@@ -98,8 +99,8 @@ func (k *K8sAPIServer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
-	ctx := context.Background()
+func (k *K8sAPIServer) Start(telegraf.Accumulator) error {
+	var ctx context.Context
 	ctx, k.cancel = context.WithCancel(context.Background())
 
 	lockNamespace := os.Getenv("K8S_NAMESPACE")
@@ -122,7 +123,7 @@ func (k *K8sAPIServer) Start(acc telegraf.Accumulator) error {
 	}
 
 	lock, err := resourcelock.New(
-		resourcelock.ConfigMapsResourceLock,
+		resourcelock.ConfigMapsLeasesResourceLock,
 		lockNamespace, lockName,
 		k8sclient.Get().ClientSet.CoreV1(),
 		k8sclient.Get().ClientSet.CoordinationV1(),

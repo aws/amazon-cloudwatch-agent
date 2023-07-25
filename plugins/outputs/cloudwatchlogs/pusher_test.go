@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo"
 	"io"
 	"log"
 	"os"
@@ -21,6 +20,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 )
 
 var wg sync.WaitGroup

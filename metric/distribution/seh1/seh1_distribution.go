@@ -8,6 +8,8 @@ import (
 	"log"
 	"math"
 
+	"go.opentelemetry.io/collector/pdata/pmetric"
+
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
@@ -156,6 +158,35 @@ func (seh1Distribution *SEH1Distribution) AddDistributionWithWeight(distribution
 	}
 }
 
+// ConvertToOtel could convert an SEH1Distribution to pmetric.ExponentialHistogram.
+// But there is no need because it will just get converted bak to a SEH1Distribution.
+func (sd *SEH1Distribution) ConvertToOtel(dp pmetric.HistogramDataPoint) {
+	dp.SetMax(sd.maximum)
+	dp.SetMin(sd.minimum)
+	dp.SetCount(uint64(sd.sampleCount))
+	dp.SetSum(sd.sum)
+	dp.ExplicitBounds().EnsureCapacity(len(sd.buckets))
+	dp.BucketCounts().EnsureCapacity(len(sd.buckets))
+	for k, v := range sd.buckets {
+		dp.ExplicitBounds().Append(float64(k))
+		// Beware of potential loss of precision due to type conversion.
+		dp.BucketCounts().Append(uint64(v))
+	}
+}
+
+func (sd *SEH1Distribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit string) {
+	sd.maximum = dp.Max()
+	sd.minimum = dp.Min()
+	sd.sampleCount = float64(dp.Count())
+	sd.sum = dp.Sum()
+	sd.unit = unit
+	for i := 0; i < dp.ExplicitBounds().Len(); i++ {
+		k := dp.ExplicitBounds().At(i)
+		v := dp.BucketCounts().At(i)
+		sd.buckets[int16(k)] = float64(v)
+	}
+}
+
 func (seh1Distribution *SEH1Distribution) CanAdd(value float64, sizeLimit int) bool {
 	if seh1Distribution.Size() < sizeLimit {
 		return true
@@ -175,7 +206,7 @@ func bucketNumber(value float64) int16 {
 	return bucketNumber
 }
 
-//This method is faster than math.Floor
+// This method is faster than math.Floor
 func floor(fvalue float64) int64 {
 	ivalue := int64(fvalue)
 	if fvalue < 0 && float64(ivalue) != fvalue {

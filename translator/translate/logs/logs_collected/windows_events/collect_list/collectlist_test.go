@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 func TestApplyRule(t *testing.T) {

@@ -13,11 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
+
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
 const (
@@ -486,7 +487,7 @@ func TestLogsFileAutoRemoval(t *testing.T) {
 
 func TestLogsTimestampAsMultilineStarter(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
-	logEntryString := `15:04:05 18 Nov 2 multiline starter is in begining
+	logEntryString := `15:04:05 18 Nov 2 multiline starter is in beginning
 append line
 multiline starter is not in beginning 15:04:06 18 Nov 2
 append line`
@@ -521,7 +522,7 @@ append line`
 		evts <- e
 	})
 
-	e1 := "15:04:05 18 Nov 2 multiline starter is in begining\nappend line"
+	e1 := "15:04:05 18 Nov 2 multiline starter is in beginning\nappend line"
 	et1 := time.Unix(1541171045, 0)
 	e2 := "multiline starter is not in beginning 15:04:06 18 Nov 2\nappend line"
 	et2 := time.Unix(1541171046, 0)

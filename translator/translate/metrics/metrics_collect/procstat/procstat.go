@@ -4,6 +4,7 @@
 package procstat
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
@@ -50,6 +51,20 @@ func (p *Procstat) ApplyRule(input interface{}) (returnKey string, returnVal int
 			if key, val := rule.ApplyRule(processConfig); key != "" {
 				result[key] = val
 			}
+		}
+		/*  Generate a alias name for each procstat monitored process  since every monitored process  plugin will generate
+		a duplicate plugin but with different configuration. Moreover, we want to order by PidFile, ExeKey, Pattern Key
+		according to the public documents if multiple configuration is specified
+		https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-procstat-process-metrics.html#CloudWatch-Agent-procstat-configuration
+		*/
+		for _, procstatMonitored := range []string{PatternKey, ExeKey, PidFileKey} {
+			for _, rule := range ChildRule {
+				if key, val := rule.ApplyRule(processConfig); key != "" && key == procstatMonitored {
+					result[util.Alias_Key] = hash.HashName(val.(string))
+					break
+				}
+			}
+
 		}
 		resArray = append(resArray, result)
 	}

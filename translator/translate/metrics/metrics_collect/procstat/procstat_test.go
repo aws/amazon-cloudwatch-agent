@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 )
 
 func checkResult(t *testing.T, inputBytes []byte, expectedOutput interface{}) {
@@ -21,7 +23,7 @@ func checkResult(t *testing.T, inputBytes []byte, expectedOutput interface{}) {
 	}
 }
 
-//Check the case when the input is in "procstat":{//specific configuration}
+// Check the case when the input is in "procstat":{//specific configuration}
 func TestExeConfig(t *testing.T) {
 	input := []byte(`{"procstat": [
 	{
@@ -29,11 +31,12 @@ func TestExeConfig(t *testing.T) {
 		{"name": "cpu_usage", "rename": "cwagent_cpu_usage", "unit": "Percent"},
 		{"name": "memory_rss", "rename": "cwagent_mem_usage", "unit": "Bytes"}
 	    ],
-	    "exe": "amazon-cloudwat"
+	    "exe": "amazon-cloudwatch"
 	}
       ]}`)
 	expectedVal := []interface{}{map[string]interface{}{
-		"exe":        "amazon-cloudwat",
+		"exe":        "amazon-cloudwatch",
+		"alias":      hash.HashName("amazon-cloudwatch"),
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
 		"tagexclude": []string{"user", "result"},
@@ -53,6 +56,7 @@ func TestPidFileConfig(t *testing.T) {
       ]}`)
 	expectedVal := []interface{}{map[string]interface{}{
 		"pid_file":   "/var/run/sshd",
+		"alias":      hash.HashName("/var/run/sshd"),
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
 		"tagexclude": []string{"user", "result"},
@@ -72,6 +76,7 @@ func TestPatternConfig(t *testing.T) {
       ]}`)
 	expectedVal := []interface{}{map[string]interface{}{
 		"pattern":    "sshd",
+		"alias":      hash.HashName("sshd"),
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
 		"tagexclude": []string{"user", "result"},
@@ -95,6 +100,7 @@ func TestMultiLookupConfig(t *testing.T) {
 		"pid_file":   "/var/run/sshd",
 		"exe":        "cloudwatch",
 		"pattern":    "sshd",
+		"alias":      hash.HashName("/var/run/sshd"),
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
 		"tagexclude": []string{"user", "result"},
@@ -115,6 +121,7 @@ func TestIntervalConfig(t *testing.T) {
       ]}`)
 	expectedVal := []interface{}{map[string]interface{}{
 		"pid_file":   "/var/run/sshd",
+		"alias":      hash.HashName("/var/run/sshd"),
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage", "memory_rss"},
 		"interval":   "30s",
@@ -144,12 +151,14 @@ func TestMultiProcessesConfig(t *testing.T) {
 	expectedVal := []interface{}{
 		map[string]interface{}{
 			"pid_file":   "/var/run/sshd",
+			"alias":      hash.HashName("/var/run/sshd"),
 			"pid_finder": "native",
 			"fieldpass":  []string{"cpu_usage", "memory_rss"},
 			"tagexclude": []string{"user", "result"},
 		},
 		map[string]interface{}{
 			"exe":        "cloudwatch",
+			"alias":      hash.HashName("cloudwatch"),
 			"pid_finder": "native",
 			"fieldpass":  []string{"cpu_usage", "memory_rss"},
 			"tagexclude": []string{"user", "result"},
@@ -178,6 +187,7 @@ func TestIntervalErrorConfig(t *testing.T) {
       ]}`)
 	expectedVal := []interface{}{map[string]interface{}{
 		"pid_file":   "/var/run/sshd",
+		"alias":      hash.HashName("/var/run/sshd"),
 		"pid_finder": "native",
 		"fieldpass":  []string{"cpu_usage"},
 		"tagexclude": []string{"user", "result"},

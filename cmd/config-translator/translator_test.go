@@ -8,11 +8,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldSuccess bool, expectedErrorMap map[string]int) {
@@ -57,6 +56,13 @@ func TestAgentConfig(t *testing.T) {
 	expectedErrorMap := map[string]int{}
 	expectedErrorMap["invalid_type"] = 5
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidAgent.json", false, expectedErrorMap)
+}
+
+func TestTracesConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validTrace.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["array_min_properties"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidTrace.json", false, expectedErrorMap)
 }
 
 func TestLogFilesConfig(t *testing.T) {
@@ -125,28 +131,6 @@ func TestMetricsConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithInvalidMetrics_Collected.json", false, expectedErrorMap6)
 }
 
-func TestCsmConfig_Valid(t *testing.T) {
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validCsm.json", true, map[string]int{})
-}
-
-func TestCsmConfig_InvalidKey(t *testing.T) {
-	expectedErrorMap := map[string]int{}
-	expectedErrorMap["additional_property_not_allowed"] = 1
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidCsmKey.json", false, expectedErrorMap)
-}
-
-func TestCsmConfig_InvalidPort(t *testing.T) {
-	expectedErrorMap := map[string]int{}
-	expectedErrorMap["number_gte"] = 1
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidCsmPort.json", false, expectedErrorMap)
-}
-
-func TestCsmConfig_InvalidMemoryLimitInMb(t *testing.T) {
-	expectedErrorMap := map[string]int{}
-	expectedErrorMap["invalid_type"] = 1
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidCsmMemoryLimitInMb.json", false, expectedErrorMap)
-}
-
 func TestProcstatConfig(t *testing.T) {
 	expectedErrorMap := map[string]int{}
 	expectedErrorMap["invalid_type"] = 1
@@ -180,13 +164,13 @@ func TestInvalidLogFilterConfig(t *testing.T) {
 
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
-	if files, err := os.ReadDir("../../translator/totomlconfig/sampleConfig/"); err == nil {
+	if files, err := os.ReadDir("../../translator/tocwconfig/sampleConfig/"); err == nil {
 		re := regexp.MustCompile(".json")
 		for _, file := range files {
 			if re.MatchString(file.Name()) {
-				t.Logf("Validating ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
-				checkIfSchemaValidateAsExpected(t, "../../translator/totomlconfig/sampleConfig/"+file.Name(), true, map[string]int{})
-				t.Logf("Validated ../../translator/totomlconfig/sampleConfig/%s\n", file.Name())
+				t.Logf("Validating ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
+				checkIfSchemaValidateAsExpected(t, "../../translator/tocwconfig/sampleConfig/"+file.Name(), true, map[string]int{})
+				t.Logf("Validated ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
 			}
 		}
 	} else {

@@ -3,7 +3,7 @@
 
 package config
 
-var defaultLinuxOnPremConfig string = `
+var defaultLinuxOnPremConfig = `
 {
 	"agent": {
 		"run_as_user": "cwagent"
@@ -53,7 +53,7 @@ var defaultDarwinOnPremConfig = `
 }
 `
 
-var defaultWindowsOnPremConfig string = `
+var defaultWindowsOnPremConfig = `
 {
 	"metrics": {
 		"metrics_collected": {
@@ -75,7 +75,7 @@ var defaultWindowsOnPremConfig string = `
 }
 `
 
-var defaultLinuxEC2Config string = `
+var defaultLinuxEC2Config = `
 {
 	"agent": {
 		"run_as_user": "cwagent"
@@ -137,7 +137,7 @@ var defaultDarwinEC2Config = `
 }
 `
 
-var defaultWindowsEC2Config string = `
+var defaultWindowsEC2Config = `
 {
 	"metrics": {
 		"metrics_collected": {
@@ -165,7 +165,7 @@ var defaultWindowsEC2Config string = `
 }
 `
 
-var defaultLinuxECSNodeMetricConfig string = `
+var defaultLinuxECSNodeMetricConfig = `
 {
   "logs": {
     "metrics_collected": {

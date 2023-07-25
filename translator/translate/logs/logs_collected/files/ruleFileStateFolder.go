@@ -10,7 +10,7 @@ import (
 type FileStateFolder struct {
 }
 
-//FileStateFolder is internal value, not exposing to customer
+// FileStateFolder is internal value, not exposing to customer
 func (f *FileStateFolder) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	return "file_state_folder", util.GetFileStateFolder()
 }

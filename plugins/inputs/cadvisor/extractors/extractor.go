@@ -7,8 +7,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	cinfo "github.com/google/cadvisor/info/v1"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 const (

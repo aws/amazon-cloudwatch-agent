@@ -4,23 +4,20 @@
 package ssm
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/tool/data"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
-	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
-
-	"time"
-
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
-
 	"fmt"
-
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/data"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 const (
@@ -80,8 +77,7 @@ func determineCreds(ctx *runtime.Context) *credentials.Credentials {
 
 	fileAccessKey := ""
 	fileAccessKeyDesc := ""
-	var fileCredentialsProvider *credentials.Credentials
-	fileCredentialsProvider = credentials.NewSharedCredentials("", "AmazonCloudWatchAgent")
+	fileCredentialsProvider := credentials.NewSharedCredentials("", "AmazonCloudWatchAgent")
 	fileCreds, err := fileCredentialsProvider.Get()
 	if err == nil {
 		fileAccessKey = fileCreds.AccessKeyID
