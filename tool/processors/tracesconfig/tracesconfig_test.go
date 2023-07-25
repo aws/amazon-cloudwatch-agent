@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/xraydaemonmigration"
@@ -50,7 +51,7 @@ var mockProcesses = func() ([]xraydaemonmigration.Process, error) {
 	var correctDaemonProcess = &proc{
 		pid:        123,
 		name:       "xray",
-		cmdline:    []string{"xray", "-c", filepath.Join("testdata", "cfg.yaml"), "-b", "127.0.0.1:2000", "-t", "127.0.0.1:2000", "-a", "resourceTesting", "-n", "us-east-1", "-m", "23", "-r", "roleTest", "-p", "127.0.0.1:2000"},
+		cmdline:    []string{"xray", "-c", filepath.Join("testdata", "cfg.yaml"), "-b", addr + ":2000", "-t", addr + ":2000", "-a", "resourceTesting", "-n", "us-east-1", "-m", "23", "-r", "roleTest", "-p", "127.0.0.1:2000"},
 		cwd:        "",
 		strcmdline: "./xray -c ./cfg.yaml -b 127.0.0.1:2000 -t 127.0.0.1:2000 -a resourceTesting -n us-east-1 -m 23 -r roleTest -p 127.0.0.1:2000",
 	}
@@ -108,7 +109,7 @@ func TestGenerateTracesConfiguration(t *testing.T) {
 	//Xray run as a servie
 	xraydaemonmigration.GetProcesses = mockProcessesXrayService
 	inputChan = testutil.SetUpTestInputStream()
-	testutil.Type(inputChan, "2")
+	testutil.Type(inputChan, "2", "2000", "2000", "", "", "")
 	jsonStruct, err = generateTracesConfiguration(ctx)
 	assert.Nil(t, jsonStruct)
 
@@ -148,4 +149,79 @@ func TestGenerateTracesConfiguration(t *testing.T) {
 	jsonStruct, err = generateTracesConfiguration(ctx)
 	jsonFile, err = json.MarshalIndent(*jsonStruct, "", "\t")
 	assert.JSONEq(t, string(expectedDefaultConfigFile), string(jsonFile))
+}
+
+func TestUserBuildsTracesConfig(t *testing.T) {
+	inputChan := testutil.SetUpTestInputStream()
+	testutil.Type(inputChan, "3000", "4000", "10", "20", "us-east-1", "This should be a number", "This should be a number", "", "", "", "", "")
+
+	tracesConfig := &config.Traces{}
+
+	whichUDPPort(tracesConfig)
+	whichTCPPort(tracesConfig)
+	chooseBufferSize(tracesConfig)
+	chooseConcurrency(tracesConfig)
+	chooseRegion(tracesConfig)
+
+	//checking if variable of traces config are the values they supposed to be
+	assert.Equal(t, addr+":3000", tracesConfig.TracesCollected.Xray.BindAddress)
+	assert.Equal(t, addr+":4000", tracesConfig.TracesCollected.Xray.TcpProxy.BindAddress)
+	assert.Equal(t, 10, tracesConfig.BufferSizeMB)
+	assert.Equal(t, 20, tracesConfig.Concurrency)
+	assert.Equal(t, "us-east-1", tracesConfig.RegionOverride)
+	//wrong inputs
+	chooseConcurrency(tracesConfig)
+	chooseBufferSize(tracesConfig)
+	assert.Equal(t, tracesConfig.Concurrency, 8)
+	assert.Equal(t, tracesConfig.BufferSizeMB, 3)
+
+	//blank answers (no input)
+	whichUDPPort(tracesConfig)
+	whichTCPPort(tracesConfig)
+	chooseBufferSize(tracesConfig)
+	chooseConcurrency(tracesConfig)
+	chooseRegion(tracesConfig)
+	assert.Equal(t, addr+":2000", tracesConfig.TracesCollected.Xray.BindAddress)
+	assert.Equal(t, addr+":2000", tracesConfig.TracesCollected.Xray.TcpProxy.BindAddress)
+	assert.Equal(t, 3, tracesConfig.BufferSizeMB)
+	assert.Equal(t, 8, tracesConfig.Concurrency)
+	assert.Equal(t, "", tracesConfig.RegionOverride)
+}
+
+func TestUpdateUserConfig(t *testing.T) {
+	//Replicating user inputs
+	inputs := []string{
+		"1", addr + ":3000",
+		"2", addr + ":4000",
+		"3", "10",
+		"4", "10",
+		"5", "resourceArn",
+		"6", "true",
+		"7", "true",
+		"8", "roleArn",
+		"9", "endpointOverride",
+		"10", "regionOverride",
+		"11", "proxyOverride",
+		"0",
+	}
+	inputChan := testutil.SetUpTestInputStream()
+	testutil.Type(inputChan, inputs...)
+	tracesConfig := &config.Traces{}
+
+	//calling update function
+	updateUserConfig(tracesConfig)
+
+	//checking all tests
+	assert.Equal(t, addr+":3000", tracesConfig.TracesCollected.Xray.BindAddress)
+	assert.Equal(t, addr+":4000", tracesConfig.TracesCollected.Xray.TcpProxy.BindAddress)
+	assert.Equal(t, 10, tracesConfig.BufferSizeMB)
+	assert.Equal(t, 10, tracesConfig.Concurrency)
+	assert.Equal(t, "resourceArn", tracesConfig.ResourceArn)
+	assert.Equal(t, true, tracesConfig.LocalMode)
+	assert.Equal(t, true, tracesConfig.Insecure)
+	assert.Equal(t, "roleArn", tracesConfig.Credentials.RoleArn)
+	assert.Equal(t, "endpointOverride", tracesConfig.EndpointOverride)
+	assert.Equal(t, "regionOverride", tracesConfig.RegionOverride)
+	assert.Equal(t, "proxyOverride", tracesConfig.ProxyOverride)
+
 }
