@@ -112,6 +112,16 @@ var schema = `{
           "minLength": 1,
           "maxLength": 255
         },
+        "global_dimensions": {
+          "type": "object",
+          "description": "Any dimensions to be applied to all published metrics",
+          "maxProperties": 30,
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
         "aggregation_dimensions": {
           "description": "Specifies the dimensions on which collected metrics are to be aggregated",
           "type": "array",

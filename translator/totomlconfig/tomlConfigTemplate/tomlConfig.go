@@ -264,6 +264,7 @@ type (
 		DropOriginalMetrics map[string][]string      `toml:"drop_original_metrics"`
 		MetricDecorations   []metricDecorationConfig `toml:"metric_decoration"`
 		TagPass             map[string][]string
+		GlobalDimensions    map[string]string `toml:"global_dimensions"`
 	}
 
 	metricDecorationConfig struct {

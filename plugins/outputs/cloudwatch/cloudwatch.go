@@ -63,7 +63,8 @@ type CloudWatch struct {
 	MetricConfigs      []MetricDecorationConfig `toml:"metric_decoration"`
 	RollupDimensions   [][]string               `toml:"rollup_dimensions"`
 	DropOriginConfigs  map[string][]string      `toml:"drop_original_metrics"`
-	Namespace          string                   `toml:"namespace"` // CloudWatch Metrics Namespace
+	Namespace          string                   `toml:"namespace"`         // CloudWatch Metrics Namespace
+	GlobalDimensions   map[string]string        `toml:"global_dimensions"` // Dimensions to append for all Metrics
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -463,7 +464,7 @@ func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.Metri
 		point.RemoveTag(highResolutionTagKey)
 	}
 
-	rawDimensions := BuildDimensions(point.Tags())
+	rawDimensions := BuildDimensions(point.Tags(), c.GlobalDimensions)
 	dimensionsList := c.ProcessRollup(rawDimensions)
 	//https://pratheekadidela.in/2016/02/11/is-append-in-go-efficient/
 	//https://www.ardanlabs.com/blog/2013/08/understanding-slices-in-go-programming.html
@@ -577,7 +578,7 @@ func (c *CloudWatch) BuildMetricDatum(point telegraf.Metric) []*cloudwatch.Metri
 // 30 dimensions per metric so we only keep up to the first 30 alphabetically.
 // This always includes the "host" tag if it exists.
 // See https://github.com/aws/amazon-cloudwatch-agent/issues/398
-func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
+func BuildDimensions(mTags map[string]string, globalDimensions map[string]string) []*cloudwatch.Dimension {
 	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
 
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
@@ -588,25 +589,41 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 		})
 	}
 
-	var keys []string
-	for k := range mTags {
-		if k != "host" {
-			keys = append(keys, k)
+	globalDimensionKeys := make([]string, 0, len(globalDimensions))
+
+	for key, value := range globalDimensions {
+		if key != "" && key != "host" && value != "" {
+			globalDimensionKeys = append(globalDimensionKeys, key)
 		}
 	}
-	sort.Strings(keys)
+
+	if len(globalDimensionKeys)+len(dimensions) > MaxDimensions {
+		log.Printf("D! max MaxDimensions %v is less than than number of global dimensions plus host dimension (if present) %v thus only taking the max number", MaxDimensions, len(globalDimensionKeys)+len(dimensions))
+		sort.Strings(globalDimensionKeys)
+		globalDimensionKeys = globalDimensionKeys[:MaxDimensions-len(dimensions)]
+	}
+
+	for _, key := range globalDimensionKeys {
+		dimensions = append(dimensions, &cloudwatch.Dimension{
+			Name:  aws.String(key),
+			Value: aws.String(globalDimensions[key]),
+		})
+	}
+
+	var keys []string
+	for key, value := range mTags {
+		if key != "" && key != "host" && value != "" && globalDimensions[key] == "" {
+			keys = append(keys, key)
+		}
+	}
+
+	if len(dimensions)+len(keys) > MaxDimensions {
+		log.Printf("D! max MaxDimensions %v is less than than number of dimensions %v thus only taking the max number", MaxDimensions, len(dimensions)+len(keys))
+		sort.Strings(keys)
+		keys = keys[:MaxDimensions-len(dimensions)]
+	}
 
 	for _, k := range keys {
-		if len(dimensions) >= MaxDimensions {
-			log.Printf("D! max MaxDimensions %v is less than than number of dimensions %v thus only taking the max number", MaxDimensions, len(dimensions))
-			break
-		}
-
-		value := mTags[k]
-		if value == "" {
-			continue
-		}
-
 		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String(k),
 			Value: aws.String(mTags[k]),

@@ -11,6 +11,10 @@
     }
   },
   "metrics": {
+    "global_dimensions": {
+      "Environment": "test",
+      "DeploymentStack": "green"
+    },
     "metrics_collected": {
       "nvidia_gpu": {
         "measurement": [

@@ -11,6 +11,10 @@
     }
   },
   "metrics": {
+    "global_dimensions": {
+      "Environment": "test",
+      "DeploymentStack": "green"
+    },
     "metrics_collected": {
       "collectd": {
         "service_address": "udp://127.0.0.1:25826",

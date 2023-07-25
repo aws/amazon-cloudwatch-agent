@@ -34,29 +34,280 @@ func TestBuildDimensions(t *testing.T) {
 	assert := assert.New(t)
 
 	testPoint := testutil.TestMetric(1)
-	dimensions := BuildDimensions(testPoint.Tags())
+	testPoint.AddTag("host", "example.org")
+
+	dimensions := BuildDimensions(testPoint.Tags(), nil)
+
+	assert.Equal(len(testPoint.Tags()), len(dimensions), "Number of dimensions should be equal to number of tags")
+
+	tagMap := testPoint.Tags()
+
+	for _, dimension := range dimensions {
+		actualKey := *dimension.Name
+		expectedValue, keyExists := tagMap[actualKey]
+
+		assert.True(keyExists, "Key should be equal")
+		assert.Equal(expectedValue, *dimension.Value, "Value should be equal")
+	}
+}
+
+// Test tags with blank names or values are rejected
+func TestBuildDimensionsRejectsBlankDimensions(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	expectedLength := len(testPoint.TagList())
+
+	testPoint.AddTag("", "RejectedBecauseKeyIsEmpty")
+	testPoint.AddTag("RejectedBecauseValueIsEmpty", "")
+
+	dimensions := BuildDimensions(testPoint.Tags(), nil)
 
 	tagKeys := make([]string, len(testPoint.Tags()))
 	i := 0
-	for k, _ := range testPoint.Tags() {
+	for k := range testPoint.Tags() {
+		tagKeys[i] = k
+		i += 1
+	}
+
+	assert.Equal(expectedLength, len(dimensions), "Empty key or value dimensions should be rejected")
+}
+
+// Test that we retain as many tags as possible if the number exceeds the max number permitted
+func TestBuildDimensionsExceedMaxNumber(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	dimensionToBeDropped := "zzz"
+	testPoint.AddTag(dimensionToBeDropped, "ValueToBeDropped")
+
+	for i := len(testPoint.Tags()); i <= MaxDimensions; i++ {
+		testPoint.AddTag(fmt.Sprint(i), "Value"+fmt.Sprint(i))
+	}
+
+	dimensions := BuildDimensions(testPoint.Tags(), nil)
+
+	assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions retained should be MaxDimensions")
+
+	for _, dimension := range dimensions {
+		assert.NotEqual(dimensionToBeDropped, *dimension.Name, "Dimensions should be dropped based on alphabetical ordering")
+		tagValue := testPoint.Tags()[*dimension.Name]
+		assert.Equal(tagValue, *dimension.Value, "Value should be equal")
+	}
+}
+
+// Test that we prioritise the host dimension if the number exceeds the max number permitted
+func TestBuildDimensionsHostRetainedWhenExceedMaxNumber(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	expectedHost := "my-host-name"
+	testPoint.AddTag("host", expectedHost)
+
+	for i := 0; i <= MaxDimensions; i++ {
+		testPoint.AddTag(fmt.Sprint(i), "Value"+fmt.Sprint(i))
+	}
+
+	dimensions := BuildDimensions(testPoint.Tags(), nil)
+
+	assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions retained should be MaxDimensions")
+
+	var actualHost *string
+
+	for _, dimension := range dimensions {
+		if *dimension.Name == "host" {
+			actualHost = dimension.Value
+			assert.Equal(expectedHost, *dimension.Value, "Host values should be equal")
+		}
+	}
+
+	assert.NotNil(actualHost, "Host dimension should have been retained")
+}
+
+// Test that we don't add the host dimension if the value is empty
+func TestBuildDimensionsDropHostIfBlank(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	testPoint.AddTag("host", "")
+
+	dimensions := BuildDimensions(testPoint.Tags(), nil)
+	assert.Equal(len(testPoint.TagList())-1, len(dimensions), "Empty host tag should be dropped")
+
+	for _, dimension := range dimensions {
+		assert.NotEqual("host", *dimension.Name, "Empty host dimension should not be retained")
+	}
+}
+
+// Test that global dimensions are added correctly
+func TestGlobalDimensions(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	globalDimensions := map[string]string{
+		"Environment": "test",
+		"Deployment":  "green",
+	}
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+
+	tagKeys := make([]string, len(testPoint.Tags()))
+	i := 0
+	for k := range testPoint.Tags() {
+		tagKeys[i] = k
+		i += 1
+	}
+
+	assert.Equal(len(testPoint.Tags())+len(globalDimensions), len(dimensions), "Number of dimensions should be equal to number of tags plus the number of global dimensions")
+
+	for key, value := range globalDimensions {
+		var matchingDimension *cloudwatch.Dimension
+
+		for _, dimension := range dimensions {
+			if *dimension.Name == key {
+				matchingDimension = dimension
+			}
+		}
+
+		assert.NotNil(matchingDimension, "Global dimension should exist")
+		assert.Equal(value, *matchingDimension.Value, "Global dimension value should be equal")
+	}
+
+	for i, key := range tagKeys {
+		dimension := *dimensions[i+len(globalDimensions)]
+		assert.Equal(key, *dimension.Name, "Key should be equal")
+		assert.Equal(testPoint.Tags()[key], *dimension.Value, "Value should be equal")
+	}
+}
+
+// Test that global host dimension is ignored
+func TestGlobalDimensionsIgnoreHost(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	globalDimensions := map[string]string{
+		"Environment": "test",
+		"Deployment":  "green",
+		"host":        "ShouldBeDropped",
+	}
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+
+	assert.Equal(len(testPoint.Tags())+len(globalDimensions)-1, len(dimensions), "Output dimensions should not include the global host dimension")
+
+	for _, dimension := range dimensions {
+		assert.NotEqual("host", *dimension.Name, "Global host dimension should be dropped")
+	}
+}
+
+// Test that we retain as many global dimensions as possible if the number exceeds the max number permitted
+func TestGlobalDimensionsExceedMaxNumber(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+
+	dimensionToBeDropped := "zzzz"
+	globalDimensions := map[string]string{}
+	globalDimensions[dimensionToBeDropped] = "ValueToBeDropped"
+
+	for i := 1; i <= MaxDimensions; i++ {
+		globalDimensions[fmt.Sprint(i)] = "Value"
+	}
+
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+	assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions retained should be MaxDimensions")
+
+	for _, dimension := range dimensions {
+		name := dimension.Name
+		assert.NotEqual(dimensionToBeDropped, *name, "Dimensions should be dropped based on alphabetical ordering")
+		actualValue := dimension.Value
+
+		assert.Equal(globalDimensions[*name], *actualValue, "Value should equal")
+	}
+}
+
+// Test that the metric host tag is retained even when the global dimensions exceed the max number permitted
+func TestGlobalDimensionsMetricHostIsRetainedIfExceedMaxNumber(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+
+	for key := range testPoint.Tags() {
+		testPoint.RemoveTag(key)
+	}
+
+	expectedHost := "some-host"
+	testPoint.AddTag("host", expectedHost)
+	testPoint.AddTag("shouldBeDropped", "OK")
+
+	globalDimensions := map[string]string{}
+
+	for i := 0; i <= MaxDimensions; i++ {
+		globalDimensions[fmt.Sprint(i)] = "Value"
+	}
+
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+
+	assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions retained should be MaxDimensions")
+
+	var actualHost *string
+
+	for _, dimension := range dimensions {
+		assert.NotEqual("shouldBeDropped", *dimension.Value, "Global dimensions should be retained in preference to metric tags")
+
+		if *dimension.Name == "host" {
+			actualHost = dimension.Value
+			assert.Equal(expectedHost, *dimension.Value)
+		} else {
+			assert.Contains(globalDimensions, *dimension.Name, "Global dimensions should be retained")
+		}
+	}
+
+	assert.NotNil(actualHost, "Host tag should have been retained")
+}
+
+// Test that global dimensions override metric tags correctly
+func TestGlobalDimensionsOverride(t *testing.T) {
+	assert := assert.New(t)
+
+	testPoint := testutil.TestMetric(1)
+	testPoint.AddTag("Environment", "live")
+
+	globalDimensions := map[string]string{
+		"Environment": "test",
+		"Deployment":  "green",
+	}
+	dimensions := BuildDimensions(testPoint.Tags(), globalDimensions)
+
+	tagKeys := make([]string, len(testPoint.Tags())-1)
+	i := 0
+	for k := range testPoint.Tags() {
+		if k == "Environment" {
+			continue
+		}
 		tagKeys[i] = k
 		i += 1
 	}
 
 	sort.Strings(tagKeys)
 
-	if len(testPoint.Tags()) >= MaxDimensions {
-		assert.Equal(MaxDimensions, len(dimensions), "Number of dimensions should be less than MaxDimensions")
-	} else {
-		assert.Equal(len(testPoint.Tags()), len(dimensions), "Number of dimensions should be equal to number of tags")
+	assert.Equal(len(testPoint.Tags())+len(globalDimensions)-1, len(dimensions), "Conflicting global and metric dimensions should be merged")
+
+	for key, value := range globalDimensions {
+		var matchingDimension *cloudwatch.Dimension
+
+		for _, dimension := range dimensions {
+			if *dimension.Name == key {
+				matchingDimension = dimension
+				break
+			}
+		}
+
+		assert.NotNil(matchingDimension, "Global dimension should exist")
+		assert.Equal(value, *matchingDimension.Value, "Global dimension value should be equal")
 	}
 
 	for i, key := range tagKeys {
-		if i >= 10 {
-			break
-		}
-		assert.Equal(key, *dimensions[i].Name, "Key should be equal")
-		assert.Equal(testPoint.Tags()[key], *dimensions[i].Value, "Value should be equal")
+		assert.Equal(key, *dimensions[i+len(globalDimensions)].Name, "Key should be equal")
+		assert.Equal(testPoint.Tags()[key], *dimensions[i+len(globalDimensions)].Value, "Value should be equal")
 	}
 }
 
@@ -288,7 +539,7 @@ func TestIsFlushable(t *testing.T) {
 	datum := cloudwatch.MetricDatum{
 		MetricName: aws.String("test_metric"),
 		Value:      aws.Float64(1),
-		Dimensions: BuildDimensions(tags),
+		Dimensions: BuildDimensions(tags, nil),
 		Timestamp:  aws.Time(time.Now()),
 	}
 	batch.Partition = append(batch.Partition, &datum)
@@ -306,7 +557,7 @@ func TestIsFull(t *testing.T) {
 	datum := cloudwatch.MetricDatum{
 		MetricName: aws.String("test_metric"),
 		Value:      aws.Float64(1),
-		Dimensions: BuildDimensions(tags),
+		Dimensions: BuildDimensions(tags, nil),
 		Timestamp:  aws.Time(time.Now()),
 	}
 	for i := 0; i < 3; {
