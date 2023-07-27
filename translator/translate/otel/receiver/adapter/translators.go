@@ -32,7 +32,7 @@ var (
 	logKey       = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
 	logMetricKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
 	metricKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
-	skipInputSet = map[string]bool{files.SectionKey: true}
+	skipInputSet = collections.NewSet[string](files.SectionKey, windows_events.SectionKey)
 )
 
 var (
@@ -149,7 +149,7 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 				}
 			}
 			cfgKey := common.ConfigKey(baseKey, inputName)
-			if skipInputSet[inputName] {
+			if skipInputSet.Contains(inputName) {
 				// logs agent is separate from otel agent
 				continue
 			} else if multipleInputSet.Contains(inputName) {
