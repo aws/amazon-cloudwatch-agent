@@ -12,6 +12,20 @@ exporters:
     log_stream_name: '{NodeName}'
     max_retries: 2
     metric_declarations:
+      # container metrics
+      - dimensions: [ [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - container_cpu_utilization
+          - container_cpu_utilization_over_container_limit
+          - container_memory_utilization
+          - container_memory_utilization_over_container_limit
+          - container_memory_failures_total
+          - container_filesystem_usage
+          - container_status_running
+          - container_status_terminated
+          - container_status_waiting
+          - container_status_waiting_reason_crashed
       # pod metrics
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ] ]
         label_matchers: [ ]

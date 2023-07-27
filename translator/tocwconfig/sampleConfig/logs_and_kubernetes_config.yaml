@@ -39,7 +39,7 @@ exporters:
     max_retries: 2
     metric_declarations:
       # container metrics
-      - dimensions: [ [ ClusterName, ContainerName, FullPodName, Namespace, PodName ], [ ClusterName, ContainerName, Namespace, PodName ] ]
+      - dimensions: [ [ ClusterName ], [ ClusterName, ContainerName, FullPodName, Namespace, PodName ], [ ClusterName, ContainerName, Namespace, PodName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - container_cpu_utilization
