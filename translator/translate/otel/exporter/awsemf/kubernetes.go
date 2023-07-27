@@ -4,8 +4,9 @@
 package awsemf
 
 import (
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awscontainerinsight"
 )
@@ -53,17 +54,22 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 func getContainerMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var containerMetricDeclarations []*awsemfexporter.MetricDeclaration
 	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
-	if containerInsightsGranularityLevel >= awscontainerinsight.IndividualPodContainerMetrics {
-		containerMetricDeclarations = append(containerMetricDeclarations, []*awsemfexporter.MetricDeclaration{
-			{
-				Dimensions: [][]string{{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
-				MetricNameSelectors: []string{
-					"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
-					"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
-					"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed",
-				},
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
+		dimensions := [][]string{{"ClusterName"}}
+		if containerInsightsGranularityLevel >= awscontainerinsight.IndividualPodContainerMetrics {
+			dimensions = append(dimensions, []string{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, []string{"ContainerName", "PodName", "Namespace", "ClusterName"})
+		}
+
+		metricDeclaration := awsemfexporter.MetricDeclaration{
+			Dimensions: dimensions,
+			MetricNameSelectors: []string{
+				"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
+				"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
+				"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed",
 			},
-		}...)
+		}
+
+		containerMetricDeclarations = append(containerMetricDeclarations, &metricDeclaration)
 	}
 	return containerMetricDeclarations
 }

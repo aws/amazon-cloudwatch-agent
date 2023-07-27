@@ -6,10 +6,11 @@ package awsemf
 import (
 	"testing"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 
 	legacytranslator "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
@@ -260,6 +261,13 @@ func TestTranslator(t *testing.T) {
 				},
 				"metric_declarations": []*awsemfexporter.MetricDeclaration{
 					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{
+							"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
+							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
+							"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed"},
+					},
+					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"ClusterName", "Namespace"}},
 						MetricNameSelectors: []string{"pod_cpu_utilization", "pod_memory_utilization",
 							"pod_network_rx_bytes", "pod_network_tx_bytes", "pod_cpu_utilization_over_pod_limit",
@@ -351,7 +359,7 @@ func TestTranslator(t *testing.T) {
 				},
 				"metric_declarations": []*awsemfexporter.MetricDeclaration{
 					{
-						Dimensions: [][]string{{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{
 							"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
 							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
