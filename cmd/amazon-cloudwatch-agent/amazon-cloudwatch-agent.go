@@ -296,18 +296,21 @@ func runAgent(ctx context.Context,
 	}
 
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
-		log.Println("creating new logs agent")
-		logAgent := logs.NewLogAgent(c)
+		log.Println("I! Creating new logs agent")
 		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
-		go logAgent.Run(ctx)
+		logAgent := logs.NewLogAgent(c)
 
 		// If OTEL config does not exist, then ASSUME just monitoring logs.
 		// So just start Telegraf.
 		_, err = os.Stat(*fOtelConfig)
 		if errors.Is(err, os.ErrNotExist) {
 			agentinfo.SetComponents(&otelcol.Config{}, c)
-			return ag.Run(ctx)
+			log.Println("I! Only starting logs agent")
+			logAgent.Run(ctx)
+			return nil
 		}
+
+		go logAgent.Run(ctx)
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
 
