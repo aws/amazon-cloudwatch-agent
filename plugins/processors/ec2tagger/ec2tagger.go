@@ -6,7 +6,6 @@ package ec2tagger
 import (
 	"context"
 	"hash/fnv"
-	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	translatorCtx "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
@@ -66,17 +64,10 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 	mdCredentialConfig := &configaws.CredentialConfig{}
 
 	p := &Tagger{
-		Config:     config,
-		logger:     logger,
-		cancelFunc: cancel,
-		metadataProvider: NewMetadataProvider(
-			mdCredentialConfig.Credentials(),
-			&aws.Config{
-				HTTPClient: &http.Client{Timeout: defaultIMDSTimeout},
-				LogLevel:   configaws.SDKLogLevel(),
-				Logger:     configaws.SDKLogger{},
-				Retryer:    retryer.IMDSRetryer,
-			}),
+		Config:           config,
+		logger:           logger,
+		cancelFunc:       cancel,
+		metadataProvider: NewMetadataProvider(mdCredentialConfig.Credentials()),
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),

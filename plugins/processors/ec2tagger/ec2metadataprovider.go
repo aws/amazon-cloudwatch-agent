@@ -5,10 +5,15 @@ package ec2tagger
 
 import (
 	"context"
+	"net/http"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+
+	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 )
 
 type MetadataProvider interface {
@@ -18,25 +23,68 @@ type MetadataProvider interface {
 }
 
 type metadataClient struct {
-	metadata *ec2metadata.EC2Metadata
+	metadataFallbackDisabled *ec2metadata.EC2Metadata
+	metadataFallbackEnabled  *ec2metadata.EC2Metadata
 }
 
 var _ MetadataProvider = (*metadataClient)(nil)
 
-func NewMetadataProvider(p client.ConfigProvider, cfgs ...*aws.Config) MetadataProvider {
+func NewMetadataProvider(p client.ConfigProvider) MetadataProvider {
+	disableFallbackConfig := &aws.Config{
+		HTTPClient:                &http.Client{Timeout: defaultIMDSTimeout},
+		LogLevel:                  configaws.SDKLogLevel(),
+		Logger:                    configaws.SDKLogger{},
+		Retryer:                   retryer.IMDSRetryer,
+		EC2MetadataEnableFallback: aws.Bool(false),
+	}
+	enableFallbackConfig := &aws.Config{
+		HTTPClient:                &http.Client{Timeout: defaultIMDSTimeout},
+		LogLevel:                  configaws.SDKLogLevel(),
+		Logger:                    configaws.SDKLogger{},
+		Retryer:                   retryer.IMDSRetryer,
+		EC2MetadataEnableFallback: aws.Bool(true),
+	}
 	return &metadataClient{
-		metadata: ec2metadata.New(p, cfgs...),
+		metadataFallbackDisabled: ec2metadata.New(p, disableFallbackConfig),
+		metadataFallbackEnabled:  ec2metadata.New(p, enableFallbackConfig),
 	}
 }
 
 func (c *metadataClient) InstanceID(ctx context.Context) (string, error) {
-	return c.metadata.GetMetadataWithContext(ctx, "instance-id")
+	contextOuter, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+	instanceId, err := c.metadataFallbackDisabled.GetMetadataWithContext(contextOuter, "instance-id")
+	if err != nil {
+		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
+		defer cancelFnInner()
+		instanceIdInner, errInner := c.metadataFallbackEnabled.GetMetadataWithContext(contextInner, "instance-id")
+		return instanceIdInner, errInner
+	}
+	return instanceId, err
 }
 
 func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
-	return c.metadata.GetMetadataWithContext(ctx, "hostname")
+	contextOuter, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+	hostname, err := c.metadataFallbackDisabled.GetMetadataWithContext(contextOuter, "hostname")
+	if err != nil {
+		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
+		defer cancelFnInner()
+		hostnameInner, errInner := c.metadataFallbackEnabled.GetMetadataWithContext(contextInner, "hostname")
+		return hostnameInner, errInner
+	}
+	return hostname, err
 }
 
 func (c *metadataClient) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
-	return c.metadata.GetInstanceIdentityDocumentWithContext(ctx)
+	contextOuter, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+	instanceDocument, err := c.metadataFallbackDisabled.GetInstanceIdentityDocumentWithContext(contextOuter)
+	if err != nil {
+		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
+		defer cancelFnInner()
+		instanceDocumentInner, errInner := c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(contextInner)
+		return instanceDocumentInner, errInner
+	}
+	return instanceDocument, err
 }

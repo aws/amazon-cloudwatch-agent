@@ -4,6 +4,7 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/interfaze"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
@@ -207,22 +209,43 @@ func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentia
 
 func DefaultEC2Region() (region string) {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
-	// imds does not need to retry here since this is config wizard
-	// by the time user can run the wizard imds should be up
-	ses, err := session.NewSession(&aws.Config{
-		HTTPClient: &http.Client{Timeout: 1 * time.Second},
-		MaxRetries: aws.Int(0),
-		LogLevel:   configaws.SDKLogLevel(),
-		Logger:     configaws.SDKLogger{},
+	// imds should by the time user can run the wizard
+	// thus cancel context faster
+	// no need for a fallback metric since this happens during wizard
+	// we will not get this metric from user-agent
+	sesFallBackDisabled, err := session.NewSession(&aws.Config{
+		HTTPClient:                &http.Client{Timeout: 10 * time.Second},
+		MaxRetries:                aws.Int(3),
+		LogLevel:                  configaws.SDKLogLevel(),
+		Logger:                    configaws.SDKLogger{},
+		EC2MetadataEnableFallback: aws.Bool(false),
+		Retryer:                   retryer.IMDSRetryer,
+	})
+	sesFallBackEnabled, err := session.NewSession(&aws.Config{
+		HTTPClient:                &http.Client{Timeout: 10 * time.Second},
+		MaxRetries:                aws.Int(3),
+		LogLevel:                  configaws.SDKLogLevel(),
+		Logger:                    configaws.SDKLogger{},
+		EC2MetadataEnableFallback: aws.Bool(true),
+		Retryer:                   retryer.IMDSRetryer,
 	})
 	if err != nil {
 		return
 	}
-	md := ec2metadata.New(ses)
-	if info, err := md.Region(); err == nil {
+	md := ec2metadata.New(sesFallBackDisabled)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFn()
+	if info, errOuter := md.RegionWithContext(ctx); errOuter == nil {
 		region = info
 	} else {
-		fmt.Println("Could not get region from ec2 metadata...")
+		mdInner := ec2metadata.New(sesFallBackEnabled)
+		contextInner, cancelFnInner := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancelFnInner()
+		if infoInner, errInner := mdInner.RegionWithContext(contextInner); errInner == nil {
+			region = infoInner
+		} else {
+			fmt.Println("Could not get region from ec2 metadata...")
+		}
 	}
 	return
 }

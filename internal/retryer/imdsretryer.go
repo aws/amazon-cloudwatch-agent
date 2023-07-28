@@ -26,18 +26,12 @@ type iMDSRetryer struct {
 }
 
 // newIMDSRetryer allows us to retry imds errors
-// 2 imds calls 1 for hostname 1 for doc
-// 2 calls 1 for imdsv2 1 for imdsv1
-// 2 seconds 4 seconds 8 seconds 16 seconds 32 seconds = 1 minute 2 seconds
-// total is 4 minutes 8 seconds
-// random jitter is applied of half the retry time
-// max retry total time is 6 minutes 12 seconds
-// min retry total time is 2 minutes 4 seconds
+// .5 seconds 1 seconds 2 seconds 4 seconds 8 seconds = 15.5 seconds
 func newIMDSRetryer() iMDSRetryer {
 	return iMDSRetryer{
 		DefaultRetryer: client.DefaultRetryer{
 			NumMaxRetries: 5,
-			MinRetryDelay: 2 * time.Second,
+			MinRetryDelay: time.Second / 2,
 		},
 	}
 }
