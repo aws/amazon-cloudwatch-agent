@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -222,12 +223,9 @@ func DefaultEC2Region() (region string) {
 		Retryer:                   retryer.IMDSRetryer,
 	})
 	sesFallBackEnabled, err := session.NewSession(&aws.Config{
-		HTTPClient:                &http.Client{Timeout: 10 * time.Second},
-		MaxRetries:                aws.Int(3),
-		LogLevel:                  configaws.SDKLogLevel(),
-		Logger:                    configaws.SDKLogger{},
-		EC2MetadataEnableFallback: aws.Bool(true),
-		Retryer:                   retryer.IMDSRetryer,
+		HTTPClient: &http.Client{Timeout: 10 * time.Second},
+		LogLevel:   configaws.SDKLogLevel(),
+		Logger:     configaws.SDKLogger{},
 	})
 	if err != nil {
 		return
@@ -238,6 +236,7 @@ func DefaultEC2Region() (region string) {
 	if info, errOuter := md.RegionWithContext(ctx); errOuter == nil {
 		region = info
 	} else {
+		log.Printf("D! could not get region without imds v1 fallback enable thus enable fallback")
 		mdInner := ec2metadata.New(sesFallBackEnabled)
 		contextInner, cancelFnInner := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancelFnInner()

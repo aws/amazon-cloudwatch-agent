@@ -5,6 +5,7 @@ package ec2tagger
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -38,11 +39,9 @@ func NewMetadataProvider(p client.ConfigProvider) MetadataProvider {
 		EC2MetadataEnableFallback: aws.Bool(false),
 	}
 	enableFallbackConfig := &aws.Config{
-		HTTPClient:                &http.Client{Timeout: defaultIMDSTimeout},
-		LogLevel:                  configaws.SDKLogLevel(),
-		Logger:                    configaws.SDKLogger{},
-		Retryer:                   retryer.IMDSRetryer,
-		EC2MetadataEnableFallback: aws.Bool(true),
+		HTTPClient: &http.Client{Timeout: defaultIMDSTimeout},
+		LogLevel:   configaws.SDKLogLevel(),
+		Logger:     configaws.SDKLogger{},
 	}
 	return &metadataClient{
 		metadataFallbackDisabled: ec2metadata.New(p, disableFallbackConfig),
@@ -55,6 +54,7 @@ func (c *metadataClient) InstanceID(ctx context.Context) (string, error) {
 	defer cancelFn()
 	instanceId, err := c.metadataFallbackDisabled.GetMetadataWithContext(contextOuter, "instance-id")
 	if err != nil {
+		log.Printf("D! could not get instance id without imds v1 fallback enable thus enable fallback")
 		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
 		defer cancelFnInner()
 		instanceIdInner, errInner := c.metadataFallbackEnabled.GetMetadataWithContext(contextInner, "instance-id")
@@ -68,6 +68,7 @@ func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
 	defer cancelFn()
 	hostname, err := c.metadataFallbackDisabled.GetMetadataWithContext(contextOuter, "hostname")
 	if err != nil {
+		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
 		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
 		defer cancelFnInner()
 		hostnameInner, errInner := c.metadataFallbackEnabled.GetMetadataWithContext(contextInner, "hostname")
@@ -81,6 +82,7 @@ func (c *metadataClient) Get(ctx context.Context) (ec2metadata.EC2InstanceIdenti
 	defer cancelFn()
 	instanceDocument, err := c.metadataFallbackDisabled.GetInstanceIdentityDocumentWithContext(contextOuter)
 	if err != nil {
+		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
 		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
 		defer cancelFnInner()
 		instanceDocumentInner, errInner := c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(contextInner)

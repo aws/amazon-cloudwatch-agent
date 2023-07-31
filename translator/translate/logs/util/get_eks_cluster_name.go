@@ -5,7 +5,6 @@ package util
 
 import (
 	"log"
-	"net/http"
 	"strings"
 	"time"
 
@@ -62,7 +61,6 @@ func GetClusterNameFromEc2Tagger() string {
 	config := &aws.Config{
 		Region:                        aws.String(region),
 		CredentialsChainVerboseErrors: aws.Bool(true),
-		HTTPClient:                    &http.Client{Timeout: 1 * time.Minute},
 		LogLevel:                      configaws.SDKLogLevel(),
 		Logger:                        configaws.SDKLogger{},
 	}

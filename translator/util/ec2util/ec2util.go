@@ -6,6 +6,7 @@ package ec2util
 import (
 	goContext "context"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -103,10 +104,8 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		EC2MetadataEnableFallback: aws.Bool(false),
 	})
 	mdEnableFallback := ec2metadata.New(ses, &aws.Config{
-		LogLevel:                  configaws.SDKLogLevel(),
-		Logger:                    configaws.SDKLogger{},
-		Retryer:                   retryer.IMDSRetryer,
-		EC2MetadataEnableFallback: aws.Bool(true),
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
 	})
 
 	// ec2 and ecs treats retries for getting host name differently
@@ -117,13 +116,14 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	if hostname, err := mdDisableFallback.GetMetadataWithContext(hostNameContext, "hostname"); err == nil {
 		e.Hostname = hostname
 	} else {
+		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
 		contextInner, cancelFnInner := goContext.WithTimeout(goContext.Background(), 30*time.Second)
 		defer cancelFnInner()
 		hostnameInner, errInner := mdEnableFallback.GetMetadataWithContext(contextInner, "hostname")
 		if errInner == nil {
 			e.Hostname = hostnameInner
 		} else {
-			fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
+			fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", errInner)
 		}
 	}
 
@@ -136,6 +136,7 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		e.PrivateIP = instanceIdentityDocument.PrivateIP
 		e.InstanceID = instanceIdentityDocument.InstanceID
 	} else {
+		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
 		contextInner, cancelFnInner := goContext.WithTimeout(goContext.Background(), 30*time.Second)
 		defer cancelFnInner()
 		instanceIdentityDocumentInner, errInner := mdEnableFallback.GetInstanceIdentityDocumentWithContext(contextInner)
@@ -145,7 +146,7 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 			e.PrivateIP = instanceIdentityDocumentInner.PrivateIP
 			e.InstanceID = instanceIdentityDocumentInner.InstanceID
 		} else {
-			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", err)
+			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", errInner)
 		}
 	}
 
