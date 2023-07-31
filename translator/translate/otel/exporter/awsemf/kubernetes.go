@@ -41,7 +41,7 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getNamespaceMetricDeclarations()...)
 
 	// Setup cluster metrics
-	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getClusterMetricDeclarations()...)
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getClusterMetricDeclarations(conf)...)
 
 	// Setup control plane metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getControlPlaneMetricDeclarations(conf)...)
@@ -224,13 +224,18 @@ func getNamespaceMetricDeclarations() []*awsemfexporter.MetricDeclaration {
 	}
 }
 
-func getClusterMetricDeclarations() []*awsemfexporter.MetricDeclaration {
+func getClusterMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	metricNameSelectors := []string{"cluster_node_count", "cluster_failed_node_count"}
+
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
+		metricNameSelectors = append(metricNameSelectors, "cluster_number_of_running_pods")
+	}
+
 	return []*awsemfexporter.MetricDeclaration{
 		{
-			Dimensions: [][]string{{"ClusterName"}},
-			MetricNameSelectors: []string{
-				"cluster_node_count", "cluster_failed_node_count",
-			},
+			Dimensions:          [][]string{{"ClusterName"}},
+			MetricNameSelectors: metricNameSelectors,
 		},
 	}
 }

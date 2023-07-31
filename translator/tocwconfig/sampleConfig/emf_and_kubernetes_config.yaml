@@ -139,6 +139,7 @@ exporters:
         metric_name_selectors:
           - cluster_node_count
           - cluster_failed_node_count
+          - cluster_number_of_running_pods
       # control plane metrics
       - dimensions: [ [ClusterName, endpoint], [ ClusterName ] ]
         label_matchers: [ ]
