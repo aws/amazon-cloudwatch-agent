@@ -150,6 +150,8 @@ require (
 	k8s.io/klog/v2 v2.90.1
 )
 
+require github.com/nsqio/go-diskqueue v1.1.0
+
 require (
 	cloud.google.com/go/compute v1.19.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
