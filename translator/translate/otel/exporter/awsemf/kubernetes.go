@@ -96,7 +96,7 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 	case awscontainerinsight.EnhancedClusterMetrics:
 		selectors = append(selectors, []string{"pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers",
 			"pod_status_ready", "pod_status_scheduled", "pod_status_running", "pod_status_pending", "pod_status_failed", "pod_status_unknown",
-			"pod_status_succeeded", "pod_status_initialized"}...)
+			"pod_status_succeeded"}...)
 		dimensions = append(dimensions, []string{"Service", "Namespace", "ClusterName"})
 	default:
 		podMetricDeclarations = append(podMetricDeclarations, &awsemfexporter.MetricDeclaration{

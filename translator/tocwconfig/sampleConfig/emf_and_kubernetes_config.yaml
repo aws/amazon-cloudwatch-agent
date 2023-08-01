@@ -77,7 +77,6 @@ exporters:
           - pod_status_failed
           - pod_status_unknown
           - pod_status_succeeded
-          - pod_status_initialized
       # node metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]

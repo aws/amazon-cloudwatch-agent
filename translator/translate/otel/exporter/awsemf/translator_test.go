@@ -279,7 +279,7 @@ func TestTranslator(t *testing.T) {
 							"pod_status_ready", "pod_status_scheduled",
 							"pod_status_running", "pod_status_pending",
 							"pod_status_failed", "pod_status_unknown",
-							"pod_status_succeeded", "pod_status_initialized",
+							"pod_status_succeeded",
 						},
 					},
 					{
@@ -377,7 +377,7 @@ func TestTranslator(t *testing.T) {
 							"pod_status_ready", "pod_status_scheduled",
 							"pod_status_running", "pod_status_pending",
 							"pod_status_failed", "pod_status_unknown",
-							"pod_status_succeeded", "pod_status_initialized"},
+							"pod_status_succeeded"},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
