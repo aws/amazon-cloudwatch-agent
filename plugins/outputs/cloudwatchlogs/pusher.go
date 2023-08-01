@@ -188,12 +188,14 @@ func (p *pusher) start() {
 		select {
 		case <-p.ticker.C:
 			temp, bufferSize, err := p.dequeue()
-			p.dequeueEvents = temp
-			p.backlogBufferSize = bufferSize
 			if err != nil {
-				p.Log.Errorf("Error while querying metrics from the backlog")
+				p.Log.Errorf("Error while dequeue log from the backlogQueue")
 			}
-			if p.dequeueEvents != nil {
+
+			if temp != nil {
+				p.dequeueEvents = temp
+				p.backlogBufferSize = bufferSize
+
 				p.send()
 			}
 		case e := <-ec:
