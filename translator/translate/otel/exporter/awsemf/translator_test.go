@@ -314,7 +314,7 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count", "cluster_number_of_running_pods"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
@@ -411,7 +411,7 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count", "cluster_number_of_running_pods"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
