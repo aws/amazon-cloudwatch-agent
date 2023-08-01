@@ -25,7 +25,6 @@ import (
 const (
 	reqSizeLimit         = 1024 * 1024
 	reqEventsLimit       = 10000
-	typeStr              = "awscloudwatchputlogdata"
 	queuesDirectory      = "/var/agent/queues"
 	maxBacklogQueueDepth = 1024 // 100 MB file with 100 KB per message in worst case (1024 = 100 MB / 100 KB)
 
@@ -66,9 +65,11 @@ type pusher struct {
 	needSort            bool
 	stop                <-chan struct{}
 	lastSentTime        time.Time
-	backlogQueue        persistentqueue.PersistentQueue
-	ticker              *time.Ticker
-	dequeueEvents       *cloudwatchlogs.PutLogEventsInput
+
+	backlogQueue      persistentqueue.PersistentQueue
+	ticker            *time.Ticker
+	dequeueEvents     *cloudwatchlogs.PutLogEventsInput
+	backlogBufferSize int
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
@@ -186,12 +187,15 @@ func (p *pusher) start() {
 	for {
 		select {
 		case <-p.ticker.C:
-			temp, err := p.dequeue()
+			temp, bufferSize, err := p.dequeue()
 			p.dequeueEvents = temp
+			p.backlogBufferSize = bufferSize
 			if err != nil {
 				p.Log.Errorf("Error while querying metrics from the backlog")
 			}
-			p.send()
+			if p.dequeueEvents != nil {
+				p.send()
+			}
 		case e := <-ec:
 			// Start timer when first event of the batch is added (happens after a flush timer timeout)
 			if len(p.events) == 0 {
@@ -239,25 +243,25 @@ func (p *pusher) start() {
 	}
 }
 
-func (p *pusher) dequeue() (*cloudwatchlogs.PutLogEventsInput, error) {
+func (p *pusher) dequeue() (*cloudwatchlogs.PutLogEventsInput, int, error) {
 	if p.backlogQueue.Depth() == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 	obj, err := p.backlogQueue.Dequeue()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	input := obj.(retryStruct)
-	if !input.firstRetryTime.IsZero() {
+	if !input.FirstRetryTime.IsZero() {
 		now := time.Now()
-		dt := now.Sub(input.firstRetryTime).Hours()
+		dt := now.Sub(input.FirstRetryTime).Hours()
 		if dt > 24*14 || dt < -2 {
-			p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, input.firstRetryTime, time.Now())
-			return nil, nil
+			p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, input.FirstRetryTime, time.Now())
+			return nil, 0, nil
 		}
 	}
 
-	return &input.PutLogEventsInput, nil
+	return &input.PutLogEventsInput, 0, nil
 }
 
 func (p *pusher) reset() {
@@ -277,8 +281,8 @@ func (p *pusher) reset() {
 
 type retryStruct struct {
 	cloudwatchlogs.PutLogEventsInput
-	firstRetryTime time.Time `type:"timestamp"`
-	bufferredSize  int       `type:"buffersize"`
+	FirstRetryTime time.Time `type:"timestamp"`
+	BufferredSize  int       `type:"buffersize"`
 }
 
 func (p *pusher) send() {
@@ -288,9 +292,9 @@ func (p *pusher) send() {
 		input = p.dequeueEvents
 		p.dequeueEvents = nil
 		input.SequenceToken = p.sequenceToken
-		//opStartTime := time.Now()
+		opStartTime := time.Now()
 		output, err := p.Service.PutLogEvents(input)
-		//p.agentInfo.RecordOpData(time.Since(opStartTime), p.bufferredSize, err)
+		p.agentInfo.RecordOpData(time.Since(opStartTime), p.backlogBufferSize, err)
 		if err == nil {
 			if output.NextSequenceToken != nil {
 				p.sequenceToken = output.NextSequenceToken
@@ -308,6 +312,8 @@ func (p *pusher) send() {
 				}
 			}
 		}
+		p.addStats("rawSize", float64(p.bufferredSize))
+		p.backlogBufferSize = 0
 		return
 	}
 
@@ -400,7 +406,8 @@ func (p *pusher) send() {
 			retryinput := retryStruct{}
 			inputJson, _ := json.Marshal(input)
 			json.Unmarshal(inputJson, &retryinput.PutLogEventsInput)
-			retryinput.firstRetryTime = time.Now()
+			retryinput.FirstRetryTime = time.Now()
+			retryinput.BufferredSize = p.bufferredSize
 			for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
 				done := p.doneCallbacks[i]
 				done()
@@ -409,8 +416,8 @@ func (p *pusher) send() {
 			p.reset()
 			go func() {
 				p.backlogQueue.Enqueue(retryinput)
-				return
 			}()
+			return
 		}
 
 		wait := retryWait(retryCount)
