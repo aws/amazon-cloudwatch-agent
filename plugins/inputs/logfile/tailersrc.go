@@ -57,7 +57,9 @@ func (le LogEvent) Done() {
 }
 
 type tailerSrc struct {
-	group, stream   string
+	group           string
+	stream          string
+	class           string
 	destination     string
 	stateFilePath   string
 	tailer          *tail.Tail
@@ -81,7 +83,7 @@ type tailerSrc struct {
 var _ logs.LogSrc = (*tailerSrc)(nil)
 
 func NewTailerSrc(
-	group, stream, destination, stateFilePath string,
+	group, stream, destination, stateFilePath, logClass string,
 	tailer *tail.Tail,
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
@@ -97,6 +99,7 @@ func NewTailerSrc(
 		stream:          stream,
 		destination:     destination,
 		stateFilePath:   stateFilePath,
+		class:           logClass,
 		tailer:          tailer,
 		autoRemoval:     autoRemoval,
 		isMLStart:       isMultilineStartFn,
@@ -140,6 +143,10 @@ func (ts *tailerSrc) Destination() string {
 
 func (ts *tailerSrc) Retention() int {
 	return ts.retentionInDays
+}
+
+func (ts *tailerSrc) Class() string {
+	return ts.class
 }
 func (ts *tailerSrc) Done(offset fileOffset) {
 	// ts.offsetCh will only be blocked when the runSaveState func has exited,

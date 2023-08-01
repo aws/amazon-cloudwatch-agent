@@ -58,7 +58,7 @@ func (c *CollectList) ApplyRule(input interface{}) (returnKey string, returnVal 
 			result = append(result, singleTransformedConfig)
 		}
 	}
-	logUtil.ValidateLogRetentionSettings(result, GetCurPath())
+	logUtil.ValidateLogGroupFields(result, GetCurPath())
 	return EventConfigTomlKey, result
 }
 

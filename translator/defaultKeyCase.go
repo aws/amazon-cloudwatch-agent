@@ -5,6 +5,7 @@ package translator
 
 import (
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 // DefaultCase check if current input overrides the default value for the given config entry key.
@@ -84,4 +85,18 @@ func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (retu
 			fmt.Sprintf("%s value (%v) in is not valid retention in days.", key, returnVal))
 	}
 	return
+}
+
+func DefaultLogGroupClassCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
+	returnKey, returnVal = DefaultCase(key, defaultVal, input)
+	if classVal, ok := returnVal.(string); ok && IsValidLogGroupClass(classVal) {
+		returnVal = classVal
+	} else {
+		returnVal = util.StandardLogGroupClass
+		AddErrorMessages(
+			fmt.Sprintf("LogGroupClass key: %s", key),
+			fmt.Sprintf("%s value (%v) in is not a valid Log Group Class field. Defaulting to standard.", key, returnVal))
+	}
+	return
+
 }

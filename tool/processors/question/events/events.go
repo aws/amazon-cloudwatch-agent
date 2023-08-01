@@ -76,6 +76,16 @@ func monitorEvents(ctx *runtime.Context, config *data.Config) {
 
 		logStreamName := util.AskWithDefault("Log stream name:", logStreamNameHint)
 
+		logGroupDefaultOption := 1
+		logGroupClass := util.Choice("Which log group tier would you like to have for this log group?", logGroupDefaultOption, []string{util.StandardLogGroupClass, util.EssentialsLogGroupClass})
+		if logGroupClass == util.StandardLogGroupClass {
+			logGroupClass = util.StandardLogGroupClass
+			logGroupDefaultOption = 1
+		} else {
+			logGroupClass = util.EssentialsLogGroupClass
+			logGroupDefaultOption = 2
+		}
+
 		eventFormat := util.Choice("In which format do you want to store windows event to CloudWatch Logs?", eventFormatDefaultOption, []string{EventFormatXMLDescription, EventFormatPlainTextDescription})
 		if eventFormat == EventFormatXMLDescription {
 			eventFormat = EventFormatXML
@@ -92,7 +102,7 @@ func monitorEvents(ctx *runtime.Context, config *data.Config) {
 		if err == nil {
 			retention = i
 		}
-		logsConf.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels, retention)
+		logsConf.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels, retention, logGroupClass)
 
 		yes = util.Yes(fmt.Sprintf("Do you want to specify any additional %s to monitor?", WindowsEventLog))
 		if !yes {

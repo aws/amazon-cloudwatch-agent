@@ -33,6 +33,7 @@ func TestFileConfig(t *testing.T) {
 		"from_beginning":    true,
 		"log_group_name":    "group1",
 		"log_stream_name":   "LOG_STREAM_NAME",
+		"log_group_class":   "standard",
 		"pipe":              false,
 		"retention_in_days": -1,
 	}}
@@ -54,6 +55,7 @@ func TestFileConfigOverride(t *testing.T) {
 		"log_group_name":    "group1",
 		"pipe":              false,
 		"retention_in_days": -1,
+		"log_group_class":   "standard",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -82,6 +84,7 @@ func TestTimestampFormat(t *testing.T) {
 		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		"timezone":          "UTC",
 		"retention_in_days": -1,
+		"log_group_class":   "standard",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -107,6 +110,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  "15:04:05 06 Jan 2",
 				"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
+				"log_group_class":   "standard",
 			}},
 		},
 		{
@@ -125,6 +129,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  "1 2 15:04:05",
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "standard",
 			}},
 		},
 		{
@@ -143,6 +148,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  "2 1 15:04:05",
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "standard",
 			}},
 		},
 		{
@@ -161,6 +167,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  "5 2 1 15:04:05",
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "standard",
 			}},
 		},
 	}
@@ -205,6 +212,7 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 	expectedRegex := "(\\d{1,2}:\\d{1,2}:\\d{1,2} \\d{2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2})"
 	expectVal := []interface{}{map[string]interface{}{
 		"file_path":         "path1",
+		"log_group_class":   "standard",
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
@@ -251,6 +259,7 @@ func TestTimestampFormat_SpecialCharacters(t *testing.T) {
 	expectedRegex := "(\\^\\.\\*\\?\\|\\[\\(\\{\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2}\\}\\)\\]\\$)"
 	expectVal := []interface{}{map[string]interface{}{
 		"file_path":         "path1",
+		"log_group_class":   "standard",
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
@@ -290,6 +299,7 @@ func TestTimestampFormat_Template(t *testing.T) {
 	expectedRegex := "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
 	expectVal := []interface{}{map[string]interface{}{
 		"file_path":         "path1",
+		"log_group_class":   "standard",
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
@@ -347,6 +357,7 @@ func TestMultiLineStartPattern(t *testing.T) {
 		"from_beginning":           true,
 		"pipe":                     false,
 		"retention_in_days":        -1,
+		"log_group_class":          "standard",
 		"timestamp_layout":         "15:04:05 06 Jan 02",
 		"timestamp_regex":          "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
 		"timezone":                 "UTC",
@@ -377,6 +388,7 @@ func TestEncoding(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
+		"log_group_class":   "standard",
 		"timestamp_layout":  "15:04:05 06 Jan 02",
 		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
 		"timezone":          "UTC",
@@ -405,6 +417,7 @@ func TestEncoding_Invalid(t *testing.T) {
 		"file_path":         "path1",
 		"from_beginning":    true,
 		"pipe":              false,
+		"log_group_class":   "standard",
 		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
@@ -433,6 +446,7 @@ func TestAutoRemoval(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
+		"log_group_class":   "standard",
 		"auto_removal":      true,
 	}}
 	assert.Equal(t, expectVal, val)
@@ -455,6 +469,7 @@ func TestAutoRemoval(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": -1,
 		"auto_removal":      false,
+		"log_group_class":   "standard",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -474,6 +489,7 @@ func TestAutoRemoval(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
+		"log_group_class":   "standard",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -546,6 +562,7 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 		"from_beginning":     true,
 		"pipe":               false,
 		"retention_in_days":  -1,
+		"log_group_class":    "standard",
 		"blacklist":          "^agent.log",
 		"publish_multi_logs": true,
 		"timezone":           "UTC",
@@ -572,6 +589,7 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 		"retention_in_days":  -1,
 		"publish_multi_logs": false,
 		"timezone":           "UTC",
+		"log_group_class":    "standard",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -591,6 +609,7 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
+		"log_group_class":   "standard",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -614,6 +633,7 @@ func TestLogFilters(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
+		"log_group_class":   "standard",
 		"filters": []interface{}{
 			map[string]interface{}{
 				"type":       "include",
@@ -655,12 +675,14 @@ func TestRetentionDifferentLogGroups(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": 3,
 		"from_beginning":    true,
+		"log_group_class":   "standard",
 	}, map[string]interface{}{
 		"file_path":         "path1",
 		"log_group_name":    "test1",
 		"pipe":              false,
 		"retention_in_days": 3,
 		"from_beginning":    true,
+		"log_group_class":   "standard",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -692,12 +714,14 @@ func TestDuplicateRetention(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": 3,
 		"from_beginning":    true,
+		"log_group_class":   "standard",
 	}, map[string]interface{}{
 		"file_path":         "path1",
 		"log_group_name":    "test1",
 		"pipe":              false,
 		"retention_in_days": 3,
 		"from_beginning":    true,
+		"log_group_class":   "standard",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -730,13 +754,140 @@ func TestConflictingRetention(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": 3,
 		"from_beginning":    true,
+		"log_group_class":   "standard",
 	}, map[string]interface{}{
 		"file_path":         "path1",
 		"log_group_name":    "test1",
 		"pipe":              false,
 		"retention_in_days": 5,
 		"from_beginning":    true,
+		"log_group_class":   "standard",
 	}}
 	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different retention_in_days values can't be set for the same log group: test1", translator.ErrorMessages[len(translator.ErrorMessages)-1])
+	assert.Equal(t, expectVal, val)
+}
+
+func TestDifferentLogGroupClasses(t *testing.T) {
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1",
+       			"log_group_name":"test2",
+				"retention_in_days":3
+			},
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test2",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "standard",
+	}, map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "standard",
+	}}
+	assert.Equal(t, expectVal, val)
+}
+
+func TestDuplicateLogGroupClass(t *testing.T) {
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3,
+				"log_group_class": "standard"
+			},
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3,
+				"log_group_class": "standard"
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "standard",
+	}, map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "standard",
+	}}
+	assert.Equal(t, expectVal, val)
+}
+
+func TestConflictingLogGroupClass(t *testing.T) {
+	translator.ResetMessages()
+	f := new(FileConfig)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+		"collect_list":[
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3,
+				"log_group_class":   "standard"
+
+			},
+			{
+				"file_path":"path1",
+       			"log_group_name":"test1",
+				"retention_in_days":3,
+				"log_group_class":   "essentials"
+
+			}
+		]
+	}`), &input)
+	if e != nil {
+		assert.Fail(t, e.Error())
+	}
+	_, val := f.ApplyRule(input)
+	expectVal := []interface{}{map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "standard",
+	}, map[string]interface{}{
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "essentials",
+	}}
+	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different log_group_class values can't be set for the same log group: test1", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 	assert.Equal(t, expectVal, val)
 }

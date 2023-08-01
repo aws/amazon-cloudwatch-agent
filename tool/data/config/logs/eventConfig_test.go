@@ -13,11 +13,12 @@ import (
 
 func TestEventConfig_ToMap(t *testing.T) {
 	conf := &EventConfig{
-		EventName:   "System",
-		LogGroup:    "SystemGroup",
-		LogStream:   "SystemStream",
-		EventLevels: []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
-		Retention:   1,
+		EventName:     "System",
+		LogGroup:      "SystemGroup",
+		LogStream:     "SystemStream",
+		LogGroupClass: "basic",
+		EventLevels:   []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
+		Retention:     1,
 	}
 	ctx := &runtime.Context{}
 	key, value := conf.ToMap(ctx)
@@ -27,6 +28,7 @@ func TestEventConfig_ToMap(t *testing.T) {
 		"event_levels":      []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
 		"log_group_name":    "SystemGroup",
 		"log_stream_name":   "SystemStream",
+		"log_group_class":   "basic",
 		"retention_in_days": 1},
 		value)
 }

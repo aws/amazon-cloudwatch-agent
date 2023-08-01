@@ -34,6 +34,7 @@ type windowsEventLog struct {
 	levels        []string
 	logGroupName  string
 	logStreamName string
+	logGroupClass string
 	renderFormat  string
 	maxToRead     int // Maximum number returned in one read.
 	destination   string
@@ -48,12 +49,13 @@ type windowsEventLog struct {
 	startOnce   sync.Once
 }
 
-func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int, retention int) *windowsEventLog {
+func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
 		logGroupName:  logGroupName,
 		logStreamName: logStreamName,
+		logGroupClass: logGroupClass,
 		renderFormat:  renderFormat,
 		maxToRead:     maximumToRead,
 		destination:   destination,
@@ -99,6 +101,11 @@ func (w *windowsEventLog) Destination() string {
 func (w *windowsEventLog) Retention() int {
 	return w.retention
 }
+
+func (w *windowsEventLog) Class() string {
+	return w.logGroupClass
+}
+
 func (w *windowsEventLog) Stop() {
 	close(w.done)
 }

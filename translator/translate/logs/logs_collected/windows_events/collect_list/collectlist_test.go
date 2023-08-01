@@ -48,6 +48,7 @@ func TestApplyRule(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": -1,
+			"log_group_class":   "standard",
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -56,6 +57,7 @@ func TestApplyRule(t *testing.T) {
 			"log_group_name":    "Application",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
+			"log_group_class":   "standard",
 		},
 	}
 
@@ -118,6 +120,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
+			"log_group_class":   "standard",
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -126,6 +129,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
+			"log_group_class":   "standard",
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -134,6 +138,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
+			"log_group_class":   "standard",
 		},
 	}
 
@@ -186,6 +191,7 @@ func TestConflictingRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
+			"log_group_class":   "standard",
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -194,6 +200,7 @@ func TestConflictingRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
+			"log_group_class":   "standard",
 		},
 	}
 

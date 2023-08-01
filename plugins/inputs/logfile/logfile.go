@@ -232,6 +232,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				groupName, streamName,
 				t.Destination,
 				t.getStateFilePath(filename),
+				fileconfig.LogGroupClass,
 				tailer,
 				fileconfig.AutoRemoval,
 				mlCheck,
