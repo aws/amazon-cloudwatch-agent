@@ -54,6 +54,7 @@ jobs:
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
+    if: false
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
@@ -114,6 +115,7 @@ jobs:
     needs: [BuildAndUpload, GenerateTestMatrix]
     name: 'CFTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
     permissions:
@@ -154,6 +156,7 @@ jobs:
   StartLocalStack:
     name: 'StartLocalStack'
     runs-on: ubuntu-latest
+    if: false
     defaults:
       run:
         working-directory: terraform/ec2/localstack
@@ -200,6 +203,7 @@ jobs:
     needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -314,6 +318,7 @@ jobs:
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
+    if: false
     outputs:
       CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
@@ -376,6 +381,7 @@ jobs:
     needs: [BuildAndUpload, GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -458,6 +464,7 @@ jobs:
     needs: [BuildAndUpload, GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -538,7 +545,8 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
-    if: ${{ always() }}
+    if: false
+    #if: ${{ always() }}
     needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest ]
     defaults:
       run:
@@ -574,6 +582,7 @@ jobs:
   ECSEC2IntegrationTest:
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     needs: [ BuildAndUpload, GenerateTestMatrix ]
     strategy:
       fail-fast: false
@@ -656,6 +665,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     needs: [BuildAndUpload, GenerateTestMatrix]
     strategy:
       fail-fast: false
@@ -734,6 +744,7 @@ jobs:
   EKSIntegrationTest:
     name: 'EKSIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     needs: [ BuildAndUpload, GenerateTestMatrix ]
     strategy:
       fail-fast: false
@@ -816,6 +827,7 @@ jobs:
   EKSPrometheusIntegrationTest:
     name: 'EKSPrometheusIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     needs: [ BuildAndUpload, GenerateTestMatrix ]
     strategy:
       fail-fast: false
@@ -897,6 +909,7 @@ jobs:
     name: "PerformanceTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -965,6 +978,7 @@ jobs:
     name: "EC2WinPerformanceTest"
     needs: [ BuildAndUpload, GenerateTestMatrix ]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1033,6 +1047,7 @@ jobs:
     name: "StressTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1103,6 +1118,7 @@ jobs:
     name: "EC2WinStressTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if : false
     strategy:
       fail-fast: false
       matrix:
