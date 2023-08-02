@@ -161,8 +161,7 @@ fmt: install-goimports addlicense
 	@echo $(ALL_SRC) | xargs -n 10 $(GOIMPORTS) $(GOIMPORTS_OPT)
 
 fmt-sh: install-shfmt
-	${SHFMT} -w -d -i 5 .
-
+	${SHFMT} -d -i 5 .
 impi: install-impi
 	# Skip plugins/plugins.go
 	@echo $(ALL_SRC) | xargs -n 10 $(IMPI) --local $(CW_AGENT_IMPORT_PATH) --scheme stdThirdPartyLocal --skip plugins/plugins.go
