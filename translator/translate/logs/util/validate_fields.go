@@ -5,8 +5,9 @@ package util
 
 import (
 	"fmt"
-	"golang.org/x/exp/slices"
 	"strings"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )

@@ -5,6 +5,7 @@ package translator
 
 import (
 	"fmt"
+
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
