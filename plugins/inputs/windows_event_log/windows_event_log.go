@@ -94,12 +94,12 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 			eventConfig.Levels,
 			eventConfig.LogGroupName,
 			eventConfig.LogStreamName,
-			eventConfig.LogGroupClass,
 			eventConfig.RenderFormat,
 			destination,
 			stateFilePath,
 			eventConfig.BatchReadSize,
 			eventConfig.Retention,
+			eventConfig.LogGroupClass,
 		)
 		err = eventLog.Init()
 		if err != nil {
