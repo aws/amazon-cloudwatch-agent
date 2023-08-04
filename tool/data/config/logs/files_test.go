@@ -4,6 +4,7 @@
 package logs
 
 import (
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,8 +15,8 @@ import (
 func TestFiles_ToMap(t *testing.T) {
 	conf := new(Files)
 
-	conf.AddLogFile("/var/log", "lg1", "ls1", "timeStamp1", "utc", "p1", "utf-8", 1, "essentials")
-	conf.AddLogFile("/var/message", "lg2", "ls2", "timeStamp2", "pst", "p2", "", 1, "essentials")
+	conf.AddLogFile("/var/log", "lg1", "ls1", "timeStamp1", "utc", "p1", "utf-8", 1, util.EssentialsLogGroupClass)
+	conf.AddLogFile("/var/message", "lg2", "ls2", "timeStamp2", "pst", "p2", "", 1, util.EssentialsLogGroupClass)
 
 	expectedKey := "files"
 	expectedVal := map[string]interface{}{
@@ -29,7 +30,7 @@ func TestFiles_ToMap(t *testing.T) {
 				"timezone":                 "utc",
 				"encoding":                 "utf-8",
 				"retention_in_days":        1,
-				"log_group_class":          "essentials",
+				"log_group_class":          util.EssentialsLogGroupClass,
 			},
 			{
 				"multi_line_start_pattern": "p2",
@@ -39,7 +40,7 @@ func TestFiles_ToMap(t *testing.T) {
 				"timestamp_format":         "timeStamp2",
 				"timezone":                 "pst",
 				"retention_in_days":        1,
-				"log_group_class":          "essentials",
+				"log_group_class":          util.EssentialsLogGroupClass,
 			},
 		},
 	}

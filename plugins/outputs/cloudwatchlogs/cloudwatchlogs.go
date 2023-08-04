@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ import (
 const (
 	LogGroupNameTag   = "log_group_name"
 	LogStreamNameTag  = "log_stream_name"
+	LogGroupClassTag  = "log_group_class"
 	LogTimestampField = "log_timestamp"
 	LogEntryField     = "value"
 
@@ -100,7 +102,7 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 		retention = -1
 	}
 	if logGroupClass == "" {
-		logGroupClass = "standard"
+		logGroupClass = util.StandardLogGroupClass
 	}
 
 	t := Target{
@@ -185,7 +187,15 @@ func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (Target, error) 
 		logStream = c.LogStreamName
 	}
 
-	return Target{logGroup, logStream, "essentials", -1}, nil
+	logGroupClass, ok := tags[LogGroupClassTag]
+	if ok {
+		m.RemoveTag(LogGroupClassTag)
+	} else if logGroupClass == "" {
+		logGroupClass = util.StandardLogGroupClass
+
+	}
+
+	return Target{logGroup, logStream, logGroupClass, -1}, nil
 }
 
 func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structuredLogEvent {

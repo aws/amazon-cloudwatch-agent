@@ -52,7 +52,7 @@ func TestProcessor_Process(t *testing.T) {
 							"file_path":         "/var/log/messages",
 							"log_group_name":    "/var/log/messages",
 							"log_stream_name":   "{hostname}",
-							"log_group_class":   "standard",
+							"log_group_class":   util.StandardLogGroupClass,
 							"retention_in_days": -1,
 						},
 					},

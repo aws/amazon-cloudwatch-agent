@@ -6,6 +6,7 @@ package logfile
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -114,7 +115,7 @@ func (config *FileConfig) init() error {
 	}
 	//If the log group class is not specified, it will default to the standard tier
 	if config.LogGroupClass == "" {
-		config.LogGroupClass = "essentials"
+		config.LogGroupClass = util.StandardLogGroupClass
 	}
 	//If the timezone info is not specified, we will use the Local timezone as default value.
 	if config.Timezone == time.UTC.String() {

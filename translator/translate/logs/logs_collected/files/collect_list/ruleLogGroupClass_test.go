@@ -5,6 +5,7 @@ package collect_list
 
 import (
 	"encoding/json"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func TestApplyLogGroupClassRule(t *testing.T) {
 	if e == nil {
 		actualReturnKey, actualReturnVal := r.ApplyRule(input)
 		assert.Equal(t, "log_group_class", actualReturnKey)
-		assert.Equal(t, "essentials", actualReturnVal)
+		assert.Equal(t, util.EssentialsLogGroupClass, actualReturnVal)
 	} else {
 		panic(e)
 	}

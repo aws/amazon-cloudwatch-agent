@@ -5,6 +5,7 @@ package collectlist
 
 import (
 	"encoding/json"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func TestApplyRule(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": -1,
-			"log_group_class":   "standard",
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -57,7 +58,7 @@ func TestApplyRule(t *testing.T) {
 			"log_group_name":    "Application",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
-			"log_group_class":   "standard",
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 	}
 
@@ -120,7 +121,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
-			"log_group_class":   "standard",
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -129,7 +130,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
-			"log_group_class":   "standard",
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -138,7 +139,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
-			"log_group_class":   "standard",
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 	}
 
@@ -191,7 +192,7 @@ func TestConflictingRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
-			"log_group_class":   "standard",
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -200,7 +201,7 @@ func TestConflictingRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
-			"log_group_class":   "standard",
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 	}
 

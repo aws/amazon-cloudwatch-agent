@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile"
 	"io"
 	"log"
 	"os"
@@ -765,6 +766,6 @@ func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
 
 func testPreparation(retention int, s *svcMock, flushTimeout time.Duration, retryDuration time.Duration) (chan struct{}, *pusher) {
 	stop := make(chan struct{})
-	p := NewPusher(Target{"G", "S", "standard", retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg, agentinfo.New(""))
+	p := NewPusher(Target{"G", "S", logfile.StandardLogGroupClass, retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg, agentinfo.New(""))
 	return stop, p
 }

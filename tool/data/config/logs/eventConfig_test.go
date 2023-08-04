@@ -4,6 +4,7 @@
 package logs
 
 import (
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +17,7 @@ func TestEventConfig_ToMap(t *testing.T) {
 		EventName:     "System",
 		LogGroup:      "SystemGroup",
 		LogStream:     "SystemStream",
-		LogGroupClass: "basic",
+		LogGroupClass: util.EssentialsLogGroupClass,
 		EventLevels:   []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
 		Retention:     1,
 	}
@@ -28,7 +29,7 @@ func TestEventConfig_ToMap(t *testing.T) {
 		"event_levels":      []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
 		"log_group_name":    "SystemGroup",
 		"log_stream_name":   "SystemStream",
-		"log_group_class":   "basic",
+		"log_group_class":   util.EssentialsLogGroupClass,
 		"retention_in_days": 1},
 		value)
 }

@@ -59,7 +59,7 @@ func TestTailerSrc(t *testing.T) {
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
 	ts := NewTailerSrc(
 		"groupName", "streamName",
-		"destination", "essentials",
+		"destination", EssentialsLogGroupClass,
 		statefile.Name(),
 		tailer,
 		false, // AutoRemoval
@@ -171,7 +171,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		"groupName", "streamName",
 		"destination",
 		statefile.Name(),
-		"essentials",
+		EssentialsLogGroupClass,
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
@@ -389,7 +389,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		t.Name(),
 		t.Name(),
 		"destination",
-		"essentials",
+		EssentialsLogGroupClass,
 		statefile.Name(),
 		tailer,
 		false, // AutoRemoval
