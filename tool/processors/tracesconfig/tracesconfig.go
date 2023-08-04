@@ -33,7 +33,7 @@ func (p *processor) Process(ctx *runtime.Context, cfg *data.Config) {
 	}
 
 	if !ctx.TracesOnly {
-		yes := util.Yes("Do you want to add traces to your configuration?")
+		yes := util.Yes("Do you want the CloudWatch agent to also retrieve X-ray traces?")
 		if !yes {
 			return
 		}
@@ -57,7 +57,7 @@ func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) int
 var DefaultTracesConfigFile []byte
 
 const (
-	anyExistingDaemonConfiguration = "Do you have any existing X-Ray Daemon configuration file to import for migration?"
+	anyExistingDaemonConfiguration = "Do you have an existing X-Ray Daemon configuration file to import for migration?"
 	filePathXrayConfigQuestion     = "What is the file path for the existing X-Ray Daemon configuration file?"
 )
 
@@ -183,7 +183,7 @@ func updateUserConfig(tracesConfig *config.Traces) *config.Traces {
 // array of fields
 func generateFieldOptions() []string {
 	options := []string{
-		"0: Exit",
+		"0: Keep this configuration and exit",
 		"1: UDP BindAddress",
 		"2: TCP BindAddress",
 		"3: concurrency",
