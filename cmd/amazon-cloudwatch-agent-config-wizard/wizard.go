@@ -33,6 +33,8 @@ var isNonInteractiveWindowsMigration *bool
 
 var configOutputPath *string
 
+var isNonInteractiveXrayMigration *bool
+
 func main() {
 	// Parse command line args for non-interactive Windows migration
 	isNonInteractiveWindowsMigration = flag.Bool("isNonInteractiveWindowsMigration", false,
@@ -44,7 +46,7 @@ func main() {
 	tracesOnly := flag.Bool("tracesOnly", false, "If true, only trace configuration will be generated")
 	useParameterStore := flag.Bool("useParameterStore", false,
 		"If true, it will use the parameter store for the migrated config storage.")
-
+	isNonInteractiveXrayMigration = flag.Bool("nonInteractiveXrayMigration", false, "If true, then this is part of non Interactive xray migration tool.")
 	configFilePath := flag.String("configFilePath", "",
 		fmt.Sprintf("The path of the old config file. Default is %s on Windows or %s on Linux", windows.DefaultFilePathWindowsConfiguration, linux.DefaultFilePathLinuxConfiguration))
 
@@ -55,7 +57,6 @@ func main() {
 	flag.Parse()
 
 	if *isNonInteractiveWindowsMigration {
-
 		addWindowsMigrationInputs(*configFilePath, *parameterStoreName, *parameterStoreRegion, *useParameterStore)
 	} else if *isNonInteractiveLinuxMigration {
 		ctx := new(runtime.Context)
@@ -72,6 +73,9 @@ func main() {
 		config := new(data.Config)
 		ctx.TracesOnly = true
 		ctx.ConfigOutputPath = *configOutputPath
+		if *isNonInteractiveXrayMigration {
+			ctx.NonInteractiveXrayMigration = true
+		}
 		process(ctx, config, tracesconfig.Processor, serialization.Processor)
 		return
 	}
@@ -116,6 +120,9 @@ func startProcessing() {
 	processor = processors.StartProcessor
 	if *isNonInteractiveWindowsMigration {
 		ctx.WindowsNonInteractiveMigration = true
+	}
+	if *isNonInteractiveXrayMigration {
+		ctx.NonInteractiveXrayMigration = true
 	}
 	for {
 		if processor == nil {

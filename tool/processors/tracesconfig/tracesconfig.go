@@ -44,7 +44,7 @@ func (p *processor) Process(ctx *runtime.Context, cfg *data.Config) {
 	}
 	cfg.TracesConfig = newTraces
 	//user can review and update their current configurations
-	if cfg.TracesConfig != nil {
+	if cfg.TracesConfig != nil && !ctx.NonInteractiveXrayMigration {
 		cfg.TracesConfig = updateUserConfig(cfg.TracesConfig)
 	}
 }
@@ -300,6 +300,7 @@ func generateTracesConfiguration(ctx *runtime.Context) (*config.Traces, error) {
 
 	configFilePath, err = xraydaemonmigration.FindConfigFile(chosenProcess)
 	if err != nil {
+		fmt.Println("Ran into error while trying to find Daemon Configurations. Using default traces configuration")
 		err = json.Unmarshal(DefaultTracesConfigFile, &tracesFile)
 		if err != nil {
 			return nil, err
@@ -308,8 +309,13 @@ func generateTracesConfiguration(ctx *runtime.Context) (*config.Traces, error) {
 	} else if configFilePath == "" { //if user used command line to make configuration
 		tracesFile, err = xraydaemonmigration.ConvertYamlToJson(nil, chosenProcess)
 		if err != nil {
-			return nil, err
+			fmt.Println("Failed to translate configuration to traces. Using default traces configuration")
+			err = json.Unmarshal(DefaultTracesConfigFile, &tracesFile)
+			if err != nil {
+				return nil, err
+			}
 		}
+
 		return tracesFile, nil
 	}
 

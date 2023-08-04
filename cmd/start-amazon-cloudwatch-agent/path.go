@@ -14,18 +14,10 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/paths"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-)
-
-const (
-	AGENT_DIR_LINUX = "/opt/aws/amazon-cloudwatch-agent"
-
-	JSON_DIR_LINUX = "amazon-cloudwatch-agent.d"
-
-	TRANSLATOR_BINARY_LINUX = "config-translator"
-	AGENT_BINARY_LINUX      = "amazon-cloudwatch-agent"
 )
 
 func startAgent(writer io.WriteCloser) error {
@@ -36,7 +28,7 @@ func startAgent(writer io.WriteCloser) error {
 			"-config", tomlConfigPath,
 			"-envconfig", envConfigPath,
 			"-otelconfig", yamlConfigPath,
-			"-pidfile", AGENT_DIR_LINUX + "/var/amazon-cloudwatch-agent.pid",
+			"-pidfile", paths.AgentDir + "/var/amazon-cloudwatch-agent.pid",
 		}
 		if err := syscall.Exec(agentBinaryPath, execArgs, os.Environ()); err != nil {
 			return fmt.Errorf("error exec as agent binary: %w", err)
@@ -74,7 +66,7 @@ func startAgent(writer io.WriteCloser) error {
 		"-config", tomlConfigPath,
 		"-envconfig", envConfigPath,
 		"-otelconfig", yamlConfigPath,
-		"-pidfile", AGENT_DIR_LINUX + "/var/amazon-cloudwatch-agent.pid",
+		"-pidfile", paths.AgentDir + "/var/amazon-cloudwatch-agent.pid",
 	}
 	if err = syscall.Exec(name, agentCmd, os.Environ()); err != nil {
 		// log file is closed, so use fmt here
@@ -95,15 +87,15 @@ func generateMergedJsonConfigMap() (map[string]interface{}, error) {
 }
 
 func init() {
-	jsonConfigPath = AGENT_DIR_LINUX + "/etc/" + JSON
-	jsonDirPath = AGENT_DIR_LINUX + "/etc/" + JSON_DIR_LINUX
-	envConfigPath = AGENT_DIR_LINUX + "/etc/" + ENV
-	tomlConfigPath = AGENT_DIR_LINUX + "/etc/" + TOML
-	commonConfigPath = AGENT_DIR_LINUX + "/etc/" + COMMON_CONFIG
-	yamlConfigPath = AGENT_DIR_LINUX + "/etc/" + YAML
+	jsonConfigPath = paths.AgentDir + "/etc/" + JSON
+	jsonDirPath = paths.AgentDir + "/etc/" + paths.JsonDir
+	envConfigPath = paths.AgentDir + "/etc/" + ENV
+	tomlConfigPath = paths.AgentDir + "/etc/" + TOML
+	commonConfigPath = paths.AgentDir + "/etc/" + COMMON_CONFIG
+	yamlConfigPath = paths.AgentDir + "/etc/" + YAML
 
-	agentLogFilePath = AGENT_DIR_LINUX + "/logs/" + AGENT_LOG_FILE
+	agentLogFilePath = paths.AgentDir + "/logs/" + AGENT_LOG_FILE
 
-	translatorBinaryPath = AGENT_DIR_LINUX + "/bin/" + TRANSLATOR_BINARY_LINUX
-	agentBinaryPath = AGENT_DIR_LINUX + "/bin/" + AGENT_BINARY_LINUX
+	translatorBinaryPath = paths.AgentDir + "/bin/" + paths.TranslatorBinaryName
+	agentBinaryPath = paths.AgentDir + "/bin/" + paths.AgentDir
 }

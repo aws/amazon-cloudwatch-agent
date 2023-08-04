@@ -21,6 +21,7 @@ type Process interface {
 	Cwd() (string, error)
 	CmdlineSlice() ([]string, error)
 	Cmdline() (string, error)
+	Terminate() error
 }
 
 // Daemon Yaml Configuration struct
