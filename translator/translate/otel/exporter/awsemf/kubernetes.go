@@ -128,7 +128,7 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 					"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
 					"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
 					"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
-					"node_status_condition_pid_pressure", "node_status_condition_network_unavailable",
+					"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
 					"node_status_capacity_pods", "node_status_allocatable_pods",
 				},
 			},

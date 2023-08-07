@@ -71,6 +71,7 @@ exporters:
           - node_status_condition_memory_pressure
           - node_status_condition_pid_pressure
           - node_status_condition_network_unavailable
+          - node_status_condition_unknown
           - node_status_capacity_pods
           - node_status_allocatable_pods
       # node fs metrics
