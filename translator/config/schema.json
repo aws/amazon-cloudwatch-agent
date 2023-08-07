@@ -619,6 +619,9 @@
                   "log_stream_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
                   },
+                  "log_group_class": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupClassDefinition"
+                  },
                   "multi_line_start_pattern": {
                     "type": "string",
                     "minLength": 1,
@@ -719,6 +722,9 @@
                   "log_group_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
                   },
+                  "log_group_class": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupClassDefinition"
+                  },
                   "retention_in_days": {
                     "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
                   },
@@ -752,6 +758,11 @@
           "maxLength": 512
         },
         "logStreamNameDefinition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "logGroupClassDefinition": {
           "type": "string",
           "minLength": 1,
           "maxLength": 512

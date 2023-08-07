@@ -5,7 +5,10 @@ package translator
 
 import (
 	"fmt"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"strconv"
+
+	"golang.org/x/exp/slices"
 )
 
 // ErrorMessages will provide detail error messages to user
@@ -14,6 +17,8 @@ var InfoMessages = []string{}
 
 // ValidRetentionInDays is based on what's supported by PutRetentionPolicy. See https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html#CloudWatch-Agent-Configuration-File-Logssection.
 var ValidRetentionInDays = []string{"-1", "1", "3", "5", "7", "14", "30", "60", "90", "120", "150", "180", "365", "400", "545", "731", "1096", "1827", "2192", "2557", "2922", "3288", "3653"}
+
+var ValidLogGroupClasses = []string{util.StandardLogGroupClass, util.EssentialsLogGroupClass}
 
 // IsValid checks whether the mandatory config parameter is valid
 func IsValid(input interface{}, key string, path string) bool {
@@ -73,7 +78,7 @@ func ResetMessages() {
 
 var ValidDays = map[int]bool{}
 
-func initializeValidMap() {
+func initializeValidDaysMap() {
 	for i := 0; i < len(ValidRetentionInDays); i++ {
 		val, err := strconv.Atoi(ValidRetentionInDays[i])
 		if err == nil {
@@ -83,6 +88,10 @@ func initializeValidMap() {
 }
 
 func IsValidRetentionDays(days int) bool {
-	initializeValidMap()
+	initializeValidDaysMap()
 	return ValidDays[days]
+}
+
+func IsValidLogGroupClass(class string) bool {
+	return slices.Contains(ValidLogGroupClasses, class)
 }
