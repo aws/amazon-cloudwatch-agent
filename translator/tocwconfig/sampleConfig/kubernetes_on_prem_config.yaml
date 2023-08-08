@@ -1,6 +1,7 @@
 connectors: {}
 exporters:
   awsemf/containerinsights:
+    certificate_file_path: ""
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
     disable_metric_extraction: true
@@ -156,6 +157,7 @@ processors:
     timeout: 5s
 receivers:
   awscontainerinsightreceiver:
+    certificate_file_path: ""
     add_container_name_metric_label: false
     add_full_pod_name_metric_label: false
     add_service_as_attribute: true
