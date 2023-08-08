@@ -1,7 +1,9 @@
 connectors: {}
 exporters:
   awscloudwatchlogs/emf_logs:
-    endpoint: ""
+    emf_only: true
+    certificate_file_path: ""
+    endpoint: "https://fake_endpoint"
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
@@ -31,6 +33,7 @@ exporters:
     dimension_rollup_option: NoDimensionRollup
     disable_metric_extraction: true
     eks_fargate_container_insights_enabled: false
+    certificate_file_path: ""
     endpoint: ""
     local_mode: false
     log_group_name: /aws/containerinsights/{ClusterName}/performance
@@ -178,6 +181,7 @@ receivers:
     collection_interval: 30s
     container_orchestrator: eks
     enable_control_plane_metrics: true
+    certificate_file_path: ""
     endpoint: ""
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true

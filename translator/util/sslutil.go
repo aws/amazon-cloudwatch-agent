@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
 )
 
 func GetSSL(sslConfig map[string]string) (result map[string]string) {
@@ -27,7 +28,7 @@ func GetSSL(sslConfig map[string]string) (result map[string]string) {
 
 func SetSSLEnv(sslConfig map[string]string) {
 	if ssl := GetSSL(sslConfig); len(sslConfig) > 0 {
-		os.Setenv("AWS_CA_BUNDLE", ssl[commonconfig.CABundlePath])
+		os.Setenv(envconfig.AWS_CA_BUNDLE, ssl[commonconfig.CABundlePath])
 	}
 
 }
