@@ -188,7 +188,7 @@ func getDeploymentMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metri
 			{
 				Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
 				MetricNameSelectors: []string{
-					"deployment_spec_replicas", "deployment_status_replicas", "deployment_status_replicas_available", "deployment_status_replicas_unavailable",
+					"replicas_desired", "replicas_ready", "status_replicas_available", "status_replicas_unavailable",
 				},
 			},
 		}...)
@@ -205,7 +205,6 @@ func getDaemonSetMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
 				MetricNameSelectors: []string{
 					"daemonset_status_number_available", "daemonset_status_number_unavailable",
-					"daemonset_status_desired_number_scheduled", "daemonset_status_current_number_scheduled",
 				},
 			},
 		}...)

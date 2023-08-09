@@ -115,22 +115,20 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - service_number_of_running_pods
-      # deployment metrics
+      # deployment/stateful set/replica set metrics
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
-          - deployment_spec_replicas
-          - deployment_status_replicas
-          - deployment_status_replicas_available
-          - deployment_status_replicas_unavailable
-      # daemonset metrics
+          - replicas_desired
+          - replicas_ready
+          - status_replicas_available
+          - status_replicas_unavailable
+      # daemon set metrics
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - daemonset_status_number_available
           - daemonset_status_number_unavailable
-          - daemonset_status_desired_number_scheduled
-          - daemonset_status_current_number_scheduled
       # namespace metrics
       - dimensions: [ [ ClusterName, Namespace ], [ ClusterName ] ]
         label_matchers: [ ]
