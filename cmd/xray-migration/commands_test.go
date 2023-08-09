@@ -96,9 +96,8 @@ func TestTerminateXray(t *testing.T) {
 		cmdline: []string{filepath.Join("usr", "bin", "xray"), filepath.Join("var", "log", "xray", "xray.log")},
 		cwd:     "",
 	}
-	err := TerminateXray(xrayService)
+	err := TerminateXray(xrayService, func() bool { return false })
 	assert.NoError(t, err)
-
 }
 
 func TestIsCWAOn(t *testing.T) {
@@ -185,7 +184,7 @@ func TestWithProcesses(t *testing.T) {
 	assert.NoError(t, err)
 	greaterThan := len(processes) > 0
 	assert.True(t, greaterThan)
-	err = TerminateXray(processes[0])
+	err = TerminateXray(processes[0], func() bool { return false })
 	assert.NoError(t, err)
 
 	//Fetch Config Case
