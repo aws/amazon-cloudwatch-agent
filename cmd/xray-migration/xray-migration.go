@@ -64,7 +64,7 @@ func main() {
 	argList, _ := processes[0].CmdlineSlice()
 	cwd, _ := processes[0].Cwd()
 	isService := checkXrayStatus()
-	err = TerminateXray(processes[0])
+	err = TerminateXray(processes[0], checkXrayStatus)
 	if err != nil {
 		fmt.Println("There was a problem terminating X-Ray Daemon: ", err)
 		os.Exit(1)
@@ -168,7 +168,7 @@ func configExists(configLocation string) startType {
 	return Append
 }
 
-func TerminateXray(process xraydaemonmigration.Process) error {
+func TerminateXray(process xraydaemonmigration.Process, checkXrayStatus func() bool) error {
 	var err error
 	if checkXrayStatus() {
 		err = StopXrayService()
