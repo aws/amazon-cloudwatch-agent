@@ -74,6 +74,10 @@ replace github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf23 =
 // go-kit has the fix for nats-io/jwt/v2 merged but not released yet. Replacing this version for now until next release.
 replace github.com/go-kit/kit => github.com/go-kit/kit v0.12.1-0.20220808180842-62c81a0f3047
 
+// Pin to specific version since defaults for root creds changed in later versions
+// https://github.com/aws/aws-sdk-go/blob/main/internal/shareddefaults/shared_config.go#L32
+replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.44.106
+
 // openshift removed all tags from their repo, use the pseudoversion from the release-3.9 branch HEAD
 replace github.com/openshift/api v3.9.0+incompatible => github.com/openshift/api v0.0.0-20180801171038-322a19404e37
 
