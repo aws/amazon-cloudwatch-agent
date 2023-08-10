@@ -12,6 +12,6 @@ const (
 	BinaryDir            = "bin"
 	TranslatorBinaryName = "config-translator.exe"
 	AgentBinaryName      = "amazon-cloudwatch-agent.exe"
-	WizardBinaryName     = "amazon-cloudwatch-agent-config-wizard"
+	WizardBinaryName     = "amazon-cloudwatch-agent-config-wizard.exe"
 	AgentStartName       = "amazon-cloudwatch-agent-ctl.ps1"
 )

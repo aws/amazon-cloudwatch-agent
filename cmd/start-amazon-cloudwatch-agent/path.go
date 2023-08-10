@@ -51,7 +51,7 @@ func startAgent(writer io.WriteCloser) error {
 
 	name, err := exec.LookPath(agentBinaryPath)
 	if err != nil {
-		log.Printf("E! Faield to lookpath: %v ", err)
+		log.Printf("E! Failed to lookpath: %v ", err)
 		return err
 	}
 
@@ -97,5 +97,5 @@ func init() {
 	agentLogFilePath = paths.AgentDir + "/logs/" + AGENT_LOG_FILE
 
 	translatorBinaryPath = paths.AgentDir + "/bin/" + paths.TranslatorBinaryName
-	agentBinaryPath = paths.AgentDir + "/bin/" + paths.AgentDir
+	agentBinaryPath = paths.AgentDir + "/bin/" + paths.AgentBinaryName
 }
