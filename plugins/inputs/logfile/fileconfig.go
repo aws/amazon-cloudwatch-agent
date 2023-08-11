@@ -6,7 +6,6 @@ package logfile
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 const (

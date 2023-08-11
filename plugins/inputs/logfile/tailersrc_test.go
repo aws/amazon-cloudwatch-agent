@@ -22,6 +22,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 type tailerTestResources struct {
@@ -59,7 +60,7 @@ func TestTailerSrc(t *testing.T) {
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
 	ts := NewTailerSrc(
 		"groupName", "streamName",
-		"destination", EssentialsLogGroupClass,
+		"destination", util.EssentialsLogGroupClass,
 		statefile.Name(),
 		tailer,
 		false, // AutoRemoval
@@ -171,7 +172,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		"groupName", "streamName",
 		"destination",
 		statefile.Name(),
-		EssentialsLogGroupClass,
+		util.EssentialsLogGroupClass,
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
@@ -389,7 +390,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		t.Name(),
 		t.Name(),
 		"destination",
-		EssentialsLogGroupClass,
+		util.EssentialsLogGroupClass,
 		statefile.Name(),
 		tailer,
 		false, // AutoRemoval

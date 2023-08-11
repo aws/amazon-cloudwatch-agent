@@ -5,10 +5,11 @@ package translator
 
 import (
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"strconv"
 
 	"golang.org/x/exp/slices"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 // ErrorMessages will provide detail error messages to user

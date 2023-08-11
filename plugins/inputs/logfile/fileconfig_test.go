@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 func TestFileConfigInit(t *testing.T) {
@@ -21,7 +23,7 @@ func TestFileConfigInit(t *testing.T) {
 		TimestampLayout:       "02 Jan 2006 15:04:05",
 		Timezone:              "UTC",
 		MultiLineStartPattern: "{timestamp_regex}",
-		LogGroupClass:         EssentialsLogGroupClass,
+		LogGroupClass:         util.EssentialsLogGroupClass,
 	}
 
 	err := fileConfig.init()
@@ -39,7 +41,7 @@ func TestFileConfigInit(t *testing.T) {
 	assert.True(t, fileConfig.MultiLineStartPatternP == fileConfig.TimestampRegexP, "The multiline start pattern should be the same as the timestampFromLogLine pattern.")
 
 	assert.Equal(t, time.UTC, fileConfig.TimezoneLoc, "The timezone location should be UTC.")
-	assert.Equal(t, EssentialsLogGroupClass, fileConfig.LogGroupClass)
+	assert.Equal(t, util.EssentialsLogGroupClass, fileConfig.LogGroupClass)
 
 	assert.Nil(t, fileConfig.Filters)
 }
@@ -84,7 +86,7 @@ func TestEmptyLogGroupClassInit(t *testing.T) {
 
 	err := fileConfig.init()
 	assert.NotNil(t, err)
-	assert.Equal(t, StandardLogGroupClass, fileConfig.LogGroupClass)
+	assert.Equal(t, util.StandardLogGroupClass, fileConfig.LogGroupClass)
 }
 
 func TestLogGroupName(t *testing.T) {

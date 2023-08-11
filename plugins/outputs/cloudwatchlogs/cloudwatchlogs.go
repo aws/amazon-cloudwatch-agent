@@ -6,7 +6,6 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +22,7 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 const (
