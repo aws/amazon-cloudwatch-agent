@@ -415,8 +415,7 @@ func (p *pusher) send() {
 
 		if retryCount >= 1 {
 			p.Log.Debugf("ready to enqueue")
-			//I forgot add & , I shouldn't use retryinput := &retryStruct{}
-			retryinput := &retryStruct{}
+			retryinput := retryStruct{}
 			inputJson, ok := json.Marshal(input)
 			if ok != nil {
 				p.Log.Debugf("marshal error happens")

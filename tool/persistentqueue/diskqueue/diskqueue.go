@@ -104,6 +104,6 @@ func getDiskQueueLogger(logger telegraf.Logger) func(level diskqueue.LogLevel, f
 			logFn = logger.Debugf
 		}
 
-		logFn(fmt.Sprintf(f, args))
+		logFn(fmt.Sprintf(f))
 	}
 }
