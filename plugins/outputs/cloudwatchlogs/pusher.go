@@ -6,20 +6,22 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
-	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue"
-	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue/diskqueue"
+	"math/rand"
+	"sort"
+	"sync"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/google/uuid"
 	"github.com/influxdata/telegraf"
-	"math/rand"
-	"sort"
-	"sync"
-	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue"
+	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue/diskqueue"
 )
 
 const (
@@ -167,7 +169,7 @@ func (p *pusher) start() {
 	defer p.wg.Done()
 
 	ec := make(chan logs.LogEvent)
-	p.ticker = time.NewTicker(time.Minute)
+	p.ticker = time.NewTicker(10 * time.Second)
 
 	// Merge events from both blocking and non-blocking channel
 	go func() {
@@ -187,15 +189,14 @@ func (p *pusher) start() {
 	for {
 		select {
 		case <-p.ticker.C:
+			p.Log.Debugf("start dequeue from disk")
 			temp, bufferSize, err := p.dequeue()
 			if err != nil {
 				p.Log.Errorf("Error while dequeue log from the backlogQueue")
 			}
-
 			if temp != nil {
 				p.dequeueEvents = temp
 				p.backlogBufferSize = bufferSize
-
 				p.send()
 			}
 		case e := <-ec:
@@ -251,6 +252,7 @@ func (p *pusher) dequeue() (*cloudwatchlogs.PutLogEventsInput, int, error) {
 	}
 	obj, err := p.backlogQueue.Dequeue()
 	if err != nil {
+		p.Log.Debugf("errors happens when dequeue from disk")
 		return nil, 0, err
 	}
 	input := obj.(retryStruct)
@@ -263,7 +265,7 @@ func (p *pusher) dequeue() (*cloudwatchlogs.PutLogEventsInput, int, error) {
 		}
 	}
 
-	return &input.PutLogEventsInput, 0, nil
+	return &input.PutLogEventsInput, input.BufferredSize, nil
 }
 
 func (p *pusher) reset() {
@@ -289,8 +291,11 @@ type retryStruct struct {
 
 func (p *pusher) send() {
 	var input *cloudwatchlogs.PutLogEventsInput
+	startTime := time.Now()
+	defer p.resetFlushTimer() // Reset the flush timer after sending the request
 
 	if p.dequeueEvents != nil {
+		p.Log.Debug("send dequeueEvents to cloudwatch")
 		input = p.dequeueEvents
 		p.dequeueEvents = nil
 		input.SequenceToken = p.sequenceToken
@@ -314,12 +319,12 @@ func (p *pusher) send() {
 				}
 			}
 		}
-		p.addStats("rawSize", float64(p.bufferredSize))
+		p.Log.Debugf("in the persistentQueue Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), input.LogGroupName, input.LogStreamName, p.backlogBufferSize/1024, time.Since(startTime))
+		p.addStats("rawSize", float64(p.backlogBufferSize))
 		p.backlogBufferSize = 0
 		return
 	}
 
-	defer p.resetFlushTimer() // Reset the flush timer after sending the request
 	if p.needSort {
 		sort.Stable(ByTimestamp(p.events))
 	}
@@ -330,8 +335,6 @@ func (p *pusher) send() {
 		LogStreamName: &p.Stream,
 		SequenceToken: p.sequenceToken,
 	}
-
-	startTime := time.Now()
 
 	retryCount := 0
 	for {
@@ -369,6 +372,7 @@ func (p *pusher) send() {
 			return
 		}
 
+		p.Log.Debugf("errors not nil, we need tell exactly what's error")
 		awsErr, ok := err.(awserr.Error)
 		if !ok {
 			p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", p.Group, p.Stream, err)
@@ -404,23 +408,38 @@ func (p *pusher) send() {
 			p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
 		}
 
+		p.Log.Debugf("retry error detected, start retry")
+
 		if retryCount >= 1 {
+			p.Log.Debugf("ready to enqueue")
 			retryinput := retryStruct{}
-			inputJson, _ := json.Marshal(input)
-			json.Unmarshal(inputJson, &retryinput.PutLogEventsInput)
+			inputJson, ok := json.Marshal(input)
+			if ok != nil {
+				p.Log.Debugf("marshal error happens")
+				ok = nil
+			}
+			ok = json.Unmarshal(inputJson, &retryinput.PutLogEventsInput)
+			if ok != nil {
+				p.Log.Debugf("unmarshal errors happens")
+			}
 			retryinput.FirstRetryTime = time.Now()
 			retryinput.BufferredSize = p.bufferredSize
+			go func() {
+				p.Log.Debugf("start to enqueue")
+				err := p.backlogQueue.Enqueue(retryinput)
+				if err != nil {
+					p.Log.Debugf("enqueue errors:%v", err)
+				}
+			}()
 			for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
 				done := p.doneCallbacks[i]
 				done()
 			}
 			p.addStats("rawSize", float64(p.bufferredSize))
 			p.reset()
-			go func() {
-				p.backlogQueue.Enqueue(retryinput)
-			}()
 			return
 		}
+		p.Log.Debugf("retry happens")
 
 		wait := retryWait(retryCount)
 		if time.Since(startTime)+wait > p.RetryDuration {

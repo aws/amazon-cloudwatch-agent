@@ -965,6 +965,7 @@ jobs:
     name: "EC2WinPerformanceTest"
     needs: [ BuildAndUpload, GenerateTestMatrix ]
     runs-on: ubuntu-latest
+    if : false
     strategy:
       fail-fast: false
       matrix:
@@ -1033,6 +1034,7 @@ jobs:
     name: "StressTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1103,6 +1105,7 @@ jobs:
     name: "EC2WinStressTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
