@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -218,7 +217,6 @@ func DefaultEC2Region() (region string) {
 	// no need for a fallback metric since this happens during wizard
 	// we will not get this metric from user-agent
 	sesFallBackDisabled, err := session.NewSession(&aws.Config{
-		HTTPClient:                &http.Client{Timeout: 10 * time.Second},
 		MaxRetries:                aws.Int(3),
 		LogLevel:                  configaws.SDKLogLevel(),
 		Logger:                    configaws.SDKLogger{},
@@ -226,9 +224,8 @@ func DefaultEC2Region() (region string) {
 		Retryer:                   retryer.IMDSRetryer,
 	})
 	sesFallBackEnabled, err := session.NewSession(&aws.Config{
-		HTTPClient: &http.Client{Timeout: 10 * time.Second},
-		LogLevel:   configaws.SDKLogLevel(),
-		Logger:     configaws.SDKLogger{},
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
 	})
 	if err != nil {
 		return

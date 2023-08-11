@@ -121,7 +121,7 @@ cwa_status() {
 
      starttime_fmt=''
      local pid=$(cwa_pid)
-     if [[ $pid =~ ^[\-0-9]+$ ]] && ( (pid >0)); then
+     if [[ $pid =~ ^[\-0-9]+$ ]] && [ "$pid" -gt 0 ]; then
           starttime="$(TZ=UTC LC_ALL=C ps -o lstart= "${pid}")"
           starttime_fmt="$(TZ=UTC date -jf "%a %b %d %T %Y " "${starttime}" +%FT%T%z)"
      else
@@ -142,7 +142,7 @@ cwa_runstatus() {
      running=false
      set +e
      local pid=$(cwa_pid)
-     if [[ "$pid" =~ ^[0-9]+$ ]] && ( (pid >0)); then
+     if [[ "$pid" =~ ^[0-9]+$ ]] && [ "$pid" -gt 0 ]; then
           running='true'
      elif [[ "$pid" == "-" ]]; then
           running='true'

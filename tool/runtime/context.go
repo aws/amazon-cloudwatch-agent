@@ -20,5 +20,6 @@ type Context struct {
 	WindowsNonInteractiveMigration bool
 
 	//Xray Daemon Migration
-	TracesOnly bool
+	TracesOnly                  bool
+	NonInteractiveXrayMigration bool
 }

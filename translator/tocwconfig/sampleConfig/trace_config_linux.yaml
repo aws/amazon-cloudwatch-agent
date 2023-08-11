@@ -2,6 +2,7 @@ connectors: {}
 exporters:
   awsxray:
     aws_log_groups: []
+    certificate_file_path: ""
     endpoint: ""
     index_all_attributes: false
     indexed_attributes: []

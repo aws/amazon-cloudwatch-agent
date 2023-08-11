@@ -1,7 +1,9 @@
 connectors: {}
 exporters:
   awscloudwatchlogs/emf_logs:
-    endpoint: ""
+    certificate_file_path: ""
+    emf_only: true
+    endpoint: "https://fake_endpoint"
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
@@ -36,6 +38,7 @@ exporters:
     disable_metric_extraction: true
     version: "0"
     eks_fargate_container_insights_enabled: false
+    certificate_file_path: ""
     endpoint: ""
     local_mode: false
     retain_initial_value_of_delta_metric: false
@@ -132,6 +135,7 @@ receivers:
     collection_interval: 30s
     container_orchestrator: eks
     enable_control_plane_metrics: false
+    certificate_file_path: ""
     endpoint: ""
     prefer_full_pod_name: true
     leader_lock_name: cwagent-clusterleader

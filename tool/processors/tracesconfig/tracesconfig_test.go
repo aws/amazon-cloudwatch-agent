@@ -34,6 +34,9 @@ func (p *proc) Cwd() (string, error) {
 func (p *proc) Cmdline() (string, error) {
 	return p.strcmdline, nil
 }
+func (p *proc) Terminate() error {
+	return nil
+}
 
 var mockProcessesXrayService = func() ([]xraydaemonmigration.Process, error) {
 	var xrayService = &proc{
@@ -111,7 +114,7 @@ func TestGenerateTracesConfiguration(t *testing.T) {
 	inputChan = testutil.SetUpTestInputStream()
 	testutil.Type(inputChan, "2", "2000", "2000", "", "", "")
 	jsonStruct, err = generateTracesConfiguration(ctx)
-	assert.Nil(t, jsonStruct)
+	assert.NotNil(t, jsonStruct) //changed to not nil due to returning defaults
 
 	//no processes test
 	xraydaemonmigration.GetProcesses = noProcesses

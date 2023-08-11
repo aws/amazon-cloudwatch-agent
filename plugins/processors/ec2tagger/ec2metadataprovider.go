@@ -6,7 +6,6 @@ package ec2tagger
 import (
 	"context"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -32,16 +31,14 @@ var _ MetadataProvider = (*metadataClient)(nil)
 
 func NewMetadataProvider(p client.ConfigProvider) MetadataProvider {
 	disableFallbackConfig := &aws.Config{
-		HTTPClient:                &http.Client{Timeout: defaultIMDSTimeout},
 		LogLevel:                  configaws.SDKLogLevel(),
 		Logger:                    configaws.SDKLogger{},
 		Retryer:                   retryer.IMDSRetryer,
 		EC2MetadataEnableFallback: aws.Bool(false),
 	}
 	enableFallbackConfig := &aws.Config{
-		HTTPClient: &http.Client{Timeout: defaultIMDSTimeout},
-		LogLevel:   configaws.SDKLogLevel(),
-		Logger:     configaws.SDKLogger{},
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
 	}
 	return &metadataClient{
 		metadataFallbackDisabled: ec2metadata.New(p, disableFallbackConfig),

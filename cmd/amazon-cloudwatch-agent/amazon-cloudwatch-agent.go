@@ -28,8 +28,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
-	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/otelcol"
 
 	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
@@ -40,6 +38,7 @@ import (
 	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/configprovider"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/defaultcomponents"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/registry"
 )
@@ -296,42 +295,31 @@ func runAgent(ctx context.Context,
 	}
 
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
-		log.Println("I! Creating new logs agent")
-		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
+		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
+		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
+		go logAgent.Run(ctx)
 
 		// If OTEL config does not exist, then ASSUME just monitoring logs.
 		// So just start Telegraf.
 		_, err = os.Stat(*fOtelConfig)
 		if errors.Is(err, os.ErrNotExist) {
 			agentinfo.SetComponents(&otelcol.Config{}, c)
-			log.Println("I! Only starting logs agent")
-			logAgent.Run(ctx)
-			return nil
+			return ag.Run(ctx)
 		}
-
-		go logAgent.Run(ctx)
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
 
 	yamlConfigPath := *fOtelConfig
-	fprovider := fileprovider.New()
-	settings := otelcol.ConfigProviderSettings{
-		ResolverSettings: confmap.ResolverSettings{
-			URIs:      []string{yamlConfigPath},
-			Providers: map[string]confmap.Provider{fprovider.Scheme(): fprovider},
-		},
+	provider, err := configprovider.Get(yamlConfigPath)
+	if err != nil {
+		log.Printf("E! Error while initializing config provider: %v\n", err)
+		return err
 	}
 
 	factories, err := components(c)
 	if err != nil {
 		log.Printf("E! Error while adapting telegraf input plugins: %v\n", err)
-		return err
-	}
-
-	provider, err := otelcol.NewConfigProvider(settings)
-	if err != nil {
-		log.Printf("E! Error while initializing config provider: %v\n", err)
 		return err
 	}
 

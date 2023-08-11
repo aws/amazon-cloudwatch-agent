@@ -32,6 +32,10 @@ func (p *proc) Cmdline() (string, error) {
 	return p.strcmdline, nil
 }
 
+func (p *proc) Terminate() error {
+	return nil
+}
+
 var mockProcesses = func() ([]Process, error) {
 
 	var correctDaemonProcess = &proc{
