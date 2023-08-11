@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 func TestFileConfigInit(t *testing.T) {
@@ -21,6 +23,7 @@ func TestFileConfigInit(t *testing.T) {
 		TimestampLayout:       "02 Jan 2006 15:04:05",
 		Timezone:              "UTC",
 		MultiLineStartPattern: "{timestamp_regex}",
+		LogGroupClass:         util.EssentialsLogGroupClass,
 	}
 
 	err := fileConfig.init()
@@ -38,6 +41,7 @@ func TestFileConfigInit(t *testing.T) {
 	assert.True(t, fileConfig.MultiLineStartPatternP == fileConfig.TimestampRegexP, "The multiline start pattern should be the same as the timestampFromLogLine pattern.")
 
 	assert.Equal(t, time.UTC, fileConfig.TimezoneLoc, "The timezone location should be UTC.")
+	assert.Equal(t, util.EssentialsLogGroupClass, fileConfig.LogGroupClass)
 
 	assert.Nil(t, fileConfig.Filters)
 }
@@ -68,6 +72,21 @@ func TestFileConfigInitFailureCase(t *testing.T) {
 	err = fileConfig.init()
 	assert.Error(t, err)
 	assert.Equal(t, "multi_line_start_pattern has issue, regexp: Compile( (\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+) ): error parsing regexp: invalid nested repetition operator: `{2}+`", err.Error())
+}
+
+func TestEmptyLogGroupClassInit(t *testing.T) {
+	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+)",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+	}
+
+	err := fileConfig.init()
+	assert.NotNil(t, err)
+	assert.Equal(t, util.StandardLogGroupClass, fileConfig.LogGroupClass)
 }
 
 func TestLogGroupName(t *testing.T) {

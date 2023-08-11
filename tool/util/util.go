@@ -39,6 +39,9 @@ const (
 	MapKeyMetricsCollectionInterval = "metrics_collection_interval"
 	MapKeyInstances                 = "resources"
 	MapKeyMeasurement               = "measurement"
+
+	StandardLogGroupClass   = "standard"
+	EssentialsLogGroupClass = "essentials"
 )
 
 func CurOS() string {

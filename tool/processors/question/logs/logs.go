@@ -49,6 +49,7 @@ func monitorLogs(ctx *runtime.Context, config *data.Config) {
 		logFilePath := util.Ask("Log file path:")
 		logGroupNameHint := strings.Replace(filepath.Base(logFilePath), " ", "_", -1)
 		logGroupName := util.AskWithDefault("Log group name:", logGroupNameHint)
+		logGroupClass := util.Choice("Log group class:", 1, []string{util.StandardLogGroupClass, util.EssentialsLogGroupClass})
 		logStreamNameHint := "{instance_id}"
 		if ctx.IsOnPrem {
 			logStreamNameHint = "{hostname}"
@@ -63,7 +64,7 @@ func monitorLogs(ctx *runtime.Context, config *data.Config) {
 		if err == nil {
 			retention = i
 		}
-		logsConf.AddLogFile(logFilePath, logGroupName, logStreamName, "", "", "", "", retention)
+		logsConf.AddLogFile(logFilePath, logGroupName, logStreamName, "", "", "", "", retention, logGroupClass)
 		yes = util.Yes("Do you want to specify any additional log files to monitor?")
 		if !yes {
 			return

@@ -22,11 +22,13 @@ import (
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 const (
 	LogGroupNameTag   = "log_group_name"
 	LogStreamNameTag  = "log_stream_name"
+	LogGroupClassTag  = "log_group_class"
 	LogTimestampField = "log_timestamp"
 	LogEntryField     = "value"
 
@@ -89,7 +91,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.LogDest {
+func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGroupClass string) logs.LogDest {
 	if group == "" {
 		group = c.LogGroupName
 	}
@@ -99,11 +101,15 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.Lo
 	if retention <= 0 {
 		retention = -1
 	}
+	if logGroupClass == "" {
+		logGroupClass = util.StandardLogGroupClass
+	}
 
 	t := Target{
 		Group:     group,
 		Stream:    stream,
 		Retention: retention,
+		Class:     logGroupClass,
 	}
 	return c.getDest(t)
 }
@@ -181,7 +187,15 @@ func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (Target, error) 
 		logStream = c.LogStreamName
 	}
 
-	return Target{logGroup, logStream, -1}, nil
+	logGroupClass, ok := tags[LogGroupClassTag]
+	if ok {
+		m.RemoveTag(LogGroupClassTag)
+	} else if logGroupClass == "" {
+		logGroupClass = util.StandardLogGroupClass
+
+	}
+
+	return Target{logGroup, logStream, logGroupClass, -1}, nil
 }
 
 func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structuredLogEvent {
@@ -332,8 +346,8 @@ func (cd *cwDest) setRetryer(r request.Retryer) {
 }
 
 type Target struct {
-	Group, Stream string
-	Retention     int
+	Group, Stream, Class string
+	Retention            int
 }
 
 // Description returns a one-sentence description on the Output

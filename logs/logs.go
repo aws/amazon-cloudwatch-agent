@@ -38,6 +38,7 @@ type LogSrc interface {
 	Destination() string
 	Description() string
 	Retention() int
+	Class() string
 	Stop()
 }
 

@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
 
 // TestCreateDestination would create different destination for cloudwatchlogs endpoint based on the log group, log stream,
@@ -17,25 +19,31 @@ func TestCreateDestination(t *testing.T) {
 		cfgLogGroup               string
 		cfgLogStream              string
 		cfgLogRetention           int
+		cfgLogClass               string
 		expectedLogGroup          string
 		expectedLogStream         string
 		expectedLogGroupRetention int
+		expectedLogClass          string
 	}{
 		"WithTomlGroupStream": {
 			cfgLogGroup:               "",
 			cfgLogStream:              "",
 			cfgLogRetention:           -1,
+			cfgLogClass:               "",
 			expectedLogGroup:          "G1",
 			expectedLogStream:         "S1",
 			expectedLogGroupRetention: -1,
+			expectedLogClass:          util.StandardLogGroupClass,
 		},
 		"WithOverrideGroupStream": {
 			cfgLogGroup:               "Group5",
 			cfgLogStream:              "Stream5",
 			cfgLogRetention:           -1,
+			cfgLogClass:               util.EssentialsLogGroupClass,
 			expectedLogGroup:          "Group5",
 			expectedLogStream:         "Stream5",
 			expectedLogGroupRetention: -1,
+			expectedLogClass:          util.EssentialsLogGroupClass,
 		},
 	}
 
@@ -49,9 +57,11 @@ func TestCreateDestination(t *testing.T) {
 				pusherStopChan: make(chan struct{}),
 				cwDests:        make(map[Target]*cwDest),
 			}
-			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention).(*cwDest)
+			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention, testCase.cfgLogClass).(*cwDest)
 			require.Equal(t, testCase.expectedLogGroup, dest.pusher.Group)
 			require.Equal(t, testCase.expectedLogStream, dest.pusher.Stream)
+			require.Equal(t, testCase.expectedLogGroupRetention, dest.pusher.Retention)
+			require.Equal(t, testCase.expectedLogClass, dest.pusher.Class)
 		})
 	}
 }
@@ -63,9 +73,9 @@ func TestDuplicateDestination(t *testing.T) {
 		cwDests:        make(map[Target]*cwDest),
 		pusherStopChan: make(chan struct{}),
 	}
-	// Given the same log group, log stream and same retention
-	d1 := c.CreateDest("FILENAME", "", -1)
-	d2 := c.CreateDest("FILENAME", "", -1)
+	// Given the same log group, log stream, same retention, and logClass
+	d1 := c.CreateDest("FILENAME", "", -1, util.EssentialsLogGroupClass)
+	d2 := c.CreateDest("FILENAME", "", -1, util.EssentialsLogGroupClass)
 
 	// Then the destination for cloudwatchlogs endpoint would be the same
 	require.Equal(t, d1, d2)
