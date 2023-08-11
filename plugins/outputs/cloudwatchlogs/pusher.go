@@ -193,12 +193,15 @@ func (p *pusher) start() {
 			temp, bufferSize, err := p.dequeue()
 			if err != nil {
 				p.Log.Errorf("Error while dequeue log from the backlogQueue")
+
+			} else {
+				if temp != nil {
+					p.dequeueEvents = temp
+					p.backlogBufferSize = bufferSize
+					p.send()
+				}
 			}
-			if temp != nil {
-				p.dequeueEvents = temp
-				p.backlogBufferSize = bufferSize
-				p.send()
-			}
+
 		case e := <-ec:
 			// Start timer when first event of the batch is added (happens after a flush timer timeout)
 			if len(p.events) == 0 {
@@ -255,17 +258,17 @@ func (p *pusher) dequeue() (*cloudwatchlogs.PutLogEventsInput, int, error) {
 		p.Log.Debugf("errors happens when dequeue from disk")
 		return nil, 0, err
 	}
-	input := obj.(retryStruct)
+	input := obj.(*retryStruct)
 	if !input.FirstRetryTime.IsZero() {
 		now := time.Now()
-		dt := now.Sub(input.FirstRetryTime).Hours()
+		dt := now.Sub(*input.FirstRetryTime).Hours()
 		if dt > 24*14 || dt < -2 {
 			p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, input.FirstRetryTime, time.Now())
 			return nil, 0, nil
 		}
 	}
 
-	return &input.PutLogEventsInput, input.BufferredSize, nil
+	return input.PutLogEventsInput, *input.BufferredSize, nil
 }
 
 func (p *pusher) reset() {
@@ -284,9 +287,9 @@ func (p *pusher) reset() {
 }
 
 type retryStruct struct {
-	cloudwatchlogs.PutLogEventsInput
-	FirstRetryTime time.Time `type:"timestamp"`
-	BufferredSize  int       `type:"buffersize"`
+	*cloudwatchlogs.PutLogEventsInput
+	FirstRetryTime *time.Time `type:"timestamp"`
+	BufferredSize  *int       `type:"buffersize"`
 }
 
 func (p *pusher) send() {
@@ -412,18 +415,19 @@ func (p *pusher) send() {
 
 		if retryCount >= 1 {
 			p.Log.Debugf("ready to enqueue")
-			retryinput := retryStruct{}
+			//I forgot add & , I shouldn't use retryinput := &retryStruct{}
+			retryinput := &retryStruct{}
 			inputJson, ok := json.Marshal(input)
 			if ok != nil {
 				p.Log.Debugf("marshal error happens")
 				ok = nil
 			}
-			ok = json.Unmarshal(inputJson, &retryinput.PutLogEventsInput)
+			ok = json.Unmarshal(inputJson, retryinput.PutLogEventsInput)
 			if ok != nil {
-				p.Log.Debugf("unmarshal errors happens")
+				p.Log.Debugf("when enqueue unmarshal errors happens")
 			}
-			retryinput.FirstRetryTime = time.Now()
-			retryinput.BufferredSize = p.bufferredSize
+			*retryinput.FirstRetryTime = time.Now()
+			*retryinput.BufferredSize = p.bufferredSize
 			go func() {
 				p.Log.Debugf("start to enqueue")
 				err := p.backlogQueue.Enqueue(retryinput)
