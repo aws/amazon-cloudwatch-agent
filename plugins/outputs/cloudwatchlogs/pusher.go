@@ -167,7 +167,8 @@ func hasValidTime(e logs.LogEvent) bool {
 
 func (p *pusher) start() {
 	defer p.wg.Done()
-
+	//var tmpwg sync.WaitGroup
+	//tmpwg.Add(1)
 	ec := make(chan logs.LogEvent)
 	p.ticker = time.NewTicker(10 * time.Second)
 
@@ -427,7 +428,9 @@ func (p *pusher) send() {
 			}
 			*retryinput.FirstRetryTime = time.Now()
 			*retryinput.BufferredSize = p.bufferredSize
+			p.wg.Add(1)
 			go func() {
+				defer p.wg.Done()
 				p.Log.Debugf("start to enqueue")
 				err := p.backlogQueue.Enqueue(retryinput)
 				if err != nil {
