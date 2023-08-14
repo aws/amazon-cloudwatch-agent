@@ -1,0 +1,17 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Gazpacho Beta Pre-Release
+on:
+  workflow_dispatch:
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "gazpacho-pre-release:latest"
+      BucketKey: "gazpacho-pre-release"
+      PackageBucketKey: "gazpacho-pre-release"
