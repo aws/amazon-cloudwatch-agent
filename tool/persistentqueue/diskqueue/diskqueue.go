@@ -5,12 +5,12 @@ package diskqueue
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/tool"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/nsqio/go-diskqueue"
 
-	"github.com/aws/amazon-cloudwatch-agent/tool"
 	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue"
 )
 
@@ -69,10 +69,12 @@ func (dq *diskQueue) Enqueue(obj interface{}) error {
 		<-dq.queue.ReadChan()
 	}
 	dq.logger.Debugf("put function start work")
+	//return dq.queue.Put(marshaledObj)
 	return dq.queue.Put(compressedObj)
 }
 
 func (dq *diskQueue) Dequeue() (interface{}, error) {
+	//obj := <-dq.queue.ReadChan()
 	obj, err := tool.Uncompress(<-dq.queue.ReadChan())
 	if err != nil {
 		return nil, err
@@ -104,6 +106,6 @@ func getDiskQueueLogger(logger telegraf.Logger) func(level diskqueue.LogLevel, f
 			logFn = logger.Debugf
 		}
 
-		logFn(fmt.Sprintf(f))
+		logFn(fmt.Sprintf(f, args))
 	}
 }

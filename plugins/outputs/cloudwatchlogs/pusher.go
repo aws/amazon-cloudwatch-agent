@@ -30,9 +30,9 @@ const (
 	queuesDirectory      = "/var/agent/queues"
 	maxBacklogQueueDepth = 1024 // 100 MB file with 100 KB per message in worst case (1024 = 100 MB / 100 KB)
 
-	maxBytesPerFile = 100 * 1024 * 1024 // 100 MB
-	maxMsgSize      = 100 * 1024        // 100 KB
-	minMsgSize      = 1                 // messages should have content
+	maxBytesPerFile = 1024 * 1024 * 1024 // 100 MB
+	maxMsgSize      = 1024 * 1024        // 100 KB
+	minMsgSize      = 1                  // messages should have content
 	syncEvery       = 5
 	syncTimeout     = time.Minute
 )
@@ -116,6 +116,7 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
+	p.Log.Debugf("Pusher has been created,run start()")
 	go p.start()
 	return p
 }
@@ -170,7 +171,8 @@ func (p *pusher) start() {
 	//var tmpwg sync.WaitGroup
 	//tmpwg.Add(1)
 	ec := make(chan logs.LogEvent)
-	p.ticker = time.NewTicker(10 * time.Second)
+	p.Log.Debugf("ticker been created")
+	p.ticker = time.NewTicker(5 * time.Second)
 
 	// Merge events from both blocking and non-blocking channel
 	go func() {
@@ -199,10 +201,12 @@ func (p *pusher) start() {
 				if temp != nil {
 					p.dequeueEvents = temp
 					p.backlogBufferSize = bufferSize
+					p.Log.Debugf("send dequeue logEvent to cloudwatch")
 					p.send()
+				} else {
+					p.Log.Debugf("there is no logEvent in disk")
 				}
 			}
-
 		case e := <-ec:
 			// Start timer when first event of the batch is added (happens after a flush timer timeout)
 			if len(p.events) == 0 {
@@ -259,17 +263,17 @@ func (p *pusher) dequeue() (*cloudwatchlogs.PutLogEventsInput, int, error) {
 		p.Log.Debugf("errors happens when dequeue from disk")
 		return nil, 0, err
 	}
-	input := obj.(*retryStruct)
+	input := obj.(retryStruct)
 	if !input.FirstRetryTime.IsZero() {
 		now := time.Now()
-		dt := now.Sub(*input.FirstRetryTime).Hours()
+		dt := now.Sub(input.FirstRetryTime).Hours()
 		if dt > 24*14 || dt < -2 {
 			p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, input.FirstRetryTime, time.Now())
 			return nil, 0, nil
 		}
 	}
 
-	return input.PutLogEventsInput, *input.BufferredSize, nil
+	return input.PutLogEventsInput, input.BufferredSize, nil
 }
 
 func (p *pusher) reset() {
@@ -289,8 +293,8 @@ func (p *pusher) reset() {
 
 type retryStruct struct {
 	*cloudwatchlogs.PutLogEventsInput
-	FirstRetryTime *time.Time `type:"timestamp"`
-	BufferredSize  *int       `type:"buffersize"`
+	FirstRetryTime time.Time `type:"firstRetryTimeStamp"`
+	BufferredSize  int       `type:"buffersize"`
 }
 
 func (p *pusher) send() {
@@ -323,7 +327,7 @@ func (p *pusher) send() {
 				}
 			}
 		}
-		p.Log.Debugf("in the persistentQueue Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), input.LogGroupName, input.LogStreamName, p.backlogBufferSize/1024, time.Since(startTime))
+		p.Log.Debugf("in the persistentQueue Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), *input.LogGroupName, *input.LogStreamName, p.backlogBufferSize/1024, time.Since(startTime))
 		p.addStats("rawSize", float64(p.backlogBufferSize))
 		p.backlogBufferSize = 0
 		return
@@ -417,18 +421,25 @@ func (p *pusher) send() {
 		if retryCount >= 1 {
 			p.Log.Debugf("ready to enqueue")
 			retryinput := retryStruct{}
-			inputJson, ok := json.Marshal(input)
-			if ok != nil {
-				p.Log.Debugf("marshal error happens")
-				ok = nil
-			}
-			ok = json.Unmarshal(inputJson, retryinput.PutLogEventsInput)
-			if ok != nil {
-				p.Log.Debugf("when enqueue unmarshal errors happens")
-			}
-			*retryinput.FirstRetryTime = time.Now()
-			*retryinput.BufferredSize = p.bufferredSize
+			retryinput.PutLogEventsInput = Clone(input)
+			//inputJson, ok := json.Marshal(input)
+			//p.Log.Debugf("marshal happens")
+			//if ok != nil {
+			//	p.Log.Debugf("marshal error happens")
+			//	ok = nil
+			//}
+			//var temp *cloudwatchlogs.PutLogEventsInput
+			//ok = json.Unmarshal(inputJson, temp)
+			//retryinput.PutLogEventsInput = temp
+			//p.Log.Debugf("unmarshal happens")
+			//if ok != nil {
+			//	p.Log.Debugf("%v", ok)
+			//	p.Log.Debugf("when enqueue unmarshal errors happens")
+			//}
+			retryinput.FirstRetryTime = time.Now()
+			retryinput.BufferredSize = p.bufferredSize
 			p.wg.Add(1)
+			//p.Log.Debugf("why cannot write into disk")
 			go func() {
 				defer p.wg.Done()
 				p.Log.Debugf("start to enqueue")
@@ -467,6 +478,22 @@ func (p *pusher) send() {
 		retryCount++
 
 	}
+
+}
+func Clone(input *cloudwatchlogs.PutLogEventsInput) *cloudwatchlogs.PutLogEventsInput {
+	clone := cloudwatchlogs.PutLogEventsInput{
+		LogEvents:     make([]*cloudwatchlogs.InputLogEvent, len(input.LogEvents)),
+		LogGroupName:  input.LogGroupName,
+		LogStreamName: input.LogStreamName,
+		SequenceToken: input.SequenceToken,
+	}
+	for i, p := range input.LogEvents {
+		if p == nil {
+			continue
+		}
+		clone.LogEvents[i] = p
+	}
+	return &clone
 
 }
 
