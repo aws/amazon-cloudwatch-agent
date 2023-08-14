@@ -92,7 +92,7 @@ require (
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
 	github.com/go-kit/log v0.2.1
 	github.com/gobwas/glob v0.2.3
-	github.com/google/cadvisor v0.47.1
+	github.com/google/cadvisor v0.47.3
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/golang-lru v0.6.0
