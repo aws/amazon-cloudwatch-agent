@@ -140,7 +140,7 @@ jobs:
 
       - name: Cache if success
         id: cf-integration-test
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: go.mod
           key: "cf-integration-${{ github.sha }}-test"
