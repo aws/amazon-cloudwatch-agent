@@ -7,7 +7,7 @@ exporters:
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
-    log_stream_name: i-UNKNOWN
+    log_stream_name: host_name_from_env
     max_retries: 2
     no_verify_ssl: false
     num_workers: 8
