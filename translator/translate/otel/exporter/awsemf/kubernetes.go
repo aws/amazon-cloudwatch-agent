@@ -251,6 +251,12 @@ func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Met
 				},
 			},
 			{
+				Dimensions: [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"apiserver_storage_list_duration_seconds",
+				},
+			},
+			{
 				Dimensions: [][]string{{"ClusterName"}},
 				MetricNameSelectors: []string{
 					"apiserver_storage_objects",
