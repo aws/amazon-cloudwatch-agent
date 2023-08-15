@@ -320,6 +320,10 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
 					},
 					{
+						Dimensions:          [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds"},
+					},
+					{
 						Dimensions: [][]string{{"ClusterName"}},
 						MetricNameSelectors: []string{"apiserver_storage_objects",
 							"apiserver_request_total",
@@ -414,6 +418,10 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds"},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}},
