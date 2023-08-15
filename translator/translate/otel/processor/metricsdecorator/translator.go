@@ -5,7 +5,6 @@ package metricsdecorator
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -13,6 +12,9 @@ import (
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
+	translatorcontext "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	metricsconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/util"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
 )
 
@@ -89,6 +91,7 @@ func (t *translator) getContextStatements(conf *confmap.Conf) (ContextStatement,
 	var statements []string
 	measurementMaps := getMeasurementMaps(conf)
 	for plugin, measurementMap := range measurementMaps {
+		plugin = metricsconfig.GetRealPluginName(plugin)
 		for _, entry := range measurementMap {
 			switch val := entry.(type) {
 			case map[string]interface{}:
@@ -97,12 +100,11 @@ func (t *translator) getContextStatements(conf *confmap.Conf) (ContextStatement,
 					return ContextStatement{}, errors.New("name field is missing for one of your metrics")
 				}
 
-				// metrics at this point are all prefixed with their plugin category name.
-				// 1. The plain metric name without the plugin prefix will not properly decorate in CW
-				// 2. Without the prefix, there will be conflicting statements for metrics with the same name, but different plugins
-				if !strings.HasPrefix(name.(string), plugin) {
-					name = metric.DecorateMetricName(plugin, name.(string))
+				metricName := util.GetValidMetric(translatorcontext.CurrentContext().Os(), plugin, name.(string))
+				if metricName == "" {
+					return ContextStatement{}, fmt.Errorf("metric name (%q) is invalid for decoration", name.(string))
 				}
+				name = metric.DecorateMetricName(plugin, metricName)
 
 				if newUnit, ok := val["unit"]; ok {
 					statement := fmt.Sprintf("set(unit, \"%s\") where name == \"%s\"", newUnit, name)

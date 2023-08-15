@@ -22,6 +22,13 @@ func TestCompleteConfigUnix(t *testing.T) {
 	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
 }
 
+func TestDeltaConfigLinux(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "delta_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "delta_config_linux", "darwin", nil, "")
+}
+
 func TestDropOriginConfig(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}

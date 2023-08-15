@@ -22,9 +22,12 @@ import (
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/testutil"
+	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	translatorcontext "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
 func TestTranslateUnix(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslator().(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	c := testutil.GetConf(t, filepath.Join("testdata", "unix", "config.yaml"))
@@ -47,6 +50,7 @@ func TestTranslateUnix(t *testing.T) {
 // This is done by using a test TransformProcessor yaml configuration, starting the processor
 // and having it consume test metrics.
 func TestMetricDecorationUnix(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslator().(*translator)
 	cfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	conf := testutil.GetConf(t, filepath.Join("testdata", "unix", "config.yaml"))
