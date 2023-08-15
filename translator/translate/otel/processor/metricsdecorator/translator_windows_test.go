@@ -23,9 +23,12 @@ import (
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/testutil"
+	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	translatorcontext "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
 func TestTranslateWindows(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
 	transl := NewTranslator().(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	c := testutil.GetConf(t, filepath.Join("testdata", "windows", "config.yaml"))
@@ -48,6 +51,7 @@ func TestTranslateWindows(t *testing.T) {
 }
 
 func TestMetricDecorationWindows(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
 	transl := NewTranslator().(*translator)
 	cfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	conf := testutil.GetConf(t, filepath.Join("testdata", "windows", "config.yaml"))

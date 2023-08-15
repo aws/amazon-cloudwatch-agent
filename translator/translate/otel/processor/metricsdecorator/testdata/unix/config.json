@@ -30,6 +30,12 @@
         ]
       },
       "nvidia_gpu": {
+        "measurement": [
+          {
+            "name": "utilization_gpu",
+            "rename": "gpu-utilization"
+          }
+        ],
         "drop_original_metrics": ["utilization_gpu", "temperature_gpu"]
       }
     },

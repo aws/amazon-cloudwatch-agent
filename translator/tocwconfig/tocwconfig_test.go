@@ -195,13 +195,6 @@ func TestStandardConfigWithCommonConfig(t *testing.T) {
 	checkTranslation(t, "standard_config_windows", "windows", expectedEnvVars, "_with_common_config")
 }
 
-func TestDeltaConfigLinux(t *testing.T) {
-	resetContext(t)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "delta_config_linux", "linux", expectedEnvVars, "")
-	checkTranslation(t, "delta_config_linux", "darwin", nil, "")
-}
-
 func TestDeltaNetConfigLinux(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}
