@@ -62,6 +62,19 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 		}
 		return out
 	}
+	if !g.hasSuperMeta {
+		out := make(map[string]os.FileInfo)
+		files, _ := filepath.Glob(g.path)
+		for _, file := range files {
+			info, err := os.Stat(file)
+			if info != nil {
+				out[file] = info
+			} else {
+				log.Printf("D! Stat file %v failed due to %v", g.path, err)
+			}
+		}
+		return out
+	}
 	return walkFilePath(g.root, g.g)
 }
 
@@ -126,7 +139,8 @@ func hasMeta(path string) bool {
 	return strings.ContainsAny(path, "*?[")
 }
 
-// hasSuperMeta reports whether path contains any super magic glob characters (**).
+// hasSuperMeta reports whether path contains any super magic glob characters (**), or glob characters
+// that are not supported by filepath.Glob (!{})
 func hasSuperMeta(path string) bool {
-	return strings.Contains(path, "**")
+	return strings.Contains(path, "**") || strings.ContainsAny(path, "!{}")
 }

@@ -7,6 +7,7 @@
 package globpath
 
 import (
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -29,6 +30,44 @@ func TestInversionGlobPattern(t *testing.T) {
 	assert.Equal(t, "log1.log", stat.Name())
 }
 
+func BenchmarkGlobPath(b *testing.B) {
+	dir := getTestdataDir()
+
+	tests := []string{
+		dir + "/log[!23].log",
+		dir + "/log?.log",
+		dir + "/**",
+		dir + "/**/{[n-z]ested, foo}.txt",
+		dir + "/dir_doesnt_exist/**",
+	}
+	for _, test := range tests {
+		b.Run(test, func(b *testing.B) {
+			g, _ := Compile(test)
+			g.Match()
+		})
+	}
+}
+
+// BenchmarkFilepathGlob illustrates the performance difference between filepath.Glob compared to
+// Glob.Match, but ultimately they differ in behavior. Running through the same inputs returns different
+// results
+func BenchmarkFilepathGlob(b *testing.B) {
+	dir := getTestdataDir()
+
+	tests := []string{
+		dir + "/log[!23].log",
+		dir + "/log?.log",
+		dir + "/**",
+		dir + "/**/{[n-z]ested, foo}.txt",
+		dir + "/dir_doesnt_exist/**",
+	}
+	for _, test := range tests {
+		b.Run(test, func(b *testing.B) {
+			filepath.Glob(test)
+		})
+	}
+}
+
 // TestCompileGlob ensures that different path configurations will
 // set the glob.Glob attribute of the GlobPath struct, and ensures that
 // the glob is used to match files appropriately
@@ -48,10 +87,11 @@ func TestCompileGlob(t *testing.T) {
 			numMatched: 1,
 		},
 		{
-			path:       "/log[!23].log",
-			hasGlob:    true,
-			hasMeta:    true,
-			numMatched: 1,
+			path:         "/log[!23].log",
+			hasGlob:      true,
+			hasMeta:      true,
+			hasSuperMeta: true,
+			numMatched:   1,
 		},
 		{
 			path:       "/log?.log",
@@ -176,4 +216,35 @@ func TestFindNestedTextFile(t *testing.T) {
 func getTestdataDir() string {
 	_, filename, _, _ := runtime.Caller(1)
 	return strings.Replace(filename, "globpath_test.go", "testdata", 1)
+}
+
+func TestHasMeta(t *testing.T) {
+	tests := map[string]bool{
+		"abcd!ef":           false,
+		"/tmp/foo?.log":     true,
+		"abc**":             true,
+		"something[":        true,
+		"{something, else}": false,
+	}
+	for path, expected := range tests {
+		t.Run(path, func(t *testing.T) {
+			assert.Equal(t, expected, hasMeta(path))
+		})
+	}
+}
+
+func TestHasSuperMeta(t *testing.T) {
+	tests := map[string]bool{
+		"abcd!ef":           true,
+		"/tmp/foo?.log":     false,
+		"abc**":             true,
+		"something[":        false,
+		"{something, else}": true,
+	}
+
+	for path, expected := range tests {
+		t.Run(path, func(t *testing.T) {
+			assert.Equal(t, expected, hasSuperMeta(path))
+		})
+	}
 }
