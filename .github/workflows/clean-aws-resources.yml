@@ -152,3 +152,39 @@ jobs:
 
       - name: Clean old ecs cluster
         run: go run ./tool/clean/clean_ecs/clean_ecs.go --tags=clean
+
+  clean-eks-clusters:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old eks cluster
+        run: go run ./tool/clean/clean_eks/clean_eks.go --tags=clean
+
+  clean-asg:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old asg
+        run: go run ./tool/clean/clean_auto_scaling_groups/clean_auto_scaling_groups.go --tags=clean

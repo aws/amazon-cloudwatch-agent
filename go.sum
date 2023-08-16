@@ -233,6 +233,8 @@ github.com/aws/aws-sdk-go-v2/internal/ini v1.2.4/go.mod h1:ZcBrrI3zBKlhGFNYWvju0
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.34 h1:gGLG7yKaXG02/jBlg210R7VgQIotiQntNhsCFejawx8=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.34/go.mod h1:Etz2dj6UHYuw+Xw830KfzCfWGMzqvUTCjUj5b76GVDc=
 github.com/aws/aws-sdk-go-v2/service/appconfig v1.4.2/go.mod h1:FZ3HkCe+b10uFZZkFdvf98LHW21k49W8o8J366lqVKY=
+github.com/aws/aws-sdk-go-v2/service/autoscaling v1.28.10 h1:moHEk4wbdc8VNvff4UOLuXVHtjh7YtsGdiyB0MrPPKg=
+github.com/aws/aws-sdk-go-v2/service/autoscaling v1.28.10/go.mod h1:P3qp1VYVoxHgDhpDDCTre1ee9IKpmgqnUoOb+8RA9qI=
 github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.8.1/go.mod h1:CM+19rL1+4dFWnOQKwDc7H1KwXTz+h61oUSHyhV0b3o=
 github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.25.7 h1:dkpnVfgWELJx4g6Q7GQnvm7dYqBAx3lVvJ4ylh9gsRw=
 github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.25.7/go.mod h1:hZ0QWEIcOqKen/WqEkFGa6KxhHY6YnKQJb8POFmCpno=
@@ -244,6 +246,8 @@ github.com/aws/aws-sdk-go-v2/service/ecs v1.28.1 h1:PxWgrtfQvct60NjxSrFsSWG/Yg1H
 github.com/aws/aws-sdk-go-v2/service/ecs v1.28.1/go.mod h1:eZBCsRjzc+ZX8x3h0beHOu+uxRWRwnEHzzvDgKy9v0E=
 github.com/aws/aws-sdk-go-v2/service/efs v1.19.7 h1:BmyhflgczNmmuAPFhAhMQuLc9zSHiqIY5ouS+oSwxPQ=
 github.com/aws/aws-sdk-go-v2/service/efs v1.19.7/go.mod h1:ENSgtHyPiYyBcTAi26Hpr8Xp636IB18qr0D5Ho8EQWA=
+github.com/aws/aws-sdk-go-v2/service/eks v1.27.15 h1:Q48ivwZJ136hfkk8Dua1fMM7m1e1s/0rBRyRX/J9XAY=
+github.com/aws/aws-sdk-go-v2/service/eks v1.27.15/go.mod h1:9mqDBj08MtFxKFQWUEMm4iFnIdM9gFpnSJvHUEIfsiU=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.8.0 h1:wS94St7YDmLhrPJw3mjJfCfHHOABS3G9c//mDZRzELU=
 github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.6.0 h1:q/O6wGx7MFwWfRNgTIVmGgXGBz9UKv16eSX1uuWdM7A=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.3.2/go.mod h1:72HRZDLMtmVQiLG2tLfQcaWLCssELvGl+Zf2WVxMmR8=
