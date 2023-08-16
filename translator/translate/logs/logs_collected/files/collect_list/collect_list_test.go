@@ -865,7 +865,7 @@ func TestConflictingLogGroupClass(t *testing.T) {
 				"file_path":"path1",
        			"log_group_name":"test1",
 				"retention_in_days":3,
-				"log_group_class":   "essentials"
+				"log_group_class":   "basic"
 
 			}
 		]

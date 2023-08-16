@@ -33,7 +33,7 @@ func TestProcessor_Process(t *testing.T) {
 		log_stream_name = {hostname}
 		initial_position = start_of_file
 		log_group_name = /var/log/messages
-		log_group_class = standard
+		log_group_class = STANDARD
 	`
 	tmpFile, _ := os.CreateTemp("", "")
 	defer os.Remove(tmpFile.Name())

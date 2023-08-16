@@ -4,6 +4,7 @@
 package collect_list
 
 import (
+	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
 )
 
@@ -13,7 +14,7 @@ type LogGroupClass struct {
 }
 
 func (f *LogGroupClass) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
-	_, returnVal = translator.DefaultLogGroupClassCase(LogGroupClassSectionKey, "standard", input)
+	_, returnVal = translator.DefaultLogGroupClassCase(LogGroupClassSectionKey, util.StandardLogGroupClass, input)
 	returnKey = LogGroupClassSectionKey
 	return
 }

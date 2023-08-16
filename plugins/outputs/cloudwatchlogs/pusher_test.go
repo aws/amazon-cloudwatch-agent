@@ -461,7 +461,7 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	require.Equal(t, 1, cnt, fmt.Sprintf("Expecting pusher to call send 1 time, but %d times called", cnt))
 }
 
-func TestCreateLogGroupAndLogSteamWhenNotFound(t *testing.T) {
+func TestCreateLogGroupAndLogStreamWhenNotFound(t *testing.T) {
 	var s svcMock
 	nst := "NEXT_SEQ_TOKEN"
 

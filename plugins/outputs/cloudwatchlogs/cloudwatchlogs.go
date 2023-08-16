@@ -187,15 +187,7 @@ func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (Target, error) 
 		logStream = c.LogStreamName
 	}
 
-	logGroupClass, ok := tags[LogGroupClassTag]
-	if ok {
-		m.RemoveTag(LogGroupClassTag)
-	} else if logGroupClass == "" {
-		logGroupClass = util.StandardLogGroupClass
-
-	}
-
-	return Target{logGroup, logStream, logGroupClass, -1}, nil
+	return Target{logGroup, logStream, util.StandardLogGroupClass, -1}, nil
 }
 
 func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structuredLogEvent {

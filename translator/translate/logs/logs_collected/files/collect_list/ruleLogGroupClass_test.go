@@ -16,7 +16,7 @@ func TestApplyLogGroupClassRule(t *testing.T) {
 	r := new(LogGroupClass)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
-			"log_group_class": "essentials"
+			"log_group_class": "basic"
 	}`), &input)
 	if e == nil {
 		actualReturnKey, actualReturnVal := r.ApplyRule(input)
@@ -38,7 +38,7 @@ func TestInvalidLogGroupClass(t *testing.T) {
 	if e == nil {
 		actualReturnKey, actualReturnValue := r.ApplyRule(input)
 		assert.Equal(t, "log_group_class", actualReturnKey)
-		assert.Equal(t, "standard", actualReturnValue)
+		assert.Equal(t, util.StandardLogGroupClass, actualReturnValue)
 	} else {
 		panic(e)
 	}
@@ -53,7 +53,7 @@ func TestInvalidTypeLogGroupClass(t *testing.T) {
 	if e == nil {
 		actualReturnKey, actualReturnValue := r.ApplyRule(input)
 		assert.Equal(t, "log_group_class", actualReturnKey)
-		assert.Equal(t, "standard", actualReturnValue)
+		assert.Equal(t, util.StandardLogGroupClass, actualReturnValue)
 	} else {
 		panic(e)
 	}

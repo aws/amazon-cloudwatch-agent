@@ -5,6 +5,7 @@ package translator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
 )
@@ -90,8 +91,9 @@ func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (retu
 
 func DefaultLogGroupClassCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
 	returnKey, returnVal = DefaultCase(key, defaultVal, input)
-	if classVal, ok := returnVal.(string); ok && IsValidLogGroupClass(classVal) {
-		returnVal = classVal
+	if classVal, ok := returnVal.(string); ok && IsValidLogGroupClass(strings.ToUpper(classVal)) {
+		//CreateLogGroup API only accepts values STANDARD or ESSENTIALS
+		returnVal = strings.ToUpper(classVal)
 	} else {
 		returnVal = util.StandardLogGroupClass
 		AddErrorMessages(
