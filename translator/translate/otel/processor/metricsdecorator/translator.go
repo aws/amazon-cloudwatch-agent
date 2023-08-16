@@ -126,13 +126,17 @@ func (t *translator) getContextStatements(conf *confmap.Conf) (ContextStatement,
 }
 
 func getMeasurementMaps(conf *confmap.Conf) map[string][]interface{} {
+	metricsCollected := conf.Get(metricsKey)
+	plugins, ok := metricsCollected.(map[string]interface{})
+	if !ok {
+		return nil
+	}
 	measurementMap := make(map[string][]interface{})
-	metricsList := append(common.LinuxPluginKeys, common.WindowsPluginKeys...)
-	for _, metric := range metricsList {
-		path := common.ConfigKey(metricsKey, metric, common.MeasurementKey)
+	for plugin := range plugins {
+		path := common.ConfigKey(metricsKey, plugin, common.MeasurementKey)
 		if conf.IsSet(path) {
 			m := conf.Get(path).([]interface{})
-			measurementMap[metric] = m
+			measurementMap[plugin] = m
 		}
 	}
 	return measurementMap
