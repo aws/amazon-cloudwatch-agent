@@ -82,6 +82,7 @@ processors:
             - InstanceType
             - ImageId
         refresh_interval_seconds: 0s
+        imds_retries: 1
     transform:
         error_mode: propagate
         log_statements: []

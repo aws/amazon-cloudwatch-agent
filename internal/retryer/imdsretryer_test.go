@@ -10,6 +10,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 func Test_IMDSRetryer_ShouldRetry(t *testing.T) {
@@ -69,10 +72,48 @@ func Test_IMDSRetryer_ShouldRetry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := IMDSRetryer
-			if got := r.ShouldRetry(tt.req); got != tt.want {
+			if got := NewIMDSRetryer(GetDefaultRetryNumber()).ShouldRetry(tt.req); got != tt.want {
 				t.Errorf("ShouldRetry() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestNumberOfRetryTest(t *testing.T) {
+	tests := []struct {
+		name               string
+		expectedRetries    string
+		expectedRetriesInt int
+	}{
+		{
+			name:               "expect default for empty",
+			expectedRetries:    "",
+			expectedRetriesInt: DefaultImdsRetries,
+		},
+		{
+			name:               "expect 2 for 2",
+			expectedRetries:    "2",
+			expectedRetriesInt: 2,
+		},
+		{
+			name:               "expect default for invalid",
+			expectedRetries:    "-1",
+			expectedRetriesInt: 1,
+		},
+		{
+			name:               "expect default for not int",
+			expectedRetries:    "not an int",
+			expectedRetriesInt: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer t.Setenv(envconfig.IMDS_NUMBER_RETRY, "")
+			t.Setenv(envconfig.IMDS_NUMBER_RETRY, tt.expectedRetries)
+			defaultIMDSRetryer := NewIMDSRetryer(GetDefaultRetryNumber())
+			newIMDSRetryer := NewIMDSRetryer(tt.expectedRetriesInt)
+			assert.Equal(t, defaultIMDSRetryer.MaxRetries(), tt.expectedRetriesInt)
+			assert.Equal(t, newIMDSRetryer.MaxRetries(), tt.expectedRetriesInt)
 		})
 	}
 }
