@@ -27,7 +27,7 @@ import (
 	translatorcontext "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
 )
 
-func TestTranslateWindows(t *testing.T) {
+func TestTranslate(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
 	transl := NewTranslator().(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
@@ -50,7 +50,7 @@ func TestTranslateWindows(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(expectedCfg, actualCfg))
 }
 
-func TestMetricDecorationWindows(t *testing.T) {
+func TestMetricDecoration(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
 	transl := NewTranslator().(*translator)
 	cfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
