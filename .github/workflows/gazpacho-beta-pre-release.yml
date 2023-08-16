@@ -3,7 +3,9 @@
 
 name: Gazpacho Beta Pre-Release
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main-gazpacho
 jobs:
   BuildAndUpload:
     uses: ./.github/workflows/test-build.yml

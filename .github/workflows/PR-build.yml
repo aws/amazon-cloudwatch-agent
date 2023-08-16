@@ -156,6 +156,7 @@ jobs:
           $env:sdkPath=(Get-ChildItem "C:/Users/runneradmin/gosdk/apollo/env/AWSGoSDK-Release/var/tmp/release-automation/staging-*/sdk/src/github.com/aws/aws-sdk-go")
           echo $env:sdkPath
           cd D:\a\private-amazon-cloudwatch-agent-staging\private-amazon-cloudwatch-agent-staging
+          ls
           go mod edit -replace github.com/aws/aws-sdk-go=$env:sdkPath
 
       - name: Replace AWS SDK (Linux)
@@ -166,6 +167,7 @@ jobs:
           unzip -q -d ~/gosdk ~/staging.zip || true
           sdkPath=$(echo ~/gosdk/apollo/env/AWSGoSDK-Release/var/tmp/release-automation/staging-*/sdk/src/github.com/aws/aws-sdk-go)
           echo $sdkPath
+          ls
           go mod edit -replace github.com/aws/aws-sdk-go=$sdkPath
 
       - name: Unit Test
