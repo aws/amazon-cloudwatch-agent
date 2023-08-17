@@ -38,7 +38,7 @@ linters-settings:
   goimports:
     # Put imports beginning with prefix after 3rd-party packages.
     # It's a comma-separated list of prefixes.
-    local-prefixes: github.com/aws/private-amazon-cloudwatch-agent-staging
+    local-prefixes: github.com/aws/amazon-cloudwatch-agent
   misspell:
     # Correct spellings using locale preferences for US or UK.
     # Default is to use a neutral variety of English.

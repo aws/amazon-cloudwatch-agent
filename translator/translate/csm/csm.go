@@ -4,9 +4,9 @@
 package csm
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate"
 )
 
 const JSONSectionKey = "csm"

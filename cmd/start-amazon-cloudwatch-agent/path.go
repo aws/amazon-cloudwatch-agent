@@ -14,10 +14,10 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/paths"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 func startAgent(writer io.WriteCloser) error {

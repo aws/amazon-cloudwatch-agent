@@ -3,7 +3,7 @@
 
 package util
 
-import "github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
+import "github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 
 func ToOtelValue(value interface{}) interface{} {
 	switch v := value.(type) {

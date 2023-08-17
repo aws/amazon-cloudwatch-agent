@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/registerrules"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 )
 
 // TestFindReceiversInConfig confirms whether the given the agent json configuration

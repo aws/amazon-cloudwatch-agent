@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 )
 
 func TestStatsD_ToMap(t *testing.T) {

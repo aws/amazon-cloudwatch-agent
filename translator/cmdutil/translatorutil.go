@@ -13,17 +13,17 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/registerrules"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toenvconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel"
-	translatorUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toenvconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
+	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 const (

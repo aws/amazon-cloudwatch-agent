@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util/httpclient"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/httpclient"
 )
 
 const (

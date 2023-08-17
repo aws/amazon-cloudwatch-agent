@@ -4,9 +4,9 @@
 package rollup_dimensions
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics"
-	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
+	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
 )
 
 type rollupDimensions struct {

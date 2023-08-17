@@ -23,11 +23,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/interfaze"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
 )
 
 const (

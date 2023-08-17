@@ -12,7 +12,7 @@ import (
 	cinfo "github.com/google/cadvisor/info/v1"
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 const (

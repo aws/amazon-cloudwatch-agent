@@ -13,7 +13,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 func startAgent(writer io.WriteCloser) error {
