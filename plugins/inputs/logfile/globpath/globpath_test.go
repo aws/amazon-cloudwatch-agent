@@ -118,6 +118,13 @@ func TestCompileGlob(t *testing.T) {
 			numMatched:   1,
 		},
 		{
+			path:         "/nested1/nested2/{nested, foo}.txt",
+			hasGlob:      true,
+			hasMeta:      false,
+			hasSuperMeta: true,
+			numMatched:   1,
+		},
+		{
 			path:       "/i_dont_exist.log",
 			numMatched: 0,
 		},

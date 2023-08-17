@@ -52,7 +52,7 @@ func Compile(path string) (*GlobPath, error) {
 }
 
 func (g *GlobPath) Match() map[string]os.FileInfo {
-	if !g.hasMeta {
+	if !g.hasMeta && !g.hasSuperMeta {
 		out := make(map[string]os.FileInfo)
 		info, err := os.Stat(g.path)
 		if info != nil {
@@ -61,8 +61,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 			log.Printf("D! Stat file %v failed due to %v", g.path, err)
 		}
 		return out
-	}
-	if !g.hasSuperMeta {
+	} else if !g.hasSuperMeta {
 		out := make(map[string]os.FileInfo)
 		files, _ := filepath.Glob(g.path)
 		for _, file := range files {
