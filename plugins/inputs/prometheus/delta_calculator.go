@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/mapWithExpiry"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
 )
 
 const (

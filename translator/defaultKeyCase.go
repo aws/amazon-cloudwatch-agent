@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 // DefaultCase check if current input overrides the default value for the given config entry key.

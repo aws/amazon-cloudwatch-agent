@@ -6,8 +6,8 @@ package util
 import (
 	"os"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 func GetSSL(sslConfig map[string]string) (result map[string]string) {

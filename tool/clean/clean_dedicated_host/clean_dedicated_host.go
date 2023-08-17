@@ -16,7 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
 // Can't release a host if it was being used within the last 24 hr add 2 hr as a buffer

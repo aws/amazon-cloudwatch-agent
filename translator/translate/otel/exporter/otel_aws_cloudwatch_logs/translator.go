@@ -14,10 +14,10 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 //go:embed aws_cloudwatch_logs_default.yaml

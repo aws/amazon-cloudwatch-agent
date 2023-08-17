@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 // TestCreateDestination would create different destination for cloudwatchlogs endpoint based on the log group, log stream,

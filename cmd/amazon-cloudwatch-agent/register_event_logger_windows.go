@@ -9,7 +9,7 @@ package main
 import (
 	"github.com/influxdata/telegraf/logger"
 
-	lumberjack "github.com/aws/private-amazon-cloudwatch-agent-staging/logger"
+	lumberjack "github.com/aws/amazon-cloudwatch-agent/logger"
 )
 
 const LogTargetEventLog = "eventlog"

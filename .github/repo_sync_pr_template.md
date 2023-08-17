@@ -26,7 +26,6 @@ Some useful commands
 
 ### Best practices 
 
-* Remember to update all references from `amazon-cloudwatch-agent` to `private-amazon-cloudwatch-agent-staging`
 * Resolve the `go.sum` with `go mod tidy`. Don't bother manually resolving conflicts in this file
 * When finished, ensure builds work by using `make build` or `make release`
 * When unsure or blocked, do a deep dive on the `git blame` for greater context. Maybe even look for the associated PR's and ask the original authors and PR approvers

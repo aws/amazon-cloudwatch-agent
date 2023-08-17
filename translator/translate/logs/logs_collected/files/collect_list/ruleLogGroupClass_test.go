@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 func TestApplyLogGroupClassRule(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {

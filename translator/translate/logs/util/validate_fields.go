@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 const (

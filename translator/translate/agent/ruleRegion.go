@@ -6,9 +6,9 @@ package agent
 import (
 	"fmt"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 type Region struct {

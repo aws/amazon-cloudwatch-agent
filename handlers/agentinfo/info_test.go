@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/service"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 )
 
 func TestNew(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution/regular"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 )
 
 const (

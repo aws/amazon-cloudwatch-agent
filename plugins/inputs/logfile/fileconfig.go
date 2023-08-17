@@ -16,9 +16,9 @@ import (
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/ianaindex"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 const (

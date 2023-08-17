@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/exp/slices"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 // ErrorMessages will provide detail error messages to user

@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/xraydaemonmigration"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/xraydaemonmigration"
 )
 
 func main() {

@@ -17,16 +17,16 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
-	receiverAdapter "github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/containerinsights"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/emf_logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/host"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/prometheus"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/pipeline/xray"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/adapter"
+	receiverAdapter "github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 )
 
 var registry = common.NewTranslatorMap[*common.ComponentTranslators]()

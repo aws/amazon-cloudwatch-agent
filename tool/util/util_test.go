@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
 var expectResult = `{

@@ -3,7 +3,7 @@
 
 package dockerlabel
 
-import "github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+import "github.com/aws/amazon-cloudwatch-agent/translator"
 
 const (
 	SectionKeySDMetricsPathLabel = "sd_metrics_path_label"

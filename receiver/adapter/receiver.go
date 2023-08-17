@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter/accumulator"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter/accumulator"
 )
 
 // AdaptedReceiver uses an OTel Scrape Controller to scrape metrics and has three phases:

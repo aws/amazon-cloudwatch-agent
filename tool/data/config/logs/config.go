@@ -3,7 +3,7 @@
 
 package logs
 
-import "github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+import "github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 
 type Config struct {
 	FilePath              string `file_path`

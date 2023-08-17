@@ -26,9 +26,9 @@ import (
 	"go.opentelemetry.io/collector/otelcol"
 	"golang.org/x/exp/maps"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 )
 
 const (

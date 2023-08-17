@@ -14,9 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
 const (

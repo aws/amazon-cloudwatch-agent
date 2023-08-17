@@ -10,10 +10,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logger"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/logger"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 var httpProxy string

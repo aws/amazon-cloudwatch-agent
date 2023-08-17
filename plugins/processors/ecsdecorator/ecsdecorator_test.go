@@ -10,8 +10,8 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/logscommon"
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 )
 
 func TestTagMetricSourceForTypeInstance(t *testing.T) {

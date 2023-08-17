@@ -6,7 +6,7 @@ package testutil
 import (
 	"fmt"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
+	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
 )
 
 func SetUpTestInputStream() chan<- string {
