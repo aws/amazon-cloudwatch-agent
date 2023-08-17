@@ -11,11 +11,11 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
-	translatorcontext "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	metricsconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/util"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	metricsconfig "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 var metricsKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)

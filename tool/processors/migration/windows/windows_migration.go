@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/defaultConfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/ssm"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/defaultConfig"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/ssm"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 var Processor processors.Processor = &processor{}

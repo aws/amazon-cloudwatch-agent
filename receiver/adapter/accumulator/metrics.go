@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 func ConvertTelegrafToOtelMetrics(measurement string, fields map[string]interface{}, tags map[string]string, tp telegraf.ValueType, t time.Time) (pmetric.Metrics, error) {

@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.uber.org/zap"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter/accumulator"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter/accumulator"
 )
 
 func Test_AdaptedReceiver_WithEmptyMetrics(t *testing.T) {

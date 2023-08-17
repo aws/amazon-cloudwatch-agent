@@ -4,8 +4,8 @@
 package config
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config/metric"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/config/metric"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 )
 
 type Metrics struct {

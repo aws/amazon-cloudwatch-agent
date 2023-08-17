@@ -4,9 +4,9 @@
 package agent
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 type CommonCreds struct {

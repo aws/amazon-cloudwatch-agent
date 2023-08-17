@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/processor/processortest"
 
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 )
 
 type mockEC2Client struct {

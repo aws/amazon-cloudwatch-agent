@@ -4,7 +4,7 @@
 package collectlist
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 const RetentionInDaysSectionKey = "retention_in_days"

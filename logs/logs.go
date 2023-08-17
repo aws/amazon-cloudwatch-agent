@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
 
 var ErrOutputStopped = errors.New("Output plugin stopped")

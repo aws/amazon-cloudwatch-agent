@@ -19,9 +19,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/logfile/tail"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
 type tailerTestResources struct {

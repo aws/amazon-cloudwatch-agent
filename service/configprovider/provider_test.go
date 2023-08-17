@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/defaultcomponents"
+	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 )
 
 const (

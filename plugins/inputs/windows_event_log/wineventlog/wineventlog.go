@@ -19,7 +19,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385588(v=vs.85).aspx

@@ -21,10 +21,10 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/processor/processortest"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/testutil"
-	translatorconfig "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	translatorcontext "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 func TestTranslate(t *testing.T) {

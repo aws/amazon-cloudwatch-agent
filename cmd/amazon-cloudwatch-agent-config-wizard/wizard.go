@@ -9,16 +9,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/basicInfo"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/migration/linux"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/migration/windows"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/processors/serialization"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/runtime"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/stdin"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/testutil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/basicInfo"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/migration/linux"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/migration/windows"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/serialization"
+	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
+	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 type IMainProcessor interface {

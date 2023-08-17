@@ -20,8 +20,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	translatorCtx "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 type ec2MetadataLookupType struct {
@@ -138,8 +138,7 @@ func (t *Tagger) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetri
 
 // updateOtelAttributes adds tags and the requested dimensions to the attributes of each
 // DataPoint. We add and remove at the DataPoint level instead of resource level because this is
-// where the receiver/adapter does. See:
-// https://github.com/aws/private-amazon-cloudwatch-agent-staging/blob/d6047ac26144187d3604d65ea2fe0b6e02357b08/receiver/adapter/accumulator/metrics.go#L16-L19
+// where the receiver/adapter does.
 func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 	for _, attr := range attributes {
 		if t.ec2TagCache != nil {

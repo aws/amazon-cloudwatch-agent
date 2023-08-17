@@ -4,8 +4,8 @@
 package taskdefinition
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus/ecsservicediscovery"
 )
 
 type Rule translator.Rule

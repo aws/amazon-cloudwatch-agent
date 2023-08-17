@@ -18,7 +18,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
 const (

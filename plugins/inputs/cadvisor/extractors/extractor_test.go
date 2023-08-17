@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 func TestCAdvisorMetric_Merge(t *testing.T) {

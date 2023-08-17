@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldSuccess bool, expectedErrorMap map[string]int) {
