@@ -11,7 +11,7 @@ exporters:
     max_retries: 2
     no_verify_ssl: false
     num_workers: 8
-    profile: ""
+    profile: "default"
     proxy_address: ""
     raw_log: true
     region: us-east-1
@@ -27,7 +27,7 @@ exporters:
     role_arn: ""
     sending_queue:
       queue_size: 1000
-    shared_credentials_file: []
+    shared_credentials_file: [ "/root/.aws/credentials" ]
   awsemf/containerinsights:
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
@@ -159,8 +159,8 @@ exporters:
       enabled: true
     retain_initial_value_of_delta_metric: false
     role_arn: ""
-    profile: ""
-    shared_credentials_file: [ ]
+    profile: "default"
+    shared_credentials_file: [ "/root/.aws/credentials" ]
     version: "0"
 extensions: {}
 processors:
@@ -195,8 +195,8 @@ receivers:
     request_timeout_seconds: 0
     resource_arn: ""
     role_arn: ""
-    profile: ""
-    shared_credentials_file: []
+    profile: "default"
+    shared_credentials_file: [ "/root/.aws/credentials" ]
   tcplog/emf_logs:
     attributes: {}
     encoding: utf-8

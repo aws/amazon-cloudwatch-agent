@@ -56,6 +56,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 
 func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
@@ -168,6 +169,7 @@ func TestLogOnlyConfig(t *testing.T) {
 
 func TestTraceConfig(t *testing.T) {
 	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "trace_config", "linux", expectedEnvVars, "_linux")
 	checkTranslation(t, "trace_config", "darwin", expectedEnvVars, "_linux")
@@ -182,7 +184,7 @@ func TestConfigWithEnvironmentVariables(t *testing.T) {
 
 func TestStandardConfigWithCommonConfig(t *testing.T) {
 	resetContext(t)
-	readCommonConfig(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentialsProxySsl.toml")
 	expectedEnvVars := map[string]string{
 		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
 		"HTTPS_PROXY":   "https://127.0.0.1:3280",
@@ -260,10 +262,10 @@ func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFil
 	verifyToYamlTranslation(t, input, expectedYamlFilePath, tokenReplacements...)
 }
 
-func readCommonConfig(t *testing.T) {
+func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 	ctx := context.CurrentContext()
 	cfg := commonconfig.New()
-	data, _ := os.ReadFile("./sampleConfig/commonConfigTest.toml")
+	data, _ := os.ReadFile(commonConfigFilePath)
 	require.NoError(t, cfg.Parse(bytes.NewReader(data)))
 	ctx.SetCredentials(cfg.CredentialsMap())
 	ctx.SetProxy(cfg.ProxyMap())
