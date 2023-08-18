@@ -180,8 +180,8 @@ receivers:
     request_timeout_seconds: 0
     resource_arn: ""
     role_arn: ""
-    profile: ""
-    shared_credentials_file: []
+    profile: "AmazonCloudWatchAgent"
+    shared_credentials_file: [ "fake-path" ]
 service:
   extensions: []
   pipelines:
