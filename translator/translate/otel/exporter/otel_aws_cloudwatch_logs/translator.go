@@ -75,9 +75,11 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	if profile, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
-		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profile)
-		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", agent.Global_Config.Credentials[agent.CredentialsFile_Key])}
+	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
+		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
 	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
 	if c.IsSet(roleArnPathKey) {
