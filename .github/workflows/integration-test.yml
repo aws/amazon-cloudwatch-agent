@@ -632,6 +632,7 @@ jobs:
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
               -var="cwagent_image_tag=${{ github.sha }}"\
               -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+              -var="metadataEnabled=${{ matrix.arrays.metadataEnabled }}" \
               -var="ami=${{ matrix.arrays.ami }}" ; then
               terraform destroy -auto-approve
             else
