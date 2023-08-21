@@ -15,6 +15,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
 //go:embed awsemf_default_ecs.yaml
@@ -124,6 +125,11 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	if err := setKubernetesMetricDeclaration(conf, cfg); err != nil {
 		return err
 	}
+
+	if awscontainerinsight.GetGranularityLevel(conf) >= awscontainerinsight.EnhancedClusterMetrics {
+		cfg.EnhancedContainerInsights = true
+	}
+
 	return nil
 }
 
