@@ -30,8 +30,23 @@
         ]
       },
       "nvidia_gpu": {
+        "measurement": [
+          {
+            "name": "utilization_gpu",
+            "rename": "gpu-utilization"
+          }
+        ],
         "drop_original_metrics": ["utilization_gpu", "temperature_gpu"]
-      }
+      },
+      "procstat": [
+        {
+          "exe": "agent",
+          "measurement": [
+            "cpu_time_system",
+            "cpu_time_user"
+          ]
+        }
+      ]
     },
     "aggregation_dimensions" : [["ImageId"], ["InstanceId", "InstanceType"], ["d1"], []],
     "namespace": "namespace",

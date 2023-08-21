@@ -1,0 +1,13 @@
+{
+        "traces_collected": {
+                "xray": {
+                        "bind_address": "",
+                        "tcp_proxy": {
+                                "bind_address": ""
+                        }
+                }
+        },
+        "concurrency": 0,
+        "buffer_size_mb": 0,
+        "insecure": false
+}

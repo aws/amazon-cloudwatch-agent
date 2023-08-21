@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  cwagent:
+    container_name: "cwagent"
+    image: amazon-cloudwatch-agent:latest
+    environment:
+      - 'CW_CONFIG_CONTENT:{
+                             "agent": {
+                               "debug": true
+                             },
+                           }'

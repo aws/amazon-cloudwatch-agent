@@ -5,8 +5,10 @@ package util
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -55,7 +57,7 @@ func TestSerializeResultMapToJsonByteArray(t *testing.T) {
 }
 
 func TestSaveResultByteArrayToJsonFile(t *testing.T) {
-	filePath := SaveResultByteArrayToJsonFile([]byte(expectResult))
+	filePath := SaveResultByteArrayToJsonFile([]byte(expectResult), ConfigFilePath())
 	bytes, err := os.ReadFile(filePath)
 	assert.NoError(t, err)
 	actualResult := string(bytes)
@@ -122,4 +124,45 @@ func TestChoice(t *testing.T) {
 	parsedAnswer = Choice("Question", 1, []string{"validValue1", "validValue2"})
 
 	assert.Equal(t, "validValue2", parsedAnswer)
+}
+
+func TestChoiceIndex(t *testing.T) {
+	inputChan := testutil.SetUpTestInputStream()
+
+	testutil.Type(inputChan, "")
+
+	parsedAnswer := ChoiceIndex("Question", 1, []string{"validValue1", "validValue2"})
+
+	assert.Equal(t, 0, parsedAnswer)
+
+	testutil.Type(inputChan, "InvalidAnswer", "2")
+
+	parsedAnswer = ChoiceIndex("Question", 1, []string{"validValue1", "validValue2"})
+
+	assert.Equal(t, 1, parsedAnswer)
+}
+
+func TestBackupConfigFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFilePath := filepath.Join(tmpDir, "testConfig.json")
+	err := os.WriteFile(configFilePath, []byte(`{"key":"value"}`), 0644)
+	assert.Nil(t, err)
+
+	backupDirPath := filepath.Join(tmpDir, "backup")
+	for i := 0; i < 16; i++ {
+		err = backupConfigFile(configFilePath, backupDirPath)
+		assert.Nil(t, err)
+
+		files, err := os.ReadDir(backupDirPath)
+		assert.Nil(t, err)
+
+		backupFileContents, err := os.ReadFile(filepath.Join(backupDirPath, files[0].Name()))
+		assert.Nil(t, err)
+		assert.Equal(t, `{"key":"value"}`, string(backupFileContents))
+		time.Sleep(time.Second)
+	}
+	files, err := os.ReadDir(backupDirPath)
+	assert.Nil(t, err)
+	assert.Equal(t, 10, len(files))
+
 }

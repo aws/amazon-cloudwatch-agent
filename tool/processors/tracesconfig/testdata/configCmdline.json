@@ -1,0 +1,20 @@
+{
+  "traces_collected": {
+    "xray": {
+      "bind_address": "127.0.0.1:2000",
+      "tcp_proxy": {
+        "bind_address": "127.0.0.1:2000"
+      }
+    }
+  },
+  "concurrency": 8,
+  "buffer_size_mb": 23,
+  "resource_arn": "resourceTesting",
+  "local_mode": true,
+  "insecure": false,
+  "region_override": "us-east-1",
+  "proxy_override": "127.0.0.1:2000",
+  "credentials": {
+    "role_arn": "roleTest"
+  }
+}

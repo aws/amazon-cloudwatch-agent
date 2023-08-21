@@ -55,9 +55,9 @@ func translateConfig() error {
 		args = append(args, "--input", jsonConfigPath, "--input-dir", jsonDirPath, "--config", commonConfigPath)
 	}
 	cmd := exec.Command(translatorBinaryPath, args...)
-
-	stdoutStderr, err := cmd.CombinedOutput()
-	log.Printf("I! %s \n", stdoutStderr)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stdout
+	err := cmd.Run()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			status := exitErr.Sys().(syscall.WaitStatus)

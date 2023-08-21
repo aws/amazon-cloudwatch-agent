@@ -41,29 +41,35 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getNamespaceMetricDeclarations()...)
 
 	// Setup cluster metrics
-	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getClusterMetricDeclarations()...)
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getClusterMetricDeclarations(conf)...)
 
 	// Setup control plane metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getControlPlaneMetricDeclarations(conf)...)
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
+
 	return nil
 }
 
 func getContainerMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var containerMetricDeclarations []*awsemfexporter.MetricDeclaration
 	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
-	if containerInsightsGranularityLevel >= awscontainerinsight.IndividualPodContainerMetrics {
-		containerMetricDeclarations = append(containerMetricDeclarations, []*awsemfexporter.MetricDeclaration{
-			{
-				Dimensions: [][]string{{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
-				MetricNameSelectors: []string{
-					"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
-					"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
-					"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed",
-				},
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
+		dimensions := [][]string{{"ClusterName"}}
+		if containerInsightsGranularityLevel >= awscontainerinsight.IndividualPodContainerMetrics {
+			dimensions = append(dimensions, []string{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, []string{"ContainerName", "PodName", "Namespace", "ClusterName"})
+		}
+
+		metricDeclaration := awsemfexporter.MetricDeclaration{
+			Dimensions: dimensions,
+			MetricNameSelectors: []string{
+				"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
+				"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
+				"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed",
 			},
-		}...)
+		}
+
+		containerMetricDeclarations = append(containerMetricDeclarations, &metricDeclaration)
 	}
 	return containerMetricDeclarations
 }
@@ -91,7 +97,7 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 	case awscontainerinsight.EnhancedClusterMetrics:
 		selectors = append(selectors, []string{"pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers",
 			"pod_status_ready", "pod_status_scheduled", "pod_status_running", "pod_status_pending", "pod_status_failed", "pod_status_unknown",
-			"pod_status_succeeded", "pod_status_initialized"}...)
+			"pod_status_succeeded"}...)
 		dimensions = append(dimensions, []string{"Service", "Namespace", "ClusterName"})
 	default:
 		podMetricDeclarations = append(podMetricDeclarations, &awsemfexporter.MetricDeclaration{
@@ -105,13 +111,27 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 		MetricNameSelectors: selectors,
 	}
 
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
+		podMetricDeclarations = append(
+			podMetricDeclarations,
+			&awsemfexporter.MetricDeclaration{
+				Dimensions: [][]string{
+					{"FullPodName", "PodName", "Namespace", "ClusterName"},
+					{"PodName", "Namespace", "ClusterName"},
+					{"Service", "Namespace", "ClusterName"},
+					{"ClusterName"},
+				},
+				MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_rx_errors", "pod_interface_network_tx_dropped", "pod_interface_network_tx_errors"},
+			},
+		)
+	}
+
 	podMetricDeclarations = append(
 		podMetricDeclarations,
 		&metricDeclaration)
 
 	return podMetricDeclarations
 }
-
 func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
 	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
@@ -123,9 +143,19 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 					"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
 					"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
 					"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
-					"node_status_condition_pid_pressure", "node_status_condition_network_unavailable",
+					"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
 					"node_status_capacity_pods", "node_status_allocatable_pods",
 				},
+			},
+			{
+				Dimensions: [][]string{
+					{"NodeName", "InstanceId", "ClusterName"},
+					{"ClusterName"},
+				},
+				MetricNameSelectors: []string{
+					"node_interface_network_rx_dropped", "node_interface_network_rx_errors",
+					"node_interface_network_tx_dropped", "node_interface_network_tx_errors",
+					"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total"},
 			},
 		}
 	} else {
@@ -183,7 +213,7 @@ func getDeploymentMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metri
 			{
 				Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
 				MetricNameSelectors: []string{
-					"deployment_spec_replicas", "deployment_status_replicas", "deployment_status_replicas_available", "deployment_status_replicas_unavailable",
+					"replicas_desired", "replicas_ready", "status_replicas_available", "status_replicas_unavailable",
 				},
 			},
 		}...)
@@ -200,7 +230,6 @@ func getDaemonSetMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
 				MetricNameSelectors: []string{
 					"daemonset_status_number_available", "daemonset_status_number_unavailable",
-					"daemonset_status_desired_number_scheduled", "daemonset_status_current_number_scheduled",
 				},
 			},
 		}...)
@@ -219,13 +248,18 @@ func getNamespaceMetricDeclarations() []*awsemfexporter.MetricDeclaration {
 	}
 }
 
-func getClusterMetricDeclarations() []*awsemfexporter.MetricDeclaration {
+func getClusterMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	metricNameSelectors := []string{"cluster_node_count", "cluster_failed_node_count"}
+
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
+		metricNameSelectors = append(metricNameSelectors, "cluster_number_of_running_pods")
+	}
+
 	return []*awsemfexporter.MetricDeclaration{
 		{
-			Dimensions: [][]string{{"ClusterName"}},
-			MetricNameSelectors: []string{
-				"cluster_node_count", "cluster_failed_node_count",
-			},
+			Dimensions:          [][]string{{"ClusterName"}},
+			MetricNameSelectors: metricNameSelectors,
 		},
 	}
 }
@@ -239,6 +273,12 @@ func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Met
 				Dimensions: [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 				MetricNameSelectors: []string{
 					"etcd_db_total_size_in_bytes",
+				},
+			},
+			{
+				Dimensions: [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"apiserver_storage_list_duration_seconds",
 				},
 			},
 			{

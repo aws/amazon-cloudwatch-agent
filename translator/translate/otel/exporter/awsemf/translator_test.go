@@ -40,6 +40,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
 				"parse_json_encoded_attr_values":         []string{"Sources"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -80,6 +81,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              true,
+				"enhanced_container_insights":            false,
 				"parse_json_encoded_attr_values":         []string{"Sources"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -118,6 +120,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -185,6 +188,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              true,
+				"enhanced_container_insights":            false,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -252,6 +256,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            true,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -259,6 +264,13 @@ func TestTranslator(t *testing.T) {
 					Enabled: true,
 				},
 				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{
+							"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
+							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
+							"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed"},
+					},
 					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"ClusterName", "Namespace"}},
 						MetricNameSelectors: []string{"pod_cpu_utilization", "pod_memory_utilization",
@@ -272,8 +284,17 @@ func TestTranslator(t *testing.T) {
 							"pod_status_ready", "pod_status_scheduled",
 							"pod_status_running", "pod_status_pending",
 							"pod_status_failed", "pod_status_unknown",
-							"pod_status_succeeded", "pod_status_initialized",
+							"pod_status_succeeded",
 						},
+					},
+					{
+						Dimensions: [][]string{
+							{"FullPodName", "PodName", "Namespace", "ClusterName"},
+							{"PodName", "Namespace", "ClusterName"},
+							{"Service", "Namespace", "ClusterName"},
+							{"ClusterName"},
+						},
+						MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_rx_errors", "pod_interface_network_tx_dropped", "pod_interface_network_tx_errors"},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -281,8 +302,18 @@ func TestTranslator(t *testing.T) {
 							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
 							"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
 							"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
-							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable",
+							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
 							"node_status_capacity_pods", "node_status_allocatable_pods"},
+					},
+					{
+						Dimensions: [][]string{
+							{"NodeName", "InstanceId", "ClusterName"},
+							{"ClusterName"},
+						},
+						MetricNameSelectors: []string{
+							"node_interface_network_rx_dropped", "node_interface_network_rx_errors",
+							"node_interface_network_tx_dropped", "node_interface_network_tx_errors",
+							"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total"},
 					},
 					{
 						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -294,12 +325,11 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"deployment_spec_replicas", "deployment_status_replicas", "deployment_status_replicas_available", "deployment_status_replicas_unavailable"},
+						MetricNameSelectors: []string{"replicas_desired", "replicas_ready", "status_replicas_available", "status_replicas_unavailable"},
 					},
 					{
-						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"daemonset_status_number_available", "daemonset_status_number_unavailable",
-							"daemonset_status_desired_number_scheduled", "daemonset_status_current_number_scheduled"},
+						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"daemonset_status_number_available", "daemonset_status_number_unavailable"},
 					},
 					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
@@ -307,11 +337,15 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count", "cluster_number_of_running_pods"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds"},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}},
@@ -343,6 +377,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "{NodeName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            true,
 				"parse_json_encoded_attr_values":         []string{"Sources", "kubernetes"},
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -351,7 +386,7 @@ func TestTranslator(t *testing.T) {
 				},
 				"metric_declarations": []*awsemfexporter.MetricDeclaration{
 					{
-						Dimensions: [][]string{{"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{
 							"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
 							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
@@ -370,7 +405,16 @@ func TestTranslator(t *testing.T) {
 							"pod_status_ready", "pod_status_scheduled",
 							"pod_status_running", "pod_status_pending",
 							"pod_status_failed", "pod_status_unknown",
-							"pod_status_succeeded", "pod_status_initialized"},
+							"pod_status_succeeded"},
+					},
+					{
+						Dimensions: [][]string{
+							{"FullPodName", "PodName", "Namespace", "ClusterName"},
+							{"PodName", "Namespace", "ClusterName"},
+							{"Service", "Namespace", "ClusterName"},
+							{"ClusterName"},
+						},
+						MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_rx_errors", "pod_interface_network_tx_dropped", "pod_interface_network_tx_errors"},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -378,8 +422,18 @@ func TestTranslator(t *testing.T) {
 							"node_memory_reserved_capacity", "node_number_of_running_pods", "node_number_of_running_containers",
 							"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
 							"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
-							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable",
+							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
 							"node_status_capacity_pods", "node_status_allocatable_pods"},
+					},
+					{
+						Dimensions: [][]string{
+							{"NodeName", "InstanceId", "ClusterName"},
+							{"ClusterName"},
+						},
+						MetricNameSelectors: []string{
+							"node_interface_network_rx_dropped", "node_interface_network_rx_errors",
+							"node_interface_network_tx_dropped", "node_interface_network_tx_errors",
+							"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total"},
 					},
 					{
 						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -391,12 +445,11 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"deployment_spec_replicas", "deployment_status_replicas", "deployment_status_replicas_available", "deployment_status_replicas_unavailable"},
+						MetricNameSelectors: []string{"replicas_desired", "replicas_ready", "status_replicas_available", "status_replicas_unavailable"},
 					},
 					{
-						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"daemonset_status_number_available", "daemonset_status_number_unavailable",
-							"daemonset_status_desired_number_scheduled", "daemonset_status_current_number_scheduled"},
+						Dimensions:          [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"daemonset_status_number_available", "daemonset_status_number_unavailable"},
 					},
 					{
 						Dimensions:          [][]string{{"Namespace", "ClusterName"}, {"ClusterName"}},
@@ -404,11 +457,15 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count"},
+						MetricNameSelectors: []string{"cluster_node_count", "cluster_failed_node_count", "cluster_number_of_running_pods"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds"},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}},
@@ -454,6 +511,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -498,6 +556,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              true,
+				"enhanced_container_insights":            false,
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -534,6 +593,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -570,6 +630,7 @@ func TestTranslator(t *testing.T) {
 				"log_stream_name":                        "{ServiceName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
 				"parse_json_encoded_attr_values":         nilSlice,
 				"output_destination":                     "cloudwatch",
 				"eks_fargate_container_insights_enabled": false,
@@ -600,6 +661,7 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
 				require.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
 				require.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
+				require.Equal(t, testCase.want["enhanced_container_insights"], gotCfg.EnhancedContainerInsights)
 				require.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
 				require.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
 				require.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)

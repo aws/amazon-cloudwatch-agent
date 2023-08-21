@@ -1,11 +1,13 @@
 connectors: {}
 exporters:
   awscloudwatchlogs/emf_logs:
-    endpoint: ""
+    certificate_file_path: ""
+    emf_only: true
+    endpoint: "https://fake_endpoint"
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
-    log_stream_name: i-UNKNOWN
+    log_stream_name: host_name_from_env
     max_retries: 2
     no_verify_ssl: false
     num_workers: 8
@@ -27,11 +29,13 @@ exporters:
     profile: ""
     shared_credentials_file: [ ]
   awsemf/containerinsights:
+    certificate_file_path: ""
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
     disable_metric_extraction: false
     eks_fargate_container_insights_enabled: false
     endpoint: ""
+    enhanced_container_insights: true
     local_mode: false
     log_group_name: /aws/containerinsights/{ClusterName}/performance
     log_retention: 0
@@ -39,7 +43,7 @@ exporters:
     max_retries: 2
     metric_declarations:
       # container metrics
-      - dimensions: [ [ ClusterName, ContainerName, FullPodName, Namespace, PodName ], [ ClusterName, ContainerName, Namespace, PodName ] ]
+      - dimensions: [ [ ClusterName ], [ ClusterName, ContainerName, FullPodName, Namespace, PodName ], [ ClusterName, ContainerName, Namespace, PodName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - container_cpu_utilization
@@ -62,6 +66,13 @@ exporters:
           - pod_network_tx_bytes
           - pod_cpu_utilization_over_pod_limit
           - pod_memory_utilization_over_pod_limit
+      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace,  Service ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - pod_interface_network_rx_dropped
+          - pod_interface_network_rx_errors
+          - pod_interface_network_tx_dropped
+          - pod_interface_network_tx_errors
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, Service ] ]
         label_matchers: []
         metric_name_selectors:
@@ -77,7 +88,6 @@ exporters:
           - pod_status_failed
           - pod_status_unknown
           - pod_status_succeeded
-          - pod_status_initialized
       # node metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
@@ -98,8 +108,18 @@ exporters:
           - node_status_condition_memory_pressure
           - node_status_condition_pid_pressure
           - node_status_condition_network_unavailable
+          - node_status_condition_unknown
           - node_status_capacity_pods
           - node_status_allocatable_pods
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - node_interface_network_rx_dropped
+          - node_interface_network_rx_errors
+          - node_interface_network_tx_dropped
+          - node_interface_network_tx_errors
+          - node_diskio_io_service_bytes_total
+          - node_diskio_io_serviced_total
       # node fs metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
@@ -112,22 +132,20 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - service_number_of_running_pods
-      # deployment metrics
+      # deployment/stateful set/replica set metrics
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
-          - deployment_spec_replicas
-          - deployment_status_replicas
-          - deployment_status_replicas_available
-          - deployment_status_replicas_unavailable
+          - replicas_desired
+          - replicas_ready
+          - status_replicas_available
+          - status_replicas_unavailable
       # daemon set metrics
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - daemonset_status_number_available
           - daemonset_status_number_unavailable
-          - daemonset_status_desired_number_scheduled
-          - daemonset_status_current_number_scheduled
       # namespace metrics
       - dimensions: [ [ ClusterName, Namespace ], [ ClusterName ] ]
         label_matchers: [ ]
@@ -139,11 +157,16 @@ exporters:
         metric_name_selectors:
           - cluster_node_count
           - cluster_failed_node_count
+          - cluster_number_of_running_pods
       # control plane metrics
       - dimensions: [ [ClusterName, endpoint], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - etcd_db_total_size_in_bytes
+      - dimensions: [ [ClusterName, resource], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_storage_list_duration_seconds
       - dimensions: [ [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
@@ -185,6 +208,7 @@ processors:
     timeout: 5s
 receivers:
   awscontainerinsightreceiver:
+    certificate_file_path: ""
     add_container_name_metric_label: true
     add_full_pod_name_metric_label: true
     add_service_as_attribute: true
