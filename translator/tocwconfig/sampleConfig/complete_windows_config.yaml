@@ -165,9 +165,6 @@ receivers:
         alias_name: LogicalDisk
         collection_interval: 1m0s
         initial_delay: 1s
-    telegraf_windows_event_log:
-        collection_interval: 1m0s
-        initial_delay: 1s
     udplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -212,7 +209,6 @@ service:
                 - telegraf_win_perf_counters/3081249416
                 - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
-                - telegraf_windows_event_log
         traces/xray:
             exporters:
                 - awsxray
