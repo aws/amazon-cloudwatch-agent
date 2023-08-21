@@ -30,7 +30,7 @@ const (
 	queuesDirectory      = "/var/agent/queues"
 	maxBacklogQueueDepth = 1024 // 100 MB file with 100 KB per message in worst case (1024 = 100 MB / 100 KB)
 
-	maxBytesPerFile = 1024 * 1024 * 1024 // 100 MB
+	maxBytesPerFile = 1024 * 1024 * 1024 // 1 GB
 	maxMsgSize      = 1024 * 1024        // 100 KB
 	minMsgSize      = 1                  // messages should have content
 	syncEvery       = 5
@@ -68,10 +68,9 @@ type pusher struct {
 	stop                <-chan struct{}
 	lastSentTime        time.Time
 
-	backlogQueue      persistentqueue.PersistentQueue
-	ticker            *time.Ticker
-	dequeueEvents     *cloudwatchlogs.PutLogEventsInput
-	backlogBufferSize int
+	backlogQueue  persistentqueue.PersistentQueue
+	ticker        *time.Ticker
+	dequeueEvents *retryStruct
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
@@ -172,7 +171,7 @@ func (p *pusher) start() {
 	//tmpwg.Add(1)
 	ec := make(chan logs.LogEvent)
 	p.Log.Debugf("ticker been created")
-	p.ticker = time.NewTicker(5 * time.Second)
+	p.ticker = time.NewTicker(10 * time.Second)
 
 	// Merge events from both blocking and non-blocking channel
 	go func() {
@@ -193,14 +192,13 @@ func (p *pusher) start() {
 		select {
 		case <-p.ticker.C:
 			p.Log.Debugf("start dequeue from disk")
-			temp, bufferSize, err := p.dequeue()
+			temp, err := p.dequeue()
 			if err != nil {
 				p.Log.Errorf("Error while dequeue log from the backlogQueue")
 
 			} else {
 				if temp != nil {
 					p.dequeueEvents = temp
-					p.backlogBufferSize = bufferSize
 					p.Log.Debugf("send dequeue logEvent to cloudwatch")
 					p.send()
 				} else {
@@ -254,14 +252,14 @@ func (p *pusher) start() {
 	}
 }
 
-func (p *pusher) dequeue() (*cloudwatchlogs.PutLogEventsInput, int, error) {
+func (p *pusher) dequeue() (*retryStruct, error) {
 	if p.backlogQueue.Depth() == 0 {
-		return nil, 0, nil
+		return nil, nil
 	}
 	obj, err := p.backlogQueue.Dequeue()
 	if err != nil {
 		p.Log.Debugf("errors happens when dequeue from disk")
-		return nil, 0, err
+		return nil, err
 	}
 	input := obj.(retryStruct)
 	if !input.FirstRetryTime.IsZero() {
@@ -269,11 +267,11 @@ func (p *pusher) dequeue() (*cloudwatchlogs.PutLogEventsInput, int, error) {
 		dt := now.Sub(input.FirstRetryTime).Hours()
 		if dt > 24*14 || dt < -2 {
 			p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, input.FirstRetryTime, time.Now())
-			return nil, 0, nil
+			return nil, nil
 		}
 	}
 
-	return input.PutLogEventsInput, input.BufferredSize, nil
+	return &input, nil
 }
 
 func (p *pusher) reset() {
@@ -298,18 +296,22 @@ type retryStruct struct {
 }
 
 func (p *pusher) send() {
-	var input *cloudwatchlogs.PutLogEventsInput
 	startTime := time.Now()
 	defer p.resetFlushTimer() // Reset the flush timer after sending the request
 
+	var input *cloudwatchlogs.PutLogEventsInput
+
 	if p.dequeueEvents != nil {
+		//var input *retryStruct
 		p.Log.Debug("send dequeueEvents to cloudwatch")
-		input = p.dequeueEvents
+		input = p.dequeueEvents.PutLogEventsInput
+		temp := p.dequeueEvents
 		p.dequeueEvents = nil
 		input.SequenceToken = p.sequenceToken
-		opStartTime := time.Now()
+		//opStartTime := time.Now()
+		//p.Log.Debug("log group is %v / %v", *input.LogGroupName, *input.LogStreamName)
 		output, err := p.Service.PutLogEvents(input)
-		p.agentInfo.RecordOpData(time.Since(opStartTime), p.backlogBufferSize, err)
+		p.agentInfo.RecordOpData(time.Since(temp.FirstRetryTime), temp.BufferredSize, err)
 		if err == nil {
 			if output.NextSequenceToken != nil {
 				p.sequenceToken = output.NextSequenceToken
@@ -326,10 +328,61 @@ func (p *pusher) send() {
 					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
 				}
 			}
+			p.Log.Debugf("in the persistentQueue Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), *input.LogGroupName, *input.LogStreamName, temp.BufferredSize/1024, time.Since(startTime))
+			p.addStats("rawSize", float64(temp.BufferredSize))
+			return
 		}
-		p.Log.Debugf("in the persistentQueue Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), *input.LogGroupName, *input.LogStreamName, p.backlogBufferSize/1024, time.Since(startTime))
-		p.addStats("rawSize", float64(p.backlogBufferSize))
-		p.backlogBufferSize = 0
+		p.Log.Debugf("errors not nil, we need tell exactly what's error")
+		awsErr, ok := err.(awserr.Error)
+		if !ok {
+			p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", p.Group, p.Stream, err)
+			// Messages will be discarded but done callbacks not called
+			p.reset()
+			return
+		}
+		switch e := awsErr.(type) {
+		case *cloudwatchlogs.ResourceNotFoundException:
+			err := p.createLogGroupAndStream()
+			if err != nil {
+				p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
+				break
+			}
+			p.putRetentionPolicy()
+		case *cloudwatchlogs.InvalidSequenceTokenException:
+			if p.sequenceToken == nil {
+				p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v", p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
+			} else {
+				p.Log.Warnf("Invalid SequenceToken used (%v) while sending logs to %v/%v, will use new token and retry: %v", p.sequenceToken, p.Group, p.Stream, e.Message())
+			}
+			if e.ExpectedSequenceToken == nil {
+				p.Log.Errorf("Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, e.Message())
+			}
+			p.sequenceToken = e.ExpectedSequenceToken
+		case *cloudwatchlogs.InvalidParameterException,
+			*cloudwatchlogs.DataAlreadyAcceptedException:
+			p.Log.Errorf("%v, will not retry the request", e)
+			p.reset()
+			return
+
+		default:
+			p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
+		}
+		p.Log.Debugf("ready to enqueue again")
+		p.wg.Add(1)
+		go func() {
+			defer p.wg.Done()
+			p.Log.Debugf("start to enqueue")
+			err := p.backlogQueue.Enqueue(*temp)
+			if err != nil {
+				p.Log.Debugf("enqueue errors:%v", err)
+			}
+		}()
+		for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
+			done := p.doneCallbacks[i]
+			done()
+		}
+		//p.addStats("rawSize", float64(temp.BufferredSize))
+		p.reset()
 		return
 	}
 
@@ -422,24 +475,9 @@ func (p *pusher) send() {
 			p.Log.Debugf("ready to enqueue")
 			retryinput := retryStruct{}
 			retryinput.PutLogEventsInput = Clone(input)
-			//inputJson, ok := json.Marshal(input)
-			//p.Log.Debugf("marshal happens")
-			//if ok != nil {
-			//	p.Log.Debugf("marshal error happens")
-			//	ok = nil
-			//}
-			//var temp *cloudwatchlogs.PutLogEventsInput
-			//ok = json.Unmarshal(inputJson, temp)
-			//retryinput.PutLogEventsInput = temp
-			//p.Log.Debugf("unmarshal happens")
-			//if ok != nil {
-			//	p.Log.Debugf("%v", ok)
-			//	p.Log.Debugf("when enqueue unmarshal errors happens")
-			//}
-			retryinput.FirstRetryTime = time.Now()
+			retryinput.FirstRetryTime = startTime
 			retryinput.BufferredSize = p.bufferredSize
 			p.wg.Add(1)
-			//p.Log.Debugf("why cannot write into disk")
 			go func() {
 				defer p.wg.Done()
 				p.Log.Debugf("start to enqueue")
@@ -452,7 +490,7 @@ func (p *pusher) send() {
 				done := p.doneCallbacks[i]
 				done()
 			}
-			p.addStats("rawSize", float64(p.bufferredSize))
+			//p.addStats("rawSize", float64(p.bufferredSize))
 			p.reset()
 			return
 		}

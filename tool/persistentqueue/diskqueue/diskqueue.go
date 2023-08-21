@@ -62,7 +62,6 @@ func (dq *diskQueue) Enqueue(obj interface{}) error {
 
 	compressedObj, err := tool.Compress(marshaledObj)
 	if err != nil {
-
 		return err
 	}
 	for dq.queue.Depth() >= dq.size {
