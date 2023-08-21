@@ -1,7 +1,9 @@
 connectors: {}
 exporters:
   awscloudwatchlogs/emf_logs:
-    endpoint: ""
+    certificate_file_path: ""
+    emf_only: true
+    endpoint: "https://fake_endpoint"
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
@@ -27,6 +29,7 @@ exporters:
     profile: ""
     shared_credentials_file: [ ]
   awsemf/containerinsights:
+    certificate_file_path: ""
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
     disable_metric_extraction: false
@@ -185,6 +188,7 @@ processors:
     timeout: 5s
 receivers:
   awscontainerinsightreceiver:
+    certificate_file_path: ""
     add_container_name_metric_label: true
     add_full_pod_name_metric_label: true
     add_service_as_attribute: true
