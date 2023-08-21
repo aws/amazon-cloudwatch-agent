@@ -23,9 +23,12 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
-func TestTranslateWindows(t *testing.T) {
+func TestTranslate(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
 	transl := NewTranslator().(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	c := testutil.GetConf(t, filepath.Join("testdata", "windows", "config.yaml"))
@@ -47,7 +50,8 @@ func TestTranslateWindows(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(expectedCfg, actualCfg))
 }
 
-func TestMetricDecorationWindows(t *testing.T) {
+func TestMetricDecoration(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
 	transl := NewTranslator().(*translator)
 	cfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	conf := testutil.GetConf(t, filepath.Join("testdata", "windows", "config.yaml"))

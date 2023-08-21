@@ -161,7 +161,6 @@ func Test_StatsdPlugin(t *testing.T) {
 	scrapeAndValidateMetrics(t, &sanityTestConfig{
 		plugin:             "statsd",
 		regularInputConfig: regularInputConfig{},
-		//StatsD Format: https://github.com/aws/amazon-cloudwatch-agent/tree/v1.247360.0/plugins/inputs/statsd#influx-statsd
 		serviceInputConfig:   serviceInputConfig{protocol: "udp", listeningPort: "127.0.0.1:14224", metricSending: []byte("statsd_time_idle:42|c\n")},
 		expectedMetrics:      [][]string{{"time_idle"}},
 		numMetricsComparator: assert.Equal,
