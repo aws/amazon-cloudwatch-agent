@@ -47,6 +47,7 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getControlPlaneMetricDeclarations(conf)...)
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
+
 	return nil
 }
 
@@ -110,13 +111,27 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 		MetricNameSelectors: selectors,
 	}
 
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
+		podMetricDeclarations = append(
+			podMetricDeclarations,
+			&awsemfexporter.MetricDeclaration{
+				Dimensions: [][]string{
+					{"FullPodName", "PodName", "Namespace", "ClusterName"},
+					{"PodName", "Namespace", "ClusterName"},
+					{"Service", "Namespace", "ClusterName"},
+					{"ClusterName"},
+				},
+				MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_rx_errors", "pod_interface_network_tx_dropped", "pod_interface_network_tx_errors"},
+			},
+		)
+	}
+
 	podMetricDeclarations = append(
 		podMetricDeclarations,
 		&metricDeclaration)
 
 	return podMetricDeclarations
 }
-
 func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
 	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
@@ -131,6 +146,16 @@ func getNodeMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDecla
 					"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
 					"node_status_capacity_pods", "node_status_allocatable_pods",
 				},
+			},
+			{
+				Dimensions: [][]string{
+					{"NodeName", "InstanceId", "ClusterName"},
+					{"ClusterName"},
+				},
+				MetricNameSelectors: []string{
+					"node_interface_network_rx_dropped", "node_interface_network_rx_errors",
+					"node_interface_network_tx_dropped", "node_interface_network_tx_errors",
+					"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total"},
 			},
 		}
 	} else {

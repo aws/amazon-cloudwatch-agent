@@ -40,6 +40,7 @@ exporters:
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
     endpoint: ""
+    enhanced_container_insights: false
     local_mode: false
     retain_initial_value_of_delta_metric: false
     parse_json_encoded_attr_values: [ Sources, kubernetes ]

@@ -7,6 +7,7 @@ exporters:
     disable_metric_extraction: true
     eks_fargate_container_insights_enabled: false
     endpoint: ""
+    enhanced_container_insights: true
     local_mode: false
     log_group_name: /aws/containerinsights/{ClusterName}/performance
     log_retention: 0
@@ -37,6 +38,13 @@ exporters:
           - pod_network_tx_bytes
           - pod_cpu_utilization_over_pod_limit
           - pod_memory_utilization_over_pod_limit
+      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace,  Service ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - pod_interface_network_rx_dropped
+          - pod_interface_network_rx_errors
+          - pod_interface_network_tx_dropped
+          - pod_interface_network_tx_errors
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ] ]
         label_matchers: [ ]
         metric_name_selectors:
@@ -75,6 +83,15 @@ exporters:
           - node_status_condition_unknown
           - node_status_capacity_pods
           - node_status_allocatable_pods
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - node_interface_network_rx_dropped
+          - node_interface_network_rx_errors
+          - node_interface_network_tx_dropped
+          - node_interface_network_tx_errors
+          - node_diskio_io_service_bytes_total
+          - node_diskio_io_serviced_total
       # node fs metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
