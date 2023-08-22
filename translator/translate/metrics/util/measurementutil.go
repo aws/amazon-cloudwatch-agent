@@ -57,7 +57,7 @@ func ApplyMeasurementRule(inputs interface{}, pluginName string, targetOs string
 			inputMetricName = input.(map[string]interface{})[measurement_name]
 		}
 
-		if formatted_metricName := getValidMetric(targetOs, pluginName, inputMetricName.(string)); formatted_metricName != "" {
+		if formatted_metricName := GetValidMetric(targetOs, pluginName, inputMetricName.(string)); formatted_metricName != "" {
 			returnVal = append(returnVal, formatted_metricName)
 		} else {
 			translator.AddErrorMessages(path, "measurement name "+inputMetricName.(string)+" is invalid")
@@ -90,7 +90,7 @@ func ApplyMeasurementRuleForMetricDecoration(inputs interface{}, pluginName stri
 			continue
 		}
 
-		formattedMetricName := getValidMetric(targetOs, pluginName, inputMetricName.(string))
+		formattedMetricName := GetValidMetric(targetOs, pluginName, inputMetricName.(string))
 
 		if formattedMetricName != "" {
 			decorationMap := make(map[string]string)
@@ -115,7 +115,7 @@ func ApplyMeasurementRuleForMetricDecoration(inputs interface{}, pluginName stri
 	return
 }
 
-func getValidMetric(targetOs string, pluginName string, metricName string) string {
+func GetValidMetric(targetOs string, pluginName string, metricName string) string {
 	var registeredMetrics map[string][]string
 	switch targetOs {
 	case translatorConfig.OS_TYPE_LINUX:
@@ -125,7 +125,7 @@ func getValidMetric(targetOs string, pluginName string, metricName string) strin
 	case translatorConfig.OS_TYPE_WINDOWS:
 		return metricName
 	default:
-		log.Panicf("E! Unknown os platform in getValidMetric: %s", targetOs)
+		log.Panicf("E! Unknown os platform in GetValidMetric: %s", targetOs)
 	}
 	if val, ok := registeredMetrics[pluginName]; ok {
 		formattedMetricName := getFormattedMetricName(metricName, pluginName)

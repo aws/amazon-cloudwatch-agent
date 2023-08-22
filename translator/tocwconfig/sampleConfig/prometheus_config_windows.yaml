@@ -7,7 +7,9 @@ exporters:
     version: "0"
     retain_initial_value_of_delta_metric: false
     eks_fargate_container_insights_enabled: false
+    certificate_file_path: ""
     endpoint: ""
+    enhanced_container_insights: false
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/TestCluster/prometheus
     log_retention: 0

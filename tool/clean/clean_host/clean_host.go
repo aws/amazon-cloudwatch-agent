@@ -55,6 +55,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 		"cwagent-integ-test-ec2-windows-*",
 		"cwagent-performance-*",
 		"cwagent-stress-*",
+		"LocalStackIntegrationTestInstance",
 	}}
 
 	instanceInput := ec2.DescribeInstancesInput{

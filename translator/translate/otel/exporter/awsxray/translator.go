@@ -58,6 +58,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	cfg.RoleARN = getRoleARN(conf)
 	cfg.Region = getRegion(conf)
+	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
+		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+	}
 	if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
 		cfg.Endpoint = endpointOverride
 	}

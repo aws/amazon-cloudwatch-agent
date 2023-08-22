@@ -24,6 +24,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -56,6 +57,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 
 func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
@@ -168,15 +170,22 @@ func TestLogOnlyConfig(t *testing.T) {
 
 func TestTraceConfig(t *testing.T) {
 	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "trace_config", "linux", expectedEnvVars, "_linux")
 	checkTranslation(t, "trace_config", "darwin", expectedEnvVars, "_linux")
 	checkTranslation(t, "trace_config", "windows", expectedEnvVars, "_windows")
 }
 
+func TestConfigWithEnvironmentVariables(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "config_with_env", "linux", expectedEnvVars, "")
+}
+
 func TestStandardConfigWithCommonConfig(t *testing.T) {
 	resetContext(t)
-	readCommonConfig(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentialsProxySsl.toml")
 	expectedEnvVars := map[string]string{
 		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
 		"HTTPS_PROXY":   "https://127.0.0.1:3280",
@@ -186,13 +195,6 @@ func TestStandardConfigWithCommonConfig(t *testing.T) {
 	checkTranslation(t, "standard_config_linux", "linux", expectedEnvVars, "_with_common_config")
 	checkTranslation(t, "standard_config_linux", "darwin", nil, "_with_common_config")
 	checkTranslation(t, "standard_config_windows", "windows", expectedEnvVars, "_with_common_config")
-}
-
-func TestDeltaConfigLinux(t *testing.T) {
-	resetContext(t)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "delta_config_linux", "linux", expectedEnvVars, "")
-	checkTranslation(t, "delta_config_linux", "darwin", nil, "")
 }
 
 func TestDeltaNetConfigLinux(t *testing.T) {
@@ -261,10 +263,10 @@ func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFil
 	verifyToYamlTranslation(t, input, expectedYamlFilePath, tokenReplacements...)
 }
 
-func readCommonConfig(t *testing.T) {
+func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 	ctx := context.CurrentContext()
 	cfg := commonconfig.New()
-	data, _ := os.ReadFile("./sampleConfig/commonConfigTest.toml")
+	data, _ := os.ReadFile(commonConfigFilePath)
 	require.NoError(t, cfg.Parse(bytes.NewReader(data)))
 	ctx.SetCredentials(cfg.CredentialsMap())
 	ctx.SetProxy(cfg.ProxyMap())
@@ -281,6 +283,7 @@ func resetContext(t *testing.T) {
 	context.ResetContext()
 
 	t.Setenv("ProgramData", "c:\\ProgramData")
+	retryer.IMDSRetryer = nil
 }
 
 // toml files in the given path will be parsed into the config toml struct and be compared as struct

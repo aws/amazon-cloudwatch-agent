@@ -28,8 +28,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
-	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/otelcol"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -40,6 +38,7 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
 )
@@ -312,23 +311,15 @@ func runAgent(ctx context.Context,
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
 
 	yamlConfigPath := *fOtelConfig
-	fprovider := fileprovider.New()
-	settings := otelcol.ConfigProviderSettings{
-		ResolverSettings: confmap.ResolverSettings{
-			URIs:      []string{yamlConfigPath},
-			Providers: map[string]confmap.Provider{fprovider.Scheme(): fprovider},
-		},
+	provider, err := configprovider.Get(yamlConfigPath)
+	if err != nil {
+		log.Printf("E! Error while initializing config provider: %v\n", err)
+		return err
 	}
 
 	factories, err := components(c)
 	if err != nil {
 		log.Printf("E! Error while adapting telegraf input plugins: %v\n", err)
-		return err
-	}
-
-	provider, err := otelcol.NewConfigProvider(settings)
-	if err != nil {
-		log.Printf("E! Error while initializing config provider: %v\n", err)
 		return err
 	}
 

@@ -114,10 +114,8 @@ func TestFindReceiversInConfig(t *testing.T) {
 					},
 				},
 			},
-			os: translatorconfig.OS_TYPE_WINDOWS,
-			want: map[component.ID]wantResult{
-				component.NewID("telegraf_windows_event_log"): {"logs::logs_collected::windows_events", time.Minute},
-			},
+			os:   translatorconfig.OS_TYPE_WINDOWS,
+			want: map[component.ID]wantResult{},
 		},
 		"WithNoSocketListener": {
 			input: map[string]interface{}{
