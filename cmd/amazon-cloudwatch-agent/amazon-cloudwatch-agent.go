@@ -28,6 +28,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/otelcol"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -330,10 +331,7 @@ func runAgent(ctx context.Context,
 
 	agentinfo.SetComponents(cfg, c)
 
-	params := otelcol.CollectorSettings{
-		Factories:      factories,
-		ConfigProvider: provider,
-	}
+	params := getCollectorParams(factories, provider)
 
 	cmd := otelcol.NewCommand(params)
 
@@ -344,6 +342,20 @@ func runAgent(ctx context.Context,
 	cmd.SetArgs(e)
 
 	return cmd.Execute()
+}
+
+func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider) otelcol.CollectorSettings {
+	params := otelcol.CollectorSettings{
+		Factories:      factories,
+		ConfigProvider: provider,
+		// build info is essential for populating the user agent string in otel contrib upstream exporters, like the EMF exporter
+		BuildInfo: component.BuildInfo{
+			Command:     "CWAgent",
+			Description: "CloudWatch Agent",
+			Version:     agentinfo.Version(),
+		},
+	}
+	return params
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
