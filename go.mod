@@ -78,7 +78,7 @@ replace github.com/go-kit/kit => github.com/go-kit/kit v0.12.1-0.20220808180842-
 replace github.com/openshift/api v3.9.0+incompatible => github.com/openshift/api v0.0.0-20180801171038-322a19404e37
 
 require (
-	github.com/BurntSushi/toml v0.4.1
+	github.com/BurntSushi/toml v1.3.2
 	github.com/Jeffail/gabs v1.4.0
 	github.com/Rican7/retry v0.1.1-0.20160712041035-272ad122d6e5
 	github.com/aws/aws-sdk-go v1.44.309
@@ -152,6 +152,8 @@ require (
 	k8s.io/client-go v0.26.3
 	k8s.io/klog/v2 v2.90.1
 )
+
+require github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws v0.24.0
 
 require (
 	cloud.google.com/go/compute v1.19.0 // indirect
