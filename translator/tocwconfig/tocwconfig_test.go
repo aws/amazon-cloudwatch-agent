@@ -51,12 +51,12 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
-	t.Setenv(envconfig.AWS_CA_BUNDLE, "sampleConfig/public_amazon_cert.pem")
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/etc/test/ca_bundle.pem")
 	defer func() {
 		t.Setenv(envconfig.AWS_CA_BUNDLE, "")
 	}()
 	expectedEnvVars := map[string]string{
-		"AWS_CA_BUNDLE": "sampleConfig/public_amazon_cert.pem",
+		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
 	}
 	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_container_insights_config", "darwin", nil, "")
