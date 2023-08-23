@@ -6,7 +6,7 @@ exporters:
     dimension_rollup_option: NoDimensionRollup
     disable_metric_extraction: true
     eks_fargate_container_insights_enabled: false
-    endpoint: ""
+    endpoint: "https://fake_endpoint"
     enhanced_container_insights: true
     local_mode: false
     log_group_name: /aws/containerinsights/{ClusterName}/performance
