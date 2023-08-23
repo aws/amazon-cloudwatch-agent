@@ -978,7 +978,7 @@ jobs:
     name: "EC2WinPerformanceTest"
     needs: [ BuildAndUpload, GenerateTestMatrix ]
     runs-on: ubuntu-latest
-    if: false
+    if : false
     strategy:
       fail-fast: false
       matrix:

@@ -1,12 +1,17 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package diskqueue
 
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/tool"
-	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/nsqio/go-diskqueue"
-	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue"
 )
 
 type diskQueue struct {
@@ -14,6 +19,7 @@ type diskQueue struct {
 	unmarshal persistentqueue.Unmarshaler
 	queue     diskqueue.Interface
 	size      int64
+	logger    telegraf.Logger
 }
 
 func NewPersistentQueue(
@@ -43,12 +49,14 @@ func NewPersistentQueue(
 			syncTimeout,
 			getDiskQueueLogger(logger),
 		),
+		logger: logger,
 	}
 }
 
 func (dq *diskQueue) Enqueue(obj interface{}) error {
 	marshaledObj, err := dq.marshal(obj)
 	if err != nil {
+		dq.logger.Debugf("errors happen when marshal")
 		return err
 	}
 
@@ -59,10 +67,13 @@ func (dq *diskQueue) Enqueue(obj interface{}) error {
 	for dq.queue.Depth() >= dq.size {
 		<-dq.queue.ReadChan()
 	}
+	dq.logger.Debugf("put function start work")
+	//return dq.queue.Put(marshaledObj)
 	return dq.queue.Put(compressedObj)
 }
 
 func (dq *diskQueue) Dequeue() (interface{}, error) {
+	//obj := <-dq.queue.ReadChan()
 	obj, err := tool.Uncompress(<-dq.queue.ReadChan())
 	if err != nil {
 		return nil, err
@@ -80,18 +91,18 @@ func (dq *diskQueue) Close() error {
 
 func getDiskQueueLogger(logger telegraf.Logger) func(level diskqueue.LogLevel, f string, args ...interface{}) {
 	return func(level diskqueue.LogLevel, f string, args ...interface{}) {
-		logFn := logger.Info
+		logFn := logger.Debugf
 		switch level {
 		case diskqueue.DEBUG:
-			logFn = logger.Debug
+			logFn = logger.Debugf
 		case diskqueue.INFO:
-			logFn = logger.Info
+			logFn = logger.Debugf
 		case diskqueue.WARN:
-			logFn = logger.Warn
+			logFn = logger.Debugf
 		case diskqueue.ERROR:
-			logFn = logger.Error
+			logFn = logger.Debugf
 		case diskqueue.FATAL:
-			logFn = logger.Error
+			logFn = logger.Debugf
 		}
 
 		logFn(fmt.Sprintf(f, args))
