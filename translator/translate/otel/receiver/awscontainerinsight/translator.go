@@ -5,6 +5,7 @@ package awscontainerinsight
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -79,6 +80,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultMetricsCollectionInterval)
 	cfg.ContainerOrchestrator = configuredService.Value
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
+		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+	}
 
 	if configuredService.Value == eks {
 		if err := t.setClusterName(conf, cfg); err != nil {

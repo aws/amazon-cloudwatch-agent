@@ -4,14 +4,18 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
 	sysruntime "runtime"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -20,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
@@ -27,10 +32,9 @@ import (
 
 const (
 	configJsonFileName = "config.json"
-
-	OsTypeLinux   = "linux"
-	OsTypeWindows = "windows"
-	OsTypeDarwin  = "darwin"
+	OsTypeLinux        = "linux"
+	OsTypeWindows      = "windows"
+	OsTypeDarwin       = "darwin"
 
 	MapKeyMetricsCollectionInterval = "metrics_collection_interval"
 	MapKeyInstances                 = "resources"
@@ -40,7 +44,23 @@ const (
 func CurOS() string {
 	return sysruntime.GOOS
 }
-
+func getBackupDir() string {
+	switch sysruntime.GOOS {
+	case "windows":
+		return filepath.Join(os.Getenv("APPDATA"), "Amazon", "CloudWatchAgent", "etc", "backup-configs")
+	default:
+		return "/opt/aws/amazon-cloudwatch-agent/etc/backup-configs"
+	}
+}
+func FileBackup(filePath string, dirPath string) error {
+	fileInfo, err := os.Stat(filePath)
+	if os.IsNotExist(err) || fileInfo.Size() == 0 {
+		return nil
+	} else if err = backupConfigFile(filePath, dirPath); err != nil {
+		return err
+	}
+	return nil
+}
 func CurPath() string {
 	ex, err := os.Executable()
 	if err != nil {
@@ -83,15 +103,69 @@ func SerializeResultMapToJsonByteArray(resultMap map[string]interface{}) []byte 
 	return resultByteArray
 }
 
-func SaveResultByteArrayToJsonFile(resultByteArray []byte) string {
-	filePath := ConfigFilePath()
-	err := os.WriteFile(filePath, resultByteArray, 0755)
+func SaveResultByteArrayToJsonFile(resultByteArray []byte, filePath string) string {
+	//make a backup of file if it exists
+	dirPath := getBackupDir()
+	err := FileBackup(filePath, dirPath)
+	if err != nil {
+		fmt.Println("There was an error trying to backup your file: ", err)
+	} else {
+		fmt.Println("Existing config JSON identified and copied to: ", dirPath)
+	}
+	err = os.WriteFile(filePath, resultByteArray, 0755)
 	if err != nil {
 		fmt.Printf("Error in writing file to %s: %v\nMake sure that you have write permission to %s.", filePath, err, filePath)
 		os.Exit(1)
 	}
 	fmt.Printf("Saved config file to %s successfully.\n", filePath)
 	return filePath
+}
+func backupConfigFile(configFilePath, backupDirPath string) error {
+
+	err := os.MkdirAll(backupDirPath, 0755)
+	if err != nil {
+		return err
+	}
+	files, err := os.ReadDir(backupDirPath)
+	if err != nil {
+		return err
+	}
+
+	newBackupNumber := len(files) + 1
+	if len(files) >= 10 {
+		sort.Slice(files, func(i, j int) bool {
+			infoI, _ := files[i].Info()
+			infoJ, _ := files[j].Info()
+			return infoI.ModTime().Before(infoJ.ModTime())
+		})
+
+		removedFileName := files[0].Name()
+		removedNumberStr := strings.TrimSuffix(strings.TrimPrefix(removedFileName, "config-"), ".json")
+		removedNumber, err := strconv.Atoi(removedNumberStr)
+		if err != nil {
+			return err
+		}
+		err = os.Remove(filepath.Join(backupDirPath, files[0].Name()))
+		if err != nil {
+			return err
+		}
+		newBackupNumber = removedNumber + 10
+	}
+	backupFilePath := filepath.Join(backupDirPath, fmt.Sprintf("config-%d.json", newBackupNumber))
+
+	backUpFile, err := os.Create(backupFilePath)
+	defer backUpFile.Close()
+	if err != nil {
+		return err
+	}
+	configFile, err := os.Open(configFilePath)
+	defer configFile.Close()
+	if err != nil {
+		return err
+	}
+	//copying file to backup
+	_, err = io.Copy(backUpFile, configFile)
+	return err
 }
 
 func SDKRegion() (region string) {
@@ -135,21 +209,39 @@ func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentia
 
 func DefaultEC2Region() (region string) {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
-	ses, err := session.NewSession(&aws.Config{
-		HTTPClient: &http.Client{Timeout: 1 * time.Second},
-		MaxRetries: aws.Int(0),
-		LogLevel:   configaws.SDKLogLevel(),
-		Logger:     configaws.SDKLogger{},
+	// imds should by the time user can run the wizard
+	// thus cancel context faster
+	// no need for a fallback metric since this happens during wizard
+	// we will not get this metric from user-agent
+	sesFallBackDisabled, err := session.NewSession(&aws.Config{
+		MaxRetries:                aws.Int(3),
+		LogLevel:                  configaws.SDKLogLevel(),
+		Logger:                    configaws.SDKLogger{},
+		EC2MetadataEnableFallback: aws.Bool(false),
+		Retryer:                   retryer.IMDSRetryer,
+	})
+	sesFallBackEnabled, err := session.NewSession(&aws.Config{
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
 	})
 	if err != nil {
 		return
 	}
-	md := ec2metadata.New(ses)
-	if !md.Available() {
-		return
-	}
-	if info, err := md.Region(); err == nil {
+	md := ec2metadata.New(sesFallBackDisabled)
+	ctx, cancelFn := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFn()
+	if info, errOuter := md.RegionWithContext(ctx); errOuter == nil {
 		region = info
+	} else {
+		log.Printf("D! could not get region without imds v1 fallback enable thus enable fallback")
+		mdInner := ec2metadata.New(sesFallBackEnabled)
+		contextInner, cancelFnInner := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancelFnInner()
+		if infoInner, errInner := mdInner.RegionWithContext(contextInner); errInner == nil {
+			region = infoInner
+		} else {
+			fmt.Println("Could not get region from ec2 metadata...")
+		}
 	}
 	return
 }
@@ -223,6 +315,31 @@ func Choice(question string, defaultOption int, validValues []string) string {
 	}
 }
 
+// ChoiceIndex returns index of choice chosen
+func ChoiceIndex(question string, defaultOption int, validValues []string) int {
+	for {
+		var answer string
+		options := ""
+		if validValues != nil {
+			for i := range validValues {
+				options = fmt.Sprintf("%s%s. %s\n", options, strconv.Itoa(i+1), validValues[i])
+			}
+			fmt.Printf("%s\n%sdefault choice: [%d]:\n\r", question, options, defaultOption)
+		}
+		stdin.Scanln(&answer)
+		var option int
+		var err error
+		if answer == "" {
+			option = defaultOption
+		} else {
+			option, err = strconv.Atoi(answer)
+		}
+		if err == nil && option > 0 && option <= len(validValues) {
+			return option - 1
+		}
+		fmt.Printf("The value %s is not valid to this question.\nPlease retry to answer:\n", answer)
+	}
+}
 func EnterToExit() {
 	fmt.Println("Please press Enter to exit...")
 	stdin.Scanln()

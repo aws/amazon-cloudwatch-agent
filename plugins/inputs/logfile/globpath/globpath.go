@@ -33,7 +33,7 @@ func Compile(path string) (*GlobPath, error) {
 
 	// if there are no glob meta characters in the path, don't bother compiling
 	// a glob object or finding the root directory. (see short-circuit in Match)
-	if !out.hasMeta || !out.hasSuperMeta {
+	if !out.hasMeta && !out.hasSuperMeta {
 		return &out, nil
 	}
 
@@ -52,7 +52,7 @@ func Compile(path string) (*GlobPath, error) {
 }
 
 func (g *GlobPath) Match() map[string]os.FileInfo {
-	if !g.hasMeta {
+	if !g.hasMeta && !g.hasSuperMeta {
 		out := make(map[string]os.FileInfo)
 		info, err := os.Stat(g.path)
 		if info != nil {
@@ -61,8 +61,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 			log.Printf("D! Stat file %v failed due to %v", g.path, err)
 		}
 		return out
-	}
-	if !g.hasSuperMeta {
+	} else if !g.hasSuperMeta {
 		out := make(map[string]os.FileInfo)
 		files, _ := filepath.Glob(g.path)
 		for _, file := range files {
@@ -139,7 +138,8 @@ func hasMeta(path string) bool {
 	return strings.ContainsAny(path, "*?[")
 }
 
-// hasSuperMeta reports whether path contains any super magic glob characters (**).
+// hasSuperMeta reports whether path contains any super magic glob characters (**), or glob characters
+// that are not supported by filepath.Glob (!{})
 func hasSuperMeta(path string) bool {
-	return strings.Contains(path, "**")
+	return strings.Contains(path, "**") || strings.ContainsAny(path, "!{}")
 }

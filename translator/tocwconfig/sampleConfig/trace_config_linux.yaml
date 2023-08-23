@@ -2,6 +2,7 @@ connectors: {}
 exporters:
   awsxray:
     aws_log_groups: []
+    certificate_file_path: ""
     endpoint: ""
     index_all_attributes: false
     indexed_attributes: []
@@ -14,8 +15,8 @@ exporters:
     request_timeout_seconds: 30
     resource_arn: ""
     role_arn: ""
-    profile: ""
-    shared_credentials_file: []
+    profile: "default"
+    shared_credentials_file: [ "/root/.aws/credentials" ]
     telemetry:
       enabled: true
       include_metadata: true

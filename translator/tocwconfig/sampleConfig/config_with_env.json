@@ -1,0 +1,28 @@
+{
+  "agent": {
+    "region": "${ENV_REGION}"
+  },
+  "logs": {
+    "credentials": {
+      "role_arn": "${ENV_CREDENTIALS_ROLE_ARN}"
+    },
+    "log_stream_name": "${ENV_LOG_STREAM_NAME}",
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "timezone": "UTC",
+            "retention_in_days": 5
+          }
+        ]
+      }
+    },
+    "metrics_collected": {
+      "emf": {
+      }
+    }
+  }
+}

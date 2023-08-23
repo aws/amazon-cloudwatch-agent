@@ -1,11 +1,13 @@
 connectors: {}
 exporters:
   awscloudwatchlogs/emf_logs:
-    endpoint: ""
+    emf_only: true
+    certificate_file_path: ""
+    endpoint: "https://fake_endpoint"
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
-    log_stream_name: i-UNKNOWN
+    log_stream_name: fake-host-name
     max_retries: 2
     no_verify_ssl: false
     num_workers: 8
@@ -31,7 +33,9 @@ exporters:
     dimension_rollup_option: NoDimensionRollup
     disable_metric_extraction: false
     eks_fargate_container_insights_enabled: false
+    certificate_file_path: ""
     endpoint: ""
+    enhanced_container_insights: false
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/{ClusterName}/performance
     log_retention: 0
@@ -103,6 +107,7 @@ receivers:
     collection_interval: 30s
     container_orchestrator: ecs
     enable_control_plane_metrics: false
+    certificate_file_path: ""
     endpoint: ""
     leader_lock_name: otel-container-insight-clusterleader
     leader_lock_using_config_map_only: false

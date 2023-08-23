@@ -56,7 +56,7 @@ func migrateOldAgentConfig() {
 
 	// 3 - marshall the new config object to string
 	if newConfigJson, err := json.Marshal(newConfig); err == nil {
-		util.SaveResultByteArrayToJsonFile(newConfigJson)
+		util.SaveResultByteArrayToJsonFile(newConfigJson, util.ConfigFilePath())
 	} else {
 		fmt.Fprintf(os.Stderr, "Failed to produce the new configuration file. Error details: %v", err)
 		os.Exit(1)
