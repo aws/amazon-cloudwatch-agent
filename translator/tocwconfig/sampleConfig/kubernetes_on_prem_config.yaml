@@ -7,6 +7,7 @@ exporters:
     disable_metric_extraction: true
     eks_fargate_container_insights_enabled: false
     endpoint: ""
+    "imds_retries": 1
     enhanced_container_insights: true
     local_mode: false
     log_group_name: /aws/containerinsights/{ClusterName}/performance
@@ -185,6 +186,7 @@ receivers:
     container_orchestrator: eks
     enable_control_plane_metrics: true
     endpoint: ""
+    "imds_retries": 1
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
     local_mode: true

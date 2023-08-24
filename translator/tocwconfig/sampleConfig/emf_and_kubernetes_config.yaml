@@ -4,6 +4,7 @@ exporters:
     emf_only: true
     certificate_file_path: ""
     endpoint: "https://fake_endpoint"
+    "imds_retries": 2
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
@@ -35,6 +36,7 @@ exporters:
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
     endpoint: ""
+    "imds_retries": 2
     enhanced_container_insights: true
     local_mode: false
     log_group_name: /aws/containerinsights/{ClusterName}/performance
@@ -217,6 +219,7 @@ receivers:
     enable_control_plane_metrics: true
     certificate_file_path: ""
     endpoint: ""
+    "imds_retries": 2
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
     local_mode: false
