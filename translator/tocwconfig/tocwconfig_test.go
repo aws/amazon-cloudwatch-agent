@@ -15,8 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-
 	"github.com/BurntSushi/toml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -26,6 +24,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
