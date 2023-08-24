@@ -83,6 +83,12 @@ func TestLogsAndKubernetesConfig(t *testing.T) {
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
+	// for otel components and not our adapter components like
+	// ec2 tagger processor we will have 0 for the imds number retry
+	// in config instead of empty both become the value
+	// both empty and 0 become 0 on converting of the yaml into a go struct
+	// this is due to int defaulting to 0 in go
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "logs_and_kubernetes_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "logs_and_kubernetes_config", "darwin", nil, "")

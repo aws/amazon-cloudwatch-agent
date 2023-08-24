@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
@@ -84,6 +85,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {
