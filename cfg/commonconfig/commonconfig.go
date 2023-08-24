@@ -26,6 +26,7 @@ type CommonConfig struct {
 	Credentials *Credentials
 	Proxy       *Proxy
 	SSL         *SSL
+	IMDS        *IMDS
 }
 
 type Credentials struct {
@@ -41,6 +42,11 @@ type Proxy struct {
 
 type SSL struct {
 	CABundlePath *string `toml:"ca_bundle_path"`
+}
+
+// IMDS is in common config because it happens before agent config translation
+type IMDS struct {
+	ImdsRetries *int `toml:"imds_retries"`
 }
 
 func New() *CommonConfig {

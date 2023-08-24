@@ -31,7 +31,7 @@ func TestMetadataProvider_Get(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			c := NewMetadataProvider(tc.sess)
+			c := NewMetadataProvider(tc.sess, 0)
 			gotDoc, err := c.Get(tc.ctx)
 			assert.NotNil(t, err)
 			assert.Truef(t, reflect.DeepEqual(gotDoc, tc.expectDoc), "get() gotDoc: %v, expected: %v", gotDoc, tc.expectDoc)
@@ -64,7 +64,7 @@ func TestMetadataProvider_available(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			c := NewMetadataProvider(tc.sess)
+			c := NewMetadataProvider(tc.sess, 0)
 			_, err := c.InstanceID(tc.ctx)
 			assert.ErrorIs(t, err, tc.want)
 		})

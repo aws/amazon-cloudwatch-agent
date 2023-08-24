@@ -6,7 +6,6 @@ package ec2tagger
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -29,11 +28,11 @@ type metadataClient struct {
 
 var _ MetadataProvider = (*metadataClient)(nil)
 
-func NewMetadataProvider(p client.ConfigProvider) MetadataProvider {
+func NewMetadataProvider(p client.ConfigProvider, retries int) MetadataProvider {
 	disableFallbackConfig := &aws.Config{
 		LogLevel:                  configaws.SDKLogLevel(),
 		Logger:                    configaws.SDKLogger{},
-		Retryer:                   retryer.IMDSRetryer,
+		Retryer:                   retryer.NewIMDSRetryer(retries),
 		EC2MetadataEnableFallback: aws.Bool(false),
 	}
 	enableFallbackConfig := &aws.Config{
@@ -47,43 +46,28 @@ func NewMetadataProvider(p client.ConfigProvider) MetadataProvider {
 }
 
 func (c *metadataClient) InstanceID(ctx context.Context) (string, error) {
-	contextOuter, cancelFn := context.WithTimeout(ctx, 30*time.Second)
-	defer cancelFn()
-	instanceId, err := c.metadataFallbackDisabled.GetMetadataWithContext(contextOuter, "instance-id")
+	instanceId, err := c.metadataFallbackDisabled.GetMetadataWithContext(ctx, "instance-id")
 	if err != nil {
 		log.Printf("D! could not get instance id without imds v1 fallback enable thus enable fallback")
-		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
-		defer cancelFnInner()
-		instanceIdInner, errInner := c.metadataFallbackEnabled.GetMetadataWithContext(contextInner, "instance-id")
-		return instanceIdInner, errInner
+		return c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "instance-id")
 	}
 	return instanceId, err
 }
 
 func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
-	contextOuter, cancelFn := context.WithTimeout(ctx, 30*time.Second)
-	defer cancelFn()
-	hostname, err := c.metadataFallbackDisabled.GetMetadataWithContext(contextOuter, "hostname")
+	hostname, err := c.metadataFallbackDisabled.GetMetadataWithContext(ctx, "hostname")
 	if err != nil {
 		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
-		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
-		defer cancelFnInner()
-		hostnameInner, errInner := c.metadataFallbackEnabled.GetMetadataWithContext(contextInner, "hostname")
-		return hostnameInner, errInner
+		return c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "hostname")
 	}
 	return hostname, err
 }
 
 func (c *metadataClient) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
-	contextOuter, cancelFn := context.WithTimeout(ctx, 30*time.Second)
-	defer cancelFn()
-	instanceDocument, err := c.metadataFallbackDisabled.GetInstanceIdentityDocumentWithContext(contextOuter)
+	instanceDocument, err := c.metadataFallbackDisabled.GetInstanceIdentityDocumentWithContext(ctx)
 	if err != nil {
 		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
-		contextInner, cancelFnInner := context.WithTimeout(ctx, 30*time.Second)
-		defer cancelFnInner()
-		instanceDocumentInner, errInner := c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(contextInner)
-		return instanceDocumentInner, errInner
+		return c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(ctx)
 	}
 	return instanceDocument, err
 }

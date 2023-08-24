@@ -34,6 +34,7 @@ processors:
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
         shared_credential_file: fake-path
+        imds_retries: 2
 receivers:
     telegraf_cpu:
         collection_interval: 1m0s

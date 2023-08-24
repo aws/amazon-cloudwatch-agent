@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -24,6 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
@@ -147,7 +149,10 @@ func TestInvalidInputConfig(t *testing.T) {
 }
 
 func TestStandardConfig(t *testing.T) {
+	// the way our config translator works is int(0) leaves an empty in the yaml
+	// this will default to 0 on contrib side since int default is 0 for golang
 	resetContext(t)
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "standard_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "standard_config_linux", "darwin", nil, "")
@@ -271,9 +276,11 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 	ctx.SetCredentials(cfg.CredentialsMap())
 	ctx.SetProxy(cfg.ProxyMap())
 	ctx.SetSSL(cfg.SSLMap())
+	util.LoadImdsRetries(cfg.IMDS)
 }
 
 func resetContext(t *testing.T) {
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
 	util.DetectRegion = func(string, map[string]string) string {
 		return "us-west-2"
 	}
@@ -283,7 +290,6 @@ func resetContext(t *testing.T) {
 	context.ResetContext()
 
 	t.Setenv("ProgramData", "c:\\ProgramData")
-	retryer.IMDSRetryer = nil
 }
 
 // toml files in the given path will be parsed into the config toml struct and be compared as struct
