@@ -980,6 +980,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/opencen
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.77.0 h1:CFTeCIKxPyypJcH5ZhthAfV93pbi5huF44NEftABnjk=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.77.0 h1:/6aMxOY14YS3xbm+HuxXI8NFxTnmRHwLf5CARLEzzDw=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.77.0/go.mod h1:PU+KpXerGtB06q/nSvyVYoO3/EKBs243OIM+BFPVtkg=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.77.0 h1:ewo6UOO4aIGV0TbwSm/MlSBc7rKGPJhwqN96ogTJpn4=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.77.0/go.mod h1:FG1+Oen/nKqgdJJHgYMf3+Q+e9o1wG6qIs3EQxhVipQ=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.77.0 h1:6qvVVmDbm5hao1WWbKLkQHRMxr9kkkmmAjEMUZK1RkU=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.77.0/go.mod h1:Z0rIaEGTQpstoOsSNS1aA8wfpwz6iSc1Ljh+tWZTQPc=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.77.0 h1:0UkaMRzC6LfxqF9WhdKS7UmuXWVuZUiA/hcT99iv4Bc=

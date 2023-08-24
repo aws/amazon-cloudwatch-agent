@@ -92,6 +92,17 @@ exporters:
     version: "0"
 extensions: {}
 processors:
+  metricstransform/containerinsights:
+    transforms:
+      - include: apiserver_request_total
+        match_type: regexp
+        experimental_match_labels: { "code": "5.*" }
+        action: insert
+        new_name: apiserver_request_total_5xx
+        aggregation_type: ""
+        group_resource_labels: { }
+        operations: [ ]
+        submatch_case: ""
   batch/containerinsights:
     send_batch_max_size: 0
     send_batch_size: 8192
@@ -174,6 +185,7 @@ service:
       exporters:
         - awsemf/containerinsights
       processors:
+        - metricstransform/containerinsights
         - batch/containerinsights
       receivers:
         - awscontainerinsightreceiver
