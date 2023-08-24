@@ -177,7 +177,28 @@ exporters:
           - rest_client_request_duration_seconds
           - rest_client_requests_total
           - etcd_request_duration_seconds
-    metric_descriptors: [ ]
+    metric_descriptors:
+      - metric_name: apiserver_storage_objects
+        unit: Count
+        overwrite: true
+      - metric_name: apiserver_request_total
+        unit: Count
+        overwrite: true
+      - metric_name: apiserver_request_duration_seconds
+        unit: Seconds
+        overwrite: true
+      - metric_name: apiserver_admission_controller_admission_duration_seconds
+        unit: Seconds
+        overwrite: true
+      - metric_name: rest_client_request_duration_seconds
+        unit: Seconds
+        overwrite: true
+      - metric_name: rest_client_requests_total
+        unit: Count
+        overwrite: true
+      - metric_name: etcd_request_duration_seconds
+        unit: Seconds
+        overwrite: true
     namespace: ContainerInsights
     no_verify_ssl: false
     num_workers: 8

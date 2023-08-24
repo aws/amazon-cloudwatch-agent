@@ -47,6 +47,7 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getControlPlaneMetricDeclarations(conf)...)
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
+	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
 
 	return nil
 }
@@ -296,4 +297,50 @@ func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Met
 		}...)
 	}
 	return metricDeclarations
+}
+
+func getControlPlaneMetricDescriptors(conf *confmap.Conf) []awsemfexporter.MetricDescriptor {
+	containerInsightsGranularityLevel := awscontainerinsight.GetGranularityLevel(conf)
+	if containerInsightsGranularityLevel >= awscontainerinsight.EnhancedClusterMetrics {
+		// the control plane metrics do not have units so we need to add them manually
+		return []awsemfexporter.MetricDescriptor{
+			{
+				MetricName: "apiserver_storage_objects",
+				Unit:       "Count",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "apiserver_request_total",
+				Unit:       "Count",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "apiserver_request_duration_seconds",
+				Unit:       "Seconds",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "apiserver_admission_controller_admission_duration_seconds",
+				Unit:       "Seconds",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "rest_client_request_duration_seconds",
+				Unit:       "Seconds",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "rest_client_requests_total",
+				Unit:       "Count",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "etcd_request_duration_seconds",
+				Unit:       "Seconds",
+				Overwrite:  true,
+			},
+		}
+	}
+	return []awsemfexporter.MetricDescriptor{}
+
 }
