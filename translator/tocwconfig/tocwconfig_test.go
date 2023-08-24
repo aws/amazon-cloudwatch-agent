@@ -9,12 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 
 	"github.com/BurntSushi/toml"
 	"github.com/google/go-cmp/cmp"
