@@ -9,7 +9,7 @@
       "kubernetes": {
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
-        "metric_granularity": 3
+        "enhanced_container_insights": true
       }
     },
     "logs_collected": {

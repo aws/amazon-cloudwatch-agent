@@ -100,17 +100,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.LocalMode = true
 		}
 
-		metricGranularityLevel := GetGranularityLevel(conf)
-		switch metricGranularityLevel {
-		case IndividualPodContainerMetrics:
+		if EnhancedContainerInsightsEnabled(conf) {
 			cfg.AddFullPodNameMetricLabel = true
 			cfg.AddContainerNameMetricLabel = true
 			cfg.PrefFullPodName = true
 			cfg.EnableControlPlaneMetrics = true
-		case EnhancedClusterMetrics:
-			cfg.EnableControlPlaneMetrics = true
-		default:
-			cfg.EnableControlPlaneMetrics = false
 		}
 	}
 

@@ -43,7 +43,7 @@ exporters:
     max_retries: 2
     metric_declarations:
       # container metrics
-      - dimensions: [ [ ClusterName ] ]
+      - dimensions: [ [ ClusterName ], [ ClusterName, ContainerName, FullPodName, Namespace, PodName ], [ ClusterName, ContainerName, Namespace, PodName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - container_cpu_utilization
@@ -57,7 +57,7 @@ exporters:
           - container_status_waiting
           - container_status_waiting_reason_crashed
       # pod metrics
-      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ] ]
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ], [ ClusterName, FullPodName, Namespace, PodName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - pod_cpu_utilization
@@ -73,8 +73,8 @@ exporters:
           - pod_interface_network_rx_errors
           - pod_interface_network_tx_dropped
           - pod_interface_network_tx_errors
-      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ] ]
-        label_matchers: [ ]
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, Service ] ]
+        label_matchers: []
         metric_name_selectors:
           - pod_cpu_reserved_capacity
           - pod_memory_reserved_capacity
@@ -229,8 +229,8 @@ processors:
     timeout: 5s
 receivers:
   awscontainerinsightreceiver:
-    add_container_name_metric_label: false
-    add_full_pod_name_metric_label: false
+    add_container_name_metric_label: true
+    add_full_pod_name_metric_label: true
     add_service_as_attribute: true
     cluster_name: TestCluster
     collection_interval: 30s
@@ -244,7 +244,7 @@ receivers:
     max_retries: 0
     no_verify_ssl: false
     num_workers: 0
-    prefer_full_pod_name: false
+    prefer_full_pod_name: true
     proxy_address: ""
     region: "us-east-1"
     request_timeout_seconds: 0
