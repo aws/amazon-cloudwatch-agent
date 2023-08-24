@@ -128,7 +128,7 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 		return err
 	}
 
-	if awscontainerinsight.GetGranularityLevel(conf) >= awscontainerinsight.EnhancedClusterMetrics {
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
 		cfg.EnhancedContainerInsights = true
 	}
 
