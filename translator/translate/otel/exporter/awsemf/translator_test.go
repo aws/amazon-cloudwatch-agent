@@ -358,8 +358,43 @@ func TestTranslator(t *testing.T) {
 							"etcd_request_duration_seconds"},
 					},
 				},
-				"metric_descriptors": nilMetricDescriptorsSlice,
-			},
+				"metric_descriptors": []awsemfexporter.MetricDescriptor{
+					{
+						MetricName: "apiserver_storage_objects",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_request_total",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_request_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_admission_controller_admission_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "rest_client_request_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "rest_client_requests_total",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "etcd_request_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+				}},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesWithEnableFullPodAndContainerMetrics": {
 			input: map[string]interface{}{
@@ -478,7 +513,43 @@ func TestTranslator(t *testing.T) {
 							"etcd_request_duration_seconds"},
 					},
 				},
-				"metric_descriptors": nilMetricDescriptorsSlice,
+				"metric_descriptors": []awsemfexporter.MetricDescriptor{
+					{
+						MetricName: "apiserver_storage_objects",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_request_total",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_request_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_admission_controller_admission_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "rest_client_request_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "rest_client_requests_total",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "etcd_request_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+				},
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheus": {
