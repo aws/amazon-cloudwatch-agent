@@ -256,6 +256,18 @@ jobs:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
+      - name: Replace AWS SDK (Linux)
+        if: matrix.family != 'windows'
+        working-directory: cwa
+        run: |
+          mkdir ~/gosdk
+          aws s3 cp s3://gazpacho-beta-pre-release/staging.zip ~
+          unzip -q -d ~/gosdk ~/staging.zip || true
+          sdkPath=$(echo ~/gosdk/apollo/env/AWSGoSDK-Release/var/tmp/release-automation/staging-*/sdk/src/github.com/aws/aws-sdk-go)
+          echo $sdkPath
+          ls
+          go mod edit -replace github.com/aws/aws-sdk-go=$sdkPath
+
       - name: Cache binaries
         id: cached_binaries
         uses: actions/cache@v3
