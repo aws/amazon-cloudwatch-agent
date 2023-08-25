@@ -276,6 +276,12 @@ func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Met
 				},
 			},
 			{
+				Dimensions: [][]string{{"ClusterName", "priority_level"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"apiserver_flowcontrol_request_concurrency_limit",
+				},
+			},
+			{
 				Dimensions: [][]string{{"ClusterName"}},
 				MetricNameSelectors: []string{
 					"apiserver_storage_objects",
@@ -286,6 +292,7 @@ func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Met
 					"rest_client_request_duration_seconds",
 					"rest_client_requests_total",
 					"etcd_request_duration_seconds",
+					"apiserver_flowcontrol_rejected_requests_total",
 				},
 			},
 		}...)
@@ -336,6 +343,16 @@ func getControlPlaneMetricDescriptors(conf *confmap.Conf) []awsemfexporter.Metri
 			{
 				MetricName: "etcd_request_duration_seconds",
 				Unit:       "Seconds",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "apiserver_flowcontrol_rejected_requests_total",
+				Unit:       "Count",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "apiserver_flowcontrol_request_concurrency_limit",
+				Unit:       "Count",
 				Overwrite:  true,
 			},
 		}
