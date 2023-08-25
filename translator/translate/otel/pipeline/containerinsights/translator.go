@@ -12,7 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocesssor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
