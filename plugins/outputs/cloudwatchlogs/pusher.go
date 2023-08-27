@@ -31,7 +31,7 @@ const (
 	maxBacklogQueueDepth = 1024 // 100 MB file with 100 KB per message in worst case (1024 = 100 MB / 100 KB)
 
 	maxBytesPerFile = 1024 * 1024 * 1024 // 1 GB
-	maxMsgSize      = 1024 * 1024        // 100 KB
+	maxMsgSize      = 256*1024 + 2       // 256 KB
 	minMsgSize      = 1                  // messages should have content
 	syncEvery       = 5
 	syncTimeout     = time.Minute
@@ -301,8 +301,8 @@ func (p *pusher) send() {
 
 	var input *cloudwatchlogs.PutLogEventsInput
 
+	//means pusher will publish logEvent dequeued from disk to destination
 	if p.dequeueEvents != nil {
-		//var input *retryStruct
 		p.Log.Debug("send dequeueEvents to cloudwatch")
 		input = p.dequeueEvents.PutLogEventsInput
 		temp := p.dequeueEvents
@@ -328,16 +328,15 @@ func (p *pusher) send() {
 					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
 				}
 			}
-			p.Log.Debugf("in the persistentQueue Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), *input.LogGroupName, *input.LogStreamName, temp.BufferredSize/1024, time.Since(startTime))
+			p.Log.Debugf("in the persistentQueue, Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), *input.LogGroupName, *input.LogStreamName, temp.BufferredSize/1024, time.Since(startTime))
 			p.addStats("rawSize", float64(temp.BufferredSize))
+			p.lastSentTime = time.Now()
 			return
 		}
 		p.Log.Debugf("errors not nil, we need tell exactly what's error")
 		awsErr, ok := err.(awserr.Error)
 		if !ok {
 			p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", p.Group, p.Stream, err)
-			// Messages will be discarded but done callbacks not called
-			p.reset()
 			return
 		}
 		switch e := awsErr.(type) {
@@ -367,7 +366,7 @@ func (p *pusher) send() {
 		default:
 			p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
 		}
-		p.Log.Debugf("ready to enqueue again")
+		p.Log.Debugf("this logEvent will be enqueue again")
 		p.wg.Add(1)
 		go func() {
 			defer p.wg.Done()
@@ -377,10 +376,10 @@ func (p *pusher) send() {
 				p.Log.Debugf("enqueue errors:%v", err)
 			}
 		}()
-		for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
-			done := p.doneCallbacks[i]
-			done()
-		}
+		//for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
+		//	done := p.doneCallbacks[i]
+		//	done()
+		//}
 		//p.addStats("rawSize", float64(temp.BufferredSize))
 		p.reset()
 		return

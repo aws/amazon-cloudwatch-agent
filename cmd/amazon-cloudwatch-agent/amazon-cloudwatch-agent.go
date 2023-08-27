@@ -407,7 +407,7 @@ func main() {
 	go func() {
 		log.Println("GC has perpared")
 
-		ticker := time.NewTicker(time.Hour)
+		ticker := time.NewTicker(30 * time.Minute)
 		for {
 			select {
 			case <-ticker.C:
@@ -416,25 +416,6 @@ func main() {
 			}
 		}
 	}()
-
-	//this is profile for collecting memo usage
-	//go func() {
-	//	log.Println("profile has perpared")
-	//	f, err := os.OpenFile("mem.pprof", os.O_RDWR|os.O_CREATE, 0666)
-	//	defer f.Close()
-	//	if err != nil {
-	//		log.Printf("%v", err)
-	//	}
-	//	newTicker := time.NewTicker(5 * time.Minute)
-	//	for {
-	//		select {
-	//		case <-newTicker.C:
-	//			if err := pprof.WriteHeapProfile(f); err != nil {
-	//				log.Printf("%v", err)
-	//			}
-	//		}
-	//	}
-	//}()
 
 	flag.Parse()
 	args := flag.Args()

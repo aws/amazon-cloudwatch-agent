@@ -96,13 +96,13 @@ func getDiskQueueLogger(logger telegraf.Logger) func(level diskqueue.LogLevel, f
 		case diskqueue.DEBUG:
 			logFn = logger.Debugf
 		case diskqueue.INFO:
-			logFn = logger.Debugf
+			logFn = logger.Infof
 		case diskqueue.WARN:
-			logFn = logger.Debugf
+			logFn = logger.Warnf
 		case diskqueue.ERROR:
-			logFn = logger.Debugf
+			logFn = logger.Errorf
 		case diskqueue.FATAL:
-			logFn = logger.Debugf
+			logFn = logger.Errorf
 		}
 
 		logFn(fmt.Sprintf(f, args))
