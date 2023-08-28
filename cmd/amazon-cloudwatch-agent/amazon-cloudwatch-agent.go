@@ -407,7 +407,6 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
-
 	flag.Parse()
 	args := flag.Args()
 
