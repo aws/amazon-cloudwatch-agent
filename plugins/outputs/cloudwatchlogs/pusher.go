@@ -356,7 +356,6 @@ func (p *pusher) sendDequeuEvent() {
 	case *cloudwatchlogs.InvalidParameterException,
 		*cloudwatchlogs.DataAlreadyAcceptedException:
 		p.Log.Errorf("%v, will not retry the request", e)
-		p.reset()
 		return
 
 	default:
@@ -372,7 +371,6 @@ func (p *pusher) sendDequeuEvent() {
 			p.Log.Debugf("enqueue errors:%v", err)
 		}
 	}()
-	p.reset()
 	return
 
 }
