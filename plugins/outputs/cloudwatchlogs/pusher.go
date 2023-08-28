@@ -31,7 +31,7 @@ const (
 	maxBacklogQueueDepth = 1024 // 100 MB file with 100 KB per message in worst case (1024 = 100 MB / 100 KB)
 
 	maxBytesPerFile = 1024 * 1024 * 1024 // 1 GB
-	maxMsgSize      = 1024 * 1024        // 100 KB
+	maxMsgSize      = 256*1024 + 2       // 256 KB
 	minMsgSize      = 1                  // messages should have content
 	syncEvery       = 5
 	syncTimeout     = time.Minute
@@ -200,7 +200,7 @@ func (p *pusher) start() {
 				if temp != nil {
 					p.dequeueEvents = temp
 					p.Log.Debugf("send dequeue logEvent to cloudwatch")
-					p.send()
+					p.sendDequeuEvent()
 				} else {
 					p.Log.Debugf("there is no logEvent in disk")
 				}
@@ -295,107 +295,102 @@ type retryStruct struct {
 	BufferredSize  int       `type:"buffersize"`
 }
 
-func (p *pusher) send() {
+func (p *pusher) sendDequeuEvent() {
 	startTime := time.Now()
-	defer p.resetFlushTimer() // Reset the flush timer after sending the request
 
 	var input *cloudwatchlogs.PutLogEventsInput
 
-	if p.dequeueEvents != nil {
-		//var input *retryStruct
-		p.Log.Debug("send dequeueEvents to cloudwatch")
-		input = p.dequeueEvents.PutLogEventsInput
-		temp := p.dequeueEvents
-		p.dequeueEvents = nil
-		input.SequenceToken = p.sequenceToken
-		//opStartTime := time.Now()
-		//p.Log.Debug("log group is %v / %v", *input.LogGroupName, *input.LogStreamName)
-		output, err := p.Service.PutLogEvents(input)
-		p.agentInfo.RecordOpData(time.Since(temp.FirstRetryTime), temp.BufferredSize, err)
-		if err == nil {
-			if output.NextSequenceToken != nil {
-				p.sequenceToken = output.NextSequenceToken
-			}
-			if output.RejectedLogEventsInfo != nil {
-				info := output.RejectedLogEventsInfo
-				if info.TooOldLogEventEndIndex != nil {
-					p.Log.Warnf("%d log events for log '%s/%s' are too old", *info.TooOldLogEventEndIndex, p.Group, p.Stream)
-				}
-				if info.TooNewLogEventStartIndex != nil {
-					p.Log.Warnf("%d log events for log '%s/%s' are too new", *info.TooNewLogEventStartIndex, p.Group, p.Stream)
-				}
-				if info.ExpiredLogEventEndIndex != nil {
-					p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
-				}
-			}
-			p.Log.Debugf("in the persistentQueue Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), *input.LogGroupName, *input.LogStreamName, temp.BufferredSize/1024, time.Since(startTime))
-			p.addStats("rawSize", float64(temp.BufferredSize))
-			return
+	//means pusher will publish logEvent dequeued from disk to destination
+	p.Log.Debug("send dequeueEvents to cloudwatch")
+	input = p.dequeueEvents.PutLogEventsInput
+	temp := p.dequeueEvents
+	p.dequeueEvents = nil
+	input.SequenceToken = p.sequenceToken
+	output, err := p.Service.PutLogEvents(input)
+	p.agentInfo.RecordOpData(time.Since(temp.FirstRetryTime), temp.BufferredSize, err)
+	if err == nil {
+		if output.NextSequenceToken != nil {
+			p.sequenceToken = output.NextSequenceToken
 		}
-		p.Log.Debugf("errors not nil, we need tell exactly what's error")
-		awsErr, ok := err.(awserr.Error)
-		if !ok {
-			p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", p.Group, p.Stream, err)
-			// Messages will be discarded but done callbacks not called
-			p.reset()
-			return
+		if output.RejectedLogEventsInfo != nil {
+			info := output.RejectedLogEventsInfo
+			if info.TooOldLogEventEndIndex != nil {
+				p.Log.Warnf("%d log events for log '%s/%s' are too old", *info.TooOldLogEventEndIndex, p.Group, p.Stream)
+			}
+			if info.TooNewLogEventStartIndex != nil {
+				p.Log.Warnf("%d log events for log '%s/%s' are too new", *info.TooNewLogEventStartIndex, p.Group, p.Stream)
+			}
+			if info.ExpiredLogEventEndIndex != nil {
+				p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
+			}
 		}
-		switch e := awsErr.(type) {
-		case *cloudwatchlogs.ResourceNotFoundException:
-			err := p.createLogGroupAndStream()
-			if err != nil {
-				p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
-				break
-			}
-			p.putRetentionPolicy()
-		case *cloudwatchlogs.InvalidSequenceTokenException:
-			if p.sequenceToken == nil {
-				p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v", p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
-			} else {
-				p.Log.Warnf("Invalid SequenceToken used (%v) while sending logs to %v/%v, will use new token and retry: %v", p.sequenceToken, p.Group, p.Stream, e.Message())
-			}
-			if e.ExpectedSequenceToken == nil {
-				p.Log.Errorf("Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, e.Message())
-			}
-			p.sequenceToken = e.ExpectedSequenceToken
-		case *cloudwatchlogs.InvalidParameterException,
-			*cloudwatchlogs.DataAlreadyAcceptedException:
-			p.Log.Errorf("%v, will not retry the request", e)
-			p.reset()
-			return
-
-		default:
-			p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
-		}
-		p.Log.Debugf("ready to enqueue again")
-		p.wg.Add(1)
-		go func() {
-			defer p.wg.Done()
-			p.Log.Debugf("start to enqueue")
-			err := p.backlogQueue.Enqueue(*temp)
-			if err != nil {
-				p.Log.Debugf("enqueue errors:%v", err)
-			}
-		}()
-		for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
-			done := p.doneCallbacks[i]
-			done()
-		}
-		//p.addStats("rawSize", float64(temp.BufferredSize))
-		p.reset()
+		p.Log.Debugf("in the persistentQueue, Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), *input.LogGroupName, *input.LogStreamName, temp.BufferredSize/1024, time.Since(startTime))
+		p.addStats("rawSize", float64(temp.BufferredSize))
+		p.lastSentTime = time.Now()
 		return
 	}
+	p.Log.Debugf("errors not nil, we need tell exactly what's error")
+	awsErr, ok := err.(awserr.Error)
+	if !ok {
+		p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", p.Group, p.Stream, err)
+		return
+	}
+	switch e := awsErr.(type) {
+	case *cloudwatchlogs.ResourceNotFoundException:
+		err := p.createLogGroupAndStream()
+		if err != nil {
+			p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
+			break
+		}
+		p.putRetentionPolicy()
+	case *cloudwatchlogs.InvalidSequenceTokenException:
+		if p.sequenceToken == nil {
+			p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v", p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
+		} else {
+			p.Log.Warnf("Invalid SequenceToken used (%v) while sending logs to %v/%v, will use new token and retry: %v", p.sequenceToken, p.Group, p.Stream, e.Message())
+		}
+		if e.ExpectedSequenceToken == nil {
+			p.Log.Errorf("Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, e.Message())
+		}
+		p.sequenceToken = e.ExpectedSequenceToken
+	case *cloudwatchlogs.InvalidParameterException,
+		*cloudwatchlogs.DataAlreadyAcceptedException:
+		p.Log.Errorf("%v, will not retry the request", e)
+		p.reset()
+		return
 
+	default:
+		p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
+	}
+	p.Log.Debugf("this logEvent will be enqueue again")
+	p.wg.Add(1)
+	go func() {
+		defer p.wg.Done()
+		p.Log.Debugf("start to enqueue again")
+		err := p.backlogQueue.Enqueue(*temp)
+		if err != nil {
+			p.Log.Debugf("enqueue errors:%v", err)
+		}
+	}()
+	p.reset()
+	return
+
+}
+
+func (p *pusher) send() {
+	defer p.resetFlushTimer() // Reset the flush timer after sending the request
 	if p.needSort {
 		sort.Stable(ByTimestamp(p.events))
 	}
 
-	input = &cloudwatchlogs.PutLogEventsInput{
+	input := &cloudwatchlogs.PutLogEventsInput{
 		LogEvents:     p.events,
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,
 		SequenceToken: p.sequenceToken,
 	}
+
+	startTime := time.Now()
 
 	retryCount := 0
 	for {
@@ -490,7 +485,6 @@ func (p *pusher) send() {
 				done := p.doneCallbacks[i]
 				done()
 			}
-			//p.addStats("rawSize", float64(p.bufferredSize))
 			p.reset()
 			return
 		}
