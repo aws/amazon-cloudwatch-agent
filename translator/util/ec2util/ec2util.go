@@ -5,16 +5,17 @@ package ec2util
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
@@ -95,27 +96,48 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		return err
 	}
 
-	md := ec2metadata.New(ses, &aws.Config{
+	mdDisableFallback := ec2metadata.New(ses, &aws.Config{
+		LogLevel:                  configaws.SDKLogLevel(),
+		Logger:                    configaws.SDKLogger{},
+		Retryer:                   retryer.NewIMDSRetryer(retryer.GetDefaultRetryNumber()),
+		EC2MetadataEnableFallback: aws.Bool(false),
+	})
+	mdEnableFallback := ec2metadata.New(ses, &aws.Config{
 		LogLevel: configaws.SDKLogLevel(),
 		Logger:   configaws.SDKLogger{},
-		Retryer:  client.DefaultRetryer{NumMaxRetries: allowedRetries},
 	})
 
+	// ec2 and ecs treats retries for getting host name differently
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
-	if hostname, err := md.GetMetadata("hostname"); err == nil {
+	if hostname, err := mdDisableFallback.GetMetadata("hostname"); err == nil {
 		e.Hostname = hostname
 	} else {
-		fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
+		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
+		hostnameInner, errInner := mdEnableFallback.GetMetadata("hostname")
+		if errInner == nil {
+			e.Hostname = hostnameInner
+		} else {
+			fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", errInner)
+		}
 	}
 
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-	if instanceIdentityDocument, err := md.GetInstanceIdentityDocument(); err == nil {
+	if instanceIdentityDocument, err := mdDisableFallback.GetInstanceIdentityDocument(); err == nil {
 		e.Region = instanceIdentityDocument.Region
 		e.AccountID = instanceIdentityDocument.AccountID
 		e.PrivateIP = instanceIdentityDocument.PrivateIP
 		e.InstanceID = instanceIdentityDocument.InstanceID
 	} else {
-		fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", err)
+		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
+		instanceIdentityDocumentInner, errInner := mdEnableFallback.GetInstanceIdentityDocument()
+		if errInner == nil {
+			e.Region = instanceIdentityDocumentInner.Region
+			e.AccountID = instanceIdentityDocumentInner.AccountID
+			e.PrivateIP = instanceIdentityDocumentInner.PrivateIP
+			e.InstanceID = instanceIdentityDocumentInner.InstanceID
+		} else {
+			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", errInner)
+		}
 	}
 
 	return nil

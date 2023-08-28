@@ -14,6 +14,7 @@ processors:
     ec2_instance_tag_keys: []
     ec2_metadata_tags: []
     refresh_interval_seconds: 0s
+    imds_retries: 1
 receivers:
   telegraf_disk:
     collection_interval: 1m0s

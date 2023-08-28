@@ -13,10 +13,10 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
 //go:embed awsemf_default_ecs.yaml
@@ -79,12 +79,13 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	}
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
-	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
-		if profile, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
-			cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profile)
-			cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", agent.Global_Config.Credentials[agent.CredentialsFile_Key])}
-		}
+	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
 	}
+	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
+		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+	}
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {
@@ -126,6 +127,11 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	if err := setKubernetesMetricDeclaration(conf, cfg); err != nil {
 		return err
 	}
+
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
+		cfg.EnhancedContainerInsights = true
+	}
+
 	return nil
 }
 
@@ -137,9 +143,7 @@ func setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	}
 
 	// Prometheus will use the "job" corresponding to the target in prometheus as a log stream
-	// https://github.com/aws/amazon-cloudwatch-agent/blob/59cfe656152e31ca27e7983fac4682d0c33d3316/plugins/inputs/prometheus_scraper/metrics_handler.go#L80-L84
-	// While determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml as per
-	// https://github.com/aws/amazon-cloudwatch-agent/blob/main/plugins/outputs/cloudwatchlogs/cloudwatchlogs.go#L176-L181.
+	// While determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml
 
 	// However, since we are using awsemfexport, we can leverage the token replacement with the log stream name
 	// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/897db04f747f0bda1707c916b1ec9f6c79a0c678/exporter/awsemfexporter/util.go#L29-L37

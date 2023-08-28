@@ -17,7 +17,10 @@ exporters:
             - - d1
             - []
     awscloudwatchlogs/emf_logs:
-        endpoint: ""
+        certificate_file_path: ""
+        emf_only: true
+        endpoint: "https://logs-fips.us-west-2.amazonaws.com"
+        "imds_retries": 1
         local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
@@ -27,7 +30,7 @@ exporters:
         num_workers: 8
         proxy_address: ""
         raw_log: true
-        region: ""
+        region: "us-west-2"
         request_timeout_seconds: 30
         resource_arn: ""
         retry_on_failure:
@@ -44,7 +47,9 @@ exporters:
         shared_credentials_file: [ ]
     awsxray:
         aws_log_groups: []
+        certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+        "imds_retries": 1
         index_all_attributes: false
         indexed_attributes: []
         local_mode: true
@@ -79,6 +84,7 @@ processors:
             - InstanceType
             - ImageId
         refresh_interval_seconds: 0s
+        imds_retries: 1
     transform:
         error_mode: propagate
         log_statements: []
@@ -165,9 +171,6 @@ receivers:
         alias_name: LogicalDisk
         collection_interval: 1m0s
         initial_delay: 1s
-    telegraf_windows_event_log:
-        collection_interval: 1m0s
-        initial_delay: 1s
     udplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -212,7 +215,6 @@ service:
                 - telegraf_win_perf_counters/3081249416
                 - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
-                - telegraf_windows_event_log
         traces/xray:
             exporters:
                 - awsxray

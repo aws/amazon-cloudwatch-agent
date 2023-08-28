@@ -1,4 +1,68 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300026.3 (2022-08-22)
+========================================================================
+
+Bug fixes:
+* Retain logic to determine log stream for EMF pipeline (@4f7705a)
+* Fix rename in metrics decorator translator (@ad5861a)
+* Update config translation to respect common config profile and creds file (@e2ef915)
+* Remove plugin key allowlist for metric decorator (@47a5e47)
+
+Enhancements:
+* Remove local trace test (@a96897f)
+
+========================================================================
+Amazon CloudWatch Agent 1.300026.2 (2022-08-10)
+========================================================================
+
+Bug fixes:
+* Add expandconverter to config provider (@24592ba)
+* Pin aws sdk to v1.44.106 since the defaults for root creds changed in future versions (@048809e)
+* Update OTel fork components to 24607924fd49654505e942fe5768a1a288866b39 (@9a259d5)
+* Add Endpoint Override To EMF And Only Publish EMF Logs (@db03fb6)
+* Revert "Add Retry To IMDS Client" (@a367c86)
+
+Enhancements:
+* Removed warn log message for empty fields in telegraph metrics (@fd1b308)
+
+========================================================================
+Amazon CloudWatch Agent 1.300026.1 (2022-08-04)
+========================================================================
+
+Bug fixes:
+* Macos script fix (@6792c77)
+
+========================================================================
+Amazon CloudWatch Agent 1.300026.0 (2022-07-28)
+========================================================================
+
+Bug fixes:
+* Remove windows event log plugin from adapter translation (@4c7abf4)
+
+Enhancements:
+* Remove telegraf agent start up (@3f60a57)
+
+========================================================================
+Amazon CloudWatch Agent 1.300025.0 (2022-07-19)
+========================================================================
+
+New features:
+* Add support for OpenTelemetry and AWS X-Ray traces. See https://aws.amazon.com/about-aws/whats-new/2023/08/amazon-cloudwatch-agent-opentelemetry-traces-x-ray/
+* CloudWatch Agent is now compatible with both OpenTelemetry and Telegraf components
+
+Enhancements:
+* Adding blurb about usage data and opt-out (#776)
+* Apply cd into terraform_dir logic consistently (#778)
+* Increase terraform aws assume role duration to avoid expired token errors (#779)
+* Add excluded_tests flag to Linux test workflow (#777)
+* Echo Stress Test Info (#781)
+* update schema and validation to support 3 year retention (#788)
+* Workflow refactor and add onprem test jobs (#782)
+* Add family flag to performance test (#789)
+* Windows stress test setup (#797)
+* Replace Telegraf agent with OpenTelemetry Collector (#796)
+
+========================================================================
 Amazon CloudWatch Agent 1.247360.0 (2023-06-23)
 ========================================================================
 
@@ -30,7 +94,6 @@ Bug fixes:
 * Fix control script starting CWA on Oracle Linux 9 by using systemctl (#645)
 * Fix handling negative statefile offset (#646)
 * Fix starting the agent with "auto" mode on an on premise host (#652)
-
 
 ========================================================================
 Amazon CloudWatch Agent 1.247356.0 (2022-11-10)

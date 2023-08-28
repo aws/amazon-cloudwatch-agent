@@ -18,6 +18,7 @@ COPY go.sum /go/src/github.com/aws/amazon-cloudwatch-agent/
 RUN go mod download -x
 
 COPY . /go/src/github.com/aws/amazon-cloudwatch-agent/
+
 RUN make build-for-docker-${TARGETARCH}
 
 # Install cert and binaries

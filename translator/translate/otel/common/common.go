@@ -41,7 +41,8 @@ const (
 	MeasurementKey                     = "measurement"
 	DropOriginalMetricsKey             = "drop_original_metrics"
 	ForceFlushIntervalKey              = "force_flush_interval"
-	ContainerInsightsMetricGranularity = "metric_granularity"
+	ContainerInsightsMetricGranularity = "metric_granularity" // replaced with enhanced_container_insights
+	EnhancedContainerInsights          = "enhanced_container_insights"
 	PreferFullPodName                  = "prefer_full_pod_name"
 	Console                            = "console"
 	DiskIOKey                          = "diskio"
@@ -60,12 +61,6 @@ const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
 	PipelineNameEmfLogs          = "emf_logs"
-)
-
-var (
-	// LinuxPluginKeys - available plugins. The proctstat plugin does not support metric decoration, hence it is omitted
-	LinuxPluginKeys   = []string{"cpu", "disk", "diskio", "internal", "mem", "net", "netstat", "nvidia_gpu", "processes", "swap"}
-	WindowsPluginKeys = []string{"Memory", "LogicalDisk", "Network Interface", "Paging", "PhysicalDisk", "Processor", "System", "TCPv4", "TCPv6"}
 )
 
 // Translator is used to translate the JSON config into an

@@ -1,0 +1,103 @@
+connectors: {}
+exporters:
+  awscloudwatchlogs/emf_logs:
+    certificate_file_path: ""
+    emf_only: true
+    endpoint: ""
+    "imds_retries": 1
+    local_mode: false
+    log_group_name: emf/logs/default
+    log_retention: 0
+    log_stream_name: ${ENV_LOG_STREAM_NAME}
+    max_retries: 2
+    no_verify_ssl: false
+    num_workers: 8
+    profile: ""
+    proxy_address: ""
+    raw_log: true
+    region: ${ENV_REGION}
+    request_timeout_seconds: 30
+    resource_arn: ""
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_elapsed_time: 5m0s
+      max_interval: 30s
+      multiplier: 1.5
+      randomization_factor: 0.5
+    role_arn: ${ENV_CREDENTIALS_ROLE_ARN}
+    sending_queue:
+      queue_size: 1000
+    shared_credentials_file: []
+extensions: {}
+processors:
+  batch/emf_logs:
+    send_batch_max_size: 0
+    send_batch_size: 8192
+    timeout: 5s
+receivers:
+  tcplog/emf_logs:
+    attributes: {}
+    encoding: utf-8
+    id: tcp_input
+    listen_address: 0.0.0.0:25888
+    operators: []
+    output: []
+    resource: {}
+    retry_on_failure:
+      enabled: false
+      initial_interval: 0s
+      max_elapsed_time: 0s
+      max_interval: 0s
+    storage: null
+    type: tcp_input
+  udplog/emf_logs:
+    attributes: {}
+    encoding: utf-8
+    id: udp_input
+    listen_address: 0.0.0.0:25888
+    multiline:
+      line_end_pattern: .^
+      line_start_pattern: ""
+    operators: []
+    output: []
+    resource: {}
+    retry_on_failure:
+      enabled: false
+      initial_interval: 0s
+      max_elapsed_time: 0s
+      max_interval: 0s
+    storage: null
+    type: udp_input
+service:
+  extensions: []
+  pipelines:
+    logs/emf_logs:
+      exporters:
+        - awscloudwatchlogs/emf_logs
+      processors:
+        - batch/emf_logs
+      receivers:
+        - tcplog/emf_logs
+        - udplog/emf_logs
+  telemetry:
+    logs:
+      development: false
+      disable_caller: false
+      disable_stacktrace: false
+      encoding: console
+      error_output_paths: []
+      initial_fields: {}
+      level: info
+      output_paths:
+        - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+      sampling:
+        initial: 2
+        thereafter: 500
+    metrics:
+      address: ""
+      level: None
+      metric_readers: []
+    resource: {}
+    traces:
+      propagators: []

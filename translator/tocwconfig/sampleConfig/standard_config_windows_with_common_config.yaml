@@ -22,6 +22,7 @@ processors:
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
         shared_credential_file: fake-path
+        imds_retries: 2
 receivers:
     telegraf_win_perf_counters/1492679118:
         alias_name:          Memory

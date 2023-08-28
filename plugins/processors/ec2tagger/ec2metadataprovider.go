@@ -5,10 +5,14 @@ package ec2tagger
 
 import (
 	"context"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
 type MetadataProvider interface {
@@ -18,25 +22,52 @@ type MetadataProvider interface {
 }
 
 type metadataClient struct {
-	metadata *ec2metadata.EC2Metadata
+	metadataFallbackDisabled *ec2metadata.EC2Metadata
+	metadataFallbackEnabled  *ec2metadata.EC2Metadata
 }
 
 var _ MetadataProvider = (*metadataClient)(nil)
 
-func NewMetadataProvider(p client.ConfigProvider, cfgs ...*aws.Config) MetadataProvider {
+func NewMetadataProvider(p client.ConfigProvider, retries int) MetadataProvider {
+	disableFallbackConfig := &aws.Config{
+		LogLevel:                  configaws.SDKLogLevel(),
+		Logger:                    configaws.SDKLogger{},
+		Retryer:                   retryer.NewIMDSRetryer(retries),
+		EC2MetadataEnableFallback: aws.Bool(false),
+	}
+	enableFallbackConfig := &aws.Config{
+		LogLevel: configaws.SDKLogLevel(),
+		Logger:   configaws.SDKLogger{},
+	}
 	return &metadataClient{
-		metadata: ec2metadata.New(p, cfgs...),
+		metadataFallbackDisabled: ec2metadata.New(p, disableFallbackConfig),
+		metadataFallbackEnabled:  ec2metadata.New(p, enableFallbackConfig),
 	}
 }
 
 func (c *metadataClient) InstanceID(ctx context.Context) (string, error) {
-	return c.metadata.GetMetadataWithContext(ctx, "instance-id")
+	instanceId, err := c.metadataFallbackDisabled.GetMetadataWithContext(ctx, "instance-id")
+	if err != nil {
+		log.Printf("D! could not get instance id without imds v1 fallback enable thus enable fallback")
+		return c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "instance-id")
+	}
+	return instanceId, err
 }
 
 func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
-	return c.metadata.GetMetadataWithContext(ctx, "hostname")
+	hostname, err := c.metadataFallbackDisabled.GetMetadataWithContext(ctx, "hostname")
+	if err != nil {
+		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
+		return c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "hostname")
+	}
+	return hostname, err
 }
 
 func (c *metadataClient) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
-	return c.metadata.GetInstanceIdentityDocumentWithContext(ctx)
+	instanceDocument, err := c.metadataFallbackDisabled.GetInstanceIdentityDocumentWithContext(ctx)
+	if err != nil {
+		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
+		return c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(ctx)
+	}
+	return instanceDocument, err
 }

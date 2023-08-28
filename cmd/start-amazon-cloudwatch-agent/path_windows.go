@@ -12,15 +12,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
-)
 
-const (
-	AGENT_DIR_WINDOWS = "\\Amazon\\AmazonCloudWatchAgent\\"
-
-	JSON_DIR_WINDOWS = "\\Configs"
-
-	TRANSLATOR_BINARY_WINDOWS = "config-translator.exe"
-	AGENT_BINARY_WINDOWS      = "amazon-cloudwatch-agent.exe"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 func startAgent(writer io.WriteCloser) error {
@@ -51,11 +44,11 @@ func init() {
 		programData = os.Getenv("ALLUSERSPROFILE") + "\\Application Data"
 	}
 
-	agentRootDir := programFiles + AGENT_DIR_WINDOWS
-	agentConfigDir := programData + AGENT_DIR_WINDOWS
+	agentRootDir := programFiles + paths.AgentDir
+	agentConfigDir := programData + paths.AgentDir
 
 	jsonConfigPath = agentConfigDir + "\\" + JSON
-	jsonDirPath = agentConfigDir + JSON_DIR_WINDOWS
+	jsonDirPath = agentConfigDir + paths.JsonDir
 	envConfigPath = agentConfigDir + "\\" + ENV
 	tomlConfigPath = agentConfigDir + "\\" + TOML
 	yamlConfigPath = agentConfigDir + "\\" + YAML
@@ -64,6 +57,6 @@ func init() {
 
 	agentLogFilePath = agentConfigDir + "\\Logs\\" + AGENT_LOG_FILE
 
-	translatorBinaryPath = agentRootDir + "\\" + TRANSLATOR_BINARY_WINDOWS
-	agentBinaryPath = agentRootDir + "\\" + AGENT_BINARY_WINDOWS
+	translatorBinaryPath = agentRootDir + "\\" + paths.TranslatorBinaryName
+	agentBinaryPath = agentRootDir + "\\" + paths.AgentBinaryName
 }

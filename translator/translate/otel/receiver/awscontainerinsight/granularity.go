@@ -11,14 +11,15 @@ import (
 
 const (
 	BaseContainerInsights = iota + 1
-	EnhancedClusterMetrics
-	IndividualPodContainerMetrics
 )
 
-type GranularityLevel int
-
-func GetGranularityLevel(conf *confmap.Conf) GranularityLevel {
-	levelFloat := common.GetOrDefaultNumber(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.ContainerInsightsMetricGranularity), 1)
-
-	return GranularityLevel(int(levelFloat))
+func EnhancedContainerInsightsEnabled(conf *confmap.Conf) bool {
+	isSet := common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnhancedContainerInsights), false)
+	if !isSet {
+		levelFloat := common.GetOrDefaultNumber(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.ContainerInsightsMetricGranularity), 1)
+		if levelFloat > BaseContainerInsights {
+			isSet = true
+		}
+	}
+	return isSet
 }

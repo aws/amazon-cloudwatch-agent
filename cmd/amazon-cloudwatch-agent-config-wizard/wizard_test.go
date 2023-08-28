@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/ssm"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors/template"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/tracesconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
@@ -43,6 +44,7 @@ func TestWindowsMigration(t *testing.T) {
 	processorMock.On("VerifyProcessor", statsd.Processor).Return()
 	processorMock.On("VerifyProcessor", collectd.Processor).Return()
 	processorMock.On("VerifyProcessor", migration.Processor).Return()
+	processorMock.On("VerifyProcessor", tracesconfig.Processor).Return()
 	processorMock.On("VerifyProcessor", windows.Processor).Return()
 	processorMock.On("VerifyProcessor", ssm.Processor).Return()
 	MainProcessorGlobal = processorMock

@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/data"
 	"github.com/aws/amazon-cloudwatch-agent/tool/processors"
-	"github.com/aws/amazon-cloudwatch-agent/tool/processors/serialization"
+	"github.com/aws/amazon-cloudwatch-agent/tool/processors/tracesconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -40,7 +40,7 @@ func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
 }
 
 func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) interface{} {
-	return serialization.Processor
+	return tracesconfig.Processor
 }
 
 func monitorEvents(ctx *runtime.Context, config *data.Config) {
