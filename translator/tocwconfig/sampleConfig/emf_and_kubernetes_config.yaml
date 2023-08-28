@@ -4,6 +4,7 @@ exporters:
     emf_only: true
     certificate_file_path: ""
     endpoint: "https://fake_endpoint"
+    "imds_retries": 2
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
@@ -35,6 +36,7 @@ exporters:
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
     endpoint: ""
+    "imds_retries": 2
     enhanced_container_insights: true
     local_mode: false
     log_group_name: /aws/containerinsights/{ClusterName}/performance
@@ -43,7 +45,7 @@ exporters:
     max_retries: 2
     metric_declarations:
       # container metrics
-      - dimensions: [ [ ClusterName ] ]
+      - dimensions: [ [ ClusterName ], [ ClusterName, ContainerName, FullPodName, Namespace, PodName ], [ ClusterName, ContainerName, Namespace, PodName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - container_cpu_utilization
@@ -57,7 +59,7 @@ exporters:
           - container_status_waiting
           - container_status_waiting_reason_crashed
       # pod metrics
-      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ] ]
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ], [ ClusterName, FullPodName, Namespace, PodName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - pod_cpu_utilization
@@ -73,8 +75,8 @@ exporters:
           - pod_interface_network_rx_errors
           - pod_interface_network_tx_dropped
           - pod_interface_network_tx_errors
-      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ] ]
-        label_matchers: [ ]
+      - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, Service ] ]
+        label_matchers: []
         metric_name_selectors:
           - pod_cpu_reserved_capacity
           - pod_memory_reserved_capacity
@@ -177,7 +179,28 @@ exporters:
           - rest_client_request_duration_seconds
           - rest_client_requests_total
           - etcd_request_duration_seconds
-    metric_descriptors: []
+    metric_descriptors:
+          - metric_name: apiserver_storage_objects
+            unit: Count
+            overwrite: true
+          - metric_name: apiserver_request_total
+            unit: Count
+            overwrite: true
+          - metric_name: apiserver_request_duration_seconds
+            unit: Seconds
+            overwrite: true
+          - metric_name: apiserver_admission_controller_admission_duration_seconds
+            unit: Seconds
+            overwrite: true
+          - metric_name: rest_client_request_duration_seconds
+            unit: Seconds
+            overwrite: true
+          - metric_name: rest_client_requests_total
+            unit: Count
+            overwrite: true
+          - metric_name: etcd_request_duration_seconds
+            unit: Seconds
+            overwrite: true
     namespace: ContainerInsights
     no_verify_ssl: false
     num_workers: 8
@@ -208,8 +231,8 @@ processors:
     timeout: 5s
 receivers:
   awscontainerinsightreceiver:
-    add_container_name_metric_label: false
-    add_full_pod_name_metric_label: false
+    add_container_name_metric_label: true
+    add_full_pod_name_metric_label: true
     add_service_as_attribute: true
     cluster_name: TestCluster
     collection_interval: 30s
@@ -217,13 +240,14 @@ receivers:
     enable_control_plane_metrics: true
     certificate_file_path: ""
     endpoint: ""
+    "imds_retries": 2
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
     local_mode: false
     max_retries: 0
     no_verify_ssl: false
     num_workers: 0
-    prefer_full_pod_name: false
+    prefer_full_pod_name: true
     proxy_address: ""
     region: "us-east-1"
     request_timeout_seconds: 0

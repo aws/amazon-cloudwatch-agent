@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -82,6 +83,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if proxyAddress, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.ProxyOverrideKey)); ok {
 		cfg.ProxyAddress = proxyAddress
 	}
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	return cfg, nil
 }
 

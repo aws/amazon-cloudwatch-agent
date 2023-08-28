@@ -5,6 +5,7 @@ no_verify_ssl: true
 role_arn: trace_role_arn
 endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
 region: us-west-2
+imds_retries: 1
 proxy_address: https://proxy.proxy.com
 telemetry:
   enabled: true

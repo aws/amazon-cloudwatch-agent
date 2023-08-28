@@ -30,6 +30,7 @@ processors:
       - InstanceId
       - InstanceType
     refresh_interval_seconds: 0s
+    imds_retries: 1
 receivers:
   telegraf_cpu:
     collection_interval: 1m0s
