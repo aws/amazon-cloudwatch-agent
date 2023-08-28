@@ -22,3 +22,7 @@
 
 # [ssl]
 #    ca_bundle_path = "{ca_bundle_file_path}"
+
+#
+# [imds]
+#    imds_retries = 1

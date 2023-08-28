@@ -41,7 +41,8 @@ const (
 	MeasurementKey                     = "measurement"
 	DropOriginalMetricsKey             = "drop_original_metrics"
 	ForceFlushIntervalKey              = "force_flush_interval"
-	ContainerInsightsMetricGranularity = "metric_granularity"
+	ContainerInsightsMetricGranularity = "metric_granularity" // replaced with enhanced_container_insights
+	EnhancedContainerInsights          = "enhanced_container_insights"
 	PreferFullPodName                  = "prefer_full_pod_name"
 	Console                            = "console"
 	DiskIOKey                          = "diskio"

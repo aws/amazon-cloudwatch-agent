@@ -16,7 +16,7 @@ func GetSSL(sslConfig map[string]string) (result map[string]string) {
 		result[commonconfig.CABundlePath] = val
 		return
 	}
-	names := []string{"AWS_CA_BUNDLE"}
+	names := []string{envconfig.AWS_CA_BUNDLE}
 	for _, name := range names {
 		if val := os.Getenv(name); val != "" {
 			result[commonconfig.CABundlePath] = val

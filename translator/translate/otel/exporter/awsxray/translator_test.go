@@ -38,8 +38,9 @@ func TestTranslator(t *testing.T) {
 		"WithDefault": {
 			input: map[string]interface{}{"traces": map[string]interface{}{}},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"region":   "us-east-1",
-				"role_arn": "global_arn",
+				"region":       "us-east-1",
+				"role_arn":     "global_arn",
+				"imds_retries": 1,
 				"telemetry": map[string]interface{}{
 					"enabled":          true,
 					"include_metadata": true,

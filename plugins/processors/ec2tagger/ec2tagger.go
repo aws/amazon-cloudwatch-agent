@@ -67,7 +67,7 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 		Config:           config,
 		logger:           logger,
 		cancelFunc:       cancel,
-		metadataProvider: NewMetadataProvider(mdCredentialConfig.Credentials()),
+		metadataProvider: NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),
