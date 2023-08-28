@@ -35,7 +35,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		"transforms": map[string]interface{}{
 			"include":                   "apiserver_request_total",
 			"match_type":                "regexp",
-			"experimental_match_labels": map[string]string{"code": "5.*"},
+			"experimental_match_labels": map[string]string{"code": "^5.*"},
 			"action":                    "insert",
 			"new_name":                  "apiserver_request_total_5xx",
 		},
