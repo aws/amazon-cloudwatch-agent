@@ -407,18 +407,6 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
-	go func() {
-		log.Println("GC has perpared")
-
-		ticker := time.NewTicker(30 * time.Minute)
-		for {
-			select {
-			case <-ticker.C:
-				log.Println("GC start run")
-				runtime.GC()
-			}
-		}
-	}()
 
 	flag.Parse()
 	args := flag.Args()
