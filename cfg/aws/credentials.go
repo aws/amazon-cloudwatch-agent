@@ -6,12 +6,14 @@ package aws
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -76,11 +78,19 @@ func OverwriteCredentialsChain(providers ...RootCredentialsProvider) {
 }
 
 func getSession(config *aws.Config) *session.Session {
-	ses, err := session.NewSession(config)
+	cfgFiles := getFallbackSharedConfigFiles(backwardsCompatibleUserHomeDir)
+	log.Printf("D! Fallback shared config file(s): %v", cfgFiles)
+	ses, err := session.NewSessionWithOptions(session.Options{
+		Config:            *config,
+		SharedConfigFiles: cfgFiles,
+	})
 	if err != nil {
 		log.Printf("E! Failed to create credential sessions, retrying in 15s, error was '%s' \n", err)
 		time.Sleep(15 * time.Second)
-		ses, err = session.NewSession(config)
+		ses, err = session.NewSessionWithOptions(session.Options{
+			Config:            *config,
+			SharedConfigFiles: cfgFiles,
+		})
 		if err != nil {
 			log.Printf("E! Retry failed for creating credential sessions, error was '%s' \n", err)
 			return ses
@@ -92,6 +102,19 @@ func getSession(config *aws.Config) *session.Session {
 		log.Printf("E! Failed to get credential from session: %v", err)
 	} else {
 		log.Printf("D! Using credential %s from %s", cred.AccessKeyID, cred.ProviderName)
+	}
+	if cred.ProviderName == ec2rolecreds.ProviderName {
+		var found []string
+		cfgFiles = getFallbackSharedConfigFiles(currentUserHomeDir)
+		for _, cfgFile := range cfgFiles {
+			if _, err = os.Stat(cfgFile); err == nil {
+				found = append(found, cfgFile)
+			}
+		}
+		if len(found) > 0 {
+			log.Printf("W! Unused shared config file(s) found: %v. If you would like to use them, "+
+				"please update your common-config.toml.", found)
+		}
 	}
 	return ses
 }
