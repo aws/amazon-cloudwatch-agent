@@ -48,7 +48,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 		"buildPKG",
 		"buildMSI",
 		"MSIUpgrade_*",
-		"EC2IntegrationTest",
+		"Ec2IntegrationTest",
 		"IntegrationTestBase",
 		"CWADockerImageBuilderX86",
 		"CWADockerImageBuilderARM64",
