@@ -347,21 +347,43 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds"},
 					},
 					{
+						Dimensions:          [][]string{{"ClusterName", "priority_level"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_flowcontrol_request_concurrency_limit"},
+					},
+					{
 						Dimensions: [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{"apiserver_storage_objects",
+						MetricNameSelectors: []string{
+							"apiserver_admission_controller_admission_duration_seconds",
+							"apiserver_flowcontrol_rejected_requests_total",
+							"apiserver_request_duration_seconds",
 							"apiserver_request_total",
 							"apiserver_request_total_5xx",
-							"apiserver_request_duration_seconds",
-							"apiserver_admission_controller_admission_duration_seconds",
+							"apiserver_storage_objects",
+							"etcd_request_duration_seconds",
 							"rest_client_request_duration_seconds",
 							"rest_client_requests_total",
-							"etcd_request_duration_seconds"},
+						},
 					},
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
 					{
-						MetricName: "apiserver_storage_objects",
+						MetricName: "apiserver_admission_controller_admission_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_flowcontrol_request_concurrency_limit",
 						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_flowcontrol_rejected_requests_total",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_request_duration_seconds",
+						Unit:       "Seconds",
 						Overwrite:  true,
 					},
 					{
@@ -375,12 +397,12 @@ func TestTranslator(t *testing.T) {
 						Overwrite:  true,
 					},
 					{
-						MetricName: "apiserver_request_duration_seconds",
-						Unit:       "Seconds",
+						MetricName: "apiserver_storage_objects",
+						Unit:       "Count",
 						Overwrite:  true,
 					},
 					{
-						MetricName: "apiserver_admission_controller_admission_duration_seconds",
+						MetricName: "etcd_request_duration_seconds",
 						Unit:       "Seconds",
 						Overwrite:  true,
 					},
@@ -392,11 +414,6 @@ func TestTranslator(t *testing.T) {
 					{
 						MetricName: "rest_client_requests_total",
 						Unit:       "Count",
-						Overwrite:  true,
-					},
-					{
-						MetricName: "etcd_request_duration_seconds",
-						Unit:       "Seconds",
 						Overwrite:  true,
 					},
 				},

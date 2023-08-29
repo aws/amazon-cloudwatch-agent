@@ -169,6 +169,10 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - apiserver_storage_list_duration_seconds
+      - dimensions: [ [ClusterName, priority_level], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_flowcontrol_request_concurrency_limit
       - dimensions: [ [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
@@ -180,6 +184,7 @@ exporters:
           - rest_client_request_duration_seconds
           - rest_client_requests_total
           - etcd_request_duration_seconds
+          - apiserver_flowcontrol_rejected_requests_total
     metric_descriptors:
           - metric_name: apiserver_storage_objects
             unit: Count
@@ -204,6 +209,12 @@ exporters:
             overwrite: true
           - metric_name: etcd_request_duration_seconds
             unit: Seconds
+            overwrite: true
+          - metric_name: apiserver_flowcontrol_rejected_requests_total
+            unit: Count
+            overwrite: true
+          - metric_name: apiserver_flowcontrol_request_concurrency_limit
+            unit: Count
             overwrite: true
     namespace: ContainerInsights
     no_verify_ssl: false
