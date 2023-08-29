@@ -42,7 +42,7 @@ func cleanHost() error {
 }
 
 func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
-	maxResults := *int32(1000)
+	maxResults := int32(1000)
 	nameFilter := types.Filter{Name: aws.String("tag:Name"), Values: []string{
 		"buildLinuxPackage",
 		"buildPKG",
@@ -64,7 +64,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 			nameFilter,
 			{Name: aws.String("instance-state-name"),
 				Values: []string{"running"}}},
-		MaxResults: maxResults}
+		MaxResults: aws.Int32(maxResults)}
 	for {
 		instanceIds := make([]string, 0)
 		expirationDateInstance := time.Now().UTC().Add(clean.KeepDurationOneDay)
