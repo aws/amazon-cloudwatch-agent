@@ -280,6 +280,7 @@ func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Met
 				MetricNameSelectors: []string{
 					"apiserver_storage_objects",
 					"apiserver_request_total",
+					"apiserver_request_total_5xx",
 					"apiserver_request_duration_seconds",
 					"apiserver_admission_controller_admission_duration_seconds",
 					"rest_client_request_duration_seconds",
@@ -304,6 +305,11 @@ func getControlPlaneMetricDescriptors(conf *confmap.Conf) []awsemfexporter.Metri
 			},
 			{
 				MetricName: "apiserver_request_total",
+				Unit:       "Count",
+				Overwrite:  true,
+			},
+			{
+				MetricName: "apiserver_request_total_5xx",
 				Unit:       "Count",
 				Overwrite:  true,
 			},
