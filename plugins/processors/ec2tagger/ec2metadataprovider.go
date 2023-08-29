@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
 type MetadataProvider interface {
@@ -32,7 +31,6 @@ func NewMetadataProvider(p client.ConfigProvider, retries int) MetadataProvider 
 	disableFallbackConfig := &aws.Config{
 		LogLevel:                  configaws.SDKLogLevel(),
 		Logger:                    configaws.SDKLogger{},
-		Retryer:                   retryer.NewIMDSRetryer(retries),
 		EC2MetadataEnableFallback: aws.Bool(false),
 	}
 	enableFallbackConfig := &aws.Config{
