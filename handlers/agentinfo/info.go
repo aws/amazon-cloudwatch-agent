@@ -282,6 +282,7 @@ func readVersionFile() string {
 	return strings.Trim(string(byteArray), " \n\r\t")
 }
 
+// a
 func getUsageDataEnabled() bool {
 	ok, err := strconv.ParseBool(os.Getenv(envconfig.CWAGENT_USAGE_DATA))
 	return ok || err != nil
