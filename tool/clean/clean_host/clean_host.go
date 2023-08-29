@@ -42,12 +42,13 @@ func cleanHost() error {
 }
 
 func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
-	maxResults := int32(1000)
+	maxResults := *int32(1000)
 	nameFilter := types.Filter{Name: aws.String("tag:Name"), Values: []string{
 		"buildLinuxPackage",
 		"buildPKG",
 		"buildMSI",
 		"MSIUpgrade_*",
+		"EC2IntegrationTest",
 		"IntegrationTestBase",
 		"CWADockerImageBuilderX86",
 		"CWADockerImageBuilderARM64",
