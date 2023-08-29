@@ -71,7 +71,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 		describeInstanceOutput, _ := ec2client.DescribeInstances(cxt, &instanceInput)
 		for _, reservation := range describeInstanceOutput.Reservations {
 			for _, instance := range reservation.Instances {
-				log.Printf("instance id %v experation date %v host creation date raw %v host state %v",
+				log.Printf("instance id %v expiration date %v host creation date raw %v host state %v",
 					*instance.InstanceId, expirationDateInstance, *instance.LaunchTime, instance.State)
 				if expirationDateInstance.After(*instance.LaunchTime) {
 					log.Printf("Try to delete instance %s tags %v launch-date %s", *instance.InstanceId, instance.Tags, *instance.LaunchTime)
@@ -84,7 +84,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 			return
 		}
 
-		log.Printf("instances to temrinate %v", instanceIds)
+		log.Printf("instances to terminate %v", instanceIds)
 		terminateInstance := ec2.TerminateInstancesInput{InstanceIds: instanceIds}
 		_, err := ec2client.TerminateInstances(cxt, &terminateInstance)
 		if err != nil {
