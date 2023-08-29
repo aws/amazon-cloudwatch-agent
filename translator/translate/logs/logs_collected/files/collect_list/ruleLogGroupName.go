@@ -4,9 +4,9 @@
 package collect_list
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
 const LogGroupNameSectionKey = "log_group_name"

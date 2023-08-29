@@ -20,15 +20,18 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/processor/processortest"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/metric"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
-func TestTranslateUnix(t *testing.T) {
+func TestTranslate(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslator().(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	c := testutil.GetConf(t, filepath.Join("testdata", "unix", "config.yaml"))
-	c.Unmarshal(&expectedCfg)
+	require.NoError(t, c.Unmarshal(&expectedCfg))
 
 	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "unix", "config.json")))
 	translatedCfg, err := transl.Translate(conf)
@@ -46,11 +49,12 @@ func TestTranslateUnix(t *testing.T) {
 // TestMetricDecoration - This test is used to verify that metrics are receiving decorations correctly.
 // This is done by using a test TransformProcessor yaml configuration, starting the processor
 // and having it consume test metrics.
-func TestMetricDecorationUnix(t *testing.T) {
+func TestMetricDecoration(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslator().(*translator)
 	cfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
 	conf := testutil.GetConf(t, filepath.Join("testdata", "unix", "config.yaml"))
-	conf.Unmarshal(&cfg)
+	require.NoError(t, conf.Unmarshal(&cfg))
 	sink := new(consumertest.MetricsSink)
 
 	expectedMetrics := pmetric.NewMetrics()
@@ -68,7 +72,7 @@ func TestMetricDecorationUnix(t *testing.T) {
 	metrics.AddGaugeMetricDataPoint("cpu_usage_idle", "none", 0.0, 0, 0, nil)
 	metrics.AddGaugeMetricDataPoint("cpu_time_active", "none", 0.0, 0, 0, nil)
 	metrics.AddGaugeMetricDataPoint("other_metric", "none", 0.0, 0, 0, nil)
-	proc.ConsumeMetrics(ctx, actualMetrics)
+	assert.NoError(t, proc.ConsumeMetrics(ctx, actualMetrics))
 
 	assert.Equal(t, expectedMetrics, actualMetrics)
 }

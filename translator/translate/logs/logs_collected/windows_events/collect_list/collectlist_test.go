@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/util"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 func TestApplyRule(t *testing.T) {

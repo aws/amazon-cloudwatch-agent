@@ -4,7 +4,7 @@
 package collect_list
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
 const AutoRemovalSectionKey = "auto_removal"

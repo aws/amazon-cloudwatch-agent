@@ -3,7 +3,7 @@
 
 package windows_events
 
-import "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/util"
+import "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 
 type FileStateFolder struct {
 }

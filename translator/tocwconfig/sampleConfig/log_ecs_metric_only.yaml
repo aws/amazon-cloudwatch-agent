@@ -7,7 +7,7 @@ exporters:
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
-    log_stream_name: i-UNKNOWN
+    log_stream_name: fake-host-name
     max_retries: 2
     no_verify_ssl: false
     num_workers: 8
@@ -35,6 +35,7 @@ exporters:
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
     endpoint: ""
+    enhanced_container_insights: false
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/{ClusterName}/performance
     log_retention: 0

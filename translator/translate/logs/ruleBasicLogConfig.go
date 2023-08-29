@@ -4,8 +4,8 @@
 package logs
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 )
 
 type BasicLogConfig struct {

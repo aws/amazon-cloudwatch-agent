@@ -30,17 +30,17 @@ import (
 	"github.com/kardianos/service"
 	"go.opentelemetry.io/collector/otelcol"
 
-	configaws "github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/aws"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cmd/amazon-cloudwatch-agent/internal"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/handlers/agentinfo"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/receiver/adapter"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/configprovider"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/defaultcomponents"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/service/registry"
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
+	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
+	"github.com/aws/amazon-cloudwatch-agent/service/registry"
 )
 
 const (

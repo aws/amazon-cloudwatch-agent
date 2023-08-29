@@ -10,11 +10,11 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	awsxrayexporter "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/exporter/awsxray"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/processor"
-	awsxrayreceiver "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/awsxray"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/receiver/otlp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	awsxrayexporter "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor"
+	awsxrayreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsxray"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 const (

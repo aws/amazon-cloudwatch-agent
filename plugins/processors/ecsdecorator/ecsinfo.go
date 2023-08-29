@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/httpclient"
+	"github.com/aws/amazon-cloudwatch-agent/internal/httpclient"
 )
 
 type ecsInfo struct {

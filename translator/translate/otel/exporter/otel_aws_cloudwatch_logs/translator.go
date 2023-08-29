@@ -14,10 +14,10 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/envconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 //go:embed aws_cloudwatch_logs_default.yaml
@@ -75,9 +75,11 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	if profile, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
-		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profile)
-		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", agent.Global_Config.Credentials[agent.CredentialsFile_Key])}
+	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
+		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
 	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
 	if c.IsSet(roleArnPathKey) {
@@ -97,11 +99,19 @@ func (t *translator) isEmf(conf *confmap.Conf) bool {
 
 func (t *translator) setEmfFields(conf *confmap.Conf, cfg *awscloudwatchlogsexporter.Config) error {
 	cfg.Region = agent.Global_Config.Region
+
 	if conf.IsSet(streamNameKey) {
 		cfg.LogStreamName = fmt.Sprintf("%v", conf.Get(streamNameKey))
+	} else {
+		rule := logs.LogStreamName{}
+		_, val := rule.ApplyRule(conf.Get(common.LogsKey))
+		if logStreamName, ok := val.(map[string]interface{})[common.LogStreamName]; !ok {
+			return &common.MissingKeyError{ID: t.ID(), JsonKey: streamNameKey}
+		} else {
+			cfg.LogStreamName = logStreamName.(string)
+		}
 	}
-	metadata := util.GetMetadataInfo(util.Ec2MetadataInfoProvider)
-	cfg.LogStreamName = util.ResolvePlaceholder(cfg.LogStreamName, metadata)
+
 	cfg.EmfOnly = true
 	return nil
 }

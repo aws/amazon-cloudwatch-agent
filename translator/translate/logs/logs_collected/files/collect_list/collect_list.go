@@ -9,13 +9,13 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/logs_collected/files"
-	logUtil "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
+	logUtil "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 )
 
 type Rule translator.Rule

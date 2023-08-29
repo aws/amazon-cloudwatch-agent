@@ -10,8 +10,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/unit"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/unit"
 )
 
 // OTEL supports: https://unitsofmeasure.org/ucum

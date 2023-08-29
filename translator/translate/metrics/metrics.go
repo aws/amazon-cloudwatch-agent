@@ -6,12 +6,12 @@ package metrics
 import (
 	"sort"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
 type Rule translator.Rule

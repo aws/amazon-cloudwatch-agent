@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/hash"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 )
 
 func checkResult(t *testing.T, inputBytes []byte, expectedOutput interface{}) {

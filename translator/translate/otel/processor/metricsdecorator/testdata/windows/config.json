@@ -67,6 +67,10 @@
       "System": {
         "measurement": [
           "Context Switches/sec",
+          {
+            "name": "System Up Time",
+            "rename": "UPTIME"
+          },
           "System Calls/sec",
           "Processor Queue Length"
         ],

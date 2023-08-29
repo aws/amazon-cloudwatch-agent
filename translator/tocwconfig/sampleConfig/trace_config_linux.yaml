@@ -15,8 +15,8 @@ exporters:
     request_timeout_seconds: 30
     resource_arn: ""
     role_arn: ""
-    profile: ""
-    shared_credentials_file: []
+    profile: "default"
+    shared_credentials_file: [ "/root/.aws/credentials" ]
     telemetry:
       enabled: true
       include_metadata: true

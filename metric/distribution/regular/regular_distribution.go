@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 type RegularDistribution struct {

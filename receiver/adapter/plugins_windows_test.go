@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/win_perf_counters"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/win_perf_counters"
 )
 
 func Test_WindowsPerfCountersPlugin(t *testing.T) {

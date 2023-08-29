@@ -19,7 +19,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/swap"
 	"github.com/stretchr/testify/assert"
 
-	_ "github.com/aws/private-amazon-cloudwatch-agent-staging/plugins/inputs/statsd"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd"
 )
 
 const testCfg = "./testdata/all_plugins.toml"

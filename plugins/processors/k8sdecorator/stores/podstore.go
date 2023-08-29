@@ -13,11 +13,11 @@ import (
 	"github.com/influxdata/telegraf"
 	corev1 "k8s.io/api/core/v1"
 
-	. "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/containerinsightscommon"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/k8sCommon/k8sclient"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/k8sCommon/kubeletutil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/mapWithExpiry"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/profiler"
+	. "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/k8sclient"
+	"github.com/aws/amazon-cloudwatch-agent/internal/k8sCommon/kubeletutil"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapWithExpiry"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
 const (

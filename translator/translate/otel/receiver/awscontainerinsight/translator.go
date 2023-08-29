@@ -5,6 +5,7 @@ package awscontainerinsight
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -13,12 +14,12 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/collections"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/logs/util"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 // container orchestrator keys
@@ -79,6 +80,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultMetricsCollectionInterval)
 	cfg.ContainerOrchestrator = configuredService.Value
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
+		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+	}
 
 	if configuredService.Value == eks {
 		if err := t.setClusterName(conf, cfg); err != nil {

@@ -13,8 +13,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
-	cloudwatchutil "github.com/aws/private-amazon-cloudwatch-agent-staging/internal/cloudwatch"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/metric/distribution"
+	cloudwatchutil "github.com/aws/amazon-cloudwatch-agent/internal/cloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 // ConvertOtelDimensions will returns a sorted list of dimensions.

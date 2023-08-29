@@ -16,7 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/clean"
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
 // Clean ecs clusters if they have been open longer than 7 day

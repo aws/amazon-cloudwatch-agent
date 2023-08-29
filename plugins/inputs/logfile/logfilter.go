@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/logs"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
 const (

@@ -23,18 +23,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/cfg/commonconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/retryer"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/cmdutil"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/config"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/context"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toenvconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/tocwconfig/toyamlconfig"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/agent"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toenvconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 const (
@@ -57,6 +57,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 
 func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
@@ -169,6 +170,7 @@ func TestLogOnlyConfig(t *testing.T) {
 
 func TestTraceConfig(t *testing.T) {
 	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "trace_config", "linux", expectedEnvVars, "_linux")
 	checkTranslation(t, "trace_config", "darwin", expectedEnvVars, "_linux")
@@ -183,7 +185,7 @@ func TestConfigWithEnvironmentVariables(t *testing.T) {
 
 func TestStandardConfigWithCommonConfig(t *testing.T) {
 	resetContext(t)
-	readCommonConfig(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentialsProxySsl.toml")
 	expectedEnvVars := map[string]string{
 		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
 		"HTTPS_PROXY":   "https://127.0.0.1:3280",
@@ -193,13 +195,6 @@ func TestStandardConfigWithCommonConfig(t *testing.T) {
 	checkTranslation(t, "standard_config_linux", "linux", expectedEnvVars, "_with_common_config")
 	checkTranslation(t, "standard_config_linux", "darwin", nil, "_with_common_config")
 	checkTranslation(t, "standard_config_windows", "windows", expectedEnvVars, "_with_common_config")
-}
-
-func TestDeltaConfigLinux(t *testing.T) {
-	resetContext(t)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "delta_config_linux", "linux", expectedEnvVars, "")
-	checkTranslation(t, "delta_config_linux", "darwin", nil, "")
 }
 
 func TestDeltaNetConfigLinux(t *testing.T) {
@@ -268,10 +263,10 @@ func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFil
 	verifyToYamlTranslation(t, input, expectedYamlFilePath, tokenReplacements...)
 }
 
-func readCommonConfig(t *testing.T) {
+func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 	ctx := context.CurrentContext()
 	cfg := commonconfig.New()
-	data, _ := os.ReadFile("./sampleConfig/commonConfigTest.toml")
+	data, _ := os.ReadFile(commonConfigFilePath)
 	require.NoError(t, cfg.Parse(bytes.NewReader(data)))
 	ctx.SetCredentials(cfg.CredentialsMap())
 	ctx.SetProxy(cfg.ProxyMap())

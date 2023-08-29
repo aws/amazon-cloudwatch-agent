@@ -7,11 +7,11 @@ exporters:
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
-    log_stream_name: i-UNKNOWN
+    log_stream_name: host_name_from_env
     max_retries: 2
     no_verify_ssl: false
     num_workers: 8
-    profile: ""
+    profile: "default"
     proxy_address: ""
     raw_log: true
     region: us-east-1
@@ -27,7 +27,7 @@ exporters:
     role_arn: ""
     sending_queue:
       queue_size: 1000
-    shared_credentials_file: []
+    shared_credentials_file: [ "/root/.aws/credentials" ]
   awsemf/containerinsights:
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
@@ -35,6 +35,7 @@ exporters:
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
     endpoint: ""
+    enhanced_container_insights: true
     local_mode: false
     log_group_name: /aws/containerinsights/{ClusterName}/performance
     log_retention: 0
@@ -65,6 +66,13 @@ exporters:
           - pod_network_tx_bytes
           - pod_cpu_utilization_over_pod_limit
           - pod_memory_utilization_over_pod_limit
+      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace,  Service ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - pod_interface_network_rx_dropped
+          - pod_interface_network_rx_errors
+          - pod_interface_network_tx_dropped
+          - pod_interface_network_tx_errors
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ] ]
         label_matchers: [ ]
         metric_name_selectors:
@@ -103,6 +111,15 @@ exporters:
           - node_status_condition_unknown
           - node_status_capacity_pods
           - node_status_allocatable_pods
+      - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - node_interface_network_rx_dropped
+          - node_interface_network_rx_errors
+          - node_interface_network_tx_dropped
+          - node_interface_network_tx_errors
+          - node_diskio_io_service_bytes_total
+          - node_diskio_io_serviced_total
       # node fs metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
@@ -146,6 +163,10 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - etcd_db_total_size_in_bytes
+      - dimensions: [ [ClusterName, resource], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_storage_list_duration_seconds
       - dimensions: [ [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
@@ -172,8 +193,8 @@ exporters:
       enabled: true
     retain_initial_value_of_delta_metric: false
     role_arn: ""
-    profile: ""
-    shared_credentials_file: [ ]
+    profile: "default"
+    shared_credentials_file: [ "/root/.aws/credentials" ]
     version: "0"
 extensions: {}
 processors:
@@ -208,8 +229,8 @@ receivers:
     request_timeout_seconds: 0
     resource_arn: ""
     role_arn: ""
-    profile: ""
-    shared_credentials_file: []
+    profile: "default"
+    shared_credentials_file: [ "/root/.aws/credentials" ]
   tcplog/emf_logs:
     attributes: {}
     encoding: utf-8

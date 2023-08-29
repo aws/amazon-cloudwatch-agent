@@ -11,7 +11,7 @@ import (
 
 	"github.com/bigkevmcd/go-configparser"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
 )
 
 var knownConfigKeys = []string{

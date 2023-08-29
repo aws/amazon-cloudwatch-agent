@@ -14,7 +14,7 @@ import (
 	"github.com/shirou/gopsutil/process"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/tool/data/config"
+	"github.com/aws/amazon-cloudwatch-agent/tool/data/config"
 )
 
 type Process interface {

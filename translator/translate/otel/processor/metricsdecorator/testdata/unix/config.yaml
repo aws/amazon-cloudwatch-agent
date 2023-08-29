@@ -7,3 +7,4 @@ metric_statements:
       - set(name, "cpu_time_active_renamed") where name == "cpu_time_active"
       - set(unit, "unit") where name == "disk_free"
       - set(name, "DISK_FREE") where name == "disk_free"
+      - set(name, "gpu-utilization") where name == "nvidia_smi_utilization_gpu"

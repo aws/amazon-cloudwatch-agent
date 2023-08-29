@@ -4,12 +4,12 @@
 package procstat
 
 import (
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/internal/util/hash"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonRule"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/jsonconfig/mergeJsonUtil"
-	parent "github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/metrics_collect"
-	"github.com/aws/private-amazon-cloudwatch-agent-staging/translator/translate/metrics/util"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
+	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonRule"
+	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
+	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
 )
 
 var ChildRule = map[string]translator.Rule{}
