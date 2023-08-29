@@ -16,7 +16,7 @@ func TestApplyLogGroupClassRule(t *testing.T) {
 	r := new(LogGroupClass)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
-			"log_group_class": "basic"
+			"log_group_class": "essentials"
 	}`), &input)
 	if e == nil {
 		actualReturnKey, actualReturnVal := r.ApplyRule(input)

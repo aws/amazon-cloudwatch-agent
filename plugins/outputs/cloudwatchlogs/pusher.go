@@ -344,8 +344,8 @@ func (p *pusher) createLogGroupAndStream() error {
 	p.Log.Debugf("creating stream fail due to : %v", err)
 	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
 		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
-			LogGroupName: &p.Group,
-			LogGroupTier: &p.Class,
+			LogGroupName:  &p.Group,
+			LogGroupClass: &p.Class,
 		})
 
 		// attempt to create stream again if group created successfully.

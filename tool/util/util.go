@@ -41,7 +41,7 @@ const (
 	MapKeyMeasurement               = "measurement"
 
 	StandardLogGroupClass   = "STANDARD"
-	EssentialsLogGroupClass = "BASIC"
+	EssentialsLogGroupClass = "ESSENTIALS"
 )
 
 func CurOS() string {

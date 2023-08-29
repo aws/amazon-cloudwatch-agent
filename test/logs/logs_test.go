@@ -38,7 +38,7 @@ type input struct {
 	testName      string
 	configPath    string
 	logGroupName  string
-	logGroupClass types.LogGroupTier
+	logGroupClass types.LogGroupClass
 }
 
 var testParameters = []input{
@@ -46,19 +46,19 @@ var testParameters = []input{
 		testName:      "Standard log config",
 		configPath:    "testdata/logs_config.json",
 		logGroupName:  instanceId,
-		logGroupClass: types.LogGroupTierStandard,
+		logGroupClass: types.LogGroupClassStandard,
 	},
 	{
 		testName:      "Standard log config with standard class specification",
 		configPath:    "testdata/logs_config_standard.json",
 		logGroupName:  instanceId,
-		logGroupClass: types.LogGroupTierStandard,
+		logGroupClass: types.LogGroupClassStandard,
 	},
-	{ //TODO update all naming from basic to essentials once SDK changes are available
-		testName:      "Standard log config with basic class specification",
+	{
+		testName:      "Standard log config with essentials class specification",
 		configPath:    "testdata/logs_config_basic.json",
-		logGroupName:  instanceId + "-basic",
-		logGroupClass: types.LogGroupTierBasic,
+		logGroupName:  instanceId + "-essentials",
+		logGroupClass: types.LogGroupClassEssentials,
 	},
 }
 
@@ -108,7 +108,7 @@ func validateLogGroupExistence(param input) (bool, error) {
 	// check CWL to ensure we got the expected log groups
 	describeLogGroupInput := cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(param.logGroupName),
-		LogGroupTier:       param.logGroupClass,
+		LogGroupClass:      param.logGroupClass,
 	}
 
 	describeLogGroupOutput, err := CwlClient.DescribeLogGroups(ctx, &describeLogGroupInput)
