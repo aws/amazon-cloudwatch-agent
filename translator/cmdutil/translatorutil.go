@@ -208,10 +208,12 @@ func TranslateJsonMapToTomlConfig(jsonConfigValue interface{}) (interface{}, err
 	if !translator.IsTranslateSuccess() {
 		return nil, fmt.Errorf("%v", translator.ErrorMessages)
 	}
+
 	// Translation is valid, log info messages and continue to convert/write to toml
 	for _, infoMessage := range translator.InfoMessages {
 		log.Println(infoMessage)
 	}
+
 	return val, nil
 }
 

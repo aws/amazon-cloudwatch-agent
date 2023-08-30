@@ -45,7 +45,7 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/a
 %dir /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d
 %dir /opt/aws/amazon-cloudwatch-agent/logs
 %dir /opt/aws/amazon-cloudwatch-agent/var
-%dir /var/agent/queues
+
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
 /opt/aws/amazon-cloudwatch-agent/bin/CWAGENT_VERSION

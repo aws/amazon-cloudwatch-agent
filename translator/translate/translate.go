@@ -66,6 +66,7 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 
 	// sort rule here so that we could get the output plugin instance in a stable order
 	sortedRuleKey := make([]string, 0, len(targetRuleMap))
+
 	for k := range targetRuleMap {
 		sortedRuleKey = append(sortedRuleKey, k)
 	}

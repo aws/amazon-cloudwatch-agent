@@ -50,6 +50,7 @@ type CloudWatchLogs struct {
 	Profile          string `toml:"profile"`
 	Filename         string `toml:"shared_credential_file"`
 	Token            string `toml:"token"`
+	PersistentQueue  bool   `toml:"persistentQueue"`
 
 	//log group and stream names
 	LogStreamName string `toml:"log_stream_name"`
@@ -138,7 +139,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentInfo.UserAgent()))
 	client.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("X-Amz-Agent-Stats", agentInfo.StatsHeader))
 
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, agentInfo)
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, agentInfo, c.PersistentQueue)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
