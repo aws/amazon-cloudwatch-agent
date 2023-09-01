@@ -60,8 +60,8 @@ func TestTailerSrc(t *testing.T) {
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
 	ts := NewTailerSrc(
 		"groupName", "streamName",
-		"destination", util.EssentialsLogGroupClass,
-		statefile.Name(),
+		"destination", statefile.Name(),
+		util.EssentialsLogGroupClass,
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
