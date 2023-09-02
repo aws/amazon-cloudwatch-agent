@@ -19,7 +19,6 @@ type diskQueue struct {
 	unmarshal persistentqueue.Unmarshaler
 	queue     diskqueue.Interface
 	size      int64
-	logger    telegraf.Logger
 }
 
 func NewPersistentQueue(
@@ -49,14 +48,13 @@ func NewPersistentQueue(
 			syncTimeout,
 			getDiskQueueLogger(logger),
 		),
-		logger: logger,
 	}
 }
 
 func (dq *diskQueue) Enqueue(obj interface{}) error {
 	marshaledObj, err := dq.marshal(obj)
 	if err != nil {
-		dq.logger.Debugf("errors happen when marshal")
+		//dq.logger.Debugf("errors happen when marshal")
 		return err
 	}
 
@@ -67,8 +65,6 @@ func (dq *diskQueue) Enqueue(obj interface{}) error {
 	for dq.queue.Depth() >= dq.size {
 		<-dq.queue.ReadChan()
 	}
-	dq.logger.Debugf("put function start work")
-	//return dq.queue.Put(marshaledObj)
 	return dq.queue.Put(compressedObj)
 }
 
@@ -91,20 +87,19 @@ func (dq *diskQueue) Close() error {
 
 func getDiskQueueLogger(logger telegraf.Logger) func(level diskqueue.LogLevel, f string, args ...interface{}) {
 	return func(level diskqueue.LogLevel, f string, args ...interface{}) {
-		logFn := logger.Debugf
+		logFn := logger.Info
 		switch level {
 		case diskqueue.DEBUG:
-			logFn = logger.Debugf
+			logFn = logger.Debug
 		case diskqueue.INFO:
-			logFn = logger.Infof
+			logFn = logger.Info
 		case diskqueue.WARN:
-			logFn = logger.Warnf
+			logFn = logger.Warn
 		case diskqueue.ERROR:
-			logFn = logger.Errorf
+			logFn = logger.Error
 		case diskqueue.FATAL:
-			logFn = logger.Errorf
+			logFn = logger.Error
 		}
-
-		logFn(fmt.Sprintf(f, args))
+		logFn(fmt.Sprintf(f, args...))
 	}
 }
