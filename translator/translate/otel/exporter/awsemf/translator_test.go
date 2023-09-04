@@ -425,7 +425,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"log_group_name":  "/test/log/group",
-							"log_stream_name": "{ServiceName}",
+							"log_stream_name": "{LogStreamName}",
 							"emf_processor": map[string]interface{}{
 								"metric_declaration": []interface{}{
 									map[string]interface{}{
@@ -446,7 +446,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"namespace":                              "CWAgent/Prometheus",
 				"log_group_name":                         "/test/log/group",
-				"log_stream_name":                        "{ServiceName}",
+				"log_stream_name":                        "{JobName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
 				"enhanced_container_insights":            false,
@@ -483,7 +483,7 @@ func TestTranslator(t *testing.T) {
 						"prometheus": map[string]interface{}{
 							"disable_metric_extraction": true,
 							"log_group_name":            "/test/log/group",
-							"log_stream_name":           "{ServiceName}",
+							"log_stream_name":           "{JobName}",
 						},
 					},
 				},
@@ -491,7 +491,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"namespace":                              "",
 				"log_group_name":                         "/test/log/group",
-				"log_stream_name":                        "{ServiceName}",
+				"log_stream_name":                        "{JobName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              true,
 				"enhanced_container_insights":            false,
@@ -515,7 +515,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"log_group_name":  "/test/log/group",
-							"log_stream_name": "{ServiceName}",
+							"log_stream_name": "{JobName}",
 							"emf_processor": map[string]interface{}{
 								"metric_unit": map[string]interface{}{
 									"jvm_gc_collection_seconds_sum": "Milliseconds",
@@ -528,7 +528,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"namespace":                              "CWAgent/Prometheus",
 				"log_group_name":                         "/test/log/group",
-				"log_stream_name":                        "{ServiceName}",
+				"log_stream_name":                        "{JobName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
 				"enhanced_container_insights":            false,
@@ -557,7 +557,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"log_group_name":  "/test/log/group",
-							"log_stream_name": "{ServiceName}",
+							"log_stream_name": "{JobName}",
 						},
 					},
 				},
@@ -565,7 +565,7 @@ func TestTranslator(t *testing.T) {
 			want: map[string]interface{}{
 				"namespace":                              "",
 				"log_group_name":                         "/test/log/group",
-				"log_stream_name":                        "{ServiceName}",
+				"log_stream_name":                        "{JobName}",
 				"dimension_rollup_option":                "NoDimensionRollup",
 				"disable_metric_extraction":              false,
 				"enhanced_container_insights":            false,
