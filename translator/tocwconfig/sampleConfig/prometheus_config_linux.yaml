@@ -14,7 +14,7 @@ exporters:
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/TestCluster/prometheus
     log_retention: 0
-    log_stream_name: '{ServiceName}'
+    log_stream_name: '{JobName}'
     max_retries: 2
     metric_descriptors:
       - metric_name: "nginx_request_count"
