@@ -18,6 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 )
 
 const (
@@ -114,6 +116,7 @@ func getSession(config *aws.Config) *session.Session {
 		if len(found) > 0 {
 			log.Printf("W! Unused shared config file(s) found: %v. If you would like to use them, "+
 				"please update your common-config.toml.", found)
+			agentinfo.RecordSharedConfigFallback()
 		}
 	}
 	return ses

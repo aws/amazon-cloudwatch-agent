@@ -147,6 +147,9 @@ func TestGetAgentStats(t *testing.T) {
 
 	stats.StatusCode = nil
 	assert.Empty(t, getAgentStats(stats))
+
+	stats.SharedConfigFallback = aws.Int(1)
+	assert.Equal(t, "\"scfb\":1", getAgentStats(stats))
 }
 
 func TestGetStatusCode(t *testing.T) {
@@ -232,4 +235,14 @@ func TestIsUsageDataEnabled(t *testing.T) {
 
 	t.Setenv(envconfig.CWAGENT_USAGE_DATA, "FALSE")
 	assert.False(t, getUsageDataEnabled())
+}
+
+func TestSharedConfigFallback(t *testing.T) {
+	defer sharedConfigFallback.Store(false)
+	assert.Nil(t, getSharedConfigFallback())
+	RecordSharedConfigFallback()
+	assert.Equal(t, 1, *(getSharedConfigFallback()))
+	RecordSharedConfigFallback()
+	RecordSharedConfigFallback()
+	assert.Equal(t, 1, *(getSharedConfigFallback()))
 }
