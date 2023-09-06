@@ -33,7 +33,7 @@ const (
 	maxBytesPerFile = 1024 * 1024 * 1024 // 1 GB
 	maxMsgSize      = 256*1024 + 2       // 256 KB
 	minMsgSize      = 1                  // messages should have content
-	syncEvery       = 5
+	syncEvery       = 5                  //number of writes per file synchronize, ensuring the data is actually written to disk rather than being in the memory
 	syncTimeout     = time.Minute
 )
 
@@ -70,7 +70,7 @@ type pusher struct {
 
 	backlogQueue        persistentqueue.PersistentQueue
 	ticker              *time.Ticker
-	dequeueEvents       *retryStruct
+	dequeueEvents       *RetryStruct
 	flagPersistentQueue bool
 
 	initNonBlockingChOnce sync.Once
@@ -82,7 +82,7 @@ type pusher struct {
 func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, agentInfo agentinfo.AgentInfo, flagPersistentQueue bool) *pusher {
 	marshaler := func(i interface{}) ([]byte, error) { return json.Marshal(i) }
 	unmarshaler := func(bytes []byte) (interface{}, error) {
-		var data retryStruct
+		var data RetryStruct
 		return data, json.Unmarshal(bytes, &data)
 	}
 	id := uuid.New()
@@ -301,7 +301,7 @@ func (p *pusher) start() {
 	}
 }
 
-func (p *pusher) dequeue() (*retryStruct, error) {
+func (p *pusher) dequeue() (*RetryStruct, error) {
 	if p.backlogQueue.Depth() == 0 {
 		return nil, nil
 	}
@@ -310,7 +310,7 @@ func (p *pusher) dequeue() (*retryStruct, error) {
 		p.Log.Debugf("errors happens when dequeue from disk")
 		return nil, err
 	}
-	input := obj.(retryStruct)
+	input := obj.(RetryStruct)
 	if !input.FirstRetryTime.IsZero() {
 		now := time.Now()
 		dt := now.Sub(input.FirstRetryTime).Hours()
@@ -338,7 +338,7 @@ func (p *pusher) reset() {
 	p.maxT = nil
 }
 
-type retryStruct struct {
+type RetryStruct struct {
 	*cloudwatchlogs.PutLogEventsInput
 	FirstRetryTime time.Time `type:"firstRetryTimeStamp"`
 	BufferredSize  int       `type:"buffersize"`
@@ -513,7 +513,7 @@ func (p *pusher) send() {
 		if p.flagPersistentQueue {
 			p.Log.Debugf("retry error detected, start retry")
 			if retryCount >= 1 {
-				retryinput := retryStruct{}
+				retryinput := RetryStruct{}
 				retryinput.PutLogEventsInput = Clone(input)
 				retryinput.FirstRetryTime = startTime
 				retryinput.BufferredSize = p.bufferredSize

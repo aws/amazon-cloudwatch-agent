@@ -241,7 +241,6 @@ type (
 	// Output plugins
 
 	cloudWatchOutputConfig struct {
-		PersistentQueue     bool   `toml:"persistentQueue"`
 		EndpointOverride    string `toml:"endpoint_override"`
 		ForceFlushInterval  string `toml:"force_flush_interval"`
 		MaxDatumsPerCall    int    `toml:"max_datums_per_call"`

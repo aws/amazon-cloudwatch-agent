@@ -22,8 +22,6 @@ func TestCompleteConfigUnix(t *testing.T) {
 	checkTranslation(t, "complete_linux_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
 
-	//checkTranslation(t, "complete_linux_config", "linux", nil, "")
-
 }
 
 func TestDeltaConfigLinux(t *testing.T) {

@@ -54,7 +54,6 @@ jobs:
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
-    if: false
     outputs:
       ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
       ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}

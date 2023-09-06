@@ -54,7 +54,6 @@ func NewPersistentQueue(
 func (dq *diskQueue) Enqueue(obj interface{}) error {
 	marshaledObj, err := dq.marshal(obj)
 	if err != nil {
-		//dq.logger.Debugf("errors happen when marshal")
 		return err
 	}
 
@@ -69,7 +68,6 @@ func (dq *diskQueue) Enqueue(obj interface{}) error {
 }
 
 func (dq *diskQueue) Dequeue() (interface{}, error) {
-	//obj := <-dq.queue.ReadChan()
 	obj, err := tool.Uncompress(<-dq.queue.ReadChan())
 	if err != nil {
 		return nil, err
