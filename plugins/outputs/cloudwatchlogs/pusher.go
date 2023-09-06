@@ -6,6 +6,8 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util/persistentqueue"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util/persistentqueue/diskqueue"
 	"math/rand"
 	"sort"
 	"sync"
@@ -20,8 +22,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
-	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue"
-	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue/diskqueue"
 )
 
 const (

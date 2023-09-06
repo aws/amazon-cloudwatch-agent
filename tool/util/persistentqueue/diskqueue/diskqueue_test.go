@@ -3,14 +3,13 @@ package diskqueue
 import (
 	"encoding/json"
 	"errors"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util/persistentqueue"
 	"github.com/influxdata/telegraf/plugins/common/shim"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue"
 )
 
 func setupDiskQueue(

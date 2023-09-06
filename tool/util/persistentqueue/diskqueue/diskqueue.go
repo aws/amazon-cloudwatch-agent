@@ -5,13 +5,13 @@ package diskqueue
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util/persistentqueue"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/nsqio/go-diskqueue"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool"
-	"github.com/aws/amazon-cloudwatch-agent/tool/persistentqueue"
 )
 
 type diskQueue struct {
