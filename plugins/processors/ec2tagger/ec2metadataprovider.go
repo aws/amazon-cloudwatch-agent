@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
@@ -49,7 +50,11 @@ func (c *metadataClient) InstanceID(ctx context.Context) (string, error) {
 	instanceId, err := c.metadataFallbackDisabled.GetMetadataWithContext(ctx, "instance-id")
 	if err != nil {
 		log.Printf("D! could not get instance id without imds v1 fallback enable thus enable fallback")
-		return c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "instance-id")
+		instanceInner, errorInner := c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "instance-id")
+		if errorInner == nil {
+			agentinfo.SetImdsFallbackSucceed()
+		}
+		return instanceInner, errorInner
 	}
 	return instanceId, err
 }
@@ -58,7 +63,11 @@ func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
 	hostname, err := c.metadataFallbackDisabled.GetMetadataWithContext(ctx, "hostname")
 	if err != nil {
 		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
-		return c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "hostname")
+		hostnameInner, errorInner := c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "hostname")
+		if errorInner == nil {
+			agentinfo.SetImdsFallbackSucceed()
+		}
+		return hostnameInner, errorInner
 	}
 	return hostname, err
 }
@@ -67,7 +76,11 @@ func (c *metadataClient) Get(ctx context.Context) (ec2metadata.EC2InstanceIdenti
 	instanceDocument, err := c.metadataFallbackDisabled.GetInstanceIdentityDocumentWithContext(ctx)
 	if err != nil {
 		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
-		return c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(ctx)
+		instanceDocumentInner, errorInner := c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(ctx)
+		if errorInner == nil {
+			agentinfo.SetImdsFallbackSucceed()
+		}
+		return instanceDocumentInner, errorInner
 	}
 	return instanceDocument, err
 }
