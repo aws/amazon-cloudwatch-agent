@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -47,6 +48,7 @@ var (
 	version                 = readVersionFile()
 	fullVersion             = getFullVersion(version)
 	id                      = uuid.NewString()
+	sharedConfigFallback    atomic.Bool
 )
 
 var isRunningAsRoot = defaultIsRunningAsRoot
@@ -65,13 +67,14 @@ type agentInfo struct {
 }
 
 type agentStats struct {
-	CpuPercent          *float64 `json:"cpu,omitempty"`
-	MemoryBytes         *uint64  `json:"mem,omitempty"`
-	FileDescriptorCount *int32   `json:"fd,omitempty"`
-	ThreadCount         *int32   `json:"th,omitempty"`
-	LatencyMillis       *int64   `json:"lat,omitempty"`
-	PayloadBytes        *int     `json:"load,omitempty"`
-	StatusCode          *int     `json:"code,omitempty"`
+	CpuPercent           *float64 `json:"cpu,omitempty"`
+	MemoryBytes          *uint64  `json:"mem,omitempty"`
+	FileDescriptorCount  *int32   `json:"fd,omitempty"`
+	ThreadCount          *int32   `json:"th,omitempty"`
+	LatencyMillis        *int64   `json:"lat,omitempty"`
+	PayloadBytes         *int     `json:"load,omitempty"`
+	StatusCode           *int     `json:"code,omitempty"`
+	SharedConfigFallback *int     `json:"scfb,omitempty"`
 }
 
 func New(groupName string) AgentInfo {
@@ -119,6 +122,7 @@ func (ai *agentInfo) RecordOpData(latency time.Duration, payloadBytes int, err e
 		stats.MemoryBytes = ai.memoryBytes()
 		stats.FileDescriptorCount = ai.fileDescriptorCount()
 		stats.ThreadCount = ai.threadCount()
+		stats.SharedConfigFallback = getSharedConfigFallback()
 		ai.nextUpdate = now.Add(updateInterval)
 	}
 
@@ -296,4 +300,15 @@ func isUsageDataEnabled() bool {
 
 func defaultIsRunningAsRoot() bool {
 	return os.Getuid() == 0
+}
+
+func RecordSharedConfigFallback() {
+	sharedConfigFallback.Store(true)
+}
+
+func getSharedConfigFallback() *int {
+	if sharedConfigFallback.Load() {
+		return aws.Int(1)
+	}
+	return nil
 }
