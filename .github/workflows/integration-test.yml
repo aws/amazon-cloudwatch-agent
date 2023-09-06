@@ -538,7 +538,7 @@ jobs:
   StopLocalStack:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
-    #if: ${{ always() }}
+    if: ${{ always() }}
     needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest ]
     defaults:
       run:
@@ -966,7 +966,6 @@ jobs:
     name: "EC2WinPerformanceTest"
     needs: [ BuildAndUpload, GenerateTestMatrix ]
     runs-on: ubuntu-latest
-    if : false
     strategy:
       fail-fast: false
       matrix:
@@ -1105,7 +1104,6 @@ jobs:
     name: "EC2WinStressTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
-    if : false
     strategy:
       fail-fast: false
       matrix:
