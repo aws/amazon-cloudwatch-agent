@@ -192,7 +192,7 @@ func Test_Accumulator_WithUnsupportedValueAndEmptyFields(t *testing.T) {
 	as.Equal(0, otelMetrics.ResourceMetrics().Len())
 }
 
-func Test_ModifyMetricandConvertMetricValue(t *testing.T) {
+func Test_ModifyMetricAndConvertMetricValue(t *testing.T) {
 	t.Helper()
 
 	as := assert.New(t)
@@ -214,7 +214,7 @@ func Test_ModifyMetricandConvertMetricValue(t *testing.T) {
 		telegraf.Gauge,
 	)
 
-	modifiedMetric, err := acc.modifyMetricandConvertToOtelValue(metric)
+	modifiedMetric, err := acc.modifyMetricAndConvertToOtelValue(metric)
 	as.NoError(err)
 
 	txMetricValue, txMetricExist := modifiedMetric.GetField("tx")
