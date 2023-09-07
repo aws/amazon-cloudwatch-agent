@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/consumer/consumertest"
@@ -192,46 +193,96 @@ func Test_Accumulator_WithUnsupportedValueAndEmptyFields(t *testing.T) {
 	as.Equal(0, otelMetrics.ResourceMetrics().Len())
 }
 
-func Test_ModifyMetricandConvertMetricValue(t *testing.T) {
-	t.Helper()
-
+func Test_ModifyMetricAndConvertMetricValue(t *testing.T) {
 	as := assert.New(t)
-
-	acc := newOtelAccumulatorWithTestRunningInputs(as, nil, false)
-
-	metric := testutil.MustMetric(
-		"cpu",
-		map[string]string{
-			"instance_id": "mock",
+	cfg := &models.InputConfig{
+		Filter: models.Filter{
+			FieldDrop: []string{"filtered_field"},
 		},
-		map[string]interface{}{
-			"tx":     float64(4.5),
-			"rx":     int32(3),
-			"error":  false,
-			"client": "redis",
+	}
+	acc := newOtelAccumulatorWithConfig(as, nil, false, cfg)
+
+	testCases := map[string]struct {
+		metric            telegraf.Metric
+		wantErr           error
+		wantFields        map[string]interface{}
+		wantDroppedFields []string
+	}{
+		"WithEmpty": {
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{},
+				time.Now(),
+				telegraf.Gauge,
+			),
 		},
-		time.Now(),
-		telegraf.Gauge,
-	)
+		"WithFiltered": {
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"filtered_field": 1,
+				},
+				time.Now(),
+				telegraf.Gauge,
+			),
+		},
+		"WithInvalidConvert": {
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"client": "redis",
+				},
+				time.Now(),
+				telegraf.Gauge,
+			),
+			wantErr: errEmptyAfterConvert,
+		},
+		"WithValid": {
+			metric: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"instance_id": "mock",
+				},
+				map[string]interface{}{
+					"tx":     4.5,
+					"rx":     int32(3),
+					"error":  false,
+					"client": "redis",
+				},
+				time.Now(),
+				telegraf.Gauge,
+			),
+			wantFields: map[string]interface{}{
+				"tx":    4.5,
+				"rx":    int64(3),
+				"error": int64(0),
+			},
+			wantDroppedFields: []string{"client"},
+		},
+	}
 
-	modifiedMetric, err := acc.modifyMetricandConvertToOtelValue(metric)
-	as.NoError(err)
-
-	txMetricValue, txMetricExist := modifiedMetric.GetField("tx")
-	as.True(txMetricExist)
-	as.Equal(float64(4.5), txMetricValue)
-
-	rxMetricValue, rxMetricExist := modifiedMetric.GetField("rx")
-	as.True(rxMetricExist)
-	as.Equal(int64(3), rxMetricValue)
-
-	errorMetricValue, errorMetricExist := modifiedMetric.GetField("error")
-	as.True(errorMetricExist)
-	as.Equal(int64(0), errorMetricValue)
-
-	_, clientMetricExist := modifiedMetric.GetField("client")
-	as.False(clientMetricExist)
-
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := acc.modifyMetricAndConvertToOtelValue(testCase.metric)
+			as.Equal(testCase.wantErr, err)
+			if len(testCase.wantFields) == 0 {
+				as.Nil(got)
+			} else {
+				for field, wantValue := range testCase.wantFields {
+					value, ok := got.GetField(field)
+					as.True(ok)
+					as.Equal(wantValue, value)
+				}
+				for _, field := range testCase.wantDroppedFields {
+					_, ok := got.GetField(field)
+					as.False(ok)
+				}
+			}
+		})
+	}
 }
 
 func Test_Accumulator_AddMetric(t *testing.T) {

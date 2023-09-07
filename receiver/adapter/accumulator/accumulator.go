@@ -48,7 +48,9 @@ type otelAccumulator struct {
 	mutex sync.Mutex
 }
 
-var emptyMetricsBeforeFilteringError = errors.New("empty metrics before filtering metrics")
+var (
+	errEmptyAfterConvert = errors.New("empty metrics after converting fields")
+)
 
 func NewAccumulator(input *models.RunningInput, ctx context.Context, consumer consumer.Metrics, logger *zap.Logger) OtelAccumulator {
 	_, isServiceInput := input.Input.(telegraf.ServiceInput)
@@ -118,15 +120,19 @@ func (o *otelAccumulator) addMetric(
 // convertToOtelMetricsAndAddMetric converts Telegraf's Metric model to OTEL Stream Model
 // and add the OTEl Metric to channel
 func (o *otelAccumulator) convertToOtelMetricsAndAddMetric(m telegraf.Metric) {
-	mMetric, err := o.modifyMetricandConvertToOtelValue(m)
+	mMetric, err := o.modifyMetricAndConvertToOtelValue(m)
 	if err != nil {
-		if !errors.Is(err, emptyMetricsBeforeFilteringError) {
-			o.logger.Warn("Filter and convert failed",
-				zap.String("name", m.Name()),
-				zap.Any("tags", m.Tags()),
-				zap.Any("fields", m.Fields()),
-				zap.Any("type", m.Type()), zap.Error(err))
-		}
+		o.logger.Warn(
+			"Conversion of metric values failed",
+			zap.String("name", m.Name()),
+			zap.Any("tags", m.Tags()),
+			zap.Any("fields", m.Fields()),
+			zap.Any("type", m.Type()),
+			zap.Error(err),
+		)
+	}
+
+	if mMetric == nil {
 		return
 	}
 
@@ -161,19 +167,19 @@ func (o *otelAccumulator) GetOtelMetrics() pmetric.Metrics {
 	return finalMetrics
 }
 
-// modifyMetricandConvertToOtelValue modifies metric by filtering metrics, add prefix for each field in metrics, etc
+// modifyMetricAndConvertToOtelValue modifies metric by filtering metrics, add prefix for each field in metrics, etc
 // and convert to value supported by OTEL (int64 and float64).
 // Distributions are not modified yet.
-func (o *otelAccumulator) modifyMetricandConvertToOtelValue(m telegraf.Metric) (telegraf.Metric, error) {
+func (o *otelAccumulator) modifyMetricAndConvertToOtelValue(m telegraf.Metric) (telegraf.Metric, error) {
 	if len(m.Fields()) == 0 {
-		return nil, emptyMetricsBeforeFilteringError
+		return nil, nil
 	}
 
 	// MakeMetric modifies metrics (e.g filter metrics, add prefix for measurement) by customer config
 	// https://github.com/influxdata/telegraf/blob/5479df2eb5e8401773d604a83590d789a158c735/models/running_input.go#L91-L114
 	mMetric := o.input.MakeMetric(m)
 	if mMetric == nil {
-		return nil, errors.New("empty metrics after filtering metrics")
+		return nil, nil
 	}
 
 	if m.Type() == telegraf.Histogram {
@@ -194,7 +200,7 @@ func (o *otelAccumulator) modifyMetricandConvertToOtelValue(m telegraf.Metric) (
 	}
 
 	if len(mMetric.Fields()) == 0 {
-		return nil, errors.New("empty metrics after final conversion")
+		return nil, errEmptyAfterConvert
 	}
 
 	return mMetric, nil
