@@ -1,5 +1,20 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300026.3 (2022-08-22)
+Amazon CloudWatch Agent 1.300028.0 (2023-09-07)
+========================================================================
+
+Bug fixes:
+* Fix file pattern matching to support glob wildcard characters (!{})
+* Use LogStreamName instead of ServiceName in token replacement for Prometheus
+* Add fallback shared config files for credential ordering to maintain previous AWS SDK behavior
+
+Enhancements:
+* Try using IMDSv2 only first before using client with fallback
+* Add support for configurable IMDS retries in the common-config.toml
+* Add support for traces in agent configuration wizard
+* Remove misleading metric filter warning
+
+========================================================================
+Amazon CloudWatch Agent 1.300026.3 (2023-08-22)
 ========================================================================
 
 Bug fixes:
@@ -8,17 +23,13 @@ Bug fixes:
 * Update config translation to respect common config profile and creds file (@e2ef915)
 * Remove plugin key allowlist for metric decorator (@47a5e47)
 
-Enhancements:
-* Remove local trace test (@a96897f)
-
 ========================================================================
-Amazon CloudWatch Agent 1.300026.2 (2022-08-10)
+Amazon CloudWatch Agent 1.300026.2 (2023-08-10)
 ========================================================================
 
 Bug fixes:
 * Add expandconverter to config provider (@24592ba)
-* Pin aws sdk to v1.44.106 since the defaults for root creds changed in future versions (@048809e)
-* Update OTel fork components to 24607924fd49654505e942fe5768a1a288866b39 (@9a259d5)
+* Pin AWS SDK to v1.44.106 since the defaults for root creds changed in future versions (@048809e)
 * Add Endpoint Override To EMF And Only Publish EMF Logs (@db03fb6)
 * Revert "Add Retry To IMDS Client" (@a367c86)
 
@@ -26,14 +37,14 @@ Enhancements:
 * Removed warn log message for empty fields in telegraph metrics (@fd1b308)
 
 ========================================================================
-Amazon CloudWatch Agent 1.300026.1 (2022-08-04)
+Amazon CloudWatch Agent 1.300026.1 (2023-08-04)
 ========================================================================
 
 Bug fixes:
 * Macos script fix (@6792c77)
 
 ========================================================================
-Amazon CloudWatch Agent 1.300026.0 (2022-07-28)
+Amazon CloudWatch Agent 1.300026.0 (2023-07-28)
 ========================================================================
 
 Bug fixes:
@@ -43,7 +54,7 @@ Enhancements:
 * Remove telegraf agent start up (@3f60a57)
 
 ========================================================================
-Amazon CloudWatch Agent 1.300025.0 (2022-07-19)
+Amazon CloudWatch Agent 1.300025.0 (2023-07-19)
 ========================================================================
 
 New features:
