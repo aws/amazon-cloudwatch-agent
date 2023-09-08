@@ -82,7 +82,7 @@ func (seh1Distribution *SEH1Distribution) AddEntryWithUnit(value float64, weight
 	if weight <= 0 {
 		return fmt.Errorf("unsupported weight %v: %w", weight, distribution.ErrUnsupportedWeight)
 	}
-	if value < 0 || math.IsNaN(value) || math.IsInf(value, 0) || !distribution.IsValueInRange(value) {
+	if !distribution.IsSupportedValue(value, 0, distribution.MaxValue) {
 		return fmt.Errorf("unsupported value %v: %w", value, distribution.ErrUnsupportedValue)
 	}
 	//sample count

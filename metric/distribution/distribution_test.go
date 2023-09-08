@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsValueInRange(t *testing.T) {
+func TestIsAcceptedValue(t *testing.T) {
 	testCases := []struct {
 		input float64
 		want  bool
@@ -20,8 +20,11 @@ func TestIsValueInRange(t *testing.T) {
 		{input: MaxValue, want: true},
 		{input: MaxValue * 1.0001, want: false},
 		{input: math.Pow(2, 300), want: true},
+		{input: math.NaN(), want: false},
+		{input: math.Inf(1), want: false},
+		{input: math.Inf(-1), want: false},
 	}
 	for _, testCase := range testCases {
-		assert.Equal(t, testCase.want, IsValueInRange(testCase.input))
+		assert.Equal(t, testCase.want, IsSupportedValue(testCase.input, MinValue, MaxValue))
 	}
 }

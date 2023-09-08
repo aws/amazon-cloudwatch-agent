@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util"
@@ -184,21 +185,23 @@ func (o *otelAccumulator) modifyMetricAndConvertToOtelValue(m telegraf.Metric) (
 	// Otel only supports numeric data. Therefore, filter unsupported data type and convert metrics value to corresponding value before
 	// converting the data model
 	// https://github.com/open-telemetry/opentelemetry-collector/blob/bdc3e22d28006b6c9496568bd8d8bcf0aa1e4950/pdata/pmetric/metrics.go#L106-L113
-	var droppedFields []string
+	var errs error
 	for field, value := range mMetric.Fields() {
 		// Convert all int,uint to int64 and float to float64 and bool to int.
-		otelValue := util.ToOtelValue(value)
+		otelValue, err := util.ToOtelValue(value)
+		if err != nil {
+			errs = multierr.Append(errs, fmt.Errorf("field (%s): %w", field, err))
+		}
 
 		if otelValue == nil {
 			mMetric.RemoveField(field)
-			droppedFields = append(droppedFields, field)
 		} else if value != otelValue {
 			mMetric.AddField(field, otelValue)
 		}
 	}
 
 	if len(mMetric.Fields()) == 0 {
-		return nil, fmt.Errorf("empty metrics after converting fields: %v", droppedFields)
+		return nil, fmt.Errorf("empty metrics after converting fields: %w", errs)
 	}
 
 	return mMetric, nil
