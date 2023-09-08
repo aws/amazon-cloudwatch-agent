@@ -24,6 +24,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 // Return true if found.
@@ -242,6 +243,8 @@ func TestBuildMetricDatumDropUnsupported(t *testing.T) {
 		math.NaN(),
 		math.Inf(1),
 		math.Inf(-1),
+		distribution.MaxValue * 1.001,
+		distribution.MinValue * 1.001,
 	}
 	for _, testCase := range testCases {
 		got := cw.BuildMetricDatum(&aggregationDatum{

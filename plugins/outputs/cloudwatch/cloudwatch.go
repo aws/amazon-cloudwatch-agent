@@ -399,7 +399,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 			continue
 		}
 		if len(distList) == 0 {
-			if math.IsNaN(*metric.Value) || math.IsInf(*metric.Value, 0) {
+			if math.IsNaN(*metric.Value) || math.IsInf(*metric.Value, 0) || !distribution.IsValueInRange(*metric.Value) {
 				log.Printf("E! metric (%s) has an unsupported value: %v, dropping it", *metric.MetricName, *metric.Value)
 				continue
 			}
