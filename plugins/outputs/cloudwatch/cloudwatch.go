@@ -6,6 +6,7 @@ package cloudwatch
 import (
 	"context"
 	"log"
+	"math"
 	"reflect"
 	"sort"
 	"sync"
@@ -398,6 +399,11 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 			continue
 		}
 		if len(distList) == 0 {
+			value := *metric.Value
+			if math.IsNaN(value) || math.IsInf(value, 0) {
+				log.Printf("W! metric (%s) has an unsupported value: %v, setting it to 0", *metric.MetricName, value)
+				value = 0
+			}
 			// Not a distribution.
 			datum := &cloudwatch.MetricDatum{
 				MetricName:        metric.MetricName,
@@ -405,7 +411,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 				Timestamp:         metric.Timestamp,
 				Unit:              metric.Unit,
 				StorageResolution: metric.StorageResolution,
-				Value:             metric.Value,
+				Value:             aws.Float64(value),
 			}
 			datums = append(datums, datum)
 		} else {

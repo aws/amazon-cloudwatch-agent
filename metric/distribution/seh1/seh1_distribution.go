@@ -5,6 +5,7 @@ package seh1
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math"
 
@@ -79,6 +80,9 @@ func (seh1Distribution *SEH1Distribution) Size() int {
 
 // weight is 1/samplingRate
 func (seh1Distribution *SEH1Distribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return fmt.Errorf("unsupported value: %v", value)
+	}
 	if weight > 0 {
 		if value < 0 {
 			return errors.New("negative value")

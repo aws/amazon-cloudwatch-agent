@@ -4,6 +4,8 @@
 package seh1
 
 import (
+	"errors"
+	"math"
 	"math/big"
 	"testing"
 
@@ -77,6 +79,10 @@ func TestSEH1Distribution(t *testing.T) {
 	//add distClone into another dist
 	anotherDist.AddDistribution(distClone)
 	assert.Equal(t, dist, anotherDist) //the direction of AddDistribution should not matter.
+
+	assert.Equal(t, errors.New("unsupported value: NaN"), anotherDist.AddEntry(math.NaN(), 1))
+	assert.Equal(t, errors.New("unsupported value: +Inf"), anotherDist.AddEntry(math.Inf(1), 1))
+	assert.Equal(t, errors.New("unsupported value: -Inf"), anotherDist.AddEntry(math.Inf(-1), 1))
 }
 
 func cloneSEH1Distribution(dist *SEH1Distribution) *SEH1Distribution {

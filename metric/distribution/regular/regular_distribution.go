@@ -5,6 +5,7 @@ package regular
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math"
 
@@ -69,6 +70,9 @@ func (regularDist *RegularDistribution) Size() int {
 
 // weight is 1/samplingRate
 func (regularDist *RegularDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return fmt.Errorf("unsupported value: %v", value)
+	}
 	if weight > 0 {
 		if value < 0 {
 			return errors.New("negative value")

@@ -3,7 +3,11 @@
 
 package util
 
-import "github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+import (
+	"math"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+)
 
 func ToOtelValue(value interface{}) interface{} {
 	switch v := value.(type) {
@@ -30,6 +34,9 @@ func ToOtelValue(value interface{}) interface{} {
 	case float32:
 		return float64(v)
 	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return float64(0)
+		}
 		return v
 	case bool:
 		if v {

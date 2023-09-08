@@ -6,6 +6,7 @@ package cloudwatch
 import (
 	"context"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -232,6 +233,25 @@ func TestProcessRollup(t *testing.T) {
 	assert.EqualValues(t, expectedDimensionList, actualDimensionList,
 		"Unexpected dimension roll up list with duplicate roll up")
 	cw.Shutdown(context.Background())
+}
+
+func TestBuildMetricDatum(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+	testCases := []float64{math.NaN(), math.Inf(1), math.Inf(-1)}
+	for _, testCase := range testCases {
+		got := cw.BuildMetricDatum(&aggregationDatum{
+			MetricDatum: cloudwatch.MetricDatum{
+				MetricName: aws.String("test"),
+				Value:      aws.Float64(testCase),
+			},
+		})
+		assert.Len(t, got, 1)
+		assert.Equal(t, &cloudwatch.MetricDatum{
+			MetricName: aws.String("test"),
+			Value:      aws.Float64(0),
+		}, got[0])
+	}
 }
 
 func TestGetUniqueRollupList(t *testing.T) {

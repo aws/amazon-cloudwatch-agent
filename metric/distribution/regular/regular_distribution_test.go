@@ -4,12 +4,14 @@
 package regular
 
 import (
+	"errors"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSEH1Distribution(t *testing.T) {
+func TestRegularDistribution(t *testing.T) {
 	//dist new and add entry
 	dist := NewRegularDistribution()
 
@@ -34,9 +36,9 @@ func TestSEH1Distribution(t *testing.T) {
 	//another dist new and add entry
 	anotherDist := NewRegularDistribution()
 
-	anotherDist.AddEntry(21, 1)
-	anotherDist.AddEntry(22, 1)
-	anotherDist.AddEntry(23, 2)
+	assert.NoError(t, anotherDist.AddEntry(21, 1))
+	assert.NoError(t, anotherDist.AddEntry(22, 1))
+	assert.NoError(t, anotherDist.AddEntry(23, 2))
 
 	assert.Equal(t, 89.0, anotherDist.Sum())
 	assert.Equal(t, 4.0, anotherDist.SampleCount())
@@ -75,6 +77,10 @@ func TestSEH1Distribution(t *testing.T) {
 	//add distClone into another dist
 	anotherDist.AddDistribution(distClone)
 	assert.Equal(t, dist, anotherDist) //the direction of AddDistribution should not matter.
+
+	assert.Equal(t, errors.New("unsupported value: NaN"), anotherDist.AddEntry(math.NaN(), 1))
+	assert.Equal(t, errors.New("unsupported value: +Inf"), anotherDist.AddEntry(math.Inf(1), 1))
+	assert.Equal(t, errors.New("unsupported value: -Inf"), anotherDist.AddEntry(math.Inf(-1), 1))
 }
 
 func cloneRegularDistribution(dist *RegularDistribution) *RegularDistribution {
