@@ -399,10 +399,9 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 			continue
 		}
 		if len(distList) == 0 {
-			value := *metric.Value
-			if math.IsNaN(value) || math.IsInf(value, 0) {
-				log.Printf("W! metric (%s) has an unsupported value: %v, setting it to 0", *metric.MetricName, value)
-				value = 0
+			if math.IsNaN(*metric.Value) || math.IsInf(*metric.Value, 0) {
+				log.Printf("E! metric (%s) has an unsupported value: %v, dropping it", *metric.MetricName, *metric.Value)
+				continue
 			}
 			// Not a distribution.
 			datum := &cloudwatch.MetricDatum{
@@ -411,7 +410,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 				Timestamp:         metric.Timestamp,
 				Unit:              metric.Unit,
 				StorageResolution: metric.StorageResolution,
-				Value:             aws.Float64(value),
+				Value:             metric.Value,
 			}
 			datums = append(datums, datum)
 		} else {

@@ -4,7 +4,9 @@
 package accumulator
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"runtime"
 	"testing"
@@ -234,11 +236,12 @@ func Test_ModifyMetricAndConvertMetricValue(t *testing.T) {
 				map[string]string{},
 				map[string]interface{}{
 					"client": "redis",
+					"nan":    math.NaN(),
 				},
 				time.Now(),
 				telegraf.Gauge,
 			),
-			wantErr: errEmptyAfterConvert,
+			wantErr: errors.New("empty metrics after converting fields: [client nan]"),
 		},
 		"WithValid": {
 			metric: testutil.MustMetric(

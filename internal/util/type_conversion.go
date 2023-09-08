@@ -35,7 +35,7 @@ func ToOtelValue(value interface{}) interface{} {
 		return float64(v)
 	case float64:
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			return float64(0)
+			return nil
 		}
 		return v
 	case bool:

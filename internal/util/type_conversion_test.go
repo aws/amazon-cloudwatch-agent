@@ -15,9 +15,9 @@ func TestToOtelValue(t *testing.T) {
 		input interface{}
 		want  interface{}
 	}{
-		{input: math.NaN(), want: float64(0)},
-		{input: math.Inf(1), want: float64(0)},
-		{input: math.Inf(-1), want: float64(0)},
+		{input: math.NaN(), want: nil},
+		{input: math.Inf(1), want: nil},
+		{input: math.Inf(-1), want: nil},
 		{input: "test", want: nil},
 		{input: int32(3), want: int64(3)},
 		{input: 5.5, want: 5.5},
