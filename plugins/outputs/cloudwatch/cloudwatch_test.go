@@ -246,11 +246,7 @@ func TestBuildMetricDatum(t *testing.T) {
 				Value:      aws.Float64(testCase),
 			},
 		})
-		assert.Len(t, got, 1)
-		assert.Equal(t, &cloudwatch.MetricDatum{
-			MetricName: aws.String("test"),
-			Value:      aws.Float64(0),
-		}, got[0])
+		assert.Empty(t, got)
 	}
 }
 

@@ -4,7 +4,6 @@
 package regular
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -70,37 +69,33 @@ func (regularDist *RegularDistribution) Size() int {
 
 // weight is 1/samplingRate
 func (regularDist *RegularDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
-	if math.IsNaN(value) || math.IsInf(value, 0) {
-		return fmt.Errorf("unsupported value: %v", value)
+	if weight <= 0 {
+		return fmt.Errorf("weight must be larger than 0: %v", weight)
 	}
-	if weight > 0 {
-		if value < 0 {
-			return errors.New("negative value")
-		}
-		//sample count
-		regularDist.sampleCount += weight
-		//sum
-		regularDist.sum += value * weight
-		//min
-		if value < regularDist.minimum {
-			regularDist.minimum = value
-		}
-		//max
-		if value > regularDist.maximum {
-			regularDist.maximum = value
-		}
+	if value < 0 || math.IsNaN(value) || math.IsInf(value, 0) {
+		return fmt.Errorf("value cannot be negative, NaN, or Inf: %v", value)
+	}
+	//sample count
+	regularDist.sampleCount += weight
+	//sum
+	regularDist.sum += value * weight
+	//min
+	if value < regularDist.minimum {
+		regularDist.minimum = value
+	}
+	//max
+	if value > regularDist.maximum {
+		regularDist.maximum = value
+	}
 
-		//values and counts
-		regularDist.buckets[value] += weight
+	//values and counts
+	regularDist.buckets[value] += weight
 
-		//unit
-		if regularDist.unit == "" {
-			regularDist.unit = unit
-		} else if regularDist.unit != unit && unit != "" {
-			log.Printf("D! Multiple units are detected: %s, %s", regularDist.unit, unit)
-		}
-	} else {
-		log.Printf("D! Weight should be larger than 0: %v", weight)
+	//unit
+	if regularDist.unit == "" {
+		regularDist.unit = unit
+	} else if regularDist.unit != unit && unit != "" {
+		log.Printf("D! Multiple units are detected: %s, %s", regularDist.unit, unit)
 	}
 	return nil
 }

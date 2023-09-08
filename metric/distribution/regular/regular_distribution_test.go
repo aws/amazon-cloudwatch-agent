@@ -78,9 +78,11 @@ func TestRegularDistribution(t *testing.T) {
 	anotherDist.AddDistribution(distClone)
 	assert.Equal(t, dist, anotherDist) //the direction of AddDistribution should not matter.
 
-	assert.Equal(t, errors.New("unsupported value: NaN"), anotherDist.AddEntry(math.NaN(), 1))
-	assert.Equal(t, errors.New("unsupported value: +Inf"), anotherDist.AddEntry(math.Inf(1), 1))
-	assert.Equal(t, errors.New("unsupported value: -Inf"), anotherDist.AddEntry(math.Inf(-1), 1))
+	assert.Equal(t, errors.New("weight must be larger than 0: 0"), anotherDist.AddEntry(1, 0))
+	assert.Equal(t, errors.New("value cannot be negative, NaN, or Inf: -1"), anotherDist.AddEntry(-1, 1))
+	assert.Equal(t, errors.New("value cannot be negative, NaN, or Inf: NaN"), anotherDist.AddEntry(math.NaN(), 1))
+	assert.Equal(t, errors.New("value cannot be negative, NaN, or Inf: +Inf"), anotherDist.AddEntry(math.Inf(1), 1))
+	assert.Equal(t, errors.New("value cannot be negative, NaN, or Inf: -Inf"), anotherDist.AddEntry(math.Inf(-1), 1))
 }
 
 func cloneRegularDistribution(dist *RegularDistribution) *RegularDistribution {

@@ -4,7 +4,6 @@
 package seh1
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -80,38 +79,34 @@ func (seh1Distribution *SEH1Distribution) Size() int {
 
 // weight is 1/samplingRate
 func (seh1Distribution *SEH1Distribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
-	if math.IsNaN(value) || math.IsInf(value, 0) {
-		return fmt.Errorf("unsupported value: %v", value)
+	if weight <= 0 {
+		return fmt.Errorf("weight must be larger than 0: %v", weight)
 	}
-	if weight > 0 {
-		if value < 0 {
-			return errors.New("negative value")
-		}
-		//sample count
-		seh1Distribution.sampleCount += weight
-		//sum
-		seh1Distribution.sum += value * weight
-		//min
-		if value < seh1Distribution.minimum {
-			seh1Distribution.minimum = value
-		}
-		//max
-		if value > seh1Distribution.maximum {
-			seh1Distribution.maximum = value
-		}
+	if value < 0 || math.IsNaN(value) || math.IsInf(value, 0) {
+		return fmt.Errorf("value cannot be negative, NaN, or Inf: %v", value)
+	}
+	//sample count
+	seh1Distribution.sampleCount += weight
+	//sum
+	seh1Distribution.sum += value * weight
+	//min
+	if value < seh1Distribution.minimum {
+		seh1Distribution.minimum = value
+	}
+	//max
+	if value > seh1Distribution.maximum {
+		seh1Distribution.maximum = value
+	}
 
-		//seh
-		bucketNumber := bucketNumber(value)
-		seh1Distribution.buckets[bucketNumber] += weight
+	//seh
+	bucketNumber := bucketNumber(value)
+	seh1Distribution.buckets[bucketNumber] += weight
 
-		//unit
-		if seh1Distribution.unit == "" {
-			seh1Distribution.unit = unit
-		} else if seh1Distribution.unit != unit && unit != "" {
-			log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, unit)
-		}
-	} else {
-		log.Printf("D! Weight should be larger than 0: %v", weight)
+	//unit
+	if seh1Distribution.unit == "" {
+		seh1Distribution.unit = unit
+	} else if seh1Distribution.unit != unit && unit != "" {
+		log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, unit)
 	}
 	return nil
 }

@@ -235,13 +235,12 @@ func Test_ModifyMetricAndConvertMetricValue(t *testing.T) {
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
-					"client": "redis",
-					"nan":    math.NaN(),
+					"nan": math.NaN(),
 				},
 				time.Now(),
 				telegraf.Gauge,
 			),
-			wantErr: errors.New("empty metrics after converting fields: [client nan]"),
+			wantErr: errors.New("empty metrics after converting fields: [nan]"),
 		},
 		"WithValid": {
 			metric: testutil.MustMetric(
