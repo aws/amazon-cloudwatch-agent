@@ -3,7 +3,16 @@
 
 package distribution
 
-import "go.opentelemetry.io/collector/pdata/pmetric"
+import (
+	"errors"
+
+	"go.opentelemetry.io/collector/pdata/pmetric"
+)
+
+var (
+	ErrUnsupportedWeight = errors.New("weight must be larger than 0")
+	ErrUnsupportedValue  = errors.New("value cannot be negative, NaN, or Inf")
+)
 
 type Distribution interface {
 	Maximum() float64

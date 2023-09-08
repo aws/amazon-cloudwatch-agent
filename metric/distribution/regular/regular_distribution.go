@@ -70,10 +70,10 @@ func (regularDist *RegularDistribution) Size() int {
 // weight is 1/samplingRate
 func (regularDist *RegularDistribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
 	if weight <= 0 {
-		return fmt.Errorf("weight must be larger than 0: %v", weight)
+		return fmt.Errorf("unsupported weight %v: %w", weight, distribution.ErrUnsupportedWeight)
 	}
 	if value < 0 || math.IsNaN(value) || math.IsInf(value, 0) {
-		return fmt.Errorf("value cannot be negative, NaN, or Inf: %v", value)
+		return fmt.Errorf("unsupported value %v: %w", value, distribution.ErrUnsupportedValue)
 	}
 	//sample count
 	regularDist.sampleCount += weight

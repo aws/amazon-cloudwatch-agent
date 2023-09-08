@@ -235,10 +235,14 @@ func TestProcessRollup(t *testing.T) {
 	cw.Shutdown(context.Background())
 }
 
-func TestBuildMetricDatum(t *testing.T) {
+func TestBuildMetricDatumDropUnsupported(t *testing.T) {
 	svc := new(mockCloudWatchClient)
 	cw := newCloudWatchClient(svc, time.Second)
-	testCases := []float64{math.NaN(), math.Inf(1), math.Inf(-1)}
+	testCases := []float64{
+		math.NaN(),
+		math.Inf(1),
+		math.Inf(-1),
+	}
 	for _, testCase := range testCases {
 		got := cw.BuildMetricDatum(&aggregationDatum{
 			MetricDatum: cloudwatch.MetricDatum{
