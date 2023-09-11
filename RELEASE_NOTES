@@ -1,11 +1,12 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300028.0 (2023-09-07)
+Amazon CloudWatch Agent 1.300028.0 (2023-09-11)
 ========================================================================
 
 Bug fixes:
 * Fix file pattern matching to support glob wildcard characters (!{})
 * Use LogStreamName instead of ServiceName in token replacement for Prometheus
 * Add fallback shared config files for credential ordering to maintain previous AWS SDK behavior
+* Drop unsupported NaN, Inf, and out of range values
 
 Enhancements:
 * Try using IMDSv2 only first before using client with fallback
