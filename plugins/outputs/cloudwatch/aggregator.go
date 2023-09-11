@@ -147,7 +147,7 @@ func (durationAgg *durationAggregator) aggregating() {
 					if err != nil {
 						if errors.Is(err, distribution.ErrUnsupportedValue) {
 							log.Printf("W! err %s, metric %s", err, *m.MetricName)
-						} else if errors.Is(err, distribution.ErrUnsupportedWeight) {
+						} else {
 							log.Printf("D! err %s, metric %s", err, *m.MetricName)
 						}
 					}

@@ -150,7 +150,7 @@ func (seh1Distribution *SEH1Distribution) AddDistributionWithWeight(distribution
 		if seh1Distribution.unit == "" {
 			seh1Distribution.unit = distribution.Unit()
 		} else if seh1Distribution.unit != distribution.Unit() && distribution.Unit() != "" {
-			log.Printf("D! Multiple units are dected: %s, %s", seh1Distribution.unit, distribution.Unit())
+			log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, distribution.Unit())
 		}
 	} else {
 		log.Printf("D! SampleCount * Weight should be larger than 0: %v, %v", distribution.SampleCount(), weight)

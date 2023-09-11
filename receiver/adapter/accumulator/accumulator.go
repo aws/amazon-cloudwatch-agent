@@ -190,7 +190,7 @@ func (o *otelAccumulator) modifyMetricAndConvertToOtelValue(m telegraf.Metric) (
 		// Convert all int,uint to int64 and float to float64 and bool to int.
 		otelValue, err := util.ToOtelValue(value)
 		if err != nil {
-			errs = multierr.Append(errs, fmt.Errorf("field (%s): %w", field, err))
+			errs = multierr.Append(errs, fmt.Errorf("field (%q): %w", field, err))
 		}
 
 		if otelValue == nil {
