@@ -25,7 +25,7 @@ jobs:
       build: ${{ steps.filter.outputs.build }}
       lint: ${{ steps.filter.outputs.lint }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
         id: filter
         with:
@@ -52,7 +52,7 @@ jobs:
 
       - name: Check out code
         if: needs.changes.outputs.lint == 'true'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Check format
         if: needs.changes.outputs.lint == 'true'
@@ -107,7 +107,7 @@ jobs:
 
       - name: Check out code
         if: needs.changes.outputs.build == 'true'
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache binaries
         id: cached_binaries
