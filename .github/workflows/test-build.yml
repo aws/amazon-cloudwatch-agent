@@ -94,7 +94,7 @@ jobs:
 
       - name: Import GPG Key
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        uses: crazy-max/ghaction-import-gpg@v5
+        uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
@@ -353,7 +353,7 @@ jobs:
           aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
           aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
       - name: Import GPG Key
-        uses: crazy-max/ghaction-import-gpg@v5
+        uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
