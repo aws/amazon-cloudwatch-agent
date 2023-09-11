@@ -4,10 +4,13 @@
 package seh1
 
 import (
+	"math"
 	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 func TestSEH1Distribution(t *testing.T) {
@@ -77,6 +80,14 @@ func TestSEH1Distribution(t *testing.T) {
 	//add distClone into another dist
 	anotherDist.AddDistribution(distClone)
 	assert.Equal(t, dist, anotherDist) //the direction of AddDistribution should not matter.
+
+	assert.ErrorIs(t, anotherDist.AddEntry(1, 0), distribution.ErrUnsupportedWeight)
+	assert.ErrorIs(t, anotherDist.AddEntry(-1, 1), distribution.ErrUnsupportedValue)
+	assert.ErrorIs(t, anotherDist.AddEntry(math.NaN(), 1), distribution.ErrUnsupportedValue)
+	assert.ErrorIs(t, anotherDist.AddEntry(math.Inf(1), 1), distribution.ErrUnsupportedValue)
+	assert.ErrorIs(t, anotherDist.AddEntry(math.Inf(-1), 1), distribution.ErrUnsupportedValue)
+	assert.ErrorIs(t, anotherDist.AddEntry(distribution.MaxValue*1.001, 1), distribution.ErrUnsupportedValue)
+	assert.ErrorIs(t, anotherDist.AddEntry(distribution.MinValue*1.001, 1), distribution.ErrUnsupportedValue)
 }
 
 func cloneSEH1Distribution(dist *SEH1Distribution) *SEH1Distribution {

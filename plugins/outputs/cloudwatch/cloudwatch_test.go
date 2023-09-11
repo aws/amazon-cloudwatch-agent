@@ -6,6 +6,7 @@ package cloudwatch
 import (
 	"context"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 // Return true if found.
@@ -232,6 +234,27 @@ func TestProcessRollup(t *testing.T) {
 	assert.EqualValues(t, expectedDimensionList, actualDimensionList,
 		"Unexpected dimension roll up list with duplicate roll up")
 	cw.Shutdown(context.Background())
+}
+
+func TestBuildMetricDatumDropUnsupported(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+	testCases := []float64{
+		math.NaN(),
+		math.Inf(1),
+		math.Inf(-1),
+		distribution.MaxValue * 1.001,
+		distribution.MinValue * 1.001,
+	}
+	for _, testCase := range testCases {
+		got := cw.BuildMetricDatum(&aggregationDatum{
+			MetricDatum: cloudwatch.MetricDatum{
+				MetricName: aws.String("test"),
+				Value:      aws.Float64(testCase),
+			},
+		})
+		assert.Empty(t, got)
+	}
 }
 
 func TestGetUniqueRollupList(t *testing.T) {

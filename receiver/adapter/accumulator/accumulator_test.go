@@ -5,6 +5,7 @@ package accumulator
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"runtime"
 	"testing"
@@ -204,7 +205,7 @@ func Test_ModifyMetricAndConvertMetricValue(t *testing.T) {
 
 	testCases := map[string]struct {
 		metric            telegraf.Metric
-		wantErr           error
+		wantErrStr        string
 		wantFields        map[string]interface{}
 		wantDroppedFields []string
 	}{
@@ -234,11 +235,12 @@ func Test_ModifyMetricAndConvertMetricValue(t *testing.T) {
 				map[string]string{},
 				map[string]interface{}{
 					"client": "redis",
+					"nan":    math.NaN(),
 				},
 				time.Now(),
 				telegraf.Gauge,
 			),
-			wantErr: errEmptyAfterConvert,
+			wantErrStr: "empty metrics after converting fields",
 		},
 		"WithValid": {
 			metric: testutil.MustMetric(
@@ -267,10 +269,12 @@ func Test_ModifyMetricAndConvertMetricValue(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got, err := acc.modifyMetricAndConvertToOtelValue(testCase.metric)
-			as.Equal(testCase.wantErr, err)
-			if len(testCase.wantFields) == 0 {
+			if testCase.wantErrStr != "" {
+				as.Error(err)
+				as.ErrorContains(err, testCase.wantErrStr)
 				as.Nil(got)
 			} else {
+				as.NoError(err)
 				for field, wantValue := range testCase.wantFields {
 					value, ok := got.GetField(field)
 					as.True(ok)

@@ -5,7 +5,7 @@ package accumulator
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util"
@@ -47,10 +48,6 @@ type otelAccumulator struct {
 
 	mutex sync.Mutex
 }
-
-var (
-	errEmptyAfterConvert = errors.New("empty metrics after converting fields")
-)
 
 func NewAccumulator(input *models.RunningInput, ctx context.Context, consumer consumer.Metrics, logger *zap.Logger) OtelAccumulator {
 	_, isServiceInput := input.Input.(telegraf.ServiceInput)
@@ -188,9 +185,13 @@ func (o *otelAccumulator) modifyMetricAndConvertToOtelValue(m telegraf.Metric) (
 	// Otel only supports numeric data. Therefore, filter unsupported data type and convert metrics value to corresponding value before
 	// converting the data model
 	// https://github.com/open-telemetry/opentelemetry-collector/blob/bdc3e22d28006b6c9496568bd8d8bcf0aa1e4950/pdata/pmetric/metrics.go#L106-L113
+	var errs error
 	for field, value := range mMetric.Fields() {
 		// Convert all int,uint to int64 and float to float64 and bool to int.
-		otelValue := util.ToOtelValue(value)
+		otelValue, err := util.ToOtelValue(value)
+		if err != nil {
+			errs = multierr.Append(errs, fmt.Errorf("field (%q): %w", field, err))
+		}
 
 		if otelValue == nil {
 			mMetric.RemoveField(field)
@@ -200,7 +201,7 @@ func (o *otelAccumulator) modifyMetricAndConvertToOtelValue(m telegraf.Metric) (
 	}
 
 	if len(mMetric.Fields()) == 0 {
-		return nil, errEmptyAfterConvert
+		return nil, fmt.Errorf("empty metrics after converting fields: %w", errs)
 	}
 
 	return mMetric, nil
