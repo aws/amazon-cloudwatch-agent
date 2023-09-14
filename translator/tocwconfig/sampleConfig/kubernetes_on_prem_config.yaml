@@ -204,6 +204,7 @@ exporters:
     role_arn: ""
     profile: "AmazonCloudWatchAgent"
     shared_credentials_file: ["fake-path"]
+    tags: {}
     version: "0"
 extensions: {}
 processors:
@@ -219,6 +220,8 @@ processors:
         operations: [ ]
         submatch_case: ""
   batch/containerinsights:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
@@ -275,7 +278,8 @@ service:
     metrics:
       address: ""
       level: None
-      metric_readers: []
+      readers: []
     resource: {}
     traces:
+      processors: []
       propagators: []

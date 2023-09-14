@@ -29,6 +29,7 @@ exporters:
       queue_size: 1000
     profile: ""
     shared_credentials_file: []
+    tags: {}
   awsemf/containerinsights:
     namespace: ContainerInsights
     log_group_name: '/aws/containerinsights/{ClusterName}/performance'
@@ -119,13 +120,18 @@ exporters:
     role_arn: ""
     profile: ""
     shared_credentials_file: [ ]
+    tags: {}
 extensions: {}
 processors:
   batch/emf_logs:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
   batch/containerinsights:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
@@ -222,7 +228,8 @@ service:
     metrics:
       address: ""
       level: None
-      metric_readers: []
+      readers: []
     resource: {}
     traces:
+      processors: []
       propagators: []
