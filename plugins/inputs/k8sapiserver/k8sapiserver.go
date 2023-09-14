@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	lockName = "cwagent-clusterleader"
+	lockName                     = "cwagent-clusterleader"
+	configMapsLeasesResourceLock = "configmapsleases"
 )
 
 type K8sAPIServer struct {
@@ -123,7 +124,7 @@ func (k *K8sAPIServer) Start(telegraf.Accumulator) error {
 	}
 
 	lock, err := resourcelock.New(
-		resourcelock.ConfigMapsLeasesResourceLock,
+		configMapsLeasesResourceLock,
 		lockNamespace, lockName,
 		k8sclient.Get().ClientSet.CoreV1(),
 		k8sclient.Get().ClientSet.CoordinationV1(),
