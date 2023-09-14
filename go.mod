@@ -1,6 +1,6 @@
 module github.com/aws/amazon-cloudwatch-agent
 
-go 1.19
+go 1.20
 
 replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20220502160831-c20ebe67c5ef
 
