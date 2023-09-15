@@ -29,7 +29,6 @@ exporters:
       queue_size: 1000
     profile: ""
     shared_credentials_file: [ ]
-    tags: {}
   awsemf/containerinsights:
     certificate_file_path: ""
     detailed_metrics: false
@@ -234,7 +233,6 @@ exporters:
     role_arn: ""
     profile: ""
     shared_credentials_file: [ ]
-    tags: {}
     version: "0"
 extensions: {}
 processors:

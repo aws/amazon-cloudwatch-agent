@@ -29,7 +29,6 @@ exporters:
     sending_queue:
       queue_size: 1000
     shared_credentials_file: [ "/root/.aws/credentials" ]
-    tags: {}
   awsemf/containerinsights:
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
@@ -234,7 +233,6 @@ exporters:
     role_arn: ""
     profile: "default"
     shared_credentials_file: [ "/root/.aws/credentials" ]
-    tags: {}
     version: "0"
 extensions: {}
 processors:

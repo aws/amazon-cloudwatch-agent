@@ -29,7 +29,6 @@ exporters:
     sending_queue:
       queue_size: 1000
     shared_credentials_file: []
-    tags: {}
 extensions: {}
 processors:
   batch/emf_logs:

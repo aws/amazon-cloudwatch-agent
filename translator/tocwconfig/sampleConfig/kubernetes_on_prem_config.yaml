@@ -204,7 +204,6 @@ exporters:
     role_arn: ""
     profile: "AmazonCloudWatchAgent"
     shared_credentials_file: ["fake-path"]
-    tags: {}
     version: "0"
 extensions: {}
 processors:

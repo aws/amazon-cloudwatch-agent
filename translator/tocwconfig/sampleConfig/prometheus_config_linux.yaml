@@ -69,7 +69,6 @@ exporters:
     role_arn: ""
     profile: ""
     shared_credentials_file: [ ]
-    tags: {}
 
 extensions: {}
 

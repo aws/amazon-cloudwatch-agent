@@ -29,7 +29,6 @@ exporters:
       queue_size: 1000
     profile: ""
     shared_credentials_file: [ ]
-    tags: {}
   awsemf/containerinsights:
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
@@ -90,7 +89,6 @@ exporters:
     role_arn: ""
     profile: ""
     shared_credentials_file: [ ]
-    tags: {}
     version: "0"
 extensions: {}
 processors:

@@ -29,7 +29,6 @@ exporters:
       queue_size: 1000
     profile: ""
     shared_credentials_file: []
-    tags: {}
   awsemf/containerinsights:
     namespace: ContainerInsights
     log_group_name: '/aws/containerinsights/{ClusterName}/performance'
@@ -120,7 +119,6 @@ exporters:
     role_arn: ""
     profile: ""
     shared_credentials_file: [ ]
-    tags: {}
 extensions: {}
 processors:
   batch/emf_logs:

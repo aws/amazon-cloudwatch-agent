@@ -48,7 +48,6 @@ exporters:
             queue_size: 1000
         profile: ""
         shared_credentials_file: [ ]
-        tags: {}
     awsxray:
         aws_log_groups: []
         certificate_file_path: ""
