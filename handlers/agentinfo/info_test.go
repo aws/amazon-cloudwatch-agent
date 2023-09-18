@@ -123,8 +123,12 @@ func TestGetAgentStats(t *testing.T) {
 		LatencyMillis:       aws.Int64(1234),
 		PayloadBytes:        aws.Int(5678),
 		StatusCode:          aws.Int(200),
+		ImdsFallbackSucceed: aws.Int(1),
 	}
 
+	assert.Equal(t, "\"cpu\":1.2,\"mem\":123,\"fd\":456,\"th\":789,\"lat\":1234,\"load\":5678,\"code\":200,\"ifs\":1", getAgentStats(stats))
+
+	stats.ImdsFallbackSucceed = nil
 	assert.Equal(t, "\"cpu\":1.2,\"mem\":123,\"fd\":456,\"th\":789,\"lat\":1234,\"load\":5678,\"code\":200", getAgentStats(stats))
 
 	stats.CpuPercent = nil
@@ -147,6 +151,9 @@ func TestGetAgentStats(t *testing.T) {
 
 	stats.StatusCode = nil
 	assert.Empty(t, getAgentStats(stats))
+
+	stats.SharedConfigFallback = aws.Int(1)
+	assert.Equal(t, "\"scfb\":1", getAgentStats(stats))
 }
 
 func TestGetStatusCode(t *testing.T) {
@@ -232,4 +239,23 @@ func TestIsUsageDataEnabled(t *testing.T) {
 
 	t.Setenv(envconfig.CWAGENT_USAGE_DATA, "FALSE")
 	assert.False(t, getUsageDataEnabled())
+}
+
+func TestSharedConfigFallback(t *testing.T) {
+	defer sharedConfigFallback.Store(false)
+	assert.Nil(t, getSharedConfigFallback())
+	RecordSharedConfigFallback()
+	assert.Equal(t, 1, *(getSharedConfigFallback()))
+	RecordSharedConfigFallback()
+	RecordSharedConfigFallback()
+	assert.Equal(t, 1, *(getSharedConfigFallback()))
+}
+
+func TestSetImdsFallbackSucceed(t *testing.T) {
+	defer imdsFallbackSucceed.Store(false)
+	assert.False(t, imdsFallbackSucceed.Load())
+	assert.Nil(t, succeedImdsFallback())
+	SetImdsFallbackSucceed()
+	assert.True(t, imdsFallbackSucceed.Load())
+	assert.Equal(t, aws.Int(1), succeedImdsFallback())
 }

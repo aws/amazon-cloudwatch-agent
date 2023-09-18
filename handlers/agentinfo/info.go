@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -47,6 +48,8 @@ var (
 	version                 = readVersionFile()
 	fullVersion             = getFullVersion(version)
 	id                      = uuid.NewString()
+	sharedConfigFallback    atomic.Bool
+	imdsFallbackSucceed     atomic.Bool
 )
 
 var isRunningAsRoot = defaultIsRunningAsRoot
@@ -65,13 +68,15 @@ type agentInfo struct {
 }
 
 type agentStats struct {
-	CpuPercent          *float64 `json:"cpu,omitempty"`
-	MemoryBytes         *uint64  `json:"mem,omitempty"`
-	FileDescriptorCount *int32   `json:"fd,omitempty"`
-	ThreadCount         *int32   `json:"th,omitempty"`
-	LatencyMillis       *int64   `json:"lat,omitempty"`
-	PayloadBytes        *int     `json:"load,omitempty"`
-	StatusCode          *int     `json:"code,omitempty"`
+	CpuPercent           *float64 `json:"cpu,omitempty"`
+	MemoryBytes          *uint64  `json:"mem,omitempty"`
+	FileDescriptorCount  *int32   `json:"fd,omitempty"`
+	ThreadCount          *int32   `json:"th,omitempty"`
+	LatencyMillis        *int64   `json:"lat,omitempty"`
+	PayloadBytes         *int     `json:"load,omitempty"`
+	StatusCode           *int     `json:"code,omitempty"`
+	SharedConfigFallback *int     `json:"scfb,omitempty"`
+	ImdsFallbackSucceed  *int     `json:"ifs,omitempty"`
 }
 
 func New(groupName string) AgentInfo {
@@ -119,6 +124,8 @@ func (ai *agentInfo) RecordOpData(latency time.Duration, payloadBytes int, err e
 		stats.MemoryBytes = ai.memoryBytes()
 		stats.FileDescriptorCount = ai.fileDescriptorCount()
 		stats.ThreadCount = ai.threadCount()
+		stats.SharedConfigFallback = getSharedConfigFallback()
+		stats.ImdsFallbackSucceed = succeedImdsFallback()
 		ai.nextUpdate = now.Add(updateInterval)
 	}
 
@@ -146,6 +153,15 @@ func (ai *agentInfo) memoryBytes() *uint64 {
 func (ai *agentInfo) fileDescriptorCount() *int32 {
 	if fdCount, err := ai.proc.NumFDs(); err == nil {
 		return aws.Int32(fdCount)
+	}
+	return nil
+}
+
+// we only need to know if value is 1
+// thus return nil if not set
+func succeedImdsFallback() *int {
+	if imdsFallbackSucceed.Load() {
+		return aws.Int(1)
 	}
 	return nil
 }
@@ -282,6 +298,8 @@ func readVersionFile() string {
 	return strings.Trim(string(byteArray), " \n\r\t")
 }
 
+// this returns true for true or invalid
+// examples of invalid are not set env var, "", "invalid"
 func getUsageDataEnabled() bool {
 	ok, err := strconv.ParseBool(os.Getenv(envconfig.CWAGENT_USAGE_DATA))
 	return ok || err != nil
@@ -296,4 +314,19 @@ func isUsageDataEnabled() bool {
 
 func defaultIsRunningAsRoot() bool {
 	return os.Getuid() == 0
+}
+
+func RecordSharedConfigFallback() {
+	sharedConfigFallback.Store(true)
+}
+
+func getSharedConfigFallback() *int {
+	if sharedConfigFallback.Load() {
+		return aws.Int(1)
+	}
+	return nil
+}
+
+func SetImdsFallbackSucceed() {
+	imdsFallbackSucceed.Store(true)
 }

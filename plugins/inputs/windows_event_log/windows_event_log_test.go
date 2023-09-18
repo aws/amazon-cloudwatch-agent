@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestGetStateFilePathGood tests getStateFilePath with good input.
@@ -100,4 +102,22 @@ func TestGetStateFilePathSpecialChars(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected non-nil")
 	}
+}
+
+func TestWindowsDuplicateStart(t *testing.T) {
+	fileStateFolder := filepath.Join(t.TempDir(), "CloudWatchAgentTest")
+	plugin := Plugin{
+		FileStateFolder: fileStateFolder,
+	}
+	ec := EventConfig{
+		LogGroupName:  "My  Group/:::",
+		LogStreamName: "My::Stream//  ",
+		Name:          "System  Event//Log::",
+	}
+	plugin.Events = append(plugin.Events, ec)
+	require.Equal(t, 0, len(plugin.newEvents), "Start should be ran only once so there should be only 1 new event")
+	plugin.Start(nil)
+	require.Equal(t, 1, len(plugin.newEvents), "Start should be ran only once so there should be only 1 new event")
+	plugin.Start(nil)
+	require.Equal(t, 1, len(plugin.newEvents), "Start should be ran only once so there should be only 1 new event")
 }

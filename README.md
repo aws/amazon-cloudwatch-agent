@@ -3,8 +3,6 @@
 # Amazon CloudWatch Agent
 The Amazon CloudWatch Agent is software developed for the [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)
 
-This repo is for the effort to port CloudWatch Agent to run on the OpenTelemetry framework.
-
 ## Overview
 The Amazon CloudWatch Agent enables you to do the following:
 
@@ -12,8 +10,10 @@ The Amazon CloudWatch Agent enables you to do the following:
 - Collect system-level metrics from on-premises servers. These can include servers in a hybrid environment as well as servers not managed by AWS.
 - Retrieve custom metrics from your applications or services using the StatsD and collectd protocols. StatsD is supported on both Linux servers and servers running Windows Server. collectd is supported only on Linux servers.
 - Collect logs from Amazon EC2 instances and on-premises servers, running either Linux or Windows Server.
+- Collect Open Telemetry and AWS X-Ray traces
 
-Amazon CloudWatch Agent uses the open-source project [telegraf](https://github.com/influxdata/telegraf) as its dependency. It operates by starting a telegraf agent with some original plugins and some customized plugins.
+Amazon CloudWatch Agent uses open-source projects [telegraf](https://github.com/influxdata/telegraf) and [opentelemetry-collector](https://github.com/open-telemetry/opentelemetry-collector) as its dependencies. 
+It operates by starting an opentelemetry collector and is capable of operating pipelines consisting of both telegraf and opentemetry components in addition to customized components.
 
 ### Setup
 * [Configuring IAM Roles](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html)

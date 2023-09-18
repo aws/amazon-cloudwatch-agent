@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -86,6 +87,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	if configuredService.Value == eks {
 		if err := t.setClusterName(conf, cfg); err != nil {
@@ -100,17 +102,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.LocalMode = true
 		}
 
-		metricGranularityLevel := GetGranularityLevel(conf)
-		switch metricGranularityLevel {
-		case IndividualPodContainerMetrics:
+		if EnhancedContainerInsightsEnabled(conf) {
 			cfg.AddFullPodNameMetricLabel = true
 			cfg.AddContainerNameMetricLabel = true
 			cfg.PrefFullPodName = true
 			cfg.EnableControlPlaneMetrics = true
-		case EnhancedClusterMetrics:
-			cfg.EnableControlPlaneMetrics = true
-		default:
-			cfg.EnableControlPlaneMetrics = false
 		}
 	}
 

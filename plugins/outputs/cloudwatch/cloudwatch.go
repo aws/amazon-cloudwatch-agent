@@ -398,6 +398,10 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 			continue
 		}
 		if len(distList) == 0 {
+			if !distribution.IsSupportedValue(*metric.Value, distribution.MinValue, distribution.MaxValue) {
+				log.Printf("E! metric (%s) has an unsupported value: %v, dropping it", *metric.MetricName, *metric.Value)
+				continue
+			}
 			// Not a distribution.
 			datum := &cloudwatch.MetricDatum{
 				MetricName:        metric.MetricName,

@@ -5,38 +5,37 @@ package retryer
 
 import (
 	"log"
-	"time"
+	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/request"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
-// IMDSRetryer this must implement request.Retryer
-// not sure how to make in a test context not to retry
-// this seems to only be an issue on mac
-// windows and linux do not have this issue
-// in text context do not try to retry
-// this causes timeout failures for mac unit tests
-// currently we set the var to nil in tests to mock
-var IMDSRetryer request.Retryer = newIMDSRetryer()
+const (
+	DefaultImdsRetries = 1
+)
 
-type iMDSRetryer struct {
+type IMDSRetryer struct {
 	client.DefaultRetryer
 }
 
-// newIMDSRetryer allows us to retry imds errors
-// .5 seconds 1 seconds 2 seconds 4 seconds 8 seconds = 15.5 seconds
-func newIMDSRetryer() iMDSRetryer {
-	return iMDSRetryer{
+// NewIMDSRetryer allows us to retry imds errors
+// otel component layer retries should come from aws config settings
+// translator layer should come from env vars see GetDefaultRetryNumber()
+func NewIMDSRetryer(imdsRetries int) IMDSRetryer {
+	log.Printf("I! imds retry client will retry %d times", imdsRetries)
+	return IMDSRetryer{
 		DefaultRetryer: client.DefaultRetryer{
-			NumMaxRetries: 5,
-			MinRetryDelay: time.Second / 2,
+			NumMaxRetries: imdsRetries,
 		},
 	}
 }
 
-func (r iMDSRetryer) ShouldRetry(req *request.Request) bool {
+func (r IMDSRetryer) ShouldRetry(req *request.Request) bool {
 	// there is no enum of error codes
 	// EC2MetadataError is not retryable by default
 	// Fallback to SDK's built in retry rules
@@ -46,4 +45,13 @@ func (r iMDSRetryer) ShouldRetry(req *request.Request) bool {
 	}
 	log.Printf("D! should retry %t for imds error : %v", shouldRetry, req.Error)
 	return shouldRetry
+}
+
+func GetDefaultRetryNumber() int {
+	imdsRetryEnv := os.Getenv(envconfig.IMDS_NUMBER_RETRY)
+	imdsRetry, err := strconv.Atoi(imdsRetryEnv)
+	if err == nil && imdsRetry >= 0 {
+		return imdsRetry
+	}
+	return DefaultImdsRetries
 }

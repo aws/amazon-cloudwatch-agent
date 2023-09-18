@@ -64,6 +64,24 @@ func TestTranslator(t *testing.T) {
 				exporters:    []string{"awsemf/containerinsights"},
 			},
 		},
+		"WithKubernetes/WithEnhancedContainerInsights": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"enhanced_container_insights": true,
+							"cluster_name":                "TestCluster",
+						},
+					},
+				},
+			},
+			want: &want{
+				pipelineType: "metrics/containerinsights",
+				receivers:    []string{"awscontainerinsightreceiver"},
+				processors:   []string{"metricstransform/containerinsights", "batch/containerinsights"},
+				exporters:    []string{"awsemf/containerinsights"},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

@@ -1,4 +1,4 @@
-log_stream_name: "{ServiceName}"
+log_stream_name: "{JobName}"
 resource_to_telemetry_conversion:
   enabled: true
 detailed_metrics: false

@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
@@ -84,6 +85,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {
@@ -126,7 +128,7 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 		return err
 	}
 
-	if awscontainerinsight.GetGranularityLevel(conf) >= awscontainerinsight.EnhancedClusterMetrics {
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) {
 		cfg.EnhancedContainerInsights = true
 	}
 
@@ -139,13 +141,6 @@ func setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 	if err := setPrometheusLogGroup(conf, cfg); err != nil {
 		return err
 	}
-
-	// Prometheus will use the "job" corresponding to the target in prometheus as a log stream
-	// While determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml
-
-	// However, since we are using awsemfexport, we can leverage the token replacement with the log stream name
-	// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/897db04f747f0bda1707c916b1ec9f6c79a0c678/exporter/awsemfexporter/util.go#L29-L37
-	// Therefore, add a tag {ServiceName} for replacing job as a log stream
 
 	if conf.IsSet(emfProcessorBasePathKey) {
 		if err := setPrometheusNamespace(conf, cfg); err != nil {

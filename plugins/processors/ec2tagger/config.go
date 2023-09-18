@@ -26,12 +26,13 @@ type Config struct {
 	DiskDeviceTagKey string `mapstructure:"disk_device_tag_key,omitempty"`
 
 	// unlike other AWS plugins, this one determines the region from ec2 metadata not user configuration
-	AccessKey string `mapstructure:"access_key,omitempty"`
-	SecretKey string `mapstructure:"secret_key,omitempty"`
-	RoleARN   string `mapstructure:"role_arn,omitempty"`
-	Profile   string `mapstructure:"profile,omitempty"`
-	Filename  string `mapstructure:"shared_credential_file,omitempty"`
-	Token     string `mapstructure:"token,omitempty"`
+	AccessKey   string `mapstructure:"access_key,omitempty"`
+	SecretKey   string `mapstructure:"secret_key,omitempty"`
+	RoleARN     string `mapstructure:"role_arn,omitempty"`
+	Profile     string `mapstructure:"profile,omitempty"`
+	Filename    string `mapstructure:"shared_credential_file,omitempty"`
+	Token       string `mapstructure:"token,omitempty"`
+	IMDSRetries int    `mapstructure:"imds_retries,omitempty"`
 }
 
 // Verify Config implements Processor interface.

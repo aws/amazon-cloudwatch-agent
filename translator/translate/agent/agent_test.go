@@ -121,7 +121,6 @@ func noAgentConfig(t *testing.T, osType string) {
 }
 
 func TestInternal(t *testing.T) {
-	retryer.IMDSRetryer = nil
 	internal(t, config.OS_TYPE_LINUX)
 	internal(t, config.OS_TYPE_DARWIN)
 }
