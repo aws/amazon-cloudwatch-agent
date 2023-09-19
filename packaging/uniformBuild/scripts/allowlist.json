@@ -1,0 +1,22 @@
+[
+  {
+    "testname": "Stress",
+    "why":"Result of the stress test does not impact the release",
+    "general-ignore": true
+  },
+  {
+    "testname": "Performance",
+    "why":"Result of the performance test does not impact the release",
+    "general-ignore": true
+  },
+  {
+    "testname":"EC2Linux / Test (./test/metric_value_benchmark, ol8, linux, ec2_linux, amd64, t3a.medium, cloudwatch-agent-i...",
+    "why":"Faulty test",
+    "general-ignore": false
+  },
+  {
+    "testname":"ol7",
+    "why":"Missing ami, test is not working properly",
+    "general-ignore": true
+  }
+]

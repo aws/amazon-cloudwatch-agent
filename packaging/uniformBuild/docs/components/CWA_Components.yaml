@@ -1,0 +1,35 @@
+name: Other Dependencies 
+description: This is the env where we build CWA
+schemaVersion: 1.0
+
+phases:
+  - name: build
+    steps:
+      - name: make
+        action: ExecuteBash
+        inputs:
+          commands:
+            - apt install make -y
+      - name: qemu
+        action: ExecuteBash
+        inputs:
+          commands:
+            - apt install qemu qemu-kvm virt-manager bridge-utils -y
+      - name: zip
+        action: ExecuteBash
+        inputs:
+          commands:
+            - apt install zip unzip -y
+      - name: aws-cli
+        action: ExecuteBash
+        inputs:
+          commands:
+            - apt install awscli -y
+            - snap install aws-cli --classic
+      - name: validate
+        action: ExecuteBash
+        inputs:
+          commands:
+            - make -v 
+            - zip --version
+

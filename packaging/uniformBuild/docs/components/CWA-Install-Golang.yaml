@@ -1,0 +1,41 @@
+name: Golang
+description: This is the env where we build CWA
+schemaVersion: 1.0
+
+phases:
+  - name: build
+    steps:
+      - name: GetLatestGolang
+        action: ExecuteBash
+        inputs:
+          commands:
+            - wget https://go.dev/dl/go1.21.1.linux-amd64.tar.gz -O golang.tar.gz
+      - name: UnzipLatestGolang
+        action: ExecuteBash
+        inputs:
+          commands:
+            - tar -C /usr/local/ -xzf golang.tar.gz
+      - name: SetEnvironmentVariable
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              echo "Setting environment variable..."
+              sudo echo "export PATH=$PATH:/usr/local/go/bin" >> /etc/profile
+
+
+  - name: validate
+    steps:
+      - name: ValidateInstallation
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              source /etc/profile
+              if [[ `go version` ]]; then
+                echo 'Go successfully installed.'
+              else
+                echo 'Go was not installed correctly. Failing.'
+                exit 1
+              fi
+
