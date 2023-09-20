@@ -502,13 +502,13 @@ func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
 	return dimensions
 }
 
-func (c *CloudWatch) ProcessRollup(rawDimension []*cloudwatch.Dimension) [][]*cloudwatch.Dimension {
+func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*cloudwatch.Dimension {
 	rawDimensionMap := map[string]string{}
-	for _, v := range rawDimension {
+	for _, v := range rawDimensions {
 		rawDimensionMap[*v.Name] = *v.Value
 	}
 	targetDimensionsList := c.config.RollupDimensions
-	fullDimensionsList := [][]*cloudwatch.Dimension{rawDimension}
+	fullDimensionsList := [][]*cloudwatch.Dimension{rawDimensions}
 	for _, targetDimensions := range targetDimensionsList {
 		i := 0
 		extraDimensions := make([]*cloudwatch.Dimension, len(targetDimensions))
@@ -523,7 +523,7 @@ func (c *CloudWatch) ProcessRollup(rawDimension []*cloudwatch.Dimension) [][]*cl
 			}
 			i += 1
 		}
-		if i == len(targetDimensions) && !reflect.DeepEqual(rawDimension, extraDimensions) {
+		if i == len(targetDimensions) && len(targetDimensions) != len(rawDimensions) {
 			fullDimensionsList = append(fullDimensionsList, extraDimensions)
 		}
 	}
