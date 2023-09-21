@@ -210,25 +210,41 @@ func TestBuildMetricDatumDropUnsupported(t *testing.T) {
 }
 
 func TestGetUniqueRollupList(t *testing.T) {
-	inputLists := [][]string{{"d1"}, {"d1"}, {"d2"}, {"d1"}}
-	actualLists := GetUniqueRollupList(inputLists)
-	expectedLists := [][]string{{"d1"}, {"d2"}}
-	assert.EqualValues(t, expectedLists, actualLists, "Duplicate list showed up")
-
-	inputLists = [][]string{{"d1", "d2", ""}}
-	actualLists = GetUniqueRollupList(inputLists)
-	expectedLists = [][]string{{"d1", "d2", ""}}
-	assert.EqualValues(t, expectedLists, actualLists, "Unique list should be same with input list")
-
-	inputLists = [][]string{{}, {}}
-	actualLists = GetUniqueRollupList(inputLists)
-	expectedLists = [][]string{{}}
-	assert.EqualValues(t, expectedLists, actualLists, "Unique list failed on empty list")
-
-	inputLists = [][]string{}
-	actualLists = GetUniqueRollupList(inputLists)
-	expectedLists = [][]string{}
-	assert.EqualValues(t, expectedLists, actualLists, "Unique list result should be empty")
+	testCases := map[string]struct {
+		input [][]string
+		want  [][]string
+	}{
+		"WithEmpty": {
+			input: [][]string{},
+			want:  [][]string{},
+		},
+		"WithSimple": {
+			input: [][]string{{"d1", "d2", ""}},
+			want:  [][]string{{"", "d1", "d2"}},
+		},
+		"WithDuplicates/NoDimension": {
+			input: [][]string{{}, {}},
+			want:  [][]string{{}},
+		},
+		"WithDuplicates/SingleDimension": {
+			input: [][]string{{"d1"}, {"d1"}, {"d2"}, {"d1"}},
+			want:  [][]string{{"d1"}, {"d2"}},
+		},
+		"WithDuplicates/DifferentOrder": {
+			input: [][]string{{"d2", "d1", "d3"}, {"d3", "d1", "d2"}, {"d3", "d2", "d1"}},
+			want:  [][]string{{"d1", "d2", "d3"}},
+		},
+		"WithDuplicates/WithinSets": {
+			input: [][]string{{"d1", "d1", "d2"}, {"d1", "d1"}, {"d2", "d1"}, {"d1"}},
+			want:  [][]string{{"d1", "d2"}, {"d1"}},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := GetUniqueRollupList(testCase.input)
+			assert.EqualValues(t, testCase.want, got)
+		})
+	}
 }
 
 func TestIsDropping(t *testing.T) {
