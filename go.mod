@@ -94,6 +94,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/eks v1.27.15
 	github.com/aws/smithy-go v1.13.5
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
+	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/go-kit/log v0.2.1
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cadvisor v0.47.3 // indirect
