@@ -64,6 +64,8 @@ jobs:
           go mod tidy
           go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws=github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws@${{ steps.get-latest-commit.outputs.sha }}
           go mod tidy
+          go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza=github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
           git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}"
           git push -u origin HEAD
           git config --global --unset user.name
