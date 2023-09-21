@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"golang.org/x/exp/maps"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
@@ -502,50 +503,61 @@ func BuildDimensions(tagMap map[string]string) []*cloudwatch.Dimension {
 	return dimensions
 }
 
-func (c *CloudWatch) ProcessRollup(rawDimension []*cloudwatch.Dimension) [][]*cloudwatch.Dimension {
+// ProcessRollup creates the dimension sets based on the dimensions available in the original metric.
+func (c *CloudWatch) ProcessRollup(rawDimensions []*cloudwatch.Dimension) [][]*cloudwatch.Dimension {
 	rawDimensionMap := map[string]string{}
-	for _, v := range rawDimension {
+	for _, v := range rawDimensions {
 		rawDimensionMap[*v.Name] = *v.Value
 	}
 	targetDimensionsList := c.config.RollupDimensions
-	fullDimensionsList := [][]*cloudwatch.Dimension{rawDimension}
+	fullDimensionsList := [][]*cloudwatch.Dimension{rawDimensions}
 	for _, targetDimensions := range targetDimensionsList {
-		i := 0
+		// skip if target dimensions count is same or more than the original metric.
+		// cannot have dimensions that do not exist in the original metric.
+		if len(targetDimensions) >= len(rawDimensions) {
+			continue
+		}
+		count := 0
 		extraDimensions := make([]*cloudwatch.Dimension, len(targetDimensions))
 		for _, targetDimensionKey := range targetDimensions {
 			if val, ok := rawDimensionMap[targetDimensionKey]; !ok {
 				break
 			} else {
-				extraDimensions[i] = &cloudwatch.Dimension{
+				extraDimensions[count] = &cloudwatch.Dimension{
 					Name:  aws.String(targetDimensionKey),
 					Value: aws.String(val),
 				}
 			}
-			i += 1
+			count++
 		}
-		if i == len(targetDimensions) && !reflect.DeepEqual(rawDimension, extraDimensions) {
+		if count == len(targetDimensions) {
 			fullDimensionsList = append(fullDimensionsList, extraDimensions)
 		}
 	}
 	return fullDimensionsList
 }
 
+// GetUniqueRollupList filters out duplicate dimensions within the sets and filters
+// duplicate sets.
 func GetUniqueRollupList(inputLists [][]string) [][]string {
-	uniqueLists := [][]string{}
-	if len(inputLists) > 0 {
-		uniqueLists = append(uniqueLists, inputLists[0])
-	}
+	var uniqueSets []collections.Set[string]
 	for _, inputList := range inputLists {
+		inputSet := collections.NewSet(inputList...)
 		count := 0
-		for _, u := range uniqueLists {
-			if reflect.DeepEqual(inputList, u) {
+		for _, uniqueSet := range uniqueSets {
+			if reflect.DeepEqual(inputSet, uniqueSet) {
 				break
 			}
-			count += 1
-			if count == len(uniqueLists) {
-				uniqueLists = append(uniqueLists, inputList)
-			}
+			count++
 		}
+		if count == len(uniqueSets) {
+			uniqueSets = append(uniqueSets, inputSet)
+		}
+	}
+	uniqueLists := make([][]string, len(uniqueSets))
+	for i, uniqueSet := range uniqueSets {
+		uniqueLists[i] = maps.Keys(uniqueSet)
+		sort.Strings(uniqueLists[i])
 	}
 	log.Printf("I! cloudwatch: get unique roll up list %v", uniqueLists)
 	return uniqueLists
