@@ -645,6 +645,9 @@
                   "auto_removal": {
                     "type": "boolean"
                   },
+                  "from_beginning": {
+                    "type": "boolean"
+                  },
                   "blacklist": {
                     "type": "string",
                     "minLength": 1,
