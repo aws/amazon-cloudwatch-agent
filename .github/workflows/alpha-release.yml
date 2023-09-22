@@ -1,0 +1,25 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: CCWA Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "ccwa-release:latest"
+      BucketKey: "release"
+      PackageBucketKey: "release"
+
+  DeployCanary:
+    needs: [BuildAndUpload]
+    uses: ./.github/workflows/deploy-canary.yml
+    secrets: inherit
