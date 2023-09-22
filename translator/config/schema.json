@@ -584,6 +584,10 @@
         "endpoint_override": {
           "description": "The override endpoint to use to access cloudwatch logs",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "persistentQueue": {
+          "description": "can writes logEvents in memory to the disk, and read logEvent from disk ",
+          "type": "boolean"
         }
       },
       "additionalProperties": false,

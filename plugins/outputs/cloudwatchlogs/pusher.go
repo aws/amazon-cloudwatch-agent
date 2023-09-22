@@ -4,6 +4,10 @@
 package cloudwatchlogs
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util/persistentqueue"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util/persistentqueue/diskqueue"
 	"math/rand"
 	"sort"
 	"sync"
@@ -12,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/google/uuid"
 	"github.com/influxdata/telegraf"
 
 	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
@@ -20,8 +25,16 @@ import (
 )
 
 const (
-	reqSizeLimit   = 1024 * 1024
-	reqEventsLimit = 10000
+	reqSizeLimit         = 1024 * 1024
+	reqEventsLimit       = 10000
+	queuesDirectory      = "/opt/aws/amazon-cloudwatch-agent/var"
+	maxBacklogQueueDepth = 1024 // 100 MB file with 100 KB per message in worst case (1024 = 100 MB / 100 KB)
+
+	maxBytesPerFile = 1024 * 1024 * 1024 // 1 GB
+	maxMsgSize      = 256*1024 + 2       // 256 KB
+	minMsgSize      = 1                  // messages should have content
+	syncEvery       = 5                  //number of writes per file synchronize, ensuring the data is actually written to disk rather than being in the memory
+	syncTimeout     = time.Minute
 )
 
 var (
@@ -55,29 +68,56 @@ type pusher struct {
 	stop                <-chan struct{}
 	lastSentTime        time.Time
 
+	backlogQueue        persistentqueue.PersistentQueue
+	ticker              *time.Ticker
+	dequeueEvents       *RetryStruct
+	flagPersistentQueue bool
+
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
 	agentInfo             agentinfo.AgentInfo
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, agentInfo agentinfo.AgentInfo) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, agentInfo agentinfo.AgentInfo, flagPersistentQueue bool) *pusher {
+	marshaler := func(i interface{}) ([]byte, error) { return json.Marshal(i) }
+	unmarshaler := func(bytes []byte) (interface{}, error) {
+		var data RetryStruct
+		return data, json.Unmarshal(bytes, &data)
+	}
+	id := uuid.New()
+	dn := fmt.Sprintf("dir_%s", id.String())
 	p := &pusher{
-		Target:          target,
-		Service:         service,
-		FlushTimeout:    flushTimeout,
-		RetryDuration:   retryDuration,
-		Log:             logger,
-		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
-		eventsCh:        make(chan logs.LogEvent, 100),
-		flushTimer:      time.NewTimer(flushTimeout),
-		stop:            stop,
-		startNonBlockCh: make(chan struct{}),
-		wg:              wg,
-		agentInfo:       agentInfo,
+		Target:        target,
+		Service:       service,
+		FlushTimeout:  flushTimeout,
+		RetryDuration: retryDuration,
+		Log:           logger,
+		events:        make([]*cloudwatchlogs.InputLogEvent, 0, 10),
+		eventsCh:      make(chan logs.LogEvent, 100),
+		flushTimer:    time.NewTimer(flushTimeout),
+		stop:          stop,
+		backlogQueue: diskqueue.NewPersistentQueue(
+			dn,
+			queuesDirectory,
+			maxBacklogQueueDepth,
+			maxBytesPerFile,
+			minMsgSize,
+			maxMsgSize,
+			syncEvery,
+			syncTimeout,
+			marshaler,
+			unmarshaler,
+			logger,
+		),
+		startNonBlockCh:     make(chan struct{}),
+		wg:                  wg,
+		agentInfo:           agentInfo,
+		flagPersistentQueue: flagPersistentQueue,
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
+	p.Log.Debugf("Pusher has been created and the persistentQueue feature is %v", flagPersistentQueue)
 	go p.start()
 	return p
 }
@@ -129,8 +169,8 @@ func hasValidTime(e logs.LogEvent) bool {
 
 func (p *pusher) start() {
 	defer p.wg.Done()
-
 	ec := make(chan logs.LogEvent)
+	p.ticker = time.NewTicker(10 * time.Second)
 
 	// Merge events from both blocking and non-blocking channel
 	go func() {
@@ -147,54 +187,140 @@ func (p *pusher) start() {
 		}
 	}()
 
-	for {
-		select {
-		case e := <-ec:
-			// Start timer when first event of the batch is added (happens after a flush timer timeout)
-			if len(p.events) == 0 {
-				p.resetFlushTimer()
-			}
+	if p.flagPersistentQueue {
+		for {
+			select {
+			case <-p.ticker.C:
+				//p.Log.Debugf("start dequeue from disk")
+				temp, err := p.dequeue()
+				if err != nil {
+					p.Log.Errorf("Error while dequeue log from the backlogQueue")
 
-			ce := p.convertEvent(e)
-			et := time.Unix(*ce.Timestamp/1000, *ce.Timestamp%1000) // Cloudwatch Log Timestamp is in Millisecond
+				} else {
+					if temp != nil {
+						p.dequeueEvents = temp
+						//p.Log.Debugf("send dequeue logEvent to cloudwatch")
+						p.sendDequeuEvent()
+					} else {
+						p.Log.Debugf("there is no logEvent in disk")
+					}
+				}
+			case e := <-ec:
+				// Start timer when first event of the batch is added (happens after a flush timer timeout)
+				if len(p.events) == 0 {
+					p.resetFlushTimer()
+				}
 
-			// A batch of log events in a single request cannot span more than 24 hours.
-			if (p.minT != nil && et.Sub(*p.minT) > 24*time.Hour) || (p.maxT != nil && p.maxT.Sub(et) > 24*time.Hour) {
-				p.send()
-			}
+				ce := p.convertEvent(e)
+				et := time.Unix(*ce.Timestamp/1000, *ce.Timestamp%1000) // Cloudwatch Log Timestamp is in Millisecond
 
-			size := len(*ce.Message) + eventHeaderSize
-			if p.bufferredSize+size > reqSizeLimit || len(p.events) == reqEventsLimit {
-				p.send()
-			}
+				// A batch of log events in a single request cannot span more than 24 hours.
+				if (p.minT != nil && et.Sub(*p.minT) > 24*time.Hour) || (p.maxT != nil && p.maxT.Sub(et) > 24*time.Hour) {
+					p.send()
+				}
 
-			if len(p.events) > 0 && *ce.Timestamp < *p.events[len(p.events)-1].Timestamp {
-				p.needSort = true
-			}
+				size := len(*ce.Message) + eventHeaderSize
+				if p.bufferredSize+size > reqSizeLimit || len(p.events) == reqEventsLimit {
+					p.send()
+				}
 
-			p.events = append(p.events, ce)
-			p.doneCallbacks = append(p.doneCallbacks, e.Done)
-			p.bufferredSize += size
-			if p.minT == nil || p.minT.After(et) {
-				p.minT = &et
-			}
-			if p.maxT == nil || p.maxT.Before(et) {
-				p.maxT = &et
-			}
+				if len(p.events) > 0 && *ce.Timestamp < *p.events[len(p.events)-1].Timestamp {
+					p.needSort = true
+				}
 
-		case <-p.flushTimer.C:
-			if time.Since(p.lastSentTime) >= p.FlushTimeout && len(p.events) > 0 {
-				p.send()
-			} else {
-				p.resetFlushTimer()
+				p.events = append(p.events, ce)
+				p.doneCallbacks = append(p.doneCallbacks, e.Done)
+				p.bufferredSize += size
+				if p.minT == nil || p.minT.After(et) {
+					p.minT = &et
+				}
+				if p.maxT == nil || p.maxT.Before(et) {
+					p.maxT = &et
+				}
+			case <-p.flushTimer.C:
+				if time.Since(p.lastSentTime) >= p.FlushTimeout && len(p.events) > 0 {
+					p.send()
+				} else {
+					p.resetFlushTimer()
+				}
+			case <-p.stop:
+				if len(p.events) > 0 {
+					p.send()
+				}
+				return
 			}
-		case <-p.stop:
-			if len(p.events) > 0 {
-				p.send()
+		}
+	} else {
+		for {
+			select {
+			case e := <-ec:
+				// Start timer when first event of the batch is added (happens after a flush timer timeout)
+				if len(p.events) == 0 {
+					p.resetFlushTimer()
+				}
+
+				ce := p.convertEvent(e)
+				et := time.Unix(*ce.Timestamp/1000, *ce.Timestamp%1000) // Cloudwatch Log Timestamp is in Millisecond
+
+				// A batch of log events in a single request cannot span more than 24 hours.
+				if (p.minT != nil && et.Sub(*p.minT) > 24*time.Hour) || (p.maxT != nil && p.maxT.Sub(et) > 24*time.Hour) {
+					p.send()
+				}
+
+				size := len(*ce.Message) + eventHeaderSize
+				if p.bufferredSize+size > reqSizeLimit || len(p.events) == reqEventsLimit {
+					p.send()
+				}
+
+				if len(p.events) > 0 && *ce.Timestamp < *p.events[len(p.events)-1].Timestamp {
+					p.needSort = true
+				}
+
+				p.events = append(p.events, ce)
+				p.doneCallbacks = append(p.doneCallbacks, e.Done)
+				p.bufferredSize += size
+				if p.minT == nil || p.minT.After(et) {
+					p.minT = &et
+				}
+				if p.maxT == nil || p.maxT.Before(et) {
+					p.maxT = &et
+				}
+			case <-p.flushTimer.C:
+				if time.Since(p.lastSentTime) >= p.FlushTimeout && len(p.events) > 0 {
+					p.send()
+				} else {
+					p.resetFlushTimer()
+				}
+			case <-p.stop:
+				if len(p.events) > 0 {
+					p.send()
+				}
+				return
 			}
-			return
 		}
 	}
+}
+
+func (p *pusher) dequeue() (*RetryStruct, error) {
+	if p.backlogQueue.Depth() == 0 {
+		return nil, nil
+	}
+	obj, err := p.backlogQueue.Dequeue()
+	if err != nil {
+		p.Log.Debugf("errors happens when dequeue from disk")
+		return nil, err
+	}
+	input := obj.(RetryStruct)
+	if !input.FirstRetryTime.IsZero() {
+		now := time.Now()
+		dt := now.Sub(input.FirstRetryTime).Hours()
+		if dt > 24*14 || dt < -2 {
+			p.Log.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", p.Group, p.Stream, input.FirstRetryTime, time.Now())
+			return nil, nil
+		}
+	}
+
+	return &input, nil
 }
 
 func (p *pusher) reset() {
@@ -210,6 +336,92 @@ func (p *pusher) reset() {
 	p.needSort = false
 	p.minT = nil
 	p.maxT = nil
+}
+
+type RetryStruct struct {
+	*cloudwatchlogs.PutLogEventsInput
+	FirstRetryTime time.Time `type:"firstRetryTimeStamp"`
+	BufferredSize  int       `type:"buffersize"`
+}
+
+func (p *pusher) sendDequeuEvent() {
+	startTime := time.Now()
+
+	var input *cloudwatchlogs.PutLogEventsInput
+
+	//means pusher will publish logEvent dequeued from disk to destination
+	p.Log.Debug("send dequeueEvents to cloudwatch")
+	input = p.dequeueEvents.PutLogEventsInput
+	temp := p.dequeueEvents
+	p.dequeueEvents = nil
+	input.SequenceToken = p.sequenceToken
+	output, err := p.Service.PutLogEvents(input)
+	p.agentInfo.RecordOpData(time.Since(temp.FirstRetryTime), temp.BufferredSize, err)
+	if err == nil {
+		if output.NextSequenceToken != nil {
+			p.sequenceToken = output.NextSequenceToken
+		}
+		if output.RejectedLogEventsInfo != nil {
+			info := output.RejectedLogEventsInfo
+			if info.TooOldLogEventEndIndex != nil {
+				p.Log.Warnf("%d log events for log '%s/%s' are too old", *info.TooOldLogEventEndIndex, p.Group, p.Stream)
+			}
+			if info.TooNewLogEventStartIndex != nil {
+				p.Log.Warnf("%d log events for log '%s/%s' are too new", *info.TooNewLogEventStartIndex, p.Group, p.Stream)
+			}
+			if info.ExpiredLogEventEndIndex != nil {
+				p.Log.Warnf("%d log events for log '%s/%s' are expired", *info.ExpiredLogEventEndIndex, p.Group, p.Stream)
+			}
+		}
+		p.Log.Debugf("in the persistentQueue, Pusher published %v log events to group: %v stream: %v with size %v KB in %v.", len(input.LogEvents), *input.LogGroupName, *input.LogStreamName, temp.BufferredSize/1024, time.Since(startTime))
+		p.addStats("rawSize", float64(temp.BufferredSize))
+		p.lastSentTime = time.Now()
+		return
+	}
+	p.Log.Debugf("errors not nil, we need tell exactly what's error")
+	awsErr, ok := err.(awserr.Error)
+	if !ok {
+		p.Log.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", p.Group, p.Stream, err)
+		return
+	}
+	switch e := awsErr.(type) {
+	case *cloudwatchlogs.ResourceNotFoundException:
+		err := p.createLogGroupAndStream()
+		if err != nil {
+			p.Log.Errorf("Unable to create log stream %v/%v: %v", p.Group, p.Stream, e.Message())
+			break
+		}
+		p.putRetentionPolicy()
+	case *cloudwatchlogs.InvalidSequenceTokenException:
+		if p.sequenceToken == nil {
+			p.Log.Infof("First time sending logs to %v/%v since startup so sequenceToken is nil, learned new token:(%v): %v", p.Group, p.Stream, e.ExpectedSequenceToken, e.Message())
+		} else {
+			p.Log.Warnf("Invalid SequenceToken used (%v) while sending logs to %v/%v, will use new token and retry: %v", p.sequenceToken, p.Group, p.Stream, e.Message())
+		}
+		if e.ExpectedSequenceToken == nil {
+			p.Log.Errorf("Failed to find sequence token from aws response while sending logs to %v/%v: %v", p.Group, p.Stream, e.Message())
+		}
+		p.sequenceToken = e.ExpectedSequenceToken
+	case *cloudwatchlogs.InvalidParameterException,
+		*cloudwatchlogs.DataAlreadyAcceptedException:
+		p.Log.Errorf("%v, will not retry the request", e)
+		return
+
+	default:
+		p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
+	}
+	p.Log.Debugf("this logEvent will be enqueue again")
+	p.wg.Add(1)
+	go func() {
+		defer p.wg.Done()
+		p.Log.Debugf("start to enqueue again")
+		err := p.backlogQueue.Enqueue(*temp)
+		if err != nil {
+			p.Log.Debugf("enqueue errors:%v", err)
+		}
+	}()
+	return
+
 }
 
 func (p *pusher) send() {
@@ -298,6 +510,32 @@ func (p *pusher) send() {
 			p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
 		}
 
+		if p.flagPersistentQueue {
+			p.Log.Debugf("retry error detected, start retry")
+			if retryCount >= 1 {
+				retryinput := RetryStruct{}
+				retryinput.PutLogEventsInput = Clone(input)
+				retryinput.FirstRetryTime = startTime
+				retryinput.BufferredSize = p.bufferredSize
+				p.wg.Add(1)
+				go func() {
+					defer p.wg.Done()
+					p.Log.Debugf("start to enqueue")
+					err := p.backlogQueue.Enqueue(retryinput)
+					if err != nil {
+						p.Log.Debugf("enqueue errors:%v", err)
+						return
+					}
+				}()
+				for i := len(p.doneCallbacks) - 1; i >= 0; i-- {
+					done := p.doneCallbacks[i]
+					done()
+				}
+				p.reset()
+				return
+			}
+		}
+
 		wait := retryWait(retryCount)
 		if time.Since(startTime)+wait > p.RetryDuration {
 			p.Log.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
@@ -316,7 +554,24 @@ func (p *pusher) send() {
 		}
 
 		retryCount++
+
 	}
+
+}
+func Clone(input *cloudwatchlogs.PutLogEventsInput) *cloudwatchlogs.PutLogEventsInput {
+	clone := cloudwatchlogs.PutLogEventsInput{
+		LogEvents:     make([]*cloudwatchlogs.InputLogEvent, len(input.LogEvents)),
+		LogGroupName:  input.LogGroupName,
+		LogStreamName: input.LogStreamName,
+		SequenceToken: input.SequenceToken,
+	}
+	for i, p := range input.LogEvents {
+		if p == nil {
+			continue
+		}
+		clone.LogEvents[i] = p
+	}
+	return &clone
 
 }
 

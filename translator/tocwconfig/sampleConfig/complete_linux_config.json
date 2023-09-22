@@ -202,7 +202,8 @@
     "credentials": {
       "role_arn": "log_role_arn_value_test"
     },
-    "endpoint_override": "https://logs-fips.us-west-2.amazonaws.com"
+    "endpoint_override": "https://logs-fips.us-west-2.amazonaws.com",
+    "persistentQueue": true
   },
   "traces": {
     "traces_collected": {

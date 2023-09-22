@@ -6,7 +6,9 @@
 
 package tocwconfig
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestCompleteConfigUnix(t *testing.T) {
 	resetContext(t)
@@ -15,11 +17,11 @@ func TestCompleteConfigUnix(t *testing.T) {
 		"CWAGENT_LOG_LEVEL":  "DEBUG",
 		"AWS_SDK_LOG_LEVEL":  "LogDebug",
 	}
-
-	// The translation needs to use the runtime.GOOS value in order to generate the proper configuration YAML,
-	// so this is separate
+	//The translation needs to use the runtime.GOOS value in order to generate the proper configuration YAML,
+	//so this is separate
 	checkTranslation(t, "complete_linux_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
+
 }
 
 func TestDeltaConfigLinux(t *testing.T) {

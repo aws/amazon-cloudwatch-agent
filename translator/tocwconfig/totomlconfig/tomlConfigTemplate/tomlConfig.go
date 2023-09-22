@@ -263,6 +263,7 @@ type (
 	}
 
 	cloudWatchLogsConfig struct {
+		PersistentQueue    bool   `toml:"persistentQueue"`
 		EndpointOverride   string `toml:"endpoint_override"`
 		ForceFlushInterval string `toml:"force_flush_interval"`
 		LogStreamName      string `toml:"log_stream_name"`

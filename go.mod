@@ -154,6 +154,7 @@ require (
 	k8s.io/apimachinery v0.26.3
 	k8s.io/client-go v0.26.3
 	k8s.io/klog/v2 v2.90.1
+	github.com/nsqio/go-diskqueue v1.1.0
 )
 
 require (
