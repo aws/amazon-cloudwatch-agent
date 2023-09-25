@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -14,12 +13,6 @@ import (
 	"time"
 )
 
-const TEST_REPO = "https://github.com/aws/amazon-cloudwatch-agent-test"
-const BUILD_ARN = "arn:aws:iam::506463145083:instance-profile/Uniform-Build-Env-Instance-Profile"
-const COMMAND_TRACKING_TIMEOUT = 20 * time.Minute
-const COMMAND_TRACKING_INTERVAL = 1 * time.Second
-const COMMAND_TRACKING_COUNT = int(COMMAND_TRACKING_TIMEOUT / COMMAND_TRACKING_INTERVAL)
-
 // This is the main struct that is managing the build process
 type RemoteBuildManager struct {
 	ssmClient       *ssm.Client
@@ -30,6 +23,10 @@ type RemoteBuildManager struct {
 var DEFAULT_INSTANCE_GUIDE = map[string]OS{
 	"MainBuildEnv":     LINUX,
 	"WindowsMSIPacker": LINUX,
+	"MacPkgMaker":      MACOS,
+}
+var MACOS_TEST_INSTANCE_GUIDE = map[string]OS{
+	"MacPkgMaker": MACOS,
 }
 
 /*
@@ -46,10 +43,6 @@ func CreateRemoteBuildManager(instanceGuide map[string]OS, accountID string) *Re
 	rbm.instanceManager = CreateNewInstanceManager(cfg, instanceGuide)
 	fmt.Println("New Instance Manager Created")
 	rbm.instanceManager.GetSupportedAMIs(accountID)
-	b, err := json.MarshalIndent(rbm.instanceManager.amis, "", "  ")
-	fmt.Printf("Got Supported Amis: %s  %s\n ", b, err)
-	//linuxImage := rbm.instanceManager.GetLatestAMIVersion()
-	//rbm.instanceManager.amis["linux"] = linuxImage
 	fmt.Println("About to create ec2 instances")
 	err = rbm.instanceManager.CreateEC2InstancesBlocking()
 
@@ -78,7 +71,7 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 		return err
 	}
 	if isAlreadyBuilt := rbm.CheckS3(commitHash); isAlreadyBuilt {
-		fmt.Println("Found cache skipping build")
+		fmt.Println("\033Found cache skipping build")
 		return nil
 	}
 	fmt.Println("Starting CWA Build")
@@ -90,7 +83,10 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 	return rbm.RunCommand(buildMasterCommand, instanceName, fmt.Sprintf("building CWA | %s | branch: %s | hash: %s",
 		strings.Replace(gitUrl, "https://github.com/", "", 1), branch, commitHash))
 }
+
+// Windows
 func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string) error {
+	//rbm.CheckS3(fmt.)
 	command := mergeCommands(
 		CloneGitRepo(TEST_REPO, "main"),
 		"cd ccwa",
@@ -109,37 +105,49 @@ func (rbm *RemoteBuildManager) BuildMsi() error {
 	//	)
 	return nil
 }
-func (rbm *RemoteBuildManager) MakeMacPkg() error {
+func (rbm *RemoteBuildManager) MakeMacPkg(instanceName string, commitHash string) error {
 	//@TODO needs mac ami
 	command := mergeCommands(
-		CloneGitRepo(TEST_REPO, "main"),
+		CloneGitRepo(MAIN_REPO, "main"),
 		"cd ccwa",
 		MakeMacBinary(),
 		CopyBinaryMac(),
 		CreatePkgCopyDeps(),
-		BuildAndUploadMac(),
+		BuildAndUploadMac(commitHash),
 	)
-	return rbm.RunCommand(command, "MacBuildEnv", "Making Mac pkg")
+	return rbm.RunCommand(command, instanceName, "Making Mac pkg")
 }
 func (rbm *RemoteBuildManager) Close() error {
 	return rbm.instanceManager.Close()
 }
-func initEnvCmd() string {
-	return mergeCommands(
-		"export GOENV=/root/.config/go/env",
-		"export GOCACHE=/root/.cache/go-build",
-		"export GOMODCACHE=/root/go/pkg/mod",
-		"export PATH=$PATH:/usr/local/go/bin",
-	)
+func initEnvCmd(os OS) string {
+	switch os {
+	case MACOS:
+		return mergeCommands(
+			"source /etc/profile",
+			LoadWorkDirectory(os),
+			"echo 'ENV SET FOR MACOS'",
+		)
+	default:
+		return mergeCommands(
+			"export GOENV=/root/.config/go/env",
+			"export GOCACHE=/root/.cache/go-build",
+			"export GOMODCACHE=/root/go/pkg/mod",
+			"export PATH=$PATH:/usr/local/go/bin",
+			LoadWorkDirectory(os),
+		)
+	}
+
 }
 
 // CACHE COMMANDS
 func (rbm *RemoteBuildManager) CheckS3(targetFile string) bool {
-	input := &s3.HeadObjectInput{
+	return false //DOESNT WORK FOR NOW forcing an already existing cache
+	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(S3_INTEGRATION_BUCKET),
-		Key:    aws.String(targetFile),
+		Prefix: aws.String(targetFile),
 	}
-	_, err := rbm.s3Client.HeadObject(context.Background(), input)
+	_, err := rbm.s3Client.ListObjectsV2(context.Background(), input)
 	if err != nil {
 		if err.Error() == "NotFound: Not Found" {
 			fmt.Printf("Object %s does not exist in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
@@ -153,9 +161,7 @@ func (rbm *RemoteBuildManager) CheckS3(targetFile string) bool {
 }
 
 func main() {
-	//REPO_NAME := "https://github.com/aws/amazon-cloudwatch-agent.git"
-	//BRANCH_NAME := "main"
-	//@TODO ADD CACHE
+	//@TODO FIX CACHE
 	var repo string
 	var branch string
 	var comment string
@@ -169,13 +175,21 @@ func main() {
 	flag.StringVar(&accountID, "a", "", "accountID")
 	flag.StringVar(&accountID, "account_id", "", "accountID")
 	flag.Parse()
-	rbm := CreateRemoteBuildManager(DEFAULT_INSTANCE_GUIDE, accountID)
-	defer rbm.Close()
-	err := rbm.BuildCWAAgent(repo, branch, comment, "MainBuildEnv")
-	if err != nil {
-		panic(err)
-	}
-	err = rbm.MakeMsiZip("WindowsMSIPacker", comment)
+	//rbm := CreateRemoteBuildManager(DEFAULT_INSTANCE_GUIDE, accountID)
+	rbm := CreateRemoteBuildManager(MACOS_TEST_INSTANCE_GUIDE, accountID)
+	comment = "GHA_DEBUG_RUN"
+	var err error
+	//defer rbm.Close() TEMP DISABLED MAKE SURE YOU TURN IT BACK ON @TODO
+	//err := rbm.BuildCWAAgent(repo, branch, comment, "MainBuildEnv")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//err = rbm.MakeMsiZip("WindowsMSIPacker", comment)
+	//if err != nil {
+	//	panic(err)
+	//}
+	time.Sleep(7 * time.Minute)
+	err = rbm.MakeMacPkg("MacPkgMaker", comment)
 	if err != nil {
 		panic(err)
 	}

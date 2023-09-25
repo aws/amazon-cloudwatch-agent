@@ -24,18 +24,14 @@ var (
 	INVALID_OS       = errors.New("That OS is not in supported AMIs")
 )
 
-type OS string
-
-const (
-	LINUX   OS = "linux"
-	WINDOWS OS = "windows"
-	//DARWIN  OS = "darwin"
-)
-
-var SUPPORTED_OS = []OS{LINUX, WINDOWS} //go doesn't let me create a slice from enum so this is the solution
+type Instance struct {
+	types.Instance
+	name string
+	os   OS
+}
 type InstanceManager struct {
 	ec2Client     *ec2.Client
-	instances     map[string]*types.Instance
+	instances     map[string]*Instance
 	amis          map[OS]*types.Image
 	instanceGuide map[string]OS
 }
@@ -43,7 +39,7 @@ type InstanceManager struct {
 func CreateNewInstanceManager(cfg aws.Config, instanceGuide map[string]OS) *InstanceManager {
 	return &InstanceManager{
 		ec2Client:     ec2.NewFromConfig(cfg),
-		instances:     make(map[string]*types.Instance),
+		instances:     make(map[string]*Instance),
 		amis:          make(map[OS]*types.Image),
 		instanceGuide: instanceGuide,
 	}
@@ -92,14 +88,23 @@ func parseTime(value string) *time.Time {
 	}
 	return &t
 }
-
+func getPlatformDetails(img *types.Image) string {
+	for _, tag := range img.Tags {
+		if *tag.Key == PLATFORM_KEY {
+			return *tag.Value
+		}
+	}
+	return ""
+}
 func (imng *InstanceManager) GetSupportedAMIs(accountID string) {
 	//this populates the amis map
 	latestAmis := imng.GetAllAMIVersions(accountID) //this is sorted by date
 	fmt.Printf("Found %d possible AMIs \n", len(latestAmis))
 	for _, os := range SUPPORTED_OS {
 		for _, ami := range latestAmis {
-			if strings.Contains(strings.ToLower(*ami.PlatformDetails), string(os)) {
+			platform := getPlatformDetails(&ami)
+			if strings.Contains(strings.ToLower(platform), string(os)) {
+				fmt.Printf("Using: \033[1m %s \033[0m with \033[1;34;47m %s \033[0m \n", *ami.ImageId, platform)
 				imng.amis[os] = &ami
 				break
 			}
@@ -117,14 +122,14 @@ func (imng *InstanceManager) CreateEC2InstancesBlocking() error {
 	//create instances
 	for instanceName, osType := range imng.instanceGuide {
 		image := imng.amis[osType]
-		instance := CreateInstanceCmd(imng.ec2Client, image, instanceName)
+		instance := CreateInstanceCmd(imng.ec2Client, image, instanceName, osType)
 		imng.instances[instanceName] = &instance
 	}
 	time.Sleep(1 * time.Minute) // on average an ec2 launches in 60-90 seconds
 	var wg sync.WaitGroup
 	for _, instance := range imng.instances {
 		wg.Add(1)
-		go func(targetInstance *types.Instance) {
+		go func(targetInstance *Instance) {
 			defer wg.Done()
 			WaitUntilAgentIsOn(imng.ec2Client, targetInstance)
 			err := AssignInstanceProfile(imng.ec2Client, targetInstance)
@@ -139,13 +144,20 @@ func (imng *InstanceManager) CreateEC2InstancesBlocking() error {
 	return nil
 }
 func (imng *InstanceManager) Close() error {
+	var wg sync.WaitGroup
 	for instanceName, instance := range imng.instances {
-		fmt.Printf("Closed instance: %s - %s \n", instanceName, *instance.InstanceId)
-		err := StopInstanceCmd(imng.ec2Client, *instance.InstanceId)
-		if err != nil {
-			return err
-		}
+		fmt.Printf("\033[1;35mClosed instance: %s - %s \n \033[0m", instanceName, *instance.InstanceId)
+		wg.Add(1)
+		go func(client *ec2.Client, instanceID string) {
+			defer wg.Done()
+			err := StopInstanceCmd(client, instanceID)
+			time.Sleep(10 * time.Second)
+			if err != nil {
+				return
+			}
+		}(imng.ec2Client, *instance.InstanceId)
 	}
+	wg.Wait()
 	return nil
 }
 
@@ -186,7 +198,7 @@ type EC2StopInstancesAPI interface {
 func MakeInstance(c context.Context, api EC2CreateInstanceAPI, input *ec2.RunInstancesInput) (*ec2.RunInstancesOutput, error) {
 	return api.RunInstances(c, input)
 }
-func AssignInstanceProfile(client *ec2.Client, instance *types.Instance) error {
+func AssignInstanceProfile(client *ec2.Client, instance *Instance) error {
 	_, err := client.AssociateIamInstanceProfile(context.TODO(), &ec2.AssociateIamInstanceProfileInput{
 		IamInstanceProfile: &types.IamInstanceProfileSpecification{
 			Arn: aws.String(BUILD_ARN),
@@ -197,16 +209,16 @@ func AssignInstanceProfile(client *ec2.Client, instance *types.Instance) error {
 		fmt.Println("Got an error attaching iam profile")
 		return err
 	}
-	fmt.Println("IAM Instance Profile successfully added")
+	fmt.Println("IAM Instance Profile successfully added to ", instance.name)
 	return nil
 }
-func CreateInstanceCmd(client *ec2.Client, image *types.Image, name string) types.Instance {
+func CreateInstanceCmd(client *ec2.Client, image *types.Image, name string, os OS) Instance {
 	// Create separate values if required.
 	minMaxCount := int32(1)
 
 	input := &ec2.RunInstancesInput{
 		ImageId:      image.ImageId,
-		InstanceType: types.InstanceTypeT2Large,
+		InstanceType: OS_TO_INSTANCE_TYPES[os],
 		MinCount:     &minMaxCount,
 		MaxCount:     &minMaxCount,
 		TagSpecifications: []types.TagSpecification{
@@ -217,10 +229,10 @@ func CreateInstanceCmd(client *ec2.Client, image *types.Image, name string) type
 						Key:   aws.String("Name"),
 						Value: aws.String(name),
 					},
-					//{
-					//	Key:   aws.String("BuildEnv"),
-					//	Value: aws.String("true"),
-					//},
+					{
+						Key:   aws.String("BuildEnv"),
+						Value: aws.String("true"),
+					},
 				},
 			},
 		},
@@ -232,11 +244,17 @@ func CreateInstanceCmd(client *ec2.Client, image *types.Image, name string) type
 	if err != nil {
 		fmt.Println("Got an error creating an instance:")
 		fmt.Println(err)
-		return types.Instance{}
+		return Instance{}
 	}
 
-	fmt.Printf("Created tagged instance with ID %s | %s \n", *result.Instances[0].InstanceId, name)
-	return result.Instances[0]
+	fmt.Printf("Created tagged instance with ID %s | \033[1m %s \033[0m \n", *result.Instances[0].InstanceId, name)
+	instance := Instance{
+		result.Instances[0],
+		name,
+		os,
+	}
+
+	return instance
 }
 func StopInstance(c context.Context, api EC2StopInstancesAPI, input *ec2.StopInstancesInput) (*ec2.StopInstancesOutput, error) {
 	resp, err := api.StopInstances(c, input)
@@ -251,6 +269,8 @@ func StopInstance(c context.Context, api EC2StopInstancesAPI, input *ec2.StopIns
 	return resp, err
 }
 func StopInstanceCmd(client *ec2.Client, instanceID string) error {
+	//@TODO:Change to terminate
+
 	input := &ec2.StopInstancesInput{
 		InstanceIds: []string{
 			instanceID,
@@ -273,7 +293,7 @@ func enforceCommentLimit(s string) string {
 	}
 	return s
 }
-func RunCmdRemotely(ssmClient *ssm.Client, instance *types.Instance, command string, comment string) error {
+func RunCmdRemotely(ssmClient *ssm.Client, instance *Instance, command string, comment string) error {
 	// Specify the input for sending the command
 	timeout := int32(COMMAND_TRACKING_TIMEOUT.Seconds())
 	sendCommandInput := &ssm.SendCommandInput{
@@ -281,8 +301,11 @@ func RunCmdRemotely(ssmClient *ssm.Client, instance *types.Instance, command str
 		InstanceIds:  []string{*instance.InstanceId},
 		Parameters: map[string][]string{
 			"commands": {
-				initEnvCmd(),
-				command},
+				mergeCommands(
+					initEnvCmd(instance.os),
+					command,
+				),
+			},
 			"workingDirectory": {"~"},
 			"executionTimeout": {strconv.Itoa(int(timeout))},
 		},
@@ -301,7 +324,7 @@ func RunCmdRemotely(ssmClient *ssm.Client, instance *types.Instance, command str
 	// Wait for the command to complete
 	commandID := *output.Command.CommandId
 	fmt.Printf("Waiting for command{%s}{%s}'s response\n", commandID, comment)
-	status := CheckCommandStatus(ssmClient, commandID, "linux")
+	status := CheckCommandStatus(ssmClient, commandID, instance.name)
 	if status == ssmtypes.CommandStatusTimedOut {
 		fmt.Println("Command timed out!")
 		return errors.New(fmt.Sprintf("Command timed-out after %f seconds", COMMAND_TRACKING_TIMEOUT.Seconds()))
@@ -324,7 +347,7 @@ func RunCmdRemotely(ssmClient *ssm.Client, instance *types.Instance, command str
 	return nil
 
 }
-func WaitUntilAgentIsOn(client *ec2.Client, instance *types.Instance) {
+func WaitUntilAgentIsOn(client *ec2.Client, instance *Instance) {
 	// Get instance status
 	input := &ec2.DescribeInstanceStatusInput{
 		InstanceIds: []string{*instance.InstanceId},
@@ -366,18 +389,6 @@ func GetInstanceFromID(client *ec2.Client, instanceID string) *types.Instance {
 	return &output.Reservations[0].Instances[0]
 
 }
-func GetCommandsList(ssmClient *ssm.Client) {
-	// List all commands
-	resp, err := ssmClient.ListCommands(context.TODO(), &ssm.ListCommandsInput{})
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	// Print the command IDs and statuses
-	for _, command := range resp.Commands {
-		fmt.Printf("%s: %s\n", *command.CommandId, command.Status)
-	}
-}
 func GetCommandInfo(ssmClient *ssm.Client, commandID string) ssmtypes.Command {
 	resp, err := ssmClient.ListCommands(context.TODO(), &ssm.ListCommandsInput{
 		CommandId: &commandID,
@@ -389,13 +400,13 @@ func GetCommandInfo(ssmClient *ssm.Client, commandID string) ssmtypes.Command {
 	return resp.Commands[0]
 }
 func CheckCommandStatus(ssmClient *ssm.Client, commandID string, instanceTitle string) ssmtypes.CommandStatus {
-	const STATUS_BAR_THROTTLE = 10
+	const STATUS_BAR_THROTTLE = 10 * time.Second
 	bar := progressbar.NewOptions(COMMAND_TRACKING_COUNT,
 		progressbar.OptionEnableColorCodes(true),
 		progressbar.OptionShowBytes(true),
 		progressbar.OptionSetWidth(15),
 		progressbar.OptionShowElapsedTimeOnFinish(),
-		progressbar.OptionThrottle(STATUS_BAR_THROTTLE*time.Second),
+		progressbar.OptionThrottle(STATUS_BAR_THROTTLE),
 	)
 	desc := ""
 	defer func() {

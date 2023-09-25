@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -25,7 +26,7 @@ func TestMain(m *testing.M) {
 func TestAmiLatest(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 
-	imng := CreateNewInstanceManager(cfg)
+	imng := CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
 	// is it consistent
 	previous := *imng.GetLatestAMIVersion(accountID).ImageId
 	for i := 0; i < 5; i++ {
@@ -38,7 +39,7 @@ func TestAmiLatest(t *testing.T) {
 func TestSupportedAmis(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 
-	imng := CreateNewInstanceManager(cfg)
+	imng := CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
 	imng.GetSupportedAMIs(accountID)
 	for _, os := range SUPPORTED_OS {
 		_, ok := imng.amis[os]
@@ -50,12 +51,24 @@ func TestSupportedAmis(t *testing.T) {
 func TestEc2Generation(t *testing.T) {
 	rbm := CreateRemoteBuildManager(DEFAULT_INSTANCE_GUIDE, accountID)
 	fmt.Println(rbm.ssmClient)
-	rbm.Close()
+	defer rbm.Close()
+}
+func TestS3Cache(t *testing.T) {
+	cfg, _ := config.LoadDefaultConfig(context.TODO())
+	rbm := RemoteBuildManager{}
+	rbm.s3Client = s3.NewFromConfig(cfg)
+	require.False(t, rbm.CheckS3("FileThatDoestExist"), "Should fail")
+	rbm.CheckS3("s3Check")
+
 }
 func TestOnSpecificInstance(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-	imng := CreateNewInstanceManager(cfg)
-	testInstance := GetInstanceFromID(imng.ec2Client, "i-0dd926b8dcf5884b6")
+	imng := CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
+	testInstance := &Instance{
+		*GetInstanceFromID(imng.ec2Client, "i-0dd926b8dcf5884b6"),
+		"_",
+		LINUX,
+	}
 	ssmClient := ssm.NewFromConfig(cfg)
 	RunCmdRemotely(ssmClient, testInstance, mergeCommands(
 		"aws --version",

@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-const S3_INTEGRATION_BUCKET = "uniform-build-env-test"
-
 func mergeCommands(args ...string) string {
 	return strings.Join(args, "&&")
 }
@@ -85,6 +83,15 @@ func UploadMSI(commitHash string) string {
 	)
 }
 
+func LoadWorkDirectory(os OS) string {
+	switch os {
+	case MACOS:
+		return "cd ~"
+	default:
+		return ""
+	}
+}
+
 // MAC COMMANDS
 func MakeMacBinary() string {
 	return "make amazon-cloudwatch-agent-darwin package-darwin"
@@ -94,20 +101,28 @@ func CopyBinaryMac() string {
 		"echo cw agent version $(cat CWAGENT_VERSION)",
 		"cp -r build/bin/darwin/amd64/. /tmp/",
 		"cp -r build/bin/darwin/arm64/. /tmp/arm64/",
-		"cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION)")
+		"cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION")
 }
 func CreatePkgCopyDeps() string {
 	return mergeCommands(
+		"cd ~",
+		fmt.Sprintf("git clone %s test", TEST_REPO),
+		"cd test",
 		"cp -r pkg/tools/. /tmp/",
 		"cp -r pkg/tools/. /tmp/arm64/",
+		"cd ..",
 	)
 }
-func BuildAndUploadMac() string {
+func BuildAndUploadMac(commitHash string) string {
+	bucket := S3_INTEGRATION_BUCKET
+	key := commitHash
 	return mergeCommands(
+		"cd /tmp/",
 		"chmod +x create_pkg.sh",
 		"chmod +x arm64/create_pkg.sh",
-		"./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} \"nosha\" amd64",
+		fmt.Sprintf("./create_pkg.sh %s/%s \"nosha\" amd64", bucket, key),
 		"cd arm64",
-		"./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} \"nosha\" arm64",
+		fmt.Sprintf("./create_pkg.sh  %s/%s \"nosha\" arm64", bucket, key),
+		"cd ~",
 	)
 }
