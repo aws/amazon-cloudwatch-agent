@@ -57,6 +57,8 @@ extensions: {}
 
 processors:
   batch/prometheus:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
@@ -65,6 +67,7 @@ receivers:
   telegraf_prometheus:
     collection_interval: 1m0s
     initial_delay: "1s"
+    timeout: 0s
 
 service:
   extensions: []
@@ -93,7 +96,8 @@ service:
         metrics:
             address: ""
             level: None
-            metric_readers: []
+            readers: []
         resource: {}
         traces:
+            processors: []
             propagators: []
