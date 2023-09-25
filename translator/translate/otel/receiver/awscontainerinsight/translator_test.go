@@ -12,12 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
-	retryer.IMDSRetryer = nil
 	acit := NewTranslator()
 	require.EqualValues(t, "awscontainerinsightreceiver", acit.ID().String())
 	testCases := map[string]struct {
@@ -135,6 +133,30 @@ func TestTranslator(t *testing.T) {
 				ClusterName:                  "TestCluster",
 			},
 		},
+		"WithKubernetes/WithEnhancedContainerInsights": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"enhanced_container_insights": true,
+							"cluster_name":                "TestCluster",
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				PrefFullPodName:              true,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				TagService:                   true,
+				EnableControlPlaneMetrics:    true,
+				AddFullPodNameMetricLabel:    true,
+				AddContainerNameMetricLabel:  true,
+			},
+		},
 		"WithKubernetes/WithLevel1Granularity": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
@@ -172,14 +194,14 @@ func TestTranslator(t *testing.T) {
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
 				CollectionInterval:           60 * time.Second,
-				PrefFullPodName:              false,
+				PrefFullPodName:              true,
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
 				TagService:                   true,
 				EnableControlPlaneMetrics:    true,
-				AddFullPodNameMetricLabel:    false,
-				AddContainerNameMetricLabel:  false,
+				AddFullPodNameMetricLabel:    true,
+				AddContainerNameMetricLabel:  true,
 			},
 		},
 		"WithKubernetes/WithLevel3Granularity": {

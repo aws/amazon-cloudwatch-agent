@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -90,6 +91,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	return cfg, nil
 }
 

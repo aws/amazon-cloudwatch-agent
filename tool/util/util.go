@@ -4,7 +4,6 @@
 package util
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,7 +15,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -213,15 +211,11 @@ func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentia
 func DefaultEC2Region() (region string) {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
 	// imds should by the time user can run the wizard
-	// thus cancel context faster
-	// no need for a fallback metric since this happens during wizard
-	// we will not get this metric from user-agent
 	sesFallBackDisabled, err := session.NewSession(&aws.Config{
-		MaxRetries:                aws.Int(3),
 		LogLevel:                  configaws.SDKLogLevel(),
 		Logger:                    configaws.SDKLogger{},
 		EC2MetadataEnableFallback: aws.Bool(false),
-		Retryer:                   retryer.IMDSRetryer,
+		Retryer:                   retryer.NewIMDSRetryer(retryer.GetDefaultRetryNumber()),
 	})
 	sesFallBackEnabled, err := session.NewSession(&aws.Config{
 		LogLevel: configaws.SDKLogLevel(),
@@ -231,19 +225,15 @@ func DefaultEC2Region() (region string) {
 		return
 	}
 	md := ec2metadata.New(sesFallBackDisabled)
-	ctx, cancelFn := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancelFn()
-	if info, errOuter := md.RegionWithContext(ctx); errOuter == nil {
+	if info, errOuter := md.Region(); errOuter == nil {
 		region = info
 	} else {
-		log.Printf("D! could not get region without imds v1 fallback enable thus enable fallback")
+		log.Printf("D! could not get region from imds v2 thus enable fallback")
 		mdInner := ec2metadata.New(sesFallBackEnabled)
-		contextInner, cancelFnInner := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancelFnInner()
-		if infoInner, errInner := mdInner.RegionWithContext(contextInner); errInner == nil {
+		if infoInner, errInner := mdInner.Region(); errInner == nil {
 			region = infoInner
 		} else {
-			fmt.Println("Could not get region from ec2 metadata...")
+			fmt.Printf("W! could not get region from ec2 metadata... %v", errInner)
 		}
 	}
 	return

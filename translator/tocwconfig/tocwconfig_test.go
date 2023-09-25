@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -24,6 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
@@ -81,6 +83,12 @@ func TestLogsAndKubernetesConfig(t *testing.T) {
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
+	// for otel components and not our adapter components like
+	// ec2 tagger processor we will have 0 for the imds number retry
+	// in config instead of empty both become the value
+	// both empty and 0 become 0 on converting of the yaml into a go struct
+	// this is due to int defaulting to 0 in go
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "logs_and_kubernetes_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "logs_and_kubernetes_config", "darwin", nil, "")
@@ -147,7 +155,10 @@ func TestInvalidInputConfig(t *testing.T) {
 }
 
 func TestStandardConfig(t *testing.T) {
+	// the way our config translator works is int(0) leaves an empty in the yaml
+	// this will default to 0 on contrib side since int default is 0 for golang
 	resetContext(t)
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "standard_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "standard_config_linux", "darwin", nil, "")
@@ -271,9 +282,11 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 	ctx.SetCredentials(cfg.CredentialsMap())
 	ctx.SetProxy(cfg.ProxyMap())
 	ctx.SetSSL(cfg.SSLMap())
+	util.LoadImdsRetries(cfg.IMDS)
 }
 
 func resetContext(t *testing.T) {
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
 	util.DetectRegion = func(string, map[string]string) string {
 		return "us-west-2"
 	}
@@ -283,7 +296,6 @@ func resetContext(t *testing.T) {
 	context.ResetContext()
 
 	t.Setenv("ProgramData", "c:\\ProgramData")
-	retryer.IMDSRetryer = nil
 }
 
 // toml files in the given path will be parsed into the config toml struct and be compared as struct

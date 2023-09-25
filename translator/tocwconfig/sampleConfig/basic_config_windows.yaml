@@ -18,6 +18,7 @@ processors:
             - InstanceId
             - InstanceType
         refresh_interval_seconds: 0s
+        imds_retries: 1
 receivers:
     telegraf_win_perf_counters/1492679118:
         alias_name         : Memory

@@ -4,6 +4,7 @@
 package cloudwatch
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -144,7 +145,11 @@ func (durationAgg *durationAggregator) aggregating() {
 					m.distribution = distribution.NewDistribution()
 					err := m.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
 					if err != nil {
-						log.Printf("W! err %s, metric %s", err, *m.MetricName)
+						if errors.Is(err, distribution.ErrUnsupportedValue) {
+							log.Printf("W! err %s, metric %s", err, *m.MetricName)
+						} else {
+							log.Printf("D! err %s, metric %s", err, *m.MetricName)
+						}
 					}
 				}
 				// Else the first entry has a distribution, so do nothing.

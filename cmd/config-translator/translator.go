@@ -57,6 +57,7 @@ func initFlags() {
 		ctx.SetCredentials(conf.CredentialsMap())
 		ctx.SetProxy(conf.ProxyMap())
 		ctx.SetSSL(conf.SSLMap())
+		translatorUtil.LoadImdsRetries(conf.IMDS)
 	}
 	translatorUtil.SetProxyEnv(ctx.Proxy())
 	translatorUtil.SetSSLEnv(ctx.SSL())

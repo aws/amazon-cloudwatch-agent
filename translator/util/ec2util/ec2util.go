@@ -4,7 +4,6 @@
 package ec2util
 
 import (
-	goContext "context"
 	"fmt"
 	"log"
 	"net"
@@ -16,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -100,7 +100,7 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	mdDisableFallback := ec2metadata.New(ses, &aws.Config{
 		LogLevel:                  configaws.SDKLogLevel(),
 		Logger:                    configaws.SDKLogger{},
-		Retryer:                   retryer.IMDSRetryer,
+		Retryer:                   retryer.NewIMDSRetryer(retryer.GetDefaultRetryNumber()),
 		EC2MetadataEnableFallback: aws.Bool(false),
 	})
 	mdEnableFallback := ec2metadata.New(ses, &aws.Config{
@@ -109,42 +109,35 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	})
 
 	// ec2 and ecs treats retries for getting host name differently
-	hostNameContext, cancelHostNameFn := goContext.WithTimeout(goContext.Background(), 30*time.Second)
-	defer cancelHostNameFn()
-
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
-	if hostname, err := mdDisableFallback.GetMetadataWithContext(hostNameContext, "hostname"); err == nil {
+	if hostname, err := mdDisableFallback.GetMetadata("hostname"); err == nil {
 		e.Hostname = hostname
 	} else {
 		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
-		contextInner, cancelFnInner := goContext.WithTimeout(goContext.Background(), 30*time.Second)
-		defer cancelFnInner()
-		hostnameInner, errInner := mdEnableFallback.GetMetadataWithContext(contextInner, "hostname")
+		hostnameInner, errInner := mdEnableFallback.GetMetadata("hostname")
 		if errInner == nil {
 			e.Hostname = hostnameInner
+			agentinfo.SetImdsFallbackSucceed()
 		} else {
 			fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", errInner)
 		}
 	}
 
-	documentContext, cancelDocumentFn := goContext.WithTimeout(goContext.Background(), 30*time.Second)
-	defer cancelDocumentFn()
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-	if instanceIdentityDocument, err := mdDisableFallback.GetInstanceIdentityDocumentWithContext(documentContext); err == nil {
+	if instanceIdentityDocument, err := mdDisableFallback.GetInstanceIdentityDocument(); err == nil {
 		e.Region = instanceIdentityDocument.Region
 		e.AccountID = instanceIdentityDocument.AccountID
 		e.PrivateIP = instanceIdentityDocument.PrivateIP
 		e.InstanceID = instanceIdentityDocument.InstanceID
 	} else {
 		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
-		contextInner, cancelFnInner := goContext.WithTimeout(goContext.Background(), 30*time.Second)
-		defer cancelFnInner()
-		instanceIdentityDocumentInner, errInner := mdEnableFallback.GetInstanceIdentityDocumentWithContext(contextInner)
+		instanceIdentityDocumentInner, errInner := mdEnableFallback.GetInstanceIdentityDocument()
 		if errInner == nil {
 			e.Region = instanceIdentityDocumentInner.Region
 			e.AccountID = instanceIdentityDocumentInner.AccountID
 			e.PrivateIP = instanceIdentityDocumentInner.PrivateIP
 			e.InstanceID = instanceIdentityDocumentInner.InstanceID
+			agentinfo.SetImdsFallbackSucceed()
 		} else {
 			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", errInner)
 		}
