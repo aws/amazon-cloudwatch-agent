@@ -69,10 +69,14 @@ exporters:
 extensions: {}
 processors:
     batch/emf_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
     batch/xray:
+        metadata_cardinality_limit: 1000
+        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -108,10 +112,13 @@ receivers:
             role_arn: trace_role_arn_value_test
             tls:
                 ca_file: ""
+                ca_pem: "[REDACTED]"
                 cert_file: ""
+                cert_pem: "[REDACTED]"
                 insecure: true
                 insecure_skip_verify: false
                 key_file: ""
+                key_pem: "[REDACTED]"
                 max_version: ""
                 min_version: ""
                 reload_interval: 0s
@@ -136,41 +143,51 @@ receivers:
                 endpoint: 0.0.0.0:2222
                 include_metadata: false
                 max_request_body_size: 0
+                response_headers: {}
                 tls: null
     telegraf_nvidia_smi:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_procstat/1340600742:
         alias_name: agent
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_statsd:
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/1063858558:
         alias_name: Network Interface
         collection_interval: 5s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/1492679118:
         alias_name: Memory
         collection_interval: 5s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/2402387132:
         alias_name: System
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/3081249416:
         alias_name: customizedObjectName
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/3762679655:
         alias_name: Processor
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/4283769065:
         alias_name: LogicalDisk
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     udplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -240,7 +257,8 @@ service:
         metrics:
             address: ""
             level: None
-            metric_readers: []
+            readers: []
         resource: {}
         traces:
+            processors: []
             propagators: []
