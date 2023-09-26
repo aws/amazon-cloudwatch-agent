@@ -157,9 +157,9 @@ require (
 )
 
 require (
-	go.opentelemetry.io/collector/config/configtelemetry v0.84.1-0.20230908201109-ab3d6c5b6470
-	go.opentelemetry.io/collector/extension v0.84.1-0.20230908201109-ab3d6c5b6470
-	go.opentelemetry.io/collector/processor v0.84.1-0.20230908201109-ab3d6c5b6470
+	go.opentelemetry.io/collector/config/configtelemetry v0.85.0
+	go.opentelemetry.io/collector/extension v0.85.0
+	go.opentelemetry.io/collector/processor v0.85.0
 )
 
 require (

@@ -78,6 +78,9 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 			return nil, fmt.Errorf("unable to unmarshal config: %w", err)
 		}
 	}
+	if endpointOverride, ok := common.GetString(c, common.ConfigKey(common.MetricsKey, common.EndpointOverrideKey)); ok {
+		cfg.Endpoint = endpointOverride
+	}
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)

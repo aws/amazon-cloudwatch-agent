@@ -1,5 +1,5 @@
 # Build the binary
-ARG GO_IMAGE=golang:latest
+ARG GO_IMAGE=golang:1.20.8
 ARG CERT_IMAGE=ubuntu:latest
 FROM $GO_IMAGE as builder
 
