@@ -4,7 +4,7 @@ exporters:
     certificate_file_path: ""
     emf_only: true
     endpoint: ""
-    "imds_retries": 1
+    imds_retries: 1
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
