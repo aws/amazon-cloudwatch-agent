@@ -72,10 +72,14 @@ exporters:
 extensions: {}
 processors:
     batch/emf_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
     batch/xray:
+        metadata_cardinality_limit: 1000
+        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -124,10 +128,13 @@ receivers:
             role_arn: trace_role_arn_value_test
             tls:
                 ca_file: ""
+                ca_pem: "[REDACTED]"
                 cert_file: ""
+                cert_pem: "[REDACTED]"
                 insecure: true
                 insecure_skip_verify: false
                 key_file: ""
+                key_pem: "[REDACTED]"
                 max_version: ""
                 min_version: ""
                 reload_interval: 0s
@@ -152,41 +159,53 @@ receivers:
                 endpoint: 0.0.0.0:2222
                 include_metadata: false
                 max_request_body_size: 0
+                response_headers: {}
                 tls: null
     telegraf_cpu:
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_disk:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_diskio:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_mem:
         collection_interval: 1s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_net:
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_netstat:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_processes:
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_procstat/1917393364:
         alias_name: /var/run/example1.pid
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_socket_listener:
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_statsd:
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_swap:
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     udplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -222,15 +241,15 @@ service:
                 - ec2tagger
                 - transform
             receivers:
+                - telegraf_procstat/1917393364
+                - telegraf_mem
                 - telegraf_cpu
                 - telegraf_disk
-                - telegraf_mem
-                - telegraf_netstat
-                - telegraf_processes
-                - telegraf_procstat/1917393364
-                - telegraf_socket_listener
-                - telegraf_statsd
                 - telegraf_swap
+                - telegraf_statsd
+                - telegraf_socket_listener
+                - telegraf_processes
+                - telegraf_netstat
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -266,7 +285,8 @@ service:
         metrics:
             address: ""
             level: None
-            metric_readers: []
+            readers: []
         resource: {}
         traces:
+            processors: []
             propagators: []

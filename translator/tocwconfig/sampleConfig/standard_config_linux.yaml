@@ -33,19 +33,24 @@ processors:
 receivers:
     telegraf_cpu:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_disk:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_diskio:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_mem:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_swap:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
 service:
     extensions: []
     pipelines:
@@ -83,7 +88,8 @@ service:
         metrics:
             address: ""
             level: None
-            metric_readers: []
+            readers: []
         resource: {}
         traces:
+            processors: []
             propagators: []

@@ -32,6 +32,8 @@ exporters:
 extensions: {}
 processors:
   batch/emf_logs:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
@@ -97,7 +99,8 @@ service:
     metrics:
       address: ""
       level: None
-      metric_readers: []
+      readers: []
     resource: {}
     traces:
+      processors: []
       propagators: []
