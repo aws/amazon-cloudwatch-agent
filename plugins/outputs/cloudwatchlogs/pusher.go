@@ -17,7 +17,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 const (
@@ -344,12 +343,9 @@ func (p *pusher) createLogGroupAndStream() error {
 
 	p.Log.Debugf("creating stream fail due to : %v", err)
 	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
-		if p.Class == util.EssentialsLogGroupClass { //TODO revert to LogGroupClass once CW Logs change has flowed out
-			p.Class = "BASIC"
-		}
 		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
-			LogGroupName: &p.Group,
-			LogGroupTier: &p.Class,
+			LogGroupName:  &p.Group,
+			LogGroupClass: &p.Class,
 		})
 
 		// attempt to create stream again if group created successfully.
