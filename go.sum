@@ -157,8 +157,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20230922200107-dd840b7a79ba/go.mod h1:8edNN/XfefbHuGLiDhFdBN1QfJfgH7wmq5ms2Gme1EA=
 github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20230922200107-dd840b7a79ba h1:40qc1Opib1XJLBpgSiPanDA/AeD40VcxVvuEUFoPHmc=
 github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20230922200107-dd840b7a79ba/go.mod h1:F5l/VuHtB8418NLJEsHeYz/pni6sWtOMR/SM6mgarhQ=
-github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20230922200107-dd840b7a79ba h1:w7IGFvj0M31rVa7W6FTQmF/4zeNIG33kX2ZTCThEenk=
-github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20230922200107-dd840b7a79ba/go.mod h1:lJLumMdUeKqurOskauSjhH4J2hz8r0iNyQWDl3i5NSM=
+github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20230927220827-964cd0b18478 h1:8/yUNd5O1lZWEIb64+QI3oz+Bf6Svt7QwvFU94JVf4k=
+github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20230927220827-964cd0b18478/go.mod h1:lJLumMdUeKqurOskauSjhH4J2hz8r0iNyQWDl3i5NSM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20230922200107-dd840b7a79ba h1:xFiz0PzqbbIhKainf9Ijkh9GFPyjye6AWbn9mdgWNLY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20230922200107-dd840b7a79ba/go.mod h1:9qsT0AsMflbQKz0ojK3aRU/PbyGQCDPKut3XMfAkW8k=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20230922200107-dd840b7a79ba h1:tNLs840+PFLTsuEVKPa2ZFxQHf9IItoMnHD17z9k+0E=
