@@ -104,7 +104,7 @@ func (imng *InstanceManager) GetSupportedAMIs(accountID string) {
 		for _, ami := range latestAmis {
 			platform := getPlatformDetails(&ami)
 			if strings.Contains(strings.ToLower(platform), string(os)) {
-				fmt.Printf("Using: \033[1m %s \033[0m with \033[1;34;47m %s \033[0m \n", *ami.ImageId, platform)
+				fmt.Printf("Using: \033[1m %s \033[0m with \033[1;34m %s \033[0m \n", *ami.ImageId, platform)
 				imng.amis[os] = &ami
 				break
 			}
@@ -296,8 +296,14 @@ func enforceCommentLimit(s string) string {
 func RunCmdRemotely(ssmClient *ssm.Client, instance *Instance, command string, comment string) error {
 	// Specify the input for sending the command
 	timeout := int32(COMMAND_TRACKING_TIMEOUT.Seconds())
+	var shellType *string
+	if instance.os == WINDOWS {
+		shellType = aws.String("AWS-RunPowerShellScript")
+	} else {
+		shellType = aws.String("AWS-RunShellScript")
+	}
 	sendCommandInput := &ssm.SendCommandInput{
-		DocumentName: aws.String("AWS-RunShellScript"),
+		DocumentName: shellType,
 		InstanceIds:  []string{*instance.InstanceId},
 		Parameters: map[string][]string{
 			"commands": {

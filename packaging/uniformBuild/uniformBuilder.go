@@ -28,6 +28,9 @@ var DEFAULT_INSTANCE_GUIDE = map[string]OS{
 var MACOS_TEST_INSTANCE_GUIDE = map[string]OS{
 	"MacPkgMaker": MACOS,
 }
+var WINDOWS_TEST_INSTANCE_GUIDE = map[string]OS{
+	"WindowsMSIBuilder": WINDOWS,
+}
 
 /*
 This function will create EC2 instances as a side effect
@@ -99,12 +102,18 @@ func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string
 	)
 	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI zip file for %s", commitHash))
 }
-func (rbm *RemoteBuildManager) BuildMsi() error {
+func (rbm *RemoteBuildManager) BuildMSI(instanceName string, commitHash string) error {
 	//@TODO needs windows ami
-	//command := mergeCommands(
-	//	)
-	return nil
+	command := mergeCommandsWin(
+		CopyMsi(commitHash),
+		"Expand-Archive buildMSI.zip -Force",
+		"cd buildMSI/msi_dep",
+		fmt.Sprintf(".\\create_msi.ps1 \"nosha\" %s/%s", S3_INTEGRATION_BUCKET, commitHash),
+	)
+	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI Build file for %s", commitHash))
 }
+
+// / MACOS ------------
 func (rbm *RemoteBuildManager) MakeMacPkg(instanceName string, commitHash string) error {
 	//@TODO needs mac ami
 	command := mergeCommands(
@@ -128,6 +137,12 @@ func initEnvCmd(os OS) string {
 			LoadWorkDirectory(os),
 			"echo 'ENV SET FOR MACOS'",
 		)
+	case WINDOWS:
+		return mergeCommandsWin(
+			"$wixToolsetBinPath = \";C:\\Program Files (x86)\\WiX Toolset v3.11\\bin;\"\n#",
+			"$env:PATH = $env:PATH + $wixToolsetBinPath",
+			LoadWorkDirectory(os),
+		)
 	default:
 		return mergeCommands(
 			"export GOENV=/root/.config/go/env",
@@ -139,6 +154,8 @@ func initEnvCmd(os OS) string {
 	}
 
 }
+
+//
 
 // CACHE COMMANDS
 func (rbm *RemoteBuildManager) CheckS3(targetFile string) bool {
@@ -176,10 +193,10 @@ func main() {
 	flag.StringVar(&accountID, "account_id", "", "accountID")
 	flag.Parse()
 	//rbm := CreateRemoteBuildManager(DEFAULT_INSTANCE_GUIDE, accountID)
-	rbm := CreateRemoteBuildManager(MACOS_TEST_INSTANCE_GUIDE, accountID)
+	rbm := CreateRemoteBuildManager(WINDOWS_TEST_INSTANCE_GUIDE, accountID)
 	comment = "GHA_DEBUG_RUN"
 	var err error
-	//defer rbm.Close() TEMP DISABLED MAKE SURE YOU TURN IT BACK ON @TODO
+	//defer rbm.Close()
 	//err := rbm.BuildCWAAgent(repo, branch, comment, "MainBuildEnv")
 	//if err != nil {
 	//	panic(err)
@@ -189,7 +206,11 @@ func main() {
 	//	panic(err)
 	//}
 	time.Sleep(7 * time.Minute)
-	err = rbm.MakeMacPkg("MacPkgMaker", comment)
+	//err = rbm.MakeMacPkg("MacPkgMaker", comment)
+	//if err != nil {
+	//	panic(err)
+	//}
+	err = rbm.BuildMSI("WindowsMSIBuilder", comment)
 	if err != nil {
 		panic(err)
 	}

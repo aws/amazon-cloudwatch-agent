@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+func mergeCommandsWin(args ...string) string {
+	return strings.Join(args, ";")
+}
 func mergeCommands(args ...string) string {
 	return strings.Join(args, "&&")
 }
@@ -63,6 +66,8 @@ func CopyBinary(commitHash string) string {
 	)
 	return command
 }
+
+// Windows Commands
 func MakeMSI() string {
 	return mergeCommands(
 		"export version=$(cat CWAGENT_VERSION)",
@@ -74,6 +79,13 @@ func MakeMSI() string {
 		"go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__",
 	)
 }
+func CopyMsi(commitHash string) string {
+	return fmt.Sprintf(
+		"aws s3 cp s3://%s/%s/buildMSI.zip .",
+		S3_INTEGRATION_BUCKET,
+		commitHash,
+	)
+}
 func UploadMSI(commitHash string) string {
 	BucketKey := commitHash
 	return fmt.Sprintf(
@@ -83,6 +95,7 @@ func UploadMSI(commitHash string) string {
 	)
 }
 
+// /
 func LoadWorkDirectory(os OS) string {
 	switch os {
 	case MACOS:
