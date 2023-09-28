@@ -113,13 +113,13 @@ func TestTimestampFormatAll(t *testing.T) {
 			input: `{
 					"collect_list":[
 						{
-							"file_path":"path1",
+							"file_path":"path2",
 							"timestamp_format":"%-m %-d %H:%M:%S"
 						}
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":         "path1",
+				"file_path":         "path2",
 				"from_beginning":    true,
 				"pipe":              false,
 				"retention_in_days": -1,
@@ -131,13 +131,13 @@ func TestTimestampFormatAll(t *testing.T) {
 			input: `{
 					"collect_list":[
 						{
-							"file_path":"path1",
+							"file_path":"path3",
 							"timestamp_format":"%-d %-m %H:%M:%S"
 						}
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":         "path1",
+				"file_path":         "path3",
 				"from_beginning":    true,
 				"pipe":              false,
 				"retention_in_days": -1,
@@ -149,13 +149,49 @@ func TestTimestampFormatAll(t *testing.T) {
 			input: `{
 					"collect_list":[
 						{
-							"file_path":"path1",
+							"file_path":"path4",
+                            "timestamp_format": "%b %d %H:%M:%S"
+						}
+					]
+				}`,
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path4",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  "Jan 02 15:04:05",
+				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path5",
+                            "timestamp_format": "%b %-d %H:%M:%S"
+						}
+					]
+				}`,
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path5",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  "Jan 2 15:04:05",
+				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path5",
 							"timestamp_format":"%-S %-d %-m %H:%M:%S"
 						}
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":         "path1",
+				"file_path":         "path5",
 				"from_beginning":    true,
 				"pipe":              false,
 				"retention_in_days": -1,
@@ -348,7 +384,7 @@ func TestMultiLineStartPattern(t *testing.T) {
 		"pipe":                     false,
 		"retention_in_days":        -1,
 		"timestamp_layout":         "15:04:05 06 Jan 02",
-		"timestamp_regex":          "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
+		"timestamp_regex":          "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		"timezone":                 "UTC",
 		"multi_line_start_pattern": "{timestamp_regex}",
 	}}
@@ -378,7 +414,7 @@ func TestEncoding(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": -1,
 		"timestamp_layout":  "15:04:05 06 Jan 02",
-		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
+		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		"timezone":          "UTC",
 		"encoding":          "gbk",
 	}}
