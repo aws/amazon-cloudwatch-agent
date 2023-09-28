@@ -58,9 +58,12 @@ receivers:
         cors: null
         endpoint: 127.0.0.1:4318
         include_metadata: false
+        logs_url_path: /v1/logs
         max_request_body_size: 0
+        metrics_url_path: /v1/metrics
         response_headers: {}
         tls: null
+        traces_url_path: /v1/traces
 service:
   extensions: []
   pipelines:

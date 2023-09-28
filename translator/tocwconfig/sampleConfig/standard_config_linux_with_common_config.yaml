@@ -23,6 +23,7 @@ processors:
             match_type: ""
             metrics: []
             regexp: null
+        initial_value: 0
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
