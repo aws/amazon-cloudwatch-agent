@@ -4,7 +4,7 @@ exporters:
     aws_log_groups: []
     certificate_file_path: ""
     endpoint: ""
-    "imds_retries": 2
+    imds_retries: 2
     index_all_attributes: false
     indexed_attributes: []
     local_mode: false

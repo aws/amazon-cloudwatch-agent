@@ -53,11 +53,20 @@ exporters:
           - container_memory_utilization
           - container_memory_utilization_over_container_limit
           - container_memory_failures_total
+          - container_memory_limit
+          - container_memory_request
           - container_filesystem_usage
+          - container_filesystem_available
+          - container_filesystem_utilization
           - container_status_running
           - container_status_terminated
           - container_status_waiting
-          - container_status_waiting_reason_crashed
+          - container_status_waiting_reason_crash_loop_back_off
+          - container_status_waiting_reason_image_pull_error
+          - container_status_waiting_reason_start_error
+          - container_status_waiting_reason_create_container_error
+          - container_status_waiting_reason_create_container_config_error
+          - container_status_terminated_reason_oom_killed
       # pod metrics
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ], [ ClusterName, FullPodName, Namespace, PodName ] ]
         label_matchers: [ ]
@@ -72,11 +81,9 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - pod_interface_network_rx_dropped
-          - pod_interface_network_rx_errors
           - pod_interface_network_tx_dropped
-          - pod_interface_network_tx_errors
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, Service ] ]
-        label_matchers: []
+        label_matchers: [ ]
         metric_name_selectors:
           - pod_cpu_reserved_capacity
           - pod_memory_reserved_capacity
@@ -90,6 +97,8 @@ exporters:
           - pod_status_failed
           - pod_status_unknown
           - pod_status_succeeded
+          - pod_memory_request
+          - pod_memory_limit
       # node metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
@@ -117,9 +126,7 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - node_interface_network_rx_dropped
-          - node_interface_network_rx_errors
           - node_interface_network_tx_dropped
-          - node_interface_network_tx_errors
           - node_diskio_io_service_bytes_total
           - node_diskio_io_serviced_total
       # node fs metrics
@@ -161,33 +168,86 @@ exporters:
           - cluster_failed_node_count
           - cluster_number_of_running_pods
       # control plane metrics
-      - dimensions: [ [ClusterName, endpoint], [ ClusterName ] ]
+      - dimensions: [ [ ClusterName, endpoint ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
+          - apiserver_storage_size_bytes
+          - apiserver_storage_size_bytes
           - etcd_db_total_size_in_bytes
-      - dimensions: [ [ClusterName, resource], [ ClusterName ] ]
+          - etcd_request_duration_seconds
+      - dimensions: [ [ ClusterName, resource ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - apiserver_storage_list_duration_seconds
-      - dimensions: [ [ClusterName, priority_level], [ ClusterName ] ]
+          - apiserver_longrunning_requests
+          - apiserver_storage_objects
+      - dimensions: [ [ ClusterName, verb ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_request_duration_seconds
+          - rest_client_request_duration_seconds
+      - dimensions: [ [ ClusterName, code, verb ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_request_total
+          - apiserver_request_total_5xx
+      - dimensions: [ [ ClusterName, operation ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_admission_controller_admission_duration_seconds
+          - apiserver_admission_step_admission_duration_seconds
+          - etcd_request_duration_seconds
+      - dimensions: [ [ ClusterName, code, method ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - rest_client_requests_total
+      - dimensions: [ [ ClusterName, request_kind ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_current_inflight_requests
+      - dimensions: [ [ ClusterName, name ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_admission_webhook_admission_duration_seconds
+      - dimensions: [ [ ClusterName, group ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_requested_deprecated_apis
+      - dimensions: [ [ ClusterName, reason ], [ ClusterName ] ]
+        label_matchers: [ ]
+        metric_name_selectors:
+          - apiserver_flowcontrol_rejected_requests_total
+      - dimensions: [ [ ClusterName, priority_level ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - apiserver_flowcontrol_request_concurrency_limit
-      - dimensions: [ [ ClusterName ] ]
-        label_matchers: [ ]
-        metric_name_selectors:
-          - apiserver_storage_objects
-          - apiserver_request_total
-          - apiserver_request_total_5xx
-          - apiserver_request_duration_seconds
-          - apiserver_admission_controller_admission_duration_seconds
-          - rest_client_request_duration_seconds
-          - rest_client_requests_total
-          - etcd_request_duration_seconds
-          - apiserver_flowcontrol_rejected_requests_total
     metric_descriptors:
-      - metric_name: apiserver_storage_objects
+      - metric_name: apiserver_admission_controller_admission_duration_seconds
+        unit: Seconds
+        overwrite: true
+      - metric_name: apiserver_admission_step_admission_duration_seconds
+        unit: Seconds
+        overwrite: true
+      - metric_name: apiserver_admission_webhook_admission_duration_seconds
+        unit: Seconds
+        overwrite: true
+      - metric_name: apiserver_current_inflight_requests
         unit: Count
+        overwrite: true
+      - metric_name: apiserver_current_inqueue_requests
+        unit: Count
+        overwrite: true
+      - metric_name: apiserver_flowcontrol_rejected_requests_total
+        unit: Count
+        overwrite: true
+      - metric_name: apiserver_flowcontrol_request_concurrency_limit
+        unit: Count
+        overwrite: true
+      - metric_name: apiserver_longrunning_requests
+        unit: Count
+        overwrite: true
+      - metric_name: apiserver_request_duration_seconds
+        unit: Seconds
         overwrite: true
       - metric_name: apiserver_request_total
         unit: Count
@@ -195,25 +255,34 @@ exporters:
       - metric_name: apiserver_request_total_5xx
         unit: Count
         overwrite: true
-      - metric_name: apiserver_request_duration_seconds
+      - metric_name: apiserver_storage_objects
+        unit: Count
+        overwrite: true
+      - metric_name: etcd_request_duration_seconds
         unit: Seconds
         overwrite: true
-      - metric_name: apiserver_admission_controller_admission_duration_seconds
+      - metric_name: apiserver_storage_list_duration_seconds
+        unit: Seconds
+        overwrite: true
+      - metric_name: apiserver_storage_objects
+        unit: Count
+        overwrite: true
+      - metric_name: apiserver_storage_db_total_size_in_bytes
+        unit: Bytes
+        overwrite: true
+      - metric_name: apiserver_storage_size_bytes
+        unit: Bytes
+        overwrite: true
+      - metric_name: etcd_db_total_size_in_bytes
+        unit: Bytes
+        overwrite: true
+      - metric_name: etcd_request_duration_seconds
         unit: Seconds
         overwrite: true
       - metric_name: rest_client_request_duration_seconds
         unit: Seconds
         overwrite: true
       - metric_name: rest_client_requests_total
-        unit: Count
-        overwrite: true
-      - metric_name: etcd_request_duration_seconds
-        unit: Seconds
-        overwrite: true
-      - metric_name: apiserver_flowcontrol_rejected_requests_total
-        unit: Count
-        overwrite: true
-      - metric_name: apiserver_flowcontrol_request_concurrency_limit
         unit: Count
         overwrite: true
     namespace: ContainerInsights

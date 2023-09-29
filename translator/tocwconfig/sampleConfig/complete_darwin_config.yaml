@@ -20,7 +20,7 @@ exporters:
         emf_only: true
         certificate_file_path: ""
         endpoint: "https://logs-fips.us-west-2.amazonaws.com"
-        "imds_retries": 1
+        imds_retries: 1
         local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
@@ -49,7 +49,7 @@ exporters:
         aws_log_groups: []
         certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
-        "imds_retries": 1
+        imds_retries: 1
         index_all_attributes: false
         indexed_attributes: []
         local_mode: true
