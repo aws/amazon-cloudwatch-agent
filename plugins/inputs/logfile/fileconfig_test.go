@@ -95,7 +95,7 @@ func TestTimestampParser(t *testing.T) {
 		TimezoneLoc:     timezoneLoc}
 
 	expectedTimestamp := time.Unix(1497882318, 0)
-	timestampString := "1 Jun 2017 14:25:18"
+	timestampString := "19 Jun 2017 14:25:18"
 	logEntry := fmt.Sprintf("%s [INFO] This is a test message.", timestampString)
 	timestamp := fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, expectedTimestamp.UnixNano(), timestamp.UnixNano(),
@@ -122,7 +122,7 @@ func TestTimestampParserWithPadding(t *testing.T) {
 		Timezone:        timezone,
 		TimezoneLoc:     timezoneLoc}
 
-	logEntry := fmt.Sprintf(" 2 01 07:10:06 instance-id: i-02fce21a425a2efb3")
+	logEntry := fmt.Sprintf(" 2 1 07:10:06 instance-id: i-02fce21a425a2efb3")
 	timestamp := fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, 7, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "7", timestamp.Hour()))
 	assert.Equal(t, 10, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "10", timestamp.Minute()))
