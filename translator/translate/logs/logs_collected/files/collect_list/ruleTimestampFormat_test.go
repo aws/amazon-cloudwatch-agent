@@ -82,11 +82,11 @@ func TestApplyTimestampFormatZeroPaddingRule(t *testing.T) {
 	var zero interface{}
 
 	e := json.Unmarshal([]byte(`{
-			"timestamp": "%-m %-d %H:%M:%S"
+			"timestamp_format": "%-m %-d %H:%M:%S"
 	}`), &non_zero)
 
 	f := json.Unmarshal([]byte(`{
-			"timestamp": "%m %d %H:%M:%S"
+			"timestamp_format": "%m %d %H:%M:%S"
 	}`), &zero)
 
 	if (e == nil) || (f == nil) {
@@ -96,7 +96,7 @@ func TestApplyTimestampFormatZeroPaddingRule(t *testing.T) {
 		assert.Equal(t, zeroActualReturnKey, nonZeroActualReturnKey)
 		assert.NotNil(t, zeroRetVal)
 		assert.NotNil(t, nonZeroRetVal)
-		assert.Equal(t, "(\\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})", zeroRetVal)
+		assert.Equal(t, "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})", nonZeroRetVal)
 		assert.Equal(t, zeroRetVal, nonZeroRetVal)
 
 	} else {
