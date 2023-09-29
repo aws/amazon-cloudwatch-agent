@@ -105,11 +105,13 @@ func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string
 func (rbm *RemoteBuildManager) BuildMSI(instanceName string, commitHash string) error {
 	//@TODO needs windows ami
 	command := mergeCommandsWin(
-		CopyMsi(commitHash),
-		"Expand-Archive buildMSI.zip -Force",
-		"cd buildMSI/msi_dep",
+		//CopyMsi(commitHash),
+		//"Expand-Archive buildMSI.zip -Force",
+		"cd C:\\buildMSI\\msi_dep",
 		fmt.Sprintf(".\\create_msi.ps1 \"nosha\" %s/%s", S3_INTEGRATION_BUCKET, commitHash),
 	)
+	rbm.RunCommand(CopyMsi(commitHash), instanceName, "copy msi")
+	rbm.RunCommand("Expand-Archive buildMSI.zip -DestinationPat C:\\buildMSI -Force", instanceName, "unzip msi.zip")
 	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI Build file for %s", commitHash))
 }
 
@@ -139,7 +141,7 @@ func initEnvCmd(os OS) string {
 		)
 	case WINDOWS:
 		return mergeCommandsWin(
-			"$wixToolsetBinPath = \";C:\\Program Files (x86)\\WiX Toolset v3.11\\bin;\"\n#",
+			"$wixToolsetBinPath = \";C:\\Program Files (x86)\\WiX Toolset v3.11\\bin;\"",
 			"$env:PATH = $env:PATH + $wixToolsetBinPath",
 			LoadWorkDirectory(os),
 		)

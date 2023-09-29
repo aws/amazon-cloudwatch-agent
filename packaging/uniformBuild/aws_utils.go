@@ -297,20 +297,26 @@ func RunCmdRemotely(ssmClient *ssm.Client, instance *Instance, command string, c
 	// Specify the input for sending the command
 	timeout := int32(COMMAND_TRACKING_TIMEOUT.Seconds())
 	var shellType *string
+	var masterCommand string
 	if instance.os == WINDOWS {
 		shellType = aws.String("AWS-RunPowerShellScript")
+		masterCommand = mergeCommandsWin(
+			initEnvCmd(instance.os),
+			command,
+		)
 	} else {
 		shellType = aws.String("AWS-RunShellScript")
+		masterCommand = mergeCommands(
+			initEnvCmd(instance.os),
+			command,
+		)
 	}
 	sendCommandInput := &ssm.SendCommandInput{
 		DocumentName: shellType,
 		InstanceIds:  []string{*instance.InstanceId},
 		Parameters: map[string][]string{
 			"commands": {
-				mergeCommands(
-					initEnvCmd(instance.os),
-					command,
-				),
+				masterCommand,
 			},
 			"workingDirectory": {"~"},
 			"executionTimeout": {strconv.Itoa(int(timeout))},
