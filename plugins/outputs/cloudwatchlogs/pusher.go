@@ -413,8 +413,10 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 			// a valid timestamp and use the last valid timestamp for new entries that does
 			// not have a timestamp.
 			t = p.lastValidTime
+			p.Log.Debugf("Unable to parse valid timestamp, using last valid timestamp %v: for log group %v: ", p.lastValidTime, p.Group)
 		} else {
 			t = time.Now().UnixNano() / 1000000
+			p.Log.Debugf("Unable to parse valid timestamp %v: ", p.Group)
 		}
 	} else {
 		t = e.Time().UnixNano() / 1000000
