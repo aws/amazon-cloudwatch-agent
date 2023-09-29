@@ -5,7 +5,6 @@ package collect_list
 
 import (
 	"encoding/json"
-	//"github.com/aws/amazon-cloudwatch-agent/translator"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -83,7 +82,7 @@ func TestApplyTimestampFormatZeroPaddingRule(t *testing.T) {
 	var zero interface{}
 
 	e := json.Unmarshal([]byte(`{
-			"timestamp": "%m %-d %H:%M:%S"
+			"timestamp": "%-m %-d %H:%M:%S"
 	}`), &non_zero)
 
 	f := json.Unmarshal([]byte(`{
