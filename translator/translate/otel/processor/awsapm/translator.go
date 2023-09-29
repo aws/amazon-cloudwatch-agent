@@ -57,7 +57,11 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	configKey := common.APMConfigKeys[t.dataType]
 	cfg := t.factory.CreateDefaultConfig().(*awsapmprocessor.Config)
-	cfg.Resolvers = []string{"eks"}
+	if common.IsAPMKubernetes() {
+		cfg.Resolvers = []string{"eks"}
+	} else {
+		cfg.Resolvers = []string{"generic"}
+	}
 	return t.translateCustomRules(conf, configKey, cfg)
 }
 

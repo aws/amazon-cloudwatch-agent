@@ -809,8 +809,8 @@ func TestEksResolver(t *testing.T) {
 		resourceAttributes.PutStr("ec2.tag.kubernetes.io/cluster/test-cluster", "owned")
 		err = resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
-		assert.Equal(t, "test-namespace-3", getStrAttr(attributes, "K8s.Namespace", t))
-		assert.Equal(t, "test-cluster", getStrAttr(attributes, "EKS.Cluster", t))
+		assert.Equal(t, "test-namespace-3", getStrAttr(attributes, "HostedIn.K8s.Namespace", t))
+		assert.Equal(t, "test-cluster", getStrAttr(attributes, "HostedIn.EKS.Cluster", t))
 
 		// Test case 6: Process with valid IP but GetWorkloadAndNamespaceByIP returns error
 		attributes = pcommon.NewMap()
