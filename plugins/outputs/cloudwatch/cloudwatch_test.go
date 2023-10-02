@@ -6,6 +6,7 @@ package cloudwatch
 import (
 	"context"
 	"log"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
 
 // Return true if found.
@@ -98,10 +100,10 @@ func TestProcessRollup(t *testing.T) {
 		publisher.NewNonBlockingFifoQueue(10),
 		10,
 		2*time.Second,
-		cw.WriteToCloudWatch)
-	cw.config.RollupDimensions = [][]string{{"d1", "d2"}, {"d1"}, {}, {"d4"}}
+		cw.WriteToCloudWatch,
+	)
 
-	rawDimension := []*cloudwatch.Dimension{
+	testRawDimensions := []*cloudwatch.Dimension{
 		{
 			Name:  aws.String("d1"),
 			Value: aws.String("v1"),
@@ -116,144 +118,133 @@ func TestProcessRollup(t *testing.T) {
 		},
 	}
 
-	actualDimensionList := cw.ProcessRollup(rawDimension)
-	expectedDimensionList := [][]*cloudwatch.Dimension{
-		{
-			{
-				Name:  aws.String("d1"),
-				Value: aws.String("v1"),
-			},
-			{
-				Name:  aws.String("d2"),
-				Value: aws.String("v2"),
-			},
-			{
-				Name:  aws.String("d3"),
-				Value: aws.String("v3"),
-			},
-		},
-		{
-			{
-				Name:  aws.String("d1"),
-				Value: aws.String("v1"),
-			},
-			{
-				Name:  aws.String("d2"),
-				Value: aws.String("v2"),
-			},
-		},
-		{
-			{
-				Name:  aws.String("d1"),
-				Value: aws.String("v1"),
+	testCases := map[string]struct {
+		rollupDimensions [][]string
+		rawDimensions    []*cloudwatch.Dimension
+		want             [][]*cloudwatch.Dimension
+	}{
+		"WithSimpleRollup": {
+			rollupDimensions: [][]string{{"d1", "d2"}, {"d1"}, {}, {"d4"}},
+			rawDimensions:    testRawDimensions,
+			want: [][]*cloudwatch.Dimension{
+				testRawDimensions,
+				{
+					{
+						Name:  aws.String("d1"),
+						Value: aws.String("v1"),
+					},
+					{
+						Name:  aws.String("d2"),
+						Value: aws.String("v2"),
+					},
+				},
+				{
+					{
+						Name:  aws.String("d1"),
+						Value: aws.String("v1"),
+					},
+				},
+				{},
 			},
 		},
-		{},
-	}
-	assert.EqualValues(t, expectedDimensionList, actualDimensionList, "Unexpected dimension roll up list")
-
-	cw.config.RollupDimensions = [][]string{}
-	rawDimension = []*cloudwatch.Dimension{
-		{
-			Name:  aws.String("d1"),
-			Value: aws.String("v1"),
+		"WithNoRollupConfig": {
+			rollupDimensions: [][]string{},
+			rawDimensions:    testRawDimensions,
+			want:             [][]*cloudwatch.Dimension{testRawDimensions},
 		},
-		{
-			Name:  aws.String("d2"),
-			Value: aws.String("v2"),
+		"WithNoRawDimensions": {
+			rollupDimensions: [][]string{{"d1", "d2"}, {"d1"}, {}},
+			rawDimensions:    []*cloudwatch.Dimension{},
+			want:             [][]*cloudwatch.Dimension{{}},
 		},
-		{
-			Name:  aws.String("d3"),
-			Value: aws.String("v3"),
+		"WithDuplicate/SameOrder": {
+			rollupDimensions: [][]string{{"d1", "d2", "d3"}},
+			rawDimensions:    testRawDimensions,
+			want:             [][]*cloudwatch.Dimension{testRawDimensions},
 		},
-	}
-
-	actualDimensionList = cw.ProcessRollup(rawDimension)
-	expectedDimensionList = [][]*cloudwatch.Dimension{
-		{
-			{
-				Name:  aws.String("d1"),
-				Value: aws.String("v1"),
-			},
-			{
-				Name:  aws.String("d2"),
-				Value: aws.String("v2"),
-			},
-			{
-				Name:  aws.String("d3"),
-				Value: aws.String("v3"),
-			},
+		"WithDuplicate/DifferentOrder": {
+			rollupDimensions: [][]string{{"d2", "d1", "d3"}},
+			rawDimensions:    testRawDimensions,
+			want:             [][]*cloudwatch.Dimension{testRawDimensions},
+		},
+		"WithSameLength/DifferentNames": {
+			rollupDimensions: [][]string{{"d1", "d3", "d4"}},
+			rawDimensions:    testRawDimensions,
+			want:             [][]*cloudwatch.Dimension{testRawDimensions},
+		},
+		"WithExtraDimensions": {
+			rollupDimensions: [][]string{{"d1", "d2", "d3", "d4"}},
+			rawDimensions:    testRawDimensions,
+			want:             [][]*cloudwatch.Dimension{testRawDimensions},
 		},
 	}
-	assert.EqualValues(t, expectedDimensionList, actualDimensionList, "Unexpected dimension roll up list without rollup setting")
-
-	cw.config.RollupDimensions = [][]string{{"d1", "d2"}, {"d1"}, {}}
-	rawDimension = []*cloudwatch.Dimension{}
-
-	actualDimensionList = cw.ProcessRollup(rawDimension)
-	expectedDimensionList = [][]*cloudwatch.Dimension{
-		{},
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			cw.config.RollupDimensions = testCase.rollupDimensions
+			got := cw.ProcessRollup(testCase.rawDimensions)
+			assert.EqualValues(t, testCase.want, got, "Unexpected dimension roll up list")
+		})
 	}
-	assert.EqualValues(t, expectedDimensionList, actualDimensionList, "Unexpected dimension roll up list with no raw dimensions")
+	assert.NoError(t, cw.Shutdown(context.Background()))
+}
 
-	cw.config.RollupDimensions = [][]string{{"d1", "d2", "d3"}}
-	rawDimension = []*cloudwatch.Dimension{
-		{
-			Name:  aws.String("d1"),
-			Value: aws.String("v1"),
-		},
-		{
-			Name:  aws.String("d2"),
-			Value: aws.String("v2"),
-		},
-		{
-			Name:  aws.String("d3"),
-			Value: aws.String("v3"),
-		},
+func TestBuildMetricDatumDropUnsupported(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+	testCases := []float64{
+		math.NaN(),
+		math.Inf(1),
+		math.Inf(-1),
+		distribution.MaxValue * 1.001,
+		distribution.MinValue * 1.001,
 	}
-
-	actualDimensionList = cw.ProcessRollup(rawDimension)
-	expectedDimensionList = [][]*cloudwatch.Dimension{
-		{
-			{
-				Name:  aws.String("d1"),
-				Value: aws.String("v1"),
+	for _, testCase := range testCases {
+		got := cw.BuildMetricDatum(&aggregationDatum{
+			MetricDatum: cloudwatch.MetricDatum{
+				MetricName: aws.String("test"),
+				Value:      aws.Float64(testCase),
 			},
-			{
-				Name:  aws.String("d2"),
-				Value: aws.String("v2"),
-			},
-			{
-				Name:  aws.String("d3"),
-				Value: aws.String("v3"),
-			},
-		},
+		})
+		assert.Empty(t, got)
 	}
-	assert.EqualValues(t, expectedDimensionList, actualDimensionList,
-		"Unexpected dimension roll up list with duplicate roll up")
-	cw.Shutdown(context.Background())
 }
 
 func TestGetUniqueRollupList(t *testing.T) {
-	inputLists := [][]string{{"d1"}, {"d1"}, {"d2"}, {"d1"}}
-	actualLists := GetUniqueRollupList(inputLists)
-	expectedLists := [][]string{{"d1"}, {"d2"}}
-	assert.EqualValues(t, expectedLists, actualLists, "Duplicate list showed up")
-
-	inputLists = [][]string{{"d1", "d2", ""}}
-	actualLists = GetUniqueRollupList(inputLists)
-	expectedLists = [][]string{{"d1", "d2", ""}}
-	assert.EqualValues(t, expectedLists, actualLists, "Unique list should be same with input list")
-
-	inputLists = [][]string{{}, {}}
-	actualLists = GetUniqueRollupList(inputLists)
-	expectedLists = [][]string{{}}
-	assert.EqualValues(t, expectedLists, actualLists, "Unique list failed on empty list")
-
-	inputLists = [][]string{}
-	actualLists = GetUniqueRollupList(inputLists)
-	expectedLists = [][]string{}
-	assert.EqualValues(t, expectedLists, actualLists, "Unique list result should be empty")
+	testCases := map[string]struct {
+		input [][]string
+		want  [][]string
+	}{
+		"WithEmpty": {
+			input: [][]string{},
+			want:  [][]string{},
+		},
+		"WithSimple": {
+			input: [][]string{{"d1", "d2", ""}},
+			want:  [][]string{{"", "d1", "d2"}},
+		},
+		"WithDuplicates/NoDimension": {
+			input: [][]string{{}, {}},
+			want:  [][]string{{}},
+		},
+		"WithDuplicates/SingleDimension": {
+			input: [][]string{{"d1"}, {"d1"}, {"d2"}, {"d1"}},
+			want:  [][]string{{"d1"}, {"d2"}},
+		},
+		"WithDuplicates/DifferentOrder": {
+			input: [][]string{{"d2", "d1", "d3"}, {"d3", "d1", "d2"}, {"d3", "d2", "d1"}},
+			want:  [][]string{{"d1", "d2", "d3"}},
+		},
+		"WithDuplicates/WithinSets": {
+			input: [][]string{{"d1", "d1", "d2"}, {"d1", "d1"}, {"d2", "d1"}, {"d1"}},
+			want:  [][]string{{"d1", "d2"}, {"d1"}},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := GetUniqueRollupList(testCase.input)
+			assert.EqualValues(t, testCase.want, got)
+		})
+	}
 }
 
 func TestIsDropping(t *testing.T) {

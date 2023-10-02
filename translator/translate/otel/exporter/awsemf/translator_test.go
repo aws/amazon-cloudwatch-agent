@@ -268,8 +268,12 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"ClusterName"}, {"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{
 							"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
-							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
-							"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed"},
+							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total", "container_memory_limit", "container_memory_request",
+							"container_filesystem_usage", "container_filesystem_available", "container_filesystem_utilization",
+							"container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crash_loop_back_off",
+							"container_status_waiting_reason_image_pull_error", "container_status_waiting_reason_start_error", "container_status_waiting_reason_create_container_error",
+							"container_status_waiting_reason_create_container_config_error", "container_status_terminated_reason_oom_killed",
+						},
 					},
 					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"ClusterName", "Namespace"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}},
@@ -278,22 +282,20 @@ func TestTranslator(t *testing.T) {
 							"pod_memory_utilization_over_pod_limit"},
 					},
 					{
-						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}},
-						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts",
-							"pod_number_of_containers", "pod_number_of_running_containers",
-							"pod_status_ready", "pod_status_scheduled",
-							"pod_status_running", "pod_status_pending",
-							"pod_status_failed", "pod_status_unknown",
-							"pod_status_succeeded"},
-					},
-					{
 						Dimensions: [][]string{
 							{"FullPodName", "PodName", "Namespace", "ClusterName"},
 							{"PodName", "Namespace", "ClusterName"},
 							{"Service", "Namespace", "ClusterName"},
 							{"ClusterName"},
 						},
-						MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_rx_errors", "pod_interface_network_tx_dropped", "pod_interface_network_tx_errors"},
+						MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_tx_dropped"},
+					},
+					{
+						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers",
+							"pod_status_ready", "pod_status_scheduled", "pod_status_running", "pod_status_pending", "pod_status_failed", "pod_status_unknown",
+							"pod_status_succeeded", "pod_memory_request", "pod_memory_limit",
+						},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -310,8 +312,7 @@ func TestTranslator(t *testing.T) {
 							{"ClusterName"},
 						},
 						MetricNameSelectors: []string{
-							"node_interface_network_rx_dropped", "node_interface_network_rx_errors",
-							"node_interface_network_tx_dropped", "node_interface_network_tx_errors",
+							"node_interface_network_rx_dropped", "node_interface_network_tx_dropped",
 							"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total"},
 					},
 					{
@@ -340,29 +341,47 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+						MetricNameSelectors: []string{"apiserver_storage_size_bytes", "apiserver_storage_size_bytes", "etcd_db_total_size_in_bytes", "etcd_request_duration_seconds"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds"},
+						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds", "apiserver_longrunning_requests", "apiserver_storage_objects"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "verb"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_request_duration_seconds", "rest_client_request_duration_seconds"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "code", "verb"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_request_total", "apiserver_request_total_5xx"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "operation"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_admission_controller_admission_duration_seconds", "apiserver_admission_step_admission_duration_seconds", "etcd_request_duration_seconds"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "code", "method"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"rest_client_requests_total"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "request_kind"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_current_inflight_requests"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "name"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_admission_webhook_admission_duration_seconds"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "group"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_requested_deprecated_apis"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "reason"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_flowcontrol_rejected_requests_total"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "priority_level"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"apiserver_flowcontrol_request_concurrency_limit"},
-					},
-					{
-						Dimensions: [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{
-							"apiserver_admission_controller_admission_duration_seconds",
-							"apiserver_flowcontrol_rejected_requests_total",
-							"apiserver_request_duration_seconds",
-							"apiserver_request_total",
-							"apiserver_request_total_5xx",
-							"apiserver_storage_objects",
-							"etcd_request_duration_seconds",
-							"rest_client_request_duration_seconds",
-							"rest_client_requests_total",
-						},
 					},
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
@@ -372,12 +391,37 @@ func TestTranslator(t *testing.T) {
 						Overwrite:  true,
 					},
 					{
-						MetricName: "apiserver_flowcontrol_request_concurrency_limit",
+						MetricName: "apiserver_admission_step_admission_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_admission_webhook_admission_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_current_inflight_requests",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_current_inqueue_requests",
 						Unit:       "Count",
 						Overwrite:  true,
 					},
 					{
 						MetricName: "apiserver_flowcontrol_rejected_requests_total",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_flowcontrol_request_concurrency_limit",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_longrunning_requests",
 						Unit:       "Count",
 						Overwrite:  true,
 					},
@@ -399,6 +443,36 @@ func TestTranslator(t *testing.T) {
 					{
 						MetricName: "apiserver_storage_objects",
 						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "etcd_request_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_storage_list_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_storage_objects",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_storage_db_total_size_in_bytes",
+						Unit:       "Bytes",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_storage_size_bytes",
+						Unit:       "Bytes",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "etcd_db_total_size_in_bytes",
+						Unit:       "Bytes",
 						Overwrite:  true,
 					},
 					{

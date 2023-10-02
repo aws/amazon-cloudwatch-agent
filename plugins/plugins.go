@@ -9,8 +9,6 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/k8sdecorator"
 
 	// Enabled cloudwatch-agent input plugins
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/cadvisor"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/k8sapiserver"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd"
