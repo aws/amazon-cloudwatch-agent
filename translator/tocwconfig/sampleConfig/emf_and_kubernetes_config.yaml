@@ -172,7 +172,7 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - apiserver_storage_size_bytes
-          - apiserver_storage_size_bytes
+          - apiserver_storage_db_total_size_in_bytes
           - etcd_db_total_size_in_bytes
           - etcd_request_duration_seconds
       - dimensions: [ [ClusterName, resource], [ ClusterName ] ]
