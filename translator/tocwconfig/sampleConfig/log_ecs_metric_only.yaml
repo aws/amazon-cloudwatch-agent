@@ -4,7 +4,7 @@ exporters:
     emf_only: true
     certificate_file_path: ""
     endpoint: "https://fake_endpoint"
-    "imds_retries": 1
+    imds_retries: 1
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
@@ -36,7 +36,7 @@ exporters:
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
     endpoint: ""
-    "imds_retries": 1
+    imds_retries: 1
     enhanced_container_insights: false
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/{ClusterName}/performance
@@ -93,10 +93,14 @@ exporters:
 extensions: {}
 processors:
   batch/containerinsights:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
   batch/emf_logs:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
@@ -111,7 +115,7 @@ receivers:
     enable_control_plane_metrics: false
     certificate_file_path: ""
     endpoint: ""
-    "imds_retries": 1
+    imds_retries: 1
     leader_lock_name: otel-container-insight-clusterleader
     leader_lock_using_config_map_only: false
     local_mode: false
@@ -193,7 +197,8 @@ service:
     metrics:
       address: ""
       level: None
-      metric_readers: []
+      readers: []
     resource: {}
     traces:
+      processors: []
       propagators: []

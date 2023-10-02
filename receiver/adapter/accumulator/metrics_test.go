@@ -244,7 +244,8 @@ func Test_PopulateNumberDataPoint_WithDifferentValueType(t *testing.T) {
 	for _, tc := range test_cases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			otelValue := util.ToOtelValue(tc.telegrafDataPointValue)
+			otelValue, err := util.ToOtelValue(tc.telegrafDataPointValue)
+			as.NoError(err)
 			as.NotNil(otelValue)
 
 			switch v := tc.expectedOtelDataPointValue.(type) {
