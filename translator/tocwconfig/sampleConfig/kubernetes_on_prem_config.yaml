@@ -7,7 +7,6 @@ exporters:
     disable_metric_extraction: true
     eks_fargate_container_insights_enabled: false
     endpoint: "https://fake_endpoint"
-    "imds_retries": 1
     enhanced_container_insights: true
     imds_retries: 1
     local_mode: false
