@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
@@ -33,35 +36,33 @@ func MakeBuild() string {
 	)
 	return command
 }
-func UploadToS3(commitHash string) string {
-	BucketKey := commitHash
+func UploadToS3(key string) string {
 	command := mergeCommands(
-		fmt.Sprintf("echo 'BucketKey: %s %s'",
+		fmt.Sprintf("echo 'key: %s %s'",
 			S3_INTEGRATION_BUCKET,
-			BucketKey,
+			key,
 		),
 		"cd ccwa",
 		fmt.Sprintf("aws s3 cp build/bin s3://%s/%s --recursive",
 			S3_INTEGRATION_BUCKET,
-			BucketKey,
+			key,
 		),
 		fmt.Sprintf("aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://%s/%s/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm",
 			S3_INTEGRATION_BUCKET,
-			BucketKey,
+			key,
 		),
 		fmt.Sprintf("aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://%s/%s/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm",
 			S3_INTEGRATION_BUCKET,
-			BucketKey,
+			key,
 		),
 	)
 	return command
 }
-func CopyBinary(commitHash string) string {
-	BucketKey := commitHash
+func CopyBinary(key string) string {
 	command := mergeCommands(fmt.Sprintf(
 		"aws s3 cp s3://%s/%s . --recursive",
 		S3_INTEGRATION_BUCKET,
-		BucketKey,
+		key,
 	),
 	)
 	return command
@@ -79,19 +80,18 @@ func MakeMSI() string {
 		"go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__",
 	)
 }
-func CopyMsi(commitHash string) string {
+func CopyMsi(key string) string {
 	return fmt.Sprintf(
 		"aws s3 cp s3://%s/%s/buildMSI.zip .",
 		S3_INTEGRATION_BUCKET,
-		commitHash,
+		key,
 	)
 }
-func UploadMSI(commitHash string) string {
-	BucketKey := commitHash
+func UploadMSI(key string) string {
 	return fmt.Sprintf(
 		"aws s3 cp buildMSI.zip s3://%s/%s/buildMSI.zip",
 		S3_INTEGRATION_BUCKET,
-		BucketKey,
+		key,
 	)
 }
 
@@ -126,9 +126,8 @@ func CreatePkgCopyDeps() string {
 		"cd ..",
 	)
 }
-func BuildAndUploadMac(commitHash string) string {
+func BuildAndUploadMac(key string) string {
 	bucket := S3_INTEGRATION_BUCKET
-	key := commitHash
 	return mergeCommands(
 		"cd /tmp/",
 		"chmod +x create_pkg.sh",

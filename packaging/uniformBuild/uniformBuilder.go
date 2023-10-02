@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
@@ -5,12 +8,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"golang.org/x/sync/errgroup"
-	"strings"
 )
 
 // This is the main struct that is managing the build process
@@ -25,6 +29,9 @@ var DEFAULT_INSTANCE_GUIDE = map[string]OS{
 	"WindowsMSIPacker":  LINUX,
 	"MacPkgMaker":       MACOS,
 	"WindowsMSIBuilder": WINDOWS,
+}
+var LINUX_TEST_INSTANCE_GUIDE = map[string]OS{
+	"MainBuildEnv": LINUX,
 }
 var MACOS_TEST_INSTANCE_GUIDE = map[string]OS{
 	"MacPkgMaker": MACOS,
@@ -91,6 +98,8 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 // Windows
 func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string) error {
 	//rbm.CheckS3(fmt.)
+	//@TODO add cache
+	//@TODO add os check
 	command := mergeCommands(
 		CloneGitRepo(TEST_REPO, "main"),
 		"cd ccwa",
@@ -104,21 +113,22 @@ func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string
 	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI zip file for %s", commitHash))
 }
 func (rbm *RemoteBuildManager) BuildMSI(instanceName string, commitHash string) error {
-	//@TODO needs windows ami
+	//@TODO add cache
+	//@TODO add os check
 	command := mergeCommandsWin(
-		//CopyMsi(commitHash),
-		//"Expand-Archive buildMSI.zip -Force",
+		CopyMsi(commitHash),
+		"Expand-Archive buildMSI.zip -DestinationPat C:\\buildMSI -Force",
 		"cd C:\\buildMSI\\msi_dep",
 		fmt.Sprintf(".\\create_msi.ps1 \"nosha\" %s/%s", S3_INTEGRATION_BUCKET, commitHash),
 	)
-	rbm.RunCommand(CopyMsi(commitHash), instanceName, "copy msi")
-	rbm.RunCommand("Expand-Archive buildMSI.zip -DestinationPat C:\\buildMSI -Force", instanceName, "unzip msi.zip")
+
 	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI Build file for %s", commitHash))
 }
 
 // / MACOS ------------
 func (rbm *RemoteBuildManager) MakeMacPkg(instanceName string, commitHash string) error {
-	//@TODO needs mac ami
+	//@TODO add cache
+	//@TODO add os check
 	command := mergeCommands(
 		CloneGitRepo(MAIN_REPO, "main"),
 		"cd ccwa",
@@ -157,8 +167,6 @@ func initEnvCmd(os OS) string {
 	}
 
 }
-
-//
 
 // CACHE COMMANDS
 func (rbm *RemoteBuildManager) CheckS3(targetFile string) bool {
@@ -225,19 +233,9 @@ func main() {
 	})
 	if err := eg.Wait(); err != nil {
 		fmt.Printf("Failed because: %s \n", err)
+		return
 	}
-	//err = rbm.MakeMsiZip("WindowsMSIPacker", comment)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//time.Sleep(7 * time.Minute)
-	//err = rbm.MakeMacPkg("MacPkgMaker", comment)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//err = rbm.BuildMSI("WindowsMSIBuilder", comment)
-	//if err != nil {
-	//	panic(err)
-	//}
+	fmt.Printf("\033[32mSuccesfully\033[0m built CWA from %s with %s branch, check \033[32m%s \033[0m bucket with \033[1;32m%s\033[0m hash",
+		repo, branch, S3_INTEGRATION_BUCKET, comment)
 
 }

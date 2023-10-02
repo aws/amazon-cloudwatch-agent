@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
@@ -5,12 +8,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 )
@@ -49,7 +53,7 @@ func TestSupportedAmis(t *testing.T) {
 }
 
 func TestEc2Generation(t *testing.T) {
-	rbm := CreateRemoteBuildManager(DEFAULT_INSTANCE_GUIDE, accountID)
+	rbm := CreateRemoteBuildManager(LINUX_TEST_INSTANCE_GUIDE, accountID)
 	fmt.Println(rbm.ssmClient)
 	defer rbm.Close()
 }

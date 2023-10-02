@@ -1,15 +1,19 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 type OS string
 
 const TEST_REPO = "https://github.com/aws/amazon-cloudwatch-agent-test"
 const MAIN_REPO = "https://github.com/aws/amazon-cloudwatch-agent.git"
-const S3_INTEGRATION_BUCKET = "uniform-build-env-test"
+const S3_INTEGRATION_BUCKET = "cloudwatch-agent-integration-bucket"
 const BUILD_ARN = "arn:aws:iam::506463145083:instance-profile/Uniform-Build-Env-Instance-Profile"
 const COMMAND_TRACKING_TIMEOUT = 20 * time.Minute
 const COMMAND_TRACKING_INTERVAL = 1 * time.Second

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
@@ -5,6 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
@@ -12,11 +21,6 @@ import (
 	ssmtypes "github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/aws/smithy-go"
 	"github.com/schollz/progressbar/v3"
-	"sort"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 var (
@@ -150,7 +154,7 @@ func (imng *InstanceManager) Close() error {
 		wg.Add(1)
 		go func(client *ec2.Client, instanceID string) {
 			defer wg.Done()
-			err := StopInstanceCmd(client, instanceID)
+			err := TerminateInstanceCmd(client, instanceID)
 			time.Sleep(10 * time.Second)
 			if err != nil {
 				return
@@ -286,6 +290,26 @@ func StopInstanceCmd(client *ec2.Client, instanceID string) error {
 	fmt.Println("Stopped instance with ID " + instanceID)
 	return nil
 }
+
+func TerminateInstanceCmd(client *ec2.Client, instanceID string) error {
+	//@TODO:Change to terminate
+
+	input := &ec2.TerminateInstancesInput{
+		InstanceIds: []string{
+			instanceID,
+		},
+		DryRun: aws.Bool(false),
+	}
+
+	_, err := client.TerminateInstances(context.TODO(), input)
+	if err != nil {
+		fmt.Println("Got an error terminating the instance")
+		return err
+	}
+	fmt.Println("Stopped instance with ID " + instanceID)
+	return nil
+}
+
 func enforceCommentLimit(s string) string {
 	const commentCharLimit = 100
 	if len(s) > commentCharLimit {
