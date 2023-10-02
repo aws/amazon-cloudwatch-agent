@@ -1,4 +1,13 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300028.2 (2023-10-02)
+========================================================================
+
+Bug fixes:
+* Allow multiple files with similar names under same timestamp for cheetah
+* Fix EMF log corruption due to concurrency issues
+* Fix aggregate dimension duplicates
+
+========================================================================
 Amazon CloudWatch Agent 1.300028.1 (2023-09-18)
 ========================================================================
 
