@@ -21,6 +21,7 @@ processors:
       match_type: ""
       metrics: []
       regexp: null
+    initial_value: 0
     max_staleness: 0s
   ec2tagger:
     ec2_instance_tag_keys:
@@ -47,7 +48,8 @@ processors:
 receivers:
     telegraf_diskio:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
 service:
     extensions: []
     pipelines:
@@ -76,7 +78,8 @@ service:
         metrics:
             address: ""
             level: None
-            metric_readers: []
+            readers: []
         resource: {}
         traces:
+            processors: []
             propagators: []

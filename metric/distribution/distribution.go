@@ -3,7 +3,19 @@
 
 package distribution
 
-import "go.opentelemetry.io/collector/pdata/pmetric"
+import (
+	"errors"
+	"math"
+
+	"go.opentelemetry.io/collector/pdata/pmetric"
+)
+
+var (
+	ErrUnsupportedWeight = errors.New("weight must be larger than 0")
+	ErrUnsupportedValue  = errors.New("value cannot be negative, NaN, Inf, or greater than 2^360")
+	MinValue             = -math.Pow(2, 360)
+	MaxValue             = math.Pow(2, 360)
+)
 
 type Distribution interface {
 	Maximum() float64
@@ -36,3 +48,10 @@ type Distribution interface {
 }
 
 var NewDistribution func() Distribution
+
+// IsSupportedValue checks to see if the metric is between the min value and 2^360 and not a NaN.
+// This matches the accepted range described in the MetricDatum documentation
+// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
+func IsSupportedValue(value, min, max float64) bool {
+	return !math.IsNaN(value) && value >= min && value <= max
+}

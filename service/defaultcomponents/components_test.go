@@ -11,7 +11,7 @@ import (
 
 const (
 	receiversCount  = 5
-	processorCount  = 4
+	processorCount  = 5
 	exportersCount  = 5
 	extensionsCount = 0
 )
@@ -32,6 +32,7 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, processors["batch"])
 	assert.NotNil(t, processors["cumulativetodelta"])
 	assert.NotNil(t, processors["ec2tagger"])
+	assert.NotNil(t, processors["metricstransform"])
 	assert.NotNil(t, processors["transform"])
 
 	exporters := factories.Exporters

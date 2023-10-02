@@ -149,13 +149,6 @@ func setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 		return err
 	}
 
-	// Prometheus will use the "job" corresponding to the target in prometheus as a log stream
-	// While determining the target, we would give preference to the metric tag over the log_stream_name coming from config/toml
-
-	// However, since we are using awsemfexport, we can leverage the token replacement with the log stream name
-	// https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/897db04f747f0bda1707c916b1ec9f6c79a0c678/exporter/awsemfexporter/util.go#L29-L37
-	// Therefore, add a tag {ServiceName} for replacing job as a log stream
-
 	if conf.IsSet(emfProcessorBasePathKey) {
 		if err := setPrometheusNamespace(conf, cfg); err != nil {
 			return err

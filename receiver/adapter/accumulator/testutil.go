@@ -45,14 +45,17 @@ func generateExpectedAttributes() pcommon.Map {
 }
 
 func newOtelAccumulatorWithTestRunningInputs(as *assert.Assertions, consumer consumer.Metrics, isServiceInput bool) *otelAccumulator {
+	return newOtelAccumulatorWithConfig(as, consumer, isServiceInput, &models.InputConfig{})
+}
 
+func newOtelAccumulatorWithConfig(as *assert.Assertions, consumer consumer.Metrics, isServiceInput bool, cfg *models.InputConfig) *otelAccumulator {
 	var input telegraf.Input
 	if isServiceInput {
 		input = &TestServiceRunningInput{}
 	} else {
 		input = &TestRunningInput{}
 	}
-	ri := models.NewRunningInput(input, &models.InputConfig{})
+	ri := models.NewRunningInput(input, cfg)
 	as.NoError(ri.Config.Filter.Compile())
 
 	return &otelAccumulator{

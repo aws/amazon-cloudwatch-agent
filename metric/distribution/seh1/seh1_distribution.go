@@ -4,7 +4,7 @@
 package seh1
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"math"
 
@@ -79,35 +79,34 @@ func (seh1Distribution *SEH1Distribution) Size() int {
 
 // weight is 1/samplingRate
 func (seh1Distribution *SEH1Distribution) AddEntryWithUnit(value float64, weight float64, unit string) error {
-	if weight > 0 {
-		if value < 0 {
-			return errors.New("negative value")
-		}
-		//sample count
-		seh1Distribution.sampleCount += weight
-		//sum
-		seh1Distribution.sum += value * weight
-		//min
-		if value < seh1Distribution.minimum {
-			seh1Distribution.minimum = value
-		}
-		//max
-		if value > seh1Distribution.maximum {
-			seh1Distribution.maximum = value
-		}
+	if weight <= 0 {
+		return fmt.Errorf("unsupported weight %v: %w", weight, distribution.ErrUnsupportedWeight)
+	}
+	if !distribution.IsSupportedValue(value, 0, distribution.MaxValue) {
+		return fmt.Errorf("unsupported value %v: %w", value, distribution.ErrUnsupportedValue)
+	}
+	//sample count
+	seh1Distribution.sampleCount += weight
+	//sum
+	seh1Distribution.sum += value * weight
+	//min
+	if value < seh1Distribution.minimum {
+		seh1Distribution.minimum = value
+	}
+	//max
+	if value > seh1Distribution.maximum {
+		seh1Distribution.maximum = value
+	}
 
-		//seh
-		bucketNumber := bucketNumber(value)
-		seh1Distribution.buckets[bucketNumber] += weight
+	//seh
+	bucketNumber := bucketNumber(value)
+	seh1Distribution.buckets[bucketNumber] += weight
 
-		//unit
-		if seh1Distribution.unit == "" {
-			seh1Distribution.unit = unit
-		} else if seh1Distribution.unit != unit && unit != "" {
-			log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, unit)
-		}
-	} else {
-		log.Printf("D! Weight should be larger than 0: %v", weight)
+	//unit
+	if seh1Distribution.unit == "" {
+		seh1Distribution.unit = unit
+	} else if seh1Distribution.unit != unit && unit != "" {
+		log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, unit)
 	}
 	return nil
 }
@@ -151,7 +150,7 @@ func (seh1Distribution *SEH1Distribution) AddDistributionWithWeight(distribution
 		if seh1Distribution.unit == "" {
 			seh1Distribution.unit = distribution.Unit()
 		} else if seh1Distribution.unit != distribution.Unit() && distribution.Unit() != "" {
-			log.Printf("D! Multiple units are dected: %s, %s", seh1Distribution.unit, distribution.Unit())
+			log.Printf("D! Multiple units are detected: %s, %s", seh1Distribution.unit, distribution.Unit())
 		}
 	} else {
 		log.Printf("D! SampleCount * Weight should be larger than 0: %v, %v", distribution.SampleCount(), weight)

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -24,6 +25,8 @@ import (
 const (
 	forcePullInterval = 250 * time.Millisecond
 )
+
+var startOnlyOnce sync.Once
 
 type EventConfig struct {
 	Name          string   `toml:"event_name"`
@@ -77,6 +80,13 @@ func (s *Plugin) FindLogSrc() []logs.LogSrc {
  * We can do any initialization in this method.
  */
 func (s *Plugin) Start(acc telegraf.Accumulator) error {
+	alreadyRan := true
+	startOnlyOnce.Do(func() {
+		alreadyRan = false
+	})
+	if alreadyRan {
+		return nil
+	}
 	for _, eventConfig := range s.Events {
 		// Assume no 2 EventConfigs have the same combination of:
 		// LogGroupName, LogStreamName, Name.

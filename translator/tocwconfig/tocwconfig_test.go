@@ -353,6 +353,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 			return pretty.Sprint(x) < pretty.Sprint(y)
 		})
 		// assert.Equal(t, expected, actual) // this is useful for debugging differences between the YAML
+
 		require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 	}
 }

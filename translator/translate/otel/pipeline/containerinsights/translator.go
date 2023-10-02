@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
@@ -44,6 +45,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if conf == nil || (!conf.IsSet(ecsKey) && !conf.IsSet(eksKey)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(ecsKey, " or ", eksKey)}
 	}
+
+	// Append the metricstransformprocessor only if enhanced container insights is enabled
+	enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
+	if enhancedContainerInsightsEnabled {
+		return &common.ComponentTranslators{
+			Receivers:  common.NewTranslatorMap(awscontainerinsight.NewTranslator()),
+			Processors: common.NewTranslatorMap(metricstransformprocessor.NewTranslatorWithName(pipelineName), batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey)), // EKS & ECS CI sit under metrics_collected in "logs"
+			Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
+		}, nil
+	}
+
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap(awscontainerinsight.NewTranslator()),
 		Processors: common.NewTranslatorMap(batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey)), // EKS & ECS CI sit under metrics_collected in "logs"
