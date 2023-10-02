@@ -9,8 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"golang.org/x/sync/errgroup"
 	"strings"
-	"time"
 )
 
 // This is the main struct that is managing the build process
@@ -21,9 +21,10 @@ type RemoteBuildManager struct {
 }
 
 var DEFAULT_INSTANCE_GUIDE = map[string]OS{
-	"MainBuildEnv":     LINUX,
-	"WindowsMSIPacker": LINUX,
-	"MacPkgMaker":      MACOS,
+	"MainBuildEnv":      LINUX,
+	"WindowsMSIPacker":  LINUX,
+	"MacPkgMaker":       MACOS,
+	"WindowsMSIBuilder": WINDOWS,
 }
 var MACOS_TEST_INSTANCE_GUIDE = map[string]OS{
 	"MacPkgMaker": MACOS,
@@ -194,27 +195,49 @@ func main() {
 	flag.StringVar(&accountID, "a", "", "accountID")
 	flag.StringVar(&accountID, "account_id", "", "accountID")
 	flag.Parse()
-	//rbm := CreateRemoteBuildManager(DEFAULT_INSTANCE_GUIDE, accountID)
-	rbm := CreateRemoteBuildManager(WINDOWS_TEST_INSTANCE_GUIDE, accountID)
-	comment = "GHA_DEBUG_RUN"
+	rbm := CreateRemoteBuildManager(DEFAULT_INSTANCE_GUIDE, accountID)
+	//rbm := CreateRemoteBuildManager(WINDOWS_TEST_INSTANCE_GUIDE, accountID)
+	//comment = "GHA_DEBUG_RUN"
 	var err error
-	//defer rbm.Close()
-	//err := rbm.BuildCWAAgent(repo, branch, comment, "MainBuildEnv")
-	//if err != nil {
-	//	panic(err)
-	//}
+	eg := new(errgroup.Group)
+	defer rbm.Close()
+	err = rbm.BuildCWAAgent(repo, branch, comment, "MainBuildEnv")
+	if err != nil {
+		panic(err)
+	}
+	eg.Go(func() error { // windows
+		err = rbm.MakeMsiZip("WindowsMSIPacker", comment)
+		if err != nil {
+			return err
+		}
+		err = rbm.BuildMSI("WindowsMSIBuilder", comment)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	eg.Go(func() error {
+		err = rbm.MakeMacPkg("MacPkgMaker", comment)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		fmt.Printf("Failed because: %s \n", err)
+	}
 	//err = rbm.MakeMsiZip("WindowsMSIPacker", comment)
 	//if err != nil {
 	//	panic(err)
 	//}
-	time.Sleep(7 * time.Minute)
+	//time.Sleep(7 * time.Minute)
 	//err = rbm.MakeMacPkg("MacPkgMaker", comment)
 	//if err != nil {
 	//	panic(err)
 	//}
-	err = rbm.BuildMSI("WindowsMSIBuilder", comment)
-	if err != nil {
-		panic(err)
-	}
+	//err = rbm.BuildMSI("WindowsMSIBuilder", comment)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 }

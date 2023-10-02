@@ -101,7 +101,7 @@ func LoadWorkDirectory(os OS) string {
 	case MACOS:
 		return "cd ~"
 	default:
-		return ""
+		return "echo 'Already at work directory' "
 	}
 }
 
