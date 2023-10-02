@@ -36,7 +36,6 @@ exporters:
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
     endpoint: "https://fake_endpoint"
-    "imds_retries": 2
     enhanced_container_insights: true
     imds_retries: 2
     local_mode: false
