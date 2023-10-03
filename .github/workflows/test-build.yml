@@ -26,6 +26,11 @@ on:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
         required: true
         type: string
+      TargetRegion:
+        description: "Target region"
+        required: false
+        type: string
+        default: "us-west-2"
   workflow_call:
     inputs:
       ContainerRepositoryNameAndTag:
@@ -46,6 +51,11 @@ on:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
         required: true
         type: string
+      TargetRegion:
+        description: "Target region"
+        required: false
+        type: string
+        default: "us-west-2"
 
 jobs:
   MakeBinary:
@@ -73,7 +83,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          aws-region: $${{ inputs.TargetRegion }}
 
       - name: Cache binaries
         id: cached_binaries

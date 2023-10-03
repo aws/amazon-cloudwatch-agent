@@ -5,7 +5,7 @@ name: Enhanced Container Insights Beta Release
 on:
   workflow_dispatch:
 jobs:
-  BuildAndUpload:
+  BuildAndPushToUSWEST2:
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
     permissions:
@@ -15,3 +15,14 @@ jobs:
       ContainerRepositoryNameAndTag: "enhanced-container-insights-beta:latest"
       BucketKey: "enhanced-container-insights-beta"
       PackageBucketKey: "enhanced-container-insights-beta"
+  BuildAndPushToUSEAST1:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "enhanced-container-insights-beta:latest"
+      BucketKey: "enhanced-container-insights-beta"
+      PackageBucketKey: "enhanced-container-insights-beta"
+      TargetRegion: "us-east-1"
