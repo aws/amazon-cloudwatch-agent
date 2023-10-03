@@ -2,7 +2,7 @@ name: Update OTel fork components version
 
 env:
   UPSTREAM: https://github.com/amazon-contributing/opentelemetry-collector-contrib.git
-  UPSTREAM_BRANCH: aws-cwa-dev
+  UPSTREAM_BRANCH: aws-cwa-dev-enable-enhanced-ci-flag
 
 on:
   workflow_dispatch:
@@ -74,7 +74,7 @@ jobs:
         uses: repo-sync/pull-request@v2
         with:
           source_branch: otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
-          destination_branch: main
+          destination_branch: sky333999/endpoint
           pr_title: "Update OTel fork components to ${{ steps.get-latest-commit.outputs.sha }}"
           pr_allow_empty: false
           pr_body: |
