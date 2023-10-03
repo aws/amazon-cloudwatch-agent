@@ -270,7 +270,7 @@ func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Met
 				Dimensions: [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
 				MetricNameSelectors: []string{
 					"apiserver_storage_size_bytes",
-					"apiserver_storage_size_bytes",
+					"apiserver_storage_db_total_size_in_bytes",
 					"etcd_db_total_size_in_bytes",
 					"etcd_request_duration_seconds",
 				},
