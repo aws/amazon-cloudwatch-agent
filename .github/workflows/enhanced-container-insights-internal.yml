@@ -1,0 +1,17 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Enhanced Container Insights Internal Test Release
+on:
+  workflow_dispatch:
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "enhanced-container-insights-internal:latest"
+      BucketKey: "enhanced-container-insights-internal"
+      PackageBucketKey: "enhanced-container-insights-internal"
