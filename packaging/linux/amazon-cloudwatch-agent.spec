@@ -10,6 +10,8 @@ Source:     amazon-cloudwatch-agent.tar.gz
 
 %define _enable_debug_packages 0
 %define debug_package %{nil}
+%define _source_payload w6.gzdio
+%define _binary_payload w6.gzdio
 
 %prep
 %setup -c %{name}-%{version}
