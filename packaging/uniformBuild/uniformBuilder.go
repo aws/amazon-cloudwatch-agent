@@ -81,7 +81,7 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 	if err != nil {
 		return err
 	}
-	if isAlreadyBuilt := rbm.CheckS3(commitHash); isAlreadyBuilt {
+	if isAlreadyBuilt := rbm.fileExistsInS3(commitHash); isAlreadyBuilt {
 		fmt.Println("\033Found cache skipping build")
 		return nil
 	}
@@ -97,7 +97,7 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 
 // Windows
 func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string) error {
-	//rbm.CheckS3(fmt.)
+	//rbm.fileExistsInS3(fmt.)
 	//@TODO add cache
 	//@TODO add os check
 	command := mergeCommands(
@@ -113,8 +113,13 @@ func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string
 	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI zip file for %s", commitHash))
 }
 func (rbm *RemoteBuildManager) BuildMSI(instanceName string, commitHash string) error {
-	//@TODO add cache
-	//@TODO add os check
+	if err := rbm.instanceManager.insertOSRequirement(instanceName, WINDOWS); err != nil {
+		return err
+	}
+	if isAlreadyBuilt := rbm.fileExistsInS3(fmt.Sprintf("%s/amazon-cloudwatch-agent.msi", commitHash)); isAlreadyBuilt {
+		fmt.Println("\033Found cache skipping build")
+		return nil
+	}
 	command := mergeCommandsWin(
 		CopyMsi(commitHash),
 		"Expand-Archive buildMSI.zip -DestinationPat C:\\buildMSI -Force",
@@ -127,8 +132,13 @@ func (rbm *RemoteBuildManager) BuildMSI(instanceName string, commitHash string) 
 
 // / MACOS ------------
 func (rbm *RemoteBuildManager) MakeMacPkg(instanceName string, commitHash string) error {
-	//@TODO add cache
-	//@TODO add os check
+	if err := rbm.instanceManager.insertOSRequirement(instanceName, MACOS); err != nil {
+		return err
+	}
+	if isAlreadyBuilt := rbm.fileExistsInS3(fmt.Sprintf("%s/amd64/amazon-cloudwatch-agent.pkg", commitHash)); isAlreadyBuilt {
+		fmt.Println("\033Found cache skipping build")
+		return nil
+	}
 	command := mergeCommands(
 		CloneGitRepo(MAIN_REPO, "main"),
 		"cd ccwa",
@@ -169,8 +179,8 @@ func initEnvCmd(os OS) string {
 }
 
 // CACHE COMMANDS
-func (rbm *RemoteBuildManager) CheckS3(targetFile string) bool {
-	return false //DOESNT WORK FOR NOW forcing an already existing cache
+func (rbm *RemoteBuildManager) fileExistsInS3(targetFile string) bool {
+	fmt.Printf("Checking for %s cache \n", targetFile)
 	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(S3_INTEGRATION_BUCKET),
 		Prefix: aws.String(targetFile),
@@ -180,12 +190,13 @@ func (rbm *RemoteBuildManager) CheckS3(targetFile string) bool {
 		if err.Error() == "NotFound: Not Found" {
 			fmt.Printf("Object %s does not exist in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
 		} else {
-			panic(err)
+			fmt.Println(err)
 		}
-	} else {
-		fmt.Printf("Object %s exists in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
+		return false
 	}
-	return false
+	fmt.Printf("Object %s exists in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
+	return true
+
 }
 
 func main() {
