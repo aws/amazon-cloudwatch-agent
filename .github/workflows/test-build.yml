@@ -55,7 +55,7 @@ jobs:
   MakeBinary:
     name: 'MakeBinary'
     runs-on: ubuntu-latest
-    environment: Build-Instance
+#    environment: Build-Instance
     permissions:
       id-token: write
       contents: read
@@ -110,6 +110,26 @@ jobs:
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
+  BinaryBenchmarkTest:
+    name: BinaryBenchmarkTest
+    runs-on: ubuntu-latest
+    needs: [MakeBinary]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+      - name: Download RPM
+        run: |
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/linux/amd64/amazon-cloudwatch-agent.rpm .
+      - name: GetRPMSize
+        run: ls -lh
+      - name: Measure Installation Time
+        run : time -v rpm -i -y amazon-cloudwatch-agent.rpm
 #
 #      - name: Build Binaries
 #        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
