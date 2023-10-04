@@ -418,7 +418,6 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 			}
 		} else {
 			t = time.Now().UnixNano() / 1000000
-			p.Log.Debugf("Unable to parse valid timestamp %v: ", p.Group)
 		}
 	} else {
 		t = e.Time().UnixNano() / 1000000
