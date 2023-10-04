@@ -50,7 +50,24 @@ func TestApplyTimestampFormatLayoutRule(t *testing.T) {
 		actualReturnKey, retVal := layout.ApplyRule(input)
 		assert.Equal(t, "timestamp_layout", actualReturnKey)
 		assert.NotNil(t, retVal)
-		assert.Equal(t, "Jan 02 15:04:05", retVal)
+		assert.Equal(t, "Jan _2 15:04:05", retVal)
+
+	} else {
+		panic(e)
+	}
+}
+
+func TestApplyTimestampFormatLayoutZeroPadRule(t *testing.T) {
+	layout := new(TimestampLayout)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+			"timestamp_format": "%b %-d %H:%M:%S"
+	}`), &input)
+	if e == nil {
+		actualReturnKey, retVal := layout.ApplyRule(input)
+		assert.Equal(t, "timestamp_layout", actualReturnKey)
+		assert.NotNil(t, retVal)
+		assert.Equal(t, "Jan _2 15:04:05", retVal)
 
 	} else {
 		panic(e)
@@ -72,11 +89,13 @@ func TestApplyInvalidTimestampFormatLayoutRule(t *testing.T) {
 	}
 }
 
-func TestApplyTimestampFormatZeroPaddingRule(t *testing.T) {
+func TestApplyTimestampFormatAllZeroPaddingRule(t *testing.T) {
 	// compare zero padding and not zero padding options are
 	// translating as the same regex for %d/%-d and %m/%-m
 	nonZeroRegax := new(TimestampRegax)
 	zeroRegax := new(TimestampRegax)
+	nonZeroLayout := new(TimestampLayout)
+	zeroLayout := new(TimestampLayout)
 
 	var non_zero interface{}
 	var zero interface{}
@@ -97,6 +116,15 @@ func TestApplyTimestampFormatZeroPaddingRule(t *testing.T) {
 		assert.NotNil(t, zeroRetVal)
 		assert.NotNil(t, nonZeroRetVal)
 		assert.Equal(t, "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})", nonZeroRetVal)
+		assert.Equal(t, zeroRetVal, nonZeroRetVal)
+
+		zeroActualReturnKey, zeroRetVal = zeroLayout.ApplyRule(zero)
+		nonZeroActualReturnKey, nonZeroRetVal = nonZeroLayout.ApplyRule(non_zero)
+		assert.Equal(t, "timestamp_layout", zeroActualReturnKey)
+		assert.Equal(t, zeroActualReturnKey, nonZeroActualReturnKey)
+		assert.NotNil(t, zeroRetVal)
+		assert.NotNil(t, nonZeroRetVal)
+		assert.Equal(t, "_1 _2 15:04:05", nonZeroRetVal)
 		assert.Equal(t, zeroRetVal, nonZeroRetVal)
 
 	} else {

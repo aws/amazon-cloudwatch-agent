@@ -58,12 +58,12 @@ stdFracSecond9                                 // ".9", ".99", ..., trailing zer
 var TimeFormatMap = map[string]string{
 	"%B":  "January",
 	"%b":  "Jan",
-	"%-m": "1",
-	"%m":  "01",
+	"%-m": "_1",
+	"%m":  "_1",
 	"%A":  "Monday",
 	"%a":  "Mon",
-	"%-d": "2",
-	"%d":  "02",
+	"%-d": "_2",
+	"%d":  "_2",
 	"%H":  "15",
 	"%-I": "3",
 	"%I":  "03",
@@ -156,7 +156,7 @@ func (t *TimestampRegax) ApplyRule(input interface{}) (returnKey string, returnV
 		res = checkAndReplace(res, TimeFormatRexMap)
 		// remove the prefix, if the format startswith "%-m" or "%-d", there is an "\\s{0,1}" at the beginning.
 		// like "timestamp_format": "%-m %-d %H:%M:%S" will be converted into following layout and regex
-		//      timestamp_layout = "1 2 15:04:05"
+		//      timestamp_layout = "_1 _2 15:04:05"
 		//      timestamp_regex = "(\\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
 		// following timestamp string " 2 1 07:10:06" matches the regex, but it can not match the layout.
 		// After the prefix "\\s{0,1}", it can match both the regex and layout.

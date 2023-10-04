@@ -137,7 +137,7 @@ func TestTimestampParserDefault(t *testing.T) {
 	// Check when timestamp_format is "%b %d %H:%M:%S"
 	// %d and %-d are both treated as s{0,1}\\d{1,2}
 	timestampRegex := "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
-	timestampLayout := "Jan  9 15:04:05"
+	timestampLayout := "Jan _2 15:04:05"
 	timezone := "UTC"
 	timezoneLoc := time.UTC
 	timestampRegexP, err := regexp.Compile(timestampRegex)
@@ -149,8 +149,24 @@ func TestTimestampParserDefault(t *testing.T) {
 		Timezone:        timezone,
 		TimezoneLoc:     timezoneLoc}
 
-	logEntry := fmt.Sprintf("Sep  9 02:00:43 ip-10-8-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
+	// make sure layout is compatible for "Sep 9", "Sep  9" , "Sep 09", "Sep  09" options
+	logEntry := fmt.Sprintf("Sep 9 02:00:43  ip-10-4-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
 	timestamp := fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 02, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "2", timestamp.Hour()))
+	assert.Equal(t, 00, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "0", timestamp.Minute()))
+
+	logEntry = fmt.Sprintf("Sep  9 02:00:43  ip-10-4-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
+	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 02, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "2", timestamp.Hour()))
+	assert.Equal(t, 00, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "0", timestamp.Minute()))
+
+	logEntry = fmt.Sprintf("Sep 09 02:00:43  ip-10-4-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
+	timestamp = fileConfig.timestampFromLogLine(logEntry)
+	assert.Equal(t, 02, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "2", timestamp.Hour()))
+	assert.Equal(t, 00, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "0", timestamp.Minute()))
+
+	logEntry = fmt.Sprintf("Sep  09 02:00:43  ip-10-4-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
+	timestamp = fileConfig.timestampFromLogLine(logEntry)
 	assert.Equal(t, 02, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "2", timestamp.Hour()))
 	assert.Equal(t, 00, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "0", timestamp.Minute()))
 
