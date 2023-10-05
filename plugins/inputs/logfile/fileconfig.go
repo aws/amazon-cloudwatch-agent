@@ -179,9 +179,13 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 			replacement := fmt.Sprintf(".%s", fracSecond[:3])
 			timestampContent = fmt.Sprintf("%s%s%s", timestampContent[:start], replacement, timestampContent[end:])
 		}
-		timestamp, err := time.ParseInLocation(config.TimestampLayout[0], timestampContent, config.TimezoneLoc)
-		if err != nil && len(config.TimestampLayout) > 1 {
-			timestamp, err = time.ParseInLocation(config.TimestampLayout[1], timestampContent, config.TimezoneLoc)
+		var err error
+        var timestamp time.Time
+		for _, timestampLayout := range config.TimestampLayout{
+				timestamp, err = time.ParseInLocation(timestampLayout, timestampContent, config.TimezoneLoc)
+				if err == nil {
+				    break
+				}
 		}
 		if err != nil {
 			log.Printf("E! Error parsing timestampFromLogLine: %s", err)
