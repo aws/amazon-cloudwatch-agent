@@ -180,12 +180,12 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 			timestampContent = fmt.Sprintf("%s%s%s", timestampContent[:start], replacement, timestampContent[end:])
 		}
 		var err error
-        var timestamp time.Time
-		for _, timestampLayout := range config.TimestampLayout{
-				timestamp, err = time.ParseInLocation(timestampLayout, timestampContent, config.TimezoneLoc)
-				if err == nil {
-				    break
-				}
+		var timestamp time.Time
+		for _, timestampLayout := range config.TimestampLayout {
+			timestamp, err = time.ParseInLocation(timestampLayout, timestampContent, config.TimezoneLoc)
+			if err == nil {
+				break
+			}
 		}
 		if err != nil {
 			log.Printf("E! Error parsing timestampFromLogLine: %s", err)
