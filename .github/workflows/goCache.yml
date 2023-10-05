@@ -1,10 +1,8 @@
 name: chache build
 env:
-  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
-
 on:
-
+  workflow_dispatch:
 jobs:
   cache:
     name: cache
