@@ -1,0 +1,47 @@
+name: chache build
+env:
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
+
+on:
+
+jobs:
+  cache:
+    name: cache
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_REPO_NAME}}
+          path: ccwa
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.19.2
+      - name: Cache if success
+        id: cf-integration-test
+        uses: actions/cache@v2
+        with:
+          path: go.mod
+          key: "cf-integration-${{ github.sha }}-test"
+      - name : upload zip to s3
+        uses: NotCoffee418/s3-zip-upload@v1.3
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: us-west-2
+          bucket: ${{ secrets.S3_INTEGRATION_BUCKET }}
+          object_key: ${{ env.CWA_GITHUB_REPO_NAME }}
+          SOURCE_MODE: ZIP
+          SOURCE_PATH: ccwa
+          DEST_FILE: cloudwatch-agent.zip
+          DEST_DIR: ccwa
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}<|end_context|>
