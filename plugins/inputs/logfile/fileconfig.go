@@ -180,7 +180,7 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 			timestampContent = fmt.Sprintf("%s%s%s", timestampContent[:start], replacement, timestampContent[end:])
 		}
 		timestamp, err := time.ParseInLocation(config.TimestampLayout[0], timestampContent, config.TimezoneLoc)
-		if err != nil && len(config.TimestampLayout) > 1{
+		if err != nil && len(config.TimestampLayout) > 1 {
 			timestamp, err = time.ParseInLocation(config.TimestampLayout[1], timestampContent, config.TimezoneLoc)
 		}
 		if err != nil {
