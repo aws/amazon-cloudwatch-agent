@@ -1,6 +1,7 @@
 name: chache build
 env:
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
+  S3_INTEGRATION_BUCKET: "terraform-integration-test"
 on:
   push:
     branches:
