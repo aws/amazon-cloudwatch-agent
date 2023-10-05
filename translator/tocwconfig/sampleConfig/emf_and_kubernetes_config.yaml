@@ -178,7 +178,6 @@ exporters:
           - apiserver_storage_size_bytes
           - apiserver_storage_db_total_size_in_bytes
           - etcd_db_total_size_in_bytes
-          - etcd_request_duration_seconds
       - dimensions: [ [ClusterName, resource], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
@@ -200,6 +199,7 @@ exporters:
         metric_name_selectors:
           - apiserver_admission_controller_admission_duration_seconds
           - apiserver_admission_step_admission_duration_seconds
+          - etcd_request_duration_seconds
       - dimensions: [ [ClusterName, code, method], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:

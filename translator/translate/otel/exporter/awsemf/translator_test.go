@@ -341,7 +341,7 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"apiserver_storage_size_bytes", "apiserver_storage_db_total_size_in_bytes", "etcd_db_total_size_in_bytes", "etcd_request_duration_seconds"},
+						MetricNameSelectors: []string{"apiserver_storage_size_bytes", "apiserver_storage_db_total_size_in_bytes", "etcd_db_total_size_in_bytes"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
@@ -357,7 +357,7 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "operation"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"apiserver_admission_controller_admission_duration_seconds", "apiserver_admission_step_admission_duration_seconds"},
+						MetricNameSelectors: []string{"apiserver_admission_controller_admission_duration_seconds", "apiserver_admission_step_admission_duration_seconds", "etcd_request_duration_seconds"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "code", "method"}, {"ClusterName"}},
