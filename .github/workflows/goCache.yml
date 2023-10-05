@@ -2,6 +2,9 @@ name: chache build
 env:
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
 on:
+  push:
+    branches:
+      - CWQS-739
   workflow_dispatch:
 jobs:
   cache:
