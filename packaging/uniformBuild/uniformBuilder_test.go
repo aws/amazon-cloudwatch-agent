@@ -29,7 +29,6 @@ func TestMain(m *testing.M) {
 }
 func TestAmiLatest(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-
 	imng := CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
 	// is it consistent
 	previous := *imng.GetLatestAMIVersion(accountID).ImageId
@@ -61,8 +60,8 @@ func TestS3Cache(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	rbm := RemoteBuildManager{}
 	rbm.s3Client = s3.NewFromConfig(cfg)
-	require.False(t, rbm.CheckS3("FileThatDoestExist"), "Should fail")
-	rbm.CheckS3("s3Check")
+	require.False(t, rbm.fileExistsInS3("FileThatDoestExist"), "Should fail")
+	require.True(t, rbm.fileExistsInS3("checkS3"))
 
 }
 func TestOnSpecificInstance(t *testing.T) {

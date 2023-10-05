@@ -112,11 +112,21 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
   BinaryBenchmarkTest:
     name: BinaryBenchmarkTest
-    runs-on: ubuntu-latest
-    needs: [MakeBinary]
+    needs: [ MakeBinary ]
     permissions:
       id-token: write
       contents: read
+    strategy:
+      matrix:
+        os: [ubuntu-latest,windows-latest,macos-latest]
+        include:
+          - os: ubuntu-latest
+            installationScript:  time sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+          - os: windows-latest
+            installationScript: Measure-Command { Start-Process msiexec "/i ./amazon-cloudwatch-agent.msi /norestart "  }
+          - os: macos-latest
+            installationScript:  time sudo installer -pkg  ./amazon-cloudwatch-agent.pkg -target /
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -126,10 +136,14 @@ jobs:
       - name: Download RPM
         run: |
           aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/linux/amd64/amazon-cloudwatch-agent.deb .
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg .
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi .
+
       - name: GetRPMSize
-        run: ls -lh
+        if: matrix.os == 'ubuntu-latest'
+        run:  ls -lh
       - name: Measure Installation Time
-        run : time sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+        run : ${{matrix.installationScript}}
 
   #  #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:

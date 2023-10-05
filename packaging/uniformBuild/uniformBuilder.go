@@ -97,9 +97,14 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 
 // Windows
 func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string) error {
-	//rbm.fileExistsInS3(fmt.)
-	//@TODO add cache
-	//@TODO add os check
+	err := rbm.instanceManager.insertOSRequirement(instanceName, LINUX)
+	if err != nil {
+		return err
+	}
+	if isAlreadyBuilt := rbm.fileExistsInS3(fmt.Sprintf("%s/buildMSI.zip", commitHash)); isAlreadyBuilt {
+		fmt.Println("\033Found cache skipping build")
+		return nil
+	}
 	command := mergeCommands(
 		CloneGitRepo(TEST_REPO, "main"),
 		"cd ccwa",
@@ -181,17 +186,14 @@ func initEnvCmd(os OS) string {
 // CACHE COMMANDS
 func (rbm *RemoteBuildManager) fileExistsInS3(targetFile string) bool {
 	fmt.Printf("Checking for %s cache \n", targetFile)
-	input := &s3.ListObjectsV2Input{
+	input := &s3.HeadObjectInput{
 		Bucket: aws.String(S3_INTEGRATION_BUCKET),
-		Prefix: aws.String(targetFile),
+		Key:    aws.String(targetFile),
 	}
-	_, err := rbm.s3Client.ListObjectsV2(context.Background(), input)
+	_, err := rbm.s3Client.HeadObject(context.TODO(), input)
 	if err != nil {
-		if err.Error() == "NotFound: Not Found" {
-			fmt.Printf("Object %s does not exist in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
-		} else {
-			fmt.Println(err)
-		}
+		fmt.Printf("Object %s does not exist in bucket %s\n", targetFile, S3_INTEGRATION_BUCKET)
+		fmt.Println(err)
 		return false
 	}
 	fmt.Printf("Object %s exists in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
@@ -200,7 +202,6 @@ func (rbm *RemoteBuildManager) fileExistsInS3(targetFile string) bool {
 }
 
 func main() {
-	//@TODO FIX CACHE
 	var repo string
 	var branch string
 	var comment string
@@ -246,7 +247,7 @@ func main() {
 		fmt.Printf("Failed because: %s \n", err)
 		return
 	}
-	fmt.Printf("\033[32mSuccesfully\033[0m built CWA from %s with %s branch, check \033[32m%s \033[0m bucket with \033[1;32m%s\033[0m hash",
+	fmt.Printf("\033[32mSuccesfully\033[0m built CWA from %s with %s branch, check \033[32m%s \033[0m bucket with \033[1;32m%s\033[0m hash\n",
 		repo, branch, S3_INTEGRATION_BUCKET, comment)
 
 }
