@@ -68,7 +68,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
           cache: false
 
       - name: Configure AWS Credentials
@@ -118,6 +118,15 @@ jobs:
       id-token: write
       contents: read
     steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.21.1
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -353,6 +362,125 @@ jobs:
 #          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
 #
 #  #GH actions set up gpg only works on ubuntu as of this commit date
+      - name: Upload zip
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
+        run: aws s3 cp buildMSI.zip s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip
+
+  MakeMacPkg:
+    name: 'MakeMacPkg'
+    runs-on: macos-11
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: cwa
+          fetch-depth: 0
+
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          path: test
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.21.1
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache binaries
+        id: cached_binaries
+        uses: actions/cache@v3
+        with:
+          key: "cached-binaries-${{ runner.os }}-${{ inputs.BucketKey }}"
+          path: go.mod
+
+      - name: Cache pkg
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/Library/Caches/go-build
+            ~/go/pkg/mod
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+      - name: Build Binaries
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        working-directory: cwa
+        run: make amazon-cloudwatch-agent-darwin package-darwin
+
+      - name: Copy binary
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        working-directory: cwa
+        run: |
+          echo cw agent version $(cat CWAGENT_VERSION)
+          cp -r build/bin/darwin/amd64/. /tmp/
+          cp -r build/bin/darwin/arm64/. /tmp/arm64/
+          cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION
+
+      - name: Create pkg dep folder and copy deps
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        working-directory: test
+        run: |
+          cp -r pkg/tools/. /tmp/
+          cp -r pkg/tools/. /tmp/arm64/
+
+      - name: Build And Upload PKG
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        working-directory: /tmp/
+        run : |
+          chmod +x create_pkg.sh
+          chmod +x arm64/create_pkg.sh
+          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} "nosha" amd64
+          cd arm64
+          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} "nosha" arm64
+
+  BuildMSI:
+    name: 'BuildMSI'
+    runs-on: windows-latest
+    needs: [MakeMSIZip]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache msi
+        id: cached_msi
+        uses: actions/cache@v3
+        with:
+          key: "cached_msi_${{ github.sha }}"
+          path: go.mod
+
+      # Using the env variable returns "" for bucket name thus use the secret
+      - name: Copy msi
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip .
+
+      - name: Create msi
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run : |
+          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
+          .\wix311.exe /install /quiet /norestart
+          $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.11\bin;"
+          $env:PATH = $env:PATH + $wixToolsetBinPath
+          Expand-Archive buildMSI.zip -Force
+          cd buildMSI/msi_dep
+          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
+
+  #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:
     name: 'SignMacAndWindowsPackage'
     runs-on: ubuntu-latest
