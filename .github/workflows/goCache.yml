@@ -52,7 +52,7 @@ jobs:
           aws-region: us-west-2
       - name: upload to s3
         run: |
-          aws s3 cp ./vendor . s3://${{ secrets.S3_INTEGRATION_BUCKET }}
+          aws s3 sync ./vendor . s3://${{ secrets.S3_INTEGRATION_BUCKET }}
 #      - name: Check if directory is empty
 #        id: check_empty_directory
 #        run: |
