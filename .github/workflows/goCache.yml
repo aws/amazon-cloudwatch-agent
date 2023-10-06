@@ -37,26 +37,26 @@ jobs:
         with:
           key: "cached_binaries_${{ github.sha }}"
           path: go.mod
-      - name: Git clone the repository
-        uses: actions/checkout@v4
-      - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: arn:aws:s3:::uniform-build-env-test
-          aws-region: ${{ env.AWS_REGION }}
-      # Upload a file to AWS s3
-      - name:  Copy vendor to s3
-        run: |
-          aws s3 cp ./vendor s3://${{ env.BUCKET_NAME }}/
-#      - name: Check if directory is empty
-#        id: check_empty_directory
+#      - name: Git clone the repository
+#        uses: actions/checkout@v4
+#      - name: configure aws credentials
+#        uses: aws-actions/configure-aws-credentials@v3
+#        with:
+#          role-to-assume: arn:aws:s3:::uniform-build-env-test
+#          aws-region: ${{ env.AWS_REGION }}
+#      # Upload a file to AWS s3
+#      - name:  Copy vendor to s3
 #        run: |
-#            if [ -z "$(aws s3 ls -A ${CACHE_DIR})" ]; then
-#              echo "Directory is empty"
-#              echo "::set-output name=is_empty::true"
-#            else
-#              echo "::set-output name=is_empty::false"
-#            fi
+#          aws s3 cp ./vendor s3://${{ env.BUCKET_NAME }}/
+      - name: Check if directory is empty
+        id: check_empty_directory
+        run: |
+            if [ -z "$(aws s3 ls ${CACHE_DIR})" ]; then
+              echo "Directory is empty"
+              echo "::set-output name=is_empty::true"
+            else
+              echo "::set-output name=is_empty::false"
+            fi
 #      - name: Build Uniform Build Env
 #        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
 #        run: |
