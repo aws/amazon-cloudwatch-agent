@@ -1,0 +1,19 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: APM Beta Pre-Release
+on:
+  push:
+    branches:
+      - main-apm
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "apm-beta-pre-release:latest"
+      BucketKey: "apm-beta-pre-release"
+      PackageBucketKey: "apm-beta-pre-release"

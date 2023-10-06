@@ -1,0 +1,20 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "apm": {
+        "rules": [
+          {
+            "selectors": [
+              {
+                "dimension": "dimension1",
+                "match": "match1"
+              }
+            ],
+            "action": "replace",
+            "rule_name": "replace01"
+          }
+        ]
+      }
+    }
+  }
+}

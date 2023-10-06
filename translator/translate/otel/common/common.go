@@ -13,6 +13,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -61,6 +62,19 @@ const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
 	PipelineNameEmfLogs          = "emf_logs"
+	APM                          = "apm"
+
+	APMRules = "rules"
+)
+
+var (
+	APMTraces  = ConfigKey(TracesKey, TracesCollectedKey, APM)
+	APMMetrics = ConfigKey(LogsKey, MetricsCollectedKey, APM)
+
+	APMConfigKeys = map[component.DataType]string{
+		component.DataTypeTraces:  APMTraces,
+		component.DataTypeMetrics: APMMetrics,
+	}
 )
 
 // Translator is used to translate the JSON config into an
@@ -305,4 +319,17 @@ func GetOrDefaultDuration(conf *confmap.Conf, keychain []string, defaultDuration
 		return duration
 	}
 	return defaultDuration
+}
+
+func GetYamlFileToYamlConfig(cfg interface{}, yamlFile string) (interface{}, error) {
+	var cfgMap map[string]interface{}
+	if err := yaml.Unmarshal([]byte(yamlFile), &cfgMap); err != nil {
+		return nil, fmt.Errorf("unable to read default config: %w", err)
+	}
+
+	conf := confmap.NewFromStringMap(cfgMap)
+	if err := conf.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal config: %w", err)
+	}
+	return cfg, nil
 }

@@ -74,3 +74,47 @@ func TestTracesTranslator(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateAPM(t *testing.T) {
+	tt := NewTranslatorWithName(common.APM, WithDataType(component.DataTypeTraces))
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		want    *confmap.Conf
+		wantErr error
+	}{
+		"WithAPMEnabledTraces": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"apm": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "0.0.0.0:4317",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "0.0.0.0:4318",
+					},
+				},
+			}),
+		},
+	}
+	factory := otlpreceiver.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*otlpreceiver.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
+			}
+		})
+	}
+}

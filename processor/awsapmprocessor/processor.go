@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/internal/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/customconfiguration"
 	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/internal/normalizer"
 	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/internal/resolver"
 )

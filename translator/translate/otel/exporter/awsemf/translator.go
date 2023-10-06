@@ -28,6 +28,9 @@ var defaultKubernetesConfig string
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
 
+//go:embed awsemf_default_apm.yaml
+var defaultAPMConfig string
+
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
 	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
@@ -65,6 +68,8 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultKubernetesConfig
 	} else if isPrometheus(c) {
 		defaultConfig = defaultPrometheusConfig
+	} else if isAPM(c) {
+		defaultConfig = defaultAPMConfig
 	} else {
 		return cfg, nil
 	}
@@ -102,6 +107,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func isAPM(conf *confmap.Conf) bool {
+	return conf.IsSet(common.APMMetrics)
 }
 
 func isEcs(conf *confmap.Conf) bool {

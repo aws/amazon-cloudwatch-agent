@@ -1,0 +1,6 @@
+detectors: [eks, env, ec2]
+override: false
+timeout: 2s
+ec2:
+  tags:
+    - ^kubernetes.io/cluster/.*$

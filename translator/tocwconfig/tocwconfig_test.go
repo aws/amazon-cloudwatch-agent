@@ -54,7 +54,26 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "base_container_insights_config", "darwin", nil, "")
+}
+
+func TestBaseAPMConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "base_apm_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_apm_config", "windows", expectedEnvVars, "")
+}
+
+func TestAPMAndKubernetesConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "apm_and_kubernetes_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "apm_and_kubernetes_config", "windows", expectedEnvVars, "")
 }
 
 func TestEmfAndKubernetesConfig(t *testing.T) {
@@ -65,7 +84,6 @@ func TestEmfAndKubernetesConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "emf_and_kubernetes_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "emf_and_kubernetes_config", "darwin", nil, "")
 }
 
 func TestKubernetesModeOnPremiseConfig(t *testing.T) {

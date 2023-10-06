@@ -4,7 +4,7 @@
 package awsapmprocessor
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/internal/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/customconfiguration"
 )
 
 type Config struct {

@@ -583,6 +583,65 @@ func TestTranslator(t *testing.T) {
 				"metric_descriptors": nilMetricDescriptorsSlice,
 			},
 		},
+		"WithAPMEnabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"apm": map[string]interface{}{},
+					},
+				}},
+			want: map[string]interface{}{
+				"namespace":                              "AWS/APM",
+				"log_group_name":                         "/aws/apm/eks",
+				"log_stream_name":                        "",
+				"dimension_rollup_option":                "NoDimensionRollup",
+				"disable_metric_extraction":              false,
+				"enhanced_container_insights":            false,
+				"parse_json_encoded_attr_values":         nilSlice,
+				"output_destination":                     "cloudwatch",
+				"eks_fargate_container_insights_enabled": false,
+				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
+					Enabled: false,
+				},
+				"metric_declarations": []*awsemfexporter.MetricDeclaration{
+					{
+						Dimensions: [][]string{
+							{"EKS.Cluster", "K8s.Namespace", "Service", "Operation"},
+							{"EKS.Cluster", "K8s.Namespace", "Service"},
+						},
+						LabelMatchers: []*awsemfexporter.LabelMatcher{
+							{
+								LabelNames: []string{"aws.span.kind"},
+								Regex:      "^(SERVER|CONSUMER|LOCAL_ROOT)$",
+							},
+						},
+						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
+					},
+					{
+						Dimensions: [][]string{
+							{"EKS.Cluster", "K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace", "RemoteTarget"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "RemoteTarget"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "RemoteService", "K8s.RemoteNamespace"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "RemoteService"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace", "RemoteTarget"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "RemoteTarget"},
+							{"EKS.Cluster", "K8s.Namespace", "Service", "RemoteService", "RemoteOperation"},
+						},
+						LabelMatchers: []*awsemfexporter.LabelMatcher{
+							{
+								LabelNames: []string{"aws.span.kind"},
+								Regex:      "^(CLIENT|PRODUCER)$",
+							},
+						},
+						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
+					},
+				},
+				"metric_descriptors": nilMetricDescriptorsSlice,
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

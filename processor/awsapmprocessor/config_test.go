@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/internal/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/customconfiguration"
 )
 
 func TestLoadConfig(t *testing.T) {

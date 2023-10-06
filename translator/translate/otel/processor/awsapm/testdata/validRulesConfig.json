@@ -1,0 +1,63 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "apm": {
+        "rules": [
+          {
+            "selectors": [
+              {
+                "dimension": "Operation",
+                "match": "POST *"
+              },
+              {
+                "dimension": "RemoteService",
+                "match": "*"
+              }
+            ],
+            "action": "keep"
+          },
+          {
+            "selectors": [
+              {
+                "dimension": "Operation",
+                "match": "GET *"
+              },
+              {
+                "dimension": "RemoteService",
+                "match": "*"
+              }
+            ],
+            "action": "keep",
+            "rule_name": "keep02"
+          },
+          {
+            "selectors": [
+              {
+                "dimension": "Operation",
+                "match": "POST *"
+              }
+            ],
+            "action": "drop",
+            "rule_name": "drop01"
+          },
+          {
+            "selectors": [
+              {
+                "dimension": "Operation",
+                "match": "*"
+              }
+            ],
+            "replacements": [
+              {
+                "target_dimension": "RemoteOperation",
+                "value": "This is a test string"
+              }
+            ],
+            "action": "replace",
+            "rule_name": "replace01"
+          }
+        ]
+      }
+    }
+  }
+}
