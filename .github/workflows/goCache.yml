@@ -40,7 +40,7 @@ jobs:
       - name: Check if directory is empty
         id: check_empty_directory
         run: |
-            if [ -z "$(ls -A ${CACHE_DIR})" ]; then
+            if [ -z "$(aws s3 ls -A ${CACHE_DIR})" ]; then
               echo "Directory is empty"
               echo "::set-output name=is_empty::true"
             else
