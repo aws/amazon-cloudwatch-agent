@@ -365,7 +365,7 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "request_kind"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"apiserver_current_inflight_requests"},
+						MetricNameSelectors: []string{"apiserver_current_inflight_requests", "apiserver_current_inqueue_requests"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "name"}, {"ClusterName"}},

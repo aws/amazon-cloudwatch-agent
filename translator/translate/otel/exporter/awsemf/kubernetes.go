@@ -315,6 +315,7 @@ func getControlPlaneMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Met
 				Dimensions: [][]string{{"ClusterName", "request_kind"}, {"ClusterName"}},
 				MetricNameSelectors: []string{
 					"apiserver_current_inflight_requests",
+					"apiserver_current_inqueue_requests",
 				},
 			},
 			{
