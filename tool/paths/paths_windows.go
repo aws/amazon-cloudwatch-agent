@@ -31,8 +31,8 @@ func init() {
 		programData = filepath.Join(os.Getenv("ALLUSERSPROFILE"), "Application Data")
 	}
 
-	AgentRootDir := programFiles + AgentDir
-	AgentConfigDir := programData + AgentDir
+	AgentRootDir := filepath.Join(programFiles, AgentDir)
+	AgentConfigDir := filepath.Join(programData, AgentDir)
 	JsonConfigPath = filepath.Join(AgentConfigDir, JSON)
 	JsonDirPath = filepath.Join(AgentConfigDir, JsonDir)
 	EnvConfigPath = filepath.Join(AgentConfigDir, ENV)
