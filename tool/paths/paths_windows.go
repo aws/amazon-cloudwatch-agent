@@ -6,7 +6,10 @@
 
 package paths
 
-import "os"
+import (
+	"os"
+	"path/filepath"
+)
 
 const (
 	AgentDir             = "\\Amazon\\AmazonCloudWatchAgent\\"
@@ -25,19 +28,18 @@ func init() {
 		programData = os.Getenv("ProgramData")
 	} else {
 		// Windows 2003
-		programData = os.Getenv("ALLUSERSPROFILE") + "\\Application Data"
+		programData = filepath.Join(os.Getenv("ALLUSERSPROFILE"), "Application Data")
 	}
 
 	AgentRootDir := programFiles + AgentDir
 	AgentConfigDir := programData + AgentDir
-
-	JsonConfigPath = AgentConfigDir + "\\" + JSON
-	JsonDirPath = AgentConfigDir + JsonDir
-	EnvConfigPath = AgentConfigDir + "\\" + ENV
-	TomlConfigPath = AgentConfigDir + "\\" + TOML
-	YamlConfigPath = AgentConfigDir + "\\" + YAML
-	CommonConfigPath = AgentConfigDir + "\\" + COMMON_CONFIG
-	AgentLogFilePath = AgentConfigDir + "\\Logs\\" + AGENT_LOG_FILE
-	TranslatorBinaryPath = AgentRootDir + "\\" + TranslatorBinaryName
-	AgentBinaryPath = AgentRootDir + "\\" + AgentBinaryName
+	JsonConfigPath = filepath.Join(AgentConfigDir, JSON)
+	JsonDirPath = filepath.Join(AgentConfigDir, JsonDir)
+	EnvConfigPath = filepath.Join(AgentConfigDir, ENV)
+	TomlConfigPath = filepath.Join(AgentConfigDir, TOML)
+	YamlConfigPath = filepath.Join(AgentConfigDir, YAML)
+	CommonConfigPath = filepath.Join(AgentConfigDir, COMMON_CONFIG)
+	AgentLogFilePath = filepath.Join(AgentConfigDir, AGENT_LOG_FILE)
+	TranslatorBinaryPath = filepath.Join(AgentRootDir, TranslatorBinaryName)
+	AgentBinaryPath = filepath.Join(AgentRootDir, AgentBinaryName)
 }

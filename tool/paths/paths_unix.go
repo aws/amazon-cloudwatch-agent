@@ -6,6 +6,8 @@
 
 package paths
 
+import "path/filepath"
+
 const (
 	AgentDir             = "/opt/aws/amazon-cloudwatch-agent"
 	BinaryDir            = "bin"
@@ -17,15 +19,13 @@ const (
 )
 
 func init() {
-	JsonConfigPath = AgentDir + "/etc/" + JSON
-	JsonDirPath = AgentDir + "/etc/" + JsonDir
-	EnvConfigPath = AgentDir + "/etc/" + ENV
-	TomlConfigPath = AgentDir + "/etc/" + TOML
-	CommonConfigPath = AgentDir + "/etc/" + COMMON_CONFIG
-	YamlConfigPath = AgentDir + "/etc/" + YAML
-
-	AgentLogFilePath = AgentDir + "/logs/" + AGENT_LOG_FILE
-
-	TranslatorBinaryPath = AgentDir + "/bin/" + TranslatorBinaryName
-	AgentBinaryPath = AgentDir + "/bin/" + AgentBinaryName
+	JsonConfigPath = filepath.Join(AgentDir, "etc", JSON)
+	JsonDirPath = filepath.Join(AgentDir, "etc", JsonDir)
+	EnvConfigPath = filepath.Join(AgentDir, "etc", ENV)
+	TomlConfigPath = filepath.Join(AgentDir, "etc", TOML)
+	CommonConfigPath = filepath.Join(AgentDir, "etc", COMMON_CONFIG)
+	YamlConfigPath = filepath.Join(AgentDir, "etc", YAML)
+	AgentLogFilePath = filepath.Join(AgentDir, "logs", AGENT_LOG_FILE)
+	TranslatorBinaryPath = filepath.Join(AgentDir, "bin", TranslatorBinaryName)
+	AgentBinaryPath = filepath.Join(AgentDir, "bin", AgentBinaryName)
 }

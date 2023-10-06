@@ -27,7 +27,6 @@ func startAgent(writer io.WriteCloser) error {
 			paths.AgentBinaryPath, // when using syscall.Exec, must pass binary name as args[0]
 			"-config", paths.TomlConfigPath,
 			"-envconfig", paths.EnvConfigPath,
-			"-otelconfig", paths.YamlConfigPath,
 			"-pidfile", paths.AgentDir + "/var/amazon-cloudwatch-agent.pid",
 		}
 		if err := syscall.Exec(paths.AgentBinaryPath, execArgs, os.Environ()); err != nil {
@@ -65,7 +64,6 @@ func startAgent(writer io.WriteCloser) error {
 		paths.AgentBinaryPath,
 		"-config", paths.TomlConfigPath,
 		"-envconfig", paths.EnvConfigPath,
-		"-otelconfig", paths.YamlConfigPath,
 		"-pidfile", paths.AgentDir + "/var/amazon-cloudwatch-agent.pid",
 	}
 	if err = syscall.Exec(name, agentCmd, os.Environ()); err != nil {
