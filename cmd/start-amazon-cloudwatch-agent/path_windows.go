@@ -25,6 +25,7 @@ func startAgent(writer io.WriteCloser) error {
 		paths.AgentBinaryPath,
 		"-config", paths.TomlConfigPath,
 		"-envconfig", paths.EnvConfigPath,
+		"-otelconfig", paths.YamlConfigPath,
 	)
 	stdoutStderr, err := cmd.CombinedOutput()
 	// log file is closed, so use fmt here
