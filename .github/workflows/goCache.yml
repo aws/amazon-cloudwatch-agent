@@ -52,7 +52,7 @@ jobs:
           aws-region: us-west-2
       - name: list of files in s3
         run: |
-          if s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip; then
+          if "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             echo "true"
           else  
             echo "false"
