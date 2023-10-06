@@ -40,3 +40,10 @@ jobs:
         run: |
           cd packaging/uniformBuild
           go build .
+      - name: Download RPM
+        run: |
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/linux/amd64/amazon-cloudwatch-agent.rpm .
+      - name: GetRPMSize
+        run: ls -lh
+      - name: Measure Installation Time
+        run : time -v rpm -i -y amazon-cloudwatch-agent.rpm
