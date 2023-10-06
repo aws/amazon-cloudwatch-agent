@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 /*
@@ -138,13 +139,17 @@ func checkAndReplace(input string, timestampFormatMap map[string]string) string 
 type TimestampRegax struct {
 }
 
+// ApplyRule add timestamp regex
+// do not add timestamp check when viewing cwa logfile
 func (t *TimestampRegax) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	//Convert the input string into []rune and iterate the map and build the output []rune
 	m := input.(map[string]interface{})
 	//If user not specify the timestamp_format, then no config entry for "timestamp_layout" in TOML
 	if val, ok := m["timestamp_format"]; !ok {
-		returnKey = ""
-		returnVal = ""
+		return "", ""
+	} else if m["file_path"] == context.CurrentContext().GetAgentLogFile() {
+		fmt.Printf("timestamp_format set file_path : %s is the same as agent log file %s thus do not use timestamp_regex \n", m["file_path"], context.CurrentContext().GetAgentLogFile())
+		return "", ""
 	} else {
 		//If user provide with the specific timestamp_format, use the one that user provide
 		res := checkAndReplace(val.(string), TimeFormatRegexEscapeMap)
@@ -170,13 +175,17 @@ func (t *TimestampRegax) ApplyRule(input interface{}) (returnKey string, returnV
 type TimestampLayout struct {
 }
 
+// ApplyRule add timestamp layout
+// do not add timestamp check when viewing cwa logfile
 func (t *TimestampLayout) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	//Convert the input string into []rune and iterate the map and build the output []rune
 	m := input.(map[string]interface{})
 	//If user not specify the timestamp_format, then no config entry for "timestamp_layout" in TOML
 	if val, ok := m["timestamp_format"]; !ok {
-		returnKey = ""
-		returnVal = ""
+		return "", ""
+	} else if m["file_path"] == context.CurrentContext().GetAgentLogFile() {
+		fmt.Printf("timestamp_format set file_path : %s is the same as agent log file %s thus do not use timestamp_layout \n", m["file_path"], context.CurrentContext().GetAgentLogFile())
+		return "", ""
 	} else {
 		res := checkAndReplace(val.(string), TimeFormatMap)
 		//If user provide with the specific timestamp_format, use the one that user provide

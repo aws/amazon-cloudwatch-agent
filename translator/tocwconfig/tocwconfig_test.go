@@ -47,6 +47,13 @@ const (
 //go:embed sampleConfig/prometheus_config.yaml
 var prometheusConfig string
 
+type testCase struct {
+	filename        string
+	targetPlatform  string
+	expectedEnvVars map[string]string
+	appendString    string
+}
+
 func TestBaseContainerInsightsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -101,11 +108,32 @@ func TestWindowsEventOnlyConfig(t *testing.T) {
 }
 
 func TestStatsDConfig(t *testing.T) {
-	resetContext(t)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "statsd_config", "linux", expectedEnvVars, "_linux")
-	checkTranslation(t, "statsd_config", "windows", expectedEnvVars, "_windows")
-	checkTranslation(t, "statsd_config", "darwin", nil, "_linux")
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "statsd_config",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "_linux",
+		},
+		"windows": {
+			filename:        "statsd_config",
+			targetPlatform:  "windows",
+			expectedEnvVars: map[string]string{},
+			appendString:    "_windows",
+		},
+		"darwin": {
+			filename:        "statsd_config",
+			targetPlatform:  "darwin",
+			expectedEnvVars: nil,
+			appendString:    "_linux",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
 }
 
 // Linux only for CollectD
@@ -141,11 +169,32 @@ func TestPrometheusConfig(t *testing.T) {
 }
 
 func TestBasicConfig(t *testing.T) {
-	resetContext(t)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "basic_config_linux", "linux", expectedEnvVars, "")
-	checkTranslation(t, "basic_config_linux", "darwin", nil, "")
-	checkTranslation(t, "basic_config_windows", "windows", expectedEnvVars, "")
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "basic_config_linux",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"darwin": {
+			filename:        "basic_config_linux",
+			targetPlatform:  "darwin",
+			expectedEnvVars: nil,
+			appendString:    "",
+		},
+		"windows": {
+			filename:        "basic_config_windows",
+			targetPlatform:  "windows",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
 }
 
 func TestInvalidInputConfig(t *testing.T) {
@@ -157,20 +206,62 @@ func TestInvalidInputConfig(t *testing.T) {
 func TestStandardConfig(t *testing.T) {
 	// the way our config translator works is int(0) leaves an empty in the yaml
 	// this will default to 0 on contrib side since int default is 0 for golang
-	resetContext(t)
-	t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "standard_config_linux", "linux", expectedEnvVars, "")
-	checkTranslation(t, "standard_config_linux", "darwin", nil, "")
-	checkTranslation(t, "standard_config_windows", "windows", nil, "")
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "standard_config_linux",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"darwin": {
+			filename:        "standard_config_linux",
+			targetPlatform:  "darwin",
+			expectedEnvVars: nil,
+			appendString:    "",
+		},
+		"windows": {
+			filename:        "standard_config_windows",
+			targetPlatform:  "windows",
+			expectedEnvVars: nil,
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
 }
 
 func TestAdvancedConfig(t *testing.T) {
-	resetContext(t)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "advanced_config_linux", "linux", expectedEnvVars, "")
-	checkTranslation(t, "advanced_config_darwin", "darwin", nil, "")
-	checkTranslation(t, "advanced_config_windows", "windows", expectedEnvVars, "")
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "advanced_config_linux",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"darwin": {
+			filename:        "advanced_config_darwin",
+			targetPlatform:  "darwin",
+			expectedEnvVars: nil,
+			appendString:    "",
+		},
+		"windows": {
+			filename:        "advanced_config_windows",
+			targetPlatform:  "windows",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
 }
 
 func TestLogOnlyConfig(t *testing.T) {
@@ -179,13 +270,105 @@ func TestLogOnlyConfig(t *testing.T) {
 	checkTranslation(t, "log_only_config_windows", "windows", expectedEnvVars, "")
 }
 
-func TestTraceConfig(t *testing.T) {
+func TestSkipLogTimestampConfig(t *testing.T) {
+	testCases := map[string]testCase{
+		"default_linux": {
+			filename:        "skip_log_timestamp_default",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"default_darwin": {
+			filename:        "skip_log_timestamp_default",
+			targetPlatform:  "darwin",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"default_windows": {
+			filename:        "skip_log_timestamp_default_windows",
+			targetPlatform:  "windows",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"set_linux": {
+			filename:        "skip_log_timestamp",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"set_darwin": {
+			filename:        "skip_log_timestamp",
+			targetPlatform:  "darwin",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"set_windows": {
+			filename:        "skip_log_timestamp_windows",
+			targetPlatform:  "windows",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"no_skip_linux": {
+			filename:        "no_skip_log_timestamp",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"no_skip_darwin": {
+			filename:        "no_skip_log_timestamp",
+			targetPlatform:  "darwin",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+		"no_skip_windows": {
+			filename:        "no_skip_log_timestamp_windows",
+			targetPlatform:  "windows",
+			expectedEnvVars: map[string]string{},
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
+}
+
+func TestDoNotSkipLogDefaultTimestampConfig(t *testing.T) {
 	resetContext(t)
-	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "trace_config", "linux", expectedEnvVars, "_linux")
-	checkTranslation(t, "trace_config", "darwin", expectedEnvVars, "_linux")
-	checkTranslation(t, "trace_config", "windows", expectedEnvVars, "_windows")
+	checkTranslation(t, "log_only_config_windows", "windows", expectedEnvVars, "")
+}
+
+func TestTraceConfig(t *testing.T) {
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "trace_config",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "_linux",
+		},
+		"darwin": {
+			filename:        "trace_config",
+			targetPlatform:  "darwin",
+			expectedEnvVars: map[string]string{},
+			appendString:    "_linux",
+		},
+		"windows": {
+			filename:        "trace_config",
+			targetPlatform:  "windows",
+			expectedEnvVars: map[string]string{},
+			appendString:    "_windows",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
 }
 
 func TestConfigWithEnvironmentVariables(t *testing.T) {
@@ -195,17 +378,43 @@ func TestConfigWithEnvironmentVariables(t *testing.T) {
 }
 
 func TestStandardConfigWithCommonConfig(t *testing.T) {
-	resetContext(t)
-	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentialsProxySsl.toml")
-	expectedEnvVars := map[string]string{
-		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
-		"HTTPS_PROXY":   "https://127.0.0.1:3280",
-		"HTTP_PROXY":    "http://127.0.0.1:3280",
-		"NO_PROXY":      "254.1.1.1",
+	testCases := map[string]testCase{
+		"linux": {
+			filename:       "standard_config_linux",
+			targetPlatform: "linux",
+			expectedEnvVars: map[string]string{
+				"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
+				"HTTPS_PROXY":   "https://127.0.0.1:3280",
+				"HTTP_PROXY":    "http://127.0.0.1:3280",
+				"NO_PROXY":      "254.1.1.1",
+			},
+			appendString: "_with_common_config",
+		},
+		"darwin": {
+			filename:        "standard_config_linux",
+			targetPlatform:  "darwin",
+			expectedEnvVars: nil,
+			appendString:    "_with_common_config",
+		},
+		"windows": {
+			filename:       "standard_config_windows",
+			targetPlatform: "windows",
+			expectedEnvVars: map[string]string{
+				"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
+				"HTTPS_PROXY":   "https://127.0.0.1:3280",
+				"HTTP_PROXY":    "http://127.0.0.1:3280",
+				"NO_PROXY":      "254.1.1.1",
+			},
+			appendString: "_with_common_config",
+		},
 	}
-	checkTranslation(t, "standard_config_linux", "linux", expectedEnvVars, "_with_common_config")
-	checkTranslation(t, "standard_config_linux", "darwin", nil, "_with_common_config")
-	checkTranslation(t, "standard_config_windows", "windows", expectedEnvVars, "_with_common_config")
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			readCommonConfig(t, "./sampleConfig/commonConfig/withCredentialsProxySsl.toml")
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
 }
 
 func TestDeltaNetConfigLinux(t *testing.T) {
