@@ -435,8 +435,7 @@ func main() {
 			parts := strings.Split(pprofHostPort, ":")
 			if len(parts) == 2 && parts[0] == "" {
 				pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
-			}
-			if !strings.Contains(pprofHostPort, "localhost") {
+			} else if parts[0] != "localhost" {
 				log.Printf("W! Not starting pprof, it is restricted to localhost:nnnn")
 				return
 			}
@@ -517,7 +516,10 @@ func main() {
 					log.Fatalf("E! Failed to unmarshal env config: %v", err)
 				}
 				envVars[parts[0]] = parts[1]
-				bytes, _ = json.MarshalIndent(envVars, "", "\t")
+				bytes, err = json.MarshalIndent(envVars, "", "\t")
+				if err != nil {
+					log.Fatalf("E! Failed to marshal env config: %v", err)
+				}
 				if err = os.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
