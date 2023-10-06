@@ -52,7 +52,7 @@ jobs:
           aws-region: us-west-2
       - name: upload to s3
         run: |
-          aws s3 sync "./vendor" "s3://cloudwatch-agent-integration-bucket/bhanu/"
+          aws s3 sync "/Users/bhanuba/wsl1/uniform-build-repo-branch/amazon-cloudwatch-agent/go.mod" "s3://cloudwatch-agent-integration-bucket/bhanu/"
 #      - name: Check if directory is empty
 #        id: check_empty_directory
 #        run: |
