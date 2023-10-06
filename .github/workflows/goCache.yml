@@ -2,7 +2,8 @@ name: chache build
 env:
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
   S3_INTEGRATION_BUCKET: "terraform-integration-test"
-  CACHE_DIR: "uniform-build-env-test/cache_build_env"
+#  CACHE_DIR: "uniform-build-env-test/cache_build_env"
+  CACHE_DIR: "https://uniform-build-env-test.s3.us-west-2.amazonaws.com/cache_build_env/"
 
 on:
   push:
