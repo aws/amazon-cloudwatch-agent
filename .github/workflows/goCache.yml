@@ -35,6 +35,16 @@ jobs:
         with:
           key: "cached_binaries_${{ github.sha }}"
           path: go.mod
+
+      - name: Check if directory is empty
+        id: check_empty_directory
+        run: |
+            if [ -z "$(ls -A CACHE_DIR)" ]; then
+              echo "Directory is empty"
+              echo "::set-output name=is_empty::true"
+            else
+              echo "::set-output name=is_empty::false"
+            fi
       - name: Build Uniform Build Env
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
