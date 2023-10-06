@@ -3,7 +3,8 @@ env:
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
   S3_INTEGRATION_BUCKET: "terraform-integration-test"
 #  CACHE_DIR: "uniform-build-env-test/cache_build_env"
-  CACHE_DIR: "https://uniform-build-env-test.s3.us-west-2.amazonaws.com/cache_build_env/"
+#  CACHE_DIR: "https://uniform-build-env-test.s3.us-west-2.amazonaws.com/cache_build_env/"
+  CACHE_DIR: "uniform-build-env-test"
 
 on:
   push:
@@ -36,16 +37,26 @@ jobs:
         with:
           key: "cached_binaries_${{ github.sha }}"
           path: go.mod
-
-      - name: Check if directory is empty
-        id: check_empty_directory
+      - name: Git clone the repository
+        uses: actions/checkout@v4
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:s3:::uniform-build-env-test
+          aws-region: ${{ env.AWS_REGION }}
+      # Upload a file to AWS s3
+      - name:  Copy vendor to s3
         run: |
-            if [ -z "$(aws s3 ls -A ${CACHE_DIR})" ]; then
-              echo "Directory is empty"
-              echo "::set-output name=is_empty::true"
-            else
-              echo "::set-output name=is_empty::false"
-            fi
+          aws s3 cp ./vendor s3://${{ env.BUCKET_NAME }}/
+#      - name: Check if directory is empty
+#        id: check_empty_directory
+#        run: |
+#            if [ -z "$(aws s3 ls -A ${CACHE_DIR})" ]; then
+#              echo "Directory is empty"
+#              echo "::set-output name=is_empty::true"
+#            else
+#              echo "::set-output name=is_empty::false"
+#            fi
 #      - name: Build Uniform Build Env
 #        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
 #        run: |
