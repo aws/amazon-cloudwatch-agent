@@ -3,12 +3,12 @@ env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
-#  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
   CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
-  S3_INTEGRATION_BUCKET: "terraform-integration-test"
+#  S3_INTEGRATION_BUCKET: "terraform-integration-test"
 #  CACHE_DIR: "uniform-build-env-test/cache_build_env"
   CACHE_DIR: "s3://cloudwatch-agent-integration-bucket/cloudwatch-agent-integration-bucket/logs/"
 #  CACHE_DIR: "uniform-build-env-test"
