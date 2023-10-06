@@ -7,13 +7,13 @@
 package paths
 
 const (
-	AgentDir = "/opt/aws/amazon-cloudwatch-agent"
-	BinaryDir = "bin"
-	JsonDir = "amazon-cloudwatch-agent.d"
+	AgentDir             = "/opt/aws/amazon-cloudwatch-agent"
+	BinaryDir            = "bin"
+	JsonDir              = "amazon-cloudwatch-agent.d"
 	TranslatorBinaryName = "config-translator"
-	AgentBinaryName = "amazon-cloudwatch-agent"
-	WizardBinaryName = "amazon-cloudwatch-agent-config-wizard"
-	AgentStartName = "amazon-cloudwatch-agent-ctl"
+	AgentBinaryName      = "amazon-cloudwatch-agent"
+	WizardBinaryName     = "amazon-cloudwatch-agent-config-wizard"
+	AgentStartName       = "amazon-cloudwatch-agent-ctl"
 )
 
 func init() {

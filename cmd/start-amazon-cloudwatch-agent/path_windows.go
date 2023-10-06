@@ -11,6 +11,8 @@ import (
 	"io"
 	"log"
 	"os/exec"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 func startAgent(writer io.WriteCloser) error {
@@ -20,10 +22,9 @@ func startAgent(writer io.WriteCloser) error {
 	}
 
 	cmd := exec.Command(
-		agentBinaryPath,
-		"-config", tomlConfigPath,
-		"-envconfig", envConfigPath,
-		"-otelconfig", yamlConfigPath,
+		paths.AgentBinaryPath,
+		"-config", paths.TomlConfigPath,
+		"-envconfig", paths.EnvConfigPath,
 	)
 	stdoutStderr, err := cmd.CombinedOutput()
 	// log file is closed, so use fmt here
