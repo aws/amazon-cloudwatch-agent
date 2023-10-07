@@ -7,7 +7,7 @@ env:
   KEY_NAME: ${{ secrets.KEY_NAME }}
   CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
   CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
-  CACHE_EXIST: FALSE
+  CACHE_EXIST: "false"
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
 #  S3_INTEGRATION_BUCKET: "terraform-integration-test"
 #  CACHE_DIR: "uniform-build-env-test/cache_build_env"
@@ -55,7 +55,7 @@ jobs:
         run: |
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             echo "true"
-            CACHE_EXIST = TRUE
+            CACHE_EXIST = "true"
           fi
       - name: find cache exist or not
         run: |
