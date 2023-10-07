@@ -58,6 +58,11 @@ jobs:
             md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
             echo $md5_variable
             echo $GOPATH
+          else
+            go mod vendor
+            zip -r vendor.zip vendor
+            aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+          fi
 #            unzip -q -d vedor vendor.zip
 #            go mod vendor
 #            echo "*******************vendor directory"
@@ -71,11 +76,7 @@ jobs:
 #            echo $md5_variable_vendor
 #            pwd
 #            ls -lirt vendor
-          else
-            go mod vendor
-            zip -r vendor.zip vendor
-            aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
-          fi
+
 #          aws s3 ls "s3://cloudwatch-agent-integration-bucket/integration-test/"
 #      - name: Check if directory is empty
 #        id: check_empty_directory
