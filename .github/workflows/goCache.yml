@@ -53,17 +53,23 @@ jobs:
           aws-region: us-west-2
       - name: list of files in s3
         run: |
+          cd packaging/uniformBuild
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
             echo $md5_variable
+            unzip -q -d vedor vendor.zip
+            pwd
+            ls -lirt
           else
             go mod vendor
             zip -r vendor.zip vendor
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
           fi
       - name: build go mod
-        run: go build ./cmd/amazon-cloudwatch-agent/amazon-cloudwatch-agent.go
+        run: |
+          cd packaging/uniformBuild
+          go build .
 #            unzip -q -d vedor vendor.zip
 #            go mod vendor
 #            echo "*******************vendor directory"
