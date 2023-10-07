@@ -51,14 +51,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
       - name: list of files in s3
-        run: |
-          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
-            echo "true"
-            echo "::set-output name=is_empty::true"
-          else  
-            echo "false"
-            echo "::set-output name=is_empty::false"
-          fi
+        file_check:
+          file_path: "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+
+#        run: |
+#          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
+#            echo "true"
+#          else
+#            echo "false"
+#          fi
 
 #          aws s3 ls "s3://cloudwatch-agent-integration-bucket/integration-test/"
 #      - name: Check if directory is empty
