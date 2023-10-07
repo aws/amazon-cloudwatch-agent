@@ -54,11 +54,12 @@ jobs:
         run: |
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             echo "true"
-            cat s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip
+            echo "::set-output name=is_empty::true"
           else  
             echo "false"
+            echo "::set-output name=is_empty::false"
           fi
-      -
+
 #          aws s3 ls "s3://cloudwatch-agent-integration-bucket/integration-test/"
 #      - name: Check if directory is empty
 #        id: check_empty_directory
