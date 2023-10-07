@@ -60,12 +60,15 @@ jobs:
             unzip vendor.zip
             rm -f vendor.zip
             go mod vendor
-            zip vendor 
             zip -r vendor.zip vendor
             md5_variable_vendor=$(md5sum "./vendor.zip" | awk '{print $1}')
             echo $md5_variable_vendor
             pwd 
             ls -lirt vendor
+          else
+            go mod vendor
+            zip -r vendor.zip vendor
+            aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
           fi
 #          aws s3 ls "s3://cloudwatch-agent-integration-bucket/integration-test/"
 #      - name: Check if directory is empty
