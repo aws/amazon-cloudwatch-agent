@@ -55,7 +55,7 @@ jobs:
         run: |
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
-            unzip vendor.zip -d vendor
+            unzip vendor.zip
             pwd 
             ls -lirt vendor
           fi
