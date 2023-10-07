@@ -59,7 +59,7 @@ jobs:
           fi
       - name: find cache exist or not
         run: |
-          echo $CACHE_EXIST
+          echo "Cache exist or not: ${{ steps.set-matrix.outputs.CACHE_EXIST }}"
 #          aws s3 ls "s3://cloudwatch-agent-integration-bucket/integration-test/"
 #      - name: Check if directory is empty
 #        id: check_empty_directory
