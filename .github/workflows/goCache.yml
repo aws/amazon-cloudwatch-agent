@@ -58,8 +58,12 @@ jobs:
             md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
             echo $md5_variable
             unzip vendor.zip
+            echo "*******************vendor directory"
+            ls -lirt
             rm -f vendor.zip
             go mod vendor
+            echo "*******************vendor directory"
+            ls -lirt
             zip -r vendor.zip vendor
             md5_variable_vendor=$(md5sum "./vendor.zip" | awk '{print $1}')
             echo $md5_variable_vendor
