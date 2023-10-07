@@ -57,18 +57,19 @@ jobs:
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
             echo $md5_variable
-            unzip vendor.zip
-            echo "*******************vendor directory"
-            ls -lirt
-            rm -f vendor.zip
+            unzip -q -d vedor vendor.zip 
             go mod vendor
-            echo "*******************vendor directory"
-            ls -lirt
-            zip -r vendor.zip vendor
-            md5_variable_vendor=$(md5sum "./vendor.zip" | awk '{print $1}')
-            echo $md5_variable_vendor
-            pwd 
-            ls -lirt vendor
+#            echo "*******************vendor directory"
+#            ls -lirt
+#            rm -f vendor.zip
+#            go mod vendor
+#            echo "*******************vendor directory"
+#            ls -lirt
+#            zip -r vendor.zip vendor
+#            md5_variable_vendor=$(md5sum "./vendor.zip" | awk '{print $1}')
+#            echo $md5_variable_vendor
+#            pwd
+#            ls -lirt vendor
           else
             go mod vendor
             zip -r vendor.zip vendor
