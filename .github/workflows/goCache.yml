@@ -51,16 +51,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
       - name: list of files in s3
-        file_check:
-          file_path: "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
-
-#        run: |
-#          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
-#            echo "true"
-#          else
-#            echo "false"
-#          fi
-
+        run: |
+          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
+            echo "true"
+            ${CACHE_EXIST} = "TRUE"
+          else
+            echo "false"
+            ${CACHE_EXIST} = "FALSE"
+          fi
+      - name: find cache exist or not
+        run: |
+          if $CACHE_EXIST; then
+            echo "true"
+          else
+            echo "false"
+          fi
 #          aws s3 ls "s3://cloudwatch-agent-integration-bucket/integration-test/"
 #      - name: Check if directory is empty
 #        id: check_empty_directory
