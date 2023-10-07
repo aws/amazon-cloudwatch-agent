@@ -54,12 +54,9 @@ jobs:
       - name: list of files in s3
         run: |
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
-            echo "true"
-            echo "::set-output name=CACHE_EXIST::"true""
+            aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
+            unzip vendor.zip -d vendorUnzip
           fi
-      - name: find cache exist or not
-        run: |
-          echo "Cache exist or not: $CACHE_EXIST"
 #          aws s3 ls "s3://cloudwatch-agent-integration-bucket/integration-test/"
 #      - name: Check if directory is empty
 #        id: check_empty_directory
