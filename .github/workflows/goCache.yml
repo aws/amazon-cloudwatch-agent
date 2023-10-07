@@ -55,7 +55,7 @@ jobs:
         run: |
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             echo "true"
-            CACHE_EXIST = "TRUE"
+            CACHE_EXIST = TRUE
           fi
       - name: find cache exist or not
         run: |
