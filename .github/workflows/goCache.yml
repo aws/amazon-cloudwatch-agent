@@ -56,8 +56,6 @@ jobs:
           cd packaging/uniformBuild
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
-#            md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
-#            echo $md5_variable
             unzip vendor.zip
             pwd
             ls -lirt
@@ -71,6 +69,9 @@ jobs:
         run: |
           cd packaging/uniformBuild
           go build .
+
+#            md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
+#            echo $md5_variable
 #            unzip -q -d vedor vendor.zip
 #            go mod vendor
 #            echo "*******************vendor directory"
