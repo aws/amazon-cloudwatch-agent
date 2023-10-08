@@ -51,7 +51,8 @@ jobs:
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             unzip vendor.zip
-            (go build -mod=vendor .)
+            (go build -mod=vendor .) 
+            build_exit_status=$?
             echo $?
             echo "*******************vendor directory"
           else
