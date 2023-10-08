@@ -57,18 +57,20 @@ jobs:
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             unzip vendor.zip
-            go build -mod=vendor .> build.log 2>&1
-            if [ -s build.log ]; then
-              echo "Error detected while running 'go build'"
-              cat build.log  # Print the content of the log file for inspection
-            else
-              echo "Build successful"
-            fi
+            go build -mod=vendor .
+            echo $?
           else
             go build -mod=vendor .
             zip -r vendor.zip vendor
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
           fi
+
+#          if [ -s build.log ]; then
+#                       echo "Error detected while running 'go build'"
+#                       cat build.log  # Print the content of the log file for inspection
+#                     else
+#                       echo "Build successful"
+#                     fi
 #                      if [ $? -ne 0 ]; then
 #                        echo "Error detected while running 'go build -mod=vendor .'"
 #                        go mod tidy
