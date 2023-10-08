@@ -54,7 +54,6 @@ jobs:
             set +e
             (go build -mod=vendor .)
             build_exit_status=$?
-            set -e
             if [ $build_exit_status -ne 0 ]; then
               echo "Error detected while running 'go build -mod=vendor .'"
               go mod tidy
