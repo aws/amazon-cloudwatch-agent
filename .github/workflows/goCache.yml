@@ -52,10 +52,18 @@ jobs:
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             unzip vendor.zip
             set +e
-            (go build -mod=vendor .) 
+            (go build -mod=vendor .)
             build_exit_status=$?
-            echo $build_exit_status
-            echo "*******************vendor directory"
+            set -e
+            if [ $build_exit_status -ne 0 ]; then
+              echo "Error detected while running 'go build -mod=vendor .'"
+              go mod tidy
+              go mod vendor
+              zip -r vendor.zip vendor
+              aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+            else
+              echo "Build successful"
+            fi
           else
             go build -mod=vendor .
             zip -r vendor.zip vendor
