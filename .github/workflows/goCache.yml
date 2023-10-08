@@ -59,12 +59,21 @@ jobs:
             unzip vendor.zip
             pwd
             ls -lirt
-            go build -mod=vendor .
+            if ! go build -mod=vendor .; then
+              echo "Error detected while running 'go build -mod=vendor .'"
+              go mod tidy
+              go mod vendor
+              zip -r vendor.zip vendor
+              aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+            else
+               echo "Build successful"
+            fi
           else
             go build -mod=vendor .
             zip -r vendor.zip vendor
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
           fi
+#  go build -mod=vendor .
 #            md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
 #            echo $md5_variable
 #            unzip -q -d vedor vendor.zip
