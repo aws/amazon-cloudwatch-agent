@@ -51,14 +51,14 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
-      - name: list of files in s3
+      - name: Use the vendor zip
         run: |
           cd packaging/uniformBuild
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             unzip vendor.zip
-            go build -mod=vendor .
-            echo $?
+            build_exit_status=$(go build -mod=vendor .)
+            echo $build_exit_status
           else
             go build -mod=vendor .
             zip -r vendor.zip vendor
