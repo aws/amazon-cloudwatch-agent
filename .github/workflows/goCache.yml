@@ -54,7 +54,7 @@ jobs:
             set +e
             (go build -mod=vendor .) 
             build_exit_status=$?
-            echo $?
+            echo $build_exit_status
             echo "*******************vendor directory"
           else
             go build -mod=vendor .
