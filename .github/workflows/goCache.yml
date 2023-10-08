@@ -45,31 +45,35 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
-      - name: Use the vendor zip
-        run: |
+      - name: time for build
+        run: | 
           cd packaging/uniformBuild
-          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
-            aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
-            unzip vendor.zip
-            rm -r vendor.zip
-            set +e
-            (go build -mod=vendor .)
-            build_exit_status=$?
-            if [ $build_exit_status -ne 0 ]; then
-              echo "Error detected while running 'go build -mod=vendor .'"
-              go mod tidy
-              go mod vendor
-              zip -r vendor.zip vendor
-              aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
-              rm -f vendor.zip
-            else
-              echo "Build successful"
-            fi
-          else
-            go mod vendor
-            go build .
-            zip -r vendor.zip vendor
-            aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
-          fi
-          set -e
+          time go build .
+#      - name: go mod optimization
+#        run: |
+#          cd packaging/uniformBuild
+#          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
+#            aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
+#            unzip vendor.zip
+#            rm -r vendor.zip
+#            set +e
+#            (go build -mod=vendor .)
+#            build_exit_status=$?
+#            if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
+#              echo "Error detected while running 'go build -mod=vendor .'"
+#              go mod tidy
+#              go mod vendor
+#              zip -r vendor.zip vendor
+#              aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+#              rm -f vendor.zip
+#            else
+#              echo "Build successful"
+#            fi
+#          else
+#            go mod vendor
+#            go build .
+#            zip -r vendor.zip vendor
+#            aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+#          fi
+#          set -e
           

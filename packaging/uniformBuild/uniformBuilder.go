@@ -8,7 +8,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/hashicorp/consul/api"
 	"log"
 	"strings"
 
@@ -40,38 +39,6 @@ var MACOS_TEST_INSTANCE_GUIDE = map[string]OS{
 }
 var WINDOWS_TEST_INSTANCE_GUIDE = map[string]OS{
 	"WindowsMSIBuilder": WINDOWS,
-}
-
-func test() {
-	// Create a new Consul client configuration
-	config := api.DefaultConfig()
-
-	// Create a client to interact with the Consul server
-	client, err := api.NewClient(config)
-	if err != nil {
-		log.Fatalf("Failed to create Consul client: %v", err)
-	}
-
-	// Specify the key you want to retrieve
-	key := "my-key"
-
-	// Call the GetKV function to get the value associated with the key
-	pair, err := GetKV(client, key)
-	if err != nil {
-		log.Fatalf("Failed to get KV pair: %v", err)
-	} else {
-		log.Printf("Found key %s with value %s", key, pair.Value)
-	}
-
-}
-
-func GetKV(client *api.Client, key string) (*api.KVPair, error) {
-	kv := client.KV()
-	pair, _, err := kv.Get(key, nil)
-	if err != nil {
-		return nil, err
-	}
-	return pair, nil
 }
 
 /*
@@ -271,6 +238,4 @@ func main() {
 	}
 	fmt.Printf("\033[32mSuccesfully\033[0m built CWA from %s with %s branch, check \033[32m%s \033[0m bucket with \033[1;32m%s\033[0m hash",
 		repo, branch, S3_INTEGRATION_BUCKET, comment)
-
-	test()
 }
