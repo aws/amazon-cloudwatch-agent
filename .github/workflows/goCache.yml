@@ -51,6 +51,7 @@ jobs:
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             unzip vendor.zip
+            rm -r vendor.zip
             set +e
             (go build -mod=vendor .)
             build_exit_status=$?
@@ -60,6 +61,7 @@ jobs:
               go mod vendor
               zip -r vendor.zip vendor
               aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+              rm -f vendor.zip
             else
               echo "Build successful"
             fi
@@ -68,58 +70,5 @@ jobs:
             zip -r vendor.zip vendor
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
           fi
-
-#          if [ -s build.log ]; then
-#                       echo "Error detected while running 'go build'"
-#                       cat build.log  # Print the content of the log file for inspection
-#                     else
-#                       echo "Build successful"
-#                     fi
-#                      if [ $? -ne 0 ]; then
-#                        echo "Error detected while running 'go build -mod=vendor .'"
-#                        go mod tidy
-#                        go mod vendor
-#                        zip -r vendor.zip vendor
-#                        aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
-#                      else
-#                         echo "Build successful"
-#                      fi
-#  go build -mod=vendor .
-#            md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
-#            echo $md5_variable
-#            unzip -q -d vedor vendor.zip
-#            go mod vendor
-#            echo "*******************vendor directory"
-#            ls -lirt
-#            rm -f vendor.zip
-#            go mod vendor
-#            echo "*******************vendor directory"
-#            ls -lirt
-#            zip -r vendor.zip vendor
-#            md5_variable_vendor=$(md5sum "./vendor.zip" | awk '{print $1}')
-#            echo $md5_variable_vendor
-#            pwd
-#            ls -lirt vendor
-
-#          aws s3 ls "s3://cloudwatch-agent-integration-bucket/integration-test/"
-#      - name: Check if directory is empty
-#        id: check_empty_directory
-#        run: |
-#            if [ -z "$(aws s3 ls ${CACHE_DIR})" ]; then
-#              echo "Directory is empty"
-#              echo "::set-output name=is_empty::true"
-#            else
-#              echo "::set-output name=is_empty::false"
-#            fi
-#      - name: Build Uniform Build Env
-#        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-#        run: |
-#          cd packaging/uniformBuild
-#          go build .
-#      - name: Download RPM
-#        run: |
-#          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/linux/amd64/amazon-cloudwatch-agent.rpm .
-#      - name: GetRPMSize
-#        run: ls -lh
-#      - name: Measure Installation Time
-#        run : time -v rpm -i -y amazon-cloudwatch-agent.rpm
+          set -e
+          
