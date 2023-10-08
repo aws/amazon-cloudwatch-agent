@@ -53,6 +53,7 @@ jobs:
             unzip vendor.zip
             (go build -mod=vendor .) || true
             echo $?
+            echo "*******************vendor directory"
           else
             go build -mod=vendor .
             zip -r vendor.zip vendor
