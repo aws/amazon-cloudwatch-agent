@@ -65,11 +65,6 @@ jobs:
             zip -r vendor.zip vendor
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
           fi
-      - name: build go mod
-        run: |
-          cd packaging/uniformBuild
-          go build .
-
 #            md5_variable=$(md5sum "./vendor.zip" | awk '{print $1}')
 #            echo $md5_variable
 #            unzip -q -d vedor vendor.zip
