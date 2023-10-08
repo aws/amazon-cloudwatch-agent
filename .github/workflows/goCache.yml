@@ -57,9 +57,8 @@ jobs:
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             unzip vendor.zip
-            pwd
-            ls -lirt
-            if ! go build -mod=vendor .; then
+            go build -mod=vendor .
+            if [ $? -ne 0 ]; then
               echo "Error detected while running 'go build -mod=vendor .'"
               go mod tidy
               go mod vendor
