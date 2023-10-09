@@ -152,23 +152,23 @@ func TestTimestampParserDefault(t *testing.T) {
 	// make sure layout is compatible for "Sep 9", "Sep  9" , "Sep 09", "Sep  09" options
 	logEntry := fmt.Sprintf("Sep 9 02:00:43  ip-10-4-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
 	timestamp := fileConfig.timestampFromLogLine(logEntry)
-	assert.Equal(t, 02, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "2", timestamp.Hour()))
-	assert.Equal(t, 00, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "0", timestamp.Minute()))
+	assert.Equal(t, 02, timestamp.Hour())
+	assert.Equal(t, 00, timestamp.Minute())
 
 	logEntry = fmt.Sprintf("Sep  9 02:00:43  ip-10-4-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
 	timestamp = fileConfig.timestampFromLogLine(logEntry)
-	assert.Equal(t, 02, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "2", timestamp.Hour()))
-	assert.Equal(t, 00, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "0", timestamp.Minute()))
+	assert.Equal(t, 02, timestamp.Hour())
+	assert.Equal(t, 00, timestamp.Minute())
 
 	logEntry = fmt.Sprintf("Sep 09 02:00:43  ip-10-4-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
 	timestamp = fileConfig.timestampFromLogLine(logEntry)
-	assert.Equal(t, 02, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "2", timestamp.Hour()))
-	assert.Equal(t, 00, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "0", timestamp.Minute()))
+	assert.Equal(t, 02, timestamp.Hour())
+	assert.Equal(t, 00, timestamp.Minute())
 
 	logEntry = fmt.Sprintf("Sep  09 02:00:43  ip-10-4-213-132 sudo: vtayyare : TTY=pts/0 ; PWD=/home/vtayyare ; USER=root ; COMMAND=/bin/cat /var/log/secure\n")
 	timestamp = fileConfig.timestampFromLogLine(logEntry)
-	assert.Equal(t, 02, timestamp.Hour(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "2", timestamp.Hour()))
-	assert.Equal(t, 00, timestamp.Minute(), fmt.Sprintf("Timestamp does not match: %v, act: %v", "0", timestamp.Minute()))
+	assert.Equal(t, 02, timestamp.Hour())
+	assert.Equal(t, 00, timestamp.Minute())
 
 }
 

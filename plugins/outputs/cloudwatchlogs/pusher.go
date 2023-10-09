@@ -58,6 +58,7 @@ type pusher struct {
 	flushTimer          *time.Timer
 	sequenceToken       *string
 	lastValidTime       int64
+	lastUpdateTime      int64
 	needSort            bool
 	stop                <-chan struct{}
 	lastSentTime        time.Time
@@ -447,11 +448,13 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 			// a valid timestamp and use the last valid timestamp for new entries that does
 			// not have a timestamp.
 			t = p.lastValidTime
-            // Check when timestamp has an interval of 5 days.
-            // 432000 seconds = 5 days
-            // t -> is set in miliseconds
-			if ((time.Now().UnixNano() / 1000000000) - (t / 1000)) > 432000 {
-				p.SampledLog.Warn("Unable to parse timestamp, using last valid timestamp "+ strconv.Itoa(int(p.lastValidTime)) +": which is older than 5 days for log group "+p.Group+": ")
+            if p.lastUpdateTime != 0 {
+              // Check when timestamp has an interval of 5 days.
+              // 432000 seconds = 5 days
+              // p.lastUpdateTime -> is set in miliseconds
+                if ((time.Now().UnixNano() / 1000000000) - (p.lastUpdateTime / 1000)) > 432000 {
+                    p.SampledLog.Warn("Unable to parse timestamp, using last valid timestamp "+ strconv.Itoa(int(p.lastValidTime)) +": which is older than 5 days for log group "+p.Group+": ")
+                }
 			}
 		} else {
 			t = time.Now().UnixNano() / 1000000
@@ -459,6 +462,7 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 	} else {
 		t = e.Time().UnixNano() / 1000000
 		p.lastValidTime = t
+		p.lastUpdateTime = time.Now().UnixNano() / 1000000
 	}
 	return &cloudwatchlogs.InputLogEvent{
 		Message:   &message,

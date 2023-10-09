@@ -45,7 +45,7 @@ The plugin expects messages in one of the
       log_group_name = "logfile.log"
       log_stream_name = "<log_stream_name>"
       timestamp_regex = "^(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}).*$"
-      timestamp_layout = "_2 Jan 2006 15:04:05"
+      timestamp_layout = ["_2 Jan 2006 15:04:05"]
       timezone = "UTC"
       multi_line_start_pattern = "{timestamp_regex}"
       ## Read file from beginning.
