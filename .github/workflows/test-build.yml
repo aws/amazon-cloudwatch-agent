@@ -83,7 +83,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: $${{ inputs.TargetRegion }}
+          aws-region: ${{ inputs.TargetRegion }}
 
       - name: Cache binaries
         id: cached_binaries
