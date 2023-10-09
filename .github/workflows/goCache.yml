@@ -47,7 +47,6 @@ jobs:
           aws-region: us-west-2
       - name: time for build
         run: |
-          cd packaging/uniformBuild
           time go build .
 #      - name: time for build
 #        run: |
