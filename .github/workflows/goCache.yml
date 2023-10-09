@@ -47,7 +47,7 @@ jobs:
           aws-region: us-west-2
       - name: time for build
         run: |
-          aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
+          time aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
           time unzip vendor.zip
 #      - name: time for build
 #        run: |
