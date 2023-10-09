@@ -179,6 +179,7 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - apiserver_current_inflight_requests
+          - apiserver_current_inqueue_requests
       - dimensions: [ [ ClusterName, name ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
