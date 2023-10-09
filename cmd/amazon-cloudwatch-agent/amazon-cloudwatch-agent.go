@@ -42,6 +42,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 const (
@@ -57,8 +58,8 @@ var fQuiet = flag.Bool("quiet", false,
 var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
-var fConfig = flag.String("config", "", "configuration file to load")
-var fOtelConfig = flag.String("otelconfig", "", "YAML configuration file to run OTel pipeline")
+var fTomlConfig = flag.String("config", "", "configuration file to load")
+var fOtelConfig = flag.String("otelconfig", paths.YamlConfigPath, "YAML configuration file to run OTel pipeline")
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -135,7 +136,7 @@ func reloadLoop(
 			}
 		}(ctx)
 
-		if envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig); err == nil {
+		if envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig); err == nil {
 			// Reloads environment variables when file is changed
 			go func(ctx context.Context, envConfigPath string) {
 				var previousModTime time.Time
@@ -215,7 +216,7 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig)
+	envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig)
 	if err != nil {
 		return err
 	}
@@ -554,8 +555,8 @@ func main() {
 		// Handle the --service flag here to prevent any issues with tooling that
 		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
-			if *fConfig != "" {
-				svcConfig.Arguments = []string{"--config", *fConfig}
+			if *fTomlConfig != "" {
+				svcConfig.Arguments = []string{"--config", *fTomlConfig}
 			}
 			if *fConfigDirectory != "" {
 				svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", *fConfigDirectory)
@@ -606,7 +607,7 @@ func windowsRunAsService() bool {
 }
 
 func loadTomlConfigIntoAgent(c *config.Config) error {
-	err := c.LoadConfig(*fConfig)
+	err := c.LoadConfig(*fTomlConfig)
 	if err != nil {
 		return err
 	}
@@ -637,7 +638,7 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error {
 	if *fSchemaTest {
 		//up to this point, the given config file must be valid
 		fmt.Println(agentinfo.FullVersion())
-		fmt.Printf("The given config: %v is valid\n", *fConfig)
+		fmt.Printf("The given config: %v is valid\n", *fTomlConfig)
 		os.Exit(0)
 	}
 
