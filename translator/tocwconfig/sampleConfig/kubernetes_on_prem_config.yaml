@@ -21,6 +21,8 @@ exporters:
         metric_name_selectors:
           - container_cpu_utilization
           - container_cpu_utilization_over_container_limit
+          - container_cpu_limit
+          - container_cpu_request
           - container_memory_utilization
           - container_memory_utilization_over_container_limit
           - container_memory_failures_total
@@ -70,6 +72,8 @@ exporters:
           - pod_status_succeeded
           - pod_memory_request
           - pod_memory_limit
+          - pod_cpu_limit
+          - pod_cpu_request
       # node metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
@@ -145,7 +149,6 @@ exporters:
           - apiserver_storage_size_bytes
           - apiserver_storage_db_total_size_in_bytes
           - etcd_db_total_size_in_bytes
-          - etcd_request_duration_seconds
       - dimensions: [ [ ClusterName, resource ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
@@ -176,6 +179,7 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - apiserver_current_inflight_requests
+          - apiserver_current_inqueue_requests
       - dimensions: [ [ ClusterName, name ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
@@ -226,6 +230,9 @@ exporters:
       - metric_name: apiserver_request_total_5xx
         unit: Count
         overwrite: true
+      - metric_name: apiserver_requested_deprecated_apis
+        unit: Count
+        overwrite: true
       - metric_name: apiserver_storage_objects
         unit: Count
         overwrite: true
@@ -235,9 +242,6 @@ exporters:
       - metric_name: apiserver_storage_list_duration_seconds
         unit: Seconds
         overwrite: true
-      - metric_name: apiserver_storage_objects
-        unit: Count
-        overwrite: true
       - metric_name: apiserver_storage_db_total_size_in_bytes
         unit: Bytes
         overwrite: true
@@ -246,9 +250,6 @@ exporters:
         overwrite: true
       - metric_name: etcd_db_total_size_in_bytes
         unit: Bytes
-        overwrite: true
-      - metric_name: etcd_request_duration_seconds
-        unit: Seconds
         overwrite: true
       - metric_name: rest_client_request_duration_seconds
         unit: Seconds
