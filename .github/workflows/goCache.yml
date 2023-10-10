@@ -62,6 +62,7 @@ jobs:
             set +e
             (go build -mod=vendor .)
             build_exit_status=$?
+            echo  "build status code:$build_exit_status"
             if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
               echo "Error detected while running 'go build -mod=vendor .'"
               go mod tidy
