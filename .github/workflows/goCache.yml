@@ -75,6 +75,7 @@ jobs:
             fi
           else
             time go mod vendor
+            go build .
             zip -r vendor.zip vendor
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
           fi
