@@ -72,7 +72,6 @@ jobs:
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
           fi
           set -e
-          
 #      - name: time for build
 #        run: |
 #          time go build .
