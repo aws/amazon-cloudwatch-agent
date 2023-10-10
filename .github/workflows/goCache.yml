@@ -54,12 +54,12 @@ jobs:
 #            wget https://amazoncloudwatch-agent.s3.amazonaws.com/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
       - name: go mod optimization
         run: |
-          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
+          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then        
+            cd /packaging/uniformBuild
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             time unzip vendor.zip
             rm -r vendor.zip
             set +e
-            cd packaging/uniformBuild
             (go build -mod=vendor .)
             build_exit_status=$?
             echo  "build status code:$build_exit_status"
