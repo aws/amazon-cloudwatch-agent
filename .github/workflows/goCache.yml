@@ -52,7 +52,6 @@ jobs:
             time unzip vendor.zip
             rm -r vendor.zip
             wget https://amazoncloudwatch-agent.s3.amazonaws.com/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
-            sudo rpm -Uvh amazon-cloudwatch-agent.rpm
 #      - name: go mod optimization
 #        run: |
 #          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
