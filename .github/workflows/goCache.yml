@@ -74,7 +74,7 @@ jobs:
               echo "Build successful"
             fi
           else
-            go mod vendor
+            time go mod vendor
             zip -r vendor.zip vendor
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
             echo "vendor zip added to the bucket"
