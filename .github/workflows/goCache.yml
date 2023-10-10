@@ -55,7 +55,7 @@ jobs:
       - name: go mod optimization
         run: |
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then        
-            cd /packaging/uniformBuild
+            cd packaging/uniformBuild
             aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
             time unzip vendor.zip
             rm -r vendor.zip
