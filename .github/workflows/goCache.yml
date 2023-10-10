@@ -48,9 +48,68 @@ jobs:
 
       - name: Check with zip file
         run: |
+          cd packaging/uniformBuild
           aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
           unzip vendor.zip
           time go build -mod=vendor .
+  time_test_with_go_mod_vendor:
+    name: time for go mod vendor
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_REPO_NAME}}
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.19.2
+      - name: set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: run go mod vendor
+        run: |
+          time go mod vendor
+  make_vendor:
+    name: make vendor
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_REPO_NAME}}
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.19.2
+      - name: set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: make vendor
+        run: |
+          cd packaging/uniformBuild
+          make file " make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win "     
+          
 
 #      - name: go mod optimization
 #        run: |
