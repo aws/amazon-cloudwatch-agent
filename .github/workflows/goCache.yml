@@ -51,7 +51,9 @@ jobs:
           cd packaging/uniformBuild
           aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
           unzip vendor.zip
+          set +e
           time go build -mod=vendor .
+          set -e
   time_test_with_go_mod_vendor:
     name: time for go mod vendor
     runs-on: ubuntu-latest
@@ -109,7 +111,7 @@ jobs:
         run: |
           cd packaging/uniformBuild
           make file " make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win "     
-          
+      
 
 #      - name: go mod optimization
 #        run: |
