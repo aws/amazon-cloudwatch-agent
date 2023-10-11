@@ -529,7 +529,7 @@ processors:
                 reload_interval: 0s
                 server_name_override: ""
             token: ""
-        override: false
+        override: true
         read_buffer_size: 0
         system:
             hostname_sources: []

@@ -34,7 +34,7 @@ func TestTranslate(t *testing.T) {
 					"ec2",
 				},
 				"timeout":  "2s",
-				"override": false,
+				"override": true,
 				"ec2": map[string]interface{}{
 					"tags": []interface{}{"^kubernetes.io/cluster/.*$"},
 				},

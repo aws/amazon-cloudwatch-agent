@@ -1,5 +1,5 @@
 detectors: [eks, env, ec2]
-override: false
+override: true
 timeout: 2s
 ec2:
   tags:
