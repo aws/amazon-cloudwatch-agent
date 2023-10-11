@@ -47,9 +47,9 @@ jobs:
           aws-region: us-west-2
       - name: go mod build
         run: |
-          pwd
-          ls -lirt
-          time go mod vendor
+        
+          time aws s3 cp s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip ./vendor.zip
+          time unzip vendor.zip
 #      - name: go mod optimization
 #        run: |
 #          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
