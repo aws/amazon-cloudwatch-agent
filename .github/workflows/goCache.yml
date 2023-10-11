@@ -109,7 +109,6 @@ jobs:
           aws-region: us-west-2
       - name: make vendor
         run: |
-          cd packaging/uniformBuild
           make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win
 
 #      - name: go mod optimization
