@@ -88,12 +88,11 @@ jobs:
         run: |
           cd packaging/uniformBuild
           go build .
-#          ./uniformBuild -r "https://github.com/${{env.CWA_GITHUB_REPO_NAME}}.git" -b "main" -c "${{github.sha}}" -a "${{secrets.AWS_TEST_ACCOUNT_ID}}"
       - name: Run Uniform Build Env.
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
           cd packaging/uniformBuild
-          ./uniformBuild -r "https://github.com/${{env.CWA_GITHUB_REPO_NAME}}.git" -b "main" -c "${{inputs.BucketKey}}" -a "${{secrets.AWS_TEST_ACCOUNT_ID}}"
+          ./uniformBuild -r "https://github.com/${{env.CWA_GITHUB_REPO_NAME}}.git" -b "main" -o "${{inputs.BucketKey}}" -p "${{inputs.PackageBucketKey}}" -a "${{secrets.AWS_TEST_ACCOUNT_ID}}"
 #      - name: Cache go                                   ^^^ make it not main
 #        # Only skip for integration builds not release builds.
 #        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
@@ -135,7 +134,7 @@ jobs:
           aws-region: us-west-2
       - name: Download RPM
         run: |
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/linux/amd64/amazon-cloudwatch-agent.deb .
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/amd64/amazon-cloudwatch-agent.deb .
           aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg .
           aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi .
 
