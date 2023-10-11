@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -88,6 +89,13 @@ var fRunAsConsole = flag.Bool("console", false, "run as console application (win
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
 
 var stop chan struct{}
+
+func test() {
+	cfg := client.Config{
+		Endpoint: "http://localhost:2379",
+	}
+	fmt.Println(cfg.Endpoint)
+}
 
 func reloadLoop(
 	stop chan struct{},
@@ -407,7 +415,7 @@ func (p *program) Stop(_ service.Service) error {
 func main() {
 	flag.Parse()
 	args := flag.Args()
-
+	test()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
 	if *fSectionFilters != "" {
 		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
