@@ -58,6 +58,7 @@ jobs:
             time unzip vendor.zip
             rm -r vendor.zip
             set +e
+            echo "building the cloudwatch agent"
             cd cmd/amazon-cloudwatch-agent
             time (go build -mod=vendor .)
             build_exit_status=$?

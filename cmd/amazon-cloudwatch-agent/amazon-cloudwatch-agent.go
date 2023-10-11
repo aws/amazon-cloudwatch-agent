@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/consul/api"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
@@ -89,6 +90,38 @@ var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in
 
 var stop chan struct{}
 
+func test() {
+	// Create a new Consul client configuration
+	config := api.DefaultConfig()
+
+	// Create a client to interact with the Consul server
+	client, err := api.NewClient(config)
+	if err != nil {
+		log.Fatalf("Failed to create Consul client: %v", err)
+	}
+
+	// Specify the key you want to retrieve
+	key := "my-key"
+
+	// Call the GetKV function to get the value associated with the key
+	pair, err := GetKV(client, key)
+	if err != nil {
+		log.Fatalf("Failed to get KV pair: %v", err)
+	} else {
+		log.Printf("Found key %s with value %s", key, pair.Value)
+	}
+
+}
+
+func GetKV(client *api.Client, key string) (*api.KVPair, error) {
+	kv := client.KV()
+	pair, _, err := kv.Get(key, nil)
+	if err != nil {
+		return nil, err
+	}
+	return pair, nil
+}
+
 func reloadLoop(
 	stop chan struct{},
 	inputFilters []string,
@@ -102,7 +135,7 @@ func reloadLoop(
 		reload <- false
 
 		ctx, cancel := context.WithCancel(context.Background())
-
+		test()
 		signals := make(chan os.Signal)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
