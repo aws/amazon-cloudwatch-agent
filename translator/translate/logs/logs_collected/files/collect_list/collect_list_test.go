@@ -278,9 +278,6 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 		assert.NotNil(t, match)
 		assert.Equal(t, 2, len(match))
 		parsedTime, err := time.ParseInLocation(expectedLayout[0], match[1], time.UTC)
-		if err != nil && len(expectedLayout) > 1 {
-			parsedTime, err = time.ParseInLocation(expectedLayout[1], match[1], time.UTC)
-		}
 		assert.NoError(t, err)
 		assert.Equal(t, time.Date(2018, 3, 8, 1, 2, 3, 0, time.UTC), parsedTime)
 	}

@@ -8,12 +8,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-	"os"
-	"strconv"
-
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap"
-
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -47,7 +41,6 @@ type pusher struct {
 	FlushTimeout  time.Duration
 	RetryDuration time.Duration
 	Log           telegraf.Logger
-	SampledLog    *zap.Logger
 
 	events              []*cloudwatchlogs.InputLogEvent
 	minT, maxT          *time.Time
@@ -88,32 +81,6 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 	p.wg.Add(1)
 	go p.start()
 	return p
-}
-
-func createLogger(p *pusher) {
-    stdout := zapcore.AddSync(os.Stdout)
-
-    level := zap.NewAtomicLevelAt(zap.InfoLevel)
-
-    productionCfg := zap.NewProductionEncoderConfig()
-    productionCfg.TimeKey = "timestamp"
-    productionCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-    productionCfg.StacktraceKey = "stack"
-
-    jsonEncoder := zapcore.NewJSONEncoder(productionCfg)
-
-    jsonOutCore := zapcore.NewCore(jsonEncoder, stdout, level)
-
-    // Create a logger that samples every Nth message after the first M messages every S seconds
-    // where N = sc.Thereafter, M = sc.Initial, S = sc.Tick.
-    samplingCore := zapcore.NewSamplerWithOptions(
-        jsonOutCore,
-        time.Second, // interval
-        3, // log first 3 entries
-        0, // thereafter log zero entires within the interval
-    )
-    p.SampledLog = zap.New(samplingCore)
-    return
 }
 
 func (p *pusher) AddEvent(e logs.LogEvent) {
@@ -436,7 +403,7 @@ func (p *pusher) resetFlushTimer() {
 
 func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 	message := e.Message()
-    createLogger(p)
+	createLogger(p)
 
 	if len(message) > msgSizeLimit {
 		message = message[:msgSizeLimit-len(truncatedSuffix)] + truncatedSuffix
@@ -448,13 +415,13 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 			// a valid timestamp and use the last valid timestamp for new entries that does
 			// not have a timestamp.
 			t = p.lastValidTime
-            if p.lastUpdateTime != 0 {
-              // Check when timestamp has an interval of 5 days.
-              // 432000 seconds = 5 days
-              // p.lastUpdateTime -> is set in miliseconds
-                if ((time.Now().UnixNano() / 1000000000) - (p.lastUpdateTime / 1000)) > 432000 {
-                    p.SampledLog.Warn("Unable to parse timestamp, using last valid timestamp "+ strconv.Itoa(int(p.lastValidTime)) +": which is older than 5 days for log group "+p.Group+": ")
-                }
+			if p.lastUpdateTime != 0 {
+				// Check when timestamp has an interval of 5 days.
+				// 432000 seconds = 5 days
+				// p.lastUpdateTime -> is set in miliseconds
+				if ((time.Now().UnixNano() / 1000000000) - (p.lastUpdateTime / 1000)) > 432000 {
+					p.Log.Warnf("Unable to parse timestamp, using last valid timestamp %v: which is older than 5 days for log group %v: ", p.lastValidTime, p.Group)
+				}
 			}
 		} else {
 			t = time.Now().UnixNano() / 1000000
