@@ -38,7 +38,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.19.2
+          go-version: ~1.20
       - name: set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -52,7 +52,9 @@ jobs:
       - name: go mod optimization
         run: |
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"; then
+            echo "time for copy file to vendor from s3 bucket"
             time aws s3 cp "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip" ./vendor.zip
+            echo "time for unzip vendor file"
             time unzip vendor.zip
             rm -r vendor.zip
             set +e
@@ -77,9 +79,11 @@ jobs:
           else
             time go mod vendor
             cd cmd/amazon-cloudwatch-agent
-            go build -mod=vendor .
+            time go build -mod=vendor .
             cd -
-            zip -r vendor.zip vendor
+            echo "creating zip file"
+            time zip -r vendor.zip vendor
+            echo "copying zip file to s3 bucket"
             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
             echo "vendor zip added to the bucket"
           fi
