@@ -59,6 +59,9 @@ jobs:
                set +e
                echo "building the cloudwatch agent"
                make build -mod=vendor
+               echo "Finding the GO111MODULE environment variable"
+               go env GO111MODULEeiifcbfccnrftidblrgrjthujnnbftrdfudnrdreulff
+          
                build_exit_status=$?
                echo  "build status code:$build_exit_status"
                if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
@@ -78,7 +81,9 @@ jobs:
               go mod tidy
               go clean -modcache
               time GOPROXY=direct go mod vendor
-              time make build
+              time make build -mod=vendor
+              echo "Finding the GO111MODULE environment variable"
+              go env GO111MODULE
               echo "creating zip file"
               time zip -r vendor.zip vendor
               echo "copying zip file to s3 bucket"
