@@ -46,7 +46,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
       - name: go mod build
-        run: time go build .
+        run: |
+          cd packaging/uniformBuild
+          time go build .
 #      - name: go mod optimization
 #        run: |
 #          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
