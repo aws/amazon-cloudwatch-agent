@@ -9,8 +9,8 @@ env:
   CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
   CACHE_EXIST: "false"
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
-#  S3_INTEGRATION_BUCKET: "terraform-integration-test"
-#  CACHE_DIR: "uniform-build-env-test/cache_build_env"
+  #  S3_INTEGRATION_BUCKET: "terraform-integration-test"
+  #  CACHE_DIR: "uniform-build-env-test/cache_build_env"
   CACHE_DIR: "s3://cloudwatch-agent-integration-bucket/cloudwatch-agent-integration-bucket/logs/"
 #  CACHE_DIR: "uniform-build-env-test"
 
@@ -45,35 +45,36 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
-#      - name: go mod build     1m 6sec
-#        run: |
-#          cd cmd/am
-#          time go build .
-      - name: go mod optimization
+      - name: go mod build     1m 6sec
         run: |
-          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
-            cd packaging/uniformBuild
-            time aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
-            time unzip vendor.zip
-            rm -r vendor.zip
-            set +e
-            time (go build -mod=vendor .)
-            build_exit_status=$?
-            echo  "build status code:$build_exit_status"
-            if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
-              echo "Error detected while running 'go build -mod=vendor .'"
-              go mod tidy
-              go mod vendor
-              zip -r vendor.zip vendor
-              aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
-              rm -f vendor.zip
-            else
-              echo "Build successful"
-            fi
-          else
-            time go mod vendor
-            zip -r vendor.zip vendor
-            aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
-            echo "vendor zip added to the bucket"
-          fi
-          set -e
+          pwd
+          ls -lirt
+          time go mod download
+#      - name: go mod optimization
+#        run: |
+#          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"; then
+#            cd packaging/uniformBuild
+#            time aws s3 cp "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip" ./vendor.zip
+#            time unzip vendor.zip
+#            rm -r vendor.zip
+#            set +e
+#            time (go build -mod=vendor .)
+#            build_exit_status=$?
+#            echo  "build status code:$build_exit_status"
+#            if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
+#              echo "Error detected while running 'go build -mod=vendor .'"
+#              go mod tidy
+#              go mod vendor
+#              zip -r vendor.zip vendor
+#              aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+#              rm -f vendor.zip
+#            else
+#              echo "Build successful"
+#            fi
+#          else
+#            time go mod vendor
+#            zip -r vendor.zip vendor
+#            aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/bhanu/vendor.zip"
+#            echo "vendor zip added to the bucket"
+#          fi
+#          set -e
