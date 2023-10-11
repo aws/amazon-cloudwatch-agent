@@ -51,37 +51,37 @@ jobs:
 #          time unzip vendor.zip
       - name: go mod optimization
         run: |
-          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"; then
-           echo "time for copy file to vendor from s3 bucket"
-           time aws s3 cp "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip" ./vendor.zip
-           echo "time for unzip vendor file"
-           time unzip vendor.zip
-           rm -r vendor.zip
-           set +e
-           echo "building the cloudwatch agent"
-           time make build
-           build_exit_status=$?
-           echo  "build status code:$build_exit_status"
-            if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
-             echo "Error detected while running 'go build -mod=vendor .'"
-             go mod tidy
-             go mod vendor
-             make build
-             zip -r vendor.zip vendor
-             aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
-             rm -f vendor.zip
-          else
-            echo "Build successful"
-          fi
-         else
-          go mod tidy
-          time go mod vendor
-          time make build
-          cd -
-          echo "creating zip file"
-          time zip -r vendor.zip vendor
-          echo "copying zip file to s3 bucket"
-          aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
-          echo "vendor zip added to the bucket"
-         fi
-         set -e
+            if aws s3 ls "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"; then
+               echo "time for copy file to vendor from s3 bucket"
+               time aws s3 cp "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip" ./vendor.zip
+               echo "time for unzip vendor file"
+               time unzip vendor.zip
+               rm -r vendor.zip
+               set +e
+               echo "building the cloudwatch agent"
+               time make build
+               build_exit_status=$?
+               echo  "build status code:$build_exit_status"
+               if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
+                   echo "Error detected while running 'go build -mod=vendor .'"
+                   go mod tidy
+                   go mod vendor
+                   make build
+                   zip -r vendor.zip vendor
+                   aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
+                   rm -f vendor.zip
+               else
+                  echo "Build successful"
+              fi
+            else
+              go mod tidy
+              time go mod vendor
+              time make build
+              cd -
+              echo "creating zip file"
+              time zip -r vendor.zip vendor
+              echo "copying zip file to s3 bucket"
+              aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
+              echo "vendor zip added to the bucket"
+             fi
+             set -e
