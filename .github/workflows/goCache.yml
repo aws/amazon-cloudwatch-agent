@@ -110,8 +110,7 @@ jobs:
       - name: make vendor
         run: |
           cd packaging/uniformBuild
-          make file " make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win "     
-      
+          make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win
 
 #      - name: go mod optimization
 #        run: |
