@@ -78,6 +78,7 @@ jobs:
               echo "Build successful"
             fi
           else
+            go mod tidy
             time go mod vendor
             cd cmd/amazon-cloudwatch-agent
             time go build -mod=vendor .

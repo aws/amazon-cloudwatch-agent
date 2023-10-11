@@ -43,7 +43,6 @@ replace github.com/shirou/gopsutil/v3 => github.com/aws/telegraf/patches/gopsuti
 //Consul is used only by an plugin in telegraf and the version changes from v1.2.1 to v1.8.4 here (no major version change)
 //so the replacement should not affect amazon-cloudwatch-agent
 
-
 //consul@v1.8.4 points to a commit in go-discover that depends on an older version of kubernetes: kubernetes-1.16.9
 //https://github.com/hashicorp/consul/blob/12b16df320052414244659e4dadda078f67849ed/go.mod#L38
 //This commit contains a dependency in launchpad.net which requires the version control system Bazaar to be set up
@@ -157,6 +156,7 @@ require (
 )
 
 require (
+	github.com/hashicorp/consul/api v1.24.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/extension v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/processor v0.84.1-0.20230908201109-ab3d6c5b6470
