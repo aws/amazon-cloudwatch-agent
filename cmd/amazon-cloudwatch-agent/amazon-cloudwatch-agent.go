@@ -9,26 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
-	"github.com/aws/amazon-cloudwatch-agent/logs"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
-	"github.com/aws/amazon-cloudwatch-agent/profiler"
-	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
-	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
-	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
-	"github.com/aws/amazon-cloudwatch-agent/service/registry"
-	"github.com/influxdata/telegraf/agent"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/logger"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/wlog"
-	"github.com/kardianos/service"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/otelcol"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -40,6 +20,28 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/wlog"
+	"github.com/kardianos/service"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/otelcol"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/logs"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
+	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
+	"github.com/aws/amazon-cloudwatch-agent/service/registry"
 )
 
 const (
@@ -100,7 +102,6 @@ func reloadLoop(
 		reload <- false
 
 		ctx, cancel := context.WithCancel(context.Background())
-
 		signals := make(chan os.Signal)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
