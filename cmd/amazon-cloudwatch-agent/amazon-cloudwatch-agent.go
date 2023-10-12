@@ -27,7 +27,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
-	client "go.etcd.io/etcd/client/v3"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/otelcol"
 	"log"
@@ -404,7 +403,6 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
-	test()
 	flag.Parse()
 	args := flag.Args()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
@@ -653,11 +651,4 @@ func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, e
 	}
 
 	return "", nil
-}
-
-func test() {
-	cfg := client.Config{
-		Endpoints: []string{"http://localhost:2379"},
-	}
-	fmt.Println(cfg.Endpoints)
 }
