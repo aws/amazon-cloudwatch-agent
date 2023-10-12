@@ -60,15 +60,6 @@ exporters:
           - container_filesystem_usage
           - container_filesystem_available
           - container_filesystem_utilization
-          - container_status_running
-          - container_status_terminated
-          - container_status_waiting
-          - container_status_waiting_reason_crash_loop_back_off
-          - container_status_waiting_reason_image_pull_error
-          - container_status_waiting_reason_start_error
-          - container_status_waiting_reason_create_container_error
-          - container_status_waiting_reason_create_container_config_error
-          - container_status_terminated_reason_oom_killed
       # pod metrics
       - dimensions: [ [ ClusterName, Namespace, PodName ], [ ClusterName ], [ ClusterName, Namespace, Service ], [ ClusterName, Namespace ], [ ClusterName, FullPodName, Namespace, PodName ] ]
         label_matchers: [ ]
@@ -103,6 +94,15 @@ exporters:
           - pod_memory_limit
           - pod_cpu_limit
           - pod_cpu_request
+          - pod_container_status_running
+          - pod_container_status_terminated
+          - pod_container_status_waiting
+          - pod_container_status_waiting_reason_crash_loop_back_off
+          - pod_container_status_waiting_reason_image_pull_error
+          - pod_container_status_waiting_reason_start_error
+          - pod_container_status_waiting_reason_create_container_error
+          - pod_container_status_waiting_reason_create_container_config_error
+          - pod_container_status_terminated_reason_oom_killed
       # node metrics
       - dimensions: [ [ ClusterName, InstanceId, NodeName ], [ ClusterName ] ]
         label_matchers: [ ]
@@ -208,6 +208,7 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - apiserver_current_inflight_requests
+          - apiserver_current_inqueue_requests
       - dimensions: [ [ClusterName, name], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
