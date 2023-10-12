@@ -44,10 +44,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
-#      - name: go mod build
-#        run: |
-#          time aws s3 cp s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip ./vendor.zip
-#          time unzip vendor.zip
       - name: go mod optimization
         run: |
             if aws s3 ls "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"; then
@@ -59,10 +55,9 @@ jobs:
                set +e
                echo "building the cloudwatch agent"
                make build -mod=vendor
-               echo "Finding the GO111MODULE environment variable"
-               go env GO111MODULEeiifcbfccnrftidblrgrjthujnnbftrdfudnrdreulff
-          
                build_exit_status=$?
+               echo "Finding the GO111MODULE environment variable"
+               go env GO111MODULE
                echo  "build status code:$build_exit_status"
                if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
                    echo "Error detected while running 'go build -mod=vendor .'"
