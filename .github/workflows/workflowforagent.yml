@@ -13,14 +13,10 @@ env:
   #  CACHE_DIR: "uniform-build-env-test/cache_build_env"
   CACHE_DIR: "s3://cloudwatch-agent-integration-bucket/cloudwatch-agent-integration-bucket/logs/"
 #  CACHE_DIR: "uniform-build-env-test"
-on:
-  push:
-    branches:
-      - CWQS-739
-  workflow_dispatch:
+on: workflow_dispatch
 jobs:
   cache:
-    name: workflowforagent
+    name: Go mod cache
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -49,7 +45,7 @@ jobs:
             if aws s3 ls "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"; then
                echo "time for copy file to vendor from s3 bucket"
                time aws s3 cp "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip" ./vendor.zip
-               echo "time for unzip vendor file"
+               echo "time for unzipping the vendor file"
                time unzip vendor.zip
                rm -r vendor.zip
                set +e
@@ -57,18 +53,20 @@ jobs:
                make build
                build_exit_status=$?
                echo  "build status code:$build_exit_status"
-               if [ $build_exit_status -ne 0 ]; then   #if package is updated we are able to handle with is this functionality.
+               if [ $build_exit_status -ne 0 ]; then   #To handle the updated the mod file
                    echo "Error detected while running 'go build -mod=vendor .'"
                    go mod tidy
                    go mod vendor
                    make build
                    zip -r vendor.zip vendor
+                   echo "updating the vendor file and copying zip file to s3 bucket"
                    aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
                    rm -f vendor.zip
                else
                   echo "Build successful"
                fi
             else
+              echo "created a zip file and adding to the s3 bucket"
               go mod tidy
               go clean -modcache
               time GOPROXY=direct go mod vendor

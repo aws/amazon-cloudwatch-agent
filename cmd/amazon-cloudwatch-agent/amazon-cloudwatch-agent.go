@@ -28,7 +28,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
-	client "go.etcd.io/etcd/client/v3"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/otelcol"
 
@@ -405,12 +404,6 @@ func (p *program) Stop(_ service.Service) error {
 	return nil
 }
 
-func test() {
-	cfg := client.Config{
-		Endpoints: []string{"http://localhost:2379"},
-	}
-	fmt.Println(cfg.Endpoints)
-}
 func main() {
 	flag.Parse()
 	args := flag.Args()
@@ -418,7 +411,6 @@ func main() {
 	if *fSectionFilters != "" {
 		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
 	}
-	test()
 	if *fInputFilters != "" {
 		inputFilters = strings.Split(":"+strings.TrimSpace(*fInputFilters)+":", ":")
 	}
