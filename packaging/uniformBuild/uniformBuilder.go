@@ -81,7 +81,7 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 	if err != nil {
 		return err
 	}
-	if isAlreadyBuilt := rbm.CheckS3(commitHash); isAlreadyBuilt {
+	if isAlreadyBuilt := rbm.fileExistsInS3(commitHash); isAlreadyBuilt {
 		fmt.Println("\033Found cache skipping build")
 		return nil
 	}
@@ -97,9 +97,14 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 
 // Windows
 func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string) error {
-	//rbm.CheckS3(fmt.)
-	//@TODO add cache
-	//@TODO add os check
+	err := rbm.instanceManager.insertOSRequirement(instanceName, LINUX)
+	if err != nil {
+		return err
+	}
+	if isAlreadyBuilt := rbm.fileExistsInS3(fmt.Sprintf("%s/buildMSI.zip", commitHash)); isAlreadyBuilt {
+		fmt.Println("\033Found cache skipping build")
+		return nil
+	}
 	command := mergeCommands(
 		CloneGitRepo(TEST_REPO, "main"),
 		"cd ccwa",
@@ -112,23 +117,33 @@ func (rbm *RemoteBuildManager) MakeMsiZip(instanceName string, commitHash string
 	)
 	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI zip file for %s", commitHash))
 }
-func (rbm *RemoteBuildManager) BuildMSI(instanceName string, commitHash string) error {
-	//@TODO add cache
-	//@TODO add os check
+func (rbm *RemoteBuildManager) BuildMSI(instanceName string, bucketKey string, packageKey string) error {
+	if err := rbm.instanceManager.insertOSRequirement(instanceName, WINDOWS); err != nil {
+		return err
+	}
+	if isAlreadyBuilt := rbm.fileExistsInS3(fmt.Sprintf("%s/amazon-cloudwatch-agent.msi", packageKey)); isAlreadyBuilt {
+		fmt.Println("\033Found cache skipping build")
+		return nil
+	}
 	command := mergeCommandsWin(
-		CopyMsi(commitHash),
+		CopyMsi(bucketKey),
 		"Expand-Archive buildMSI.zip -DestinationPat C:\\buildMSI -Force",
 		"cd C:\\buildMSI\\msi_dep",
-		fmt.Sprintf(".\\create_msi.ps1 \"nosha\" %s/%s", S3_INTEGRATION_BUCKET, commitHash),
+		fmt.Sprintf(".\\create_msi.ps1 \"nosha\" %s/%s", S3_INTEGRATION_BUCKET, packageKey),
 	)
 
-	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI Build file for %s", commitHash))
+	return rbm.RunCommand(command, instanceName, fmt.Sprintf("Making MSI Build file for %s", packageKey))
 }
 
 // / MACOS ------------
 func (rbm *RemoteBuildManager) MakeMacPkg(instanceName string, commitHash string) error {
-	//@TODO add cache
-	//@TODO add os check
+	if err := rbm.instanceManager.insertOSRequirement(instanceName, MACOS); err != nil {
+		return err
+	}
+	if isAlreadyBuilt := rbm.fileExistsInS3(fmt.Sprintf("%s/amd64/amazon-cloudwatch-agent.pkg", commitHash)); isAlreadyBuilt {
+		fmt.Println("\033Found cache skipping build")
+		return nil
+	}
 	command := mergeCommands(
 		CloneGitRepo(MAIN_REPO, "main"),
 		"cd ccwa",
@@ -169,63 +184,63 @@ func initEnvCmd(os OS) string {
 }
 
 // CACHE COMMANDS
-func (rbm *RemoteBuildManager) CheckS3(targetFile string) bool {
-	return false //DOESNT WORK FOR NOW forcing an already existing cache
-	input := &s3.ListObjectsV2Input{
+func (rbm *RemoteBuildManager) fileExistsInS3(targetFile string) bool {
+	fmt.Printf("Checking for %s cache \n", targetFile)
+	input := &s3.HeadObjectInput{
 		Bucket: aws.String(S3_INTEGRATION_BUCKET),
-		Prefix: aws.String(targetFile),
+		Key:    aws.String(targetFile),
 	}
-	_, err := rbm.s3Client.ListObjectsV2(context.Background(), input)
+	_, err := rbm.s3Client.HeadObject(context.TODO(), input)
 	if err != nil {
-		if err.Error() == "NotFound: Not Found" {
-			fmt.Printf("Object %s does not exist in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
-		} else {
-			panic(err)
-		}
-	} else {
-		fmt.Printf("Object %s exists in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
+		fmt.Printf("Object %s does not exist in bucket %s\n", targetFile, S3_INTEGRATION_BUCKET)
+		fmt.Println(err)
+		return false
 	}
-	return false
+	fmt.Printf("Object %s exists in bucket %s\n", S3_INTEGRATION_BUCKET, targetFile)
+	return true
+
 }
 
 func main() {
-	//@TODO FIX CACHE
 	var repo string
 	var branch string
-	var comment string
+	var bucketKey string
+	var packageBucketKey string
 	var accountID string
 	flag.StringVar(&repo, "r", "", "repository")
 	flag.StringVar(&repo, "repo", "", "repository")
 	flag.StringVar(&branch, "b", "", "branch")
 	flag.StringVar(&branch, "branch", "", "branch")
-	flag.StringVar(&comment, "c", "", "comment")
-	flag.StringVar(&comment, "comment", "", "comment")
+	flag.StringVar(&bucketKey, "o", "", "bucketKey")
+	flag.StringVar(&bucketKey, "bucketKey", "", "bucketKey")
+	flag.StringVar(&packageBucketKey, "p", "", "packageBucketKey")
+	flag.StringVar(&packageBucketKey, "packageBucketKey", "", "packageBucketKey")
 	flag.StringVar(&accountID, "a", "", "accountID")
 	flag.StringVar(&accountID, "account_id", "", "accountID")
 	flag.Parse()
 	rbm := CreateRemoteBuildManager(DEFAULT_INSTANCE_GUIDE, accountID)
 	//rbm := CreateRemoteBuildManager(WINDOWS_TEST_INSTANCE_GUIDE, accountID)
-	//comment = "GHA_DEBUG_RUN"
+	//bucketKey = "GHA_DEBUG_RUN"
 	var err error
 	eg := new(errgroup.Group)
 	defer rbm.Close()
-	err = rbm.BuildCWAAgent(repo, branch, comment, "MainBuildEnv")
+	err = rbm.BuildCWAAgent(repo, branch, bucketKey, "MainBuildEnv")
 	if err != nil {
 		panic(err)
 	}
 	eg.Go(func() error { // windows
-		err = rbm.MakeMsiZip("WindowsMSIPacker", comment)
+		err = rbm.MakeMsiZip("WindowsMSIPacker", bucketKey)
 		if err != nil {
 			return err
 		}
-		err = rbm.BuildMSI("WindowsMSIBuilder", comment)
+		err = rbm.BuildMSI("WindowsMSIBuilder", bucketKey, packageBucketKey)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
 	eg.Go(func() error {
-		err = rbm.MakeMacPkg("MacPkgMaker", comment)
+		err = rbm.MakeMacPkg("MacPkgMaker", packageBucketKey)
 		if err != nil {
 			return err
 		}
@@ -235,6 +250,6 @@ func main() {
 		fmt.Printf("Failed because: %s \n", err)
 		return
 	}
-	fmt.Printf("\033[32mSuccesfully\033[0m built CWA from %s with %s branch, check \033[32m%s \033[0m bucket with \033[1;32m%s\033[0m hash",
-		repo, branch, S3_INTEGRATION_BUCKET, comment)
+	fmt.Printf("\033[32mSuccesfully\033[0m built CWA from %s with %s branch, check \033[32m%s \033[0m bucket with \033[1;32m%s\033[0m hash\n",
+		repo, branch, S3_INTEGRATION_BUCKET, bucketKey)
 }

@@ -18,6 +18,7 @@ const BUILD_ARN = "arn:aws:iam::506463145083:instance-profile/Uniform-Build-Env-
 const COMMAND_TRACKING_TIMEOUT = 20 * time.Minute
 const COMMAND_TRACKING_INTERVAL = 1 * time.Second
 const COMMAND_TRACKING_COUNT = int(COMMAND_TRACKING_TIMEOUT / COMMAND_TRACKING_INTERVAL)
+const PLATFORM_KEY = "platform"
 
 const (
 	LINUX   OS = "linux"
@@ -35,5 +36,3 @@ var SUPPORTED_OS = []OS{
 	WINDOWS,
 	MACOS,
 } //go doesn't let me create a slice from enum so this is the solution
-
-const PLATFORM_KEY = "platform"

@@ -273,8 +273,6 @@ func StopInstance(c context.Context, api EC2StopInstancesAPI, input *ec2.StopIns
 	return resp, err
 }
 func StopInstanceCmd(client *ec2.Client, instanceID string) error {
-	//@TODO:Change to terminate
-
 	input := &ec2.StopInstancesInput{
 		InstanceIds: []string{
 			instanceID,
@@ -292,7 +290,6 @@ func StopInstanceCmd(client *ec2.Client, instanceID string) error {
 }
 
 func TerminateInstanceCmd(client *ec2.Client, instanceID string) error {
-	//@TODO:Change to terminate
 
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: []string{
@@ -306,7 +303,7 @@ func TerminateInstanceCmd(client *ec2.Client, instanceID string) error {
 		fmt.Println("Got an error terminating the instance")
 		return err
 	}
-	fmt.Println("Stopped instance with ID " + instanceID)
+	fmt.Println("Terminated the instance with ID " + instanceID)
 	return nil
 }
 
