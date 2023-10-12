@@ -13,7 +13,8 @@ env:
   #  CACHE_DIR: "uniform-build-env-test/cache_build_env"
   CACHE_DIR: "s3://cloudwatch-agent-integration-bucket/cloudwatch-agent-integration-bucket/logs/"
 #  CACHE_DIR: "uniform-build-env-test"
-on: push
+on:
+  workflow_dispatch:
 jobs:
   cache:
     name: Go mod cache
