@@ -9,28 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
-	"net/http"
-	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
-	"os"
-	"os/signal"
-	"path/filepath"
-	"runtime"
-	"sort"
-	"strings"
-	"syscall"
-	"time"
-
-	"github.com/influxdata/telegraf/agent"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/logger"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/wlog"
-	"github.com/kardianos/service"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/otelcol"
-
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
@@ -42,6 +20,27 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/wlog"
+	"github.com/kardianos/service"
+	client "go.etcd.io/etcd/client/v3"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/otelcol"
+	"log"
+	"net/http"
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
+	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+	"syscall"
+	"time"
 )
 
 const (
@@ -405,6 +404,7 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
+	test()
 	flag.Parse()
 	args := flag.Args()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
@@ -653,4 +653,11 @@ func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, e
 	}
 
 	return "", nil
+}
+
+func test() {
+	cfg := client.Config{
+		Endpoints: []string{"http://localhost:2379"},
+	}
+	fmt.Println(cfg.Endpoints)
 }

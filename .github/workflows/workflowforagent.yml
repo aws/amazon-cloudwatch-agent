@@ -50,18 +50,19 @@ jobs:
                rm -r vendor.zip
                set +e
                echo "building the cloudwatch agent"
-               make build
+               time make build
                build_exit_status=$?
                echo  "build status code:$build_exit_status"
                if [ $build_exit_status -ne 0 ]; then   #To handle the updated the mod file
                    echo "Error detected while running 'go build -mod=vendor .'"
                    go mod tidy
                    go mod vendor
-                   make build
-                   zip -r vendor.zip vendor
-                   echo "updating the vendor file and copying zip file to s3 bucket"
+                   time make build
+                   time zip -r vendor.zip vendor
+                   echo "updating the vendor file and uploading zip file to s3 bucket"
                    aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
                    rm -f vendor.zip
+                   echo "vendor zip is updated and uploaded to s3 bucket"
                else
                   echo "Build successful"
                fi
