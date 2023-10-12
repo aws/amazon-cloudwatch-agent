@@ -71,8 +71,6 @@ jobs:
               go clean -modcache
               time GOPROXY=direct go mod vendor
               time make build -mod=vendor
-              echo "Finding the GO111MODULE environment variable"
-              go env GO111MODULE
               echo "creating zip file"
               time zip -r vendor.zip vendor
               echo "copying zip file to s3 bucket"
