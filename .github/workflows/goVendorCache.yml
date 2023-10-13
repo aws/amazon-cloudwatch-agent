@@ -35,7 +35,7 @@ jobs:
           aws-region: us-west-2
       - name: go mod optimization
         run: |
-          if aws s3 ls "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"; then
+          if aws s3 ls CACHE_DIR; then
              echo "time for copy file to vendor from s3 bucket"
              aws s3 cp CACHE_DIR ./vendor.zip
              echo "time for unzipping the vendor file"
@@ -48,7 +48,6 @@ jobs:
              echo  "build status code:$build_exit_status"
              echo "updating the vendor file as build_exit_status is not equal to 0 because we have new dependencies added to the package"
              if [ $build_exit_status -ne 0 ]; then   #To handle the updated mod file
-                 echo "Error detected while running 'go build -mod=vendor .'"
                  go mod tidy
                  go mod vendor
                  time make build GOMODCACHE=true
