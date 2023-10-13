@@ -28,7 +28,6 @@ WIN_BUILD = GOOS=windows GOARCH=amd64 go build -mod=vendor -trimpath -buildmode=
 DARWIN_BUILD_AMD64 = CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=amd64 go build -mod=vendor -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_amd64
 DARWIN_BUILD_ARM64 = CGO_ENABLED=1 GO111MODULE=on GOOS=darwin GOARCH=arm64 go build -mod=vendor -trimpath -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/darwin_arm64
 else
-@echo "Using GOMODCACHE: $(GOMODCACHE)"
 LINUX_AMD64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64
 LINUX_ARM64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64
 WIN_BUILD = GOOS=windows GOARCH=amd64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64
