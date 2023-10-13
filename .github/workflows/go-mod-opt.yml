@@ -1,18 +1,12 @@
 name: go mod cache
 env:
-  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
-  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
-  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
-  KEY_NAME: ${{ secrets.KEY_NAME }}
-  CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
-  CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
-  CACHE_EXIST: "false"
   CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
-  #  S3_INTEGRATION_BUCKET: "terraform-integration-test"
-  #  CACHE_DIR: "uniform-build-env-test/cache_build_env"
-  CACHE_DIR: "s3://cloudwatch-agent-integration-bucket/cloudwatch-agent-integration-bucket/logs/"
-on: push
+  CACHE_DIR: "s3://cloudwatch-agent-integration-bucket/GoVendorCache/vendor.zip"
+on:
+  push:
+    branches:
+      - main
+      - uniform-build-env
 jobs:
   cache:
     name: Go mod cache
@@ -43,23 +37,24 @@ jobs:
         run: |
           if aws s3 ls "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"; then
              echo "time for copy file to vendor from s3 bucket"
-             time aws s3 cp "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip" ./vendor.zip
+             aws s3 cp CACHE_DIR ./vendor.zip
              echo "time for unzipping the vendor file"
-             time unzip vendor.zip
+             unzip vendor.zip
              rm -r vendor.zip
              set +e
              echo "building the cloudwatch agent"
              time make build GOMODCACHE=true
              build_exit_status=$?
              echo  "build status code:$build_exit_status"
+             echo "updating the vendor file as build_exit_status is not equal to 0 because we have new dependencies added to the package"
              if [ $build_exit_status -ne 0 ]; then   #To handle the updated mod file
                  echo "Error detected while running 'go build -mod=vendor .'"
                  go mod tidy
                  go mod vendor
                  time make build GOMODCACHE=true
-                 time zip -r vendor.zip vendor
+                 zip -r vendor.zip vendor
                  echo "updating the vendor file and uploading zip file to s3 bucket"
-                 aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
+                 aws s3 cp vendor.zip CACHE_DIR
                  rm -f vendor.zip
                  echo "vendor zip is updated and uploaded to s3 bucket"
              else
@@ -72,9 +67,9 @@ jobs:
             go mod vendor 
             time make build GOMODCACHE=true
             echo "creating zip file"
-            time zip -r vendor.zip vendor
+            zip -r vendor.zip vendor
             echo "copying zip file to s3 bucket"
-            aws s3 cp vendor.zip "s3://cloudwatch-agent-integration-bucket/vendorTest/vendor.zip"
+            aws s3 cp vendor.zip CACHE_DIR
             echo "vendor zip added to the bucket"
            fi
            set -e
