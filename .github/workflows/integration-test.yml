@@ -14,6 +14,8 @@ env:
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  BUILD_BUCKET_KEY: "integration-test/binary/${{ github.sha }}"
+  PACKAGE_BUCKET_KEY: "integration-test/packaging/${{ github.sha }}"
 
 on:
   push:
@@ -47,10 +49,45 @@ jobs:
       id-token: write
       contents: read
     with:
+      # cant use env vars here because of https://github.com/actions/runner/issues/1189#issuecomment-1741672276
       ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
-      BucketKey: "integration-test/binary/${{ github.sha }}"
+      BucketKey:  "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
 
+  BinaryBenchmarkTest:
+    name: BinaryBenchmarkTest
+    needs: [ BuildAndUpload ]
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        os: [ ubuntu-latest,windows-latest,macos-latest ]
+        include:
+          - os: ubuntu-latest
+            installationScript: time sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+          - os: windows-latest
+            installationScript: Measure-Command { Start-Process msiexec "/i ./amazon-cloudwatch-agent.msi /norestart "  }
+          - os: macos-latest
+            installationScript: time sudo installer -pkg  ./amazon-cloudwatch-agent.pkg -target /
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+      - name: Download RPM
+        run: |
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ env.BUILD_BUCKET_KEY }}/linux/amd64/amazon-cloudwatch-agent.deb .
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ env.PACKAGE_BUCKET_KEY }}/amd64/amazon-cloudwatch-agent.pkg .
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ env.PACKAGE_BUCKET_KEY }}/amazon-cloudwatch-agent.msi .
+
+      - name: GetRPMSize
+        if: matrix.os == 'ubuntu-latest'
+        run: ls -lh
+      - name: Measure Installation Time
+        run: ${{matrix.installationScript}}
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest

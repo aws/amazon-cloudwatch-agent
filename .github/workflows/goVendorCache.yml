@@ -9,7 +9,7 @@ on:
       - uniform-build-env
 jobs:
   cache:
-    name: Go mod cache
+    name: Caching Go Mod files
     runs-on: ubuntu-latest
     permissions:
       id-token: write

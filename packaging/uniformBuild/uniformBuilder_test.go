@@ -3,6 +3,7 @@
 
 package main
 
+//@TODO UPDATE THE TESTS
 import (
 	//"github.com/stretchr/testify/require"
 	"context"
@@ -11,6 +12,9 @@ import (
 	"os"
 	"testing"
 	"time"
+	"uniformBuild/commands"
+	"uniformBuild/common"
+	"uniformBuild/utils"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -29,7 +33,7 @@ func TestMain(m *testing.M) {
 }
 func TestAmiLatest(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-	imng := CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
+	imng := utils.CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
 	// is it consistent
 	previous := *imng.GetLatestAMIVersion(accountID).ImageId
 	for i := 0; i < 5; i++ {
@@ -42,9 +46,9 @@ func TestAmiLatest(t *testing.T) {
 func TestSupportedAmis(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 
-	imng := CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
+	imng := utils.CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
 	imng.GetSupportedAMIs(accountID)
-	for _, os := range SUPPORTED_OS {
+	for _, os := range common.SUPPORTED_OS {
 		_, ok := imng.amis[os]
 		require.Truef(t, ok, "It does not contain", os)
 	}
@@ -66,27 +70,27 @@ func TestS3Cache(t *testing.T) {
 }
 func TestOnSpecificInstance(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
-	imng := CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
-	testInstance := &Instance{
-		*GetInstanceFromID(imng.ec2Client, "i-0dd926b8dcf5884b6"),
+	imng := utils.CreateNewInstanceManager(cfg, DEFAULT_INSTANCE_GUIDE)
+	testInstance := &utils.Instance{
+		*utils.GetInstanceFromID(imng.ec2Client, "i-0dd926b8dcf5884b6"),
 		"_",
-		LINUX,
+		common.LINUX,
 	}
 	ssmClient := ssm.NewFromConfig(cfg)
-	RunCmdRemotely(ssmClient, testInstance, mergeCommands(
+	utils.RunCmdRemotely(ssmClient, testInstance, commands.mergeCommands(
 		"aws --version",
 	),
 		"Manual Testing")
 }
 func TestEnviorment(t *testing.T) {
-	guide := map[string]OS{
-		"MainBuildEnv": LINUX,
+	guide := map[string]common.OS{
+		"MainBuildEnv": common.LINUX,
 	}
 	rbm := CreateRemoteBuildManager(guide, accountID)
 	defer rbm.Close()
 	func() {
 		require.NoError(t,
-			rbm.RunCommand(mergeCommands(
+			rbm.RunCommand(commands.mergeCommands(
 				"go version",
 				"go env",
 			),
@@ -95,14 +99,14 @@ func TestEnviorment(t *testing.T) {
 		)
 	}()
 	require.NoError(t,
-		rbm.RunCommand(mergeCommands(
+		rbm.RunCommand(commands.mergeCommands(
 			"aws --version",
 		),
 			"MainBuildEnv",
 			"test env aws"),
 	)
 	require.NoError(t,
-		rbm.RunCommand(mergeCommands(
+		rbm.RunCommand(commands.mergeCommands(
 			"make --version",
 		),
 			"MainBuildEnv",
@@ -111,14 +115,14 @@ func TestEnviorment(t *testing.T) {
 	)
 }
 func TestOSMixUp(t *testing.T) {
-	guide := map[string]OS{
-		"linux": LINUX,
-		"win":   WINDOWS,
+	guide := map[string]common.OS{
+		"linux": common.LINUX,
+		"win":   common.WINDOWS,
 	}
 	rbm := CreateRemoteBuildManager(guide, accountID)
 	defer rbm.Close()
-	require.NoErrorf(t, rbm.instanceManager.insertOSRequirement("linux", LINUX), "")
-	require.Errorf(t, rbm.instanceManager.insertOSRequirement("linux", WINDOWS),
+	require.NoErrorf(t, rbm.instanceManager.insertOSRequirement("linux", common.LINUX), "")
+	require.Errorf(t, rbm.instanceManager.insertOSRequirement("linux", common.WINDOWS),
 		"You should be getting an error for mixing OSes")
 
 }
@@ -140,8 +144,8 @@ func TestPrivateFork(t *testing.T) {
 }
 func TestMakeMsiZip(t *testing.T) {
 	//TestPublicRepoBuild(t)
-	guide := map[string]OS{
-		"WindowsMSIPacker": LINUX,
+	guide := map[string]common.OS{
+		"WindowsMSIPacker": common.LINUX,
 	}
 	rbm := CreateRemoteBuildManager(guide, accountID)
 	defer rbm.Close()
