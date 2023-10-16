@@ -4,130 +4,196 @@
 package collect_list
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestApplyTimestampFormatRule(t *testing.T) {
-	r := new(TimestampRegax)
-	var input interface{}
-	e := json.Unmarshal([]byte(`{
-			"timestamp_format": "%b %d %H:%M:%S"
-	}`), &input)
-	if e == nil {
-		actualReturnKey, retVal := r.ApplyRule(input)
-		assert.Equal(t, "timestamp_regex", actualReturnKey)
-		assert.NotNil(t, retVal)
-	} else {
-		panic(e)
+func TestTimestampRegexRule(t *testing.T) {
+	regex := new(TimestampRegex)
+	type want struct {
+		key   string
+		value interface{}
+	}
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		want    *want
+		wantErr error
+	}{
+		"WithNonZeroPaddedOptions": {
+			input: map[string]interface{}{
+				"timestamp_format": "%-m %-d %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_regex",
+				value: "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			},
+		},
+		"WithZeroPaddedOptions": {
+			input: map[string]interface{}{
+				"timestamp_format": "%m %d %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_regex",
+				value: "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			},
+		},
+		"WithZeroPaddedMonthWord": {
+			input: map[string]interface{}{
+				"timestamp_format": "%b %d %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_regex",
+				value: "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			},
+		},
+		"WithNonZeroPaddedMonthWord": {
+			input: map[string]interface{}{
+				"timestamp_format": "%b %-d %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_regex",
+				value: "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			},
+		},
+		"WithYearAsTwoDigits": {
+			input: map[string]interface{}{
+				"timestamp_format": "%b %-d %y %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_regex",
+				value: "(\\w{3} \\s{0,1}\\d{1,2} \\d{2} \\d{2}:\\d{2}:\\d{2})",
+			},
+		},
+		"WithYearAsFourDigits": {
+			input: map[string]interface{}{
+				"timestamp_format": "%b %-d %Y %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_regex",
+				value: "(\\w{3} \\s{0,1}\\d{1,2} \\d{4} \\d{2}:\\d{2}:\\d{2})",
+			},
+		},
+		"WithNoTimestampFormat": {
+			input: map[string]interface{}{
+				"timestamp": "foo",
+			},
+			want: &want{
+				key:   "",
+				value: "",
+			},
+		},
+		"WithInvalidTimestampFormat": {
+			input: map[string]interface{}{
+				"timestamp_format": "foo",
+			},
+			want: &want{
+				key:   "timestamp_regex",
+				value: "(foo)",
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			res, returnVal := regex.ApplyRule(testCase.input)
+			require.NotNil(t, res)
+			assert.Equal(t, res, testCase.want.key)
+			assert.Equal(t, returnVal, testCase.want.value)
+		})
 	}
 }
 
-func TestApplyInvalidTimestampFormatRule(t *testing.T) {
-	regex := new(TimestampRegax)
-	var input interface{}
-	e := json.Unmarshal([]byte(`{
-			"timestamp_format": "foo"
-	}`), &input)
-	if e == nil {
-		actualReturnKey, retVal := regex.ApplyRule(input)
-		assert.Equal(t, "timestamp_regex", actualReturnKey)
-		assert.Equal(t, "(foo)", retVal)
-	} else {
-		panic(e)
-	}
-}
-
-func TestApplyTimestampFormatLayoutRule(t *testing.T) {
+func TestTimestampLayoutxRule(t *testing.T) {
 	layout := new(TimestampLayout)
-	var input interface{}
-	e := json.Unmarshal([]byte(`{
-			"timestamp_format": "%b %d %H:%M:%S"
-	}`), &input)
-	if e == nil {
-		actualReturnKey, retVal := layout.ApplyRule(input)
-		assert.Equal(t, "timestamp_layout", actualReturnKey)
-		assert.NotNil(t, retVal)
-		assert.Equal(t, "Jan _2 15:04:05", retVal)
-
-	} else {
-		panic(e)
+	type want struct {
+		key   string
+		value interface{}
 	}
-}
-
-func TestApplyTimestampFormatLayoutZeroPadRule(t *testing.T) {
-	layout := new(TimestampLayout)
-	var input interface{}
-	e := json.Unmarshal([]byte(`{
-			"timestamp_format": "%b %-d %H:%M:%S"
-	}`), &input)
-	if e == nil {
-		actualReturnKey, retVal := layout.ApplyRule(input)
-		assert.Equal(t, "timestamp_layout", actualReturnKey)
-		assert.NotNil(t, retVal)
-		assert.Equal(t, "Jan _2 15:04:05", retVal)
-
-	} else {
-		panic(e)
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		want    *want
+		wantErr error
+	}{
+		"WithNonZeroPaddedOptions": {
+			input: map[string]interface{}{
+				"timestamp_format": "%-m %-d %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_layout",
+				value: []string{"1 _2 15:04:05", "01 _2 15:04:05"},
+			},
+		},
+		"WithZeroPaddedOptions": {
+			input: map[string]interface{}{
+				"timestamp_format": "%m %d %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_layout",
+				value: []string{"01 _2 15:04:05", "1 _2 15:04:05"},
+			},
+		},
+		"WithZeroPaddedMonthWord": {
+			input: map[string]interface{}{
+				"timestamp_format": "%b %d %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_layout",
+				value: []string{"Jan _2 15:04:05"},
+			},
+		},
+		"WithNonZeroPaddedMonthWord": {
+			input: map[string]interface{}{
+				"timestamp_format": "%b %-d %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_layout",
+				value: []string{"Jan _2 15:04:05"},
+			},
+		},
+		"WithYearAsTwoDigits": {
+			input: map[string]interface{}{
+				"timestamp_format": "%b %-d %y %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_layout",
+				value: []string{"Jan _2 06 15:04:05"},
+			},
+		},
+		"WithYearAsFourDigits": {
+			input: map[string]interface{}{
+				"timestamp_format": "%b %-d %Y %H:%M:%S",
+			},
+			want: &want{
+				key:   "timestamp_layout",
+				value: []string{"Jan _2 2006 15:04:05"},
+			},
+		},
+		"WithNoTimestampFormat": {
+			input: map[string]interface{}{
+				"timestamp": "foo",
+			},
+			want: &want{
+				key:   "",
+				value: "",
+			},
+		},
+		"WithInvalidTimestampFormat": {
+			input: map[string]interface{}{
+				"timestamp_format": "foo",
+			},
+			want: &want{
+				key:   "timestamp_layout",
+				value: []string{"foo"},
+			},
+		},
 	}
-}
-
-func TestApplyInvalidTimestampFormatLayoutRule(t *testing.T) {
-	layout := new(TimestampLayout)
-	var input interface{}
-	e := json.Unmarshal([]byte(`{
-			"timezone": "UTC"
-	}`), &input)
-	if e == nil {
-		actualReturnKey, retVal := layout.ApplyRule(input)
-		assert.Equal(t, "", actualReturnKey)
-		assert.Equal(t, "", retVal)
-	} else {
-		panic(e)
-	}
-}
-
-func TestApplyTimestampFormatAllZeroPaddingRule(t *testing.T) {
-	// compare zero padding and not zero padding options are
-	// translating as the same regex for %d/%-d and %m/%-m
-	nonZeroRegax := new(TimestampRegax)
-	zeroRegax := new(TimestampRegax)
-	nonZeroLayout := new(TimestampLayout)
-	zeroLayout := new(TimestampLayout)
-
-	var non_zero interface{}
-	var zero interface{}
-
-	e := json.Unmarshal([]byte(`{
-			"timestamp_format": "%-m %-d %H:%M:%S"
-	}`), &non_zero)
-
-	f := json.Unmarshal([]byte(`{
-			"timestamp_format": "%m %d %H:%M:%S"
-	}`), &zero)
-
-	if (e == nil) || (f == nil) {
-		zeroActualReturnKey, zeroRetVal := zeroRegax.ApplyRule(zero)
-		nonZeroActualReturnKey, nonZeroRetVal := nonZeroRegax.ApplyRule(non_zero)
-		assert.Equal(t, "timestamp_regex", zeroActualReturnKey)
-		assert.Equal(t, zeroActualReturnKey, nonZeroActualReturnKey)
-		assert.NotNil(t, zeroRetVal)
-		assert.NotNil(t, nonZeroRetVal)
-		assert.Equal(t, "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})", nonZeroRetVal)
-		assert.Equal(t, zeroRetVal, nonZeroRetVal)
-
-		zeroActualReturnKey, zeroRetVal = zeroLayout.ApplyRule(zero)
-		nonZeroActualReturnKey, nonZeroRetVal = nonZeroLayout.ApplyRule(non_zero)
-		assert.Equal(t, "timestamp_layout", zeroActualReturnKey)
-		assert.Equal(t, zeroActualReturnKey, nonZeroActualReturnKey)
-		assert.NotNil(t, zeroRetVal)
-		assert.NotNil(t, nonZeroRetVal)
-		assert.Equal(t, "_1 _2 15:04:05", nonZeroRetVal)
-		assert.Equal(t, zeroRetVal, nonZeroRetVal)
-
-	} else {
-		panic(e)
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			res, returnVal := layout.ApplyRule(testCase.input)
+			require.NotNil(t, res)
+			assert.Equal(t, res, testCase.want.key)
+			assert.Equal(t, returnVal, testCase.want.value)
+		})
 	}
 }

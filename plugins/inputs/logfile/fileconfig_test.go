@@ -18,7 +18,7 @@ func TestFileConfigInit(t *testing.T) {
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
 		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
+		TimestampLayout:       []string{"02 Jan 2006 15:04:05"},
 		Timezone:              "UTC",
 		MultiLineStartPattern: "{timestamp_regex}",
 	}
@@ -47,7 +47,7 @@ func TestFileConfigInitFailureCase(t *testing.T) {
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
 		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+)",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
+		TimestampLayout:       []string{"02 Jan 2006 15:04:05"},
 		Timezone:              "UTC",
 		MultiLineStartPattern: "{timestamp_regex}",
 	}
@@ -60,7 +60,7 @@ func TestFileConfigInitFailureCase(t *testing.T) {
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
 		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
+		TimestampLayout:       []string{"02 Jan 2006 15:04:05"},
 		Timezone:              "UTC",
 		MultiLineStartPattern: "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+)",
 	}
@@ -82,7 +82,7 @@ func TestLogGroupName(t *testing.T) {
 
 func TestTimestampParser(t *testing.T) {
 	timestampRegex := "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2})"
-	timestampLayout := "02 Jan 2006 15:04:05"
+	timestampLayout := []string{"02 Jan 2006 15:04:05"}
 	timezone := "UTC"
 	timezoneLoc := time.UTC
 	timestampRegexP, err := regexp.Compile(timestampRegex)
@@ -110,7 +110,7 @@ func TestTimestampParser(t *testing.T) {
 
 func TestTimestampParserWithPadding(t *testing.T) {
 	timestampRegex := "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
-	timestampLayout := "1 2 15:04:05"
+	timestampLayout := []string{"1 2 15:04:05"}
 	timezone := "UTC"
 	timezoneLoc := time.UTC
 	timestampRegexP, err := regexp.Compile(timestampRegex)
@@ -137,7 +137,7 @@ func TestTimestampParserDefault(t *testing.T) {
 	// Check when timestamp_format is "%b %d %H:%M:%S"
 	// %d and %-d are both treated as s{0,1}\\d{1,2}
 	timestampRegex := "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
-	timestampLayout := "Jan _2 15:04:05"
+	timestampLayout := []string{"test", "Jan 2 15:04:05"}
 	timezone := "UTC"
 	timezoneLoc := time.UTC
 	timestampRegexP, err := regexp.Compile(timestampRegex)
@@ -174,7 +174,7 @@ func TestTimestampParserDefault(t *testing.T) {
 
 func TestTimestampParserWithFracSeconds(t *testing.T) {
 	timestampRegex := "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2},(\\d{1,9}) \\w{3})"
-	timestampLayout := "02 Jan 2006 15:04:05,.000 MST"
+	timestampLayout := []string{"02 Jan 2006 15:04:05,.000 MST"}
 	timezone := "UTC"
 	timezoneLoc := time.UTC
 	timestampRegexP, err := regexp.Compile(timestampRegex)

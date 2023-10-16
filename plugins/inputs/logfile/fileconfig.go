@@ -43,7 +43,7 @@ type FileConfig struct {
 	//The regex of the timestampFromLogLine presents in the log entry
 	TimestampRegex string `toml:"timestamp_regex"`
 	//The timestampFromLogLine layout used in GoLang to parse the timestampFromLogLine.
-	TimestampLayout string `toml:"timestamp_layout"`
+	TimestampLayout []string `toml:"timestamp_layout"`
 	//The time zone used to parse the timestampFromLogLine in the log entry.
 	Timezone string `toml:"timezone"`
 
@@ -179,7 +179,10 @@ func (config *FileConfig) timestampFromLogLine(logValue string) time.Time {
 			replacement := fmt.Sprintf(".%s", fracSecond[:3])
 			timestampContent = fmt.Sprintf("%s%s%s", timestampContent[:start], replacement, timestampContent[end:])
 		}
-		timestamp, err := time.ParseInLocation(config.TimestampLayout, timestampContent, config.TimezoneLoc)
+		timestamp, err := time.ParseInLocation(config.TimestampLayout[0], timestampContent, config.TimezoneLoc)
+		if err != nil && len(config.TimestampLayout) > 1{
+			timestamp, err = time.ParseInLocation(config.TimestampLayout[1], timestampContent, config.TimezoneLoc)
+		}
 		if err != nil {
 			log.Printf("E! Error parsing timestampFromLogLine: %s", err)
 			return time.Time{}
