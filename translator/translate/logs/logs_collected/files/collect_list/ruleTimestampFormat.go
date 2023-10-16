@@ -62,8 +62,8 @@ var TimeFormatMap = map[string]string{
 	"%m":  "01",
 	"%A":  "Monday",
 	"%a":  "Mon",
-	"%-d": "2",
-	"%d":  "02",
+	"%-d": "_2",
+	"%d":  "_2",
 	"%H":  "15",
 	"%-I": "3",
 	"%I":  "03",
@@ -83,11 +83,11 @@ var TimeFormatRexMap = map[string]string{
 	"%B":  "\\w{7}",
 	"%b":  "\\w{3}",
 	"%-m": "\\s{0,1}\\d{1,2}",
-	"%m":  "\\d{2}",
+	"%m":  "\\s{0,1}\\d{1,2}",
 	"%A":  "\\w{6,9}",
 	"%a":  "\\w{3}",
 	"%-d": "\\s{0,1}\\d{1,2}",
-	"%d":  "\\d{2}",
+	"%d":  "\\s{0,1}\\d{1,2}",
 	"%H":  "\\d{2}",
 	"%-I": "\\d{1,2}",
 	"%I":  "\\d{2}",
@@ -136,12 +136,12 @@ func checkAndReplace(input string, timestampFormatMap map[string]string) string 
 	return res
 }
 
-type TimestampRegax struct {
+type TimestampRegex struct {
 }
 
 // ApplyRule add timestamp regex
 // do not add timestamp check when viewing cwa logfile
-func (t *TimestampRegax) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
+func (t *TimestampRegex) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	//Convert the input string into []rune and iterate the map and build the output []rune
 	m := input.(map[string]interface{})
 	//If user not specify the timestamp_format, then no config entry for "timestamp_layout" in TOML
@@ -156,7 +156,7 @@ func (t *TimestampRegax) ApplyRule(input interface{}) (returnKey string, returnV
 		res = checkAndReplace(res, TimeFormatRexMap)
 		// remove the prefix, if the format startswith "%-m" or "%-d", there is an "\\s{0,1}" at the beginning.
 		// like "timestamp_format": "%-m %-d %H:%M:%S" will be converted into following layout and regex
-		//      timestamp_layout = "1 2 15:04:05"
+		//      timestamp_layout = ["1 _2 15:04:05"]
 		//      timestamp_regex = "(\\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
 		// following timestamp string " 2 1 07:10:06" matches the regex, but it can not match the layout.
 		// After the prefix "\\s{0,1}", it can match both the regex and layout.
@@ -190,7 +190,20 @@ func (t *TimestampLayout) ApplyRule(input interface{}) (returnKey string, return
 		res := checkAndReplace(val.(string), TimeFormatMap)
 		//If user provide with the specific timestamp_format, use the one that user provide
 		returnKey = "timestamp_layout"
-		returnVal = res
+		timestampInput := val.(string)
+		// Go doesn't support _2 option for month in day as a result need to set
+		// timestamp_layout with 2 strings which support %m and %-m
+		if strings.Contains(timestampInput, "%m") {
+			timestampInput := strings.Replace(timestampInput, "%m", "%-m", -1)
+			alternativeLayout := checkAndReplace(timestampInput, TimeFormatMap)
+			returnVal = []string{res, alternativeLayout}
+		} else if strings.Contains(timestampInput, "%-m") {
+			timestampInput = strings.Replace(timestampInput, "%-m", "%m", -1)
+			alternativeLayout := checkAndReplace(timestampInput, TimeFormatMap)
+			returnVal = []string{res, alternativeLayout}
+		} else {
+			returnVal = []string{res}
+		}
 	}
 	return
 }
@@ -216,7 +229,7 @@ func (t *Timezone) ApplyRule(input interface{}) (returnKey string, returnVal int
 }
 func init() {
 	t1 := new(TimestampLayout)
-	t2 := new(TimestampRegax)
+	t2 := new(TimestampRegex)
 	t3 := new(Timezone)
 	r := []Rule{t1, t2, t3}
 	RegisterRule("timestamp_format", r)
