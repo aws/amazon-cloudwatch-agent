@@ -35,8 +35,8 @@ exporters:
     disable_metric_extraction: false
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
-    endpoint: ""
-    imds_retries: 1
+    endpoint: "https://fake_endpoint"
+    "imds_retries": 1
     enhanced_container_insights: false
     local_mode: false
     log_group_name: /aws/ecs/containerinsights/{ClusterName}/performance

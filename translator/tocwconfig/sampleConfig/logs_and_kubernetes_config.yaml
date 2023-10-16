@@ -35,7 +35,7 @@ exporters:
     dimension_rollup_option: NoDimensionRollup
     disable_metric_extraction: false
     eks_fargate_container_insights_enabled: false
-    endpoint: ""
+    endpoint: "https://fake_endpoint"
     imds_retries: 0
     enhanced_container_insights: true
     local_mode: false

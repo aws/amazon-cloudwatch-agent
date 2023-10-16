@@ -89,7 +89,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	if c.IsSet(endpointOverrideKey) {
 		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
 	}
-
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	return cfg, nil
