@@ -1,10 +1,10 @@
 connectors: {}
 exporters:
   awscloudwatchlogs/emf_logs:
-    certificate_file_path: ""
+    certificate_file_path: "/etc/test/ca_bundle.pem"
     emf_only: true
     endpoint: "https://fake_endpoint"
-    "imds_retries": 1
+    imds_retries: 1
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
@@ -39,10 +39,10 @@ exporters:
     disable_metric_extraction: true
     version: "0"
     eks_fargate_container_insights_enabled: false
-    certificate_file_path: ""
-    endpoint: ""
+    certificate_file_path: "/etc/test/ca_bundle.pem"
+    endpoint: "https://fake_endpoint"
     enhanced_container_insights: false
-    "imds_retries": 1
+    imds_retries: 1
     local_mode: false
     retain_initial_value_of_delta_metric: false
     parse_json_encoded_attr_values: [ Sources, kubernetes ]
@@ -122,10 +122,14 @@ exporters:
 extensions: {}
 processors:
   batch/emf_logs:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
   batch/containerinsights:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
@@ -140,7 +144,7 @@ receivers:
     enable_control_plane_metrics: false
     certificate_file_path: ""
     endpoint: ""
-    "imds_retries": 1
+    imds_retries: 1
     prefer_full_pod_name: true
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
@@ -197,8 +201,8 @@ service:
       processors:
         - batch/emf_logs
       receivers:
-        - udplog/emf_logs
         - tcplog/emf_logs
+        - udplog/emf_logs
     metrics/containerinsights:
       exporters:
         - awsemf/containerinsights
@@ -222,7 +226,8 @@ service:
     metrics:
       address: ""
       level: None
-      metric_readers: []
+      readers: []
     resource: {}
     traces:
+      processors: []
       propagators: []

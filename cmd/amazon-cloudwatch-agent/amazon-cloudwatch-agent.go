@@ -42,6 +42,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 const (
@@ -51,14 +52,14 @@ const (
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
 var pprofAddr = flag.String("pprof-addr", "",
-	"pprof address to listen on, not activate pprof if empty")
+	"pprof address to listen on, disabled by default, examples: 'localhost:1234', ':4567' (restricted to localhost)")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
-var fConfig = flag.String("config", "", "configuration file to load")
-var fOtelConfig = flag.String("otelconfig", "", "YAML configuration file to run OTel pipeline")
+var fTomlConfig = flag.String("config", "", "configuration file to load")
+var fOtelConfig = flag.String("otelconfig", paths.YamlConfigPath, "YAML configuration file to run OTel pipeline")
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -80,8 +81,6 @@ var fAggregatorFilters = flag.String("aggregator-filter", "",
 	"filter the aggregators to enable, separator is :")
 var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
-var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
@@ -137,7 +136,7 @@ func reloadLoop(
 			}
 		}(ctx)
 
-		if envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig); err == nil {
+		if envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig); err == nil {
 			// Reloads environment variables when file is changed
 			go func(ctx context.Context, envConfigPath string) {
 				var previousModTime time.Time
@@ -181,17 +180,17 @@ func reloadLoop(
 // The "config-translator" program populates that file.
 func loadEnvironmentVariables(path string) error {
 	if path == "" {
-		return fmt.Errorf("No env config file specified")
+		return fmt.Errorf("no env config file specified")
 	}
 
 	bytes, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("Can't read env config file %s due to: %s", path, err.Error())
+		return fmt.Errorf("cannot read env config file %s due to: %s", path, err.Error())
 	}
 	envVars := map[string]string{}
 	err = json.Unmarshal(bytes, &envVars)
 	if err != nil {
-		return fmt.Errorf("Can't create env config due to: %s", err.Error())
+		return fmt.Errorf("cannot create env config due to: %s", err.Error())
 	}
 
 	for key, val := range envVars {
@@ -203,7 +202,7 @@ func loadEnvironmentVariables(path string) error {
 
 func getEnvConfigPath(configPath, envConfigPath string) (string, error) {
 	if configPath == "" {
-		return "", fmt.Errorf("No config file specified")
+		return "", fmt.Errorf("no config file specified")
 	}
 	//load the environment variables that's saved in json env config file
 	if envConfigPath == "" {
@@ -217,7 +216,7 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig)
+	envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig)
 	if err != nil {
 		return err
 	}
@@ -437,6 +436,9 @@ func main() {
 			parts := strings.Split(pprofHostPort, ":")
 			if len(parts) == 2 && parts[0] == "" {
 				pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+			} else if parts[0] != "localhost" {
+				log.Printf("W! Not starting pprof, it is restricted to localhost:nnnn")
+				return
 			}
 			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
 
@@ -516,6 +518,9 @@ func main() {
 				}
 				envVars[parts[0]] = parts[1]
 				bytes, err = json.MarshalIndent(envVars, "", "\t")
+				if err != nil {
+					log.Fatalf("E! Failed to marshal env config: %v", err)
+				}
 				if err = os.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
@@ -550,8 +555,8 @@ func main() {
 		// Handle the --service flag here to prevent any issues with tooling that
 		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
-			if *fConfig != "" {
-				svcConfig.Arguments = []string{"--config", *fConfig}
+			if *fTomlConfig != "" {
+				svcConfig.Arguments = []string{"--config", *fTomlConfig}
 			}
 			if *fConfigDirectory != "" {
 				svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", *fConfigDirectory)
@@ -602,7 +607,7 @@ func windowsRunAsService() bool {
 }
 
 func loadTomlConfigIntoAgent(c *config.Config) error {
-	err := c.LoadConfig(*fConfig)
+	err := c.LoadConfig(*fTomlConfig)
 	if err != nil {
 		return err
 	}
@@ -633,7 +638,7 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error {
 	if *fSchemaTest {
 		//up to this point, the given config file must be valid
 		fmt.Println(agentinfo.FullVersion())
-		fmt.Printf("The given config: %v is valid\n", *fConfig)
+		fmt.Printf("The given config: %v is valid\n", *fTomlConfig)
 		os.Exit(0)
 	}
 

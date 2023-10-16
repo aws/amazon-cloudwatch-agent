@@ -4,7 +4,7 @@
 package retryer
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -27,7 +27,7 @@ type IMDSRetryer struct {
 // otel component layer retries should come from aws config settings
 // translator layer should come from env vars see GetDefaultRetryNumber()
 func NewIMDSRetryer(imdsRetries int) IMDSRetryer {
-	log.Printf("I! imds retry client will retry %d times", imdsRetries)
+	fmt.Printf("I! imds retry client will retry %d times", imdsRetries)
 	return IMDSRetryer{
 		DefaultRetryer: client.DefaultRetryer{
 			NumMaxRetries: imdsRetries,
@@ -43,7 +43,7 @@ func (r IMDSRetryer) ShouldRetry(req *request.Request) bool {
 	if awsError, ok := req.Error.(awserr.Error); r.DefaultRetryer.ShouldRetry(req) || (ok && awsError != nil && awsError.Code() == "EC2MetadataError") {
 		shouldRetry = true
 	}
-	log.Printf("D! should retry %t for imds error : %v", shouldRetry, req.Error)
+	fmt.Printf("D! should retry %t for imds error : %v", shouldRetry, req.Error)
 	return shouldRetry
 }
 

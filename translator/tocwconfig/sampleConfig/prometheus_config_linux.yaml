@@ -8,7 +8,7 @@ exporters:
     retain_initial_value_of_delta_metric: false
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
-    endpoint: ""
+    endpoint: "https://fake_endpoint"
     "imds_retries": 1
     enhanced_container_insights: false
     local_mode: false
@@ -74,6 +74,8 @@ extensions: {}
 
 processors:
   batch/prometheus:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 30s
@@ -82,6 +84,7 @@ receivers:
   telegraf_prometheus:
     collection_interval: 1m0s
     initial_delay: "1s"
+    timeout: 0s
 service:
   extensions: []
   pipelines:
@@ -108,7 +111,8 @@ service:
     metrics:
       address: ""
       level: None
-      metric_readers: []
+      readers: []
     resource: {}
     traces:
+      processors: []
       propagators: []

@@ -504,7 +504,7 @@ append line`
 		FilePath:              tmpfile.Name(),
 		FromBeginning:         true,
 		TimestampRegex:        "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
-		TimestampLayout:       "15:04:05 06 Jan 2",
+		TimestampLayout:       []string{"15:04:05 06 Jan 2"},
 		MultiLineStartPattern: "{timestamp_regex}",
 		Timezone:              time.UTC.String(),
 	}}

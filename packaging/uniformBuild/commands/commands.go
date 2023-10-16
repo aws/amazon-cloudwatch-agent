@@ -9,19 +9,12 @@ import (
 	"uniformBuild/common"
 )
 
-type CommandInterface interface {
-	string
-}
 type CommandPacket struct {
 	TargetOS   common.OS
 	OutputFile string
 	Command    string
 }
 
-func (packet *CommandPacket) validateOSRequirement() {
-
-}
-func (packet *CommandPacket) checkCache() {}
 func CreateCommandPacket(targetOS common.OS, OutputFile string, commands ...string) CommandPacket {
 	return CommandPacket{
 
@@ -74,11 +67,12 @@ func InitEnvCmd(os common.OS) string {
 }
 
 func CloneGitRepo(gitUrl string, branch string) string {
-	command := fmt.Sprintf(
-		"git clone %s ccwa && cd ccwa && git checkout %s && cd ..",
-		gitUrl,
-		branch)
-
+	command := MergeCommands(common.LINUX,
+		fmt.Sprintf("git clone %s ccwa", gitUrl),
+		"cd ccwa",
+		fmt.Sprintf("git checkout %s", branch),
+		"cd ..",
+	)
 	return command
 }
 func RemoveFolder(folderPath string) string {
@@ -89,8 +83,10 @@ func RemoveFolder(folderPath string) string {
 func MakeBuild() string {
 	//assuming you are running this right after CloneGitRepo
 	command := MergeCommands(
+		common.LINUX,
 		"cd ccwa",
-		" make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win ",
+		" make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win  GOMODCACHE=true",
+		//"make build",
 		"cd ..",
 	)
 	return command
@@ -166,6 +162,17 @@ func LoadWorkDirectory(os common.OS) string {
 	default:
 		return "echo 'Already at work directory' "
 	}
+}
+
+func RetrieveGoModVendor(targetOS common.OS) string {
+	return MergeCommands(targetOS,
+		"cd ccwa",
+		fmt.Sprintf("aws s3 cp %s . ", common.GO_MOD_CACHE_DIR),
+		"unzip -q vendor.zip",
+		"rm -rf vendor.zip",
+		"go mod vendor",
+		"cd ..",
+	)
 }
 
 // MAC COMMANDS

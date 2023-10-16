@@ -46,7 +46,7 @@ func AssignInstanceProfile(client *ec2.Client, instance *Instance) error {
 		fmt.Println("Got an error attaching iam profile")
 		return err
 	}
-	fmt.Println("IAM Instance Profile successfully added to ", instance.name)
+	fmt.Println("IAM Instance Profile successfully added to ", instance.Name)
 	return nil
 }
 func CreateInstanceCmd(client *ec2.Client, image *types.Image, name string, os common.OS) Instance {

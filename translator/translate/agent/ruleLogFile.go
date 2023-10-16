@@ -19,6 +19,7 @@ type Logfile struct {
 
 func (l *Logfile) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	returnKey, returnVal = translator.DefaultCase("logfile", GetDefaultValue(), input)
+	context.CurrentContext().SetAgentLogFile(returnVal.(string))
 	return
 }
 

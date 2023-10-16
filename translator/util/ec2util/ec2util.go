@@ -5,7 +5,6 @@ package ec2util
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -113,7 +112,7 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	if hostname, err := mdDisableFallback.GetMetadata("hostname"); err == nil {
 		e.Hostname = hostname
 	} else {
-		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
+		fmt.Println("D! could not get hostname without imds v1 fallback enable thus enable fallback")
 		hostnameInner, errInner := mdEnableFallback.GetMetadata("hostname")
 		if errInner == nil {
 			e.Hostname = hostnameInner
@@ -130,7 +129,7 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		e.PrivateIP = instanceIdentityDocument.PrivateIP
 		e.InstanceID = instanceIdentityDocument.InstanceID
 	} else {
-		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
+		fmt.Println("D! could not get instance document without imds v1 fallback enable thus enable fallback")
 		instanceIdentityDocumentInner, errInner := mdEnableFallback.GetInstanceIdentityDocument()
 		if errInner == nil {
 			e.Region = instanceIdentityDocumentInner.Region

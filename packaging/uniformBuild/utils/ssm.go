@@ -29,14 +29,14 @@ func RunCmdRemotely(ssmClient *ssm.Client, instance *Instance, command string, c
 	timeout := int32(common.COMMAND_TRACKING_TIMEOUT.Seconds())
 	var shellType *string
 	var masterCommand string
-	if instance.os == common.WINDOWS {
+	if instance.Os == common.WINDOWS {
 		shellType = aws.String(POWERSHELL_SSM_DOCUMENT)
 	} else {
 		shellType = aws.String(BASHSHELL_SSM_DOCUMENT)
 	}
 	masterCommand = commands.MergeCommands(
-		instance.os,
-		commands.InitEnvCmd(instance.os),
+		instance.Os,
+		commands.InitEnvCmd(instance.Os),
 		command,
 	)
 	sendCommandInput := &ssm.SendCommandInput{
@@ -64,7 +64,7 @@ func RunCmdRemotely(ssmClient *ssm.Client, instance *Instance, command string, c
 	// Wait for the command to complete
 	commandID := *output.Command.CommandId
 	fmt.Printf("Waiting for command{%s}{%s}'s response\n", commandID, comment)
-	status := CheckCommandStatus(ssmClient, commandID, instance.name)
+	status := CheckCommandStatus(ssmClient, commandID, instance.Name)
 	if status == ssmtypes.CommandStatusTimedOut {
 		fmt.Println("Command timed out!")
 		return errors.New(fmt.Sprintf("Command timed-out after %f seconds", common.COMMAND_TRACKING_TIMEOUT.Seconds()))

@@ -113,7 +113,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
 
       - name: Generate matrix
         id: set-matrix
@@ -166,7 +166,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.19.2
+          go-version: ~1.21.1
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -364,7 +364,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
 
       - name: SetOutputs
         id: set-outputs

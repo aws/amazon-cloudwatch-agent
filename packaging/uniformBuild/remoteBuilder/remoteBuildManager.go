@@ -16,9 +16,9 @@ import (
 
 // This is the main struct that is managing the build process
 type RemoteBuildManager struct {
-	ssmClient       *ssm.Client
-	instanceManager *utils.InstanceManager
-	s3Client        *s3.Client
+	SsmClient       *ssm.Client
+	InstanceManager *utils.InstanceManager
+	S3Client        *s3.Client
 }
 
 /*
@@ -32,36 +32,36 @@ func CreateRemoteBuildManager(instanceGuide map[string]common.OS, accountID stri
 	//instance := *GetInstanceFromID(client, "i-09fc6fdc80cd713a4")
 	rbm := RemoteBuildManager{}
 
-	rbm.instanceManager = utils.CreateNewInstanceManager(cfg, instanceGuide)
+	rbm.InstanceManager = utils.CreateNewInstanceManager(cfg, instanceGuide)
 	fmt.Println("New Instance Manager Created")
-	rbm.instanceManager.GetSupportedAMIs(accountID)
+	rbm.InstanceManager.GetSupportedAMIs(accountID)
 	fmt.Println("About to create ec2 instances")
-	err = rbm.instanceManager.CreateEC2InstancesBlocking()
+	err = rbm.InstanceManager.CreateEC2InstancesBlocking()
 
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Starting SSM Client")
-	rbm.ssmClient = ssm.NewFromConfig(cfg)
+	rbm.SsmClient = ssm.NewFromConfig(cfg)
 	//RunCmdRemotely(rbm.ssmClient, rbm.instances["linux"], "export PATH=$PATH:/usr/local/go/bin")
-	rbm.s3Client = s3.NewFromConfig(cfg)
+	rbm.S3Client = s3.NewFromConfig(cfg)
 	return &rbm
 }
 
 // This function runs a command on a specific instance
 func (rbm *RemoteBuildManager) RunCommand(cmdPacket commands.CommandPacket, instanceName string, comment string) error {
-	if _, ok := rbm.instanceManager.Instances[instanceName]; !ok { //check if instance exist
+	if _, ok := rbm.InstanceManager.Instances[instanceName]; !ok { //check if instance exist
 		return errors.New("Invalid Instance Name")
 	}
-	if err := rbm.instanceManager.InsertOSRequirement(instanceName, cmdPacket.TargetOS); err != nil { //check if os has right OS
+	if err := rbm.InstanceManager.InsertOSRequirement(instanceName, cmdPacket.TargetOS); err != nil { //check if os has right OS
 		return err
 	}
-	if isAlreadyBuilt := rbm.fileExistsInS3(cmdPacket.OutputFile); isAlreadyBuilt {
+	if isAlreadyBuilt := rbm.FileExistsInS3(cmdPacket.OutputFile); isAlreadyBuilt {
 		//check if this command was already ran
 		fmt.Println("Found cache skipping build")
 		return nil
 	}
-	return utils.RunCmdRemotely(rbm.ssmClient, rbm.instanceManager.Instances[instanceName], cmdPacket.Command, comment)
+	return utils.RunCmdRemotely(rbm.SsmClient, rbm.InstanceManager.Instances[instanceName], cmdPacket.Command, comment)
 }
 
 // This function Builds CWA on a specific instance( it must be a linux instance)
@@ -70,6 +70,7 @@ func (rbm *RemoteBuildManager) BuildCWAAgent(gitUrl string, branch string, commi
 		common.LINUX,
 		commitHash,
 		commands.CloneGitRepo(gitUrl, branch),
+		commands.RetrieveGoModVendor(common.LINUX),
 		commands.MakeBuild(),
 		commands.UploadToS3(commitHash),
 	)
@@ -124,17 +125,17 @@ func (rbm *RemoteBuildManager) MakeMacPkg(instanceName string, commitHash string
 	return rbm.RunCommand(commandPacket, instanceName, "Making Mac pkg")
 }
 func (rbm *RemoteBuildManager) Close() error {
-	return rbm.instanceManager.Close()
+	return rbm.InstanceManager.Close()
 }
 
 // CACHE COMMANDS
-func (rbm *RemoteBuildManager) fileExistsInS3(targetFile string) bool {
+func (rbm *RemoteBuildManager) FileExistsInS3(targetFile string) bool {
 	fmt.Printf("Checking for %s cache \n", targetFile)
 	input := &s3.HeadObjectInput{
 		Bucket: aws.String(common.S3_INTEGRATION_BUCKET),
 		Key:    aws.String(targetFile),
 	}
-	_, err := rbm.s3Client.HeadObject(context.TODO(), input)
+	_, err := rbm.S3Client.HeadObject(context.TODO(), input)
 	if err != nil {
 		fmt.Printf("Object %s does not exist in bucket %s\n", targetFile, common.S3_INTEGRATION_BUCKET)
 		fmt.Println(err)

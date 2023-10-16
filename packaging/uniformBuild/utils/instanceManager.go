@@ -24,21 +24,21 @@ var (
 
 type Instance struct {
 	types.Instance
-	name string
-	os   common.OS
+	Name string
+	Os   common.OS
 }
 type InstanceManager struct {
-	ec2Client     *ec2.Client
+	Ec2Client     *ec2.Client
 	Instances     map[string]*Instance
-	amis          map[common.OS]*types.Image
+	Amis          map[common.OS]*types.Image
 	instanceGuide map[string]common.OS
 }
 
 func CreateNewInstanceManager(cfg aws.Config, instanceGuide map[string]common.OS) *InstanceManager {
 	return &InstanceManager{
-		ec2Client:     ec2.NewFromConfig(cfg),
+		Ec2Client:     ec2.NewFromConfig(cfg),
 		Instances:     make(map[string]*Instance),
-		amis:          make(map[common.OS]*types.Image),
+		Amis:          make(map[common.OS]*types.Image),
 		instanceGuide: instanceGuide,
 	}
 }
@@ -61,14 +61,14 @@ func getPlatformDetails(img *types.Image) string {
 }
 func (imng *InstanceManager) GetSupportedAMIs(accountID string) {
 	//this populates the amis map
-	latestAmis := GetAllAMIVersions(imng.ec2Client) //this is sorted by date
+	latestAmis := GetAllAMIVersions(imng.Ec2Client) //this is sorted by date
 	fmt.Printf("Found %d possible AMIs \n", len(latestAmis))
 	for _, os := range common.SUPPORTED_OS {
 		for _, ami := range latestAmis {
 			platform := getPlatformDetails(&ami)
 			if strings.Contains(strings.ToLower(platform), string(os)) {
 				fmt.Printf("Using: \033[1m %s \033[0m with \033[1;34m %s \033[0m \n", *ami.ImageId, platform)
-				imng.amis[os] = &ami
+				imng.Amis[os] = &ami
 				break
 			}
 		}
@@ -78,14 +78,14 @@ func (imng *InstanceManager) GetSupportedAMIs(accountID string) {
 func (imng *InstanceManager) CreateEC2InstancesBlocking() error {
 	//check if all OSes are valid
 	for _, osType := range imng.instanceGuide {
-		if _, ok := imng.amis[osType]; !ok {
+		if _, ok := imng.Amis[osType]; !ok {
 			return INVALID_OS
 		}
 	}
 	//create instances
 	for instanceName, osType := range imng.instanceGuide {
-		image := imng.amis[osType]
-		instance := CreateInstanceCmd(imng.ec2Client, image, instanceName, osType)
+		image := imng.Amis[osType]
+		instance := CreateInstanceCmd(imng.Ec2Client, image, instanceName, osType)
 		imng.Instances[instanceName] = &instance
 	}
 	time.Sleep(1 * time.Minute) // on average an ec2 launches in 60-90 seconds
@@ -94,8 +94,8 @@ func (imng *InstanceManager) CreateEC2InstancesBlocking() error {
 		wg.Add(1)
 		go func(targetInstance *Instance) {
 			defer wg.Done()
-			WaitUntilAgentIsOn(imng.ec2Client, targetInstance)
-			err := AssignInstanceProfile(imng.ec2Client, targetInstance)
+			WaitUntilAgentIsOn(imng.Ec2Client, targetInstance)
+			err := AssignInstanceProfile(imng.Ec2Client, targetInstance)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -118,7 +118,7 @@ func (imng *InstanceManager) Close() error {
 			if err != nil {
 				return
 			}
-		}(imng.ec2Client, *instance.InstanceId)
+		}(imng.Ec2Client, *instance.InstanceId)
 	}
 	wg.Wait()
 	return nil

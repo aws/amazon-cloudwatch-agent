@@ -1,0 +1,18 @@
+{
+  "agent": {
+    "logfile": "c:\\tmp\\am.log"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "c:\\tmp\\am.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "timestamp_format": "%H:%M:%S %y %b %d"
+          }
+        ]
+      }
+    }
+  }
+}

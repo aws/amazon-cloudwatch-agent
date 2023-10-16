@@ -19,7 +19,7 @@ const COMMAND_TRACKING_TIMEOUT = 20 * time.Minute
 const COMMAND_TRACKING_INTERVAL = 1 * time.Second
 const COMMAND_TRACKING_COUNT = int(COMMAND_TRACKING_TIMEOUT / COMMAND_TRACKING_INTERVAL)
 const PLATFORM_KEY = "platform"
-
+const GO_MOD_CACHE_DIR = "s3://cloudwatch-agent-integration-bucket/GoVendorCache/vendor.zip"
 const (
 	LINUX   OS = "linux"
 	WINDOWS OS = "windows"
