@@ -30,12 +30,22 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	translatorConfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 const (
 	versionFilename = "CWAGENT_VERSION"
 	unknownVersion  = "Unknown"
 	updateInterval  = time.Minute
+	// region types
+	AgentConfigJson = "ACJ"
+	CredsMap        = "CM"
+	EC2Metadata     = "EC2M"
+	ECSMetadata     = "ECSM"
+	RegionNotFound  = "RNF"
+	ModeEC2         = "EC2"
+	ModeOnPrem      = "OP"
+	ModeWithIRSA    = "WI"
 )
 
 var (
@@ -50,9 +60,11 @@ var (
 	id                      = uuid.NewString()
 	sharedConfigFallback    atomic.Bool
 	imdsFallbackSucceed     atomic.Bool
+	isRunningAsRoot         = defaultIsRunningAsRoot
+	runInContainer          *int
+	regionType              *string
+	mode                    *string
 )
-
-var isRunningAsRoot = defaultIsRunningAsRoot
 
 type AgentInfo interface {
 	RecordOpData(time.Duration, int, error)
@@ -77,15 +89,21 @@ type agentStats struct {
 	StatusCode           *int     `json:"code,omitempty"`
 	SharedConfigFallback *int     `json:"scfb,omitempty"`
 	ImdsFallbackSucceed  *int     `json:"ifs,omitempty"`
+	RunInContainer       *int     `json:"ric,omitempty"`
+	RegionType           *string  `json:"rt,omitempty"`
+	Mode                 *string  `json:"m,omitempty"`
 }
 
-func New(groupName string) AgentInfo {
-	return newAgentInfo(groupName)
+func New(groupName string, regionType string, mode string) AgentInfo {
+	return newAgentInfo(groupName, regionType, mode)
 }
 
-func newAgentInfo(groupName string) *agentInfo {
+func newAgentInfo(groupName string, regionTypeInput string, modeInput string) *agentInfo {
 	ai := new(agentInfo)
 	ai.userAgent = getUserAgent(groupName, fullVersion, receivers, processors, exporters, isUsageDataEnabled())
+	runInContainer = runInContainerFunc()
+	regionType = aws.String(regionTypeInput)
+	mode = aws.String(modeInput)
 	if isUsageDataEnabled() {
 		ai.proc, _ = process.NewProcess(int32(os.Getpid()))
 		if ai.proc == nil {
@@ -96,6 +114,9 @@ func newAgentInfo(groupName string) *agentInfo {
 			MemoryBytes:         ai.memoryBytes(),
 			FileDescriptorCount: ai.fileDescriptorCount(),
 			ThreadCount:         ai.threadCount(),
+			RunInContainer:      runInContainer,
+			RegionType:          regionType,
+			Mode:                mode,
 		}
 		ai.statsHeader = getAgentStats(stats)
 		ai.nextUpdate = time.Now().Add(updateInterval)
@@ -126,6 +147,9 @@ func (ai *agentInfo) RecordOpData(latency time.Duration, payloadBytes int, err e
 		stats.ThreadCount = ai.threadCount()
 		stats.SharedConfigFallback = getSharedConfigFallback()
 		stats.ImdsFallbackSucceed = succeedImdsFallback()
+		stats.RunInContainer = runInContainer
+		stats.RegionType = regionType
+		stats.Mode = mode
 		ai.nextUpdate = now.Add(updateInterval)
 	}
 
@@ -329,4 +353,11 @@ func getSharedConfigFallback() *int {
 
 func SetImdsFallbackSucceed() {
 	imdsFallbackSucceed.Store(true)
+}
+
+func runInContainerFunc() *int {
+	if os.Getenv(translatorConfig.RUN_IN_CONTAINER) == translatorConfig.RUN_IN_CONTAINER_TRUE {
+		return aws.Int(1)
+	}
+	return aws.Int(0)
 }

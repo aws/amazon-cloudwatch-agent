@@ -6,6 +6,8 @@ exporters:
         max_values_per_datum: 150
         namespace: CWAgent
         region: us-west-2
+        region_type: "ACJ"
+        mode: "EC2"
         resource_to_telemetry_conversion:
             enabled: true
 extensions: {}

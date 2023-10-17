@@ -6,10 +6,16 @@
 
 package tocwconfig
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+)
 
 func TestCompleteConfigWindows(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{
 		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
 		"CWAGENT_LOG_LEVEL":  "DEBUG",
