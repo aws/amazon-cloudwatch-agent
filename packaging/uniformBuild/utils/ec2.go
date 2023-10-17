@@ -1,15 +1,19 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package utils
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+	"uniformBuild/common"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/smithy-go"
-	"time"
-	"uniformBuild/common"
 )
 
 // EC2CreateInstanceAPI defines the interface for the RunInstances and CreateTags functions.

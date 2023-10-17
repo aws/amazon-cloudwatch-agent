@@ -83,6 +83,12 @@ jobs:
         with:
           key: "cached_binaries_${{ github.sha }}"
           path: go.mod
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
       - name:  Build Uniform Build Env
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
@@ -92,7 +98,7 @@ jobs:
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
           cd packaging/uniformBuild
-          ./uniformBuild -r "https://github.com/${{env.CWA_GITHUB_REPO_NAME}}.git" -b "main" -o "${{inputs.BucketKey}}" -p "${{inputs.PackageBucketKey}}" -a "${{secrets.AWS_TEST_ACCOUNT_ID}}"
+          ./uniformBuild -r "https://github.com/${{env.CWA_GITHUB_REPO_NAME}}.git" -b ${{ steps.extract_branch.outputs.branch }} -o "${{inputs.BucketKey}}" -p "${{inputs.PackageBucketKey}}" -a "${{secrets.AWS_TEST_ACCOUNT_ID}}"
 #      - name: Cache go                                   ^^^ make it not main
 #        # Only skip for integration builds not release builds.
 #        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
@@ -103,12 +109,7 @@ jobs:
 #            ~/.cache/go-build
 #          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
 
-      - name: Import GPG Key
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        uses: crazy-max/ghaction-import-gpg@v5
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
+
   DockerBuild:
     name: "Build Docker Container"
     runs-on: ubuntu-latest
@@ -134,6 +135,12 @@ jobs:
             aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
             aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
             
+        - name: Import GPG Key
+          if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+          uses: crazy-max/ghaction-import-gpg@v5
+          with:
+            gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+            passphrase: ${{ secrets.PASSPHRASE }}
 
         - name: Login ECR
           if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
@@ -151,8 +158,10 @@ jobs:
       # Build dir is ignored in our .dockerignore thus need to copy to another dir.
         - name: Copy Binary For Agent Image Build
           if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-          run: cp -r build/bin/linux/* .
-
+          run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{inputs.BucketKey}}/ . --recursive
+        - name: Sign Build Files
+          if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+          run: for f in $(.); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
         - name: Build Cloudwatch Agent Image
           uses: docker/build-push-action@v4
           if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false

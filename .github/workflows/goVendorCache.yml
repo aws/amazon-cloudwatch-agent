@@ -5,7 +5,10 @@ env:
 on:
   push:
     branches:
+      - uniform-build-env
       - main
+    workflow_dispatch:
+
 jobs:
   cache:
     name: Caching Go Mod files
@@ -28,9 +31,9 @@ jobs:
           go-version: ~1.20.5
       - name: go mod optimization
         run: |
-          if aws s3 ls CACHE_DIR; then
+          if aws s3 ls ${{env.CACHE_DIR}}; then
              echo "time for copy file to vendor from s3 bucket"
-             aws s3 cp CACHE_DIR ./vendor.zip
+             aws s3 cp ${{env.CACHE_DIR}} ./vendor.zip
              echo "time for unzipping the vendor file"
              unzip vendor.zip
              rm -r vendor.zip
@@ -46,7 +49,7 @@ jobs:
                  time make build GOMODCACHE=true
                  zip -r vendor.zip vendor
                  echo "updating the vendor file and uploading zip file to s3 bucket"
-                 aws s3 cp vendor.zip CACHE_DIR
+                 aws s3 cp vendor.zip ${{env.CACHE_DIR}}
                  rm -f vendor.zip
                  echo "vendor zip is updated and uploaded to s3 bucket"
              else
@@ -61,7 +64,7 @@ jobs:
             echo "creating zip file"
             zip -r vendor.zip vendor
             echo "copying zip file to s3 bucket"
-            aws s3 cp vendor.zip CACHE_DIR
+            aws s3 cp vendor.zip ${{env.CACHE_DIR}}
             echo "vendor zip added to the bucket"
            fi
            set -e

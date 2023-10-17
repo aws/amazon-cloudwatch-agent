@@ -6,9 +6,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"uniformBuild/common"
 	"uniformBuild/remoteBuilder"
+
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {

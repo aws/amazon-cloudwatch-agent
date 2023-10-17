@@ -17,11 +17,10 @@ import (
 	"uniformBuild/remoteBuilder"
 	"uniformBuild/utils"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/aws-sdk-go-v2/config"
 )
 
 var accountID string
@@ -134,7 +133,7 @@ func TestOSMixUp(t *testing.T) {
 }
 func TestMakeBinary(t *testing.T) {
 	REPO_NAME := "https://github.com/aws/amazon-cloudwatch-agent.git"
-	BRANCH_NAME := "main"
+	BRANCH_NAME := "uniform-build-env"
 	rbm := remoteBuilder.CreateRemoteBuildManager(common.LINUX_TEST_INSTANCE_GUIDE, accountID)
 	defer rbm.Close()
 	err := rbm.BuildCWAAgent(REPO_NAME, BRANCH_NAME, fmt.Sprintf("PUBLIC_REPO_TEST-%d", time.Now().Unix()), "MainBuildEnv")

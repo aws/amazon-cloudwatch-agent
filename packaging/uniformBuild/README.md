@@ -1,7 +1,7 @@
 
 # Uniform Build Enviorment Docs
 
-
+TODO update these docs
 ## Features
 - Detect latest AMI and retrieve the image
 - Generate an individual ec2 instance for each AMI (linux,windows,mac)
@@ -96,27 +96,5 @@ C. Running remotely on a ec2 instance:
 Pipeline
 ---
 ## How to add commands
----
-## AMI
-### Package dep. list:
-#### Linux: 
-- [X] Golang
-- [X] Rpm-build
-- [ ] Zip
-- [ ] Docker
-- [ ] Qemu
-- [X] aws
----
-## Goals
-- [ ] Add windows and MacOS amis
-- [ ] Optimize GoBuild with S3 caching
----
-## TODO
-- [ ] Clean up file structure
-- [ ] try installing with the snap install instead of apt-get to see if you dont need extra stuff
-- [ ] Pull latest amis directly
-- [ ] Add non-blocking run commands
-- WindowsMSIPacker
-- MSIUpload
-- MACOS AMI
+TODO
 ---

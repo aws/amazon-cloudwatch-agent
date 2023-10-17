@@ -170,7 +170,6 @@ func RetrieveGoModVendor(targetOS common.OS) string {
 		fmt.Sprintf("aws s3 cp %s . ", common.GO_MOD_CACHE_DIR),
 		"unzip -q vendor.zip",
 		"rm -rf vendor.zip",
-		"go mod vendor",
 		"cd ..",
 	)
 }
