@@ -1,0 +1,244 @@
+# This is a reusable workflow for running the E2E test for APM.
+# It is meant to be called from another workflow.
+# Read more about reusable workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
+name: APM Enablement E2E Testing
+on:
+  workflow_call:
+    inputs:
+      test-cluster-name:
+        required: true
+        type: string
+      apm-cwagent-image-name:
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_DEFAULT_REGION: us-east-1
+  SAMPLE_APP_NAMESPACE: sample-app-namespace
+  METRIC_NAMESPACE: AWS/APM
+  APM_LOG_GROUP: /aws/apm/eks
+
+jobs:
+  apm-e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # Checkout apm branch and get only the required resources for testing
+          ref: apm
+          sparse-checkout: |
+            test
+
+      - name: Generate testing id
+        run: echo TESTING_ID="${{ github.run_id }}-${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.APM_E2E_TEST_ROLE_ARN }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+      # local directory to store the kubernetes config
+      - name: Create kubeconfig directory
+        run: mkdir -p ${{ github.workspace }}/.kube
+
+      - name: Set KUBECONFIG environment variable
+        run: echo KUBECONFIG="${{ github.workspace }}/.kube/config" >> $GITHUB_ENV
+
+      - name: Install eksctl
+        run: |
+          mkdir ${{ github.workspace }}/eksctl
+          curl -sLO "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz"
+          tar -xzf eksctl_Linux_amd64.tar.gz -C ${{ github.workspace }}/eksctl && rm eksctl_Linux_amd64.tar.gz
+          echo "${{ github.workspace }}/eksctl" >> $GITHUB_PATH
+
+      # Create the K8s service account to grant the sample app
+      # permissions to call AWS services from within the pods.
+      # https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
+      #
+      # This needs to be done before launching the sample app
+      # because the sample app manifest requires the service
+      # account to be created upfront.
+      - name: Enable OIDC for cluster
+        run: eksctl utils associate-iam-oidc-provider --cluster ${{ inputs.test-cluster-name }} --region ${{ env.AWS_DEFAULT_REGION }} --approve
+
+      - name: Create role for AWS access from the sample app
+        id: create_service_account
+        run: |
+          eksctl create iamserviceaccount \
+          --name service-account-${{ env.TESTING_ID }} \
+          --namespace ${{ env.SAMPLE_APP_NAMESPACE }} \
+          --cluster ${{ inputs.test-cluster-name }} \
+          --role-name eks-s3-access-${{ env.TESTING_ID }} \
+          --attach-policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess \
+          --region ${{ env.AWS_DEFAULT_REGION }} \
+          --approve
+
+      - name: Set up terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
+
+      - name: Deploy sample app via terraform
+        working-directory: test/terraform/eks
+        run: |
+          terraform init
+          terraform validate
+          terraform apply -auto-approve \
+            -var="test_id=${{ env.TESTING_ID }}" \
+            -var="kube_directory_path=${{ github.workspace }}/.kube" \
+            -var="eks_cluster_name=${{ inputs.test-cluster-name }}" \
+            -var="test_namespace=${{ env.SAMPLE_APP_NAMESPACE }}" \
+            -var="service_account_aws_access=service-account-${{ env.TESTING_ID }}" \
+            -var="sample_app_image=${{ secrets.APM_E2E_SAMPLE_APP_FRONTEND_SERVICE_IMAGE }}" \
+            -var="sample_remote_app_image=${{ secrets.APM_E2E_SAMPLE_APP_REMOTE_SERVICE_IMAGE }}"
+
+      # Enable APM on the test cluster
+      - name: Pull and unzip enablement script from S3
+        run: aws s3 cp ${{ secrets.APM_E2E_ONBOARDING_ZIP_S3_URI }} . && unzip -j onboarding.zip
+
+      - name: Change OTEL_TRACES_SAMPLER to always_on
+        run: "sed -i 's#parentbased_traceidratio#always_on#g' instrumentation.yaml"
+
+      - name: Set the CW Agent image in the manifest
+        run: yq -i '.spec.image = "${{ inputs.apm-cwagent-image-name }}"' agent-daemon-set.yaml
+
+      - name: Enable APM
+        run: |
+          ./enable-apm.sh \
+          ${{ inputs.test-cluster-name }} \
+          ${{ env. AWS_DEFAULT_REGION }} \
+          ${{ env.SAMPLE_APP_NAMESPACE }}
+
+      # Application pods need to be restarted for the
+      # apm instrumentation to take effect
+      - name: Restart the app pods
+        run: kubectl delete pods --all -n ${{ env.SAMPLE_APP_NAMESPACE }}
+
+      - name: Wait for sample app pods to come up
+        run: |
+          kubectl wait --for=condition=Ready pod --all -n ${{ env.SAMPLE_APP_NAMESPACE }} \
+
+      - name: Verify pod ADOT image
+        run: |
+          kubectl get pods -n ${{ env.SAMPLE_APP_NAMESPACE }} --output json | \
+          jq '.items[0].status.initContainerStatuses[0].imageID'
+
+      - name: Verify pod CWAgent image
+        run: |
+          kubectl get pods -n amazon-cloudwatch --output json | \
+          jq '.items[0].status.containerStatuses[0].imageID'
+
+      - name: Get the sample app endpoint
+        run: |
+          echo "APP_ENDPOINT=$(terraform output sample_app_endpoint)" >> $GITHUB_ENV
+        working-directory: test/terraform/eks
+
+      - name: Wait for app endpoint to come online
+        run: |
+          attempt_counter=0
+          max_attempts=12
+          until $(curl --output /dev/null --silent --head --fail http://${{ env.APP_ENDPOINT }}); do
+            if [ ${attempt_counter} -eq ${max_attempts} ];then
+              echo "Max attempts reached"
+              exit 1
+            fi
+          
+            printf '.'
+            attempt_counter=$(($attempt_counter+1))
+            sleep 10
+          done
+
+      # Validation for pulse telemetry data
+      - name: Call endpoint and validate generated EMF logs
+        id: log-validation
+        working-directory: test/validator
+        run: ./gradlew run --args='-c log-validation.yml
+          --testing-id ${{ env.TESTING_ID }}
+          --endpoint http://${{ env.APP_ENDPOINT }}
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --account-id ${{ secrets.APM_E2E_TEST_ACCOUNT }}
+          --metric-namespace ${{ env.METRIC_NAMESPACE }}
+          --app-namespace ${{ env.SAMPLE_APP_NAMESPACE }}
+          --cluster ${{ inputs.test-cluster-name }}
+          --service-name sample-application-${{ env.TESTING_ID }}
+          --rollup'
+
+      - name: Call endpoints and validate generated metrics
+        id: metric-validation
+        if: success() || steps.log-validation.outcome == 'failure'
+        working-directory: test/validator
+        run: ./gradlew run --args='-c metric-validation.yml
+          --endpoint http://${{ env.APP_ENDPOINT }}
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --account-id ${{ secrets.APM_E2E_TEST_ACCOUNT }}
+          --metric-namespace ${{ env.METRIC_NAMESPACE }}
+          --app-namespace ${{ env.SAMPLE_APP_NAMESPACE }}
+          --cluster ${{ inputs.test-cluster-name }}
+          --service-name sample-application-${{ env.TESTING_ID }}
+          --remote-service-name sample-remote-application-${{ env.TESTING_ID }}
+          --rollup'
+
+      - name: Call endpoints and validate generated traces
+        if: success() || steps.log-validation.outcome == 'failure' || steps.metric-validation.outcome == 'failure'
+        working-directory: test/validator
+        run: ./gradlew run --args='-c trace-validation.yml
+          --endpoint http://${{ env.APP_ENDPOINT }}
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --account-id ${{ secrets.APM_E2E_TEST_ACCOUNT }}
+          --metric-namespace ${{ env.METRIC_NAMESPACE }}
+          --app-namespace ${{ env.SAMPLE_APP_NAMESPACE }}
+          --cluster ${{ inputs.test-cluster-name }}
+          --service-name sample-application-${{ env.TESTING_ID }}
+          --remote-service-name sample-remote-application-${{ env.TESTING_ID }}
+          --rollup'
+
+      # Clean up Procedures
+
+      - name: Remove log group deletion command
+        if: always()
+        run: |
+          delete_log_group="aws logs delete-log-group --log-group-name '${{ env.APM_LOG_GROUP }}' --region \$REGION"
+          sed -i "s#$delete_log_group##g" clean-apm.sh       
+
+      - name: Clean APM
+        if: always()
+        run: |
+          ./clean-apm.sh \
+          ${{ inputs.test-cluster-name }} \
+          ${{ env. AWS_DEFAULT_REGION }} \
+          ${{ env.SAMPLE_APP_NAMESPACE }}
+
+      # This step also deletes lingering resources from previous test runs
+      - name: Delete all sample app resources
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 10
+        run: kubectl delete namespace ${{ env.SAMPLE_APP_NAMESPACE }}
+
+      - name: Terraform destroy
+        if: always()
+        continue-on-error: true
+        run: |
+          cd test/terraform/eks
+          terraform destroy -auto-approve \
+            -var="test_id=${{ env.TESTING_ID }}" \
+            -var="kube_directory_path=${{ github.workspace }}/.kube" \
+            -var="eks_cluster_name=${{ inputs.test-cluster-name }}" \
+            -var="test_namespace=${{ env.SAMPLE_APP_NAMESPACE }}" \
+            -var="service_account_aws_access=service-account-${{ env.TESTING_ID }}" \
+            -var="sample_app_image=${{ env.SAMPLE_APP_IMAGE }}"
+
+      - name: Remove aws access service account
+        if: always()
+        continue-on-error: true
+        run: |
+          eksctl delete iamserviceaccount \
+          --name service-account-${{ env.TESTING_ID }} \
+          --namespace ${{ env.SAMPLE_APP_NAMESPACE }} \
+          --cluster ${{ inputs.test-cluster-name }} \
+          --region ${{ env.AWS_DEFAULT_REGION }} \
