@@ -411,18 +411,18 @@ func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent
 	return &logSource, evts
 }
 
-func writeLines(t *testing.T, f *os.File, numLines int, msg string) {
-	t.Logf("start writing, %s", f.Name())
+func writeLines(t *testing.T, file *os.File, numLines int, msg string) {
+	t.Logf("start writing, %s", file.Name())
 	for i := 0; i < numLines; i++ {
-		_, err := f.WriteString(msg + "\n")
+		_, err := file.WriteString(msg + "\n")
 		require.NoError(t, err)
 	}
-	t.Logf("stop writing, %s", f.Name())
+	t.Logf("stop writing, %s", file.Name())
 }
 
 // createWriteRead creates a temp file, writes to it, then verifies events
 // are received. If isParent is true, then spawn a 2nd goroutine for createWriteRead.
-// Closes "done" channel when complete to let caller know it was successful.
+// Closes "done" when complete to let caller know it was successful.
 func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bool, isParent bool) {
 	// Let caller know when the goroutine is done.
 	defer close(done)
@@ -431,6 +431,7 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 	file := makeTempFile(t, prefix)
 	logSrc, evts := getLogSrc(t, logFile)
 	defer (*logSrc).Stop()
+	defer close(evts)
 	// Choose a large enough number of lines so that even high-spec hosts will not
 	// complete receiving logEvents before the 2nd createWriteRead() goroutine begins.
 	const numLines int = 1000000
