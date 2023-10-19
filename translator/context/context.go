@@ -112,12 +112,16 @@ func (ctx *Context) SetMode(mode string) {
 	switch mode {
 	case config.ModeEC2:
 		ctx.mode = config.ModeEC2
+		log.Printf("Mode EC2")
 	case config.ModeOnPrem:
 		ctx.mode = config.ModeOnPrem
+		log.Printf("Mode OnPrem")
 	case config.ModeOnPremise:
 		ctx.mode = config.ModeOnPremise
+		log.Printf("Mode OnPremise")
 	case config.ModeWithIRSA:
 		ctx.mode = config.ModeWithIRSA
+		log.Printf("Mode IRSA")
 	default:
 		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA)
 	}
