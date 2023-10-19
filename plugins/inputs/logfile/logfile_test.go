@@ -398,7 +398,8 @@ func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent
 	start := time.Now()
 	logSources := logFile.FindLogSrc()
 	duration := time.Since(start)
-	require.Less(t, duration, time.Second)
+	// LogFile.FindLogSrc() should not block.
+	require.Less(t, duration, time.Millisecond*100)
 	require.Equal(t, 1, len(logSources), "FindLogSrc() expected 1, got %d", len(logSources))
 	logSource := logSources[0]
 	evts := make(chan logs.LogEvent)
@@ -428,12 +429,8 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 	// done2 is only passed to child if this is the parent.
 	done2 := make(chan bool)
 	file := makeTempFile(t, prefix)
-	start := time.Now()
 	logSrc, evts := getLogSrc(t, logFile)
 	defer (*logSrc).Stop()
-	duration := time.Since(start)
-	// Verify LogFile.FindLogSrc() is not blocking until EOF on first file is reached.
-	assert.Less(t, duration, time.Millisecond*100)
 	// Choose a large enough number of lines so that even high-spec hosts will not
 	// complete receiving logEvents before the 2nd createWriteRead() goroutine begins.
 	const numLines int = 1000000
