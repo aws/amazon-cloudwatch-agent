@@ -9,13 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 
 	"github.com/BurntSushi/toml"
 	"github.com/google/go-cmp/cmp"
