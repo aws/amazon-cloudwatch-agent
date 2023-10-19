@@ -8,96 +8,57 @@ exporters:
         eks_fargate_container_insights_enabled: false
         endpoint: ""
         enhanced_container_insights: false
-        imds_retries: 1
+        imds_retries: 0
         local_mode: false
-        log_group_name: /aws/apm/eks
+        log_group_name: /aws/apm/generic
         log_retention: 0
         log_stream_name: ""
         max_retries: 2
         metric_declarations:
             - dimensions:
-                - - EKS.Cluster
-                  - K8s.Namespace
+                - - HostedIn.Environment
                   - Operation
                   - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
+                - - HostedIn.Environment
                   - Service
               label_matchers:
                 - label_names:
                     - aws.span.kind
-                  regex: ^(SERVER|CONSUMER|LOCAL_ROOT)$
+                  regex: ^(SERVER|LOCAL_ROOT)$
                   separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
             - dimensions:
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - K8s.RemoteNamespace
+                - - HostedIn.Environment
                   - Operation
                   - RemoteOperation
                   - RemoteService
                   - RemoteTarget
                   - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - K8s.RemoteNamespace
+                - - HostedIn.Environment
                   - Operation
                   - RemoteOperation
                   - RemoteService
                   - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - Operation
+                - - HostedIn.Environment
+                  - RemoteService
+                  - Service
+                - - HostedIn.Environment
                   - RemoteOperation
                   - RemoteService
                   - RemoteTarget
                   - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - Operation
+                - - HostedIn.Environment
                   - RemoteOperation
                   - RemoteService
                   - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - K8s.RemoteNamespace
-                  - RemoteService
-                  - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - RemoteService
-                  - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - K8s.RemoteNamespace
-                  - RemoteOperation
-                  - RemoteService
-                  - RemoteTarget
-                  - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - K8s.RemoteNamespace
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - RemoteOperation
-                  - RemoteService
-                  - RemoteTarget
-                  - Service
-                - - EKS.Cluster
-                  - K8s.Namespace
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
+                - - RemoteService
               label_matchers:
                 - label_names:
                     - aws.span.kind
-                  regex: ^(CLIENT|PRODUCER)$
+                  regex: ^(CLIENT|PRODUCER|CONSUMER)$
                   separator: ;
               metric_name_selectors:
                 - Latency
@@ -111,7 +72,7 @@ exporters:
         parse_json_encoded_attr_values: []
         profile: ""
         proxy_address: ""
-        region: us-east-1
+        region: ""
         request_timeout_seconds: 30
         resource_arn: ""
         resource_to_telemetry_conversion:
@@ -160,7 +121,7 @@ extensions:
 processors:
     awsapm:
         resolvers:
-            - eks
+            - generic
         rules: []
     resourcedetection:
         aks:
@@ -427,7 +388,7 @@ receivers:
         protocols:
             grpc:
                 auth: null
-                endpoint: 0.0.0.0:4317
+                endpoint: 0.0.0.0:4315
                 include_metadata: false
                 keepalive: null
                 max_concurrent_streams: 0
@@ -439,7 +400,7 @@ receivers:
             http:
                 auth: null
                 cors: null
-                endpoint: 0.0.0.0:4318
+                endpoint: 0.0.0.0:4316
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0

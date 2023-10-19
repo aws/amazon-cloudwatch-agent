@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -56,7 +57,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
 }
 
-func TestBaseAPMConfig(t *testing.T) {
+func TestGenericAPMConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
@@ -71,6 +72,7 @@ func TestAPMAndKubernetesConfig(t *testing.T) {
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_apm_eks_config")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "apm_and_kubernetes_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "apm_and_kubernetes_config", "windows", expectedEnvVars, "")
