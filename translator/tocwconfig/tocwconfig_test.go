@@ -16,8 +16,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-
 	"github.com/BurntSushi/toml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -38,6 +36,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
