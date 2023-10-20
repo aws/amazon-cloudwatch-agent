@@ -93,6 +93,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
+	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
+	//if roleARN, ok := agent.Global_Config.Role_arn[agent.Role_Arn_Key]; ok {
+	//
+	//}
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	if isEcs(c) {
