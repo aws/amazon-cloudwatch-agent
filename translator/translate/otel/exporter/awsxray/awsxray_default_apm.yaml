@@ -1,2 +1,0 @@
-# Add new attributes as annotations for diagnostics.
-indexed_attributes: [aws.local.service, aws.local.operation, aws.remote.service, aws.remote.operation, EKS.Cluster, K8s.Namespace, K8s.RemoteNamespace, aws.remote.target]

@@ -28,8 +28,11 @@ var defaultKubernetesConfig string
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
 
-//go:embed awsemf_default_apm.yaml
-var defaultAPMConfig string
+//go:embed apm_config_eks.yaml
+var apmConfigEks string
+
+//go:embed apm_config_generic.yaml
+var apmConfigGeneric string
 
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
@@ -61,6 +64,12 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 
+	if common.IsAPMKubernetes() && t.name == common.APM {
+		return common.GetYamlFileToYamlConfig(cfg, apmConfigEks)
+	} else if t.name == common.APM {
+		return common.GetYamlFileToYamlConfig(cfg, apmConfigGeneric)
+	}
+
 	var defaultConfig string
 	if isEcs(c) {
 		defaultConfig = defaultEcsConfig
@@ -68,8 +77,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		defaultConfig = defaultKubernetesConfig
 	} else if isPrometheus(c) {
 		defaultConfig = defaultPrometheusConfig
-	} else if isAPM(c) {
-		defaultConfig = defaultAPMConfig
 	} else {
 		return cfg, nil
 	}
@@ -107,10 +114,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
-}
-
-func isAPM(conf *confmap.Conf) bool {
-	return conf.IsSet(common.APMMetrics)
 }
 
 func isEcs(conf *confmap.Conf) bool {

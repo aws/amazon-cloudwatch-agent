@@ -22,9 +22,6 @@ const (
 	resourceARNKey = "resource_arn"
 )
 
-//go:embed awsxray_default_apm.yaml
-var defaultAPMConfig string
-
 type translator struct {
 	name    string
 	factory exporter.Factory
@@ -56,7 +53,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if isAPM(conf) {
 		cfg.IndexedAttributes = []string{
 			"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-			"EKS.Cluster", "K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+			"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+			"HostedIn.Environment",
 		}
 	}
 

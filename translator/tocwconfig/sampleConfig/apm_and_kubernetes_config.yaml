@@ -1,646 +1,649 @@
 connectors: {}
 exporters:
-    awsemf/apm:
-        certificate_file_path: ""
-        detailed_metrics: false
-        dimension_rollup_option: NoDimensionRollup
-        disable_metric_extraction: true
-        eks_fargate_container_insights_enabled: false
-        endpoint: ""
-        enhanced_container_insights: false
-        imds_retries: 1
-        local_mode: false
-        log_group_name: /aws/containerinsights/{ClusterName}/performance
-        log_retention: 0
-        log_stream_name: '{NodeName}'
-        max_retries: 2
-        metric_declarations:
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                  - PodName
-                - - ClusterName
-                - - ClusterName
-                  - Namespace
-                  - Service
-                - - ClusterName
-                  - Namespace
-              label_matchers: []
-              metric_name_selectors:
-                - pod_cpu_utilization
-                - pod_memory_utilization
-                - pod_network_rx_bytes
-                - pod_network_tx_bytes
-                - pod_cpu_utilization_over_pod_limit
-                - pod_memory_utilization_over_pod_limit
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                  - PodName
-              label_matchers: []
-              metric_name_selectors:
-                - pod_number_of_container_restarts
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                  - PodName
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - pod_cpu_reserved_capacity
-                - pod_memory_reserved_capacity
-            - dimensions:
-                - - ClusterName
-                  - InstanceId
-                  - NodeName
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - node_cpu_utilization
-                - node_memory_utilization
-                - node_network_total_bytes
-                - node_cpu_reserved_capacity
-                - node_memory_reserved_capacity
-                - node_number_of_running_pods
-                - node_number_of_running_containers
-            - dimensions:
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - node_cpu_usage_total
-                - node_cpu_limit
-                - node_memory_working_set
-                - node_memory_limit
-            - dimensions:
-                - - ClusterName
-                  - InstanceId
-                  - NodeName
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - node_filesystem_utilization
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                  - Service
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - service_number_of_running_pods
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - namespace_number_of_running_pods
-            - dimensions:
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - cluster_node_count
-                - cluster_failed_node_count
-        metric_descriptors: []
-        namespace: ContainerInsights
-        no_verify_ssl: false
-        num_workers: 8
-        output_destination: cloudwatch
-        parse_json_encoded_attr_values:
-            - Sources
-            - kubernetes
-        profile: ""
-        proxy_address: ""
-        region: us-east-1
-        request_timeout_seconds: 30
-        resource_arn: ""
-        resource_to_telemetry_conversion:
-            enabled: true
-        retain_initial_value_of_delta_metric: false
-        role_arn: ""
-        shared_credentials_file: []
-        version: "0"
-    awsemf/containerinsights:
-        certificate_file_path: ""
-        detailed_metrics: false
-        dimension_rollup_option: NoDimensionRollup
-        disable_metric_extraction: true
-        eks_fargate_container_insights_enabled: false
-        endpoint: ""
-        enhanced_container_insights: false
-        imds_retries: 1
-        local_mode: false
-        log_group_name: /aws/containerinsights/{ClusterName}/performance
-        log_retention: 0
-        log_stream_name: '{NodeName}'
-        max_retries: 2
-        metric_declarations:
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                  - PodName
-                - - ClusterName
-                - - ClusterName
-                  - Namespace
-                  - Service
-                - - ClusterName
-                  - Namespace
-              label_matchers: []
-              metric_name_selectors:
-                - pod_cpu_utilization
-                - pod_memory_utilization
-                - pod_network_rx_bytes
-                - pod_network_tx_bytes
-                - pod_cpu_utilization_over_pod_limit
-                - pod_memory_utilization_over_pod_limit
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                  - PodName
-              label_matchers: []
-              metric_name_selectors:
-                - pod_number_of_container_restarts
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                  - PodName
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - pod_cpu_reserved_capacity
-                - pod_memory_reserved_capacity
-            - dimensions:
-                - - ClusterName
-                  - InstanceId
-                  - NodeName
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - node_cpu_utilization
-                - node_memory_utilization
-                - node_network_total_bytes
-                - node_cpu_reserved_capacity
-                - node_memory_reserved_capacity
-                - node_number_of_running_pods
-                - node_number_of_running_containers
-            - dimensions:
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - node_cpu_usage_total
-                - node_cpu_limit
-                - node_memory_working_set
-                - node_memory_limit
-            - dimensions:
-                - - ClusterName
-                  - InstanceId
-                  - NodeName
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - node_filesystem_utilization
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                  - Service
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - service_number_of_running_pods
-            - dimensions:
-                - - ClusterName
-                  - Namespace
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - namespace_number_of_running_pods
-            - dimensions:
-                - - ClusterName
-              label_matchers: []
-              metric_name_selectors:
-                - cluster_node_count
-                - cluster_failed_node_count
-        metric_descriptors: []
-        namespace: ContainerInsights
-        no_verify_ssl: false
-        num_workers: 8
-        output_destination: cloudwatch
-        parse_json_encoded_attr_values:
-            - Sources
-            - kubernetes
-        profile: ""
-        proxy_address: ""
-        region: us-east-1
-        request_timeout_seconds: 30
-        resource_arn: ""
-        resource_to_telemetry_conversion:
-            enabled: true
-        retain_initial_value_of_delta_metric: false
-        role_arn: ""
-        shared_credentials_file: []
-        version: "0"
-    awsxray/apm:
-        aws_log_groups: []
-        certificate_file_path: ""
-        endpoint: ""
-        imds_retries: 1
-        index_all_attributes: false
-        indexed_attributes:
-            - aws.local.service
-            - aws.local.operation
-            - aws.remote.service
-            - aws.remote.operation
-            - EKS.Cluster
-            - K8s.Namespace
+  awsemf/apm:
+    certificate_file_path: ""
+    detailed_metrics: false
+    dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: false
+    eks_fargate_container_insights_enabled: false
+    endpoint: ""
+    enhanced_container_insights: false
+    imds_retries: 0
+    local_mode: false
+    log_group_name: /aws/apm/eks
+    log_retention: 0
+    log_stream_name: ""
+    max_retries: 2
+    metric_declarations:
+      - dimensions:
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - Operation
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - Service
+        label_matchers:
+          - label_names:
+              - aws.span.kind
+            regex: ^(SERVER|LOCAL_ROOT)$
+            separator: ;
+        metric_name_selectors:
+          - Latency
+          - Fault
+          - Error
+      - dimensions:
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
             - K8s.RemoteNamespace
-            - aws.remote.target
-        local_mode: false
-        max_retries: 2
-        no_verify_ssl: false
-        num_workers: 8
-        profile: ""
-        proxy_address: ""
-        region: us-east-1
-        request_timeout_seconds: 30
-        resource_arn: ""
-        role_arn: ""
-        shared_credentials_file: []
-        telemetry:
-            enabled: true
-            include_metadata: true
-extensions:
-    awsproxy/apm:
-        aws_endpoint: ""
-        endpoint: 0.0.0.0:2000
-        local_mode: false
-        proxy_address: ""
-        region: ""
-        role_arn: ""
-processors:
-    awsapm:
-        resolvers:
-            - eks
-        rules: []
-    batch/containerinsights:
-        metadata_cardinality_limit: 1000
-        metadata_keys: []
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 5s
-    resourcedetection:
-        aks:
-            resource_attributes:
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-        attributes: []
-        auth: null
-        azure:
-            resource_attributes:
-                azure.resourcegroup.name:
-                    enabled: true
-                azure.vm.name:
-                    enabled: true
-                azure.vm.scaleset.name:
-                    enabled: true
-                azure.vm.size:
-                    enabled: true
-                cloud.account.id:
-                    enabled: true
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-                cloud.region:
-                    enabled: true
-                host.id:
-                    enabled: true
-                host.name:
-                    enabled: true
-        compression: ""
-        consul:
-            address: ""
-            datacenter: ""
-            meta: {}
-            namespace: ""
-            resource_attributes:
-                azure.resourcegroup.name:
-                    enabled: true
-                azure.vm.name:
-                    enabled: true
-                azure.vm.scaleset.name:
-                    enabled: true
-                azure.vm.size:
-                    enabled: true
-                cloud.account.id:
-                    enabled: true
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-                cloud.region:
-                    enabled: true
-                host.id:
-                    enabled: true
-                host.name:
-                    enabled: true
-            token: '[REDACTED]'
-            token_file: ""
-        detectors:
-            - eks
-            - env
-            - ec2
-        docker:
-            resource_attributes:
-                host.name:
-                    enabled: true
-                os.type:
-                    enabled: true
-        ec2:
-            resource_attributes:
-                cloud.account.id:
-                    enabled: true
-                cloud.availability_zone:
-                    enabled: true
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-                cloud.region:
-                    enabled: true
-                host.id:
-                    enabled: true
-                host.image.id:
-                    enabled: true
-                host.name:
-                    enabled: true
-                host.type:
-                    enabled: true
-            tags:
-                - ^kubernetes.io/cluster/.*$
-        ecs:
-            resource_attributes:
-                aws.ecs.cluster.arn:
-                    enabled: true
-                aws.ecs.launchtype:
-                    enabled: true
-                aws.ecs.task.arn:
-                    enabled: true
-                aws.ecs.task.family:
-                    enabled: true
-                aws.ecs.task.revision:
-                    enabled: true
-                aws.log.group.arns:
-                    enabled: true
-                aws.log.group.names:
-                    enabled: true
-                aws.log.stream.arns:
-                    enabled: true
-                aws.log.stream.names:
-                    enabled: true
-                cloud.account.id:
-                    enabled: true
-                cloud.availability_zone:
-                    enabled: true
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-                cloud.region:
-                    enabled: true
-        eks:
-            resource_attributes:
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-        elasticbeanstalk:
-            resource_attributes:
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-                deployment.environment:
-                    enabled: true
-                service.instance.id:
-                    enabled: true
-                service.version:
-                    enabled: true
-        endpoint: ""
-        gcp:
-            resource_attributes:
-                cloud.account.id:
-                    enabled: true
-                cloud.availability_zone:
-                    enabled: true
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-                cloud.region:
-                    enabled: true
-                faas.id:
-                    enabled: true
-                faas.name:
-                    enabled: true
-                faas.version:
-                    enabled: true
-                gcp.cloud_run.job.execution:
-                    enabled: true
-                gcp.cloud_run.job.task_index:
-                    enabled: true
-                gcp.gce.instance.hostname:
-                    enabled: false
-                gcp.gce.instance.name:
-                    enabled: false
-                host.id:
-                    enabled: true
-                host.name:
-                    enabled: true
-                host.type:
-                    enabled: true
-                k8s.cluster.name:
-                    enabled: true
-        headers: {}
-        heroku:
-            resource_attributes:
-                cloud.provider:
-                    enabled: true
-                heroku.app.id:
-                    enabled: true
-                heroku.dyno.id:
-                    enabled: true
-                heroku.release.commit:
-                    enabled: true
-                heroku.release.creation_timestamp:
-                    enabled: true
-                service.instance.id:
-                    enabled: true
-                service.name:
-                    enabled: true
-                service.version:
-                    enabled: true
-        idle_conn_timeout: 1m30s
-        lambda:
-            resource_attributes:
-                aws.log.group.names:
-                    enabled: true
-                aws.log.stream.names:
-                    enabled: true
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-                cloud.region:
-                    enabled: true
-                faas.instance:
-                    enabled: true
-                faas.max_memory:
-                    enabled: true
-                faas.name:
-                    enabled: true
-                faas.version:
-                    enabled: true
-        max_conns_per_host: null
-        max_idle_conns: 100
-        max_idle_conns_per_host: null
-        openshift:
-            address: ""
-            resource_attributes:
-                cloud.platform:
-                    enabled: true
-                cloud.provider:
-                    enabled: true
-                cloud.region:
-                    enabled: true
-                k8s.cluster.name:
-                    enabled: true
-            tls:
-                ca_file: ""
-                ca_pem: '[REDACTED]'
-                cert_file: ""
-                cert_pem: '[REDACTED]'
-                insecure: false
-                insecure_skip_verify: false
-                key_file: ""
-                key_pem: '[REDACTED]'
-                max_version: ""
-                min_version: ""
-                reload_interval: 0s
-                server_name_override: ""
-            token: ""
-        override: true
-        read_buffer_size: 0
-        system:
-            hostname_sources: []
-            resource_attributes:
-                host.arch:
-                    enabled: false
-                host.id:
-                    enabled: false
-                host.name:
-                    enabled: true
-                os.description:
-                    enabled: false
-                os.type:
-                    enabled: true
-        timeout: 2s
-        write_buffer_size: 0
-receivers:
-    awscontainerinsightreceiver:
-        add_container_name_metric_label: false
-        add_full_pod_name_metric_label: false
-        add_service_as_attribute: true
-        certificate_file_path: ""
-        cluster_name: TestCluster
-        collection_interval: 30s
-        container_orchestrator: eks
-        enable_control_plane_metrics: false
-        endpoint: ""
-        imds_retries: 1
-        leader_lock_name: cwagent-clusterleader
-        leader_lock_using_config_map_only: true
-        local_mode: false
-        max_retries: 0
-        no_verify_ssl: false
-        num_workers: 0
-        prefer_full_pod_name: false
-        profile: ""
-        proxy_address: ""
-        region: us-east-1
-        request_timeout_seconds: 0
-        resource_arn: ""
-        role_arn: ""
-        shared_credentials_file: []
-    otlp/apm:
-        protocols:
-            grpc:
-                auth: null
-                endpoint: 0.0.0.0:4317
-                include_metadata: false
-                keepalive: null
-                max_concurrent_streams: 0
-                max_recv_msg_size_mib: 0
-                read_buffer_size: 524288
-                tls: null
-                transport: tcp
-                write_buffer_size: 0
-            http:
-                auth: null
-                cors: null
-                endpoint: 0.0.0.0:4318
-                include_metadata: false
-                logs_url_path: /v1/logs
-                max_request_body_size: 0
-                metrics_url_path: /v1/metrics
-                response_headers: {}
-                tls: null
-                traces_url_path: /v1/traces
-service:
-    extensions:
-        - awsproxy/apm
-    pipelines:
-        metrics/apm:
-            exporters:
-                - awsemf/apm
-            processors:
-                - resourcedetection
-                - awsapm
-            receivers:
-                - otlp/apm
-        metrics/containerinsights:
-            exporters:
-                - awsemf/containerinsights
-            processors:
-                - batch/containerinsights
-            receivers:
-                - awscontainerinsightreceiver
-        traces/apm:
-            exporters:
-                - awsxray/apm
-            processors:
-                - resourcedetection
-                - awsapm
-            receivers:
-                - otlp/apm
+            - Operation
+            - RemoteOperation
+            - RemoteService
+            - RemoteTarget
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - K8s.RemoteNamespace
+            - Operation
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - Operation
+            - RemoteOperation
+            - RemoteService
+            - RemoteTarget
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - Operation
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - K8s.RemoteNamespace
+            - RemoteService
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - RemoteService
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - K8s.RemoteNamespace
+            - RemoteOperation
+            - RemoteService
+            - RemoteTarget
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - K8s.RemoteNamespace
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - RemoteOperation
+            - RemoteService
+            - RemoteTarget
+            - Service
+          - - HostedIn.EKS.Cluster
+            - HostedIn.K8s.Namespace
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - RemoteService
+        label_matchers:
+          - label_names:
+              - aws.span.kind
+            regex: ^(CLIENT|PRODUCER|CONSUMER)$
+            separator: ;
+        metric_name_selectors:
+          - Latency
+          - Fault
+          - Error
+    metric_descriptors: []
+    namespace: AWS/APM
+    no_verify_ssl: false
+    num_workers: 8
+    output_destination: cloudwatch
+    parse_json_encoded_attr_values: []
+    profile: ""
+    proxy_address: ""
+    region: ""
+    request_timeout_seconds: 30
+    resource_arn: ""
+    resource_to_telemetry_conversion:
+      enabled: false
+    retain_initial_value_of_delta_metric: false
+    role_arn: ""
+    shared_credentials_file: []
+    version: "1"
+  awsemf/containerinsights:
+    certificate_file_path: ""
+    detailed_metrics: false
+    dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: true
+    eks_fargate_container_insights_enabled: false
+    endpoint: ""
+    enhanced_container_insights: false
+    imds_retries: 1
+    local_mode: false
+    log_group_name: /aws/containerinsights/{ClusterName}/performance
+    log_retention: 0
+    log_stream_name: '{NodeName}'
+    max_retries: 2
+    metric_declarations:
+      - dimensions:
+          - - ClusterName
+            - Namespace
+            - PodName
+          - - ClusterName
+          - - ClusterName
+            - Namespace
+            - Service
+          - - ClusterName
+            - Namespace
+        label_matchers: []
+        metric_name_selectors:
+          - pod_cpu_utilization
+          - pod_memory_utilization
+          - pod_network_rx_bytes
+          - pod_network_tx_bytes
+          - pod_cpu_utilization_over_pod_limit
+          - pod_memory_utilization_over_pod_limit
+      - dimensions:
+          - - ClusterName
+            - Namespace
+            - PodName
+        label_matchers: []
+        metric_name_selectors:
+          - pod_number_of_container_restarts
+      - dimensions:
+          - - ClusterName
+            - Namespace
+            - PodName
+          - - ClusterName
+        label_matchers: []
+        metric_name_selectors:
+          - pod_cpu_reserved_capacity
+          - pod_memory_reserved_capacity
+      - dimensions:
+          - - ClusterName
+            - InstanceId
+            - NodeName
+          - - ClusterName
+        label_matchers: []
+        metric_name_selectors:
+          - node_cpu_utilization
+          - node_memory_utilization
+          - node_network_total_bytes
+          - node_cpu_reserved_capacity
+          - node_memory_reserved_capacity
+          - node_number_of_running_pods
+          - node_number_of_running_containers
+      - dimensions:
+          - - ClusterName
+        label_matchers: []
+        metric_name_selectors:
+          - node_cpu_usage_total
+          - node_cpu_limit
+          - node_memory_working_set
+          - node_memory_limit
+      - dimensions:
+          - - ClusterName
+            - InstanceId
+            - NodeName
+          - - ClusterName
+        label_matchers: []
+        metric_name_selectors:
+          - node_filesystem_utilization
+      - dimensions:
+          - - ClusterName
+            - Namespace
+            - Service
+          - - ClusterName
+        label_matchers: []
+        metric_name_selectors:
+          - service_number_of_running_pods
+      - dimensions:
+          - - ClusterName
+            - Namespace
+          - - ClusterName
+        label_matchers: []
+        metric_name_selectors:
+          - namespace_number_of_running_pods
+      - dimensions:
+          - - ClusterName
+        label_matchers: []
+        metric_name_selectors:
+          - cluster_node_count
+          - cluster_failed_node_count
+    metric_descriptors: []
+    namespace: ContainerInsights
+    no_verify_ssl: false
+    num_workers: 8
+    output_destination: cloudwatch
+    parse_json_encoded_attr_values:
+      - Sources
+      - kubernetes
+    profile: ""
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    resource_to_telemetry_conversion:
+      enabled: true
+    retain_initial_value_of_delta_metric: false
+    role_arn: ""
+    shared_credentials_file: []
+    version: "0"
+  awsxray/apm:
+    aws_log_groups: []
+    certificate_file_path: ""
+    endpoint: ""
+    imds_retries: 1
+    index_all_attributes: false
+    indexed_attributes:
+      - aws.local.service
+      - aws.local.operation
+      - aws.remote.service
+      - aws.remote.operation
+      - HostedIn.EKS.Cluster
+      - HostedIn.K8s.Namespace
+      - K8s.RemoteNamespace
+      - aws.remote.target
+      - HostedIn.Environment
+    local_mode: false
+    max_retries: 2
+    no_verify_ssl: false
+    num_workers: 8
+    profile: ""
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    role_arn: ""
+    shared_credentials_file: []
     telemetry:
-        logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
-            encoding: console
-            error_output_paths: []
-            initial_fields: {}
-            level: info
-            output_paths: []
-            sampling:
-                initial: 2
-                thereafter: 500
-        metrics:
-            address: ""
-            level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+      enabled: true
+      include_metadata: true
+extensions:
+  awsproxy/apm:
+    aws_endpoint: ""
+    endpoint: 0.0.0.0:2000
+    local_mode: false
+    proxy_address: ""
+    region: ""
+    role_arn: ""
+processors:
+  awsapm:
+    resolvers:
+      - eks
+    rules: []
+  batch/containerinsights:
+    metadata_cardinality_limit: 1000
+    metadata_keys: []
+    send_batch_max_size: 0
+    send_batch_size: 8192
+    timeout: 5s
+  resourcedetection:
+    aks:
+      resource_attributes:
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+    attributes: []
+    auth: null
+    azure:
+      resource_attributes:
+        azure.resourcegroup.name:
+          enabled: true
+        azure.vm.name:
+          enabled: true
+        azure.vm.scaleset.name:
+          enabled: true
+        azure.vm.size:
+          enabled: true
+        cloud.account.id:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        host.id:
+          enabled: true
+        host.name:
+          enabled: true
+    compression: ""
+    consul:
+      address: ""
+      datacenter: ""
+      meta: {}
+      namespace: ""
+      resource_attributes:
+        azure.resourcegroup.name:
+          enabled: true
+        azure.vm.name:
+          enabled: true
+        azure.vm.scaleset.name:
+          enabled: true
+        azure.vm.size:
+          enabled: true
+        cloud.account.id:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        host.id:
+          enabled: true
+        host.name:
+          enabled: true
+      token: '[REDACTED]'
+      token_file: ""
+    detectors:
+      - eks
+      - env
+      - ec2
+    docker:
+      resource_attributes:
+        host.name:
+          enabled: true
+        os.type:
+          enabled: true
+    ec2:
+      resource_attributes:
+        cloud.account.id:
+          enabled: true
+        cloud.availability_zone:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        host.id:
+          enabled: true
+        host.image.id:
+          enabled: true
+        host.name:
+          enabled: true
+        host.type:
+          enabled: true
+      tags:
+        - ^kubernetes.io/cluster/.*$
+    ecs:
+      resource_attributes:
+        aws.ecs.cluster.arn:
+          enabled: true
+        aws.ecs.launchtype:
+          enabled: true
+        aws.ecs.task.arn:
+          enabled: true
+        aws.ecs.task.family:
+          enabled: true
+        aws.ecs.task.revision:
+          enabled: true
+        aws.log.group.arns:
+          enabled: true
+        aws.log.group.names:
+          enabled: true
+        aws.log.stream.arns:
+          enabled: true
+        aws.log.stream.names:
+          enabled: true
+        cloud.account.id:
+          enabled: true
+        cloud.availability_zone:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+    eks:
+      resource_attributes:
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+    elasticbeanstalk:
+      resource_attributes:
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        deployment.environment:
+          enabled: true
+        service.instance.id:
+          enabled: true
+        service.version:
+          enabled: true
+    endpoint: ""
+    gcp:
+      resource_attributes:
+        cloud.account.id:
+          enabled: true
+        cloud.availability_zone:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        faas.id:
+          enabled: true
+        faas.name:
+          enabled: true
+        faas.version:
+          enabled: true
+        gcp.cloud_run.job.execution:
+          enabled: true
+        gcp.cloud_run.job.task_index:
+          enabled: true
+        gcp.gce.instance.hostname:
+          enabled: false
+        gcp.gce.instance.name:
+          enabled: false
+        host.id:
+          enabled: true
+        host.name:
+          enabled: true
+        host.type:
+          enabled: true
+        k8s.cluster.name:
+          enabled: true
+    headers: {}
+    heroku:
+      resource_attributes:
+        cloud.provider:
+          enabled: true
+        heroku.app.id:
+          enabled: true
+        heroku.dyno.id:
+          enabled: true
+        heroku.release.commit:
+          enabled: true
+        heroku.release.creation_timestamp:
+          enabled: true
+        service.instance.id:
+          enabled: true
+        service.name:
+          enabled: true
+        service.version:
+          enabled: true
+    idle_conn_timeout: 1m30s
+    lambda:
+      resource_attributes:
+        aws.log.group.names:
+          enabled: true
+        aws.log.stream.names:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        faas.instance:
+          enabled: true
+        faas.max_memory:
+          enabled: true
+        faas.name:
+          enabled: true
+        faas.version:
+          enabled: true
+    max_conns_per_host: null
+    max_idle_conns: 100
+    max_idle_conns_per_host: null
+    openshift:
+      address: ""
+      resource_attributes:
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        k8s.cluster.name:
+          enabled: true
+      tls:
+        ca_file: ""
+        ca_pem: '[REDACTED]'
+        cert_file: ""
+        cert_pem: '[REDACTED]'
+        insecure: false
+        insecure_skip_verify: false
+        key_file: ""
+        key_pem: '[REDACTED]'
+        max_version: ""
+        min_version: ""
+        reload_interval: 0s
+        server_name_override: ""
+      token: ""
+    override: true
+    read_buffer_size: 0
+    system:
+      hostname_sources: []
+      resource_attributes:
+        host.arch:
+          enabled: false
+        host.id:
+          enabled: false
+        host.name:
+          enabled: true
+        os.description:
+          enabled: false
+        os.type:
+          enabled: true
+    timeout: 2s
+    write_buffer_size: 0
+receivers:
+  awscontainerinsightreceiver:
+    add_container_name_metric_label: false
+    add_full_pod_name_metric_label: false
+    add_service_as_attribute: true
+    certificate_file_path: ""
+    cluster_name: TestCluster
+    collection_interval: 30s
+    container_orchestrator: eks
+    enable_control_plane_metrics: false
+    endpoint: ""
+    imds_retries: 1
+    leader_lock_name: cwagent-clusterleader
+    leader_lock_using_config_map_only: true
+    local_mode: false
+    max_retries: 0
+    no_verify_ssl: false
+    num_workers: 0
+    prefer_full_pod_name: false
+    profile: ""
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 0
+    resource_arn: ""
+    role_arn: ""
+    shared_credentials_file: []
+  otlp/apm:
+    protocols:
+      grpc:
+        auth: null
+        endpoint: 0.0.0.0:4315
+        include_metadata: false
+        keepalive: null
+        max_concurrent_streams: 0
+        max_recv_msg_size_mib: 0
+        read_buffer_size: 524288
+        tls: null
+        transport: tcp
+        write_buffer_size: 0
+      http:
+        auth: null
+        cors: null
+        endpoint: 0.0.0.0:4316
+        include_metadata: false
+        logs_url_path: /v1/logs
+        max_request_body_size: 0
+        metrics_url_path: /v1/metrics
+        response_headers: {}
+        tls: null
+        traces_url_path: /v1/traces
+service:
+  extensions:
+    - awsproxy/apm
+  pipelines:
+    metrics/apm:
+      exporters:
+        - awsemf/apm
+      processors:
+        - resourcedetection
+        - awsapm
+      receivers:
+        - otlp/apm
+    metrics/containerinsights:
+      exporters:
+        - awsemf/containerinsights
+      processors:
+        - batch/containerinsights
+      receivers:
+        - awscontainerinsightreceiver
+    traces/apm:
+      exporters:
+        - awsxray/apm
+      processors:
+        - resourcedetection
+        - awsapm
+      receivers:
+        - otlp/apm
+  telemetry:
+    logs:
+      development: false
+      disable_caller: false
+      disable_stacktrace: false
+      encoding: console
+      error_output_paths: []
+      initial_fields: {}
+      level: info
+      output_paths: []
+      sampling:
+        initial: 2
+        thereafter: 500
+    metrics:
+      address: ""
+      level: None
+      readers: []
+    resource: {}
+    traces:
+      processors: []
+      propagators: []

@@ -17,6 +17,7 @@ import (
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	semconv "go.opentelemetry.io/collector/semconv/v1.17.0"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
@@ -42,6 +43,10 @@ const (
 	deletionDelay = 2 * time.Minute
 )
 
+var DefaultHostedInAttributeMap = map[string]string{
+	semconv.AttributeK8SNamespaceName: HostedInAttributeK8SNamespace,
+}
+
 var (
 	// ReplicaSet name = Deployment name + "-" + 10 alphanumeric characters long string (see https://stackoverflow.com/questions/46204504/kubernetes-pod-naming-convention and https://stackoverflow.com/questions/71090356/how-does-random-string-in-kubernetes-pod-name-decided)
 	// the alphanumeric characters in Kubernetes are restricted to exclude vowels to reduce the chances of "normal words" being formed. (see https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83)
@@ -54,7 +59,6 @@ var (
 )
 
 type eksResolver struct {
-	clusterName                    string // used to save the cluster name as a cache
 	logger                         *zap.Logger
 	clientset                      kubernetes.Interface
 	ipToPod                        *sync.Map
@@ -621,13 +625,13 @@ func (e *eksResolver) debug() {
 }
 
 func (e *eksResolver) Process(attributes, resourceAttributes pcommon.Map) error {
-	if value, ok := attributes.Get("aws.remote.service"); ok {
+	if value, ok := attributes.Get(AttributeRemoteService); ok {
 		valueStr := value.AsString()
 		ipStr := ""
 		if ip, _, ok := extractIPPort(valueStr); ok {
 			if workload, namespace, err := e.GetWorkloadAndNamespaceByIP(valueStr); err == nil {
-				attributes.PutStr("aws.remote.service", workload)
-				attributes.PutStr("K8s.RemoteNamespace", namespace)
+				attributes.PutStr(AttributeRemoteService, workload)
+				attributes.PutStr(AttributeRemoteNamespace, namespace)
 			} else {
 				ipStr = ip
 			}
@@ -637,32 +641,15 @@ func (e *eksResolver) Process(attributes, resourceAttributes pcommon.Map) error 
 
 		if ipStr != "" {
 			if workload, namespace, err := e.GetWorkloadAndNamespaceByIP(ipStr); err == nil {
-				attributes.PutStr("aws.remote.service", workload)
-				attributes.PutStr("K8s.RemoteNamespace", namespace)
+				attributes.PutStr(AttributeRemoteService, workload)
+				attributes.PutStr(AttributeRemoteNamespace, namespace)
 			} else {
 				e.logger.Debug("failed to Process ip", zap.String("ip", ipStr), zap.Error(err))
-				attributes.PutStr("aws.remote.service", "UnknownRemoteService")
+				attributes.PutStr(AttributeRemoteService, "UnknownRemoteService")
 			}
 		}
 	}
 
-	if namespace, ok := resourceAttributes.Get("k8s.namespace.name"); ok {
-		attributes.PutStr("K8s.Namespace", namespace.AsString())
-		// assuming cluster name resource attribute like "ec2.tag.kubernetes.io/cluster/petclinic-test" always exist when "k8s.namespace.name" exist
-		if e.clusterName != "" {
-			attributes.PutStr("EKS.Cluster", e.clusterName)
-		} else {
-			// iterate resource attributes to find the cluster name
-			resourceAttributes.Range(func(key string, value pcommon.Value) bool {
-				if strings.HasPrefix(key, "ec2.tag.kubernetes.io/cluster/") && value.Type() == pcommon.ValueTypeStr && value.AsString() == "owned" {
-					e.clusterName = strings.TrimPrefix(key, "ec2.tag.kubernetes.io/cluster/")
-					attributes.PutStr("EKS.Cluster", e.clusterName)
-					return false
-				}
-				return true
-			})
-		}
-	}
 	return nil
 }
 
@@ -706,4 +693,47 @@ func getHostNetworkPorts(pod *corev1.Pod) []string {
 		}
 	}
 	return ports
+}
+
+type eksHostedInAttributeResolver struct {
+	clusterName  string
+	attributeMap map[string]string
+}
+
+func newEKSHostedInAttributeResolver() *eksHostedInAttributeResolver {
+	return &eksHostedInAttributeResolver{
+		attributeMap: map[string]string{
+			semconv.AttributeK8SNamespaceName: HostedInAttributeK8SNamespace,
+		},
+	}
+}
+func (h *eksHostedInAttributeResolver) Process(attributes, resourceAttributes pcommon.Map) error {
+	for attrKey, mappingKey := range h.attributeMap {
+		if val, ok := resourceAttributes.Get(attrKey); ok {
+			attributes.PutStr(mappingKey, val.AsString())
+		}
+	}
+
+	if h.clusterName != "" {
+		attributes.PutStr(HostedInAttributeClusterName, h.clusterName)
+	} else {
+		platform, _ := resourceAttributes.Get(semconv.AttributeCloudProvider)
+		if platform.AsString() == semconv.AttributeCloudProviderAWS {
+			// iterate resource attributes to find the cluster name
+			resourceAttributes.Range(func(key string, value pcommon.Value) bool {
+				if strings.HasPrefix(key, "ec2.tag.kubernetes.io/cluster/") && value.Type() == pcommon.ValueTypeStr && value.AsString() == "owned" {
+					h.clusterName = strings.TrimPrefix(key, "ec2.tag.kubernetes.io/cluster/")
+					attributes.PutStr(HostedInAttributeClusterName, h.clusterName)
+					return false
+				}
+				return true
+			})
+		}
+	}
+
+	return nil
+}
+
+func (h *eksHostedInAttributeResolver) Stop(ctx context.Context) error {
+	return nil
 }

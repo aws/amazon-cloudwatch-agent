@@ -92,10 +92,10 @@ func TestTranslateAPM(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
-						"endpoint": "0.0.0.0:4317",
+						"endpoint": "0.0.0.0:4315",
 					},
 					"http": map[string]interface{}{
-						"endpoint": "0.0.0.0:4318",
+						"endpoint": "0.0.0.0:4316",
 					},
 				},
 			}),
