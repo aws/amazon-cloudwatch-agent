@@ -111,7 +111,7 @@ func getPodMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 				Dimensions: [][]string{
 					{"FullPodName", "PodName", "Namespace", "ClusterName"},
 					{"PodName", "Namespace", "ClusterName"},
-					{"Service", "Namespace", "ClusterName"},
+					{"Namespace", "ClusterName"},
 					{"ClusterName"},
 				},
 				MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_tx_dropped"},
