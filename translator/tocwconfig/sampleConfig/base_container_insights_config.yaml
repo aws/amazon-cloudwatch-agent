@@ -1,7 +1,7 @@
 connectors: {}
 exporters:
   awscloudwatchlogs/emf_logs:
-    certificate_file_path: ""
+    certificate_file_path: "/etc/test/ca_bundle.pem"
     emf_only: true
     endpoint: "https://fake_endpoint"
     imds_retries: 1
@@ -39,8 +39,8 @@ exporters:
     disable_metric_extraction: true
     version: "0"
     eks_fargate_container_insights_enabled: false
-    certificate_file_path: ""
-    endpoint: ""
+    certificate_file_path: "/etc/test/ca_bundle.pem"
+    endpoint: "https://fake_endpoint"
     enhanced_container_insights: false
     imds_retries: 1
     local_mode: false

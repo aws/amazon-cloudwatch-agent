@@ -35,7 +35,7 @@ exporters:
     disable_metric_extraction: true
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
-    endpoint: ""
+    endpoint: "https://fake_endpoint"
     enhanced_container_insights: true
     imds_retries: 2
     local_mode: false
@@ -70,7 +70,7 @@ exporters:
           - pod_network_tx_bytes
           - pod_cpu_utilization_over_pod_limit
           - pod_memory_utilization_over_pod_limit
-      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace,  Service ], [ ClusterName ] ]
+      - dimensions: [ [ ClusterName, FullPodName, Namespace, PodName ], [ ClusterName, Namespace, PodName ], [ ClusterName, Namespace ], [ ClusterName ] ]
         label_matchers: [ ]
         metric_name_selectors:
           - pod_interface_network_rx_dropped

@@ -83,19 +83,20 @@ func TestStopAtEOF(t *testing.T) {
 
 	readThreelines(t, tail)
 
-	// Since StopAtEOF() will block until the EOF is reached, run it in a goroutine.
+	// Since tail.Wait() will block until the EOF is reached, run it in a goroutine.
 	done := make(chan bool)
 	go func() {
 		tail.StopAtEOF()
+		tail.Wait()
 		close(done)
 	}()
 
 	// Verify the goroutine is blocked indefinitely.
 	select {
 	case <-done:
-		t.Fatalf("StopAtEOF() completed unexpectedly")
+		t.Fatalf("tail.Wait() completed unexpectedly")
 	case <-time.After(time.Second * 1):
-		t.Log("timeout waiting for StopAtEOF() (as expected)")
+		t.Log("timeout waiting for tail.Wait() (as expected)")
 	}
 
 	assert.Equal(t, errStopAtEOF, tail.Err())
@@ -105,12 +106,12 @@ func TestStopAtEOF(t *testing.T) {
 		<-tail.Lines
 	}
 
-	// Verify StopAtEOF() has completed.
+	// Verify tail.Wait() has completed.
 	select {
 	case <-done:
-		t.Log("StopAtEOF() completed (as expected)")
+		t.Log("tail.Wait() completed (as expected)")
 	case <-time.After(time.Second * 1):
-		t.Fatalf("StopAtEOF() has not completed")
+		t.Fatalf("tail.Wait() has not completed")
 	}
 
 	// Then remove the tmpfile

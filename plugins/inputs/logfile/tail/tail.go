@@ -165,10 +165,9 @@ func (tail *Tail) Stop() error {
 }
 
 // StopAtEOF stops tailing as soon as the end of the file is reached.
-// Blocks until tailer is dead and returns reason for death.
-func (tail *Tail) StopAtEOF() error {
+// Does not wait until tailer is dead.
+func (tail *Tail) StopAtEOF() {
 	tail.Kill(errStopAtEOF)
-	return tail.Wait()
 }
 
 var errStopAtEOF = errors.New("tail: stop at eof")
