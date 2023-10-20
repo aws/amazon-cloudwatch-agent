@@ -326,6 +326,7 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 			Token:     t.Token,
 			Region:    t.ec2MetadataRespond.region,
 		}
+		t.logger.Info("ec2tagger: the roleARN is" + t.RoleARN)
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 		go func() { //Async start of initial retrieval to prevent block of agent start
 			t.initialRetrievalOfTagsAndVolumes()
