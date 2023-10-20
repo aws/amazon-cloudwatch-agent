@@ -143,16 +143,13 @@ func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 		Logger:     SDKLogger{},
 	}
 	config.Credentials = newStsCredentials(rootCredentials, c.RoleARN, c.Region)
-	log.Printf("the roleARN is" + c.RoleARN)
 	return getSession(config)
 }
 
 func (c *CredentialConfig) Credentials() client.ConfigProvider {
 	if c.RoleARN != "" {
-		log.Printf("I'm assuming credentials!")
 		return c.assumeCredentials()
 	} else {
-		log.Printf("I'm getting root credentials!")
 		return c.rootCredentials()
 	}
 }

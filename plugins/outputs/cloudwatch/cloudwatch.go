@@ -98,7 +98,6 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	}
 	configProvider := credentialConfig.Credentials()
 	logger := models.NewLogger("outputs", "cloudwatch", "")
-	logger.Info("cloudwatch.go: The roleARN is " + credentialConfig.RoleARN)
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(logger)
 	svc := cloudwatch.New(
 		configProvider,

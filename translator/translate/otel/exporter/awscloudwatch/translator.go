@@ -56,7 +56,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	credentials := confmap.NewFromStringMap(agent.Global_Config.Credentials)
 	_ = credentials.Unmarshal(cfg)
 	cfg.RoleARN = getRoleARN(conf)
-
 	cfg.Region = agent.Global_Config.Region
 	if namespace, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, namespaceKey)); ok {
 		cfg.Namespace = namespace
