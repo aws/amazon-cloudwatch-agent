@@ -4,8 +4,9 @@
 package awsemf
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
