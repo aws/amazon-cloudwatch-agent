@@ -77,7 +77,6 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 				})
 		},
 	}
-	p.logger.Info("ec2tagger: roleARN is" + config.RoleARN)
 
 	return p
 }
