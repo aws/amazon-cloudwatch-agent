@@ -7,8 +7,10 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
@@ -25,6 +27,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -42,10 +45,12 @@ func Factories() (otelcol.Factories, error) {
 	}
 
 	if factories.Processors, err = processor.MakeFactoryMap(
+		awsapmprocessor.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		ec2tagger.NewFactory(),
 		metricstransformprocessor.NewFactory(),
+		resourcedetectionprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
@@ -61,7 +66,9 @@ func Factories() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	if factories.Extensions, err = extension.MakeFactoryMap(); err != nil {
+	if factories.Extensions, err = extension.MakeFactoryMap(
+		awsproxy.NewFactory(),
+	); err != nil {
 		return otelcol.Factories{}, err
 	}
 

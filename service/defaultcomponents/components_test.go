@@ -11,9 +11,9 @@ import (
 
 const (
 	receiversCount  = 5
-	processorCount  = 5
+	processorCount  = 7
 	exportersCount  = 5
-	extensionsCount = 0
+	extensionsCount = 1
 )
 
 func TestComponents(t *testing.T) {
@@ -29,11 +29,13 @@ func TestComponents(t *testing.T) {
 
 	processors := factories.Processors
 	assert.Len(t, processors, processorCount)
+	assert.NotNil(t, processors["awsapm"])
 	assert.NotNil(t, processors["batch"])
 	assert.NotNil(t, processors["cumulativetodelta"])
 	assert.NotNil(t, processors["ec2tagger"])
 	assert.NotNil(t, processors["metricstransform"])
 	assert.NotNil(t, processors["transform"])
+	assert.NotNil(t, processors["resourcedetection"])
 
 	exporters := factories.Exporters
 	assert.Len(t, exporters, exportersCount)
@@ -45,4 +47,5 @@ func TestComponents(t *testing.T) {
 
 	extensions := factories.Extensions
 	assert.Len(t, extensions, extensionsCount)
+	assert.NotNil(t, extensions["awsproxy"])
 }

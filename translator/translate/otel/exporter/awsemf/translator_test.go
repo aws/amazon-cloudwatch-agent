@@ -4,14 +4,19 @@
 package awsemf
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 var nilSlice []string
@@ -675,6 +680,56 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
 				require.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				require.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+			}
+		})
+	}
+}
+
+func TestTranslateAPM(t *testing.T) {
+	tt := NewTranslatorWithName(common.APM)
+	testCases := map[string]struct {
+		input        map[string]interface{}
+		want         *confmap.Conf
+		wantErr      error
+		isKubernetes bool
+	}{
+		"WithAPMEnabledEKS": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"apm": map[string]interface{}{},
+					},
+				}},
+			want:         testutil.GetConf(t, filepath.Join("apm_config_eks.yaml")),
+			isKubernetes: true,
+		},
+		"WithAPMEnabledGeneric": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"apm": map[string]interface{}{},
+					},
+				}},
+			want:         testutil.GetConf(t, filepath.Join("apm_config_generic.yaml")),
+			isKubernetes: false,
+		},
+	}
+	factory := awsemfexporter.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if testCase.isKubernetes {
+				t.Setenv(common.KubernetesEnvVar, "TEST")
+			}
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*awsemfexporter.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})
 	}

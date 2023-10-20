@@ -1,0 +1,31 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: APM Beta Pre-Release
+on:
+  push:
+    branches:
+      - main-apm
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "apm-beta-pre-release:latest"
+      BucketKey: "apm-beta-pre-release"
+      PackageBucketKey: "apm-beta-pre-release"
+
+  e2e-test:
+    needs: BuildAndUpload
+    uses: ./.github/workflows/apm-e2e-test.yml
+    secrets: inherit
+    concurrency:
+      group: 'pulse-cw-agent-test'
+      cancel-in-progress: false
+    with:
+      test-cluster-name: 'pulse-cw-agent-test'
+      # The following needs to be updated once we go public
+      apm-cwagent-image-name: '506463145083.dkr.ecr.us-west-2.amazonaws.com/apm-beta-pre-release:latest'

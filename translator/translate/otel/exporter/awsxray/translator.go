@@ -4,6 +4,7 @@
 package awsxray
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -48,6 +49,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.TracesKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
+
+	if isAPM(conf) {
+		cfg.IndexedAttributes = []string{
+			"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+			"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+			"HostedIn.Environment",
+		}
+	}
+
 	c := confmap.NewFromStringMap(map[string]interface{}{
 		"telemetry": map[string]interface{}{
 			"enabled":          true,
@@ -103,4 +113,8 @@ func getRegion(conf *confmap.Conf) string {
 		region = agent.Global_Config.Region
 	}
 	return region
+}
+
+func isAPM(conf *confmap.Conf) bool {
+	return conf.IsSet(common.APMTraces)
 }

@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "logs": {
+    "metrics_collected": {
+      "apm": {}
+    },
+    "endpoint_override":"https://fake_endpoint"
+  },
+  "traces": {
+    "traces_collected": {
+      "apm": {}
+    },
+    "endpoint_override":"https://fake_endpoint"
+  }
+}

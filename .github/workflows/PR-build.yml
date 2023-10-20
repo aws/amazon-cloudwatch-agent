@@ -5,9 +5,9 @@ name: PR Build
 on:
   workflow_dispatch:
   pull_request:
-    branches: 
+    branches:
       - main*
-    types: 
+    types:
       - opened
       - synchronize
       - reopened

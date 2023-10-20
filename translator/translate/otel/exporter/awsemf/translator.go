@@ -30,6 +30,12 @@ var defaultKubernetesConfig string
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
 
+//go:embed apm_config_eks.yaml
+var apmConfigEks string
+
+//go:embed apm_config_generic.yaml
+var apmConfigGeneric string
+
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
 	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
@@ -60,6 +66,12 @@ func (t *translator) ID() component.ID {
 // Translate creates an awsemf exporter config based on the input json config
 func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
+
+	if common.IsAPMKubernetes() && t.name == common.APM {
+		return common.GetYamlFileToYamlConfig(cfg, apmConfigEks)
+	} else if t.name == common.APM {
+		return common.GetYamlFileToYamlConfig(cfg, apmConfigGeneric)
+	}
 
 	var defaultConfig string
 	if isEcs(c) {

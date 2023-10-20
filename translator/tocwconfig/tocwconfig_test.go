@@ -36,6 +36,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -64,7 +65,27 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
 	}
 	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "base_container_insights_config", "darwin", nil, "")
+}
+
+func TestGenericAPMConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "base_apm_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_apm_config", "windows", expectedEnvVars, "")
+}
+
+func TestAPMAndKubernetesConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_apm_eks_config")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "apm_and_kubernetes_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "apm_and_kubernetes_config", "windows", expectedEnvVars, "")
 }
 
 func TestEmfAndKubernetesConfig(t *testing.T) {
@@ -75,7 +96,6 @@ func TestEmfAndKubernetesConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "emf_and_kubernetes_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "emf_and_kubernetes_config", "darwin", nil, "")
 }
 
 func TestKubernetesModeOnPremiseConfig(t *testing.T) {
