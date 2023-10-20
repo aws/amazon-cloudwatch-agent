@@ -251,10 +251,11 @@ exporters:
       - aws.local.operation
       - aws.remote.service
       - aws.remote.operation
-      - EKS.Cluster
-      - K8s.Namespace
+      - HostedIn.EKS.Cluster
+      - HostedIn.K8s.Namespace
       - K8s.RemoteNamespace
       - aws.remote.target
+      - HostedIn.Environment
     local_mode: false
     max_retries: 2
     no_verify_ssl: false
