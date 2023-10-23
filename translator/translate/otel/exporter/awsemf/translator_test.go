@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 )
 
 var nilSlice []string
@@ -19,6 +20,8 @@ var nilMetricDescriptorsSlice []awsemfexporter.MetricDescriptor
 
 func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
 	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
 		env     map[string]string
@@ -675,6 +678,8 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
 				require.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				require.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				require.Equal(t, "global_arn", gotCfg.RoleARN)
+				require.Equal(t, "us-east-1", gotCfg.Region)
 			}
 		})
 	}
