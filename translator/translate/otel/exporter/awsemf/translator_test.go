@@ -24,11 +24,10 @@ func TestTranslator(t *testing.T) {
 	agent.Global_Config.Role_arn = "global_arn"
 	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
-		env         map[string]string
-		input       map[string]interface{}
-		agentConfig agent.Agent
-		want        map[string]interface{} // Can't construct & use awsemfexporter.Config as it uses internal only types
-		wantErr     error
+		env     map[string]string
+		input   map[string]interface{}
+		want    map[string]interface{} // Can't construct & use awsemfexporter.Config as it uses internal only types
+		wantErr error
 	}{
 		"GenerateAwsEmfExporterConfigEcs": {
 			input: map[string]interface{}{
