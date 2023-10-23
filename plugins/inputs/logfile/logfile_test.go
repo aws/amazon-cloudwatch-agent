@@ -434,7 +434,7 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 	defer close(evts)
 	// Choose a large enough number of lines so that even high-spec hosts will not
 	// complete receiving logEvents before the 2nd createWriteRead() goroutine begins.
-	const numLines int = 100000
+	const numLines int = 1000000
 	const msg string = "this is the best log line ever written to a file"
 	writeLines(t, file, numLines, msg)
 	file.Close()
@@ -453,7 +453,7 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 		select {
 		case <-done2:
 			t.Log("Child completed before timeout (as expected)")
-		case <-time.After(time.Second * 10):
+		case <-time.After(time.Second * 20):
 			require.Fail(t, "timeout waiting for child")
 		}
 		t.Log("Verify 1st temp file was auto deleted.")
