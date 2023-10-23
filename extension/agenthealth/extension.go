@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 )
 
@@ -23,6 +24,11 @@ var _ awsmiddleware.Extension = (*agentHealth)(nil)
 func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
 	var responseHandlers []awsmiddleware.ResponseHandler
 	requestHandlers := []awsmiddleware.RequestHandler{useragent.NewHandler(ah.cfg.IsUsageDataEnabled)}
+	if ah.cfg.IsUsageDataEnabled {
+		req, res := stats.NewHandlers(ah.logger, ah.cfg.ClientStats)
+		requestHandlers = append(requestHandlers, req...)
+		responseHandlers = append(responseHandlers, res...)
+	}
 	return requestHandlers, responseHandlers
 }
 

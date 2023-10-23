@@ -15,13 +15,13 @@ func TestFlagStats(t *testing.T) {
 	got := provider.stats
 	assert.Nil(t, got.ImdsFallbackSucceed)
 	assert.Nil(t, got.SharedConfigFallback)
-	provider.SetImdsFallbackSucceed()
+	provider.SetFlag(FlagIMDSFallbackSucceed)
 	assert.Nil(t, got.ImdsFallbackSucceed)
 	got = provider.stats
 	assert.NotNil(t, got.ImdsFallbackSucceed)
 	assert.Equal(t, 1, *got.ImdsFallbackSucceed)
 	assert.Nil(t, got.SharedConfigFallback)
-	provider.SetSharedConfigFallback()
+	provider.SetFlag(FlagSharedConfigFallback)
 	got = provider.stats
 	assert.NotNil(t, got.SharedConfigFallback)
 	assert.Equal(t, 1, *got.SharedConfigFallback)

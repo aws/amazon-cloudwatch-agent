@@ -5,9 +5,7 @@ package stats
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
@@ -75,21 +73,15 @@ func (sh *statsHandler) Header(operation string) string {
 }
 
 func (sh *statsHandler) refreshHeader(operation string) {
-	stats := agent.Stats{}
+	stats := &agent.Stats{}
 	for _, p := range sh.providers {
 		stats.Merge(p.Stats(operation))
 	}
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
-	sh.headers[operation] = sh.getHeader(stats)
-}
-
-func (sh *statsHandler) getHeader(stats agent.Stats) string {
-	raw, err := json.Marshal(stats)
+	var err error
+	sh.headers[operation], err = stats.Marshal()
 	if err != nil {
 		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
-		return ""
 	}
-	content := strings.TrimPrefix(string(raw), "{")
-	return strings.TrimSuffix(content, "}")
 }

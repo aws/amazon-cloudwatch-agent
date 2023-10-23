@@ -61,9 +61,10 @@ func TestStatsHandler(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	handler.HandleRequest(ctx, req)
 	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"lat":1234,"load":5678,"code":200,"scfb":1,"ifs":1`, req.Header.Get(headerKeyAgentStats))
+	stats.StatusCode = aws.Int(404)
 	stats.LatencyMillis = nil
 	handler.HandleResponse(ctx, &http.Response{StatusCode: http.StatusOK})
 	time.Sleep(time.Millisecond)
 	handler.HandleRequest(ctx, req)
-	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"load":5678,"code":200,"scfb":1,"ifs":1`, req.Header.Get(headerKeyAgentStats))
+	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"load":5678,"code":404,"scfb":1,"ifs":1`, req.Header.Get(headerKeyAgentStats))
 }

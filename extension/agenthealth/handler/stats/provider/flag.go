@@ -5,7 +5,6 @@ package provider
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,6 +16,15 @@ const (
 	flagGetInterval = 5 * time.Minute
 )
 
+type Flag int
+
+const (
+	FlagIMDSFallbackSucceed = iota
+	FlagSharedConfigFallback
+	FlagAppSignal
+	FlagEnhancedContainerInsights
+)
+
 var (
 	flagSingleton FlagStats
 	flagOnce      sync.Once
@@ -24,15 +32,13 @@ var (
 
 type FlagStats interface {
 	agent.StatsProvider
-	SetImdsFallbackSucceed()
-	SetSharedConfigFallback()
+	SetFlag(flag Flag)
 }
 
 type flagStats struct {
 	*intervalStats
 
-	sharedConfigFallback atomic.Bool
-	imdsFallbackSucceed  atomic.Bool
+	flags sync.Map
 }
 
 var _ FlagStats = (*flagStats)(nil)
@@ -41,37 +47,25 @@ func (p *flagStats) update() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.stats = agent.Stats{
-		ImdsFallbackSucceed:  p.getImdsFallbackSucceed(),
-		SharedConfigFallback: p.getSharedConfigFallback(),
+		ImdsFallbackSucceed:       p.getFlag(FlagIMDSFallbackSucceed),
+		SharedConfigFallback:      p.getFlag(FlagSharedConfigFallback),
+		AppSignals:                p.getFlag(FlagAppSignal),
+		EnhancedContainerInsights: p.getFlag(FlagEnhancedContainerInsights),
 	}
 }
 
-func (p *flagStats) SetImdsFallbackSucceed() {
-	if !p.imdsFallbackSucceed.Load() {
-		p.imdsFallbackSucceed.Store(true)
-		p.update()
-	}
-}
-
-func (p *flagStats) getImdsFallbackSucceed() *int {
-	if p.imdsFallbackSucceed.Load() {
+func (p *flagStats) getFlag(flag Flag) *int {
+	if _, ok := p.flags.Load(flag); ok {
 		return aws.Int(1)
 	}
 	return nil
 }
 
-func (p *flagStats) SetSharedConfigFallback() {
-	if !p.sharedConfigFallback.Load() {
-		p.sharedConfigFallback.Store(true)
+func (p *flagStats) SetFlag(flag Flag) {
+	if _, ok := p.flags.Load(flag); !ok {
+		p.flags.Store(flag, true)
 		p.update()
 	}
-}
-
-func (p *flagStats) getSharedConfigFallback() *int {
-	if p.sharedConfigFallback.Load() {
-		return aws.Int(1)
-	}
-	return nil
 }
 
 func newFlagStats(interval time.Duration) *flagStats {

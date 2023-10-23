@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -24,7 +26,11 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			id:   component.NewIDWithName(TypeStr, "1"),
-			want: &Config{IsUsageDataEnabled: false},
+			want: &Config{IsUsageDataEnabled: false, ClientStats: client.StatsConfig{Operations: []string{client.AllowAllOperations}}},
+		},
+		{
+			id:   component.NewIDWithName(TypeStr, "2"),
+			want: &Config{IsUsageDataEnabled: true, ClientStats: client.StatsConfig{Operations: []string{"ListBuckets"}}},
 		},
 	}
 	for _, testCase := range testCases {
