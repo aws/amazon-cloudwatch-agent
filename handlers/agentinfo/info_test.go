@@ -29,7 +29,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	ai := New("")
+	ai := New("", "", "")
 	expectedUserAgentRegex := `^CWAgent/Unknown \(.*\) ` +
 		`ID/[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$`
 
@@ -37,7 +37,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestRecordOpData(t *testing.T) {
-	ai := newAgentInfo("")
+	ai := newAgentInfo("", "", "")
 
 	stats := ai.StatsHeader()
 	actual := agentStats{}
@@ -124,8 +124,20 @@ func TestGetAgentStats(t *testing.T) {
 		PayloadBytes:        aws.Int(5678),
 		StatusCode:          aws.Int(200),
 		ImdsFallbackSucceed: aws.Int(1),
+		RunInContainer:      aws.Int(0),
+		RegionType:          aws.String(EC2Metadata),
+		Mode:                aws.String(ModeWithIRSA),
 	}
 
+	assert.Equal(t, "\"cpu\":1.2,\"mem\":123,\"fd\":456,\"th\":789,\"lat\":1234,\"load\":5678,\"code\":200,\"ifs\":1,\"ric\":0,\"rt\":\"EC2M\",\"m\":\"WI\"", getAgentStats(stats))
+
+	stats.Mode = nil
+	assert.Equal(t, "\"cpu\":1.2,\"mem\":123,\"fd\":456,\"th\":789,\"lat\":1234,\"load\":5678,\"code\":200,\"ifs\":1,\"ric\":0,\"rt\":\"EC2M\"", getAgentStats(stats))
+
+	stats.RegionType = nil
+	assert.Equal(t, "\"cpu\":1.2,\"mem\":123,\"fd\":456,\"th\":789,\"lat\":1234,\"load\":5678,\"code\":200,\"ifs\":1,\"ric\":0", getAgentStats(stats))
+
+	stats.RunInContainer = nil
 	assert.Equal(t, "\"cpu\":1.2,\"mem\":123,\"fd\":456,\"th\":789,\"lat\":1234,\"load\":5678,\"code\":200,\"ifs\":1", getAgentStats(stats))
 
 	stats.ImdsFallbackSucceed = nil

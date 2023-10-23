@@ -134,6 +134,7 @@ func TestStatsDConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
 	}
@@ -142,6 +143,7 @@ func TestStatsDConfig(t *testing.T) {
 // Linux only for CollectD
 func TestCollectDConfig(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "collectd_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "collectd_config_linux", "darwin", nil, "")
@@ -195,6 +197,7 @@ func TestBasicConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
 	}
@@ -202,6 +205,7 @@ func TestBasicConfig(t *testing.T) {
 
 func TestInvalidInputConfig(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "invalid_input_linux", "linux", expectedEnvVars, "")
 }
@@ -232,6 +236,7 @@ func TestStandardConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
 			t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
@@ -262,6 +267,7 @@ func TestAdvancedConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
 	}
@@ -414,6 +420,7 @@ func TestStandardConfigWithCommonConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
 			readCommonConfig(t, "./sampleConfig/commonConfig/withCredentialsProxySsl.toml")
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
@@ -422,6 +429,7 @@ func TestStandardConfigWithCommonConfig(t *testing.T) {
 
 func TestDeltaNetConfigLinux(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "delta_net_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "delta_net_config_linux", "darwin", nil, "")
@@ -445,6 +453,7 @@ func TestLogFilterConfig(t *testing.T) {
 
 func TestIgnoreInvalidAppendDimensions(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "ignore_append_dimensions", "linux", expectedEnvVars, "")
 }
@@ -499,8 +508,8 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 
 func resetContext(t *testing.T) {
 	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
-	util.DetectRegion = func(string, map[string]string) string {
-		return "us-west-2"
+	util.DetectRegion = func(string, map[string]string) (string, string) {
+		return "us-west-2", "ACJ"
 	}
 	util.DetectCredentialsPath = func() string {
 		return "fake-path"

@@ -33,7 +33,7 @@ const (
 	LogEntryField     = "value"
 
 	defaultFlushTimeout = 5 * time.Second
-	eventHeaderSize     = 26
+	eventHeaderSize     = 200
 	truncatedSuffix     = "[Truncated...]"
 	msgSizeLimit        = 256*1024 - eventHeaderSize
 
@@ -45,6 +45,8 @@ const (
 
 type CloudWatchLogs struct {
 	Region           string `toml:"region"`
+	RegionType       string `toml:"region_type"`
+	Mode             string `toml:"mode"`
 	EndpointOverride string `toml:"endpoint_override"`
 	AccessKey        string `toml:"access_key"`
 	SecretKey        string `toml:"secret_key"`
@@ -135,7 +137,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			Logger:   configaws.SDKLogger{},
 		},
 	)
-	agentInfo := agentinfo.New(t.Group)
+	agentInfo := agentinfo.New(t.Group, c.RegionType, c.Mode)
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", useragent.Get().Header(envconfig.IsUsageDataEnabled())))
 	client.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("X-Amz-Agent-Stats", agentInfo.StatsHeader))

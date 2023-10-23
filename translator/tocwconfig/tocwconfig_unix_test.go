@@ -6,10 +6,16 @@
 
 package tocwconfig
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+)
 
 func TestCompleteConfigUnix(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{
 		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
 		"CWAGENT_LOG_LEVEL":  "DEBUG",
@@ -24,6 +30,7 @@ func TestCompleteConfigUnix(t *testing.T) {
 
 func TestDeltaConfigLinux(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "delta_config_linux", "linux", expectedEnvVars, "")
 	checkTranslation(t, "delta_config_linux", "darwin", nil, "")
@@ -31,6 +38,7 @@ func TestDeltaConfigLinux(t *testing.T) {
 
 func TestDropOriginConfig(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "drop_origin_linux", "linux", expectedEnvVars, "")
 }

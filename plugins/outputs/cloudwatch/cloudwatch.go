@@ -81,7 +81,7 @@ func (c *CloudWatch) Capabilities() consumer.Capabilities {
 }
 
 func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
-	c.agentInfo = agentinfo.New("")
+	c.agentInfo = agentinfo.New("", c.config.RegionType, c.config.Mode)
 	c.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
