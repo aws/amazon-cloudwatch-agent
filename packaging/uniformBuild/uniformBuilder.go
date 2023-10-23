@@ -34,6 +34,9 @@ func main() {
 	var err error
 	eg := new(errgroup.Group)
 	defer rbm.Close()
+	eg.Go(func() error {
+		return rbm.MakeMacPkg("MacPkgMaker", packageBucketKey)
+	})
 	err = rbm.BuildCWAAgent(repo, branch, bucketKey, "MainBuildEnv")
 	if err != nil {
 		panic(err)
@@ -49,13 +52,7 @@ func main() {
 		}
 		return nil
 	})
-	eg.Go(func() error {
-		err = rbm.MakeMacPkg("MacPkgMaker", packageBucketKey)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+
 	if err := eg.Wait(); err != nil {
 		fmt.Printf("Failed because: %s \n", err)
 		return

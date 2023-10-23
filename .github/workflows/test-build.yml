@@ -161,7 +161,7 @@ jobs:
           run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{inputs.BucketKey}}/ . --recursive
         - name: Sign Build Files
           if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-          run: for f in $(.); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
+          run: for f in $(ls); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
         - name: Build Cloudwatch Agent Image
           uses: docker/build-push-action@v4
           if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false

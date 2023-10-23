@@ -122,7 +122,7 @@ func (rbm *RemoteBuildManager) MakeMacPkg(instanceName string, commitHash string
 		commands.CloneGitRepo(common.MAIN_REPO, "main"),
 		"cd ccwa",
 		commands.MakeMacBinary(),
-		commands.CopyBinaryMac(),
+		//commands.CopyBinaryMac(),
 		commands.CreatePkgCopyDeps(),
 		commands.BuildAndUploadMac(commitHash),
 	)
