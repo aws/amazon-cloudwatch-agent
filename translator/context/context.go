@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
@@ -41,6 +42,7 @@ type Context struct {
 	multiConfig         string
 	outputTomlFilePath  string
 	mode                string
+	shortMode           string
 	credentials         map[string]string
 	proxy               map[string]string
 	ssl                 map[string]string
@@ -96,6 +98,10 @@ func (ctx *Context) Mode() string {
 	return ctx.mode
 }
 
+func (ctx *Context) ShortMode() string {
+	return ctx.shortMode
+}
+
 func (ctx *Context) Credentials() map[string]string {
 	return ctx.credentials
 }
@@ -112,12 +118,16 @@ func (ctx *Context) SetMode(mode string) {
 	switch mode {
 	case config.ModeEC2:
 		ctx.mode = config.ModeEC2
+		ctx.shortMode = agentinfo.ModeEC2
 	case config.ModeOnPrem:
 		ctx.mode = config.ModeOnPrem
+		ctx.shortMode = agentinfo.ModeOnPrem
 	case config.ModeOnPremise:
 		ctx.mode = config.ModeOnPremise
+		ctx.shortMode = agentinfo.ModeOnPrem
 	case config.ModeWithIRSA:
 		ctx.mode = config.ModeWithIRSA
+		ctx.shortMode = agentinfo.ModeWithIRSA
 	default:
 		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA)
 	}
