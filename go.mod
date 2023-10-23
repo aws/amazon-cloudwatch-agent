@@ -85,6 +85,7 @@ replace github.com/openshift/api v3.9.0+incompatible => github.com/openshift/api
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Jeffail/gabs v1.4.0
+	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20231023161526-9bd8785e9c2e
 	github.com/aws/aws-sdk-go v1.45.24
 	github.com/aws/aws-sdk-go-v2 v1.21.2
 	github.com/aws/aws-sdk-go-v2/config v1.18.25
@@ -130,14 +131,18 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/collector v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/component v0.84.1-0.20230908201109-ab3d6c5b6470
+	go.opentelemetry.io/collector/config/configtelemetry v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/confmap v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/consumer v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/exporter v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/exporter/loggingexporter v0.84.0
+	go.opentelemetry.io/collector/extension v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/pdata v1.0.0-rcv0014.0.20230908201109-ab3d6c5b6470
+	go.opentelemetry.io/collector/processor v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/processor/batchprocessor v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/receiver v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/receiver/otlpreceiver v0.84.0
+	go.uber.org/atomic v1.11.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
@@ -154,12 +159,6 @@ require (
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
 	k8s.io/klog/v2 v2.100.1
-)
-
-require (
-	go.opentelemetry.io/collector/config/configtelemetry v0.84.1-0.20230908201109-ab3d6c5b6470
-	go.opentelemetry.io/collector/extension v0.84.1-0.20230908201109-ab3d6c5b6470
-	go.opentelemetry.io/collector/processor v0.84.1-0.20230908201109-ab3d6c5b6470
 )
 
 require (
@@ -181,7 +180,6 @@ require (
 	github.com/alecthomas/participle v0.4.1 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
-	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20231023152757-c6e2437e6590 // indirect
 	github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20230928170322-0df38c533713 // indirect
 	github.com/antchfx/jsonquery v1.1.5 // indirect
 	github.com/antchfx/xmlquery v1.3.9 // indirect
@@ -394,7 +392,6 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v0.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.17.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/goleak v1.2.1 // indirect
 	golang.org/x/crypto v0.13.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
