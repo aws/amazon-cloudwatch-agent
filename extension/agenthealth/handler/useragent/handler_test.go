@@ -4,6 +4,7 @@
 package useragent
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -22,10 +23,10 @@ func TestUserAgentHandler(t *testing.T) {
 	assert.Equal(t, awsmiddleware.After, handler.Position())
 	req, err := http.NewRequest("", "localhost", nil)
 	require.NoError(t, err)
-	handler.HandleRequest("", req)
+	handler.HandleRequest(context.Background(), req)
 	assert.Equal(t, "FirstUA", req.Header.Get(headerKeyUserAgent))
 	t.Setenv(envconfig.CWAGENT_USER_AGENT, "SecondUA")
 	ua.notify()
-	handler.HandleRequest("", req)
+	handler.HandleRequest(context.Background(), req)
 	assert.Equal(t, "SecondUA FirstUA", req.Header.Get(headerKeyUserAgent))
 }

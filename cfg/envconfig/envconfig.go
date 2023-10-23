@@ -3,6 +3,12 @@
 
 package envconfig
 
+import (
+	"os"
+	"strconv"
+	"sync"
+)
+
 const (
 	//the following are the names of environment variables
 	HTTP_PROXY         = "HTTP_PROXY"
@@ -15,3 +21,22 @@ const (
 	CWAGENT_USAGE_DATA = "CWAGENT_USAGE_DATA"
 	IMDS_NUMBER_RETRY  = "IMDS_NUMBER_RETRY"
 )
+
+var (
+	usageDataEnabled bool
+	onceUsageData    sync.Once
+)
+
+// getUsageDataEnabled returns true for true or invalid
+// examples of invalid are not set env var, "", "invalid"
+func getUsageDataEnabled() bool {
+	ok, err := strconv.ParseBool(os.Getenv(CWAGENT_USAGE_DATA))
+	return ok || err != nil
+}
+
+func IsUsageDataEnabled() bool {
+	onceUsageData.Do(func() {
+		usageDataEnabled = getUsageDataEnabled()
+	})
+	return usageDataEnabled
+}

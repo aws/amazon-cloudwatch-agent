@@ -70,8 +70,6 @@ type userAgent struct {
 var _ UserAgent = (*userAgent)(nil)
 
 func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegraf.Config) {
-	ua.dataLock.Lock()
-	defer ua.dataLock.Unlock()
 	for _, input := range telegrafCfg.Inputs {
 		ua.inputs.Add(input.Config.Name)
 	}

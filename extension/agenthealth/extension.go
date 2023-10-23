@@ -21,9 +21,9 @@ type agentHealth struct {
 var _ awsmiddleware.Extension = (*agentHealth)(nil)
 
 func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	var responsesHandlers []awsmiddleware.ResponseHandler
-	requestsHandlers := []awsmiddleware.RequestHandler{useragent.NewHandler(ah.cfg.IsUsageDataEnabled)}
-	return requestsHandlers, responsesHandlers
+	var responseHandlers []awsmiddleware.ResponseHandler
+	requestHandlers := []awsmiddleware.RequestHandler{useragent.NewHandler(ah.cfg.IsUsageDataEnabled)}
+	return requestHandlers, responseHandlers
 }
 
 func newAgentHealth(logger *zap.Logger, cfg *Config) (*agentHealth, error) {

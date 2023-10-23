@@ -4,6 +4,7 @@
 package useragent
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
@@ -28,7 +29,7 @@ func (uah *userAgentHandler) Position() awsmiddleware.HandlerPosition {
 
 // HandleRequest prepends the User-Agent header with the CloudWatch Agent's
 // user agent string.
-func (uah *userAgentHandler) HandleRequest(_ string, r *http.Request) {
+func (uah *userAgentHandler) HandleRequest(_ context.Context, r *http.Request) {
 	newHeader := uah.Header()
 	current := r.Header.Get(headerKeyUserAgent)
 	if current != "" {
