@@ -35,5 +35,5 @@ func createDefaultConfig() component.Config {
 }
 
 func createExtension(_ context.Context, settings extension.CreateSettings, cfg component.Config) (extension.Extension, error) {
-	return newAgentHealth(settings.Logger, cfg.(*Config))
+	return NewAgentHealth(settings.Logger, cfg.(*Config)), nil
 }

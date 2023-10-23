@@ -10,17 +10,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -69,6 +70,7 @@ type CloudWatchLogs struct {
 	pusherStopChan  chan struct{}
 	pusherWaitGroup sync.WaitGroup
 	cwDests         map[Target]*cwDest
+	middleware      awsmiddleware.Middleware
 }
 
 func (c *CloudWatchLogs) Connect() error {
@@ -137,12 +139,15 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			Logger:   configaws.SDKLogger{},
 		},
 	)
-	agentInfo := agentinfo.New(t.Group, c.RegionType, c.Mode)
+	// TODO: set c.RegionType and c.Mode in FlagsStats
+	// TODO: set containerinsights flag based on group
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
-	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", useragent.Get().Header(envconfig.IsUsageDataEnabled())))
-	client.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("X-Amz-Agent-Stats", agentInfo.StatsHeader))
-
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, agentInfo)
+	if c.middleware != nil {
+		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
+			c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
+		}
+	}
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
@@ -379,6 +384,10 @@ func init() {
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			pusherStopChan:     make(chan struct{}),
 			cwDests:            make(map[Target]*cwDest),
+			middleware: agenthealth.NewAgentHealth(
+				zap.NewNop(),
+				&agenthealth.Config{IsUsageDataEnabled: envconfig.IsUsageDataEnabled()},
+			),
 		}
 	})
 }

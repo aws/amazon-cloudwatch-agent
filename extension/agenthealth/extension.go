@@ -32,6 +32,6 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 	return requestHandlers, responseHandlers
 }
 
-func newAgentHealth(logger *zap.Logger, cfg *Config) (*agentHealth, error) {
-	return &agentHealth{logger: logger, cfg: cfg}, nil
+func NewAgentHealth(logger *zap.Logger, cfg *Config) awsmiddleware.Extension {
+	return &agentHealth{logger: logger, cfg: cfg}
 }
