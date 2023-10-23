@@ -8,7 +8,7 @@ exporters:
     retain_initial_value_of_delta_metric: false
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
-    endpoint: ""
+    endpoint: "https://fake_endpoint"
     "imds_retries": 1
     enhanced_container_insights: false
     local_mode: false

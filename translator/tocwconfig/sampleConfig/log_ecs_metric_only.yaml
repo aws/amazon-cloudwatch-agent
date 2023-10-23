@@ -4,7 +4,7 @@ exporters:
     emf_only: true
     certificate_file_path: ""
     endpoint: "https://fake_endpoint"
-    "imds_retries": 1
+    imds_retries: 1
     local_mode: false
     log_group_name: emf/logs/default
     log_retention: 0
@@ -35,7 +35,7 @@ exporters:
     disable_metric_extraction: false
     eks_fargate_container_insights_enabled: false
     certificate_file_path: ""
-    endpoint: ""
+    endpoint: "https://fake_endpoint"
     "imds_retries": 1
     enhanced_container_insights: false
     local_mode: false
@@ -115,7 +115,7 @@ receivers:
     enable_control_plane_metrics: false
     certificate_file_path: ""
     endpoint: ""
-    "imds_retries": 1
+    imds_retries: 1
     leader_lock_name: otel-container-insight-clusterleader
     leader_lock_using_config_map_only: false
     local_mode: false

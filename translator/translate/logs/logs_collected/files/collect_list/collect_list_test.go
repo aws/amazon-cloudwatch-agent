@@ -78,7 +78,7 @@ func TestTimestampFormat(t *testing.T) {
 		"file_path":         "path1",
 		"from_beginning":    true,
 		"pipe":              false,
-		"timestamp_layout":  "15:04:05 06 Jan 2",
+		"timestamp_layout":  []string{"15:04:05 06 Jan _2"},
 		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		"timezone":          "UTC",
 		"retention_in_days": -1,
@@ -105,7 +105,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"from_beginning":    true,
 				"pipe":              false,
 				"retention_in_days": -1,
-				"timestamp_layout":  "15:04:05 06 Jan 2",
+				"timestamp_layout":  []string{"15:04:05 06 Jan _2"},
 				"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 			}},
 		},
@@ -123,7 +123,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"from_beginning":    true,
 				"pipe":              false,
 				"retention_in_days": -1,
-				"timestamp_layout":  "1 2 15:04:05",
+				"timestamp_layout":  []string{"1 _2 15:04:05", "01 _2 15:04:05"},
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
 			}},
 		},
@@ -141,8 +141,44 @@ func TestTimestampFormatAll(t *testing.T) {
 				"from_beginning":    true,
 				"pipe":              false,
 				"retention_in_days": -1,
-				"timestamp_layout":  "2 1 15:04:05",
+				"timestamp_layout":  []string{"_2 1 15:04:05", "_2 01 15:04:05"},
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path4",
+                            "timestamp_format": "%b %d %H:%M:%S"
+						}
+					]
+				}`,
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path4",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"Jan _2 15:04:05"},
+				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path5",
+                            "timestamp_format": "%b %-d %H:%M:%S"
+						}
+					]
+				}`,
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path5",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"Jan _2 15:04:05"},
+				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
 			}},
 		},
 		{
@@ -159,7 +195,25 @@ func TestTimestampFormatAll(t *testing.T) {
 				"from_beginning":    true,
 				"pipe":              false,
 				"retention_in_days": -1,
-				"timestamp_layout":  "5 2 1 15:04:05",
+				"timestamp_layout":  []string{"5 _2 1 15:04:05", "5 _2 01 15:04:05"},
+				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path7",
+							"timestamp_format":"%-S %-d %m %H:%M:%S"
+						}
+					]
+				}`,
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path7",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"5 _2 01 15:04:05", "5 _2 1 15:04:05"},
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
 			}},
 		},
@@ -182,8 +236,6 @@ func applyRule1(t *testing.T, buf string) interface{} {
 	return val
 }
 
-// stdNumMonth     // "1"         //%-m
-// stdDay          // "2"         //%-d
 // -hour:-minute:-seconds does not work for golang parser.
 func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 	f := new(FileConfig)
@@ -201,7 +253,7 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 		assert.Fail(t, e.Error())
 	}
 	_, val := f.ApplyRule(input)
-	expectedLayout := "3:4:5 06 1 2"
+	expectedLayout := []string{"3:4:5 06 1 _2", "3:4:5 06 01 _2"}
 	expectedRegex := "(\\d{1,2}:\\d{1,2}:\\d{1,2} \\d{2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2})"
 	expectVal := []interface{}{map[string]interface{}{
 		"file_path":         "path1",
@@ -223,8 +275,7 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 		match := regex.FindStringSubmatch(sampleLogEntry)
 		assert.NotNil(t, match)
 		assert.Equal(t, 2, len(match))
-
-		parsedTime, err := time.ParseInLocation(expectedLayout, match[1], time.UTC)
+		parsedTime, err := time.ParseInLocation(expectedLayout[0], match[1], time.UTC)
 		assert.NoError(t, err)
 		assert.Equal(t, time.Date(2018, 3, 8, 1, 2, 3, 0, time.UTC), parsedTime)
 	}
@@ -247,7 +298,7 @@ func TestTimestampFormat_SpecialCharacters(t *testing.T) {
 		assert.Fail(t, e.Error())
 	}
 	_, val := f.ApplyRule(input)
-	expectedLayout := "^.*?|[({15:04:05 06 Jan 2})]$"
+	expectedLayout := []string{"^.*?|[({15:04:05 06 Jan _2})]$"}
 	expectedRegex := "(\\^\\.\\*\\?\\|\\[\\(\\{\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2}\\}\\)\\]\\$)"
 	expectVal := []interface{}{map[string]interface{}{
 		"file_path":         "path1",
@@ -266,7 +317,7 @@ func TestTimestampFormat_SpecialCharacters(t *testing.T) {
 	assert.NotNil(t, match)
 	assert.Equal(t, 2, len(match))
 
-	parsedTime, err := time.ParseInLocation(expectedLayout, match[1], time.UTC)
+	parsedTime, err := time.ParseInLocation(expectedLayout[0], match[1], time.UTC)
 	assert.NoError(t, err)
 	assert.Equal(t, time.Date(2017, 12, 27, 12, 52, 0, 0, time.UTC), parsedTime)
 }
@@ -286,7 +337,7 @@ func TestTimestampFormat_Template(t *testing.T) {
 		assert.Fail(t, e.Error())
 	}
 	_, val := f.ApplyRule(input)
-	expectedLayout := "Jan 2 15:04:05"
+	expectedLayout := []string{"Jan _2 15:04:05"}
 	expectedRegex := "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
 	expectVal := []interface{}{map[string]interface{}{
 		"file_path":         "path1",
@@ -304,14 +355,14 @@ func TestTimestampFormat_Template(t *testing.T) {
 	assert.NotNil(t, match)
 	assert.Equal(t, 2, len(match))
 
-	parsedTime, err := time.ParseInLocation(expectedLayout, match[1], time.Local)
+	parsedTime, err := time.ParseInLocation(expectedLayout[0], match[1], time.Local)
 	assert.NoError(t, err)
 	assert.Equal(t, time.Date(0, 8, 9, 20, 45, 51, 0, time.Local), parsedTime)
 }
 
 func TestTimestampFormat_InvalidRegex(t *testing.T) {
 	translator.ResetMessages()
-	r := new(TimestampRegax)
+	r := new(TimestampRegex)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
 		"timestamp_format":"%Y-%m-%dT%H:%M%S+00:00"
@@ -347,8 +398,8 @@ func TestMultiLineStartPattern(t *testing.T) {
 		"from_beginning":           true,
 		"pipe":                     false,
 		"retention_in_days":        -1,
-		"timestamp_layout":         "15:04:05 06 Jan 02",
-		"timestamp_regex":          "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
+		"timestamp_layout":         []string{"15:04:05 06 Jan _2"},
+		"timestamp_regex":          "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		"timezone":                 "UTC",
 		"multi_line_start_pattern": "{timestamp_regex}",
 	}}
@@ -377,8 +428,8 @@ func TestEncoding(t *testing.T) {
 		"from_beginning":    true,
 		"pipe":              false,
 		"retention_in_days": -1,
-		"timestamp_layout":  "15:04:05 06 Jan 02",
-		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\d{2})",
+		"timestamp_layout":  []string{"15:04:05 06 Jan _2"},
+		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		"timezone":          "UTC",
 		"encoding":          "gbk",
 	}}

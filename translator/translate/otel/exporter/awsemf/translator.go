@@ -6,6 +6,7 @@ package awsemf
 import (
 	_ "embed"
 	"fmt"
+	"os"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/component"
@@ -13,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -39,6 +41,7 @@ var (
 	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
 	prometheusBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 	emfProcessorBasePathKey = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
+	endpointOverrideKey     = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
 )
 
 type translator struct {
@@ -91,12 +94,18 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	}
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	if c.IsSet(endpointOverrideKey) {
+		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
+	}
+	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
+	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
 	}
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
+	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	if isEcs(c) {
@@ -112,7 +121,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 			return nil, err
 		}
 	}
-
 	return cfg, nil
 }
 
