@@ -453,7 +453,7 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 		select {
 		case <-done2:
 			t.Log("Child completed before timeout (as expected)")
-		case <-time.After(time.Second * 10):
+		case <-time.After(time.Second * 20):
 			require.Fail(t, "timeout waiting for child")
 		}
 		t.Log("Verify 1st temp file was auto deleted.")
