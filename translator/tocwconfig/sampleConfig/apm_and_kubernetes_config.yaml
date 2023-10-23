@@ -127,7 +127,7 @@ exporters:
     dimension_rollup_option: NoDimensionRollup
     disable_metric_extraction: true
     eks_fargate_container_insights_enabled: false
-    endpoint: ""
+    endpoint: "https://fake_endpoint"
     enhanced_container_insights: false
     imds_retries: 1
     local_mode: false
