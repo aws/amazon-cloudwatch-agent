@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,8 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -42,6 +45,10 @@ const (
 	metricRetryTimeout = 2 * time.Minute
 
 	attributesInFields = "attributesInFields"
+)
+
+var (
+	containerInsightsRegexp = regexp.MustCompile("^/aws/.*containerinsights/.*/(performance|prometheus)$")
 )
 
 type CloudWatchLogs struct {
@@ -139,8 +146,11 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			Logger:   configaws.SDKLogger{},
 		},
 	)
-	// TODO: set c.RegionType and c.Mode in FlagsStats
-	// TODO: set containerinsights flag based on group
+	provider.GetFlagsStats().SetFlagWithValue(provider.FlagRegionType, c.RegionType)
+	provider.GetFlagsStats().SetFlagWithValue(provider.FlagMode, c.Mode)
+	if containerInsightsRegexp.MatchString(t.Group) {
+		useragent.Get().SetContainerInsightsFlag()
+	}
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
 	if c.middleware != nil {
 		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {

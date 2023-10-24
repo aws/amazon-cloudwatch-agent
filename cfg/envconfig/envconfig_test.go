@@ -21,3 +21,13 @@ func TestIsUsageDataEnabled(t *testing.T) {
 	t.Setenv(CWAGENT_USAGE_DATA, "FALSE")
 	assert.False(t, getUsageDataEnabled())
 }
+
+func TestIsRunningInContainer(t *testing.T) {
+	assert.False(t, IsRunningInContainer())
+
+	t.Setenv(RunInContainer, "TRUE")
+	assert.False(t, IsRunningInContainer())
+
+	t.Setenv(RunInContainer, TrueValue)
+	assert.True(t, IsRunningInContainer())
+}

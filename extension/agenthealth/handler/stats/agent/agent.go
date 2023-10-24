@@ -26,6 +26,9 @@ type Stats struct {
 	ImdsFallbackSucceed       *int     `json:"ifs,omitempty"`
 	AppSignals                *int     `json:"as,omitempty"`
 	EnhancedContainerInsights *int     `json:"eci,omitempty"`
+	RunningInContainer        *int     `json:"ric,omitempty"`
+	RegionType                *string  `json:"rt,omitempty"`
+	Mode                      *string  `json:"m,omitempty"`
 }
 
 // Merge the other Stats into the current. If the field is not nil,
