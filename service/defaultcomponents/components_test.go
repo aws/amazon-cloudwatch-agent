@@ -13,7 +13,7 @@ const (
 	receiversCount  = 5
 	processorCount  = 5
 	exportersCount  = 5
-	extensionsCount = 0
+	extensionsCount = 1
 )
 
 func TestComponents(t *testing.T) {
@@ -45,4 +45,5 @@ func TestComponents(t *testing.T) {
 
 	extensions := factories.Extensions
 	assert.Len(t, extensions, extensionsCount)
+	assert.NotNil(t, extensions["agenthealth"])
 }
