@@ -21,31 +21,31 @@ const (
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
-func NewHandlers(logger *zap.Logger, cfg client.StatsConfig) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
-	clientStats := client.NewHandler(cfg)
-	stats := newStatsHandler(logger, []agent.StatsProvider{clientStats, provider.GetProcessStats(), provider.GetFlagsStats()})
-	return []awsmiddleware.RequestHandler{clientStats, stats}, []awsmiddleware.ResponseHandler{clientStats, stats}
+func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig) ([]awsmiddleware.RequestHandler, []awsmiddleware.ResponseHandler) {
+	filter := agent.NewOperationsFilter(cfg.Operations...)
+	clientStats := client.NewHandler(filter)
+	stats := newStatsHandler(logger, filter, []agent.StatsProvider{clientStats, provider.GetProcessStats(), provider.GetFlagsStats()})
+	return []awsmiddleware.RequestHandler{clientStats, stats}, []awsmiddleware.ResponseHandler{clientStats}
 }
 
 type statsHandler struct {
-	mu        sync.Mutex
-	logger    *zap.Logger
-	providers []agent.StatsProvider
+	mu sync.Mutex
 
-	headers map[string]string
+	logger    *zap.Logger
+	filter    agent.OperationsFilter
+	providers []agent.StatsProvider
 }
 
-func newStatsHandler(logger *zap.Logger, providers []agent.StatsProvider) *statsHandler {
+func newStatsHandler(logger *zap.Logger, filter agent.OperationsFilter, providers []agent.StatsProvider) *statsHandler {
 	sh := &statsHandler{
 		logger:    logger,
+		filter:    filter,
 		providers: providers,
-		headers:   make(map[string]string),
 	}
 	return sh
 }
 
 var _ awsmiddleware.RequestHandler = (*statsHandler)(nil)
-var _ awsmiddleware.ResponseHandler = (*statsHandler)(nil)
 
 func (sh *statsHandler) ID() string {
 	return handlerID
@@ -56,32 +56,24 @@ func (sh *statsHandler) Position() awsmiddleware.HandlerPosition {
 }
 
 func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
-	header := sh.Header(awsmiddleware.GetOperationName(ctx))
+	operation := awsmiddleware.GetOperationName(ctx)
+	if !sh.filter.IsAllowed(operation) {
+		return
+	}
+	header := sh.Header(operation)
 	if header != "" {
 		r.Header.Set(headerKeyAgentStats, header)
 	}
 }
 
-func (sh *statsHandler) HandleResponse(ctx context.Context, _ *http.Response) {
-	go sh.refreshHeader(awsmiddleware.GetOperationName(ctx))
-}
-
 func (sh *statsHandler) Header(operation string) string {
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
-	return sh.headers[operation]
-}
-
-func (sh *statsHandler) refreshHeader(operation string) {
 	stats := &agent.Stats{}
 	for _, p := range sh.providers {
 		stats.Merge(p.Stats(operation))
 	}
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
-	var err error
-	sh.headers[operation], err = stats.Marshal()
+	header, err := stats.Marshal()
 	if err != nil {
 		sh.logger.Warn("Failed to serialize agent stats", zap.Error(err))
 	}
+	return header
 }

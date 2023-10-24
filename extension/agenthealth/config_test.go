@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/client"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -26,11 +26,11 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			id:   component.NewIDWithName(TypeStr, "1"),
-			want: &Config{IsUsageDataEnabled: false, ClientStats: client.StatsConfig{Operations: []string{client.AllowAllOperations}}},
+			want: &Config{IsUsageDataEnabled: false, Stats: agent.StatsConfig{Operations: []string{agent.AllowAllOperations}}},
 		},
 		{
 			id:   component.NewIDWithName(TypeStr, "2"),
-			want: &Config{IsUsageDataEnabled: true, ClientStats: client.StatsConfig{Operations: []string{"ListBuckets"}}},
+			want: &Config{IsUsageDataEnabled: true, Stats: agent.StatsConfig{Operations: []string{"ListBuckets"}}},
 		},
 	}
 	for _, testCase := range testCases {

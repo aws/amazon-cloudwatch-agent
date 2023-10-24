@@ -12,14 +12,15 @@ import (
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/jellydator/ttlcache/v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
 const (
-	handlerID          = "cloudwatchagent.ClientStatsHandler"
-	AllowAllOperations = "*"
+	handlerID   = "cloudwatchagent.ClientStatsHandler"
+	ttlDuration = 10 * time.Second
+	cacheSize   = 1000
 )
 
 type Stats interface {
@@ -28,39 +29,37 @@ type Stats interface {
 	agent.StatsProvider
 }
 
-type StatsConfig struct {
-	// Operations is the allowed operation types to gather stats for.
-	Operations []string `mapstructure:"operations,omitempty"`
-}
-
-type operationRecorder struct {
-	lastRequestID string
-	start         time.Time
-	payloadBytes  int64
-
-	stats agent.Stats
+type requestRecorder struct {
+	start        time.Time
+	payloadBytes int64
 }
 
 type clientStatsHandler struct {
-	mu                 sync.Mutex
-	allowedOperations  collections.Set[string]
-	allowAllOperations bool
-	getOperationName   func(ctx context.Context) string
-	getRequestID       func(ctx context.Context) string
+	mu sync.Mutex
 
-	operationRecorders map[string]*operationRecorder
+	filter           agent.OperationsFilter
+	getOperationName func(ctx context.Context) string
+	getRequestID     func(ctx context.Context) string
+
+	statsByOperation map[string]agent.Stats
+	requestCache     *ttlcache.Cache[string, *requestRecorder]
 }
 
 var _ Stats = (*clientStatsHandler)(nil)
 
-func NewHandler(cfg StatsConfig) Stats {
-	allowedOperations := collections.NewSet[string](cfg.Operations...)
+func NewHandler(filter agent.OperationsFilter) Stats {
+	requestCache := ttlcache.New[string, *requestRecorder](
+		ttlcache.WithTTL[string, *requestRecorder](ttlDuration),
+		ttlcache.WithCapacity[string, *requestRecorder](cacheSize),
+		ttlcache.WithDisableTouchOnHit[string, *requestRecorder](),
+	)
+	go requestCache.Start()
 	return &clientStatsHandler{
-		allowedOperations:  allowedOperations,
-		allowAllOperations: allowedOperations.Contains(AllowAllOperations),
-		getOperationName:   awsmiddleware.GetOperationName,
-		getRequestID:       awsmiddleware.GetRequestID,
-		operationRecorders: map[string]*operationRecorder{},
+		filter:           filter,
+		getOperationName: awsmiddleware.GetOperationName,
+		getRequestID:     awsmiddleware.GetRequestID,
+		requestCache:     requestCache,
+		statsByOperation: make(map[string]agent.Stats),
 	}
 }
 
@@ -74,44 +73,43 @@ func (csh *clientStatsHandler) Position() awsmiddleware.HandlerPosition {
 
 func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	operation := csh.getOperationName(ctx)
-	if !csh.allowAllOperations && !csh.allowedOperations.Contains(operation) {
+	if !csh.filter.IsAllowed(operation) {
 		return
 	}
 	csh.mu.Lock()
 	defer csh.mu.Unlock()
-	recorder, ok := csh.operationRecorders[operation]
-	if !ok {
-		recorder = &operationRecorder{}
-	}
-	recorder.lastRequestID = csh.getRequestID(ctx)
-	recorder.start = time.Now()
+	requestID := csh.getRequestID(ctx)
+	recorder := &requestRecorder{start: time.Now()}
 	recorder.payloadBytes, _ = io.Copy(io.Discard, r.Body)
-	csh.operationRecorders[operation] = recorder
+	csh.requestCache.Set(requestID, recorder, ttlcache.DefaultTTL)
 }
 
 func (csh *clientStatsHandler) HandleResponse(ctx context.Context, r *http.Response) {
 	operation := csh.getOperationName(ctx)
-	if !csh.allowAllOperations && !csh.allowedOperations.Contains(operation) {
+	if !csh.filter.IsAllowed(operation) {
 		return
 	}
 	csh.mu.Lock()
 	defer csh.mu.Unlock()
-	recorder, ok := csh.operationRecorders[operation]
+	requestID := csh.getRequestID(ctx)
+	item, ok := csh.requestCache.GetAndDelete(requestID)
 	if !ok {
 		return
 	}
-	recorder.stats = agent.Stats{
+	recorder := item.Value()
+	stats := agent.Stats{
 		PayloadBytes: aws.Int(int(recorder.payloadBytes)),
 		StatusCode:   aws.Int(r.StatusCode),
 	}
-	if recorder.lastRequestID == csh.getRequestID(ctx) {
-		latency := time.Since(recorder.start).Milliseconds()
-		recorder.stats.LatencyMillis = aws.Int64(latency)
-	}
+	latency := time.Since(recorder.start).Milliseconds()
+	stats.LatencyMillis = aws.Int64(latency)
+	csh.statsByOperation[operation] = stats
 }
 
 func (csh *clientStatsHandler) Stats(operation string) agent.Stats {
 	csh.mu.Lock()
 	defer csh.mu.Unlock()
-	return csh.operationRecorders[operation].stats
+	stats := csh.statsByOperation[operation]
+	csh.statsByOperation[operation] = agent.Stats{}
+	return stats
 }

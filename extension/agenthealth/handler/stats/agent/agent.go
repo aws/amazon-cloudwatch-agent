@@ -6,6 +6,12 @@ package agent
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+)
+
+const (
+	AllowAllOperations = "*"
 )
 
 type Stats struct {
@@ -71,4 +77,26 @@ func (s *Stats) Marshal() (string, error) {
 
 type StatsProvider interface {
 	Stats(operation string) Stats
+}
+
+type OperationsFilter struct {
+	operations collections.Set[string]
+	allowAll   bool
+}
+
+func (of OperationsFilter) IsAllowed(operationName string) bool {
+	return of.allowAll || of.operations.Contains(operationName)
+}
+
+func NewOperationsFilter(operations ...string) OperationsFilter {
+	allowed := collections.NewSet[string](operations...)
+	return OperationsFilter{
+		operations: allowed,
+		allowAll:   allowed.Contains(AllowAllOperations),
+	}
+}
+
+type StatsConfig struct {
+	// Operations are the allowed operation names to gather stats for.
+	Operations []string `mapstructure:"operations,omitempty"`
 }

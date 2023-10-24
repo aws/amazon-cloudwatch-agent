@@ -84,3 +84,23 @@ func TestMarshal(t *testing.T) {
 		})
 	}
 }
+
+func TestOperationFilter(t *testing.T) {
+	testCases := map[string]struct {
+		allowedOperations []string
+		testOperations    []string
+		want              []bool
+	}{
+		"WithNoneAllowed": {allowedOperations: nil, testOperations: []string{"nothing", "is", "allowed"}, want: []bool{false, false, false}},
+		"WithSomeAllowed": {allowedOperations: []string{"are"}, testOperations: []string{"some", "are", "allowed"}, want: []bool{false, true, false}},
+		"WithAllAllowed":  {allowedOperations: []string{"*"}, testOperations: []string{"all", "are", "allowed"}, want: []bool{true, true, true}},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			filter := NewOperationsFilter(testCase.allowedOperations...)
+			for index, testOperation := range testCase.testOperations {
+				assert.Equal(t, testCase.want[index], filter.IsAllowed(testOperation))
+			}
+		})
+	}
+}

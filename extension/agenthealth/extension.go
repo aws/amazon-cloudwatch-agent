@@ -25,7 +25,7 @@ func (ah *agentHealth) Handlers() ([]awsmiddleware.RequestHandler, []awsmiddlewa
 	var responseHandlers []awsmiddleware.ResponseHandler
 	requestHandlers := []awsmiddleware.RequestHandler{useragent.NewHandler(ah.cfg.IsUsageDataEnabled)}
 	if ah.cfg.IsUsageDataEnabled {
-		req, res := stats.NewHandlers(ah.logger, ah.cfg.ClientStats)
+		req, res := stats.NewHandlers(ah.logger, ah.cfg.Stats)
 		requestHandlers = append(requestHandlers, req...)
 		responseHandlers = append(responseHandlers, res...)
 	}

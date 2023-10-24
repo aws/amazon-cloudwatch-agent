@@ -13,12 +13,13 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 func TestHandle(t *testing.T) {
 	operation := "test"
-	cfg := StatsConfig{Operations: []string{AllowAllOperations}}
-	handler := NewHandler(cfg)
+	handler := NewHandler(agent.NewOperationsFilter("test"))
 	handler.(*clientStatsHandler).getOperationName = func(context.Context) string {
 		return operation
 	}
