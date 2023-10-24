@@ -8,13 +8,18 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 func TestFlagStats(t *testing.T) {
+	t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
 	provider := newFlagStats(time.Microsecond)
 	got := provider.stats
 	assert.Nil(t, got.ImdsFallbackSucceed)
 	assert.Nil(t, got.SharedConfigFallback)
+	assert.NotNil(t, got.RunningInContainer)
+	assert.Equal(t, 1, *got.RunningInContainer)
 	provider.SetFlag(FlagIMDSFallbackSucceed)
 	assert.Nil(t, got.ImdsFallbackSucceed)
 	got = provider.stats
@@ -25,4 +30,8 @@ func TestFlagStats(t *testing.T) {
 	got = provider.stats
 	assert.NotNil(t, got.SharedConfigFallback)
 	assert.Equal(t, 1, *got.SharedConfigFallback)
+	provider.SetFlagWithValue(FlagMode, "test")
+	got = provider.stats
+	assert.NotNil(t, got.Mode)
+	assert.Equal(t, "test", *got.Mode)
 }

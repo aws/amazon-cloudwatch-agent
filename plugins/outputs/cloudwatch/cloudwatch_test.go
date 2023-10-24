@@ -7,11 +7,14 @@ import (
 	"context"
 	"log"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -21,8 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
+	"go.uber.org/zap"
 
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 )
@@ -382,7 +386,6 @@ func newCloudWatchClient(
 			MaxDatumsPerCall:   defaultMaxDatumsPerCall,
 			MaxValuesPerDatum:  defaultMaxValuesPerDatum,
 		},
-		agentInfo: agentinfo.New("", "", ""),
 	}
 	cloudwatch.startRoutines()
 	return cloudwatch
@@ -493,6 +496,45 @@ func TestPublish(t *testing.T) {
 	time.Sleep(interval)
 	assert.Equal(t, expectedCalls, len(svc.Calls))
 	cw.Shutdown(ctx)
+}
+
+func TestMiddleware(t *testing.T) {
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	id := component.NewID("test")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	cw := &CloudWatch{
+		config: &Config{
+			Region:             "test-region",
+			Namespace:          "test-namespace",
+			ForceFlushInterval: time.Second,
+			EndpointOverride:   server.URL,
+			MiddlewareID:       &id,
+		},
+		logger: zap.NewNop(),
+	}
+	ctx := context.Background()
+	handler := new(awsmiddleware.MockHandler)
+	handler.On("ID").Return("test")
+	handler.On("Position").Return(awsmiddleware.After)
+	handler.On("HandleRequest", mock.Anything, mock.Anything)
+	handler.On("HandleResponse", mock.Anything, mock.Anything)
+	middleware := new(awsmiddleware.MockMiddlewareExtension)
+	middleware.On("Handlers").Return([]awsmiddleware.RequestHandler{handler}, []awsmiddleware.ResponseHandler{handler})
+	extensions := map[component.ID]component.Component{id: middleware}
+	host := new(awsmiddleware.MockExtensionsHost)
+	host.On("GetExtensions").Return(extensions)
+	assert.NoError(t, cw.Start(ctx, host))
+	// Expect 1500 metrics batched in 2 API calls.
+	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
+	assert.NoError(t, cw.ConsumeMetrics(ctx, pmetrics))
+	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
+	handler.AssertCalled(t, "HandleRequest", mock.Anything, mock.Anything)
+	handler.AssertCalled(t, "HandleResponse", mock.Anything, mock.Anything)
+	require.NoError(t, cw.Shutdown(ctx))
 }
 
 func TestBackoffRetries(t *testing.T) {

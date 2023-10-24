@@ -20,6 +20,19 @@ const (
 	CWAGENT_LOG_LEVEL  = "CWAGENT_LOG_LEVEL"
 	CWAGENT_USAGE_DATA = "CWAGENT_USAGE_DATA"
 	IMDS_NUMBER_RETRY  = "IMDS_NUMBER_RETRY"
+	RunInContainer     = "RUN_IN_CONTAINER"
+	RunInAWS           = "RUN_IN_AWS"
+	RunWithIRSA        = "RUN_WITH_IRSA"
+	UseDefaultConfig   = "USE_DEFAULT_CONFIG"
+	HostName           = "HOST_NAME"
+	PodName            = "POD_NAME"
+	HostIP             = "HOST_IP"
+	CWConfigContent    = "CW_CONFIG_CONTENT"
+)
+
+const (
+	// TrueValue is the expected string set on an environment variable to indicate true.
+	TrueValue = "True"
 )
 
 var (
@@ -39,4 +52,8 @@ func IsUsageDataEnabled() bool {
 		usageDataEnabled = getUsageDataEnabled()
 	})
 	return usageDataEnabled
+}
+
+func IsRunningInContainer() bool {
+	return os.Getenv(RunInContainer) == TrueValue
 }

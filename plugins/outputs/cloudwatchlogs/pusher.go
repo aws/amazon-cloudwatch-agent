@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
@@ -60,10 +59,9 @@ type pusher struct {
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
-	agentInfo             agentinfo.AgentInfo
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, agentInfo agentinfo.AgentInfo) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
@@ -76,7 +74,6 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
-		agentInfo:       agentInfo,
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
@@ -232,9 +229,7 @@ func (p *pusher) send() {
 	retryCount := 0
 	for {
 		input.SequenceToken = p.sequenceToken
-		opStartTime := time.Now()
 		output, err := p.Service.PutLogEvents(input)
-		p.agentInfo.RecordOpData(time.Since(opStartTime), p.bufferredSize, err)
 		if err == nil {
 			if output.NextSequenceToken != nil {
 				p.sequenceToken = output.NextSequenceToken

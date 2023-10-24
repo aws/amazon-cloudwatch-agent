@@ -35,6 +35,8 @@ type Config struct {
 	// "Enabled" - A boolean field to enable/disable this option. Default is `false`.
 	// If enabled, all the resource attributes will be converted to metric labels by default.
 	ResourceToTelemetrySettings resourcetotelemetry.Settings `mapstructure:"resource_to_telemetry_conversion"`
+	// MiddlewareID is an ID for an extension that can be used to configure the AWS client.
+	MiddlewareID *component.ID `mapstructure:"middleware,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)
