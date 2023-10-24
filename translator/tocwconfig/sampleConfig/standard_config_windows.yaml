@@ -4,13 +4,19 @@ exporters:
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        mode: EC2
         namespace: CWAgent
         region: us-west-2
-        region_type: "ACJ"
-        mode: "EC2"
+        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
-extensions: {}
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
 processors:
     ec2tagger:
         ec2_instance_tag_keys:
@@ -22,32 +28,33 @@ processors:
         refresh_interval_seconds: 0s
 receivers:
     telegraf_win_perf_counters/1492679118:
-        alias_name:          Memory
+        alias_name: Memory
         collection_interval: 1m0s
-        initial_delay: "1s"
+        initial_delay: 1s
         timeout: 0s
     telegraf_win_perf_counters/3446270237:
-        alias_name:          PhysicalDisk
+        alias_name: PhysicalDisk
         collection_interval: 1m0s
-        initial_delay: "1s"
+        initial_delay: 1s
         timeout: 0s
     telegraf_win_perf_counters/3610923661:
-        alias_name:          Paging File
+        alias_name: Paging File
         collection_interval: 1m0s
-        initial_delay: "1s"
+        initial_delay: 1s
         timeout: 0s
     telegraf_win_perf_counters/3762679655:
-        alias_name:          Processor
+        alias_name: Processor
         collection_interval: 1m0s
-        initial_delay: "1s"
+        initial_delay: 1s
         timeout: 0s
     telegraf_win_perf_counters/4283769065:
-        alias_name:          LogicalDisk
+        alias_name: LogicalDisk
         collection_interval: 1m0s
-        initial_delay: "1s"
+        initial_delay: 1s
         timeout: 0s
 service:
-    extensions: []
+    extensions:
+        - agenthealth/metrics
     pipelines:
         metrics/host:
             exporters:
@@ -55,11 +62,11 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_win_perf_counters/1492679118
-                - telegraf_win_perf_counters/3446270237
                 - telegraf_win_perf_counters/3610923661
+                - telegraf_win_perf_counters/3446270237
                 - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
+                - telegraf_win_perf_counters/1492679118
     telemetry:
         logs:
             development: false
@@ -69,7 +76,8 @@ service:
             error_output_paths: []
             initial_fields: {}
             level: info
-            output_paths: [c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log]
+            output_paths:
+                - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
             sampling:
                 initial: 2
                 thereafter: 500
