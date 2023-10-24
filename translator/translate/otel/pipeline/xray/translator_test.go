@@ -21,6 +21,7 @@ func TestTranslator(t *testing.T) {
 		receivers  []string
 		processors []string
 		exporters  []string
+		extensions []string
 	}
 	tt := NewTranslator()
 	assert.EqualValues(t, "traces/xray", tt.ID().String())
@@ -45,6 +46,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"awsxray"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
+				extensions: []string{"agenthealth/traces"},
 			},
 		},
 		"WithOtlpKey": {
@@ -59,6 +61,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"otlp"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
+				extensions: []string{"agenthealth/traces"},
 			},
 		},
 		"WithXrayAndOtlpKey": {
@@ -74,6 +77,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"awsxray", "otlp"},
 				processors: []string{"batch/xray"},
 				exporters:  []string{"awsxray"},
+				extensions: []string{"agenthealth/traces"},
 			},
 		},
 	}
@@ -89,6 +93,7 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.Keys(), component.ID.String))
 			}
 		})
 	}

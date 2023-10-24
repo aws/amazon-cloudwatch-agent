@@ -45,6 +45,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"telegraf_prometheus"},
 				processors: []string{"batch/prometheus"},
 				exporters:  []string{"awsemf/prometheus"},
+				extensions: []string{"agenthealth/logs"},
 			},
 		},
 	}
@@ -60,6 +61,7 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.Keys(), component.ID.String))
 			}
 		})
 	}
