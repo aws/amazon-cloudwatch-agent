@@ -18,13 +18,15 @@ func TestExtension(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, extension)
 	assert.NoError(t, extension.Start(ctx, componenttest.NewNopHost()))
-	requests, responses := extension.Handlers()
-	assert.Len(t, requests, 1)
-	assert.Len(t, responses, 0)
+	requestHandlers, responseHandlers := extension.Handlers()
+	// user agent, client stats, stats
+	assert.Len(t, requestHandlers, 3)
+	// client stats
+	assert.Len(t, responseHandlers, 1)
 	extension.cfg.IsUsageDataEnabled = false
-	extension.Handlers()
-	requests, responses = extension.Handlers()
-	assert.Len(t, requests, 1)
-	assert.Len(t, responses, 0)
+	requestHandlers, responseHandlers = extension.Handlers()
+	// user agent
+	assert.Len(t, requestHandlers, 1)
+	assert.Len(t, responseHandlers, 0)
 	assert.NoError(t, extension.Shutdown(ctx))
 }

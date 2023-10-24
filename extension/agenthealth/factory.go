@@ -8,6 +8,8 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 const (
@@ -26,6 +28,9 @@ func NewFactory() extension.Factory {
 func createDefaultConfig() component.Config {
 	return &Config{
 		IsUsageDataEnabled: true,
+		Stats: agent.StatsConfig{
+			Operations: []string{agent.AllowAllOperations},
+		},
 	}
 }
 

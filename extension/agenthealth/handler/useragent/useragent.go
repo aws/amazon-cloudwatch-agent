@@ -18,6 +18,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
@@ -29,9 +30,10 @@ const (
 
 	flagRunAsUser                 = "run_as_user"
 	flagContainerInsights         = "container_insights"
-	flagPulse                     = "pulse"
+	flagAppSignals                = "app_signals"
 	flagEnhancedContainerInsights = "enhanced_container_insights"
-	separator                     = " "
+
+	separator = " "
 
 	typeInputs     = "inputs"
 	typeProcessors = "processors"
@@ -91,10 +93,12 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 			if exporter.Type() == "awsemf" {
 				cfg := otelCfg.Exporters[exporter].(*awsemfexporter.Config)
 				if cfg.IsPulseApmEnabled() {
-					ua.outputs.Add(flagPulse)
+					ua.outputs.Add(flagAppSignals)
+					provider.GetFlagsStats().SetFlag(provider.FlagAppSignal)
 				}
 				if cfg.IsEnhancedContainerInsights() {
 					ua.outputs.Add(flagEnhancedContainerInsights)
+					provider.GetFlagsStats().SetFlag(provider.FlagEnhancedContainerInsights)
 				}
 			}
 		}
@@ -173,14 +177,13 @@ func isRunningAsRoot() bool {
 }
 
 func newUserAgent() *userAgent {
-	uah := &userAgent{
+	return &userAgent{
 		id:         uuid.NewString(),
 		isRoot:     isRunningAsRoot(),
 		inputs:     collections.NewSet[string](),
 		processors: collections.NewSet[string](),
 		outputs:    collections.NewSet[string](),
 	}
-	return uah
 }
 
 func Get() UserAgent {
