@@ -15,7 +15,7 @@ import (
 )
 
 //go:embed configs/config.yaml
-var apmAwsResourceDetectionConfig string
+var appSignalsAwsResourceDetectionConfig string
 
 type translator struct {
 	name     string
@@ -57,5 +57,5 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
-	return common.GetYamlFileToYamlConfig(cfg, apmAwsResourceDetectionConfig)
+	return common.GetYamlFileToYamlConfig(cfg, appSignalsAwsResourceDetectionConfig)
 }
