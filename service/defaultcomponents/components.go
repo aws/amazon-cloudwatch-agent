@@ -27,8 +27,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
 
 func Factories() (otelcol.Factories, error) {

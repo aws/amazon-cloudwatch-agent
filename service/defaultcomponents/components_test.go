@@ -29,6 +29,7 @@ func TestComponents(t *testing.T) {
 
 	processors := factories.Processors
 	assert.Len(t, processors, processorCount)
+	assert.NotNil(t, processors["awsappsignals"])
 	assert.NotNil(t, processors["batch"])
 	assert.NotNil(t, processors["cumulativetodelta"])
 	assert.NotNil(t, processors["ec2tagger"])
@@ -45,4 +46,6 @@ func TestComponents(t *testing.T) {
 
 	extensions := factories.Extensions
 	assert.Len(t, extensions, extensionsCount)
+	assert.NotNil(t, extensions["agenthealth"])
+	assert.NotNil(t, extensions["awsproxy"])
 }

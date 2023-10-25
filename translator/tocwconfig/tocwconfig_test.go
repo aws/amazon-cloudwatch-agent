@@ -65,6 +65,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 		"AWS_CA_BUNDLE": "/etc/test/ca_bundle.pem",
 	}
 	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_container_insights_config", "darwin", nil, "")
 }
 
 func TestGenericAppSignalsConfig(t *testing.T) {
@@ -96,6 +97,7 @@ func TestEmfAndKubernetesConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "emf_and_kubernetes_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "emf_and_kubernetes_config", "darwin", nil, "")
 }
 
 func TestKubernetesModeOnPremiseConfig(t *testing.T) {

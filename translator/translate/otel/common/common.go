@@ -62,9 +62,8 @@ const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
 	PipelineNameEmfLogs          = "emf_logs"
-	AppSignals                          = "app_signals"
-
-	AppSignalsRules = "rules"
+	AppSignals                   = "app_signals"
+	AppSignalsRules              = "rules"
 )
 
 var (
