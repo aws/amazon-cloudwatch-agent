@@ -52,6 +52,34 @@ func TestTranslator(t *testing.T) {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
 		},
+		"WithAppSignalsEnabled": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"indexed_attributes": []string{
+					"aws.local.service",
+					"aws.local.operation",
+					"aws.remote.service",
+					"aws.remote.operation",
+					"HostedIn.EKS.Cluster",
+					"HostedIn.K8s.Namespace",
+					"K8s.RemoteNamespace",
+					"aws.remote.target",
+					"HostedIn.Environment",
+				},
+				"region":       "us-east-1",
+				"role_arn":     "global_arn",
+				"imds_retries": 1,
+				"telemetry": map[string]interface{}{
+					"enabled":          true,
+					"include_metadata": true,
+				},
+			}),
+		},
 	}
 	factory := awsxrayexporter.NewFactory()
 	for name, testCase := range testCases {

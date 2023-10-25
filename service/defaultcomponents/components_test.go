@@ -11,9 +11,9 @@ import (
 
 const (
 	receiversCount  = 5
-	processorCount  = 5
+	processorCount  = 7
 	exportersCount  = 5
-	extensionsCount = 1
+	extensionsCount = 2
 )
 
 func TestComponents(t *testing.T) {
@@ -45,5 +45,4 @@ func TestComponents(t *testing.T) {
 
 	extensions := factories.Extensions
 	assert.Len(t, extensions, extensionsCount)
-	assert.NotNil(t, extensions["agenthealth"])
 }

@@ -1,0 +1,30 @@
+log_group_name: "/aws/appsignals/generic"
+namespace: "AppSignals"
+dimension_rollup_option: "NoDimensionRollup"
+metric_declarations:
+  - dimensions:
+      - [HostedIn.Environment, Service, Operation]
+      - [HostedIn.Environment, Service]
+    label_matchers:
+      - label_names:
+          - aws.span.kind
+        regex: '^(SERVER|LOCAL_ROOT)$'
+    metric_name_selectors:
+      - Latency
+      - Fault
+      - Error
+  - dimensions:
+      - [HostedIn.Environment, Service, Operation, RemoteService, RemoteOperation, RemoteTarget]
+      - [HostedIn.Environment, Service, Operation, RemoteService, RemoteOperation]
+      - [HostedIn.Environment, Service, RemoteService]
+      - [HostedIn.Environment, Service, RemoteService, RemoteOperation, RemoteTarget]
+      - [HostedIn.Environment, Service, RemoteService, RemoteOperation]
+      - [RemoteService]
+    label_matchers:
+      - label_names:
+          - aws.span.kind
+        regex: '^(CLIENT|PRODUCER|CONSUMER)$'
+    metric_name_selectors:
+      - Latency
+      - Fault
+      - Error
