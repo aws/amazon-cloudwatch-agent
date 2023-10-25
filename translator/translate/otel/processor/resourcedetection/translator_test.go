@@ -20,11 +20,11 @@ func TestTranslate(t *testing.T) {
 		want    *confmap.Conf
 		wantErr error
 	}{
-		"WithAPMEnabled": {
+		"WithAppSignalsEnabled": {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				}},
 			want: confmap.NewFromStringMap(map[string]interface{}{

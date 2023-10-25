@@ -690,32 +690,32 @@ func TestTranslator(t *testing.T) {
 	}
 }
 
-func TestTranslateAPM(t *testing.T) {
-	tt := NewTranslatorWithName(common.APM)
+func TestTranslateAppSignals(t *testing.T) {
+	tt := NewTranslatorWithName(common.AppSignals)
 	testCases := map[string]struct {
 		input        map[string]interface{}
 		want         *confmap.Conf
 		wantErr      error
 		isKubernetes bool
 	}{
-		"WithAPMEnabledEKS": {
+		"WithAppSignalsEnabledEKS": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				}},
-			want:         testutil.GetConf(t, filepath.Join("apm_config_eks.yaml")),
+			want:         testutil.GetConf(t, filepath.Join("appsignals_config_eks.yaml")),
 			isKubernetes: true,
 		},
-		"WithAPMEnabledGeneric": {
+		"WithAppSignalsEnabledGeneric": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				}},
-			want:         testutil.GetConf(t, filepath.Join("apm_config_generic.yaml")),
+			want:         testutil.GetConf(t, filepath.Join("appsignals_config_generic.yaml")),
 			isKubernetes: false,
 		},
 	}

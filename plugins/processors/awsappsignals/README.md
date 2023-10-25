@@ -1,6 +1,6 @@
-# AWS APM Processor for Amazon Cloudwatch Agent
+# AWS AppSignals Processor for Amazon Cloudwatch Agent
 
-The AWS APM processor is used to reduce the cardinality of telemtry metrics and traces before exporting them to CloudWatch Logs via [EMF](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awsemfexporter) and [X-Ray](github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter) respectively.
+The AWS AppSignals processor is used to reduce the cardinality of telemtry metrics and traces before exporting them to CloudWatch Logs via [EMF](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awsemfexporter) and [X-Ray](github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter) respectively.
 It reduces the cardinality of metrics/traces via 3 types of actions, `keep`, `drop` and `replace`, which are configured by users. CloudWatch Agent(CWA) customers will configure these rules with their CWA configurations, which will get translated to yaml.
 
 Note: Traces support only `replace` actions and are implicitly pulled from the logs section of the CWA configuration
@@ -47,10 +47,10 @@ A replacements section defines a matching against the dimensions of incoming met
 | `value`            | Value to replace current dimension value with |   ""   |
 
 
-## AWS APM Processor Configuration Example
+## AWS AppSignals Processor Configuration Example
 
 ```yaml
-awsapm:
+awsappsignals:
     resolvers: ["eks"]
     rules:
       - selectors:
@@ -92,12 +92,12 @@ awsapm:
           },
           "traces": {
             "traces_collected": {
-              "apm": {}
+              "app_signals": {}
             }
           },
           "logs": {
             "metrics_collected": {
-              "apm": {
+              "app_signals": {
                 "rules": [
                   {
                     "selectors": [

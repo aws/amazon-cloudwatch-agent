@@ -1,4 +1,4 @@
-awsapm:
+awsappsignals:
   resolvers: [eks]
   rules:
     - selectors:

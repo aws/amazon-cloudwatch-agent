@@ -511,7 +511,7 @@
         "metrics_collected": {
           "type": "object",
           "properties": {
-            "apm": {
+            "app_signals": {
               "type": "object",
               "properties": {
                 "rules": {
@@ -888,7 +888,7 @@
         "traces_collected": {
           "type": "object",
           "properties": {
-            "apm": {
+            "app_signals": {
               "type": "object",
               "properties": {},
               "additionalProperties": true

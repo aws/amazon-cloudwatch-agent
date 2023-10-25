@@ -4,7 +4,7 @@
   },
   "logs": {
     "metrics_collected": {
-      "apm": {
+      "app_signals": {
       },
       "kubernetes": {
         "cluster_name": "TestCluster",
@@ -18,7 +18,7 @@
   },
   "traces": {
     "traces_collected": {
-      "apm": {}
+      "app_signals": {}
     }
   }
 }

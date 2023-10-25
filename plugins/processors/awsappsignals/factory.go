@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsapmprocessor
+package awsappsignals
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 
 const (
 	// The value of "type" key in configuration.
-	typeStr = "awsapm"
+	typeStr = "awsappsignals"
 	// The stability level of the processor.
 	stability = component.StabilityLevelBeta
 )
@@ -85,12 +85,12 @@ func createMetricsProcessor(
 func createProcessor(
 	params processor.CreateSettings,
 	cfg component.Config,
-) (*awsapmprocessor, error) {
+) (*awsappsignalsprocessor, error) {
 	pCfg, ok := cfg.(*Config)
 	if !ok {
-		return nil, errors.New("could not initialize awsapmprocessor")
+		return nil, errors.New("could not initialize awsappsignalsprocessor")
 	}
-	ap := &awsapmprocessor{logger: params.Logger, config: pCfg}
+	ap := &awsappsignalsprocessor{logger: params.Logger, config: pCfg}
 
 	return ap, nil
 }

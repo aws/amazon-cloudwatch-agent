@@ -1,10 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsapmprocessor
+package awsappsignals
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/customconfiguration"
 )
 
 type Config struct {

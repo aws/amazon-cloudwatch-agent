@@ -67,25 +67,25 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
 }
 
-func TestGenericAPMConfig(t *testing.T) {
+func TestGenericAppSignalsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "base_apm_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "base_apm_config", "windows", expectedEnvVars, "")
+	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
 
-func TestAPMAndKubernetesConfig(t *testing.T) {
+func TestAppSignalsAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
-	t.Setenv(common.KubernetesEnvVar, "use_apm_eks_config")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "apm_and_kubernetes_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "apm_and_kubernetes_config", "windows", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_kubernetes_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_kubernetes_config", "windows", expectedEnvVars, "")
 }
 
 func TestEmfAndKubernetesConfig(t *testing.T) {

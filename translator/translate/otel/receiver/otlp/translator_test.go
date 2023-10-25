@@ -75,18 +75,18 @@ func TestTracesTranslator(t *testing.T) {
 	}
 }
 
-func TestTranslateAPM(t *testing.T) {
-	tt := NewTranslatorWithName(common.APM, WithDataType(component.DataTypeTraces))
+func TestTranslateAppSignals(t *testing.T) {
+	tt := NewTranslatorWithName(common.AppSignals, WithDataType(component.DataTypeTraces))
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf
 		wantErr error
 	}{
-		"WithAPMEnabledTraces": {
+		"WithAppSignalsEnabledTraces": {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				}},
 			want: confmap.NewFromStringMap(map[string]interface{}{

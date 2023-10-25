@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package apm
+package appsignals
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ func TestTranslatorTraces(t *testing.T) {
 		extensions []string
 	}
 	tt := NewTranslator(component.DataTypeTraces)
-	assert.EqualValues(t, "traces/apm", tt.ID().String())
+	assert.EqualValues(t, "traces/appsignals", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *want
@@ -32,21 +32,21 @@ func TestTranslatorTraces(t *testing.T) {
 	}{
 		"WithoutTracesCollectedKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: fmt.Sprint(common.APMTraces)},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: fmt.Sprint(common.AppSignalsTraces)},
 		},
-		"WithAPMEnabledTraces": {
+		"WithAppSignalsEnabledTraces": {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/apm"},
-				processors: []string{"resourcedetection", "awsapm"},
-				exporters:  []string{"awsxray/apm"},
-				extensions: []string{"awsproxy/apm"},
+				receivers:  []string{"otlp/appsignals"},
+				processors: []string{"resourcedetection", "awsappsignals"},
+				exporters:  []string{"awsxray/appsignals"},
+				extensions: []string{"awsproxy/appsignals"},
 			},
 		},
 	}
@@ -74,7 +74,7 @@ func TestTranslatorMetrics(t *testing.T) {
 		exporters  []string
 	}
 	tt := NewTranslator(component.DataTypeMetrics)
-	assert.EqualValues(t, "metrics/apm", tt.ID().String())
+	assert.EqualValues(t, "metrics/appsignals", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *want
@@ -82,20 +82,20 @@ func TestTranslatorMetrics(t *testing.T) {
 	}{
 		"WithoutMetricsCollectedKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: fmt.Sprint(common.APMMetrics)},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: fmt.Sprint(common.AppSignalsMetrics)},
 		},
-		"WithAPMEnabledMetrics": {
+		"WithAppSignalsEnabledMetrics": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/apm"},
-				processors: []string{"resourcedetection", "awsapm"},
-				exporters:  []string{"awsemf/apm"},
+				receivers:  []string{"otlp/appsignals"},
+				processors: []string{"resourcedetection", "awsappsignals"},
+				exporters:  []string{"awsemf/appsignals"},
 			},
 		},
 	}

@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsAPMKubernetes(t *testing.T) {
-	assert.False(t, IsAPMKubernetes())
+func TestIsAppSignalsKubernetes(t *testing.T) {
+	assert.False(t, IsAppSignalsKubernetes())
 	t.Setenv(KubernetesEnvVar, "TEST")
-	assert.True(t, IsAPMKubernetes())
+	assert.True(t, IsAppSignalsKubernetes())
 }

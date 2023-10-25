@@ -46,34 +46,34 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 		},
-		"WithAPMMetricsEnabled": {
+		"WithAppSignalsMetricsEnabled": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				},
 			},
 		},
-		"WithAPMTracesEnabled": {
+		"WithAppSignalsTracesEnabled": {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				},
 			},
 		},
-		"WithAPMMetricsAndTracesEnabled": {
+		"WithAppSignalsMetricsAndTracesEnabled": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				},
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				},
 			},

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsapm
+package awsappsignals
 
 import (
 	_ "embed"
@@ -11,8 +11,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/customconfiguration"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -43,7 +43,7 @@ func WithDataType(dataType component.DataType) Option {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	t := &translator{factory: awsapmprocessor.NewFactory()}
+	t := &translator{factory: awsappsignals.NewFactory()}
 	for _, opt := range opts {
 		opt.apply(t)
 	}
@@ -55,9 +55,9 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	configKey := common.APMConfigKeys[t.dataType]
-	cfg := t.factory.CreateDefaultConfig().(*awsapmprocessor.Config)
-	if common.IsAPMKubernetes() {
+	configKey := common.AppSignalsConfigKeys[t.dataType]
+	cfg := t.factory.CreateDefaultConfig().(*awsappsignals.Config)
+	if common.IsAppSignalsKubernetes() {
 		cfg.Resolvers = []string{"eks"}
 	} else {
 		cfg.Resolvers = []string{"generic"}
@@ -65,9 +65,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	return t.translateCustomRules(conf, configKey, cfg)
 }
 
-func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, cfg *awsapmprocessor.Config) (component.Config, error) {
+func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, cfg *awsappsignals.Config) (component.Config, error) {
 	var rules []customconfiguration.Rule
-	rulesConfigKey := common.ConfigKey(configKey, common.APMRules)
+	rulesConfigKey := common.ConfigKey(configKey, common.AppSignalsRules)
 	if conf.IsSet(rulesConfigKey) {
 		for _, rule := range conf.Get(rulesConfigKey).([]interface{}) {
 			ruleConfig := customconfiguration.Rule{}

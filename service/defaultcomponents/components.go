@@ -27,7 +27,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -45,7 +45,7 @@ func Factories() (otelcol.Factories, error) {
 	}
 
 	if factories.Processors, err = processor.MakeFactoryMap(
-		awsapmprocessor.NewFactory(),
+		awsappsignals.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		ec2tagger.NewFactory(),

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsapm
+package awsappsignals
 
 import (
 	_ "embed"
@@ -14,29 +14,29 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 var (
 	//go:embed testdata/config_eks.yaml
-	validAPMYamlEKS string
+	validAppSignalsYamlEKS string
 	//go:embed testdata/config_generic.yaml
-	validAPMYamlGeneric string
+	validAppSignalsYamlGeneric string
 	//go:embed testdata/validRulesConfig.json
-	validAPMRulesConfig string
+	validAppSignalsRulesConfig string
 	//go:embed testdata/validRulesConfigEKS.yaml
-	validAPMRulesYamlEKS string
+	validAppSignalsRulesYamlEKS string
 	//go:embed testdata/validRulesConfigGeneric.yaml
-	validAPMRulesYamlGeneric string
+	validAppSignalsRulesYamlGeneric string
 	//go:embed testdata/invalidRulesConfig.json
-	invalidAPMRulesConfig string
+	invalidAppSignalsRulesConfig string
 )
 
 func TestTranslate(t *testing.T) {
 	var validJsonMap, invalidJsonMap map[string]interface{}
-	json.Unmarshal([]byte(validAPMRulesConfig), &validJsonMap)
-	json.Unmarshal([]byte(invalidAPMRulesConfig), &invalidJsonMap)
+	json.Unmarshal([]byte(validAppSignalsRulesConfig), &validJsonMap)
+	json.Unmarshal([]byte(invalidAppSignalsRulesConfig), &invalidJsonMap)
 
 	tt := NewTranslator(WithDataType(component.DataTypeMetrics))
 	testCases := map[string]struct {
@@ -45,44 +45,44 @@ func TestTranslate(t *testing.T) {
 		wantErr      error
 		isKubernetes bool
 	}{
-		//The config for the awsapm processor is https://code.amazon.com/packages/AWSTracingSamplePetClinic/blobs/97ce3c409986ac8ae014de1e3fe71fdb98080f22/--/eks/apm/auto-instrumentation-new.yaml#L20
-		//The awsapm processor config does not have a platform field, instead it gets added to resolvers when marshalled
-		"WithAPMEnabledEKS": {
+		//The config for the awsappsignals processor is https://code.amazon.com/packages/AWSTracingSamplePetClinic/blobs/97ce3c409986ac8ae014de1e3fe71fdb98080f22/--/eks/appsignals/auto-instrumentation-new.yaml#L20
+		//The awsappsignals processor config does not have a platform field, instead it gets added to resolvers when marshalled
+		"WithAppSignalsEnabledEKS": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				}},
-			want:         validAPMYamlEKS,
+			want:         validAppSignalsYamlEKS,
 			isKubernetes: true,
 		},
-		"WithAPMCustomRulesEnabledEKS": {
+		"WithAppSignalsCustomRulesEnabledEKS": {
 			input:        validJsonMap,
-			want:         validAPMRulesYamlEKS,
+			want:         validAppSignalsRulesYamlEKS,
 			isKubernetes: true,
 		},
-		"WithAPMEnabledGeneric": {
+		"WithAppSignalsEnabledGeneric": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				}},
-			want:         validAPMYamlGeneric,
+			want:         validAppSignalsYamlGeneric,
 			isKubernetes: false,
 		},
-		"WithAPMCustomRulesEnabledGeneric": {
+		"WithAppSignalsCustomRulesEnabledGeneric": {
 			input:        validJsonMap,
-			want:         validAPMRulesYamlGeneric,
+			want:         validAppSignalsRulesYamlGeneric,
 			isKubernetes: false,
 		},
-		"WithInvalidAPMCustomRulesEnabled": {
+		"WithInvalidAppSignalsCustomRulesEnabled": {
 			input:   invalidJsonMap,
 			wantErr: errors.New("replace action set, but no replacements defined for service rule"),
 		},
 	}
-	factory := awsapmprocessor.NewFactory()
+	factory := awsappsignals.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			if testCase.isKubernetes {
@@ -93,12 +93,12 @@ func TestTranslate(t *testing.T) {
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
-				gotCfg, ok := got.(*awsapmprocessor.Config)
+				gotCfg, ok := got.(*awsappsignals.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
 				yamlConfig, err := common.GetYamlFileToYamlConfig(wantCfg, testCase.want)
 				require.NoError(t, err)
-				assert.Equal(t, yamlConfig.(*awsapmprocessor.Config), gotCfg)
+				assert.Equal(t, yamlConfig.(*awsappsignals.Config), gotCfg)
 			}
 		})
 	}

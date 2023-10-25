@@ -1,7 +1,7 @@
 {
   "logs": {
     "metrics_collected": {
-      "apm": {
+      "app_signals": {
         "rules": [
           {
             "selectors": [

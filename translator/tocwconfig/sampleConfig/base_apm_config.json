@@ -4,13 +4,13 @@
   },
   "logs": {
     "metrics_collected": {
-      "apm": {}
+      "app_signals": {}
     },
     "endpoint_override":"https://fake_endpoint"
   },
   "traces": {
     "traces_collected": {
-      "apm": {}
+      "app_signals": {}
     },
     "endpoint_override":"https://fake_endpoint"
   }

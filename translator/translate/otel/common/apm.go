@@ -7,7 +7,7 @@ import "os"
 
 const KubernetesEnvVar = "K8S_NAMESPACE"
 
-func IsAPMKubernetes() bool {
+func IsAppSignalsKubernetes() bool {
 	_, isSet := os.LookupEnv(KubernetesEnvVar)
 	return isSet
 }

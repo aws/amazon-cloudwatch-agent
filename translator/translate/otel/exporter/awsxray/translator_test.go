@@ -51,11 +51,11 @@ func TestTranslator(t *testing.T) {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
 		},
-		"WithAPMEnabled": {
+		"WithAppSignalsEnabled": {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"apm": map[string]interface{}{},
+						"app_signals": map[string]interface{}{},
 					},
 				}},
 			want: confmap.NewFromStringMap(map[string]interface{}{

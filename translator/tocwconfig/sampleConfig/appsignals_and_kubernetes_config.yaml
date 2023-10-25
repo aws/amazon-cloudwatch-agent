@@ -1,6 +1,6 @@
 connectors: {}
 exporters:
-  awsemf/apm:
+  awsemf/appsignals:
     certificate_file_path: ""
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
@@ -10,7 +10,7 @@ exporters:
     enhanced_container_insights: false
     imds_retries: 0
     local_mode: false
-    log_group_name: /aws/apm/eks
+    log_group_name: /aws/appsignals/eks
     log_retention: 0
     log_stream_name: ""
     max_retries: 2
@@ -105,7 +105,7 @@ exporters:
           - Fault
           - Error
     metric_descriptors: []
-    namespace: AWS/APM
+    namespace: AppSignals
     no_verify_ssl: false
     num_workers: 8
     output_destination: cloudwatch
@@ -240,7 +240,7 @@ exporters:
     role_arn: ""
     shared_credentials_file: []
     version: "0"
-  awsxray/apm:
+  awsxray/appsignals:
     aws_log_groups: []
     certificate_file_path: ""
     endpoint: ""
@@ -271,7 +271,7 @@ exporters:
       enabled: true
       include_metadata: true
 extensions:
-  awsproxy/apm:
+  awsproxy/appsignals:
     aws_endpoint: ""
     endpoint: 0.0.0.0:2000
     local_mode: false
@@ -279,7 +279,7 @@ extensions:
     region: ""
     role_arn: ""
 processors:
-  awsapm:
+  awsappsignals:
     resolvers:
       - eks
     rules: []
@@ -575,7 +575,7 @@ receivers:
     resource_arn: ""
     role_arn: ""
     shared_credentials_file: []
-  otlp/apm:
+  otlp/appsignals:
     protocols:
       grpc:
         auth: null

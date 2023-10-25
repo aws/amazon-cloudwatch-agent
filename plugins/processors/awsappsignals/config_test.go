@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsapmprocessor
+package awsappsignals
 
 import (
 	"path/filepath"
@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/customconfiguration"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -24,7 +24,7 @@ func TestLoadConfig(t *testing.T) {
 		errorMessage string
 	}{
 		{
-			id: component.NewIDWithName("awsapm", ""),
+			id: component.NewIDWithName("awsappsignals", ""),
 			expected: &Config{
 				Resolvers: []string{"eks"},
 				Rules: []customconfiguration.Rule{

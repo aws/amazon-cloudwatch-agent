@@ -50,7 +50,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
 
-	if isAPM(conf) {
+	if isAppSignals(conf) {
 		cfg.IndexedAttributes = []string{
 			"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
 			"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
@@ -115,6 +115,6 @@ func getRegion(conf *confmap.Conf) string {
 	return region
 }
 
-func isAPM(conf *confmap.Conf) bool {
-	return conf.IsSet(common.APMTraces)
+func isAppSignals(conf *confmap.Conf) bool {
+	return conf.IsSet(common.AppSignalsTraces)
 }

@@ -62,18 +62,18 @@ const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
 	PipelineNameEmfLogs          = "emf_logs"
-	APM                          = "apm"
+	AppSignals                          = "app_signals"
 
-	APMRules = "rules"
+	AppSignalsRules = "rules"
 )
 
 var (
-	APMTraces  = ConfigKey(TracesKey, TracesCollectedKey, APM)
-	APMMetrics = ConfigKey(LogsKey, MetricsCollectedKey, APM)
+	AppSignalsTraces  = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
+	AppSignalsMetrics = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
 
-	APMConfigKeys = map[component.DataType]string{
-		component.DataTypeTraces:  APMTraces,
-		component.DataTypeMetrics: APMMetrics,
+	AppSignalsConfigKeys = map[component.DataType]string{
+		component.DataTypeTraces:  AppSignalsTraces,
+		component.DataTypeMetrics: AppSignalsMetrics,
 	}
 )
 

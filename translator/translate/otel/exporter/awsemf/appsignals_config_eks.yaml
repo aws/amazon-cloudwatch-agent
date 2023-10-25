@@ -1,5 +1,5 @@
-log_group_name: "/aws/apm/eks"
-namespace: "AWS/APM"
+log_group_name: "/aws/appsignals/eks"
+namespace: "AppSignals"
 dimension_rollup_option: "NoDimensionRollup"
 metric_declarations:
   - dimensions:

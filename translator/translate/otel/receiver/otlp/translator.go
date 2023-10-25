@@ -25,8 +25,8 @@ var (
 		component.DataTypeTraces: common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
 	}
 
-	//go:embed apm_config.yaml
-	apmConfig string
+	//go:embed appsignals_config.yaml
+	appSignalsConfig string
 )
 
 type translator struct {
@@ -79,8 +79,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 
 	// TODO: Should follow pattern done in awsemf and awsexray exporter translations (i.e should be integrated with standard otlp translation)
-	if t.name == common.APM {
-		return common.GetYamlFileToYamlConfig(cfg, apmConfig)
+	if t.name == common.AppSignals {
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfig)
 	}
 
 	configKey, ok := configKeys[t.dataType]

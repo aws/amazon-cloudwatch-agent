@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package awsapmprocessor
+package awsappsignals
 
 import (
 	"context"
@@ -12,9 +12,9 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/customconfiguration"
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/internal/normalizer"
-	"github.com/aws/amazon-cloudwatch-agent/processor/awsapmprocessor/internal/resolver"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/normalizer"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/resolver"
 )
 
 const (
@@ -35,7 +35,7 @@ type stopper interface {
 	Stop(context.Context) error
 }
 
-type awsapmprocessor struct {
+type awsappsignalsprocessor struct {
 	logger                  *zap.Logger
 	config                  *Config
 	customReplacer          *customconfiguration.ReplaceActions
@@ -45,7 +45,7 @@ type awsapmprocessor struct {
 	stoppers                []stopper
 }
 
-func (ap *awsapmprocessor) Start(_ context.Context, _ component.Host) error {
+func (ap *awsappsignalsprocessor) Start(_ context.Context, _ component.Host) error {
 	attributesResolver := resolver.NewAttributesResolver(ap.config.Resolvers, ap.logger)
 	ap.stoppers = append(ap.stoppers, attributesResolver)
 	ap.metricMutators = append(ap.metricMutators, attributesResolver)
@@ -64,7 +64,7 @@ func (ap *awsapmprocessor) Start(_ context.Context, _ component.Host) error {
 	return nil
 }
 
-func (ap *awsapmprocessor) Shutdown(ctx context.Context) error {
+func (ap *awsappsignalsprocessor) Shutdown(ctx context.Context) error {
 	for _, stopper := range ap.stoppers {
 		err := stopper.Stop(ctx)
 		if err != nil {
@@ -74,7 +74,7 @@ func (ap *awsapmprocessor) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (ap *awsapmprocessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
+func (ap *awsappsignalsprocessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
 	rss := td.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
@@ -97,7 +97,7 @@ func (ap *awsapmprocessor) processTraces(ctx context.Context, td ptrace.Traces) 
 	return td, nil
 }
 
-func (ap *awsapmprocessor) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+func (ap *awsappsignalsprocessor) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	rms := md.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rs := rms.At(i)
@@ -117,7 +117,7 @@ func (ap *awsapmprocessor) processMetrics(ctx context.Context, md pmetric.Metric
 
 // Attributes are provided for each log and trace, but not at the metric level
 // Need to process attributes for every data point within a metric.
-func (ap *awsapmprocessor) processMetricAttributes(ctx context.Context, m pmetric.Metric, resourceAttribes pcommon.Map) {
+func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m pmetric.Metric, resourceAttribes pcommon.Map) {
 
 	// This is a lot of repeated code, but since there is no single parent superclass
 	// between metric data types, we can't use polymorphism.

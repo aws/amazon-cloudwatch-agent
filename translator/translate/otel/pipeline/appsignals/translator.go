@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package apm
+package appsignals
 
 import (
 	"fmt"
@@ -13,13 +13,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awsproxy"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsapm"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 const (
-	pipelineName = "apm"
+	pipelineName = "app_signals"
 )
 
 type translator struct {
@@ -39,7 +39,7 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	configKey, ok := common.APMConfigKeys[t.dataType]
+	configKey, ok := common.AppSignalsConfigKeys[t.dataType]
 	if !ok {
 		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
 	}
@@ -48,17 +48,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap(otlp.NewTranslatorWithName(common.APM, otlp.WithDataType(t.dataType))),
-		Processors: common.NewTranslatorMap(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)), awsapm.NewTranslator(awsapm.WithDataType(t.dataType))),
+		Receivers:  common.NewTranslatorMap(otlp.NewTranslatorWithName(common.AppSignals, otlp.WithDataType(t.dataType))),
+		Processors: common.NewTranslatorMap(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)), awsappsignals.NewTranslator(awsappsignals.WithDataType(t.dataType))),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
 	if t.dataType == component.DataTypeTraces {
-		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.APM))
-		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.APM))
+		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
+		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
 	} else {
-		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.APM))
+		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
 	}
 	return translators, nil
 }
