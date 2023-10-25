@@ -5,9 +5,9 @@ name: PR Build
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main* 
-    types:
+    branches: 
+      - main*
+    types: 
       - opened
       - synchronize
       - reopened
@@ -141,3 +141,4 @@ jobs:
       - name: Build
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make amazon-cloudwatch-agent-${{ matrix.family }}
+  
