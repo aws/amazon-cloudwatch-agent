@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -49,10 +50,12 @@ func TestTranslator(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*awscloudwatchlogsexporter.Config)
 				require.True(t, ok)
-				require.Equal(t, testCase.want.LogGroupName, gotCfg.LogGroupName)
-				require.Equal(t, testCase.want.LogStreamName, gotCfg.LogStreamName)
-				require.Equal(t, testCase.want.RawLog, gotCfg.RawLog)
-				require.Equal(t, testCase.want.Region, gotCfg.Region)
+				assert.Equal(t, testCase.want.LogGroupName, gotCfg.LogGroupName)
+				assert.Equal(t, testCase.want.LogStreamName, gotCfg.LogStreamName)
+				assert.Equal(t, testCase.want.RawLog, gotCfg.RawLog)
+				assert.Equal(t, testCase.want.Region, gotCfg.Region)
+				assert.NotNil(t, gotCfg.MiddlewareID)
+				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
 			}
 		})
 	}

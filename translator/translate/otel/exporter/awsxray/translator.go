@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 )
 
 const (
@@ -84,6 +85,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.ProxyAddress = proxyAddress
 	}
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.MiddlewareID = &agenthealth.TracesID
 	return cfg, nil
 }
 

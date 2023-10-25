@@ -10,3 +10,4 @@ proxy_address: https://proxy.proxy.com
 telemetry:
   enabled: true
   include_metadata: true
+middleware: agenthealth/traces

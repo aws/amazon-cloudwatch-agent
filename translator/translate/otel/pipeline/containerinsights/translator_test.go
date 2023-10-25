@@ -22,6 +22,7 @@ func TestTranslator(t *testing.T) {
 		receivers    []string
 		processors   []string
 		exporters    []string
+		extensions   []string
 	}
 	cit := NewTranslator()
 	require.EqualValues(t, "metrics/containerinsights", cit.ID().String())
@@ -47,6 +48,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"awscontainerinsightreceiver"},
 				processors:   []string{"batch/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
+				extensions:   []string{"agenthealth/logs"},
 			},
 		},
 		"WithKubernetesKey": {
@@ -62,6 +64,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"awscontainerinsightreceiver"},
 				processors:   []string{"batch/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
+				extensions:   []string{"agenthealth/logs"},
 			},
 		},
 		"WithKubernetes/WithEnhancedContainerInsights": {
@@ -80,6 +83,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"awscontainerinsightreceiver"},
 				processors:   []string{"metricstransform/containerinsights", "batch/containerinsights"},
 				exporters:    []string{"awsemf/containerinsights"},
+				extensions:   []string{"agenthealth/logs"},
 			},
 		},
 	}
@@ -95,6 +99,7 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.Keys(), component.ID.String))
 			}
 		})
 	}

@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
@@ -61,7 +62,9 @@ func Factories() (otelcol.Factories, error) {
 		return otelcol.Factories{}, err
 	}
 
-	if factories.Extensions, err = extension.MakeFactoryMap(); err != nil {
+	if factories.Extensions, err = extension.MakeFactoryMap(
+		agenthealth.NewFactory(),
+	); err != nil {
 		return otelcol.Factories{}, err
 	}
 

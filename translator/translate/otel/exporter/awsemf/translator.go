@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
@@ -60,6 +61,7 @@ func (t *translator) ID() component.ID {
 // Translate creates an awsemf exporter config based on the input json config
 func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
+	cfg.MiddlewareID = &agenthealth.LogsID
 
 	var defaultConfig string
 	if isEcs(c) {

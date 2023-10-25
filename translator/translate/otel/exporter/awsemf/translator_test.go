@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -666,20 +667,22 @@ func TestTranslator(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*awsemfexporter.Config)
 				require.True(t, ok)
-				require.Equal(t, testCase.want["namespace"], gotCfg.Namespace)
-				require.Equal(t, testCase.want["log_group_name"], gotCfg.LogGroupName)
-				require.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
-				require.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
-				require.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
-				require.Equal(t, testCase.want["enhanced_container_insights"], gotCfg.EnhancedContainerInsights)
-				require.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
-				require.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
-				require.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)
-				require.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
-				require.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
-				require.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
-				require.Equal(t, "global_arn", gotCfg.RoleARN)
-				require.Equal(t, "us-east-1", gotCfg.Region)
+				assert.Equal(t, testCase.want["namespace"], gotCfg.Namespace)
+				assert.Equal(t, testCase.want["log_group_name"], gotCfg.LogGroupName)
+				assert.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
+				assert.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
+				assert.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
+				assert.Equal(t, testCase.want["enhanced_container_insights"], gotCfg.EnhancedContainerInsights)
+				assert.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
+				assert.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
+				assert.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)
+				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
+				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
+				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				assert.Equal(t, "global_arn", gotCfg.RoleARN)
+				assert.Equal(t, "us-east-1", gotCfg.Region)
+				assert.NotNil(t, gotCfg.MiddlewareID)
+				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
 			}
 		})
 	}

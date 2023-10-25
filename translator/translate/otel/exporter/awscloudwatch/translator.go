@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/rollup_dimensions"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 )
 
 const (
@@ -78,6 +79,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if dropOriginalMetrics := getDropOriginalMetrics(conf); len(dropOriginalMetrics) != 0 {
 		cfg.DropOriginalConfigs = dropOriginalMetrics
 	}
+	cfg.MiddlewareID = &agenthealth.MetricsID
 	return cfg, nil
 }
 
@@ -147,21 +149,21 @@ func getDropOriginalMetrics(conf *confmap.Conf) map[string]bool {
 		measurementCfgKey := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, category, common.MeasurementKey)
 		dropOriginalCfgKey := common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, category, common.DropOriginalMetricsKey)
 		/* Drop original metrics does not support procstat since procstat can monitor multiple process
-				"procstat": [
-		        {
-		          "exe": "W3SVC",
-		          "measurement": [
-		            "pid_count"
-		          ]
-		        },
-		        {
-		          "exe": "IISADMIN",
-		          "measurement": [
-		            "pid_count"
-		          ]
-		        }]
-			Therefore, dropping the original metrics can conflict between these two processes (e.g customers can drop pid_count with the first
-			process but not the second process)
+		   		"procstat": [
+		           {
+		             "exe": "W3SVC",
+		             "measurement": [
+		               "pid_count"
+		             ]
+		           },
+		           {
+		             "exe": "IISADMIN",
+		             "measurement": [
+		               "pid_count"
+		             ]
+		           }]
+		   	Therefore, dropping the original metrics can conflict between these two processes (e.g customers can drop pid_count with the first
+		   	process but not the second process)
 		*/
 		if dropMetrics := common.GetArray[any](conf, dropOriginalCfgKey); dropMetrics != nil {
 			for _, dropMetric := range dropMetrics {

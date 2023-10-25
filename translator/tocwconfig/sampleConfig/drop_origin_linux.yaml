@@ -4,53 +4,60 @@ exporters:
         drop_original_metrics:
             CPU_USAGE_IDLE: true
             cpu_time_active: true
-            nvidia_smi_utilization_gpu: true
             nvidia_smi_temperature_gpu: true
+            nvidia_smi_utilization_gpu: true
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        mode: EC2
         namespace: CWAgent
         region: us-west-2
-        region_type: "ACJ"
-        mode: "EC2"
+        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
-extensions: {}
+extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
 processors:
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
-        refresh_interval_seconds: 0s
         imds_retries: 1
+        refresh_interval_seconds: 0s
     transform:
+        error_mode: propagate
         log_statements: []
-        error_mode: "propagate"
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "unit") where name == "cpu_usage_idle"
-                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                  - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "cpu_usage_idle"
+                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                - set(unit, "unit") where name == "cpu_usage_nice"
         trace_statements: []
 receivers:
     telegraf_cpu:
         collection_interval: 10s
-        initial_delay: "1s"
+        initial_delay: 1s
         timeout: 0s
     telegraf_disk:
         collection_interval: 1m0s
-        initial_delay: "1s"
+        initial_delay: 1s
         timeout: 0s
     telegraf_nvidia_smi:
         collection_interval: 1m0s
-        initial_delay: "1s"
+        initial_delay: 1s
         timeout: 0s
 service:
-    extensions: []
+    extensions:
+        - agenthealth/metrics
     pipelines:
         metrics/host:
             exporters:
@@ -71,7 +78,8 @@ service:
             error_output_paths: []
             initial_fields: {}
             level: info
-            output_paths: [/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log]
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 initial: 2
                 thereafter: 500
