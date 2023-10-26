@@ -802,17 +802,7 @@ func TestEksResolver(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "not-an-ip", getStrAttr(attributes, "aws.remote.service", t))
 
-		// Test case 4 and 5: resourceAttributes contains "k8s.namespace.name" and EKS cluster name
-		attributes = pcommon.NewMap()
-		resourceAttributes = pcommon.NewMap()
-		resourceAttributes.PutStr("k8s.namespace.name", "test-namespace-3")
-		resourceAttributes.PutStr("ec2.tag.kubernetes.io/cluster/test-cluster", "owned")
-		err = resolver.Process(attributes, resourceAttributes)
-		assert.NoError(t, err)
-		assert.Equal(t, "test-namespace-3", getStrAttr(attributes, "HostedIn.K8s.Namespace", t))
-		assert.Equal(t, "test-cluster", getStrAttr(attributes, "HostedIn.EKS.Cluster", t))
-
-		// Test case 6: Process with valid IP but GetWorkloadAndNamespaceByIP returns error
+		// Test case 4: Process with valid IP but GetWorkloadAndNamespaceByIP returns error
 		attributes = pcommon.NewMap()
 		attributes.PutStr("aws.remote.service", "192.168.1.2")
 		resourceAttributes = pcommon.NewMap()
@@ -820,6 +810,31 @@ func TestEksResolver(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "UnknownRemoteService", getStrAttr(attributes, "aws.remote.service", t))
 	})
+}
+
+func TestHostedInEksResolver(t *testing.T) {
+	// helper function to get string values from the attributes
+	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
+		if value, ok := attributes.Get(key); ok {
+			return value.AsString()
+		} else {
+			t.Errorf("Failed to get value for key: %s", key)
+			return ""
+		}
+	}
+
+	resolver := newEKSHostedInAttributeResolver()
+
+	// Test case 1 and 2: resourceAttributes contains "k8s.namespace.name" and EKS cluster name
+	attributes := pcommon.NewMap()
+	resourceAttributes := pcommon.NewMap()
+	resourceAttributes.PutStr("cloud.provider", "aws")
+	resourceAttributes.PutStr("k8s.namespace.name", "test-namespace-3")
+	resourceAttributes.PutStr("ec2.tag.kubernetes.io/cluster/test-cluster", "owned")
+	err := resolver.Process(attributes, resourceAttributes)
+	assert.NoError(t, err)
+	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, "HostedIn.K8s.Namespace", t))
+	assert.Equal(t, "test-cluster", getStrAttr(attributes, "HostedIn.EKS.Cluster", t))
 }
 
 func TestExtractIPPort(t *testing.T) {
