@@ -21,18 +21,23 @@ func TestMerge(t *testing.T) {
 	assert.EqualValues(t, 1.3, *stats.CpuPercent)
 	assert.EqualValues(t, 123, *stats.MemoryBytes)
 	stats.Merge(Stats{
+		CpuPercent:                aws.Float64(1.5),
+		MemoryBytes:               aws.Uint64(133),
 		FileDescriptorCount:       aws.Int32(456),
 		ThreadCount:               aws.Int32(789),
 		LatencyMillis:             aws.Int64(1234),
 		PayloadBytes:              aws.Int(5678),
 		StatusCode:                aws.Int(200),
-		ImdsFallbackSucceed:       aws.Int(1),
 		SharedConfigFallback:      aws.Int(1),
+		ImdsFallbackSucceed:       aws.Int(1),
 		AppSignals:                aws.Int(1),
 		EnhancedContainerInsights: aws.Int(1),
+		RunningInContainer:        aws.Int(0),
+		RegionType:                aws.String("RegionType"),
+		Mode:                      aws.String("Mode"),
 	})
-	assert.EqualValues(t, 1.3, *stats.CpuPercent)
-	assert.EqualValues(t, 123, *stats.MemoryBytes)
+	assert.EqualValues(t, 1.5, *stats.CpuPercent)
+	assert.EqualValues(t, 133, *stats.MemoryBytes)
 	assert.EqualValues(t, 456, *stats.FileDescriptorCount)
 	assert.EqualValues(t, 789, *stats.ThreadCount)
 	assert.EqualValues(t, 1234, *stats.LatencyMillis)
@@ -42,6 +47,9 @@ func TestMerge(t *testing.T) {
 	assert.EqualValues(t, 1, *stats.SharedConfigFallback)
 	assert.EqualValues(t, 1, *stats.AppSignals)
 	assert.EqualValues(t, 1, *stats.EnhancedContainerInsights)
+	assert.EqualValues(t, 0, *stats.RunningInContainer)
+	assert.EqualValues(t, "RegionType", *stats.RegionType)
+	assert.EqualValues(t, "Mode", *stats.Mode)
 }
 
 func TestMarshal(t *testing.T) {

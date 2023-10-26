@@ -23,7 +23,7 @@ func TestHandle(t *testing.T) {
 	handler.(*clientStatsHandler).getOperationName = func(context.Context) string {
 		return operation
 	}
-	assert.Equal(t, awsmiddleware.Before, handler.Position())
+	assert.Equal(t, awsmiddleware.After, handler.Position())
 	assert.Equal(t, handlerID, handler.ID())
 	body := []byte("test payload size")
 	req, err := http.NewRequest("", "localhost", bytes.NewBuffer(body))

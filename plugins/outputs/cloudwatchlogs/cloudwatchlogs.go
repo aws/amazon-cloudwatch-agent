@@ -22,6 +22,7 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
@@ -155,6 +156,8 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	if c.middleware != nil {
 		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
 			c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
+		} else {
+			c.Log.Info("Configured middleware on AWS client")
 		}
 	}
 	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup)
@@ -396,7 +399,10 @@ func init() {
 			cwDests:            make(map[Target]*cwDest),
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
-				&agenthealth.Config{IsUsageDataEnabled: envconfig.IsUsageDataEnabled()},
+				&agenthealth.Config{
+					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
+					Stats:              agent.StatsConfig{Operations: []string{"PutLogEvents"}},
+				},
 			),
 		}
 	})

@@ -9,11 +9,15 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 func TestIntervalStats(t *testing.T) {
 	s := newIntervalStats(time.Millisecond)
-	s.stats.ThreadCount = aws.Int32(2)
+	s.stats.Store(agent.Stats{
+		ThreadCount: aws.Int32(2),
+	})
 	got := s.Stats("")
 	assert.NotNil(t, got.ThreadCount)
 	got = s.Stats("")

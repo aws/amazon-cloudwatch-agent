@@ -11,6 +11,11 @@ import (
 	"go.uber.org/atomic"
 )
 
+const (
+	handlerID          = "cloudwatchagent.UserAgent"
+	headerKeyUserAgent = "User-Agent"
+)
+
 type userAgentHandler struct {
 	userAgent          UserAgent
 	isUsageDataEnabled bool

@@ -67,6 +67,15 @@ func (s *Stats) Merge(other Stats) {
 	if other.EnhancedContainerInsights != nil {
 		s.EnhancedContainerInsights = other.EnhancedContainerInsights
 	}
+	if other.RunningInContainer != nil {
+		s.RunningInContainer = other.RunningInContainer
+	}
+	if other.RegionType != nil {
+		s.RegionType = other.RegionType
+	}
+	if other.Mode != nil {
+		s.Mode = other.Mode
+	}
 }
 
 func (s *Stats) Marshal() (string, error) {

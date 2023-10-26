@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	handlerID   = "cloudwatchagent.ClientStatsHandler"
+	handlerID   = "cloudwatchagent.ClientStats"
 	ttlDuration = 10 * time.Second
 	cacheSize   = 1000
 )
@@ -35,13 +35,11 @@ type requestRecorder struct {
 }
 
 type clientStatsHandler struct {
-	mu sync.Mutex
-
 	filter           agent.OperationsFilter
 	getOperationName func(ctx context.Context) string
 	getRequestID     func(ctx context.Context) string
 
-	statsByOperation map[string]agent.Stats
+	statsByOperation sync.Map
 	requestCache     *ttlcache.Cache[string, *requestRecorder]
 }
 
@@ -59,7 +57,6 @@ func NewHandler(filter agent.OperationsFilter) Stats {
 		getOperationName: awsmiddleware.GetOperationName,
 		getRequestID:     awsmiddleware.GetRequestID,
 		requestCache:     requestCache,
-		statsByOperation: make(map[string]agent.Stats),
 	}
 }
 
@@ -68,7 +65,7 @@ func (csh *clientStatsHandler) ID() string {
 }
 
 func (csh *clientStatsHandler) Position() awsmiddleware.HandlerPosition {
-	return awsmiddleware.Before
+	return awsmiddleware.After
 }
 
 func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Request) {
@@ -76,11 +73,14 @@ func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Reques
 	if !csh.filter.IsAllowed(operation) {
 		return
 	}
-	csh.mu.Lock()
-	defer csh.mu.Unlock()
 	requestID := csh.getRequestID(ctx)
 	recorder := &requestRecorder{start: time.Now()}
-	recorder.payloadBytes, _ = io.Copy(io.Discard, r.Body)
+	if r.GetBody != nil {
+		body, err := r.GetBody()
+		if err == nil {
+			recorder.payloadBytes, err = io.Copy(io.Discard, body)
+		}
+	}
 	csh.requestCache.Set(requestID, recorder, ttlcache.DefaultTTL)
 }
 
@@ -89,8 +89,6 @@ func (csh *clientStatsHandler) HandleResponse(ctx context.Context, r *http.Respo
 	if !csh.filter.IsAllowed(operation) {
 		return
 	}
-	csh.mu.Lock()
-	defer csh.mu.Unlock()
 	requestID := csh.getRequestID(ctx)
 	item, ok := csh.requestCache.GetAndDelete(requestID)
 	if !ok {
@@ -101,15 +99,19 @@ func (csh *clientStatsHandler) HandleResponse(ctx context.Context, r *http.Respo
 		PayloadBytes: aws.Int(int(recorder.payloadBytes)),
 		StatusCode:   aws.Int(r.StatusCode),
 	}
-	latency := time.Since(recorder.start).Milliseconds()
-	stats.LatencyMillis = aws.Int64(latency)
-	csh.statsByOperation[operation] = stats
+	latency := time.Since(recorder.start)
+	stats.LatencyMillis = aws.Int64(latency.Milliseconds())
+	csh.statsByOperation.Store(operation, stats)
 }
 
 func (csh *clientStatsHandler) Stats(operation string) agent.Stats {
-	csh.mu.Lock()
-	defer csh.mu.Unlock()
-	stats := csh.statsByOperation[operation]
-	csh.statsByOperation[operation] = agent.Stats{}
+	value, ok := csh.statsByOperation.Load(operation)
+	if !ok {
+		return agent.Stats{}
+	}
+	stats, ok := value.(agent.Stats)
+	if !ok {
+		return agent.Stats{}
+	}
 	return stats
 }
