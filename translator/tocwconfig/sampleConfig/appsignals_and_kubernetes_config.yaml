@@ -1,6 +1,6 @@
 connectors: {}
 exporters:
-  awsemf/appsignals:
+  awsemf/app_signals:
     certificate_file_path: ""
     detailed_metrics: false
     dimension_rollup_option: NoDimensionRollup
@@ -105,6 +105,7 @@ exporters:
           - Fault
           - Error
     metric_descriptors: []
+    middleware: agenthealth/logs
     namespace: AppSignals
     no_verify_ssl: false
     num_workers: 8
@@ -222,6 +223,7 @@ exporters:
           - cluster_node_count
           - cluster_failed_node_count
     metric_descriptors: []
+    middleware: agenthealth/logs
     namespace: ContainerInsights
     no_verify_ssl: false
     num_workers: 8
@@ -240,7 +242,7 @@ exporters:
     role_arn: ""
     shared_credentials_file: []
     version: "0"
-  awsxray/appsignals:
+  awsxray/app_signals:
     aws_log_groups: []
     certificate_file_path: ""
     endpoint: ""
@@ -258,6 +260,7 @@ exporters:
       - HostedIn.Environment
     local_mode: false
     max_retries: 2
+    middleware: agenthealth/traces
     no_verify_ssl: false
     num_workers: 8
     profile: ""
@@ -271,13 +274,18 @@ exporters:
       enabled: true
       include_metadata: true
 extensions:
-  awsproxy/appsignals:
+  awsproxy/app_signals:
     aws_endpoint: ""
     endpoint: 0.0.0.0:2000
     local_mode: false
     proxy_address: ""
     region: ""
     role_arn: ""
+  agenthealth/logs:
+    is_usage_data_enabled: true
+    stats:
+      operations:
+        - PutLogEvents
 processors:
   awsappsignals:
     resolvers:
@@ -575,7 +583,7 @@ receivers:
     resource_arn: ""
     role_arn: ""
     shared_credentials_file: []
-  otlp/appsignals:
+  otlp/app_signals:
     protocols:
       grpc:
         auth: null
@@ -601,16 +609,17 @@ receivers:
         traces_url_path: /v1/traces
 service:
   extensions:
-    - awsproxy/apm
+    - awsproxy/app_signals
+    - agenthealth/logs
   pipelines:
-    metrics/apm:
+    metrics/app_signals:
       exporters:
-        - awsemf/apm
+        - awsemf/app_signals
       processors:
         - resourcedetection
-        - awsapm
+        - awsappsignals
       receivers:
-        - otlp/apm
+        - otlp/app_signals
     metrics/containerinsights:
       exporters:
         - awsemf/containerinsights
@@ -618,14 +627,14 @@ service:
         - batch/containerinsights
       receivers:
         - awscontainerinsightreceiver
-    traces/apm:
+    traces/app_signals:
       exporters:
-        - awsxray/apm
+        - awsxray/app_signals
       processors:
         - resourcedetection
-        - awsapm
+        - awsappsignals
       receivers:
-        - otlp/apm
+        - otlp/app_signals
   telemetry:
     logs:
       development: false

@@ -1,6 +1,6 @@
 connectors: {}
 exporters:
-    awsemf/appsignals:
+    awsemf/app_signals:
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -82,7 +82,7 @@ exporters:
         role_arn: ""
         shared_credentials_file: []
         version: "1"
-    awsxray/appsignals:
+    awsxray/app_signals:
         aws_log_groups: []
         certificate_file_path: ""
         endpoint: https://fake_endpoint
@@ -114,7 +114,7 @@ exporters:
             enabled: true
             include_metadata: true
 extensions:
-    awsproxy/appsignals:
+    awsproxy/app_signals:
         aws_endpoint: ""
         endpoint: 0.0.0.0:2000
         local_mode: false
@@ -387,7 +387,7 @@ processors:
         timeout: 2s
         write_buffer_size: 0
 receivers:
-    otlp/appsignals:
+    otlp/app_signals:
         protocols:
             grpc:
                 auth: null
@@ -413,24 +413,24 @@ receivers:
                 traces_url_path: /v1/traces
 service:
     extensions:
-        - awsproxy/appsignals
+        - awsproxy/app_signals
     pipelines:
-        metrics/appsignals:
+        metrics/app_signals:
             exporters:
-                - awsemf/appsignals
+                - awsemf/app_signals
             processors:
                 - resourcedetection
                 - awsappsignals
             receivers:
-                - otlp/appsignals
-        traces/appsignals:
+                - otlp/app_signals
+        traces/app_signals:
             exporters:
-                - awsxray/appsignals
+                - awsxray/app_signals
             processors:
                 - resourcedetection
                 - awsappsignals
             receivers:
-                - otlp/appsignals
+                - otlp/app_signals
     telemetry:
         logs:
             development: false

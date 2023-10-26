@@ -18,10 +18,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
-const (
-	pipelineName = "appsignals"
-)
-
 type translator struct {
 	dataType component.DataType
 }
@@ -35,7 +31,7 @@ func NewTranslator(dataType component.DataType) common.Translator[*common.Compon
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.dataType, pipelineName)
+	return component.NewIDWithName(t.dataType, common.AppSignals)
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
@@ -48,17 +44,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap(otlp.NewTranslatorWithName(pipelineName, otlp.WithDataType(t.dataType))),
+		Receivers:  common.NewTranslatorMap(otlp.NewTranslatorWithName(common.AppSignals, otlp.WithDataType(t.dataType))),
 		Processors: common.NewTranslatorMap(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)), awsappsignals.NewTranslator(awsappsignals.WithDataType(t.dataType))),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
 	if t.dataType == component.DataTypeTraces {
-		translators.Exporters.Set(awsxray.NewTranslatorWithName(pipelineName))
-		translators.Extensions.Set(awsproxy.NewTranslatorWithName(pipelineName))
+		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
+		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
 	} else {
-		translators.Exporters.Set(awsemf.NewTranslatorWithName(pipelineName))
+		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
 	}
 	return translators, nil
 }

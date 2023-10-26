@@ -24,7 +24,7 @@ func TestTranslatorTraces(t *testing.T) {
 		extensions []string
 	}
 	tt := NewTranslator(component.DataTypeTraces)
-	assert.EqualValues(t, "traces/appsignals", tt.ID().String())
+	assert.EqualValues(t, "traces/app_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *want
@@ -43,10 +43,10 @@ func TestTranslatorTraces(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/appsignals"},
+				receivers:  []string{"otlp/app_signals"},
 				processors: []string{"resourcedetection", "awsappsignals"},
-				exporters:  []string{"awsxray/appsignals"},
-				extensions: []string{"awsproxy/appsignals"},
+				exporters:  []string{"awsxray/app_signals"},
+				extensions: []string{"awsproxy/app_signals"},
 			},
 		},
 	}
@@ -74,7 +74,7 @@ func TestTranslatorMetrics(t *testing.T) {
 		exporters  []string
 	}
 	tt := NewTranslator(component.DataTypeMetrics)
-	assert.EqualValues(t, "metrics/appsignals", tt.ID().String())
+	assert.EqualValues(t, "metrics/app_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *want
@@ -93,9 +93,9 @@ func TestTranslatorMetrics(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/appsignals"},
+				receivers:  []string{"otlp/app_signals"},
 				processors: []string{"resourcedetection", "awsappsignals"},
-				exporters:  []string{"awsemf/appsignals"},
+				exporters:  []string{"awsemf/app_signals"},
 			},
 		},
 	}
