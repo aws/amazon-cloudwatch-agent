@@ -50,7 +50,7 @@ func TestProcessStats(t *testing.T) {
 	testErr := errors.New("test error")
 	mock := &mockProcessMetrics{}
 	provider := newProcessStats(mock, time.Millisecond)
-	got := provider.stats
+	got := provider.getStats()
 	assert.NotNil(t, got.CpuPercent)
 	assert.NotNil(t, got.MemoryBytes)
 	assert.NotNil(t, got.FileDescriptorCount)
@@ -61,7 +61,7 @@ func TestProcessStats(t *testing.T) {
 	assert.EqualValues(t, 4, *got.ThreadCount)
 	mock.err = testErr
 	time.Sleep(2 * time.Millisecond)
-	got = provider.stats
+	got = provider.getStats()
 	assert.Nil(t, got.CpuPercent)
 	assert.Nil(t, got.MemoryBytes)
 	assert.Nil(t, got.FileDescriptorCount)

@@ -74,14 +74,12 @@ func (p *processStats) updateLoop() {
 }
 
 func (p *processStats) refresh() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.stats = agent.Stats{
+	p.stats.Store(agent.Stats{
 		CpuPercent:          p.cpuPercent(),
 		MemoryBytes:         p.memoryBytes(),
 		FileDescriptorCount: p.fileDescriptorCount(),
 		ThreadCount:         p.threadCount(),
-	}
+	})
 }
 
 func newProcessStats(proc processMetrics, interval time.Duration) *processStats {

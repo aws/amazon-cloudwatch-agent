@@ -17,20 +17,15 @@ const (
 	flagGetInterval = 5 * time.Minute
 )
 
-type BoolFlag int
+type Flag int
 
 const (
-	FlagIMDSFallbackSucceed BoolFlag = iota
+	FlagIMDSFallbackSucceed Flag = iota
 	FlagSharedConfigFallback
 	FlagAppSignal
 	FlagEnhancedContainerInsights
 	FlagRunningInContainer
-)
-
-type StringFlag int
-
-const (
-	FlagMode StringFlag = iota
+	FlagMode
 	FlagRegionType
 )
 
@@ -41,8 +36,8 @@ var (
 
 type FlagStats interface {
 	agent.StatsProvider
-	SetFlag(flag BoolFlag)
-	SetFlagWithValue(flag StringFlag, value string)
+	SetFlag(flag Flag)
+	SetFlagWithValue(flag Flag, value string)
 }
 
 type flagStats struct {
@@ -54,9 +49,7 @@ type flagStats struct {
 var _ FlagStats = (*flagStats)(nil)
 
 func (p *flagStats) update() {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.stats = agent.Stats{
+	p.stats.Store(agent.Stats{
 		ImdsFallbackSucceed:       p.getIntFlag(FlagIMDSFallbackSucceed, false),
 		SharedConfigFallback:      p.getIntFlag(FlagSharedConfigFallback, false),
 		AppSignals:                p.getIntFlag(FlagAppSignal, false),
@@ -64,10 +57,10 @@ func (p *flagStats) update() {
 		RunningInContainer:        p.getIntFlag(FlagRunningInContainer, true),
 		Mode:                      p.getStringFlag(FlagMode),
 		RegionType:                p.getStringFlag(FlagRegionType),
-	}
+	})
 }
 
-func (p *flagStats) getIntFlag(flag BoolFlag, missingAsZero bool) *int {
+func (p *flagStats) getIntFlag(flag Flag, missingAsZero bool) *int {
 	if _, ok := p.flags.Load(flag); ok {
 		return aws.Int(1)
 	}
@@ -77,7 +70,7 @@ func (p *flagStats) getIntFlag(flag BoolFlag, missingAsZero bool) *int {
 	return nil
 }
 
-func (p *flagStats) getStringFlag(flag StringFlag) *string {
+func (p *flagStats) getStringFlag(flag Flag) *string {
 	value, ok := p.flags.Load(flag)
 	if !ok {
 		return nil
@@ -90,14 +83,14 @@ func (p *flagStats) getStringFlag(flag StringFlag) *string {
 	return aws.String(str)
 }
 
-func (p *flagStats) SetFlag(flag BoolFlag) {
+func (p *flagStats) SetFlag(flag Flag) {
 	if _, ok := p.flags.Load(flag); !ok {
 		p.flags.Store(flag, true)
 		p.update()
 	}
 }
 
-func (p *flagStats) SetFlagWithValue(flag StringFlag, value string) {
+func (p *flagStats) SetFlagWithValue(flag Flag, value string) {
 	if _, ok := p.flags.Load(flag); !ok {
 		p.flags.Store(flag, value)
 		p.update()

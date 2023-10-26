@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	handlerID           = "cloudwatchagent.StatsHandler"
+	handlerID           = "cloudwatchagent.AgentStats"
 	headerKeyAgentStats = "X-Amz-Agent-Stats"
 )
 
@@ -25,7 +25,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig) ([]awsmiddleware.Req
 	filter := agent.NewOperationsFilter(cfg.Operations...)
 	clientStats := client.NewHandler(filter)
 	stats := newStatsHandler(logger, filter, []agent.StatsProvider{clientStats, provider.GetProcessStats(), provider.GetFlagsStats()})
-	return []awsmiddleware.RequestHandler{clientStats, stats}, []awsmiddleware.ResponseHandler{clientStats}
+	return []awsmiddleware.RequestHandler{stats, clientStats}, []awsmiddleware.ResponseHandler{clientStats}
 }
 
 type statsHandler struct {
