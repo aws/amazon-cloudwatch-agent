@@ -65,6 +65,7 @@ exporters:
                 - Fault
                 - Error
         metric_descriptors: []
+        middleware: agenthealth/logs
         namespace: AppSignals
         no_verify_ssl: false
         num_workers: 8
@@ -99,6 +100,7 @@ exporters:
             - HostedIn.Environment
         local_mode: false
         max_retries: 2
+        middleware: agenthealth/traces
         no_verify_ssl: false
         num_workers: 8
         profile: ""

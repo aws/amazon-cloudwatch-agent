@@ -78,6 +78,7 @@ func TestTranslator(t *testing.T) {
 					"enabled":          true,
 					"include_metadata": true,
 				},
+				"middleware": "agenthealth/traces",
 			}),
 		},
 	}

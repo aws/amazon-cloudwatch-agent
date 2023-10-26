@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	pipelineName = "app_signals"
+	pipelineName = "appsignals"
 )
 
 type translator struct {
@@ -48,17 +48,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap(otlp.NewTranslatorWithName(common.AppSignals, otlp.WithDataType(t.dataType))),
+		Receivers:  common.NewTranslatorMap(otlp.NewTranslatorWithName(pipelineName, otlp.WithDataType(t.dataType))),
 		Processors: common.NewTranslatorMap(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)), awsappsignals.NewTranslator(awsappsignals.WithDataType(t.dataType))),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
 	if t.dataType == component.DataTypeTraces {
-		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
-		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
+		translators.Exporters.Set(awsxray.NewTranslatorWithName(pipelineName))
+		translators.Extensions.Set(awsproxy.NewTranslatorWithName(pipelineName))
 	} else {
-		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
+		translators.Exporters.Set(awsemf.NewTranslatorWithName(pipelineName))
 	}
 	return translators, nil
 }
