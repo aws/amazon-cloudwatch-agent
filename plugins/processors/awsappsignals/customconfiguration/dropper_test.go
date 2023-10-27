@@ -82,8 +82,7 @@ func TestDropperProcessor(t *testing.T) {
 		},
 	}
 
-	testDropper := NewCustomDropper(config)
-	testMapPlaceHolder := pcommon.NewMap()
+	testDropper := NewDropper(config)
 	isTrace := false
 
 	testCases := []TestCaseForDropper{
@@ -107,7 +106,7 @@ func TestDropperProcessor(t *testing.T) {
 	for i := range testCases {
 		tt := testCases[i]
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := testDropper.ShouldBeDropped(tt.input, testMapPlaceHolder)
+			result, err := testDropper.ShouldBeDropped(tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.output, result)
 		})
@@ -115,9 +114,7 @@ func TestDropperProcessor(t *testing.T) {
 }
 
 func TestDropperProcessorWithNilConfig(t *testing.T) {
-
-	testDropper := NewCustomDropper(nil)
-	testMapPlaceHolder := pcommon.NewMap()
+	testDropper := NewDropper(nil)
 	isTrace := false
 
 	testCases := []TestCaseForDropper{
@@ -141,7 +138,7 @@ func TestDropperProcessorWithNilConfig(t *testing.T) {
 	for i := range testCases {
 		tt := testCases[i]
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := testDropper.ShouldBeDropped(tt.input, testMapPlaceHolder)
+			result, err := testDropper.ShouldBeDropped(tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.output, result)
 		})
@@ -149,11 +146,9 @@ func TestDropperProcessorWithNilConfig(t *testing.T) {
 }
 
 func TestDropperProcessorWithEmptyConfig(t *testing.T) {
+	var config []Rule
 
-	config := []Rule{}
-
-	testDropper := NewCustomDropper(config)
-	testMapPlaceHolder := pcommon.NewMap()
+	testDropper := NewDropper(config)
 	isTrace := false
 
 	testCases := []TestCaseForDropper{
@@ -177,7 +172,7 @@ func TestDropperProcessorWithEmptyConfig(t *testing.T) {
 	for i := range testCases {
 		tt := testCases[i]
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := testDropper.ShouldBeDropped(tt.input, testMapPlaceHolder)
+			result, err := testDropper.ShouldBeDropped(tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.output, result)
 		})

@@ -9,25 +9,25 @@ type KeepActions struct {
 	Actions []ActionItem
 }
 
-func NewCustomKeeper(rules []Rule) *KeepActions {
+func NewKeeper(rules []Rule) *KeepActions {
 	return &KeepActions{
-		Actions: generateActionDetails(rules, "keep"),
+		Actions: generateActionDetails(rules, AllowListActionKeep),
 	}
 }
 
-func (k *KeepActions) ShouldBeDropped(attributes, _ pcommon.Map) (bool, error) {
+func (k *KeepActions) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
 	// nothing will be dropped if no keep rule is defined
 	if k.Actions == nil || len(k.Actions) == 0 {
 		return false, nil
 	}
 	for _, element := range k.Actions {
-		isMatched, err := isSelected(attributes, element.SelectorMatchers, false)
+		isMatched, err := matchesSelectors(attributes, element.SelectorMatchers, false)
 		if isMatched {
-			// The data point will not be dropped if one of keep rule matched
+			// keep the datapoint as one of the keep rules is matched
 			return false, nil
 		}
 		if err != nil {
-			// The data point will be dropped when error is found
+			// drop the datapoint as an error occurred in match process
 			return true, err
 		}
 	}

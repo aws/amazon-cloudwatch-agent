@@ -27,8 +27,8 @@ type attributesMutator interface {
 	Process(attributes, resourceAttributes pcommon.Map, isTrace bool) error
 }
 
-type customAllowlistMutator interface {
-	ShouldBeDropped(attributes, resourceAttributes pcommon.Map) (bool, error)
+type allowListMutator interface {
+	ShouldBeDropped(attributes pcommon.Map) (bool, error)
 }
 
 type stopper interface {
@@ -36,13 +36,13 @@ type stopper interface {
 }
 
 type awsappsignalsprocessor struct {
-	logger                  *zap.Logger
-	config                  *Config
-	customReplacer          *customconfiguration.ReplaceActions
-	customAllowlistMutators []customAllowlistMutator
-	metricMutators          []attributesMutator
-	traceMutators           []attributesMutator
-	stoppers                []stopper
+	logger            *zap.Logger
+	config            *Config
+	replaceActions    *customconfiguration.ReplaceActions
+	allowlistMutators []allowListMutator
+	metricMutators    []attributesMutator
+	traceMutators     []attributesMutator
+	stoppers          []stopper
 }
 
 func (ap *awsappsignalsprocessor) Start(_ context.Context, _ component.Host) error {
@@ -53,14 +53,14 @@ func (ap *awsappsignalsprocessor) Start(_ context.Context, _ component.Host) err
 	attributesNormalizer := normalizer.NewAttributesNormalizer(ap.logger)
 	ap.metricMutators = []attributesMutator{attributesResolver, attributesNormalizer}
 
-	ap.customReplacer = customconfiguration.NewCustomReplacer(ap.config.Rules)
-	ap.traceMutators = []attributesMutator{attributesResolver, attributesNormalizer, ap.customReplacer}
+	ap.replaceActions = customconfiguration.NewReplacer(ap.config.Rules)
+	ap.traceMutators = []attributesMutator{attributesResolver, attributesNormalizer, ap.replaceActions}
 
-	customKeeper := customconfiguration.NewCustomKeeper(ap.config.Rules)
-	ap.customAllowlistMutators = []customAllowlistMutator{customKeeper}
+	keeper := customconfiguration.NewKeeper(ap.config.Rules)
+	ap.allowlistMutators = []allowListMutator{keeper}
 
-	customDropper := customconfiguration.NewCustomDropper(ap.config.Rules)
-	ap.customAllowlistMutators = []customAllowlistMutator{customDropper}
+	dropper := customconfiguration.NewDropper(ap.config.Rules)
+	ap.allowlistMutators = []allowListMutator{dropper}
 
 	return nil
 }
@@ -126,27 +126,27 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 	case pmetric.MetricTypeGauge:
 		dps := m.Gauge().DataPoints()
 		for i := 0; i < dps.Len(); i++ {
-			for _, Mutator := range ap.metricMutators {
-				err := Mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			for _, mutator := range ap.metricMutators {
+				err := mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 			}
 		}
 		dps.RemoveIf(func(d pmetric.NumberDataPoint) bool {
-			for _, Mutator := range ap.customAllowlistMutators {
-				shouldBeDropped, err := Mutator.ShouldBeDropped(d.Attributes(), resourceAttribes)
+			for _, mutator := range ap.allowlistMutators {
+				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
-					return true
-				} else if shouldBeDropped {
+				}
+				if shouldBeDropped {
 					return true
 				}
 			}
 			return false
 		})
 		for i := 0; i < dps.Len(); i++ {
-			err := ap.customReplacer.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			err := ap.replaceActions.Process(dps.At(i).Attributes(), resourceAttribes, false)
 			if err != nil {
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 			}
@@ -154,27 +154,27 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 	case pmetric.MetricTypeSum:
 		dps := m.Sum().DataPoints()
 		for i := 0; i < dps.Len(); i++ {
-			for _, Mutator := range ap.metricMutators {
-				err := Mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			for _, mutator := range ap.metricMutators {
+				err := mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 			}
 		}
 		dps.RemoveIf(func(d pmetric.NumberDataPoint) bool {
-			for _, Mutator := range ap.customAllowlistMutators {
-				shouldBeDropped, err := Mutator.ShouldBeDropped(d.Attributes(), resourceAttribes)
+			for _, mutator := range ap.allowlistMutators {
+				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
-					return true
-				} else if shouldBeDropped {
+				}
+				if shouldBeDropped {
 					return true
 				}
 			}
 			return false
 		})
 		for i := 0; i < dps.Len(); i++ {
-			err := ap.customReplacer.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			err := ap.replaceActions.Process(dps.At(i).Attributes(), resourceAttribes, false)
 			if err != nil {
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 			}
@@ -182,27 +182,27 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 	case pmetric.MetricTypeHistogram:
 		dps := m.Histogram().DataPoints()
 		for i := 0; i < dps.Len(); i++ {
-			for _, Mutator := range ap.metricMutators {
-				err := Mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			for _, mutator := range ap.metricMutators {
+				err := mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 			}
 		}
 		dps.RemoveIf(func(d pmetric.HistogramDataPoint) bool {
-			for _, Mutator := range ap.customAllowlistMutators {
-				shouldBeDropped, err := Mutator.ShouldBeDropped(d.Attributes(), resourceAttribes)
+			for _, mutator := range ap.allowlistMutators {
+				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
-					return true
-				} else if shouldBeDropped {
+				}
+				if shouldBeDropped {
 					return true
 				}
 			}
 			return false
 		})
 		for i := 0; i < dps.Len(); i++ {
-			err := ap.customReplacer.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			err := ap.replaceActions.Process(dps.At(i).Attributes(), resourceAttribes, false)
 			if err != nil {
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 			}
@@ -210,27 +210,27 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 	case pmetric.MetricTypeExponentialHistogram:
 		dps := m.ExponentialHistogram().DataPoints()
 		for i := 0; i < dps.Len(); i++ {
-			for _, Mutator := range ap.metricMutators {
-				err := Mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			for _, mutator := range ap.metricMutators {
+				err := mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 			}
 		}
 		dps.RemoveIf(func(d pmetric.ExponentialHistogramDataPoint) bool {
-			for _, Mutator := range ap.customAllowlistMutators {
-				shouldBeDropped, err := Mutator.ShouldBeDropped(d.Attributes(), resourceAttribes)
+			for _, mutator := range ap.allowlistMutators {
+				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
-					return true
-				} else if shouldBeDropped {
+				}
+				if shouldBeDropped {
 					return true
 				}
 			}
 			return false
 		})
 		for i := 0; i < dps.Len(); i++ {
-			err := ap.customReplacer.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			err := ap.replaceActions.Process(dps.At(i).Attributes(), resourceAttribes, false)
 			if err != nil {
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 			}
@@ -238,27 +238,27 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 	case pmetric.MetricTypeSummary:
 		dps := m.Summary().DataPoints()
 		for i := 0; i < dps.Len(); i++ {
-			for _, Mutator := range ap.metricMutators {
-				err := Mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			for _, mutator := range ap.metricMutators {
+				err := mutator.Process(dps.At(i).Attributes(), resourceAttribes, false)
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 			}
 		}
 		dps.RemoveIf(func(d pmetric.SummaryDataPoint) bool {
-			for _, Mutator := range ap.customAllowlistMutators {
-				shouldBeDropped, err := Mutator.ShouldBeDropped(d.Attributes(), resourceAttribes)
+			for _, mutator := range ap.allowlistMutators {
+				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
 					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
-					return true
-				} else if shouldBeDropped {
+				}
+				if shouldBeDropped {
 					return true
 				}
 			}
 			return false
 		})
 		for i := 0; i < dps.Len(); i++ {
-			err := ap.customReplacer.Process(dps.At(i).Attributes(), resourceAttribes, false)
+			err := ap.replaceActions.Process(dps.At(i).Attributes(), resourceAttribes, false)
 			if err != nil {
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 			}

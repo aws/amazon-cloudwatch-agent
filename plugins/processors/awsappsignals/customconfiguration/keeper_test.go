@@ -69,8 +69,7 @@ func TestKeeperProcessor(t *testing.T) {
 		},
 	}
 
-	testKeeper := NewCustomKeeper(config)
-	testMapPlaceHolder := pcommon.NewMap()
+	testKeeper := NewKeeper(config)
 	isTrace := false
 
 	testCases := []TestCaseForKeeper{
@@ -93,7 +92,7 @@ func TestKeeperProcessor(t *testing.T) {
 	for i := range testCases {
 		tt := testCases[i]
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := testKeeper.ShouldBeDropped(tt.input, testMapPlaceHolder)
+			result, err := testKeeper.ShouldBeDropped(tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.output, result)
 		})
@@ -101,8 +100,7 @@ func TestKeeperProcessor(t *testing.T) {
 }
 
 func TestKeeperProcessorWithNilConfig(t *testing.T) {
-	testKeeper := NewCustomKeeper(nil)
-	testMapPlaceHolder := pcommon.NewMap()
+	testKeeper := NewKeeper(nil)
 	isTrace := false
 
 	testCases := []TestCaseForKeeper{
@@ -130,7 +128,7 @@ func TestKeeperProcessorWithNilConfig(t *testing.T) {
 	for i := range testCases {
 		tt := testCases[i]
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := testKeeper.ShouldBeDropped(tt.input, testMapPlaceHolder)
+			result, err := testKeeper.ShouldBeDropped(tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.output, result)
 		})
@@ -141,8 +139,7 @@ func TestKeeperProcessorWithEmptyConfig(t *testing.T) {
 
 	config := []Rule{}
 
-	testKeeper := NewCustomKeeper(config)
-	testMapPlaceHolder := pcommon.NewMap()
+	testKeeper := NewKeeper(config)
 	isTrace := false
 
 	testCases := []TestCaseForKeeper{
@@ -170,7 +167,7 @@ func TestKeeperProcessorWithEmptyConfig(t *testing.T) {
 	for i := range testCases {
 		tt := testCases[i]
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := testKeeper.ShouldBeDropped(tt.input, testMapPlaceHolder)
+			result, err := testKeeper.ShouldBeDropped(tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.output, result)
 		})

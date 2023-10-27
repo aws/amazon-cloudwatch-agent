@@ -11,9 +11,9 @@ type ReplaceActions struct {
 	Actions []ActionItem
 }
 
-func NewCustomReplacer(rules []Rule) *ReplaceActions {
+func NewReplacer(rules []Rule) *ReplaceActions {
 	return &ReplaceActions{
-		generateActionDetails(rules, "replace"),
+		generateActionDetails(rules, AllowListActionReplace),
 	}
 }
 
@@ -27,7 +27,7 @@ func (r *ReplaceActions) Process(attributes, _ pcommon.Map, isTrace bool) error 
 	finalRules := make(map[string]string)
 	for i := len(actions) - 1; i >= 0; i = i - 1 {
 		element := actions[i]
-		isMatched, _ := isSelected(attributes, element.SelectorMatchers, isTrace)
+		isMatched, _ := matchesSelectors(attributes, element.SelectorMatchers, isTrace)
 		if !isMatched {
 			continue
 		}

@@ -4,10 +4,19 @@
 package customconfiguration
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/gobwas/glob"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+)
+
+type AllowListAction string
+
+const (
+	AllowListActionKeep    AllowListAction = "keep"
+	AllowListActionDrop    AllowListAction = "drop"
+	AllowListActionReplace AllowListAction = "replace"
 )
 
 type Selector struct {
@@ -21,10 +30,10 @@ type Replacement struct {
 }
 
 type Rule struct {
-	Selectors    []Selector    `mapstructure:"selectors"`
-	Replacements []Replacement `mapstructure:"replacements,omitempty"`
-	Action       string        `mapstructure:"action"`
-	RuleName     string        `mapstructure:"rule_name,omitempty"`
+	Selectors    []Selector      `mapstructure:"selectors"`
+	Replacements []Replacement   `mapstructure:"replacements,omitempty"`
+	Action       AllowListAction `mapstructure:"action"`
+	RuleName     string          `mapstructure:"rule_name,omitempty"`
 }
 
 type SelectorMatcherItem struct {
@@ -44,6 +53,18 @@ var traceKeyMap = map[string]string{
 	"RemoteOperation": "aws.remote.operation",
 }
 
+func GetAllowListAction(action string) (AllowListAction, error) {
+	switch action {
+	case "drop":
+		return AllowListActionDrop, nil
+	case "keep":
+		return AllowListActionKeep, nil
+	case "replace":
+		return AllowListActionReplace, nil
+	}
+	return "", errors.New("invalid action in rule")
+}
+
 func getExactKey(metricDimensionKey string, isTrace bool) string {
 	if !isTrace {
 		return metricDimensionKey
@@ -56,7 +77,7 @@ func getExactKey(metricDimensionKey string, isTrace bool) string {
 	return traceDimensionKey
 }
 
-func isSelected(attributes pcommon.Map, selectorMatchers []SelectorMatcherItem, isTrace bool) (bool, error) {
+func matchesSelectors(attributes pcommon.Map, selectorMatchers []SelectorMatcherItem, isTrace bool) (bool, error) {
 	for _, item := range selectorMatchers {
 		exactKey := getExactKey(item.Key, isTrace)
 		value, ok := attributes.Get(exactKey)
@@ -82,24 +103,7 @@ func generateSelectorMatchers(selectors []Selector) []SelectorMatcherItem {
 	return selectorMatchers
 }
 
-func generateTestAttributes(service string, operation string, remoteService string, remoteOperation string,
-	isTrace bool) pcommon.Map {
-	attributes := pcommon.NewMap()
-	if isTrace {
-		attributes.PutStr("aws.local.service", service)
-		attributes.PutStr("aws.local.operation", operation)
-		attributes.PutStr("aws.remote.service", remoteService)
-		attributes.PutStr("aws.remote.operation", remoteOperation)
-	} else {
-		attributes.PutStr("Service", service)
-		attributes.PutStr("Operation", operation)
-		attributes.PutStr("RemoteService", remoteService)
-		attributes.PutStr("RemoteOperation", remoteOperation)
-	}
-	return attributes
-}
-
-func generateActionDetails(rules []Rule, action string) []ActionItem {
+func generateActionDetails(rules []Rule, action AllowListAction) []ActionItem {
 	var actionItems []ActionItem
 	for _, rule := range rules {
 		if rule.Action == action {

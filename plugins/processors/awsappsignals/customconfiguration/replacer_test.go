@@ -71,7 +71,7 @@ func TestReplacerProcess(t *testing.T) {
 		},
 	}
 
-	testReplacer := NewCustomReplacer(config)
+	testReplacer := NewReplacer(config)
 	testMapPlaceHolder := pcommon.NewMap()
 
 	testCases := []TestCaseForReplacer{
@@ -168,7 +168,7 @@ func TestReplacerProcessWithPriority(t *testing.T) {
 		},
 	}
 
-	testReplacer := NewCustomReplacer(config)
+	testReplacer := NewReplacer(config)
 	testMapPlaceHolder := pcommon.NewMap()
 
 	testCases := []TestCaseForReplacer{
@@ -216,7 +216,7 @@ func TestReplacerProcessWithPriority(t *testing.T) {
 
 func TestReplacerProcessWithNilConfig(t *testing.T) {
 
-	testReplacer := NewCustomReplacer(nil)
+	testReplacer := NewReplacer(nil)
 	testMapPlaceHolder := pcommon.NewMap()
 
 	testCases := []TestCaseForReplacer{
@@ -250,7 +250,7 @@ func TestReplacerProcessWithEmptyConfig(t *testing.T) {
 
 	config := []Rule{}
 
-	testReplacer := NewCustomReplacer(config)
+	testReplacer := NewReplacer(config)
 	testMapPlaceHolder := pcommon.NewMap()
 
 	testCases := []TestCaseForReplacer{

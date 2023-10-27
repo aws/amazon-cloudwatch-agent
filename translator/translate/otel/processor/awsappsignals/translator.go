@@ -79,8 +79,13 @@ func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, 
 			if ruleName, ok := ruleMap["rule_name"]; ok {
 				ruleConfig.RuleName = ruleName.(string)
 			}
-			ruleConfig.Action = action
-			if action == "replace" {
+
+			var err error
+			ruleConfig.Action, err = customconfiguration.GetAllowListAction(action)
+			if err != nil {
+				return nil, err
+			}
+			if ruleConfig.Action == customconfiguration.AllowListActionReplace {
 				replacements, ok := ruleMap["replacements"]
 				if !ok {
 					return nil, errors.New("replace action set, but no replacements defined for service rule")
