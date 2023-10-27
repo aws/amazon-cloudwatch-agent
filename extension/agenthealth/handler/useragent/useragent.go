@@ -25,9 +25,6 @@ import (
 )
 
 const (
-	handlerID          = "cloudwatchagent.UserAgentHandler"
-	headerKeyUserAgent = "User-Agent"
-
 	flagRunAsUser                 = "run_as_user"
 	flagContainerInsights         = "container_insights"
 	flagAppSignals                = "app_signals"

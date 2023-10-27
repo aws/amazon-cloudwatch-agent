@@ -15,23 +15,23 @@ import (
 func TestFlagStats(t *testing.T) {
 	t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
 	provider := newFlagStats(time.Microsecond)
-	got := provider.stats
+	got := provider.getStats()
 	assert.Nil(t, got.ImdsFallbackSucceed)
 	assert.Nil(t, got.SharedConfigFallback)
 	assert.NotNil(t, got.RunningInContainer)
 	assert.Equal(t, 1, *got.RunningInContainer)
 	provider.SetFlag(FlagIMDSFallbackSucceed)
 	assert.Nil(t, got.ImdsFallbackSucceed)
-	got = provider.stats
+	got = provider.getStats()
 	assert.NotNil(t, got.ImdsFallbackSucceed)
 	assert.Equal(t, 1, *got.ImdsFallbackSucceed)
 	assert.Nil(t, got.SharedConfigFallback)
 	provider.SetFlag(FlagSharedConfigFallback)
-	got = provider.stats
+	got = provider.getStats()
 	assert.NotNil(t, got.SharedConfigFallback)
 	assert.Equal(t, 1, *got.SharedConfigFallback)
 	provider.SetFlagWithValue(FlagMode, "test")
-	got = provider.stats
+	got = provider.getStats()
 	assert.NotNil(t, got.Mode)
 	assert.Equal(t, "test", *got.Mode)
 }
