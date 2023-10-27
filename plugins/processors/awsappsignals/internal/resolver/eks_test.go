@@ -16,6 +16,8 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
 // MockDeleter deletes a key immediately, useful for testing.
@@ -774,41 +776,41 @@ func TestEksResolver(t *testing.T) {
 
 		// Test case 1: "aws.remote.service" contains IP:Port
 		attributes := pcommon.NewMap()
-		attributes.PutStr("aws.remote.service", "192.0.2.1:8080")
+		attributes.PutStr(attr.AWSRemoteService, "192.0.2.1:8080")
 		resourceAttributes := pcommon.NewMap()
 		resolver.ipToPod.Store("192.0.2.1:8080", "test-pod")
 		resolver.podToWorkloadAndNamespace.Store("test-pod", "test-deployment@test-namespace")
 		err := resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
-		assert.Equal(t, "test-deployment", getStrAttr(attributes, "aws.remote.service", t))
-		assert.Equal(t, "test-namespace", getStrAttr(attributes, "K8s.RemoteNamespace", t))
+		assert.Equal(t, "test-deployment", getStrAttr(attributes, attr.AWSRemoteService, t))
+		assert.Equal(t, "test-namespace", getStrAttr(attributes, attr.K8SRemoteNamespace, t))
 
 		// Test case 2: "aws.remote.service" contains only IP
 		attributes = pcommon.NewMap()
-		attributes.PutStr("aws.remote.service", "192.0.2.2")
+		attributes.PutStr(attr.AWSRemoteService, "192.0.2.2")
 		resourceAttributes = pcommon.NewMap()
 		resolver.ipToPod.Store("192.0.2.2", "test-pod-2")
 		resolver.podToWorkloadAndNamespace.Store("test-pod-2", "test-deployment-2@test-namespace-2")
 		err = resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
-		assert.Equal(t, "test-deployment-2", getStrAttr(attributes, "aws.remote.service", t))
-		assert.Equal(t, "test-namespace-2", getStrAttr(attributes, "K8s.RemoteNamespace", t))
+		assert.Equal(t, "test-deployment-2", getStrAttr(attributes, attr.AWSRemoteService, t))
+		assert.Equal(t, "test-namespace-2", getStrAttr(attributes, attr.K8SRemoteNamespace, t))
 
 		// Test case 3: "aws.remote.service" contains non-ip string
 		attributes = pcommon.NewMap()
-		attributes.PutStr("aws.remote.service", "not-an-ip")
+		attributes.PutStr(attr.AWSRemoteService, "not-an-ip")
 		resourceAttributes = pcommon.NewMap()
 		err = resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
-		assert.Equal(t, "not-an-ip", getStrAttr(attributes, "aws.remote.service", t))
+		assert.Equal(t, "not-an-ip", getStrAttr(attributes, attr.AWSRemoteService, t))
 
 		// Test case 4: Process with valid IP but GetWorkloadAndNamespaceByIP returns error
 		attributes = pcommon.NewMap()
-		attributes.PutStr("aws.remote.service", "192.168.1.2")
+		attributes.PutStr(attr.AWSRemoteService, "192.168.1.2")
 		resourceAttributes = pcommon.NewMap()
 		err = resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
-		assert.Equal(t, "UnknownRemoteService", getStrAttr(attributes, "aws.remote.service", t))
+		assert.Equal(t, "UnknownRemoteService", getStrAttr(attributes, attr.AWSRemoteService, t))
 	})
 }
 
@@ -833,8 +835,8 @@ func TestHostedInEksResolver(t *testing.T) {
 	resourceAttributes.PutStr("ec2.tag.kubernetes.io/cluster/test-cluster", "owned")
 	err := resolver.Process(attributes, resourceAttributes)
 	assert.NoError(t, err)
-	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, "HostedIn.K8s.Namespace", t))
-	assert.Equal(t, "test-cluster", getStrAttr(attributes, "HostedIn.EKS.Cluster", t))
+	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, attr.HostedInK8SNamespace, t))
+	assert.Equal(t, "test-cluster", getStrAttr(attributes, attr.HostedInClusterName, t))
 }
 
 func TestExtractIPPort(t *testing.T) {

@@ -24,6 +24,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+
+	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
 const (
@@ -44,7 +46,7 @@ const (
 )
 
 var DefaultHostedInAttributeMap = map[string]string{
-	semconv.AttributeK8SNamespaceName: HostedInAttributeK8SNamespace,
+	semconv.AttributeK8SNamespaceName: attr.HostedInClusterName,
 }
 
 var (
@@ -625,13 +627,13 @@ func (e *eksResolver) debug() {
 }
 
 func (e *eksResolver) Process(attributes, resourceAttributes pcommon.Map) error {
-	if value, ok := attributes.Get(AttributeRemoteService); ok {
+	if value, ok := attributes.Get(attr.AWSRemoteService); ok {
 		valueStr := value.AsString()
 		ipStr := ""
 		if ip, _, ok := extractIPPort(valueStr); ok {
 			if workload, namespace, err := e.GetWorkloadAndNamespaceByIP(valueStr); err == nil {
-				attributes.PutStr(AttributeRemoteService, workload)
-				attributes.PutStr(AttributeRemoteNamespace, namespace)
+				attributes.PutStr(attr.AWSRemoteService, workload)
+				attributes.PutStr(attr.K8SRemoteNamespace, namespace)
 			} else {
 				ipStr = ip
 			}
@@ -641,11 +643,11 @@ func (e *eksResolver) Process(attributes, resourceAttributes pcommon.Map) error 
 
 		if ipStr != "" {
 			if workload, namespace, err := e.GetWorkloadAndNamespaceByIP(ipStr); err == nil {
-				attributes.PutStr(AttributeRemoteService, workload)
-				attributes.PutStr(AttributeRemoteNamespace, namespace)
+				attributes.PutStr(attr.AWSRemoteService, workload)
+				attributes.PutStr(attr.K8SRemoteNamespace, namespace)
 			} else {
 				e.logger.Debug("failed to Process ip", zap.String("ip", ipStr), zap.Error(err))
-				attributes.PutStr(AttributeRemoteService, "UnknownRemoteService")
+				attributes.PutStr(attr.AWSRemoteService, "UnknownRemoteService")
 			}
 		}
 	}
@@ -703,7 +705,7 @@ type eksHostedInAttributeResolver struct {
 func newEKSHostedInAttributeResolver() *eksHostedInAttributeResolver {
 	return &eksHostedInAttributeResolver{
 		attributeMap: map[string]string{
-			semconv.AttributeK8SNamespaceName: HostedInAttributeK8SNamespace,
+			semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
 		},
 	}
 }
@@ -715,7 +717,7 @@ func (h *eksHostedInAttributeResolver) Process(attributes, resourceAttributes pc
 	}
 
 	if h.clusterName != "" {
-		attributes.PutStr(HostedInAttributeClusterName, h.clusterName)
+		attributes.PutStr(attr.HostedInClusterName, h.clusterName)
 	} else {
 		platform, _ := resourceAttributes.Get(semconv.AttributeCloudProvider)
 		if platform.AsString() == semconv.AttributeCloudProviderAWS {
@@ -723,7 +725,7 @@ func (h *eksHostedInAttributeResolver) Process(attributes, resourceAttributes pc
 			resourceAttributes.Range(func(key string, value pcommon.Value) bool {
 				if strings.HasPrefix(key, "ec2.tag.kubernetes.io/cluster/") && value.Type() == pcommon.ValueTypeStr && value.AsString() == "owned" {
 					h.clusterName = strings.TrimPrefix(key, "ec2.tag.kubernetes.io/cluster/")
-					attributes.PutStr(HostedInAttributeClusterName, h.clusterName)
+					attributes.PutStr(attr.HostedInClusterName, h.clusterName)
 					return false
 				}
 				return true

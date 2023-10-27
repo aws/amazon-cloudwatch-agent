@@ -46,7 +46,7 @@ func TestTranslatorTraces(t *testing.T) {
 				receivers:  []string{"otlp/app_signals"},
 				processors: []string{"resourcedetection", "awsappsignals"},
 				exporters:  []string{"awsxray/app_signals"},
-				extensions: []string{"awsproxy/app_signals"},
+				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
 			},
 		},
 	}
@@ -62,6 +62,7 @@ func TestTranslatorTraces(t *testing.T) {
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.Keys(), component.ID.String))
 			}
 		})
 	}
@@ -72,6 +73,7 @@ func TestTranslatorMetrics(t *testing.T) {
 		receivers  []string
 		processors []string
 		exporters  []string
+		extensions []string
 	}
 	tt := NewTranslator(component.DataTypeMetrics)
 	assert.EqualValues(t, "metrics/app_signals", tt.ID().String())
@@ -96,6 +98,7 @@ func TestTranslatorMetrics(t *testing.T) {
 				receivers:  []string{"otlp/app_signals"},
 				processors: []string{"resourcedetection", "awsappsignals"},
 				exporters:  []string{"awsemf/app_signals"},
+				extensions: []string{"agenthealth/logs"},
 			},
 		},
 	}
@@ -111,6 +114,7 @@ func TestTranslatorMetrics(t *testing.T) {
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.Keys(), component.ID.String))
 			}
 		})
 	}

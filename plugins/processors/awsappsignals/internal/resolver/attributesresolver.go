@@ -5,13 +5,16 @@ package resolver
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
+
+	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
 var DefaultHostedInAttributes = map[string]string{
-	AttributeHostedInEnvironment: HostedInAttributeEnvironment,
+	attr.AWSHostedInEnvironment: attr.HostedInEnvironment,
 }
 
 type subResolver interface {
@@ -49,12 +52,13 @@ func (r *attributesResolver) Process(attributes, resourceAttributes pcommon.Map,
 }
 
 func (r *attributesResolver) Stop(ctx context.Context) error {
+	var errs error
 	for _, subResolver := range r.subResolvers {
 		if err := subResolver.Stop(ctx); err != nil {
-			return err
+			errs = errors.Join(errs, err)
 		}
 	}
-	return nil
+	return errs
 }
 
 type hostedInAttributeResolver struct {
@@ -73,9 +77,9 @@ func (h *hostedInAttributeResolver) Process(attributes, resourceAttributes pcomm
 		}
 	}
 
-	if _, ok := resourceAttributes.Get(AttributeHostedInEnvironment); !ok {
+	if _, ok := resourceAttributes.Get(attr.HostedInEnvironment); !ok {
 		hostedInEnv := "Generic"
-		attributes.PutStr(HostedInAttributeEnvironment, hostedInEnv)
+		attributes.PutStr(attr.HostedInEnvironment, hostedInEnv)
 	}
 
 	return nil

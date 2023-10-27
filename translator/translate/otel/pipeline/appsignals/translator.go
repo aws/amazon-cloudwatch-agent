@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awsproxy"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
@@ -53,8 +54,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if t.dataType == component.DataTypeTraces {
 		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
 		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeTraces, []string{agenthealth.OperationPutTraceSegments}))
 	} else {
 		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents}))
 	}
 	return translators, nil
 }

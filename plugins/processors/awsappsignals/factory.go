@@ -34,7 +34,8 @@ func NewFactory() processor.Factory {
 
 func createDefaultConfig() component.Config {
 	return &Config{
-		Resolvers: []string{"eks"}, // we need to change the default config later
+		// TODO: change default config when other resolvers are supported
+		Resolvers: []string{"eks"},
 	}
 }
 

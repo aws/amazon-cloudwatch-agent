@@ -102,6 +102,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/eks v1.27.15
 	github.com/aws/smithy-go v1.15.0
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
+	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/go-kit/log v0.2.1
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cadvisor v0.47.3 // indirect
@@ -117,10 +118,12 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.84.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.84.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.84.0
@@ -147,6 +150,7 @@ require (
 	go.opentelemetry.io/collector/processor/batchprocessor v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/receiver v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.opentelemetry.io/collector/receiver/otlpreceiver v0.84.0
+	go.opentelemetry.io/collector/semconv v0.84.1-0.20230908201109-ab3d6c5b6470
 	go.uber.org/atomic v1.11.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.25.0
@@ -164,13 +168,6 @@ require (
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
 	k8s.io/klog/v2 v2.100.1
-)
-
-require (
-	github.com/deckarep/golang-set/v2 v2.3.1
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy v0.84.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.84.0
-	go.opentelemetry.io/collector/semconv v0.84.1-0.20230908201109-ab3d6c5b6470
 )
 
 require (

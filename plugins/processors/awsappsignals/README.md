@@ -1,7 +1,7 @@
 # AWS AppSignals Processor for Amazon Cloudwatch Agent
 
-The AWS AppSignals processor is used to reduce the cardinality of telemtry metrics and traces before exporting them to CloudWatch Logs via [EMF](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awsemfexporter) and [X-Ray](github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter) respectively.
-It reduces the cardinality of metrics/traces via 3 types of actions, `keep`, `drop` and `replace`, which are configured by users. CloudWatch Agent(CWA) customers will configure these rules with their CWA configurations, which will get translated to yaml.
+The AWS AppSignals processor is used to reduce the cardinality of telemetry metrics and traces before exporting them to CloudWatch Logs via [EMF](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awsemfexporter) and [X-Ray](github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter) respectively.
+It reduces the cardinality of metrics/traces via 3 types of actions, `keep`, `drop` and `replace`, which are configured by users. CloudWatch Agent(CWA) customers will configure these rules with their CWA configurations.
 
 Note: Traces support only `replace` actions and are implicitly pulled from the logs section of the CWA configuration
 

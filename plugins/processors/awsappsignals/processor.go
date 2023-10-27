@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	failedToProcessAttribute               = "failed to Process attributes"
-	failedToProcessAttributeWithCustomRule = "failed to process attributes with custom rule, will drop it"
+	failedToProcessAttribute               = "failed to process attributes"
+	failedToProcessAttributeWithCustomRule = "failed to process attributes with custom rule, will drop the metric"
 )
 
 // this is used to Process some attributes (like IP addresses) to a generic form to reduce high cardinality
@@ -47,19 +47,20 @@ type awsappsignalsprocessor struct {
 
 func (ap *awsappsignalsprocessor) Start(_ context.Context, _ component.Host) error {
 	attributesResolver := resolver.NewAttributesResolver(ap.config.Resolvers, ap.logger)
-	ap.stoppers = append(ap.stoppers, attributesResolver)
-	ap.metricMutators = append(ap.metricMutators, attributesResolver)
+	ap.stoppers = []stopper{attributesResolver}
+	ap.metricMutators = []attributesMutator{attributesResolver}
 
 	attributesNormalizer := normalizer.NewAttributesNormalizer(ap.logger)
-	ap.metricMutators = append(ap.metricMutators, attributesNormalizer)
+	ap.metricMutators = []attributesMutator{attributesResolver, attributesNormalizer}
 
 	ap.customReplacer = customconfiguration.NewCustomReplacer(ap.config.Rules)
-	ap.traceMutators = append(ap.traceMutators, attributesResolver, attributesNormalizer, ap.customReplacer)
+	ap.traceMutators = []attributesMutator{attributesResolver, attributesNormalizer, ap.customReplacer}
 
 	customKeeper := customconfiguration.NewCustomKeeper(ap.config.Rules)
-	ap.customAllowlistMutators = append(ap.customAllowlistMutators, customKeeper)
+	ap.customAllowlistMutators = []customAllowlistMutator{customKeeper}
+
 	customDropper := customconfiguration.NewCustomDropper(ap.config.Rules)
-	ap.customAllowlistMutators = append(ap.customAllowlistMutators, customDropper)
+	ap.customAllowlistMutators = []customAllowlistMutator{customDropper}
 
 	return nil
 }
@@ -263,6 +264,6 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 			}
 		}
 	default:
-		ap.logger.Info("Ignore unknown metric type", zap.String("type", m.Type().String()))
+		ap.logger.Debug("Ignore unknown metric type", zap.String("type", m.Type().String()))
 	}
 }

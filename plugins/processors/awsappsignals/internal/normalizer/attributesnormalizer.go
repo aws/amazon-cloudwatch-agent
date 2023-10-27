@@ -6,6 +6,8 @@ package normalizer
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
+
+	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
 type attributesNormalizer struct {
@@ -13,24 +15,24 @@ type attributesNormalizer struct {
 }
 
 var renameMapForMetric = map[string]string{
-	"aws.local.service":    "Service",
-	"aws.local.operation":  "Operation",
-	"aws.remote.service":   "RemoteService",
-	"aws.remote.operation": "RemoteOperation",
-	"aws.remote.target":    "RemoteTarget",
+	attr.AWSLocalService:    "Service",
+	attr.AWSLocalOperation:  "Operation",
+	attr.AWSRemoteService:   "RemoteService",
+	attr.AWSRemoteOperation: "RemoteOperation",
+	attr.AWSRemoteTarget:    "RemoteTarget",
 }
 
 var renameMapForTrace = map[string]string{
-	// these kubernetes resource attributes are set by the openTelemtry operator
-	// see the code referecnes from upstream:
+	// these kubernetes resource attributes are set by the openTelemetry operator
+	// see the code references from upstream:
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L245
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L305C43-L305C43
-	"k8s.deployment.name":  "K8s.Workload",
-	"k8s.statefulset.name": "K8s.Workload",
-	"k8s.daemonset.name":   "K8s.Workload",
-	"k8s.job.name":         "K8s.Workload",
-	"k8s.cronjob.name":     "K8s.Workload",
-	"k8s.pod.name":         "K8s.Pod",
+	attr.K8SDeploymentName:  "K8s.Workload",
+	attr.K8SStatefulSetName: "K8s.Workload",
+	attr.K8SDaemonSetName:   "K8s.Workload",
+	attr.K8SJobName:         "K8s.Workload",
+	attr.K8SCronJobName:     "K8s.Workload",
+	attr.K8SPodName:         "K8s.Pod",
 }
 
 var copyMapForMetric = map[string]string{
@@ -38,12 +40,12 @@ var copyMapForMetric = map[string]string{
 	// see the code referecnes from upstream:
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L245
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L305C43-L305C43
-	"k8s.deployment.name":  "K8s.Workload",
-	"k8s.statefulset.name": "K8s.Workload",
-	"k8s.daemonset.name":   "K8s.Workload",
-	"k8s.job.name":         "K8s.Workload",
-	"k8s.cronjob.name":     "K8s.Workload",
-	"k8s.pod.name":         "K8s.Pod",
+	attr.K8SDeploymentName:  "K8s.Workload",
+	attr.K8SStatefulSetName: "K8s.Workload",
+	attr.K8SDaemonSetName:   "K8s.Workload",
+	attr.K8SJobName:         "K8s.Workload",
+	attr.K8SCronJobName:     "K8s.Workload",
+	attr.K8SPodName:         "K8s.Pod",
 }
 
 func NewAttributesNormalizer(logger *zap.Logger) *attributesNormalizer {
@@ -80,7 +82,7 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 				n.logger.Debug("attribute value is overwritten", zap.String("attribute", k), zap.String("original", originalAttrValue.AsString()), zap.String("new", resourceAttrValue.AsString()))
 			}
 			attributes.PutStr(v, resourceAttrValue.AsString())
-			if k == "k8s.pod.name" {
+			if k == attr.K8SPodName {
 				// only copy "host.id" from resource attributes to "K8s.Node" in attributesif the pod name is set
 				if host, ok := resourceAttributes.Get("host.id"); ok {
 					attributes.PutStr("K8s.Node", host.AsString())
@@ -95,7 +97,7 @@ func rename(attrs pcommon.Map, renameMap map[string]string) {
 		if value, ok := attrs.Get(original); ok {
 			attrs.PutStr(replacement, value.AsString())
 			attrs.Remove(original)
-			if original == "k8s.pod.name" {
+			if original == attr.K8SPodName {
 				// only rename host.id if the pod name is set
 				if host, ok := attrs.Get("host.id"); ok {
 					attrs.PutStr("K8s.Node", host.AsString())
