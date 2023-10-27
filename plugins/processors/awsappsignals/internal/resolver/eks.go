@@ -30,7 +30,7 @@ import (
 
 const (
 	// kubeAllowedStringAlphaNums holds the characters allowed in replicaset names from as parent deployment
-	// https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83
+	// https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/rand/rand.go#L121
 	kubeAllowedStringAlphaNums = "bcdfghjklmnpqrstvwxz2456789"
 
 	// Deletion delay adjustment:
@@ -46,13 +46,18 @@ const (
 )
 
 var DefaultHostedInAttributeMap = map[string]string{
-	semconv.AttributeK8SNamespaceName: attr.HostedInClusterName,
+	semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
 }
 
 var (
-	// ReplicaSet name = Deployment name + "-" + 10 alphanumeric characters long string (see https://stackoverflow.com/questions/46204504/kubernetes-pod-naming-convention and https://stackoverflow.com/questions/71090356/how-does-random-string-in-kubernetes-pod-name-decided)
-	// the alphanumeric characters in Kubernetes are restricted to exclude vowels to reduce the chances of "normal words" being formed. (see https://github.com/kubernetes/apimachinery/blob/master/pkg/util/rand/rand.go#L83)
-	replicaSetWithDeploymentNamePattern = fmt.Sprintf(`^(.+)-[%s]{10}$`, kubeAllowedStringAlphaNums)
+	// ReplicaSet name = Deployment name + "-" + up to 10 alphanumeric characters string, if the ReplicaSet was created through a deployment
+	// The suffix string of the ReplicaSet name is an int32 number (0 to 4,294,967,295) that is cast to a string and then
+	// mapped to an alphanumeric value with only the following characters allowed: "bcdfghjklmnpqrstvwxz2456789".
+	// The suffix string length is therefore nondeterministic. The regex accepts a suffix of length 6-10 to account for
+	// ReplicaSets not managed by deployments that may have similar names.
+	// Suffix Generation: https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go#L1201
+	// Alphanumeric Mapping: https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/rand/rand.go#L121)
+	replicaSetWithDeploymentNamePattern = fmt.Sprintf(`^(.+)-[%s]{6,10}$`, kubeAllowedStringAlphaNums)
 	deploymentFromReplicaSetPattern     = regexp.MustCompile(replicaSetWithDeploymentNamePattern)
 	// if a pod is launched directly by a replicaSet (with a given name by users), its name has the following pattern:
 	// Pod name = ReplicaSet name + 5 alphanumeric characters long string

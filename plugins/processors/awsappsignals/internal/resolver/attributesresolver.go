@@ -77,7 +77,7 @@ func (h *hostedInAttributeResolver) Process(attributes, resourceAttributes pcomm
 		}
 	}
 
-	if _, ok := resourceAttributes.Get(attr.HostedInEnvironment); !ok {
+	if _, ok := resourceAttributes.Get(attr.AWSHostedInEnvironment); !ok {
 		hostedInEnv := "Generic"
 		attributes.PutStr(attr.HostedInEnvironment, hostedInEnv)
 	}
