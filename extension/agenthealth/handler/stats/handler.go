@@ -5,7 +5,6 @@ package stats
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
 
@@ -64,14 +63,6 @@ func (sh *statsHandler) HandleRequest(ctx context.Context, r *http.Request) {
 	header := sh.Header(operation)
 	if header != "" {
 		r.Header.Set(headerKeyAgentStats, header)
-
-		request := awsmiddleware.GetRequestID(ctx)
-		if header != "" {
-			r.Header.Set(headerKeyAgentStats, header)
-			log.Printf("D! stats header (%s/%s): %s", operation, request, header)
-		} else {
-			log.Printf("W! empty stats header (%s/%s)", operation, request)
-		}
 	}
 }
 
