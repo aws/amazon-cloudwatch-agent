@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -28,6 +29,7 @@ func TestHandle(t *testing.T) {
 	body := []byte("test payload size")
 	req, err := http.NewRequest("", "localhost", bytes.NewBuffer(body))
 	require.NoError(t, err)
+	req.ContentLength = 20
 	ctx := context.Background()
 	handler.HandleRequest(ctx, req)
 	got := handler.Stats(operation)
@@ -41,6 +43,25 @@ func TestHandle(t *testing.T) {
 	assert.NotNil(t, got.PayloadBytes)
 	assert.NotNil(t, got.StatusCode)
 	assert.Equal(t, http.StatusOK, *got.StatusCode)
-	assert.Equal(t, 17, *got.PayloadBytes)
+	assert.Equal(t, 20, *got.PayloadBytes)
 	assert.GreaterOrEqual(t, *got.LatencyMillis, int64(1))
+
+	// without content length
+	req.ContentLength = 0
+	handler.HandleRequest(ctx, req)
+	handler.HandleResponse(ctx, &http.Response{StatusCode: http.StatusOK})
+	got = handler.Stats(operation)
+	assert.NotNil(t, got.PayloadBytes)
+	assert.Equal(t, 17, *got.PayloadBytes)
+
+	// with seeker
+	body = append(body, " with seeker"...)
+	req, err = http.NewRequest("", "localhost", aws.ReadSeekCloser(bytes.NewReader(body)))
+	require.NoError(t, err)
+	req.ContentLength = 0
+	handler.HandleRequest(ctx, req)
+	handler.HandleResponse(ctx, &http.Response{StatusCode: http.StatusOK})
+	got = handler.Stats(operation)
+	assert.NotNil(t, got.PayloadBytes)
+	assert.Equal(t, 29, *got.PayloadBytes)
 }
