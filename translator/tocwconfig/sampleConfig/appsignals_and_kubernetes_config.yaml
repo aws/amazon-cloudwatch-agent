@@ -286,6 +286,11 @@ extensions:
     stats:
       operations:
         - PutLogEvents
+  agenthealth/traces:
+    is_usage_data_enabled: true
+    stats:
+      operations:
+        - PutTraceSegments
 processors:
   awsappsignals:
     resolvers:
@@ -611,6 +616,7 @@ service:
   extensions:
     - awsproxy/app_signals
     - agenthealth/logs
+    - agenthealth/traces
   pipelines:
     metrics/app_signals:
       exporters:

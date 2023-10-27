@@ -121,6 +121,16 @@ extensions:
         proxy_address: ""
         region: ""
         role_arn: ""
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+    agenthealth/traces:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutTraceSegments
 processors:
     awsappsignals:
         resolvers:
@@ -414,6 +424,8 @@ receivers:
 service:
     extensions:
         - awsproxy/app_signals
+        - agenthealth/traces
+        - agenthealth/logs
     pipelines:
         metrics/app_signals:
             exporters:
