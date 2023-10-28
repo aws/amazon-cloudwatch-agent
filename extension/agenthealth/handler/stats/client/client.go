@@ -75,10 +75,17 @@ func (csh *clientStatsHandler) HandleRequest(ctx context.Context, r *http.Reques
 	}
 	requestID := csh.getRequestID(ctx)
 	recorder := &requestRecorder{start: time.Now()}
-	if r.GetBody != nil {
-		body, err := r.GetBody()
-		if err == nil {
-			recorder.payloadBytes, err = io.Copy(io.Discard, body)
+	if r.ContentLength > 0 {
+		recorder.payloadBytes = r.ContentLength
+	} else if r.Body != nil {
+		rsc, ok := r.Body.(aws.ReaderSeekerCloser)
+		if !ok {
+			rsc = aws.ReadSeekCloser(r.Body)
+		}
+		if length, _ := aws.SeekerLen(rsc); length > 0 {
+			recorder.payloadBytes = length
+		} else if body, err := r.GetBody(); err == nil {
+			recorder.payloadBytes, _ = io.Copy(io.Discard, body)
 		}
 	}
 	csh.requestCache.Set(requestID, recorder, ttlcache.DefaultTTL)
