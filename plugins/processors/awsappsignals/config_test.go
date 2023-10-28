@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -27,9 +27,9 @@ func TestLoadConfig(t *testing.T) {
 			id: component.NewIDWithName("awsappsignals", ""),
 			expected: &Config{
 				Resolvers: []string{"eks"},
-				Rules: []customconfiguration.Rule{
+				Rules: []rules.Rule{
 					{
-						Selectors: []customconfiguration.Selector{
+						Selectors: []rules.Selector{
 							{
 								Dimension: "Operation",
 								Match:     "* /api/visits/*",
@@ -43,7 +43,7 @@ func TestLoadConfig(t *testing.T) {
 						RuleName: "keep01",
 					},
 					{
-						Selectors: []customconfiguration.Selector{
+						Selectors: []rules.Selector{
 							{
 								Dimension: "RemoteService",
 								Match:     "UnknownRemoteService",
@@ -56,7 +56,7 @@ func TestLoadConfig(t *testing.T) {
 						Action: "drop",
 					},
 					{
-						Selectors: []customconfiguration.Selector{
+						Selectors: []rules.Selector{
 							{
 								Dimension: "Operation",
 								Match:     "* /api/visits/*",
@@ -66,7 +66,7 @@ func TestLoadConfig(t *testing.T) {
 								Match:     "*",
 							},
 						},
-						Replacements: []customconfiguration.Replacement{
+						Replacements: []rules.Replacement{
 							{
 								TargetDimension: "RemoteOperation",
 								Value:           "ListPetsByCustomer",

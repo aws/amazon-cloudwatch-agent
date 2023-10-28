@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -66,11 +66,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, cfg *awsappsignals.Config) (component.Config, error) {
-	var rules []customconfiguration.Rule
+	var rules []rules.Rule
 	rulesConfigKey := common.ConfigKey(configKey, common.AppSignalsRules)
 	if conf.IsSet(rulesConfigKey) {
 		for _, rule := range conf.Get(rulesConfigKey).([]interface{}) {
-			ruleConfig := customconfiguration.Rule{}
+			ruleConfig := rules.Rule{}
 			ruleMap := rule.(map[string]interface{})
 			selectors := ruleMap["selectors"].([]interface{})
 			action := ruleMap["action"].(string)
@@ -81,11 +81,11 @@ func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, 
 			}
 
 			var err error
-			ruleConfig.Action, err = customconfiguration.GetAllowListAction(action)
+			ruleConfig.Action, err = rules.GetAllowListAction(action)
 			if err != nil {
 				return nil, err
 			}
-			if ruleConfig.Action == customconfiguration.AllowListActionReplace {
+			if ruleConfig.Action == rules.AllowListActionReplace {
 				replacements, ok := ruleMap["replacements"]
 				if !ok {
 					return nil, errors.New("replace action set, but no replacements defined for service rule")
@@ -101,10 +101,10 @@ func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, 
 	return cfg, nil
 }
 
-func getServiceSelectors(selectorsList []interface{}) []customconfiguration.Selector {
-	var selectors []customconfiguration.Selector
+func getServiceSelectors(selectorsList []interface{}) []rules.Selector {
+	var selectors []rules.Selector
 	for _, selector := range selectorsList {
-		selectorConfig := customconfiguration.Selector{}
+		selectorConfig := rules.Selector{}
 		selectorsMap := selector.(map[string]interface{})
 
 		selectorConfig.Dimension = selectorsMap["dimension"].(string)
@@ -114,10 +114,10 @@ func getServiceSelectors(selectorsList []interface{}) []customconfiguration.Sele
 	return selectors
 }
 
-func getServiceReplacements(replacementsList interface{}) []customconfiguration.Replacement {
-	var replacements []customconfiguration.Replacement
+func getServiceReplacements(replacementsList interface{}) []rules.Replacement {
+	var replacements []rules.Replacement
 	for _, replacement := range replacementsList.([]interface{}) {
-		replacementConfig := customconfiguration.Replacement{}
+		replacementConfig := rules.Replacement{}
 		replacementMap := replacement.(map[string]interface{})
 
 		replacementConfig.TargetDimension = replacementMap["target_dimension"].(string)

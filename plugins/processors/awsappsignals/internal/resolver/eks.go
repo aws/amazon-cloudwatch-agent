@@ -43,6 +43,8 @@ const (
 	// To mitigate this issue, we've introduced a 2-minute deletion delay. This ensures that any
 	// metric data that arrives within those 2 minutes, containing the old IP, will still get mapped correctly to a service.
 	deletionDelay = 2 * time.Minute
+
+	jitterKubernetesAPISeconds = 10
 )
 
 var DefaultHostedInAttributeMap = map[string]string{
@@ -518,8 +520,8 @@ func getEksResolver(logger *zap.Logger) subResolver {
 			logger.Fatal("Failed to create eks client", zap.Error(err))
 		}
 
-		// add a time jitter of 10 seconds
-		jitterSleep(10)
+		// jitter calls to the kubernetes api
+		jitterSleep(jitterKubernetesAPISeconds)
 
 		sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
 		podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
@@ -553,8 +555,6 @@ func getEksResolver(logger *zap.Logger) subResolver {
 			workloadPodCount:               podWatcher.workloadPodCount,
 			safeStopCh:                     safeStopCh,
 		}
-
-		go instance.debugPrint()
 	})
 
 	return instance
@@ -585,50 +585,6 @@ func (e *eksResolver) GetWorkloadAndNamespaceByIP(ip string) (string, string, er
 	}
 
 	return "", "", errors.New("no EKS workload found for ip: " + ip)
-}
-
-func printSyncMap(name string, m *sync.Map, logger *zap.Logger) {
-	logger.Debug("", zap.String("MapName", name))
-	m.Range(func(key, value interface{}) bool {
-		logger.Debug("", zap.Any("key", key), zap.Any("value", value))
-		return true
-	})
-	logger.Debug("DEBUG ====================")
-}
-
-func (e *eksResolver) debugPrint() {
-	// call some logic every 5 minutes for ever
-	for {
-		select {
-		case <-time.After(5 * time.Minute):
-			e.debug()
-		case <-e.safeStopCh.ch:
-			return
-		}
-	}
-}
-
-func (e *eksResolver) debug() {
-	e.logger.Debug("start debug print")
-	// print ipToServiceAndNamespace
-	printSyncMap("ipToServiceAndNamespace", e.ipToServiceAndNamespace, e.logger)
-
-	// print serviceAndNamespaceToSelectors
-	printSyncMap("serviceAndNamespaceToSelectors", e.serviceAndNamespaceToSelectors, e.logger)
-
-	// print ipToPod
-	printSyncMap("ipToPod", e.ipToPod, e.logger)
-
-	// print podToWorkloadAndNamespace
-	printSyncMap("podToWorkloadAndNamespace", e.podToWorkloadAndNamespace, e.logger)
-
-	// print workloadAndNamespaceToLabels
-	printSyncMap("workloadAndNamespaceToLabels", e.workloadAndNamespaceToLabels, e.logger)
-
-	// print serviceToWorkload
-	e.logger.Debug("workload pod count", zap.Any("workloadPodCount", e.workloadPodCount))
-	printSyncMap("serviceToWorkload", e.serviceToWorkload, e.logger)
-	e.logger.Debug("end debug print")
 }
 
 func (e *eksResolver) Process(attributes, resourceAttributes pcommon.Map) error {

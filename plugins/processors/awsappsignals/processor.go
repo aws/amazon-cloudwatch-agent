@@ -12,9 +12,9 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/customconfiguration"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/normalizer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/resolver"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
 )
 
 const (
@@ -38,7 +38,7 @@ type stopper interface {
 type awsappsignalsprocessor struct {
 	logger            *zap.Logger
 	config            *Config
-	replaceActions    *customconfiguration.ReplaceActions
+	replaceActions    *rules.ReplaceActions
 	allowlistMutators []allowListMutator
 	metricMutators    []attributesMutator
 	traceMutators     []attributesMutator
@@ -53,13 +53,13 @@ func (ap *awsappsignalsprocessor) Start(_ context.Context, _ component.Host) err
 	attributesNormalizer := normalizer.NewAttributesNormalizer(ap.logger)
 	ap.metricMutators = []attributesMutator{attributesResolver, attributesNormalizer}
 
-	ap.replaceActions = customconfiguration.NewReplacer(ap.config.Rules)
+	ap.replaceActions = rules.NewReplacer(ap.config.Rules)
 	ap.traceMutators = []attributesMutator{attributesResolver, attributesNormalizer, ap.replaceActions}
 
-	keeper := customconfiguration.NewKeeper(ap.config.Rules)
+	keeper := rules.NewKeeper(ap.config.Rules)
 	ap.allowlistMutators = []allowListMutator{keeper}
 
-	dropper := customconfiguration.NewDropper(ap.config.Rules)
+	dropper := rules.NewDropper(ap.config.Rules)
 	ap.allowlistMutators = []allowListMutator{dropper}
 
 	return nil

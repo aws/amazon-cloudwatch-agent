@@ -4,12 +4,12 @@
 package awsappsignals
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/customconfiguration"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
 )
 
 type Config struct {
-	Resolvers []string                   `mapstructure:"resolvers"`
-	Rules     []customconfiguration.Rule `mapstructure:"rules"`
+	Resolvers []string     `mapstructure:"resolvers"`
+	Rules     []rules.Rule `mapstructure:"rules"`
 }
 
 func (cfg *Config) Validate() error {
