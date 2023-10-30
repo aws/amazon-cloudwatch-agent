@@ -89,7 +89,7 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 			ua.outputs.Add(string(exporter.Type()))
 			if exporter.Type() == "awsemf" {
 				cfg := otelCfg.Exporters[exporter].(*awsemfexporter.Config)
-				if cfg.IsPulseApmEnabled() {
+				if cfg.IsAppSignalsEnabled() {
 					ua.outputs.Add(flagAppSignals)
 					provider.GetFlagsStats().SetFlag(provider.FlagAppSignal)
 				}
