@@ -18,6 +18,8 @@ const (
 	OperationPutMetricData    = "PutMetricData"
 	OperationPutLogEvents     = "PutLogEvents"
 	OperationPutTraceSegments = "PutTraceSegments"
+
+	usageDataKey = "usage_data"
 )
 
 var (
@@ -49,9 +51,12 @@ func (t *translator) ID() component.ID {
 }
 
 // Translate creates an extension configuration.
-func (t *translator) Translate(*confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*agenthealth.Config)
 	cfg.IsUsageDataEnabled = t.isUsageDataEnabled
+	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
+		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
+	}
 	cfg.Stats = agent.StatsConfig{Operations: t.operations}
 	return cfg, nil
 }
