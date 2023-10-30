@@ -3,7 +3,7 @@ Amazon CloudWatch Agent 1.300030.1 (2023-10-30)
 ========================================================================
 
 Bug fixes:
-* Added units to StatusRunning and StatusContainerTerminatedReasonOOMKilled metrics
+* Add units to StatusRunning and StatusContainerTerminatedReasonOOMKilled metrics
 
 Enhancements:
 * Add agenthealth extension with user agent handler
