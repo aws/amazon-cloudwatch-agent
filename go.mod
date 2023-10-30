@@ -91,7 +91,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.25
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/autoscaling v1.28.10
-	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.25.7
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.28.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.99.0
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.28.1
 	github.com/aws/aws-sdk-go-v2/service/efs v1.19.7
@@ -118,7 +118,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.84.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.84.0
@@ -162,6 +161,8 @@ require (
 	k8s.io/klog/v2 v2.100.1
 )
 
+require github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-00010101000000-000000000000
+
 require (
 	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.4-0.20230617002413-005d2dfb6b68 // indirect
@@ -190,8 +191,8 @@ require (
 	github.com/apache/thrift v0.16.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.24 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.41 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.35 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.43 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.37 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.34 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.35 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.12.10 // indirect
