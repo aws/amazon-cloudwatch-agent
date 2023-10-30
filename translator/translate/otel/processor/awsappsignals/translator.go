@@ -66,7 +66,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, cfg *awsappsignals.Config) (component.Config, error) {
-	var rules []rules.Rule
+	var rulesList []rules.Rule
 	rulesConfigKey := common.ConfigKey(configKey, common.AppSignalsRules)
 	if conf.IsSet(rulesConfigKey) {
 		for _, rule := range conf.Get(rulesConfigKey).([]interface{}) {
@@ -93,9 +93,9 @@ func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, 
 				ruleConfig.Replacements = getServiceReplacements(replacements)
 			}
 
-			rules = append(rules, ruleConfig)
+			rulesList = append(rulesList, ruleConfig)
 		}
-		cfg.Rules = rules
+		cfg.Rules = rulesList
 	}
 
 	return cfg, nil
