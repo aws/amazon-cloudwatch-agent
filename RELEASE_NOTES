@@ -8,7 +8,7 @@ Bug fixes:
 Enhancements:
 * Add agenthealth extension with user agent handler
 * Add agent health metrics for agent environment
-* enable enhanced container insights flag in emf exporter
+* Enable enhanced container insights flag in EMF exporter
 
 ========================================================================
 Amazon CloudWatch Agent 1.300030.0 (2023-10-24)
