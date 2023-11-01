@@ -1,4 +1,44 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300030.1 (2023-10-30)
+========================================================================
+
+Bug fixes:
+* Add units to StatusRunning and StatusContainerTerminatedReasonOOMKilled metrics
+
+Enhancements:
+* Add agenthealth extension with user agent handler
+* Enable enhanced container insights flag in EMF exporter
+
+========================================================================
+Amazon CloudWatch Agent 1.300030.0 (2023-10-24)
+========================================================================
+
+Bug fixes:
+* Fix EMF log corruption caused by highly concurrent messages sent to the agent
+* CA Bundle fix for AWS Secret regions
+* Filter out terminated pods when calculating container insights node request metrics to match kubectl implementation
+* Fix auto_removal to not block on the file being removed
+
+Enhancements:
+* Support both zero padded and non-padded month/day when using %m/%d for the logfile timestamp_format
+* Use default path when -otelconfig option not given
+* Restrict pprof-addr to localhost
+
+========================================================================
+Amazon CloudWatch Agent 1.300028.4 (2023-10-4)
+========================================================================
+
+Bug fixes:
+* Use GZIP 6 RPM Compression To Fix Install On AL2 Without Kernel Patch
+
+========================================================================
+Amazon CloudWatch Agent 1.300028.3 (2023-10-3)
+========================================================================
+
+Bug fixes:
+* Use fmt.Printf Instead Of log.Printf On Start Up Because Of A Bug With Windows User Data Causing Agent Not To Start
+
+========================================================================
 Amazon CloudWatch Agent 1.300028.1 (2023-09-18)
 ========================================================================
 
