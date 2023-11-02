@@ -31,6 +31,12 @@ var defaultKubernetesConfig string
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
 
+//go:embed appsignals_config_eks.yaml
+var appSignalsConfigEks string
+
+//go:embed appsignals_config_generic.yaml
+var appSignalsConfigGeneric string
+
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
 	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
@@ -62,6 +68,12 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
+
+	if common.IsAppSignalsKubernetes() && t.name == common.AppSignals {
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEks)
+	} else if t.name == common.AppSignals {
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigGeneric)
+	}
 
 	var defaultConfig string
 	if isEcs(c) {

@@ -46,6 +46,38 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 		},
+		"WithAppSignalsMetricsEnabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+			},
+		},
+		"WithAppSignalsTracesEnabled": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+			},
+		},
+		"WithAppSignalsMetricsAndTracesEnabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
