@@ -11,13 +11,15 @@ import (
 	"go.opentelemetry.io/collector/component"
 )
 
-// Config represent a configuration for the CloudWatch logs exporter.
+// Config represent a configuration for the CloudWatch metrics exporter.
 type Config struct {
 	Region                   string          `mapstructure:"region"`
 	EndpointOverride         string          `mapstructure:"endpoint_override,omitempty"`
 	AccessKey                string          `mapstructure:"access_key,omitempty"`
 	SecretKey                string          `mapstructure:"secret_key,omitempty"`
 	RoleARN                  string          `mapstructure:"role_arn,omitempty"`
+	RegionType               string          `mapstructure:"region_type,omitempty"`
+	Mode                     string          `mapstructure:"mode,omitempty"`
 	Profile                  string          `mapstructure:"profile,omitempty"`
 	SharedCredentialFilename string          `mapstructure:"shared_credential_file,omitempty"`
 	Token                    string          `mapstructure:"token,omitempty"`
@@ -33,6 +35,8 @@ type Config struct {
 	// "Enabled" - A boolean field to enable/disable this option. Default is `false`.
 	// If enabled, all the resource attributes will be converted to metric labels by default.
 	ResourceToTelemetrySettings resourcetotelemetry.Settings `mapstructure:"resource_to_telemetry_conversion"`
+	// MiddlewareID is an ID for an extension that can be used to configure the AWS client.
+	MiddlewareID *component.ID `mapstructure:"middleware,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)

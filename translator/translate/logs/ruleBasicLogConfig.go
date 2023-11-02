@@ -5,6 +5,7 @@ package logs
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 )
 
@@ -16,6 +17,8 @@ func (f *BasicLogConfig) ApplyRule(input interface{}) (returnKey string, returnV
 	// add creds
 	cloudwatchlogsConfig = translator.MergeTwoUniqueMaps(cloudwatchlogsConfig, agent.Global_Config.Credentials)
 	cloudwatchlogsConfig[agent.RegionKey] = agent.Global_Config.Region
+	cloudwatchlogsConfig[agent.RegionType] = agent.Global_Config.RegionType
+	cloudwatchlogsConfig[agent.Mode] = context.CurrentContext().ShortMode()
 
 	returnKey = Output_Cloudwatch_Logs
 	returnVal = cloudwatchlogsConfig

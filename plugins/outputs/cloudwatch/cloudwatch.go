@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -22,11 +23,12 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
@@ -54,6 +56,7 @@ const (
 
 type CloudWatch struct {
 	config *Config
+	logger *zap.Logger
 	svc    cloudwatchiface.CloudWatchAPI
 	// todo: may want to increase the size of the chan since the type changed.
 	// 1 telegraf Metric could have many Fields.
@@ -69,7 +72,6 @@ type CloudWatch struct {
 	aggregator             Aggregator
 	aggregatorShutdownChan chan struct{}
 	aggregatorWaitGroup    sync.WaitGroup
-	agentInfo              agentinfo.AgentInfo
 	lastRequestBytes       int
 }
 
@@ -81,7 +83,6 @@ func (c *CloudWatch) Capabilities() consumer.Capabilities {
 }
 
 func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
-	c.agentInfo = agentinfo.New("")
 	c.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
 		maxConcurrentPublisher,
@@ -96,6 +97,8 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 		Filename:  c.config.SharedCredentialFilename,
 		Token:     c.config.Token,
 	}
+	provider.GetFlagsStats().SetFlagWithValue(provider.FlagRegionType, c.config.RegionType)
+	provider.GetFlagsStats().SetFlagWithValue(provider.FlagMode, c.config.Mode)
 	configProvider := credentialConfig.Credentials()
 	logger := models.NewLogger("outputs", "cloudwatch", "")
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(logger)
@@ -108,8 +111,9 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 			Logger:   configaws.SDKLogger{},
 		})
 	svc.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{opPutLogEvents, opPutMetricData}))
-	svc.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", c.agentInfo.UserAgent()))
-	svc.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("X-Amz-Agent-Stats", c.agentInfo.StatsHeader))
+	if c.config.MiddlewareID != nil {
+		awsmiddleware.TryConfigure(c.logger, host, *c.config.MiddlewareID, awsmiddleware.SDKv1(&svc.Handlers))
+	}
 	//Format unique roll up list
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	c.svc = svc
@@ -267,7 +271,7 @@ func (c *CloudWatch) publish() {
 			if !bufferFullOccurred {
 				// Set to true so this only happens once per push.
 				bufferFullOccurred = true
-				// Keep interval above above 1 second.
+				// Keep interval above 1 second.
 				if currentInterval.Seconds() > 1 {
 					currentInterval /= 2
 					if currentInterval.Seconds() < 1 {
@@ -341,9 +345,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	}
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
-		startTime := time.Now()
 		_, err = c.svc.PutMetricData(params)
-		c.agentInfo.RecordOpData(time.Since(startTime), c.lastRequestBytes, err)
 		if err != nil {
 			awsErr, ok := err.(awserr.Error)
 			if !ok {

@@ -43,20 +43,21 @@ func createMetricsExporter(
 	settings exporter.CreateSettings,
 	config component.Config,
 ) (exporter.Metrics, error) {
-	exp := &CloudWatch{
+	cw := &CloudWatch{
 		config: config.(*Config),
+		logger: settings.Logger,
 	}
-	exporter, err := exporterhelper.NewMetricsExporter(
+	exp, err := exporterhelper.NewMetricsExporter(
 		ctx,
 		settings,
 		config,
-		exp.ConsumeMetrics,
-		exporterhelper.WithStart(exp.Start),
-		exporterhelper.WithShutdown(exp.Shutdown),
+		cw.ConsumeMetrics,
+		exporterhelper.WithStart(cw.Start),
+		exporterhelper.WithShutdown(cw.Shutdown),
 	)
 	if err != nil {
 		return nil, err
 	}
 	return resourcetotelemetry.WrapMetricsExporter(
-		config.(*Config).ResourceToTelemetrySettings, exporter), nil
+		config.(*Config).ResourceToTelemetrySettings, exp), nil
 }
