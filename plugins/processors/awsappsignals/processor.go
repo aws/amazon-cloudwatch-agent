@@ -60,7 +60,7 @@ func (ap *awsappsignalsprocessor) Start(_ context.Context, _ component.Host) err
 	ap.allowlistMutators = []allowListMutator{keeper}
 
 	dropper := rules.NewDropper(ap.config.Rules)
-	ap.allowlistMutators = []allowListMutator{dropper}
+	ap.allowlistMutators = append(ap.allowlistMutators, dropper)
 
 	return nil
 }
