@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300031.0 (2023-11-7)
+========================================================================
+
+New features:
+* Support AppSignals on EKS and native EC2
+
+Enhancements:
+* Allow empty measurement field in the agent configuration for backward-compatibility
+
+========================================================================
 Amazon CloudWatch Agent 1.300030.2 (2023-11-2)
 ========================================================================
 
