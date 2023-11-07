@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
@@ -118,16 +117,16 @@ func (ctx *Context) SetMode(mode string) {
 	switch mode {
 	case config.ModeEC2:
 		ctx.mode = config.ModeEC2
-		ctx.shortMode = agentinfo.ModeEC2
+		ctx.shortMode = config.ShortModeEC2
 	case config.ModeOnPrem:
 		ctx.mode = config.ModeOnPrem
-		ctx.shortMode = agentinfo.ModeOnPrem
+		ctx.shortMode = config.ShortModeOnPrem
 	case config.ModeOnPremise:
 		ctx.mode = config.ModeOnPremise
-		ctx.shortMode = agentinfo.ModeOnPrem
+		ctx.shortMode = config.ShortModeOnPrem
 	case config.ModeWithIRSA:
 		ctx.mode = config.ModeWithIRSA
-		ctx.shortMode = agentinfo.ModeWithIRSA
+		ctx.shortMode = config.ShortModeWithIRSA
 	default:
 		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA)
 	}

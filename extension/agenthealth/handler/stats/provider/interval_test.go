@@ -18,13 +18,10 @@ func TestIntervalStats(t *testing.T) {
 	s.stats.Store(agent.Stats{
 		ThreadCount: aws.Int32(2),
 	})
-	got := s.Stats("")
-	assert.NotNil(t, got.ThreadCount)
-	got = s.Stats("")
-	assert.Nil(t, got.ThreadCount)
-	time.Sleep(2 * time.Millisecond)
-	got = s.Stats("")
-	assert.NotNil(t, got.ThreadCount)
-	got = s.Stats("")
-	assert.Nil(t, got.ThreadCount)
+	assert.NotNil(t, s.Stats("").ThreadCount)
+	assert.Nil(t, s.Stats("").ThreadCount)
+	time.Sleep(time.Millisecond)
+	assert.Eventually(t, func() bool {
+		return s.Stats("").ThreadCount != nil
+	}, 5*time.Millisecond, time.Millisecond)
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
@@ -100,23 +99,23 @@ func defaultECSRegion() string {
 
 func detectRegion(mode string, credsConfig map[string]string) (region string, regionType string) {
 	region = SDKRegionWithCredsMap(mode, credsConfig)
-	regionType = agentinfo.RegionNotFound
+	regionType = config.RegionTypeNotFound
 	if region != "" {
-		regionType = agentinfo.CredsMap
+		regionType = config.RegionTypeCredsMap
 	}
 
 	// For ec2, fallback to metadata when no region info found in credential profile.
 	if region == "" && mode == config.ModeEC2 {
 		fmt.Println("I! Trying to detect region from ec2")
 		region = DefaultEC2Region()
-		regionType = agentinfo.EC2Metadata
+		regionType = config.RegionTypeEC2Metadata
 	}
 
 	// try to get region from ecs metadata
 	if region == "" && mode == config.ModeEC2 {
 		fmt.Println("I! Trying to detect region from ecs")
 		region = DefaultECSRegion()
-		regionType = agentinfo.ECSMetadata
+		regionType = config.RegionTypeECSMetadata
 	}
 
 	return
