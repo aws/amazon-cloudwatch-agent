@@ -91,19 +91,20 @@ require (
 	github.com/Jeffail/gabs v1.4.0
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20231023230448-f645697bf350
 	github.com/aws/aws-sdk-go v1.45.24
-	github.com/aws/aws-sdk-go-v2 v1.21.2
+	github.com/aws/aws-sdk-go-v2 v1.22.1
 	github.com/aws/aws-sdk-go-v2/config v1.18.25
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/autoscaling v1.28.10
-	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.25.7
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.30.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.99.0
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.28.1
 	github.com/aws/aws-sdk-go-v2/service/efs v1.19.7
 	github.com/aws/aws-sdk-go-v2/service/eks v1.27.15
-	github.com/aws/smithy-go v1.15.0
+	github.com/aws/smithy-go v1.16.0
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
 	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/go-kit/log v0.2.1
+	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 	github.com/gobwas/glob v0.2.3
 	github.com/google/cadvisor v0.47.3 // indirect
 	github.com/google/go-cmp v0.5.9
@@ -125,7 +126,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.84.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.84.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.84.0
@@ -168,8 +168,9 @@ require (
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
 	k8s.io/klog/v2 v2.100.1
-	github.com/go-test/deep v1.0.2-0.20181118220953-042da051cf31
 )
+
+require github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-00010101000000-000000000000
 
 require (
 	cloud.google.com/go/compute v1.23.0 // indirect
@@ -199,8 +200,8 @@ require (
 	github.com/apache/arrow/go/v12 v12.0.1 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.24 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.41 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.35 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.1 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.34 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.35 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.12.10 // indirect
