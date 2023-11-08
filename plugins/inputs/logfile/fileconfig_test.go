@@ -23,7 +23,7 @@ func TestFileConfigInit(t *testing.T) {
 		TimestampLayout:       "02 Jan 2006 15:04:05",
 		Timezone:              "UTC",
 		MultiLineStartPattern: "{timestamp_regex}",
-		LogGroupClass:         util.EssentialsLogGroupClass,
+		LogGroupClass:         util.StandardLogGroupClass,
 	}
 
 	err := fileConfig.init()
@@ -41,7 +41,7 @@ func TestFileConfigInit(t *testing.T) {
 	assert.True(t, fileConfig.MultiLineStartPatternP == fileConfig.TimestampRegexP, "The multiline start pattern should be the same as the timestampFromLogLine pattern.")
 
 	assert.Equal(t, time.UTC, fileConfig.TimezoneLoc, "The timezone location should be UTC.")
-	assert.Equal(t, util.EssentialsLogGroupClass, fileConfig.LogGroupClass)
+	assert.Equal(t, util.StandardLogGroupClass, fileConfig.LogGroupClass)
 
 	assert.Nil(t, fileConfig.Filters)
 }
@@ -74,8 +74,22 @@ func TestFileConfigInitFailureCase(t *testing.T) {
 	assert.Equal(t, "multi_line_start_pattern has issue, regexp: Compile( (\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+) ): error parsing regexp: invalid nested repetition operator: `{2}+`", err.Error())
 }
 
-func TestEmptyLogGroupClassInit(t *testing.T) {
+func TestInfrequent_accessAndEmptyLogGroupClassInit(t *testing.T) {
 	fileConfig := &FileConfig{
+		FilePath:              "/tmp/logfile.log",
+		LogGroupName:          "logfile.log",
+		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+)",
+		TimestampLayout:       "02 Jan 2006 15:04:05",
+		Timezone:              "UTC",
+		MultiLineStartPattern: "{timestamp_regex}",
+		LogGroupClass:         util.InfrequentAccessLogGroupClass,
+	}
+
+	err := fileConfig.init()
+	assert.NotNil(t, err)
+	assert.Equal(t, util.InfrequentAccessLogGroupClass, fileConfig.LogGroupClass)
+
+	fileConfig = &FileConfig{
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
 		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+)",
@@ -84,9 +98,9 @@ func TestEmptyLogGroupClassInit(t *testing.T) {
 		MultiLineStartPattern: "{timestamp_regex}",
 	}
 
-	err := fileConfig.init()
+	err = fileConfig.init()
 	assert.NotNil(t, err)
-	assert.Equal(t, util.StandardLogGroupClass, fileConfig.LogGroupClass)
+	assert.Equal(t, "", fileConfig.LogGroupClass)
 }
 
 func TestLogGroupName(t *testing.T) {

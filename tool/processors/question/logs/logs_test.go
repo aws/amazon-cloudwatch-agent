@@ -39,7 +39,7 @@ func TestProcessor_Process(t *testing.T) {
 								"log_group_name":    "messages",
 								"log_stream_name":   "{instance_id}",
 								"retention_in_days": -1,
-								"log_group_class":   util.EssentialsLogGroupClass,
+								"log_group_class":   util.InfrequentAccessLogGroupClass,
 							},
 						},
 					},

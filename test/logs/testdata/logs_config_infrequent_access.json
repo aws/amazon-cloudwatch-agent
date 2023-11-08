@@ -9,10 +9,10 @@
         "collect_list": [
           {
             "file_path": "/tmp/test.log",
-            "log_group_name": "{instance_id}-essentials",
+            "log_group_name": "{instance_id}-infrequent_access",
             "log_stream_name": "{instance_id}",
             "timezone": "UTC",
-            "log_group_class": "essentials"
+            "log_group_class": "Infrequent_access"
           }
         ]
       }

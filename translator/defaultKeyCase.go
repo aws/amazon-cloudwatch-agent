@@ -92,7 +92,7 @@ func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (retu
 func DefaultLogGroupClassCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
 	returnKey, returnVal = DefaultCase(key, defaultVal, input)
 	if classVal, ok := returnVal.(string); ok && IsValidLogGroupClass(strings.ToUpper(classVal)) {
-		//CreateLogGroup API only accepts values STANDARD or ESSENTIALS
+		//CreateLogGroup API only accepts values STANDARD or INFREQUENT_ACCESS
 		returnVal = strings.ToUpper(classVal)
 	} else {
 		returnVal = util.StandardLogGroupClass

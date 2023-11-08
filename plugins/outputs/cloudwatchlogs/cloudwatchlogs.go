@@ -101,9 +101,6 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 	if retention <= 0 {
 		retention = -1
 	}
-	if logGroupClass == "" {
-		logGroupClass = util.StandardLogGroupClass
-	}
 
 	t := Target{
 		Group:     group,

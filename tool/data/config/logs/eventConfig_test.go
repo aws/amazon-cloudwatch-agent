@@ -17,7 +17,7 @@ func TestEventConfig_ToMap(t *testing.T) {
 		EventName:     "System",
 		LogGroup:      "SystemGroup",
 		LogStream:     "SystemStream",
-		LogGroupClass: util.EssentialsLogGroupClass,
+		LogGroupClass: util.InfrequentAccessLogGroupClass,
 		EventLevels:   []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
 		Retention:     1,
 	}
@@ -29,7 +29,7 @@ func TestEventConfig_ToMap(t *testing.T) {
 		"event_levels":      []string{"INFORMATION", "WARNING", "ERROR", "SUCCESS"},
 		"log_group_name":    "SystemGroup",
 		"log_stream_name":   "SystemStream",
-		"log_group_class":   util.EssentialsLogGroupClass,
+		"log_group_class":   util.InfrequentAccessLogGroupClass,
 		"retention_in_days": 1},
 		value)
 }

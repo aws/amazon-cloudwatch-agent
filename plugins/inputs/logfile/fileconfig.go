@@ -18,7 +18,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 const (
@@ -112,10 +111,6 @@ func (config *FileConfig) init() error {
 	//If the log group name is not specified, we will use the part before the last dot in the file path as the log group name.
 	if config.LogGroupName == "" && !config.PublishMultiLogs {
 		config.LogGroupName = logGroupName(config.FilePath)
-	}
-	//If the log group class is not specified, it will default to the standard tier
-	if config.LogGroupClass == "" {
-		config.LogGroupClass = util.StandardLogGroupClass
 	}
 	//If the timezone info is not specified, we will use the Local timezone as default value.
 	if config.Timezone == time.UTC.String() {

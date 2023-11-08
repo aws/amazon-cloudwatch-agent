@@ -16,12 +16,12 @@ func TestApplyLogGroupClassRule(t *testing.T) {
 	r := new(LogGroupClass)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
-			"log_group_class": "essentials"
+			"log_group_class": "Infrequent_access"
 	}`), &input)
 	if e == nil {
 		actualReturnKey, actualReturnVal := r.ApplyRule(input)
 		assert.Equal(t, "log_group_class", actualReturnKey)
-		assert.Equal(t, util.EssentialsLogGroupClass, actualReturnVal)
+		assert.Equal(t, util.InfrequentAccessLogGroupClass, actualReturnVal)
 	} else {
 		panic(e)
 	}

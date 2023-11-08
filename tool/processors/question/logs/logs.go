@@ -49,7 +49,7 @@ func monitorLogs(ctx *runtime.Context, config *data.Config) {
 		logFilePath := util.Ask("Log file path:")
 		logGroupNameHint := strings.Replace(filepath.Base(logFilePath), " ", "_", -1)
 		logGroupName := util.AskWithDefault("Log group name:", logGroupNameHint)
-		logGroupClass := util.Choice("Log group class:", 1, []string{util.StandardLogGroupClass, util.EssentialsLogGroupClass})
+		logGroupClass := util.Choice("Log group class:", 1, []string{util.StandardLogGroupClass, util.InfrequentAccessLogGroupClass})
 		logStreamNameHint := "{instance_id}"
 		if ctx.IsOnPrem {
 			logStreamNameHint = "{hostname}"

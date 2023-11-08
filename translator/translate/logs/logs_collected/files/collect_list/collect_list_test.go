@@ -865,7 +865,7 @@ func TestConflictingLogGroupClass(t *testing.T) {
 				"file_path":"path1",
        			"log_group_name":"test1",
 				"retention_in_days":3,
-				"log_group_class":   "essentials"
+				"log_group_class":   "Infrequent_access"
 
 			}
 		]
@@ -887,7 +887,7 @@ func TestConflictingLogGroupClass(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": 3,
 		"from_beginning":    true,
-		"log_group_class":   util.EssentialsLogGroupClass,
+		"log_group_class":   util.InfrequentAccessLogGroupClass,
 	}}
 	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different log_group_class values can't be set for the same log group: test1", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 	assert.Equal(t, expectVal, val)

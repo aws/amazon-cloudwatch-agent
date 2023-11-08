@@ -77,12 +77,12 @@ func monitorEvents(ctx *runtime.Context, config *data.Config) {
 		logStreamName := util.AskWithDefault("Log stream name:", logStreamNameHint)
 
 		logGroupDefaultOption := 1
-		logGroupClass := util.Choice("Which log group class would you like to have for this log group?", logGroupDefaultOption, []string{util.StandardLogGroupClass, util.EssentialsLogGroupClass})
+		logGroupClass := util.Choice("Which log group class would you like to have for this log group?", logGroupDefaultOption, []string{util.StandardLogGroupClass, util.InfrequentAccessLogGroupClass})
 		if logGroupClass == util.StandardLogGroupClass {
 			logGroupClass = util.StandardLogGroupClass
 			logGroupDefaultOption = 1
 		} else {
-			logGroupClass = util.EssentialsLogGroupClass
+			logGroupClass = util.InfrequentAccessLogGroupClass
 			logGroupDefaultOption = 2
 		}
 

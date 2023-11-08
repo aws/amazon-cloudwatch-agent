@@ -38,8 +38,8 @@ const (
 	MapKeyInstances                 = "resources"
 	MapKeyMeasurement               = "measurement"
 
-	StandardLogGroupClass   = "STANDARD"
-	EssentialsLogGroupClass = "ESSENTIALS"
+	StandardLogGroupClass         = "STANDARD"
+	InfrequentAccessLogGroupClass = "INFREQUENT_ACCESS"
 )
 
 func CurOS() string {
