@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -36,6 +37,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
+	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -158,6 +160,7 @@ func reloadLoop(
 							if err := wlog.SetLevelFromName(logLevel); err != nil {
 								log.Printf("E! Unable to set log level: %v\n", err)
 							}
+							cwaLogger.SetLevel(cwaLogger.ConvertToAtomicLevel(wlog.LogLevel()))
 							// Set AWS SDK logging
 							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
 							configaws.SetSDKLogLevel(sdkLogLevel)
@@ -257,7 +260,7 @@ func runAgent(ctx context.Context,
 		LogWithTimezone:     "",
 	}
 
-	logger.SetupLogging(logConfig)
+	writer := logger.NewLogWriter(logConfig)
 
 	log.Printf("I! Starting AmazonCloudWatchAgent %s\n", version.Full())
 	// Need to set SDK log level before plugins get loaded.
@@ -331,7 +334,7 @@ func runAgent(ctx context.Context,
 
 	useragent.Get().SetComponents(cfg, c)
 
-	params := getCollectorParams(factories, provider)
+	params := getCollectorParams(factories, provider, writer)
 
 	cmd := otelcol.NewCommand(params)
 
@@ -344,8 +347,10 @@ func runAgent(ctx context.Context,
 	return cmd.Execute()
 }
 
-func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider) otelcol.CollectorSettings {
-	params := otelcol.CollectorSettings{
+func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider, writer io.Writer) otelcol.CollectorSettings {
+	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
+	loggingOptions := cwaLogger.NewLoggerOptions(writer, level)
+	return otelcol.CollectorSettings{
 		Factories:      factories,
 		ConfigProvider: provider,
 		// build info is essential for populating the user agent string in otel contrib upstream exporters, like the EMF exporter
@@ -354,8 +359,8 @@ func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProv
 			Description: "CloudWatch Agent",
 			Version:     version.Number(),
 		},
+		LoggingOptions: loggingOptions,
 	}
-	return params
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
