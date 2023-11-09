@@ -6,9 +6,6 @@ Bug fixes:
 * Fix logger not rotating log file after file size reaches 100MB
 * Fix enhanced container insights not publishing metrics for pods in pending status
 
-Enhancements:
-* Remove agentinfo package in favor of agenthealth extension
-
 ========================================================================
 Amazon CloudWatch Agent 1.300031.0 (2023-11-7)
 ========================================================================
