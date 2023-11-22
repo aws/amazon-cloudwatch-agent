@@ -70,6 +70,8 @@ func TestKeeperProcessor(t *testing.T) {
 	}
 
 	testKeeper := NewKeeper(config)
+	assert.Equal(t, 1, len(testKeeper.Actions))
+
 	isTrace := false
 
 	testCases := []TestCaseForKeeper{

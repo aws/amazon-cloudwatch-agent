@@ -5,7 +5,6 @@ package rules
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/gobwas/glob"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -77,18 +76,18 @@ func getExactKey(metricDimensionKey string, isTrace bool) string {
 	return traceDimensionKey
 }
 
-func matchesSelectors(attributes pcommon.Map, selectorMatchers []SelectorMatcherItem, isTrace bool) (bool, error) {
+func matchesSelectors(attributes pcommon.Map, selectorMatchers []SelectorMatcherItem, isTrace bool) bool {
 	for _, item := range selectorMatchers {
 		exactKey := getExactKey(item.Key, isTrace)
 		value, ok := attributes.Get(exactKey)
 		if !ok {
-			return false, fmt.Errorf("can not find attribute %q in the datapoint", exactKey)
+			return false
 		}
 		if !item.Matcher.Match(value.AsString()) {
-			return false, nil
+			return false
 		}
 	}
-	return true, nil
+	return true
 }
 
 func generateSelectorMatchers(selectors []Selector) []SelectorMatcherItem {
