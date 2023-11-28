@@ -4,6 +4,7 @@
 package otlp
 
 import (
+	_ "embed"
 	"fmt"
 
 	"go.opentelemetry.io/collector/component"
@@ -23,6 +24,9 @@ var (
 	configKeys = map[component.DataType]string{
 		component.DataTypeTraces: common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
 	}
+
+	//go:embed appsignals_config.yaml
+	appSignalsConfig string
 )
 
 type translator struct {
@@ -59,11 +63,26 @@ func NewTranslator(opts ...Option) common.Translator[component.Config] {
 	return t
 }
 
+func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
+	t := &translator{name: name, factory: otlpreceiver.NewFactory()}
+	for _, opt := range opts {
+		opt.apply(t)
+	}
+	return t
+}
+
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
+
+	// TODO: Should follow pattern done in awsemf and awsexray exporter translations (i.e should be integrated with standard otlp translation)
+	if t.name == common.AppSignals {
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfig)
+	}
+
 	configKey, ok := configKeys[t.dataType]
 	if !ok {
 		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
@@ -71,7 +90,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(configKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}
-	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
 	cfg.HTTP.Endpoint = defaultHttpEndpoint
 	if endpoint, ok := common.GetString(conf, common.ConfigKey(configKey, "grpc_endpoint")); ok {

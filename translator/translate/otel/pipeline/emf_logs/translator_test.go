@@ -22,6 +22,7 @@ func TestTranslator(t *testing.T) {
 		receivers    []string
 		processors   []string
 		exporters    []string
+		extensions   []string
 	}
 	cit := NewTranslator()
 	require.EqualValues(t, "logs/emf_logs", cit.ID().String())
@@ -47,6 +48,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
+				extensions:   []string{"agenthealth/logs"},
 			},
 		},
 		"WithStructuredLogKey": {
@@ -62,6 +64,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
+				extensions:   []string{"agenthealth/logs"},
 			},
 		},
 		"WithUdpServiceAddress": {
@@ -79,6 +82,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"udplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
+				extensions:   []string{"agenthealth/logs"},
 			},
 		},
 		"WithTcpServiceAddress": {
@@ -96,6 +100,7 @@ func TestTranslator(t *testing.T) {
 				receivers:    []string{"tcplog/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
+				extensions:   []string{"agenthealth/logs"},
 			},
 		},
 	}
@@ -111,6 +116,7 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.Keys(), component.ID.String))
 			}
 		})
 	}

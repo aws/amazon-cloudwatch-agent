@@ -14,47 +14,21 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-)
-
-const (
-	COMMON_CONFIG = "common-config.toml"
-	JSON          = "amazon-cloudwatch-agent.json"
-	TOML          = "amazon-cloudwatch-agent.toml"
-	YAML          = "amazon-cloudwatch-agent.yaml"
-	ENV           = "env-config.json"
-
-	AGENT_LOG_FILE = "amazon-cloudwatch-agent.log"
-
-	//TODO this CONFIG_DIR_IN_CONTAINER should change to something indicate dir, keep it for now to avoid break testing
-	CONFIG_DIR_IN_CONTAINER = "/etc/cwagentconfig"
-)
-
-var (
-	jsonConfigPath   string
-	jsonDirPath      string
-	envConfigPath    string
-	tomlConfigPath   string
-	commonConfigPath string
-	yamlConfigPath   string
-
-	agentLogFilePath string
-
-	translatorBinaryPath string
-	agentBinaryPath      string
 )
 
 // We use an environment variable here because we need this condition before the translator reads agent config json file.
 var runInContainer = os.Getenv(config.RUN_IN_CONTAINER)
 
 func translateConfig() error {
-	args := []string{"--output", tomlConfigPath, "--mode", "auto"}
+	args := []string{"--output", paths.TomlConfigPath, "--mode", "auto"}
 	if runInContainer == config.RUN_IN_CONTAINER_TRUE {
-		args = append(args, "--input-dir", CONFIG_DIR_IN_CONTAINER)
+		args = append(args, "--input-dir", paths.CONFIG_DIR_IN_CONTAINER)
 	} else {
-		args = append(args, "--input", jsonConfigPath, "--input-dir", jsonDirPath, "--config", commonConfigPath)
+		args = append(args, "--input", paths.JsonConfigPath, "--input-dir", paths.JsonDirPath, "--config", paths.CommonConfigPath)
 	}
-	cmd := exec.Command(translatorBinaryPath, args...)
+	cmd := exec.Command(paths.TranslatorBinaryPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stdout
 	err := cmd.Run()
@@ -83,7 +57,7 @@ func main() {
 
 	if runInContainer != config.RUN_IN_CONTAINER_TRUE {
 		writer = &lumberjack.Logger{
-			Filename:   agentLogFilePath,
+			Filename:   paths.AgentLogFilePath,
 			MaxSize:    100, //MB
 			MaxBackups: 5,   //backup files
 			MaxAge:     7,   //days
@@ -96,10 +70,10 @@ func main() {
 	if err := translateConfig(); err != nil {
 		log.Fatalf("E! Cannot translate JSON, ERROR is %v \n", err)
 	}
-	log.Printf("I! Config has been translated into TOML %s \n", tomlConfigPath)
-	printFileContents(tomlConfigPath)
-	log.Printf("I! Config has been translated into YAML %s \n", yamlConfigPath)
-	printFileContents(yamlConfigPath)
+	log.Printf("I! Config has been translated into TOML %s \n", paths.TomlConfigPath)
+	printFileContents(paths.TomlConfigPath)
+	log.Printf("I! Config has been translated into YAML %s \n", paths.YamlConfigPath)
+	printFileContents(paths.YamlConfigPath)
 
 	if err := startAgent(writer); err != nil {
 		log.Printf("E! Error when starting Agent, Error is %v \n", err)

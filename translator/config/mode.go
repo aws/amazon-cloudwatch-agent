@@ -9,3 +9,9 @@ const (
 	ModeOnPremise = "onPremise"
 	ModeWithIRSA  = "withIRSA"
 )
+
+const (
+	ShortModeEC2      = "EC2"
+	ShortModeOnPrem   = "OP"
+	ShortModeWithIRSA = "WI"
+)

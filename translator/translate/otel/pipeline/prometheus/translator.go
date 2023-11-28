@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 )
@@ -45,6 +46,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Processors: common.NewTranslatorMap(
 			batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 		),
-		Exporters: common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
+		Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
+		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
 	}, nil
 }

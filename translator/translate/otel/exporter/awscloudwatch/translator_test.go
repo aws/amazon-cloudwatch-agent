@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -147,21 +148,23 @@ func TestTranslator(t *testing.T) {
 				require.NoError(t, err)
 				gotCfg, ok := got.(*cloudwatch.Config)
 				require.True(t, ok)
-				require.Equal(t, testCase.want.Namespace, gotCfg.Namespace)
-				require.Equal(t, testCase.want.Region, gotCfg.Region)
-				require.Equal(t, testCase.want.ForceFlushInterval, gotCfg.ForceFlushInterval)
-				require.Equal(t, testCase.want.RoleARN, gotCfg.RoleARN)
-				require.Equal(t, testCase.want.AccessKey, gotCfg.AccessKey)
-				require.Equal(t, testCase.want.SecretKey, gotCfg.SecretKey)
-				require.Equal(t, testCase.want.Token, gotCfg.Token)
-				require.Equal(t, testCase.want.Profile, gotCfg.Profile)
-				require.Equal(t, testCase.want.SharedCredentialFilename, gotCfg.SharedCredentialFilename)
-				require.Equal(t, testCase.want.MaxValuesPerDatum, gotCfg.MaxValuesPerDatum)
-				require.Equal(t, testCase.want.RollupDimensions, gotCfg.RollupDimensions)
+				assert.Equal(t, testCase.want.Namespace, gotCfg.Namespace)
+				assert.Equal(t, testCase.want.Region, gotCfg.Region)
+				assert.Equal(t, testCase.want.ForceFlushInterval, gotCfg.ForceFlushInterval)
+				assert.Equal(t, testCase.want.RoleARN, gotCfg.RoleARN)
+				assert.Equal(t, testCase.want.AccessKey, gotCfg.AccessKey)
+				assert.Equal(t, testCase.want.SecretKey, gotCfg.SecretKey)
+				assert.Equal(t, testCase.want.Token, gotCfg.Token)
+				assert.Equal(t, testCase.want.Profile, gotCfg.Profile)
+				assert.Equal(t, testCase.want.SharedCredentialFilename, gotCfg.SharedCredentialFilename)
+				assert.Equal(t, testCase.want.MaxValuesPerDatum, gotCfg.MaxValuesPerDatum)
+				assert.Equal(t, testCase.want.RollupDimensions, gotCfg.RollupDimensions)
+				assert.NotNil(t, gotCfg.MiddlewareID)
+				assert.Equal(t, "agenthealth/metrics", gotCfg.MiddlewareID.String())
 				if testCase.wantWindows != nil && runtime.GOOS == "windows" {
-					require.Equal(t, testCase.wantWindows.DropOriginalConfigs, gotCfg.DropOriginalConfigs)
+					assert.Equal(t, testCase.wantWindows.DropOriginalConfigs, gotCfg.DropOriginalConfigs)
 				} else {
-					require.Equal(t, testCase.want.DropOriginalConfigs, gotCfg.DropOriginalConfigs)
+					assert.Equal(t, testCase.want.DropOriginalConfigs, gotCfg.DropOriginalConfigs)
 				}
 			}
 		})

@@ -73,7 +73,7 @@ const sampleConfig = `
       log_stream_name = "<log_stream_name>"
       publish_multi_logs = false
       timestamp_regex = "^(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}).*$"
-      timestamp_layout = "02 Jan 2006 15:04:05"
+      timestamp_layout = ["_2 Jan 2006 15:04:05"]
       timezone = "UTC"
       multi_line_start_pattern = "{timestamp_regex}"
       ## Read file from beginning.

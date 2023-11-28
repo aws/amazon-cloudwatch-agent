@@ -4,14 +4,20 @@
 package awsemf
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 var nilSlice []string
@@ -19,6 +25,8 @@ var nilMetricDescriptorsSlice []awsemfexporter.MetricDescriptor
 
 func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
 	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
 		env     map[string]string
@@ -267,9 +275,10 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ContainerName", "FullPodName", "PodName", "Namespace", "ClusterName"}, {"ContainerName", "PodName", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{
-							"container_cpu_utilization", "container_cpu_utilization_over_container_limit",
-							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total",
-							"container_filesystem_usage", "container_status_running", "container_status_terminated", "container_status_waiting", "container_status_waiting_reason_crashed"},
+							"container_cpu_utilization", "container_cpu_utilization_over_container_limit", "container_cpu_limit", "container_cpu_request",
+							"container_memory_utilization", "container_memory_utilization_over_container_limit", "container_memory_failures_total", "container_memory_limit", "container_memory_request",
+							"container_filesystem_usage", "container_filesystem_available", "container_filesystem_utilization",
+						},
 					},
 					{
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"Service", "Namespace", "ClusterName"}, {"ClusterName", "Namespace"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}},
@@ -278,22 +287,23 @@ func TestTranslator(t *testing.T) {
 							"pod_memory_utilization_over_pod_limit"},
 					},
 					{
-						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}},
-						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts",
-							"pod_number_of_containers", "pod_number_of_running_containers",
-							"pod_status_ready", "pod_status_scheduled",
-							"pod_status_running", "pod_status_pending",
-							"pod_status_failed", "pod_status_unknown",
-							"pod_status_succeeded"},
-					},
-					{
 						Dimensions: [][]string{
 							{"FullPodName", "PodName", "Namespace", "ClusterName"},
 							{"PodName", "Namespace", "ClusterName"},
-							{"Service", "Namespace", "ClusterName"},
+							{"Namespace", "ClusterName"},
 							{"ClusterName"},
 						},
-						MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_rx_errors", "pod_interface_network_tx_dropped", "pod_interface_network_tx_errors"},
+						MetricNameSelectors: []string{"pod_interface_network_rx_dropped", "pod_interface_network_tx_dropped"},
+					},
+					{
+						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}},
+						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers",
+							"pod_status_ready", "pod_status_scheduled", "pod_status_running", "pod_status_pending", "pod_status_failed", "pod_status_unknown",
+							"pod_status_succeeded", "pod_memory_request", "pod_memory_limit", "pod_cpu_limit", "pod_cpu_request",
+							"pod_container_status_running", "pod_container_status_terminated", "pod_container_status_waiting", "pod_container_status_waiting_reason_crash_loop_back_off",
+							"pod_container_status_waiting_reason_image_pull_error", "pod_container_status_waiting_reason_start_error", "pod_container_status_waiting_reason_create_container_error",
+							"pod_container_status_waiting_reason_create_container_config_error", "pod_container_status_terminated_reason_oom_killed",
+						},
 					},
 					{
 						Dimensions: [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
@@ -310,8 +320,7 @@ func TestTranslator(t *testing.T) {
 							{"ClusterName"},
 						},
 						MetricNameSelectors: []string{
-							"node_interface_network_rx_dropped", "node_interface_network_rx_errors",
-							"node_interface_network_tx_dropped", "node_interface_network_tx_errors",
+							"node_interface_network_rx_dropped", "node_interface_network_tx_dropped",
 							"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total"},
 					},
 					{
@@ -340,29 +349,47 @@ func TestTranslator(t *testing.T) {
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "endpoint"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"etcd_db_total_size_in_bytes"},
+						MetricNameSelectors: []string{"apiserver_storage_size_bytes", "apiserver_storage_db_total_size_in_bytes", "etcd_db_total_size_in_bytes"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "resource"}, {"ClusterName"}},
-						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds"},
+						MetricNameSelectors: []string{"apiserver_storage_list_duration_seconds", "apiserver_longrunning_requests", "apiserver_storage_objects"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "verb"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_request_duration_seconds", "rest_client_request_duration_seconds"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "code", "verb"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_request_total", "apiserver_request_total_5xx"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "operation"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_admission_controller_admission_duration_seconds", "apiserver_admission_step_admission_duration_seconds", "etcd_request_duration_seconds"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "code", "method"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"rest_client_requests_total"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "request_kind"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_current_inflight_requests", "apiserver_current_inqueue_requests"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "name"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_admission_webhook_admission_duration_seconds"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "group"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_requested_deprecated_apis"},
+					},
+					{
+						Dimensions:          [][]string{{"ClusterName", "reason"}, {"ClusterName"}},
+						MetricNameSelectors: []string{"apiserver_flowcontrol_rejected_requests_total"},
 					},
 					{
 						Dimensions:          [][]string{{"ClusterName", "priority_level"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"apiserver_flowcontrol_request_concurrency_limit"},
-					},
-					{
-						Dimensions: [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{
-							"apiserver_admission_controller_admission_duration_seconds",
-							"apiserver_flowcontrol_rejected_requests_total",
-							"apiserver_request_duration_seconds",
-							"apiserver_request_total",
-							"apiserver_request_total_5xx",
-							"apiserver_storage_objects",
-							"etcd_request_duration_seconds",
-							"rest_client_request_duration_seconds",
-							"rest_client_requests_total",
-						},
 					},
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
@@ -372,12 +399,37 @@ func TestTranslator(t *testing.T) {
 						Overwrite:  true,
 					},
 					{
-						MetricName: "apiserver_flowcontrol_request_concurrency_limit",
+						MetricName: "apiserver_admission_step_admission_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_admission_webhook_admission_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_current_inflight_requests",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_current_inqueue_requests",
 						Unit:       "Count",
 						Overwrite:  true,
 					},
 					{
 						MetricName: "apiserver_flowcontrol_rejected_requests_total",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_flowcontrol_request_concurrency_limit",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_longrunning_requests",
 						Unit:       "Count",
 						Overwrite:  true,
 					},
@@ -397,8 +449,33 @@ func TestTranslator(t *testing.T) {
 						Overwrite:  true,
 					},
 					{
+						MetricName: "apiserver_requested_deprecated_apis",
+						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
 						MetricName: "apiserver_storage_objects",
 						Unit:       "Count",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_storage_list_duration_seconds",
+						Unit:       "Seconds",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_storage_db_total_size_in_bytes",
+						Unit:       "Bytes",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "apiserver_storage_size_bytes",
+						Unit:       "Bytes",
+						Overwrite:  true,
+					},
+					{
+						MetricName: "etcd_db_total_size_in_bytes",
+						Unit:       "Bytes",
 						Overwrite:  true,
 					},
 					{
@@ -594,18 +671,72 @@ func TestTranslator(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*awsemfexporter.Config)
 				require.True(t, ok)
-				require.Equal(t, testCase.want["namespace"], gotCfg.Namespace)
-				require.Equal(t, testCase.want["log_group_name"], gotCfg.LogGroupName)
-				require.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
-				require.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
-				require.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
-				require.Equal(t, testCase.want["enhanced_container_insights"], gotCfg.EnhancedContainerInsights)
-				require.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
-				require.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
-				require.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)
-				require.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
-				require.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
-				require.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				assert.Equal(t, testCase.want["namespace"], gotCfg.Namespace)
+				assert.Equal(t, testCase.want["log_group_name"], gotCfg.LogGroupName)
+				assert.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
+				assert.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
+				assert.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
+				assert.Equal(t, testCase.want["enhanced_container_insights"], gotCfg.EnhancedContainerInsights)
+				assert.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
+				assert.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
+				assert.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)
+				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
+				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
+				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				assert.Equal(t, "global_arn", gotCfg.RoleARN)
+				assert.Equal(t, "us-east-1", gotCfg.Region)
+				assert.NotNil(t, gotCfg.MiddlewareID)
+				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
+			}
+		})
+	}
+}
+
+func TestTranslateAppSignals(t *testing.T) {
+	tt := NewTranslatorWithName(common.AppSignals)
+	testCases := map[string]struct {
+		input        map[string]interface{}
+		want         *confmap.Conf
+		wantErr      error
+		isKubernetes bool
+	}{
+		"WithAppSignalsEnabledEKS": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want:         testutil.GetConf(t, filepath.Join("appsignals_config_eks.yaml")),
+			isKubernetes: true,
+		},
+		"WithAppSignalsEnabledGeneric": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want:         testutil.GetConf(t, filepath.Join("appsignals_config_generic.yaml")),
+			isKubernetes: false,
+		},
+	}
+	factory := awsemfexporter.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if testCase.isKubernetes {
+				t.Setenv(common.KubernetesEnvVar, "TEST")
+			}
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*awsemfexporter.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})
 	}

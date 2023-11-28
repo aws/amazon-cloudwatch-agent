@@ -14,14 +14,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
 const (
-	reqSizeLimit   = 1024 * 1024
-	reqEventsLimit = 10000
+	reqSizeLimit     = 1024 * 1024
+	reqEventsLimit   = 10000
+	warnOldTimeStamp = 1 * 24 * time.Hour
 )
 
 var (
@@ -51,6 +51,7 @@ type pusher struct {
 	flushTimer          *time.Timer
 	sequenceToken       *string
 	lastValidTime       int64
+	lastUpdateTime      time.Time
 	needSort            bool
 	stop                <-chan struct{}
 	lastSentTime        time.Time
@@ -58,10 +59,9 @@ type pusher struct {
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
-	agentInfo             agentinfo.AgentInfo
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, agentInfo agentinfo.AgentInfo) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
@@ -74,7 +74,6 @@ func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.D
 		stop:            stop,
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
-		agentInfo:       agentInfo,
 	}
 	p.putRetentionPolicy()
 	p.wg.Add(1)
@@ -230,9 +229,7 @@ func (p *pusher) send() {
 	retryCount := 0
 	for {
 		input.SequenceToken = p.sequenceToken
-		opStartTime := time.Now()
 		output, err := p.Service.PutLogEvents(input)
-		p.agentInfo.RecordOpData(time.Since(opStartTime), p.bufferredSize, err)
 		if err == nil {
 			if output.NextSequenceToken != nil {
 				p.sequenceToken = output.NextSequenceToken
@@ -414,12 +411,19 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 			// a valid timestamp and use the last valid timestamp for new entries that does
 			// not have a timestamp.
 			t = p.lastValidTime
+			if !p.lastUpdateTime.IsZero() {
+				// Check when timestamp has an interval of 5 days.
+				if time.Since(p.lastUpdateTime) > warnOldTimeStamp {
+					p.Log.Warnf("Unable to parse timestamp, using last valid timestamp found in the logs %v: which is at least older than 1 day for log group %v: ", p.lastValidTime, p.Group)
+				}
+			}
 		} else {
 			t = time.Now().UnixNano() / 1000000
 		}
 	} else {
 		t = e.Time().UnixNano() / 1000000
 		p.lastValidTime = t
+		p.lastUpdateTime = time.Now()
 	}
 	return &cloudwatchlogs.InputLogEvent{
 		Message:   &message,

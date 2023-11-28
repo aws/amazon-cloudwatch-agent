@@ -5,8 +5,11 @@ exporters:
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 5000
+        middleware: agenthealth/metrics
+        mode: EC2
         namespace: CWAgent
         region: us-west-2
+        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
         role_arn: metrics_role_arn_value_test
@@ -19,18 +22,20 @@ exporters:
     awscloudwatchlogs/emf_logs:
         certificate_file_path: ""
         emf_only: true
-        endpoint: "https://logs-fips.us-west-2.amazonaws.com"
-        "imds_retries": 1
+        endpoint: https://logs-fips.us-west-2.amazonaws.com
+        imds_retries: 1
         local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
         log_stream_name: LOG_STREAM_NAME
         max_retries: 2
+        middleware: agenthealth/logs
         no_verify_ssl: false
         num_workers: 8
+        profile: ""
         proxy_address: ""
         raw_log: true
-        region: "us-west-2"
+        region: us-west-2
         request_timeout_seconds: 30
         resource_arn: ""
         retry_on_failure:
@@ -43,36 +48,55 @@ exporters:
         role_arn: log_role_arn_value_test
         sending_queue:
             queue_size: 1000
-        profile: ""
-        shared_credentials_file: [ ]
+        shared_credentials_file: []
     awsxray:
         aws_log_groups: []
         certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
-        "imds_retries": 1
+        imds_retries: 1
         index_all_attributes: false
         indexed_attributes: []
         local_mode: true
         max_retries: 2
+        middleware: agenthealth/traces
         no_verify_ssl: true
         num_workers: 1
+        profile: ""
         proxy_address: https://proxy.proxy.com
         region: us-west-2
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
-        profile: ""
-        shared_credentials_file: [ ]
+        shared_credentials_file: []
         telemetry:
             enabled: true
             include_metadata: true
-extensions: {}
+extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+    agenthealth/traces:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutTraceSegments
 processors:
     batch/emf_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
     batch/xray:
+        metadata_cardinality_limit: 1000
+        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -108,10 +132,13 @@ receivers:
             role_arn: trace_role_arn_value_test
             tls:
                 ca_file: ""
+                ca_pem: "[REDACTED]"
                 cert_file: ""
+                cert_pem: "[REDACTED]"
                 insecure: true
                 insecure_skip_verify: false
                 key_file: ""
+                key_pem: "[REDACTED]"
                 max_version: ""
                 min_version: ""
                 reload_interval: 0s
@@ -135,42 +162,55 @@ receivers:
                 cors: null
                 endpoint: 0.0.0.0:2222
                 include_metadata: false
+                logs_url_path: /v1/logs
                 max_request_body_size: 0
+                metrics_url_path: /v1/metrics
+                response_headers: {}
                 tls: null
+                traces_url_path: /v1/traces
     telegraf_nvidia_smi:
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_procstat/1340600742:
         alias_name: agent
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_statsd:
         collection_interval: 10s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/1063858558:
         alias_name: Network Interface
         collection_interval: 5s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/1492679118:
         alias_name: Memory
         collection_interval: 5s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/2402387132:
         alias_name: System
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/3081249416:
         alias_name: customizedObjectName
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/3762679655:
         alias_name: Processor
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     telegraf_win_perf_counters/4283769065:
         alias_name: LogicalDisk
         collection_interval: 1m0s
-        initial_delay: 1s
+        initial_delay: "1s"
+        timeout: 0s
     udplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -190,7 +230,10 @@ receivers:
         storage: null
         type: udp_input
 service:
-    extensions: []
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/logs
+        - agenthealth/traces
     pipelines:
         logs/emf_logs:
             exporters:
@@ -240,7 +283,8 @@ service:
         metrics:
             address: ""
             level: None
-            metric_readers: []
+            readers: []
         resource: {}
         traces:
+            processors: []
             propagators: []

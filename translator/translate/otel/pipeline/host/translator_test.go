@@ -35,6 +35,7 @@ func TestTranslator(t *testing.T) {
 		receivers  []string
 		processors []string
 		exporters  []string
+		extensions []string
 	}
 	testCases := map[string]struct {
 		input        map[string]interface{}
@@ -60,6 +61,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{},
 				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
 			},
 		},
 		"WithMetricsKeyNet": {
@@ -76,6 +78,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"cumulativetodelta/hostDeltaMetrics"},
 				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
 			},
 		},
 		"WithMetricDecoration": {
@@ -99,6 +102,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{"transform"},
 				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
 			},
 		},
 		"WithoutMetricDecoration": {
@@ -119,6 +123,7 @@ func TestTranslator(t *testing.T) {
 				receivers:  []string{"nop", "other"},
 				processors: []string{},
 				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
 			},
 		},
 	}
@@ -139,6 +144,7 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.extensions, collections.MapSlice(got.Extensions.Keys(), component.ID.String))
 			}
 		})
 	}

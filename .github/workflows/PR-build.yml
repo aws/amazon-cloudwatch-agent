@@ -51,7 +51,7 @@ jobs:
         if: needs.changes.outputs.lint == 'true'
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
           cache: false
 
       - name: Check out code
@@ -115,7 +115,7 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
           cache: false
 
       - name: Check out code

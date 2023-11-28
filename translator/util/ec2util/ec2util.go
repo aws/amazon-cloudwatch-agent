@@ -5,7 +5,6 @@ package ec2util
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -15,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -113,11 +112,11 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 	if hostname, err := mdDisableFallback.GetMetadata("hostname"); err == nil {
 		e.Hostname = hostname
 	} else {
-		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
+		fmt.Println("D! could not get hostname without imds v1 fallback enable thus enable fallback")
 		hostnameInner, errInner := mdEnableFallback.GetMetadata("hostname")
 		if errInner == nil {
 			e.Hostname = hostnameInner
-			agentinfo.SetImdsFallbackSucceed()
+			provider.GetFlagsStats().SetFlag(provider.FlagIMDSFallbackSucceed)
 		} else {
 			fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", errInner)
 		}
@@ -130,14 +129,14 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		e.PrivateIP = instanceIdentityDocument.PrivateIP
 		e.InstanceID = instanceIdentityDocument.InstanceID
 	} else {
-		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
+		fmt.Println("D! could not get instance document without imds v1 fallback enable thus enable fallback")
 		instanceIdentityDocumentInner, errInner := mdEnableFallback.GetInstanceIdentityDocument()
 		if errInner == nil {
 			e.Region = instanceIdentityDocumentInner.Region
 			e.AccountID = instanceIdentityDocumentInner.AccountID
 			e.PrivateIP = instanceIdentityDocumentInner.PrivateIP
 			e.InstanceID = instanceIdentityDocumentInner.InstanceID
-			agentinfo.SetImdsFallbackSucceed()
+			provider.GetFlagsStats().SetFlag(provider.FlagIMDSFallbackSucceed)
 		} else {
 			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", errInner)
 		}

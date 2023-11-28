@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -34,7 +35,9 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
+	"github.com/aws/amazon-cloudwatch-agent/internal/version"
+	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -42,6 +45,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 const (
@@ -51,14 +55,14 @@ const (
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
 var pprofAddr = flag.String("pprof-addr", "",
-	"pprof address to listen on, not activate pprof if empty")
+	"pprof address to listen on, disabled by default, examples: 'localhost:1234', ':4567' (restricted to localhost)")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
-var fConfig = flag.String("config", "", "configuration file to load")
-var fOtelConfig = flag.String("otelconfig", "", "YAML configuration file to run OTel pipeline")
+var fTomlConfig = flag.String("config", "", "configuration file to load")
+var fOtelConfig = flag.String("otelconfig", paths.YamlConfigPath, "YAML configuration file to run OTel pipeline")
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -80,8 +84,6 @@ var fAggregatorFilters = flag.String("aggregator-filter", "",
 	"filter the aggregators to enable, separator is :")
 var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
-var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
@@ -137,7 +139,7 @@ func reloadLoop(
 			}
 		}(ctx)
 
-		if envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig); err == nil {
+		if envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig); err == nil {
 			// Reloads environment variables when file is changed
 			go func(ctx context.Context, envConfigPath string) {
 				var previousModTime time.Time
@@ -158,6 +160,7 @@ func reloadLoop(
 							if err := wlog.SetLevelFromName(logLevel); err != nil {
 								log.Printf("E! Unable to set log level: %v\n", err)
 							}
+							cwaLogger.SetLevel(cwaLogger.ConvertToAtomicLevel(wlog.LogLevel()))
 							// Set AWS SDK logging
 							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
 							configaws.SetSDKLogLevel(sdkLogLevel)
@@ -181,17 +184,17 @@ func reloadLoop(
 // The "config-translator" program populates that file.
 func loadEnvironmentVariables(path string) error {
 	if path == "" {
-		return fmt.Errorf("No env config file specified")
+		return fmt.Errorf("no env config file specified")
 	}
 
 	bytes, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("Can't read env config file %s due to: %s", path, err.Error())
+		return fmt.Errorf("cannot read env config file %s due to: %s", path, err.Error())
 	}
 	envVars := map[string]string{}
 	err = json.Unmarshal(bytes, &envVars)
 	if err != nil {
-		return fmt.Errorf("Can't create env config due to: %s", err.Error())
+		return fmt.Errorf("cannot create env config due to: %s", err.Error())
 	}
 
 	for key, val := range envVars {
@@ -203,7 +206,7 @@ func loadEnvironmentVariables(path string) error {
 
 func getEnvConfigPath(configPath, envConfigPath string) (string, error) {
 	if configPath == "" {
-		return "", fmt.Errorf("No config file specified")
+		return "", fmt.Errorf("no config file specified")
 	}
 	//load the environment variables that's saved in json env config file
 	if envConfigPath == "" {
@@ -217,7 +220,7 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	envConfigPath, err := getEnvConfigPath(*fConfig, *fEnvConfig)
+	envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig)
 	if err != nil {
 		return err
 	}
@@ -257,9 +260,9 @@ func runAgent(ctx context.Context,
 		LogWithTimezone:     "",
 	}
 
-	logger.SetupLogging(logConfig)
+	writer := logger.NewLogWriter(logConfig)
 
-	log.Printf("I! Starting AmazonCloudWatchAgent %s\n", agentinfo.FullVersion())
+	log.Printf("I! Starting AmazonCloudWatchAgent %s\n", version.Full())
 	// Need to set SDK log level before plugins get loaded.
 	// Some aws.Config objects get created early and live forever which means
 	// we cannot change the sdk log level without restarting the Agent.
@@ -305,7 +308,7 @@ func runAgent(ctx context.Context,
 		// So just start Telegraf.
 		_, err = os.Stat(*fOtelConfig)
 		if errors.Is(err, os.ErrNotExist) {
-			agentinfo.SetComponents(&otelcol.Config{}, c)
+			useragent.Get().SetComponents(&otelcol.Config{}, c)
 			return ag.Run(ctx)
 		}
 	}
@@ -329,9 +332,9 @@ func runAgent(ctx context.Context,
 		return err
 	}
 
-	agentinfo.SetComponents(cfg, c)
+	useragent.Get().SetComponents(cfg, c)
 
-	params := getCollectorParams(factories, provider)
+	params := getCollectorParams(factories, provider, writer)
 
 	cmd := otelcol.NewCommand(params)
 
@@ -344,18 +347,20 @@ func runAgent(ctx context.Context,
 	return cmd.Execute()
 }
 
-func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider) otelcol.CollectorSettings {
-	params := otelcol.CollectorSettings{
+func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider, writer io.Writer) otelcol.CollectorSettings {
+	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
+	loggingOptions := cwaLogger.NewLoggerOptions(writer, level)
+	return otelcol.CollectorSettings{
 		Factories:      factories,
 		ConfigProvider: provider,
 		// build info is essential for populating the user agent string in otel contrib upstream exporters, like the EMF exporter
 		BuildInfo: component.BuildInfo{
 			Command:     "CWAgent",
 			Description: "CloudWatch Agent",
-			Version:     agentinfo.Version(),
+			Version:     version.Number(),
 		},
+		LoggingOptions: loggingOptions,
 	}
-	return params
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
@@ -437,6 +442,9 @@ func main() {
 			parts := strings.Split(pprofHostPort, ":")
 			if len(parts) == 2 && parts[0] == "" {
 				pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+			} else if parts[0] != "localhost" {
+				log.Printf("W! Not starting pprof, it is restricted to localhost:nnnn")
+				return
 			}
 			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
 
@@ -451,7 +459,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Println(agentinfo.FullVersion())
+			fmt.Println(version.Full())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -490,7 +498,7 @@ func main() {
 		}
 		return
 	case *fVersion:
-		fmt.Println(agentinfo.FullVersion())
+		fmt.Println(version.Full())
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
@@ -516,6 +524,9 @@ func main() {
 				}
 				envVars[parts[0]] = parts[1]
 				bytes, err = json.MarshalIndent(envVars, "", "\t")
+				if err != nil {
+					log.Fatalf("E! Failed to marshal env config: %v", err)
+				}
 				if err = os.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
@@ -550,8 +561,8 @@ func main() {
 		// Handle the --service flag here to prevent any issues with tooling that
 		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
-			if *fConfig != "" {
-				svcConfig.Arguments = []string{"--config", *fConfig}
+			if *fTomlConfig != "" {
+				svcConfig.Arguments = []string{"--config", *fTomlConfig}
 			}
 			if *fConfigDirectory != "" {
 				svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", *fConfigDirectory)
@@ -602,7 +613,7 @@ func windowsRunAsService() bool {
 }
 
 func loadTomlConfigIntoAgent(c *config.Config) error {
-	err := c.LoadConfig(*fConfig)
+	err := c.LoadConfig(*fTomlConfig)
 	if err != nil {
 		return err
 	}
@@ -632,8 +643,8 @@ func validateAgentFinalConfigAndPlugins(c *config.Config) error {
 
 	if *fSchemaTest {
 		//up to this point, the given config file must be valid
-		fmt.Println(agentinfo.FullVersion())
-		fmt.Printf("The given config: %v is valid\n", *fConfig)
+		fmt.Println(version.Full())
+		fmt.Printf("The given config: %v is valid\n", *fTomlConfig)
 		os.Exit(0)
 	}
 

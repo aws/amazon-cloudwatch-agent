@@ -6,19 +6,26 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -33,7 +40,7 @@ const (
 	LogEntryField     = "value"
 
 	defaultFlushTimeout = 5 * time.Second
-	eventHeaderSize     = 26
+	eventHeaderSize     = 200
 	truncatedSuffix     = "[Truncated...]"
 	msgSizeLimit        = 256*1024 - eventHeaderSize
 
@@ -43,8 +50,14 @@ const (
 	attributesInFields = "attributesInFields"
 )
 
+var (
+	containerInsightsRegexp = regexp.MustCompile("^/aws/.*containerinsights/.*/(performance|prometheus)$")
+)
+
 type CloudWatchLogs struct {
 	Region           string `toml:"region"`
+	RegionType       string `toml:"region_type"`
+	Mode             string `toml:"mode"`
 	EndpointOverride string `toml:"endpoint_override"`
 	AccessKey        string `toml:"access_key"`
 	SecretKey        string `toml:"secret_key"`
@@ -67,6 +80,7 @@ type CloudWatchLogs struct {
 	pusherStopChan  chan struct{}
 	pusherWaitGroup sync.WaitGroup
 	cwDests         map[Target]*cwDest
+	middleware      awsmiddleware.Middleware
 }
 
 func (c *CloudWatchLogs) Connect() error {
@@ -136,12 +150,20 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			Logger:   configaws.SDKLogger{},
 		},
 	)
-	agentInfo := agentinfo.New(t.Group)
+	provider.GetFlagsStats().SetFlagWithValue(provider.FlagRegionType, c.RegionType)
+	provider.GetFlagsStats().SetFlagWithValue(provider.FlagMode, c.Mode)
+	if containerInsightsRegexp.MatchString(t.Group) {
+		useragent.Get().SetContainerInsightsFlag()
+	}
 	client.Handlers.Build.PushBackNamed(handlers.NewRequestCompressionHandler([]string{"PutLogEvents"}))
-	client.Handlers.Build.PushBackNamed(handlers.NewCustomHeaderHandler("User-Agent", agentInfo.UserAgent()))
-	client.Handlers.Build.PushBackNamed(handlers.NewDynamicCustomHeaderHandler("X-Amz-Agent-Stats", agentInfo.StatsHeader))
-
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, agentInfo)
+	if c.middleware != nil {
+		if err := awsmiddleware.NewConfigurer(c.middleware.Handlers()).Configure(awsmiddleware.SDKv1(&client.Handlers)); err != nil {
+			c.Log.Errorf("Unable to configure middleware on cloudwatch logs client: %v", err)
+		} else {
+			c.Log.Info("Configured middleware on AWS client")
+		}
+	}
+	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd
@@ -378,6 +400,13 @@ func init() {
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			pusherStopChan:     make(chan struct{}),
 			cwDests:            make(map[Target]*cwDest),
+			middleware: agenthealth.NewAgentHealth(
+				zap.NewNop(),
+				&agenthealth.Config{
+					IsUsageDataEnabled: envconfig.IsUsageDataEnabled(),
+					Stats:              agent.StatsConfig{Operations: []string{"PutLogEvents"}},
+				},
+			),
 		}
 	})
 }
