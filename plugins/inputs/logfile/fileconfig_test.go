@@ -79,7 +79,7 @@ func TestInfrequent_accessAndEmptyLogGroupClassInit(t *testing.T) {
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
 		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+)",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
+		TimestampLayout:       []string{"02 Jan 2006 15:04:05"},
 		Timezone:              "UTC",
 		MultiLineStartPattern: "{timestamp_regex}",
 		LogGroupClass:         util.InfrequentAccessLogGroupClass,
@@ -93,7 +93,7 @@ func TestInfrequent_accessAndEmptyLogGroupClassInit(t *testing.T) {
 		FilePath:              "/tmp/logfile.log",
 		LogGroupName:          "logfile.log",
 		TimestampRegex:        "(\\d{2} \\w{3} \\d{4} \\d{2}:\\d{2}:\\d{2}+)",
-		TimestampLayout:       "02 Jan 2006 15:04:05",
+		TimestampLayout:       []string{"02 Jan 2006 15:04:05"},
 		Timezone:              "UTC",
 		MultiLineStartPattern: "{timestamp_regex}",
 	}

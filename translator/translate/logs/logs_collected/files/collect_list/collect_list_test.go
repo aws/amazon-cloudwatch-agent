@@ -168,6 +168,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  []string{"Jan _2 15:04:05"},
 				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   util.StandardLogGroupClass,
 			}},
 		},
 		{
@@ -186,6 +187,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  []string{"Jan _2 15:04:05"},
 				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   util.StandardLogGroupClass,
 			}},
 		},
 		{
@@ -204,6 +206,7 @@ func TestTimestampFormatAll(t *testing.T) {
 				"retention_in_days": -1,
 				"timestamp_layout":  []string{"5 _2 1 15:04:05", "5 _2 01 15:04:05"},
 				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   util.StandardLogGroupClass,
 			}},
 		},
 		{
