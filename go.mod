@@ -92,7 +92,7 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Jeffail/gabs v1.4.0
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20231023230448-f645697bf350
-	github.com/aws/aws-sdk-go v1.47.12
+	github.com/aws/aws-sdk-go v1.48.6
 	github.com/aws/aws-sdk-go-v2 v1.23.0
 	github.com/aws/aws-sdk-go-v2/config v1.25.1
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.14.4 // indirect
