@@ -1,9 +1,14 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300031.0 (2023-11-7)
+Amazon CloudWatch Agent 1.300031.1 (2023-11-10)
 ========================================================================
 
-New features:
-* Support AppSignals on EKS and native EC2
+Bug fixes:
+* Fix logger not rotating log file after file size reaches 100MB
+* Fix enhanced container insights not publishing metrics for pods in pending status
+
+========================================================================
+Amazon CloudWatch Agent 1.300031.0 (2023-11-7)
+========================================================================
 
 Enhancements:
 * Allow empty measurement field in the agent configuration for backward-compatibility
