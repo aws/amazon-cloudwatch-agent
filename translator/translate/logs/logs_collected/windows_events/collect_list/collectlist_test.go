@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 )
 
@@ -48,6 +49,7 @@ func TestApplyRule(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": -1,
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -56,6 +58,7 @@ func TestApplyRule(t *testing.T) {
 			"log_group_name":    "Application",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 	}
 
@@ -118,6 +121,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -126,6 +130,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -134,6 +139,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 	}
 
@@ -186,6 +192,7 @@ func TestConflictingRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -194,6 +201,7 @@ func TestConflictingRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
+			"log_group_class":   util.StandardLogGroupClass,
 		},
 	}
 

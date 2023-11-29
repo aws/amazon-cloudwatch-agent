@@ -18,6 +18,7 @@ var knownConfigKeys = []string{
 	"file",                           // "file_path"
 	"log_group_name",                 // "log_group_name"
 	"log_stream_name",                // "log_stream_name", currently only single value in the output
+	"log_group_class",                // "log_group_class"
 	"datetime_format",                // "timestamp_format", Based on https://golang.org/src/time/format.go and http://strftime.org/seh1_distribution.go
 	"time_zone",                      // "timezone", UTC or LOCAL
 	"multi_line_start_pattern",       // "multi_line_start_pattern"
@@ -54,6 +55,7 @@ func addLogConfig(logsConfig *config.Logs, filePath, section string, p *configpa
 	logFilePath, _ := p.Get(section, "file")
 	logGroupName, _ := p.Get(section, "log_group_name")
 	logStreamName, _ := p.Get(section, "log_stream_name")
+	logGroupClass, _ := p.Get(section, "log_group_class")
 	timestampFormat, _ := p.Get(section, "datetime_format")
 	timezone, _ := p.Get(section, "time_zone")
 	multiLineStartPattern, _ := p.Get(section, "multi_line_start_pattern")
@@ -92,5 +94,5 @@ func addLogConfig(logsConfig *config.Logs, filePath, section string, p *configpa
 		}
 
 	}
-	logsConfig.AddLogFile(logFilePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding, retention)
+	logsConfig.AddLogFile(logFilePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding, retention, logGroupClass)
 }

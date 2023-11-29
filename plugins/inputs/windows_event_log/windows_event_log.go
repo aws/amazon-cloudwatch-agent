@@ -35,6 +35,7 @@ type EventConfig struct {
 	BatchReadSize int      `toml:"batch_read_size"`
 	LogGroupName  string   `toml:"log_group_name"`
 	LogStreamName string   `toml:"log_stream_name"`
+	LogGroupClass string   `toml:"log_group_class"`
 	Destination   string   `toml:"destination"`
 	Retention     int      `toml:"retention_in_days"`
 }
@@ -108,6 +109,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 			stateFilePath,
 			eventConfig.BatchReadSize,
 			eventConfig.Retention,
+			eventConfig.LogGroupClass,
 		)
 		err = eventLog.Init()
 		if err != nil {
