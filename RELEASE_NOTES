@@ -8,7 +8,6 @@ New Features:
 Enhancements:
 * Use cwagent as the default user to run the agent with configuration wizard
 * Reduce CPU spikes when using procstat on Windows by grabbing only individual processes specified
-* Use the latest AWS SDK version v1.48.6
 
 ========================================================================
 Amazon CloudWatch Agent 1.300031.1 (2023-11-10)
