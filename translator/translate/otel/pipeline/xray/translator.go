@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	awsxrayexporter "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor"
 	awsxrayreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsxray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
@@ -47,6 +48,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Receivers:  common.NewTranslatorMap[component.Config](),
 		Processors: common.NewTranslatorMap(processor.NewDefaultTranslatorWithName(pipelineName, batchprocessor.NewFactory())),
 		Exporters:  common.NewTranslatorMap(awsxrayexporter.NewTranslator()),
+		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeTraces, []string{agenthealth.OperationPutTraceSegments})),
 	}
 	if conf.IsSet(xrayKey) {
 		translators.Receivers.Set(awsxrayreceiver.NewTranslator())

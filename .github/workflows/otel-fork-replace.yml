@@ -30,7 +30,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
           cache: false
       - name: Update OTel fork components version
         id: set-matrix
@@ -38,6 +38,10 @@ jobs:
           git config --global user.name 'Github Action'
           git config --global user.email 'action@github.com'
           git checkout -b otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
+          go mod edit -replace go.opentelemetry.io/collector/config/confighttp=github.com/amazon-contributing/opentelemetry-collector-contrib/config/confighttp@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor=github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter@${{ steps.get-latest-commit.outputs.sha }}
           go mod tidy
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter@${{ steps.get-latest-commit.outputs.sha }}
@@ -63,6 +67,8 @@ jobs:
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver=github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver@${{ steps.get-latest-commit.outputs.sha }}
           go mod tidy
           go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws=github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws@${{ steps.get-latest-commit.outputs.sha }}
+          go mod tidy
+          go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza=github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza@${{ steps.get-latest-commit.outputs.sha }}
           go mod tidy
           git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}"
           git push -u origin HEAD

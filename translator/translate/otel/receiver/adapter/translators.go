@@ -152,6 +152,9 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 			if skipInputSet.Contains(inputName) {
 				// logs agent is separate from otel agent
 				continue
+			} else if measurement := common.GetArray[any](conf, common.ConfigKey(cfgKey, common.MeasurementKey)); measurement != nil && len(measurement) == 0 {
+				log.Printf("W! Agent will not emit any metrics for %s due to empty measurement field ", inputName)
+				continue
 			} else if multipleInputSet.Contains(inputName) {
 				translators.Merge(fromMultipleInput(conf, inputName, ""))
 			} else {

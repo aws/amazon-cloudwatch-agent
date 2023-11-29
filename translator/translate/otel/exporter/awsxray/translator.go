@@ -4,6 +4,7 @@
 package awsxray
 
 import (
+	_ "embed"
 	"fmt"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 )
 
 const (
@@ -48,6 +50,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.TracesKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
+
+	if isAppSignals(conf) {
+		cfg.IndexedAttributes = []string{
+			"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+			"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+			"HostedIn.Environment",
+		}
+	}
+
 	c := confmap.NewFromStringMap(map[string]interface{}{
 		"telemetry": map[string]interface{}{
 			"enabled":          true,
@@ -84,6 +95,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.ProxyAddress = proxyAddress
 	}
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.MiddlewareID = &agenthealth.TracesID
 	return cfg, nil
 }
 
@@ -103,4 +115,8 @@ func getRegion(conf *confmap.Conf) string {
 		region = agent.Global_Config.Region
 	}
 	return region
+}
+
+func isAppSignals(conf *confmap.Conf) bool {
+	return conf.IsSet(common.AppSignalsTraces)
 }

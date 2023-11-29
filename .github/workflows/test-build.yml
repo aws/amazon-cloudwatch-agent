@@ -63,7 +63,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
           cache: false
 
       - name: Install rpm
@@ -91,28 +91,6 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
           key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-
-      #TODO: remove "Replace AWS SDK" once changes are available publicly
-      - name: Replace AWS SDK (Windows)
-        if: matrix.family == 'windows'
-        run: |
-          mkdir C:/Users/runneradmin/gosdk
-          aws s3 cp s3://gazpacho-beta-pre-release/staging.zip $env:SYSTEMROOT
-          tar -xf $env:SYSTEMROOT/staging.zip -C C:/Users/runneradmin/gosdk
-          $env:sdkPath=(Get-ChildItem "C:/Users/runneradmin/gosdk/apollo/env/AWSGoSDK-Release/var/tmp/release-automation/staging-*/sdk/src/github.com/aws/aws-sdk-go")
-          echo $env:sdkPath
-          cd D:\a\private-amazon-cloudwatch-agent-staging\private-amazon-cloudwatch-agent-staging
-          go mod edit -replace github.com/aws/aws-sdk-go=$env:sdkPath
-
-      - name: Replace AWS SDK (Linux)
-        if: matrix.family != 'windows'
-        run: |
-          mkdir ~/gosdk
-          aws s3 cp s3://gazpacho-beta-pre-release/staging.zip ~
-          unzip -q -d ~/gosdk ~/staging.zip || true
-          sdkPath=$(echo ~/gosdk/apollo/env/AWSGoSDK-Release/var/tmp/release-automation/staging-*/sdk/src/github.com/aws/aws-sdk-go)
-          echo $sdkPath
-          go mod edit -replace github.com/aws/aws-sdk-go=$sdkPath
 
       - name: Import GPG Key
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
@@ -183,7 +161,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -248,7 +226,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.19.6
+          go-version: ~1.21.1
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2

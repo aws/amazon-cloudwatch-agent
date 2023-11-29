@@ -24,13 +24,13 @@ func startAgent(writer io.WriteCloser) error {
 	if os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE {
 		// Use exec so PID 1 changes to agent from start-agent.
 		execArgs := []string{
-			agentBinaryPath, // when using syscall.Exec, must pass binary name as args[0]
-			"-config", tomlConfigPath,
-			"-envconfig", envConfigPath,
-			"-otelconfig", yamlConfigPath,
+			paths.AgentBinaryPath, // when using syscall.Exec, must pass binary name as args[0]
+			"-config", paths.TomlConfigPath,
+			"-envconfig", paths.EnvConfigPath,
+			"-otelconfig", paths.YamlConfigPath,
 			"-pidfile", paths.AgentDir + "/var/amazon-cloudwatch-agent.pid",
 		}
-		if err := syscall.Exec(agentBinaryPath, execArgs, os.Environ()); err != nil {
+		if err := syscall.Exec(paths.AgentBinaryPath, execArgs, os.Environ()); err != nil {
 			return fmt.Errorf("error exec as agent binary: %w", err)
 		}
 		// We should never reach this line but the compiler doesn't know...
@@ -49,7 +49,7 @@ func startAgent(writer io.WriteCloser) error {
 		return err
 	}
 
-	name, err := exec.LookPath(agentBinaryPath)
+	name, err := exec.LookPath(paths.AgentBinaryPath)
 	if err != nil {
 		log.Printf("E! Failed to lookpath: %v ", err)
 		return err
@@ -62,10 +62,10 @@ func startAgent(writer io.WriteCloser) error {
 
 	// linux command has pid passed while windows does not
 	agentCmd := []string{
-		agentBinaryPath,
-		"-config", tomlConfigPath,
-		"-envconfig", envConfigPath,
-		"-otelconfig", yamlConfigPath,
+		paths.AgentBinaryPath,
+		"-config", paths.TomlConfigPath,
+		"-envconfig", paths.EnvConfigPath,
+		"-otelconfig", paths.YamlConfigPath,
 		"-pidfile", paths.AgentDir + "/var/amazon-cloudwatch-agent.pid",
 	}
 	if err = syscall.Exec(name, agentCmd, os.Environ()); err != nil {
@@ -80,22 +80,8 @@ func startAgent(writer io.WriteCloser) error {
 func generateMergedJsonConfigMap() (map[string]interface{}, error) {
 	ctx := context.CurrentContext()
 	setCTXOS(ctx)
-	ctx.SetInputJsonFilePath(jsonConfigPath)
-	ctx.SetInputJsonDirPath(jsonDirPath)
+	ctx.SetInputJsonFilePath(paths.JsonConfigPath)
+	ctx.SetInputJsonDirPath(paths.JsonDirPath)
 	ctx.SetMultiConfig("remove")
 	return cmdutil.GenerateMergedJsonConfigMap(ctx)
-}
-
-func init() {
-	jsonConfigPath = paths.AgentDir + "/etc/" + JSON
-	jsonDirPath = paths.AgentDir + "/etc/" + paths.JsonDir
-	envConfigPath = paths.AgentDir + "/etc/" + ENV
-	tomlConfigPath = paths.AgentDir + "/etc/" + TOML
-	commonConfigPath = paths.AgentDir + "/etc/" + COMMON_CONFIG
-	yamlConfigPath = paths.AgentDir + "/etc/" + YAML
-
-	agentLogFilePath = paths.AgentDir + "/logs/" + AGENT_LOG_FILE
-
-	translatorBinaryPath = paths.AgentDir + "/bin/" + paths.TranslatorBinaryName
-	agentBinaryPath = paths.AgentDir + "/bin/" + paths.AgentBinaryName
 }

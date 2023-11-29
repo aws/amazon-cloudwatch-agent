@@ -97,19 +97,25 @@ func defaultECSRegion() string {
 	return ecsutil.GetECSUtilSingleton().Region
 }
 
-func detectRegion(mode string, credsConfig map[string]string) (region string) {
+func detectRegion(mode string, credsConfig map[string]string) (region string, regionType string) {
 	region = SDKRegionWithCredsMap(mode, credsConfig)
+	regionType = config.RegionTypeNotFound
+	if region != "" {
+		regionType = config.RegionTypeCredsMap
+	}
 
 	// For ec2, fallback to metadata when no region info found in credential profile.
 	if region == "" && mode == config.ModeEC2 {
 		fmt.Println("I! Trying to detect region from ec2")
 		region = DefaultEC2Region()
+		regionType = config.RegionTypeEC2Metadata
 	}
 
 	// try to get region from ecs metadata
 	if region == "" && mode == config.ModeEC2 {
 		fmt.Println("I! Trying to detect region from ecs")
 		region = DefaultECSRegion()
+		regionType = config.RegionTypeECSMetadata
 	}
 
 	return

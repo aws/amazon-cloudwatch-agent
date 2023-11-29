@@ -1,0 +1,8 @@
+agenthealth:
+agenthealth/1:
+  is_usage_data_enabled: false
+agenthealth/2:
+  is_usage_data_enabled: true
+  stats:
+    operations:
+      - 'ListBuckets'

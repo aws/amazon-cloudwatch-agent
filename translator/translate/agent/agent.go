@@ -13,6 +13,7 @@ var ChildRule = map[string]translator.Rule{}
 
 const (
 	SectionKey = "agent"
+	Mode       = "mode"
 )
 
 func GetCurPath() string {
@@ -27,6 +28,8 @@ type Agent struct {
 	Interval    string
 	Credentials map[string]interface{}
 	Region      string
+	RegionType  string
+	Mode        string
 	Internal    bool
 	Role_arn    string
 }

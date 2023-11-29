@@ -8,8 +8,11 @@ exporters:
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 5000
+        middleware: agenthealth/metrics
+        mode: EC2
         namespace: CWAgent
         region: us-west-2
+        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
         role_arn: metrics_role_arn_value_test
@@ -20,20 +23,22 @@ exporters:
             - - d1
             - []
     awscloudwatchlogs/emf_logs:
-        emf_only: true
         certificate_file_path: ""
-        endpoint: "https://logs-fips.us-west-2.amazonaws.com"
-        "imds_retries": 1
+        emf_only: true
+        endpoint: https://logs-fips.us-west-2.amazonaws.com
+        imds_retries: 1
         local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
         log_stream_name: LOG_STREAM_NAME
         max_retries: 2
+        middleware: agenthealth/logs
         no_verify_ssl: false
         num_workers: 8
+        profile: ""
         proxy_address: ""
         raw_log: true
-        region: "us-west-2"
+        region: us-west-2
         request_timeout_seconds: 30
         resource_arn: ""
         retry_on_failure:
@@ -46,36 +51,55 @@ exporters:
         role_arn: log_role_arn_value_test
         sending_queue:
             queue_size: 1000
-        profile: ""
-        shared_credentials_file: [ ]
+        shared_credentials_file: []
     awsxray:
         aws_log_groups: []
         certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
-        "imds_retries": 1
+        imds_retries: 1
         index_all_attributes: false
         indexed_attributes: []
         local_mode: true
         max_retries: 2
+        middleware: agenthealth/traces
         no_verify_ssl: true
         num_workers: 1
+        profile: ""
         proxy_address: https://proxy.proxy.com
         region: us-west-2
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
-        profile: ""
-        shared_credentials_file: [ ]
+        shared_credentials_file: []
         telemetry:
             enabled: true
             include_metadata: true
-extensions: {}
+extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+    agenthealth/traces:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutTraceSegments
 processors:
     batch/emf_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
     batch/xray:
+        metadata_cardinality_limit: 1000
+        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -90,6 +114,7 @@ processors:
             match_type: ""
             metrics: []
             regexp: null
+        initial_value: 0
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
@@ -98,19 +123,19 @@ processors:
             - ImageId
             - InstanceId
             - InstanceType
-        refresh_interval_seconds: 0s
         imds_retries: 1
+        refresh_interval_seconds: 0s
     transform:
         error_mode: propagate
         log_statements: []
         metric_statements:
             - context: metric
               statements:
-                  - set(unit, "unit") where name == "cpu_usage_idle"
-                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                  - set(unit, "unit") where name == "cpu_usage_nice"
-                  - set(unit, "unit") where name == "disk_free"
-                  - set(name, "DISK_FREE") where name == "disk_free"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
+                - set(unit, "unit") where name == "cpu_usage_idle"
+                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                - set(unit, "unit") where name == "cpu_usage_nice"
         trace_statements: []
 receivers:
     awsxray:
@@ -124,10 +149,13 @@ receivers:
             role_arn: trace_role_arn_value_test
             tls:
                 ca_file: ""
+                ca_pem: '[REDACTED]'
                 cert_file: ""
+                cert_pem: '[REDACTED]'
                 insecure: true
                 insecure_skip_verify: false
                 key_file: ""
+                key_pem: '[REDACTED]'
                 max_version: ""
                 min_version: ""
                 reload_interval: 0s
@@ -151,42 +179,57 @@ receivers:
                 cors: null
                 endpoint: 0.0.0.0:2222
                 include_metadata: false
+                logs_url_path: /v1/logs
                 max_request_body_size: 0
+                metrics_url_path: /v1/metrics
+                response_headers: {}
                 tls: null
+                traces_url_path: /v1/traces
     telegraf_cpu:
         collection_interval: 10s
         initial_delay: 1s
+        timeout: 0s
     telegraf_disk:
         collection_interval: 1m0s
         initial_delay: 1s
+        timeout: 0s
     telegraf_diskio:
         collection_interval: 1m0s
         initial_delay: 1s
+        timeout: 0s
     telegraf_mem:
         collection_interval: 1s
         initial_delay: 1s
+        timeout: 0s
     telegraf_net:
         collection_interval: 10s
         initial_delay: 1s
+        timeout: 0s
     telegraf_netstat:
         collection_interval: 1m0s
         initial_delay: 1s
+        timeout: 0s
     telegraf_processes:
         collection_interval: 10s
         initial_delay: 1s
+        timeout: 0s
     telegraf_procstat/1917393364:
         alias_name: /var/run/example1.pid
         collection_interval: 10s
         initial_delay: 1s
+        timeout: 0s
     telegraf_socket_listener:
         collection_interval: 10s
         initial_delay: 1s
+        timeout: 0s
     telegraf_statsd:
         collection_interval: 10s
         initial_delay: 1s
+        timeout: 0s
     telegraf_swap:
         collection_interval: 10s
         initial_delay: 1s
+        timeout: 0s
     udplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -206,7 +249,10 @@ receivers:
         storage: null
         type: udp_input
 service:
-    extensions: []
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/logs
+        - agenthealth/traces
     pipelines:
         logs/emf_logs:
             exporters:
@@ -222,15 +268,15 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_cpu
-                - telegraf_disk
                 - telegraf_mem
+                - telegraf_disk
+                - telegraf_socket_listener
+                - telegraf_cpu
+                - telegraf_procstat/1917393364
+                - telegraf_swap
                 - telegraf_netstat
                 - telegraf_processes
-                - telegraf_procstat/1917393364
-                - telegraf_socket_listener
                 - telegraf_statsd
-                - telegraf_swap
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -239,8 +285,8 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_diskio
                 - telegraf_net
+                - telegraf_diskio
         traces/xray:
             exporters:
                 - awsxray
@@ -266,7 +312,8 @@ service:
         metrics:
             address: ""
             level: None
-            metric_readers: []
+            readers: []
         resource: {}
         traces:
+            processors: []
             propagators: []

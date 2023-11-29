@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 )
 
 //go:embed aws_cloudwatch_logs_default.yaml
@@ -49,6 +50,7 @@ func (t *translator) ID() component.ID {
 // Translate creates an awscloudwatchlogsexporter exporter config based on the input json config
 func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awscloudwatchlogsexporter.Config)
+	cfg.MiddlewareID = &agenthealth.LogsID
 
 	var defaultConfig string
 	// Add more else if when otel supports log reading
@@ -89,7 +91,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	if c.IsSet(endpointOverrideKey) {
 		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
 	}
-
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	return cfg, nil

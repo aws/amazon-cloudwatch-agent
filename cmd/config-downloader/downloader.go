@@ -143,7 +143,7 @@ func main() {
 
 	mode = sdkutil.DetectAgentMode(mode)
 
-	region = util.DetectRegion(mode, cc.CredentialsMap())
+	region, _ = util.DetectRegion(mode, cc.CredentialsMap())
 
 	if region == "" && downloadLocation != locationDefault {
 		fmt.Println("Unable to determine aws-region.")
