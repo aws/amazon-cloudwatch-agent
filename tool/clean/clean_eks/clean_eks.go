@@ -6,7 +6,7 @@ package main
 import (
 	"context"
 	"log"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -15,6 +15,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
+
+var nameRegex = regexp.MustCompile("^cwagent(-operator)?-(eks|helm)-integ-.*")
 
 // Clean eks clusters if they have been open longer than 7 day
 func main() {
@@ -50,7 +52,7 @@ func terminateClusters(ctx context.Context, client *eks.Client) {
 		if err != nil {
 			return
 		}
-		if expirationDateCluster.After(*describeClusterOutput.Cluster.CreatedAt) && strings.HasPrefix(*describeClusterOutput.Cluster.Name, "cwagent-eks-integ-") {
+		if expirationDateCluster.After(*describeClusterOutput.Cluster.CreatedAt) && nameRegex.MatchString(*describeClusterOutput.Cluster.Name) {
 			log.Printf("Try to delete cluster %s launch-date %s", cluster, *describeClusterOutput.Cluster.CreatedAt)
 			describeNodegroupInput := eks.ListNodegroupsInput{ClusterName: aws.String(cluster)}
 			nodeGroupOutput, err := client.ListNodegroups(ctx, &describeNodegroupInput)
