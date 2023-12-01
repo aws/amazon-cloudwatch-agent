@@ -21,14 +21,10 @@ func (k *KeepActions) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
 		return false, nil
 	}
 	for _, element := range k.Actions {
-		isMatched, err := matchesSelectors(attributes, element.SelectorMatchers, false)
+		isMatched := matchesSelectors(attributes, element.SelectorMatchers, false)
 		if isMatched {
 			// keep the datapoint as one of the keep rules is matched
 			return false, nil
-		}
-		if err != nil {
-			// drop the datapoint as an error occurred in match process
-			return true, err
 		}
 	}
 	return true, nil

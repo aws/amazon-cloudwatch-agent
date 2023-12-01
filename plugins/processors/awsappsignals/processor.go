@@ -57,10 +57,8 @@ func (ap *awsappsignalsprocessor) Start(_ context.Context, _ component.Host) err
 	ap.traceMutators = []attributesMutator{attributesResolver, attributesNormalizer, ap.replaceActions}
 
 	keeper := rules.NewKeeper(ap.config.Rules)
-	ap.allowlistMutators = []allowListMutator{keeper}
-
 	dropper := rules.NewDropper(ap.config.Rules)
-	ap.allowlistMutators = append(ap.allowlistMutators, dropper)
+	ap.allowlistMutators = []allowListMutator{keeper, dropper}
 
 	return nil
 }

@@ -27,7 +27,7 @@ func (r *ReplaceActions) Process(attributes, _ pcommon.Map, isTrace bool) error 
 	finalRules := make(map[string]string)
 	for i := len(actions) - 1; i >= 0; i = i - 1 {
 		element := actions[i]
-		isMatched, _ := matchesSelectors(attributes, element.SelectorMatchers, isTrace)
+		isMatched := matchesSelectors(attributes, element.SelectorMatchers, isTrace)
 		if !isMatched {
 			continue
 		}

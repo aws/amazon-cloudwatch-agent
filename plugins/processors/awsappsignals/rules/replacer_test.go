@@ -72,7 +72,7 @@ func TestReplacerProcess(t *testing.T) {
 	}
 
 	testReplacer := NewReplacer(config)
-	testMapPlaceHolder := pcommon.NewMap()
+	assert.Equal(t, 1, len(testReplacer.Actions))
 
 	testCases := []TestCaseForReplacer{
 		{
@@ -108,6 +108,8 @@ func TestReplacerProcess(t *testing.T) {
 			isTrace: false,
 		},
 	}
+
+	testMapPlaceHolder := pcommon.NewMap()
 	for i := range testCases {
 		tt := testCases[i]
 		t.Run(tt.name, func(t *testing.T) {

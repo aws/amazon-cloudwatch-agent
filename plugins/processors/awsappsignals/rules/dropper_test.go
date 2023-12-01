@@ -83,22 +83,22 @@ func TestDropperProcessor(t *testing.T) {
 	}
 
 	testDropper := NewDropper(config)
-	isTrace := false
+	assert.Equal(t, 2, len(testDropper.Actions))
 
 	testCases := []TestCaseForDropper{
 		{
 			name:   "commonTest01ShouldBeKept",
-			input:  generateTestAttributes("customer-test", "GET /user/123", "visit-service", "GET /visit/12345", isTrace),
+			input:  generateTestAttributes("customer-test", "GET /user/123", "visit-service", "GET /visit/12345", false),
 			output: false,
 		},
 		{
 			name:   "commonTest02ShouldBeDropped",
-			input:  generateTestAttributes("common-test", "GET /user/123", "customer-service", "GET /Owners/12345", isTrace),
+			input:  generateTestAttributes("common-test", "GET /user/123", "customer-service", "GET /Owners/12345", false),
 			output: true,
 		},
 		{
 			name:   "commonTest03ShouldBeDropped",
-			input:  generateTestAttributes("common-test", "PUT /test/pet/123", "visit-test-service", "GET /visit/12345", isTrace),
+			input:  generateTestAttributes("common-test", "PUT /test/pet/123", "visit-test-service", "GET /visit/12345", false),
 			output: true,
 		},
 	}

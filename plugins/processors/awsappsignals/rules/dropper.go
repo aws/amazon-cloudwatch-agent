@@ -21,14 +21,10 @@ func (d *DropActions) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
 		return false, nil
 	}
 	for _, element := range d.Actions {
-		isMatched, err := matchesSelectors(attributes, element.SelectorMatchers, false)
+		isMatched := matchesSelectors(attributes, element.SelectorMatchers, false)
 		if isMatched {
 			// drop the datapoint as one of drop rules is matched
 			return true, nil
-		}
-		if err != nil {
-			// keep the datapoint as an error occurred in match process
-			return false, err
 		}
 	}
 	return false, nil
