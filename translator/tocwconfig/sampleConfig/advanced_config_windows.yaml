@@ -73,13 +73,13 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_win_perf_counters/3446270237
-                - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/2073218482
                 - telegraf_win_perf_counters/2039663244
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
+                - telegraf_win_perf_counters/3446270237
+                - telegraf_win_perf_counters/3762679655
     telemetry:
         logs:
             development: false
@@ -92,8 +92,10 @@ service:
             output_paths:
                 - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None

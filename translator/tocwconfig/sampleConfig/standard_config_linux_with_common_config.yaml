@@ -37,9 +37,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 2
         profile: AmazonCloudWatchAgent
         refresh_interval_seconds: 0s
@@ -75,10 +75,10 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_cpu
-                - telegraf_disk
                 - telegraf_mem
                 - telegraf_swap
+                - telegraf_cpu
+                - telegraf_disk
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -99,8 +99,10 @@ service:
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None
