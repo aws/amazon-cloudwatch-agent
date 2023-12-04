@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
 )
 
@@ -59,8 +60,8 @@ func TestProcessMetrics(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ap := &awsappsignalsprocessor{
 		logger: logger,
-		config: &Config{
-			Resolvers: []string{"test"},
+		config: &config.Config{
+			Resolvers: []config.Resolver{config.NewGenericResolver()},
 			Rules:     testRules,
 		},
 	}
@@ -103,8 +104,8 @@ func TestProcessTraces(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ap := &awsappsignalsprocessor{
 		logger: logger,
-		config: &Config{
-			Resolvers: []string{"test"},
+		config: &config.Config{
+			Resolvers: []config.Resolver{config.NewGenericResolver()},
 			Rules:     testRules,
 		},
 	}

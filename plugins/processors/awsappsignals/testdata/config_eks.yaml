@@ -1,5 +1,7 @@
 awsappsignals:
-  resolvers: [eks]
+  resolvers:
+    - platform: eks
+      cluster_name: test
   rules:
     - selectors:
         - dimension: Operation

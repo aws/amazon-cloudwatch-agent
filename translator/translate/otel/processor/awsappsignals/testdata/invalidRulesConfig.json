@@ -1,6 +1,9 @@
 {
   "logs": {
     "metrics_collected": {
+      "kubernetes": {
+        "cluster_name": "test"
+      },
       "app_signals": {
         "rules": [
           {

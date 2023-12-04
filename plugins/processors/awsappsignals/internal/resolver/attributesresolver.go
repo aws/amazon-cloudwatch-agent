@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
 
+	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
@@ -27,10 +28,10 @@ type attributesResolver struct {
 }
 
 // create a new attributes resolver
-func NewAttributesResolver(resolverNames []string, logger *zap.Logger) *attributesResolver {
+func NewAttributesResolver(resolvers []appsignalsconfig.Resolver, logger *zap.Logger) *attributesResolver {
 	subResolvers := []subResolver{}
-	for _, resolverName := range resolverNames {
-		if resolverName == "eks" {
+	for _, resolver := range resolvers {
+		if resolver.Platform == appsignalsconfig.PlatformEKS {
 			subResolvers = append(subResolvers, getEksResolver(logger), newEKSHostedInAttributeResolver())
 		} else {
 			subResolvers = append(subResolvers, newHostedInAttributeResolver(DefaultHostedInAttributes))

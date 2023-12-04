@@ -1,4 +1,5 @@
-resolvers: ["generic"]
+resolvers:
+  - platform: generic
 rules:
   - selectors:
       - dimension: Operation
