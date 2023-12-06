@@ -262,7 +262,7 @@ func runAgent(ctx context.Context,
 
 	writer := logger.NewLogWriter(logConfig)
 
-	log.Printf("I! Starting AmazonCloudWatchAgent %s\n", version.Full())
+	log.Printf("I! Starting AmazonCloudWatchAgent %s with log file %s with log target %s\n", version.Full(), ag.Config.Agent.Logfile, ag.Config.Agent.LogTarget)
 	// Need to set SDK log level before plugins get loaded.
 	// Some aws.Config objects get created early and live forever which means
 	// we cannot change the sdk log level without restarting the Agent.
