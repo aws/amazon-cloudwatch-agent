@@ -18,25 +18,44 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
+const retentionPeriod = clean.KeepDurationOneWeek
+
 var (
-	roleNamePrefix = "cwagent-"
+	roleNamePrefixes = []string{
+		"cwa-integ-assume-role",
+		"cwagent-eks-Worker-Role",
+		"cwagent-integ-test-task-role",
+		"cwagent-operator-eks-Worker-Role",
+		"cwagent-operator-helm-integ-Worker-Role",
+	}
 )
+
+type iamClient interface {
+	ListRoles(ctx context.Context, input *iam.ListRolesInput, optFns ...func(*iam.Options)) (*iam.ListRolesOutput, error)
+	GetRole(ctx context.Context, input *iam.GetRoleInput, optFns ...func(*iam.Options)) (*iam.GetRoleOutput, error)
+	DeleteRole(ctx context.Context, input *iam.DeleteRoleInput, optFns ...func(*iam.Options)) (*iam.DeleteRoleOutput, error)
+	ListAttachedRolePolicies(ctx context.Context, input *iam.ListAttachedRolePoliciesInput, optFns ...func(*iam.Options)) (*iam.ListAttachedRolePoliciesOutput, error)
+	DetachRolePolicy(ctx context.Context, input *iam.DetachRolePolicyInput, optFns ...func(*iam.Options)) (*iam.DetachRolePolicyOutput, error)
+}
 
 func main() {
 	log.Print("Begin to clean IAM Roles")
-	expirationDate := time.Now().UTC().Add(clean.KeepDurationSixtyDay)
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatalf("unable to load AWS config: %v", err)
 	}
 	client := iam.NewFromConfig(cfg)
-	if err = deleteRoles(ctx, client, expirationDate); err != nil {
+	if err = deleteRoles(ctx, client, getExpirationDate()); err != nil {
 		log.Fatalf("errors cleaning: %v", err)
 	}
 }
 
-func deleteRoles(ctx context.Context, client *iam.Client, expirationDate time.Time) error {
+func getExpirationDate() time.Time {
+	return time.Now().UTC().Add(retentionPeriod)
+}
+
+func deleteRoles(ctx context.Context, client iamClient, expirationDate time.Time) error {
 	var errs error
 	var marker *string
 	for {
@@ -45,7 +64,7 @@ func deleteRoles(ctx context.Context, client *iam.Client, expirationDate time.Ti
 			return err
 		}
 		for _, role := range output.Roles {
-			if strings.HasPrefix(*role.RoleName, roleNamePrefix) && expirationDate.After(*role.CreateDate) {
+			if hasPrefix(*role.RoleName) && expirationDate.After(*role.CreateDate) {
 				var getRoleOutput *iam.GetRoleOutput
 				getRoleOutput, err = client.GetRole(ctx, &iam.GetRoleInput{RoleName: role.RoleName})
 				if err != nil {
@@ -65,7 +84,7 @@ func deleteRoles(ctx context.Context, client *iam.Client, expirationDate time.Ti
 	return errs
 }
 
-func deleteRole(ctx context.Context, client *iam.Client, role types.Role) error {
+func deleteRole(ctx context.Context, client iamClient, role types.Role) error {
 	lastUsed := "never"
 	if role.RoleLastUsed != nil && role.RoleLastUsed.LastUsedDate != nil {
 		lastUsed = fmt.Sprintf("%d days ago", int(time.Since(*role.RoleLastUsed.LastUsedDate).Hours()/24))
@@ -81,7 +100,7 @@ func deleteRole(ctx context.Context, client *iam.Client, role types.Role) error 
 	return nil
 }
 
-func detachPolicies(ctx context.Context, client *iam.Client, role types.Role) error {
+func detachPolicies(ctx context.Context, client iamClient, role types.Role) error {
 	var marker *string
 	for {
 		output, err := client.ListAttachedRolePolicies(ctx, &iam.ListAttachedRolePoliciesInput{RoleName: role.RoleName, Marker: marker})
@@ -99,4 +118,13 @@ func detachPolicies(ctx context.Context, client *iam.Client, role types.Role) er
 		marker = output.Marker
 	}
 	return nil
+}
+
+func hasPrefix(roleName string) bool {
+	for _, prefix := range roleNamePrefixes {
+		if strings.HasPrefix(roleName, prefix) {
+			return true
+		}
+	}
+	return false
 }
