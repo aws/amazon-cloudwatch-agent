@@ -57,3 +57,18 @@ func TestInvalidTypeLogGroupClass(t *testing.T) {
 		panic(e)
 	}
 }
+
+func TestEmptyLogGroupClass(t *testing.T) {
+	r := new(LogGroupClass)
+	var input interface{}
+	e := json.Unmarshal([]byte(`{
+			"log_group_class": ""
+	}`), &input)
+	if e == nil {
+		actualReturnKey, actualReturnValue := r.ApplyRule(input)
+		assert.Equal(t, "log_group_class", actualReturnKey)
+		assert.Equal(t, "", actualReturnValue)
+	} else {
+		panic(e)
+	}
+}
