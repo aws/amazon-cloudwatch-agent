@@ -25,6 +25,7 @@ var (
 		"cwa-integ-assume-role",
 		"cwagent-eks-Worker-Role",
 		"cwagent-integ-test-task-role",
+		"cwagent-integ-test-task-execution-role",
 		"cwagent-operator-eks-Worker-Role",
 		"cwagent-operator-helm-integ-Worker-Role",
 	}
@@ -36,6 +37,9 @@ type iamClient interface {
 	DeleteRole(ctx context.Context, input *iam.DeleteRoleInput, optFns ...func(*iam.Options)) (*iam.DeleteRoleOutput, error)
 	ListAttachedRolePolicies(ctx context.Context, input *iam.ListAttachedRolePoliciesInput, optFns ...func(*iam.Options)) (*iam.ListAttachedRolePoliciesOutput, error)
 	DetachRolePolicy(ctx context.Context, input *iam.DetachRolePolicyInput, optFns ...func(*iam.Options)) (*iam.DetachRolePolicyOutput, error)
+	ListInstanceProfilesForRole(ctx context.Context, input *iam.ListInstanceProfilesForRoleInput, optFns ...func(*iam.Options)) (*iam.ListInstanceProfilesForRoleOutput, error)
+	RemoveRoleFromInstanceProfile(ctx context.Context, input *iam.RemoveRoleFromInstanceProfileInput, optFns ...func(*iam.Options)) (*iam.RemoveRoleFromInstanceProfileOutput, error)
+	DeleteInstanceProfile(ctx context.Context, input *iam.DeleteInstanceProfileInput, optFns ...func(*iam.Options)) (*iam.DeleteInstanceProfileOutput, error)
 }
 
 func main() {
@@ -93,7 +97,11 @@ func deleteRole(ctx context.Context, client iamClient, role types.Role) error {
 	if err := detachPolicies(ctx, client, role); err != nil {
 		return err
 	}
+	if err := deleteProfiles(ctx, client, role); err != nil {
+		return err
+	}
 	if _, err := client.DeleteRole(ctx, &iam.DeleteRoleInput{RoleName: role.RoleName}); err != nil {
+		log.Printf("Failed to delete role (%q): %v", *role.RoleName, err)
 		return err
 	}
 	log.Printf("Deleted role (%q) successfully", *role.RoleName)
@@ -108,14 +116,59 @@ func detachPolicies(ctx context.Context, client iamClient, role types.Role) erro
 			return err
 		}
 		for _, policy := range output.AttachedPolicies {
+			log.Printf("Trying to detach policy (%q) from role (%q)", *policy.PolicyName, *role.RoleName)
 			if _, err = client.DetachRolePolicy(ctx, &iam.DetachRolePolicyInput{PolicyArn: policy.PolicyArn, RoleName: role.RoleName}); err != nil {
-				return fmt.Errorf("unable to detach policy (%q) from role (%q): %w", *policy.PolicyName, *role.RoleName, err)
+				log.Printf("Failed to detach policy (%q): %v", *policy.PolicyName, err)
+				return err
+			}
+			log.Printf("Detached policy (%q) from role (%q) successfully", *policy.PolicyName, *role.RoleName)
+		}
+		if output.Marker == nil {
+			break
+		}
+		marker = output.Marker
+	}
+	return nil
+}
+
+func deleteProfiles(ctx context.Context, client iamClient, role types.Role) error {
+	var marker *string
+	for {
+		output, err := client.ListInstanceProfilesForRole(ctx, &iam.ListInstanceProfilesForRoleInput{RoleName: role.RoleName, Marker: marker})
+		if err != nil {
+			return err
+		}
+		for _, profile := range output.InstanceProfiles {
+			if err = deleteProfile(ctx, client, role, profile); err != nil {
+				return err
 			}
 		}
 		if output.Marker == nil {
 			break
 		}
 		marker = output.Marker
+	}
+	return nil
+}
+
+func deleteProfile(ctx context.Context, client iamClient, role types.Role, profile types.InstanceProfile) error {
+	log.Printf("Trying to remove role (%q) from instance profile (%q)", *role.RoleName, *profile.InstanceProfileName)
+	_, err := client.RemoveRoleFromInstanceProfile(ctx, &iam.RemoveRoleFromInstanceProfileInput{
+		InstanceProfileName: profile.InstanceProfileName,
+		RoleName:            role.RoleName,
+	})
+	if err != nil {
+		return err
+	}
+	log.Printf("Removed role (%q) from instance profile (%q) successfully", *role.RoleName, *profile.InstanceProfileName)
+	// profile's only role is about to be deleted, so delete it too
+	if len(profile.Roles) == 1 {
+		log.Printf("Trying to delete instance profile (%q) attached to role (%q)", *profile.InstanceProfileName, *role.RoleName)
+		if _, err = client.DeleteInstanceProfile(ctx, &iam.DeleteInstanceProfileInput{InstanceProfileName: profile.InstanceProfileName}); err != nil {
+			log.Printf("Failed to delete instance profile (%q): %v", *profile.InstanceProfileName, err)
+			return err
+		}
+		log.Printf("Deleted instance profile (%q) successfully", *profile.InstanceProfileName)
 	}
 	return nil
 }
