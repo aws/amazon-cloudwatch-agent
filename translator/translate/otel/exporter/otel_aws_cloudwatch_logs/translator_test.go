@@ -68,7 +68,7 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, wantCfg.RawLog, gotCfg.RawLog)
 				assert.Equal(t, wantCfg.EmfOnly, gotCfg.EmfOnly)
 				assert.Equal(t, wantCfg.Region, gotCfg.Region)
-				assert.Equal(t, wantCfg.Region, gotCfg.RoleARN)
+				assert.Equal(t, wantCfg.RoleARN, gotCfg.RoleARN)
 				assert.NotNil(t, gotCfg.MiddlewareID)
 				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
 			}
