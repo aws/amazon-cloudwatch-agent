@@ -27,7 +27,7 @@ var defaultAwsCloudwatchLogsDefault string
 
 var (
 	emfBasePathKey      = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.Emf)
-	roleArnPathKey      = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
+	roleARNPathKey      = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 	endpointOverrideKey = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
 	streamNameKey       = common.ConfigKey(common.LogsKey, common.LogStreamName)
 )
@@ -78,21 +78,22 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 	}
 
+	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
+	if c.IsSet(endpointOverrideKey) {
+		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
+	}
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
+	if c.IsSet(roleARNPathKey) {
+		cfg.AWSSessionSettings.RoleARN, _ = common.GetString(c, roleARNPathKey)
 	}
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
-	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
-	if c.IsSet(roleArnPathKey) {
-		cfg.AWSSessionSettings.RoleARN, _ = common.GetString(c, roleArnPathKey)
-	}
-	if c.IsSet(endpointOverrideKey) {
-		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
-	}
-	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	return cfg, nil
 }
 
