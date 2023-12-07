@@ -13,35 +13,38 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
 	tt := NewTranslator()
 	assert.EqualValues(t, "awsxray", tt.ID().String())
 	testCases := map[string]struct {
-		input   map[string]interface{}
+		input   map[string]any
 		want    *confmap.Conf
 		wantErr error
 	}{
 		"WithMissingKey": {
-			input: map[string]interface{}{"logs": map[string]interface{}{}},
+			input: map[string]any{"logs": map[string]any{}},
 			wantErr: &common.MissingKeyError{
 				ID:      tt.ID(),
 				JsonKey: common.TracesKey,
 			},
 		},
 		"WithDefault": {
-			input: map[string]interface{}{"traces": map[string]interface{}{}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"region":       "us-east-1",
-				"role_arn":     "global_arn",
-				"imds_retries": 1,
-				"telemetry": map[string]interface{}{
+			input: map[string]any{"traces": map[string]any{}},
+			want: confmap.NewFromStringMap(map[string]any{
+				"certificate_file_path": "/ca/bundle",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"imds_retries":          1,
+				"telemetry": map[string]any{
 					"enabled":          true,
 					"include_metadata": true,
 				},
@@ -53,13 +56,13 @@ func TestTranslator(t *testing.T) {
 			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
 		},
 		"WithAppSignalsEnabled": {
-			input: map[string]interface{}{
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+			input: map[string]any{
+				"traces": map[string]any{
+					"traces_collected": map[string]any{
+						"app_signals": map[string]any{},
 					},
 				}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
+			want: confmap.NewFromStringMap(map[string]any{
 				"indexed_attributes": []string{
 					"aws.local.service",
 					"aws.local.operation",
@@ -71,10 +74,11 @@ func TestTranslator(t *testing.T) {
 					"aws.remote.target",
 					"HostedIn.Environment",
 				},
-				"region":       "us-east-1",
-				"role_arn":     "global_arn",
-				"imds_retries": 1,
-				"telemetry": map[string]interface{}{
+				"certificate_file_path": "/ca/bundle",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"imds_retries":          1,
+				"telemetry": map[string]any{
 					"enabled":          true,
 					"include_metadata": true,
 				},
