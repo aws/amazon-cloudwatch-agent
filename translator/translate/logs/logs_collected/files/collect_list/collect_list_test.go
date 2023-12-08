@@ -890,14 +890,14 @@ func TestDuplicateLogGroupClass(t *testing.T) {
 		"pipe":              false,
 		"retention_in_days": 3,
 		"from_beginning":    true,
-		"log_group_class":   "",
+		"log_group_class":   util.StandardLogGroupClass,
 	}, map[string]interface{}{
 		"file_path":         "path1",
 		"log_group_name":    "test1",
 		"pipe":              false,
 		"retention_in_days": 3,
 		"from_beginning":    true,
-		"log_group_class":   "",
+		"log_group_class":   util.StandardLogGroupClass,
 	}}
 	assert.Equal(t, expectVal, val)
 }
