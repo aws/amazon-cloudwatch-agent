@@ -24,7 +24,8 @@ func TestApplyRule(t *testing.T) {
           "INFORMATION",
           "CRITICAL"
         ],
-        "log_group_name": "System"
+        "log_group_name": "System",
+		"log_group_class": "STANDARD"
       },
       {
         "event_name": "Application",
@@ -58,7 +59,7 @@ func TestApplyRule(t *testing.T) {
 			"log_group_name":    "Application",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
-			"log_group_class":   util.StandardLogGroupClass,
+			"log_group_class":   "",
 		},
 	}
 
