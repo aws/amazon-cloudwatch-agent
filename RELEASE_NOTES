@@ -1,4 +1,12 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300032.2 (2023-12-08)
+========================================================================
+
+Bug fixes:
+* Fix CW Log Group creation in regions where LogGroupClass parameter is unsupported
+* Fix CA bundle configuration for X-Ray exporter and region configuration for CW Logs exporter
+
+========================================================================
 Amazon CloudWatch Agent 1.300032.1 (2023-12-06)
 ========================================================================
 
