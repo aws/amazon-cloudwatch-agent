@@ -94,5 +94,5 @@ func IsValidRetentionDays(days int) bool {
 }
 
 func IsValidLogGroupClass(class string) bool {
-	return slices.Contains(ValidLogGroupClasses, class)
+	return slices.Contains(ValidLogGroupClasses, class) || class == ""
 }

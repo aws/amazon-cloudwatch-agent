@@ -6,8 +6,6 @@ package translator
 import (
 	"fmt"
 	"strings"
-
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 // DefaultCase check if current input overrides the default value for the given config entry key.
@@ -95,10 +93,10 @@ func DefaultLogGroupClassCase(key string, defaultVal, input interface{}) (return
 		//CreateLogGroup API only accepts values STANDARD or INFREQUENT_ACCESS
 		returnVal = strings.ToUpper(classVal)
 	} else {
-		returnVal = util.StandardLogGroupClass
-		AddErrorMessages(
+		AddInfoMessages(
 			fmt.Sprintf("LogGroupClass key: %s", key),
-			fmt.Sprintf("%s value (%v) in is not a valid Log Group Class field. Defaulting to standard.", key, returnVal))
+			fmt.Sprintf("%s value (%v) in is not a valid Log Group Class field. Agent will not set the LogGroupClass parameter.", key, returnVal))
+		returnVal = ""
 	}
 	return
 
