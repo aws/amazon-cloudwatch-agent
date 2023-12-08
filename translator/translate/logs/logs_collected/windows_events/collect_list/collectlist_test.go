@@ -86,7 +86,8 @@ func TestDuplicateRetention(t *testing.T) {
           "CRITICAL"
         ],
         "log_group_name": "System",
-		"retention_in_days": 3
+		"retention_in_days": 3,
+		"log_group_class": "INFREQUENT_ACCESS"
       },
       {
         "event_name": "Application",
@@ -97,7 +98,8 @@ func TestDuplicateRetention(t *testing.T) {
         ],
         "event_format": "xml",
         "log_group_name": "System",
-		"retention_in_days": 3
+		"retention_in_days": 3,
+		"log_group_class": "INFREQUENT_ACCESS"
       },
       {
         "event_name": "Application",
@@ -108,7 +110,8 @@ func TestDuplicateRetention(t *testing.T) {
         ],
         "event_format": "xml",
         "log_group_name": "System",
-		"retention_in_days": 3
+		"retention_in_days": 3,
+		"log_group_class": "INFREQUENT_ACCESS"
       }
     ]
 }
@@ -122,7 +125,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
-			"log_group_class":   util.StandardLogGroupClass,
+			"log_group_class":   util.InfrequentAccessLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -131,7 +134,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
-			"log_group_class":   util.StandardLogGroupClass,
+			"log_group_class":   util.InfrequentAccessLogGroupClass,
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -140,7 +143,7 @@ func TestDuplicateRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
-			"log_group_class":   util.StandardLogGroupClass,
+			"log_group_class":   util.InfrequentAccessLogGroupClass,
 		},
 	}
 
