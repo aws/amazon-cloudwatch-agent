@@ -93,9 +93,9 @@ func DefaultLogGroupClassCase(key string, defaultVal, input interface{}) (return
 		//CreateLogGroup API only accepts values STANDARD or INFREQUENT_ACCESS
 		returnVal = strings.ToUpper(classVal)
 	} else {
-		AddErrorMessages(
+		AddInfoMessages(
 			fmt.Sprintf("LogGroupClass key: %s", key),
-			fmt.Sprintf("%s value (%v) in is not a valid Log Group Class field. Defaulting to standard.", key, returnVal))
+			fmt.Sprintf("%s value (%v) in is not a valid Log Group Class field. Agent will not set the LogGroupClass parameter.", key, returnVal))
 		returnVal = ""
 	}
 	return
