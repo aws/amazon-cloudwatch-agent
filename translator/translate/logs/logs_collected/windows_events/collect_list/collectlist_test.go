@@ -196,7 +196,7 @@ func TestConflictingRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 3,
-			"log_group_class":   util.StandardLogGroupClass,
+			"log_group_class":   "",
 		},
 		map[string]interface{}{
 			"event_name":        "Application",
@@ -205,7 +205,7 @@ func TestConflictingRetention(t *testing.T) {
 			"log_group_name":    "System",
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
-			"log_group_class":   util.StandardLogGroupClass,
+			"log_group_class":   "",
 		},
 	}
 
