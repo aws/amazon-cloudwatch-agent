@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
@@ -133,9 +134,12 @@ func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 		OutputPaths: outputPaths,
 		Level:       logLevel,
 		Encoding:    common.Console,
+		// enabled by default with 10 second tick
 		Sampling: &telemetry.LogsSamplingConfig{
+			Enabled:    true,
 			Initial:    2,
 			Thereafter: 500,
+			Tick:       10 * time.Second,
 		},
 	}
 }

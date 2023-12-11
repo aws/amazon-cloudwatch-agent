@@ -114,13 +114,6 @@ exporters:
             enabled: true
             include_metadata: true
 extensions:
-    awsproxy/app_signals:
-        aws_endpoint: ""
-        endpoint: 0.0.0.0:2000
-        local_mode: false
-        proxy_address: ""
-        region: ""
-        role_arn: ""
     agenthealth/logs:
         is_usage_data_enabled: true
         stats:
@@ -131,6 +124,13 @@ extensions:
         stats:
             operations:
                 - PutTraceSegments
+    awsproxy/app_signals:
+        aws_endpoint: ""
+        endpoint: 0.0.0.0:2000
+        local_mode: false
+        proxy_address: ""
+        region: ""
+        role_arn: ""
 processors:
     awsappsignals:
         resolvers:
@@ -200,6 +200,7 @@ processors:
             - eks
             - env
             - ec2
+        disable_keep_alives: false
         docker:
             resource_attributes:
                 host.name:
@@ -291,6 +292,8 @@ processors:
                     enabled: true
                 faas.id:
                     enabled: true
+                faas.instance:
+                    enabled: true
                 faas.name:
                     enabled: true
                 faas.version:
@@ -331,6 +334,15 @@ processors:
                 service.version:
                     enabled: true
         idle_conn_timeout: 1m30s
+        k8snode:
+            auth_type: serviceAccount
+            context: ""
+            node_from_env_var: ""
+            resource_attributes:
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
         lambda:
             resource_attributes:
                 aws.log.group.names:
@@ -385,6 +397,18 @@ processors:
             hostname_sources: []
             resource_attributes:
                 host.arch:
+                    enabled: false
+                host.cpu.cache.l2.size:
+                    enabled: false
+                host.cpu.family:
+                    enabled: false
+                host.cpu.model.id:
+                    enabled: false
+                host.cpu.model.name:
+                    enabled: false
+                host.cpu.stepping:
+                    enabled: false
+                host.cpu.vendor.id:
                     enabled: false
                 host.id:
                     enabled: false
@@ -454,8 +478,10 @@ service:
             level: info
             output_paths: []
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None

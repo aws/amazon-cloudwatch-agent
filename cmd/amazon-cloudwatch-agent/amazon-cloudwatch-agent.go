@@ -351,7 +351,9 @@ func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProv
 	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
 	loggingOptions := cwaLogger.NewLoggerOptions(writer, level)
 	return otelcol.CollectorSettings{
-		Factories:      factories,
+		Factories: func() (otelcol.Factories, error) {
+			return factories, nil
+		},
 		ConfigProvider: provider,
 		// build info is essential for populating the user agent string in otel contrib upstream exporters, like the EMF exporter
 		BuildInfo: component.BuildInfo{

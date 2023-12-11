@@ -34,7 +34,9 @@ func Test_getCollectorParams(t *testing.T) {
 				provider:  nil,
 			},
 			want: otelcol.CollectorSettings{
-				Factories:      otelcol.Factories{},
+				Factories: func() (otelcol.Factories, error) {
+					return otelcol.Factories{}, nil
+				},
 				ConfigProvider: nil,
 				BuildInfo: component.BuildInfo{
 					Command:     "CWAgent",
