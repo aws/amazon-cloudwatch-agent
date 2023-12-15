@@ -21,8 +21,8 @@ func (cfg *Config) Validate() error {
 	for _, resolver := range cfg.Resolvers {
 		switch resolver.Platform {
 		case PlatformEKS:
-			if resolver.ClusterName == "" {
-				return errors.New("cluster name must not be empty for eks resolver")
+			if resolver.Name == "" {
+				return errors.New("name must not be empty for eks resolver")
 			}
 		case PlatformGeneric:
 		default:

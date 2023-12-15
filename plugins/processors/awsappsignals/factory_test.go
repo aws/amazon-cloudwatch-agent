@@ -121,7 +121,7 @@ func TestLoadGenericConfig(t *testing.T) {
 		{
 			id: component.NewIDWithName("awsappsignals", ""),
 			expected: &config.Config{
-				Resolvers: []config.Resolver{config.NewGenericResolver()},
+				Resolvers: []config.Resolver{config.NewGenericResolver("")},
 				Rules:     expectedRules,
 			},
 		},

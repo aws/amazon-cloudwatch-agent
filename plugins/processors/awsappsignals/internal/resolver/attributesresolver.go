@@ -14,6 +14,8 @@ import (
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
+const AttributePlatformGeneric = "Generic"
+
 var DefaultHostedInAttributes = map[string]string{
 	attr.AWSHostedInEnvironment: attr.HostedInEnvironment,
 }
@@ -32,9 +34,9 @@ func NewAttributesResolver(resolvers []appsignalsconfig.Resolver, logger *zap.Lo
 	subResolvers := []subResolver{}
 	for _, resolver := range resolvers {
 		if resolver.Platform == appsignalsconfig.PlatformEKS {
-			subResolvers = append(subResolvers, getEksResolver(logger), newEKSHostedInAttributeResolver())
+			subResolvers = append(subResolvers, getEksResolver(logger), newEKSHostedInAttributeResolver(resolver.Name))
 		} else {
-			subResolvers = append(subResolvers, newHostedInAttributeResolver(DefaultHostedInAttributes))
+			subResolvers = append(subResolvers, newHostedInAttributeResolver(resolver.Name, DefaultHostedInAttributes))
 		}
 	}
 	return &attributesResolver{
@@ -63,11 +65,16 @@ func (r *attributesResolver) Stop(ctx context.Context) error {
 }
 
 type hostedInAttributeResolver struct {
+	name         string
 	attributeMap map[string]string
 }
 
-func newHostedInAttributeResolver(attributeMap map[string]string) *hostedInAttributeResolver {
+func newHostedInAttributeResolver(name string, attributeMap map[string]string) *hostedInAttributeResolver {
+	if name == "" {
+		name = AttributePlatformGeneric
+	}
 	return &hostedInAttributeResolver{
+		name:         name,
 		attributeMap: attributeMap,
 	}
 }
@@ -79,8 +86,7 @@ func (h *hostedInAttributeResolver) Process(attributes, resourceAttributes pcomm
 	}
 
 	if _, ok := resourceAttributes.Get(attr.AWSHostedInEnvironment); !ok {
-		hostedInEnv := "Generic"
-		attributes.PutStr(attr.HostedInEnvironment, hostedInEnv)
+		attributes.PutStr(attr.HostedInEnvironment, h.name)
 	}
 
 	return nil

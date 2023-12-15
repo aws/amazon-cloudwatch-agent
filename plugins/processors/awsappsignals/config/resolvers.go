@@ -11,19 +11,20 @@ const (
 )
 
 type Resolver struct {
-	ClusterName string `mapstructure:"cluster_name"`
-	Platform    string `mapstructure:"platform"`
+	Name     string `mapstructure:"name"`
+	Platform string `mapstructure:"platform"`
 }
 
-func NewEKSResolver(clusterName string) Resolver {
+func NewEKSResolver(name string) Resolver {
 	return Resolver{
-		ClusterName: clusterName,
-		Platform:    PlatformEKS,
+		Name:     name,
+		Platform: PlatformEKS,
 	}
 }
 
-func NewGenericResolver() Resolver {
+func NewGenericResolver(name string) Resolver {
 	return Resolver{
+		Name:     name,
 		Platform: PlatformGeneric,
 	}
 }

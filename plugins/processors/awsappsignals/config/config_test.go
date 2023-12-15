@@ -11,7 +11,7 @@ import (
 
 func TestValidatePassed(t *testing.T) {
 	config := Config{
-		Resolvers: []Resolver{NewEKSResolver("test"), NewGenericResolver()},
+		Resolvers: []Resolver{NewEKSResolver("test"), NewGenericResolver("")},
 		Rules:     nil,
 	}
 	assert.Nil(t, config.Validate())

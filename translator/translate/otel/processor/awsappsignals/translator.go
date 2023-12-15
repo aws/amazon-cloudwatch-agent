@@ -60,19 +60,18 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	configKey := common.AppSignalsConfigKeys[t.dataType]
 	cfg := t.factory.CreateDefaultConfig().(*appsignalsconfig.Config)
 
+	hostedInConfigKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in")
+	hostedIn, hostedInConfigured := common.GetString(conf, hostedInConfigKey)
 	if common.IsAppSignalsKubernetes() {
-		clusterNameFromMetricsConfig := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "cluster_name")
-		var clusterName string
-		var ok bool
-		if clusterName, ok = common.GetString(conf, clusterNameFromMetricsConfig); !ok {
-			clusterName = util.GetClusterNameFromEc2Tagger()
+		if !hostedInConfigured {
+			hostedIn = util.GetClusterNameFromEc2Tagger()
 		}
 		cfg.Resolvers = []appsignalsconfig.Resolver{
-			appsignalsconfig.NewEKSResolver(clusterName),
+			appsignalsconfig.NewEKSResolver(hostedIn),
 		}
 	} else {
 		cfg.Resolvers = []appsignalsconfig.Resolver{
-			appsignalsconfig.NewGenericResolver(),
+			appsignalsconfig.NewGenericResolver(hostedIn),
 		}
 	}
 

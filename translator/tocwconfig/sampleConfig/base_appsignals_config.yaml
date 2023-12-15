@@ -134,7 +134,7 @@ extensions:
 processors:
     awsappsignals:
         resolvers:
-            - cluster_name: ""
+            - name: ""
               platform: generic
         rules: []
     resourcedetection:

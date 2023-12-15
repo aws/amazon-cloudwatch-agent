@@ -61,7 +61,7 @@ func TestProcessMetrics(t *testing.T) {
 	ap := &awsappsignalsprocessor{
 		logger: logger,
 		config: &config.Config{
-			Resolvers: []config.Resolver{config.NewGenericResolver()},
+			Resolvers: []config.Resolver{config.NewGenericResolver("")},
 			Rules:     testRules,
 		},
 	}
@@ -105,7 +105,7 @@ func TestProcessTraces(t *testing.T) {
 	ap := &awsappsignalsprocessor{
 		logger: logger,
 		config: &config.Config{
-			Resolvers: []config.Resolver{config.NewGenericResolver()},
+			Resolvers: []config.Resolver{config.NewGenericResolver("")},
 			Rules:     testRules,
 		},
 	}

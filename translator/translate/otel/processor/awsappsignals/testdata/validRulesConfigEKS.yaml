@@ -1,6 +1,6 @@
 resolvers:
   - platform: eks
-    cluster_name: test
+    name: test
 rules:
   - selectors:
     - dimension: Operation

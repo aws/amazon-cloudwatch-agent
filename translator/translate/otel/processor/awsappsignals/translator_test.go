@@ -52,10 +52,9 @@ func TestTranslate(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{
-							"cluster_name": "test",
+						"app_signals": map[string]interface{}{
+							"hosted_in": "test",
 						},
-						"app_signals": map[string]interface{}{},
 					},
 				}},
 			want:         validAppSignalsYamlEKS,
@@ -70,9 +69,6 @@ func TestTranslate(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{
-							"cluster_name": "test",
-						},
 						"app_signals": map[string]interface{}{},
 					},
 				}},
