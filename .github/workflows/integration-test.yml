@@ -1170,3 +1170,14 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
+
+  E2ETest:
+    name: "E2ETest"
+    needs: [ BuildAndUpload ]
+    runs-on: ubuntu-latest
+    uses: ./.github/workflows/appsignals-e2e-eks-test.yml
+    secrets: inherit
+    with:
+      aws-region: 'us-east-1'
+      test-cluster-name: 'e2e-cw-agent-test'
+      container-repository-name-and-tag: "cwagent-integration-test:${{ github.sha }}"
