@@ -16,7 +16,7 @@ env:
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
-  push:
+  pull_request:
 
 jobs:
   BuildAndUpload:
