@@ -33,7 +33,6 @@ jobs:
   E2ETest:
     name: "E2ETest"
     needs: [ BuildAndUpload ]
-    runs-on: ubuntu-latest
     uses: ./.github/workflows/appsignals-e2e-eks-test.yml
     secrets: inherit
     with:
