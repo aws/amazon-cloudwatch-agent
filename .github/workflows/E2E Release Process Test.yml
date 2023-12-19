@@ -16,13 +16,9 @@ env:
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
-  workflow_dispatch:
-    inputs:
-      plugins:
-        description: 'Comma delimited list of plugins to test. Default is empty, and tests everything'
-        required: false
-        default: ''
-        type: string
+  push:
+    branches:
+      - add-e2e-test-to-release-testing
 
 permissions:
   id-token: write
