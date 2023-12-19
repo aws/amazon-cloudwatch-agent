@@ -19,24 +19,12 @@ on:
   pull_request:
 
 jobs:
-  BuildAndUpload:
-    uses: ./.github/workflows/test-build.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-
   E2ETest:
     name: "E2ETest"
-    needs: [ BuildAndUpload ]
     uses: ./.github/workflows/appsignals-e2e-eks-test.yml
     secrets: inherit
     with:
       aws-region: 'us-east-1'
       test-cluster-name: 'e2e-cw-agent-test'
-      container-repository-name-and-tag: "cwagent-integration-test:${{ github.sha }}"
+      container-repository-name-and-tag: "cwagent-integration-test:48462a266efa40991354ccc44b5542bba84e1f9d"
 
