@@ -30,6 +30,7 @@ IMAGE_REPO = cloudwatch-agent
 IMAGE_TAG = $(VERSION)
 IMAGE = $(IMAGE_REGISTRY)/$(IMAGE_REPO):$(IMAGE_TAG)
 DOCKER_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile
+DOCKER_WINDOWS_BUILD_FROM_SOURCE = docker build -t $(IMAGE) -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/source/Dockerfile.Windows
 
 CW_AGENT_IMPORT_PATH=github.com/aws/amazon-cloudwatch-agent
 ALL_SRC := $(shell find . -name '*.go' -type f | sort)
@@ -109,6 +110,11 @@ build-for-docker-amd64:
 	$(LINUX_AMD64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
 	$(LINUX_AMD64_BUILD)/config-translator github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
 
+build-for-docker-windows-amd64:
+	$(WIN_BUILD)/amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
+	$(WIN_BUILD)/start-amazon-cloudwatch-agent.exe github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
+	$(WIN_BUILD)/config-translator.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
+
 build-for-docker-arm64:
 	$(LINUX_ARM64_BUILD)/amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent
 	$(LINUX_ARM64_BUILD)/start-amazon-cloudwatch-agent github.com/aws/amazon-cloudwatch-agent/cmd/start-amazon-cloudwatch-agent
@@ -125,6 +131,13 @@ docker-build-arm64: build-for-docker-arm64
 
 docker-push:
 	docker push $(IMAGE)
+
+build-for-docker-fast-windows-amd64: build-for-docker-windows-amd64
+	rm -rf tmp
+	mkdir -p tmp/windows_amd64
+	cp build/bin/windows_amd64/* tmp/windows_amd64
+	docker build --platform windows/amd64 -f amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localbin/Dockerfile.Windows . -t amazon-cloudwatch-agent
+	rm -rf tmp
 
 install-goimports:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
@@ -315,3 +328,9 @@ dockerized-build:
 # Use vendor instead of proxy when building w/ vendor folder
 dockerized-build-vendor:
 	$(DOCKER_BUILD_FROM_SOURCE) --build-arg GO111MODULE=off .
+
+.PHONY: dockerized-windows-build
+dockerized-windows-build:
+	$(DOCKER_WINDOWS_BUILD_FROM_SOURCE) .
+	@echo Built image:
+	@echo $(IMAGE)
