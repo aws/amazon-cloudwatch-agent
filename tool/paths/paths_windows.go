@@ -21,6 +21,8 @@ const (
 	AgentStartName       = "amazon-cloudwatch-agent-ctl.ps1"
 )
 
+var CONFIG_DIR_IN_CONTAINER = filepath.Join(os.Getenv("ProgramFiles"), AgentDir, "cwagentconfig")
+
 func init() {
 	programFiles := os.Getenv("ProgramFiles")
 	var programData string
