@@ -16,7 +16,11 @@ env:
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
-  pull_request:
+  push:
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   E2ETest:
