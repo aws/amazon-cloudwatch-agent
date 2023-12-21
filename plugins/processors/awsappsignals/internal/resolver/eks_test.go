@@ -825,14 +825,13 @@ func TestHostedInEksResolver(t *testing.T) {
 		}
 	}
 
-	resolver := newEKSHostedInAttributeResolver()
+	resolver := newEKSHostedInAttributeResolver("test-cluster")
 
 	// Test case 1 and 2: resourceAttributes contains "k8s.namespace.name" and EKS cluster name
 	attributes := pcommon.NewMap()
 	resourceAttributes := pcommon.NewMap()
 	resourceAttributes.PutStr("cloud.provider", "aws")
 	resourceAttributes.PutStr("k8s.namespace.name", "test-namespace-3")
-	resourceAttributes.PutStr("ec2.tag.kubernetes.io/cluster/test-cluster", "owned")
 	err := resolver.Process(attributes, resourceAttributes)
 	assert.NoError(t, err)
 	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, attr.HostedInK8SNamespace, t))

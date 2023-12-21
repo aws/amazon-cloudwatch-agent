@@ -11,6 +11,8 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/processorhelper"
+
+	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 )
 
 const (
@@ -33,9 +35,8 @@ func NewFactory() processor.Factory {
 }
 
 func createDefaultConfig() component.Config {
-	return &Config{
-		// TODO: change default config when other resolvers are supported
-		Resolvers: []string{"eks"},
+	return &appsignalsconfig.Config{
+		Resolvers: []appsignalsconfig.Resolver{},
 	}
 }
 
@@ -87,7 +88,7 @@ func createProcessor(
 	params processor.CreateSettings,
 	cfg component.Config,
 ) (*awsappsignalsprocessor, error) {
-	pCfg, ok := cfg.(*Config)
+	pCfg, ok := cfg.(*appsignalsconfig.Config)
 	if !ok {
 		return nil, errors.New("could not initialize awsappsignalsprocessor")
 	}

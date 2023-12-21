@@ -12,7 +12,9 @@ import (
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
+	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -56,16 +58,27 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	configKey := common.AppSignalsConfigKeys[t.dataType]
-	cfg := t.factory.CreateDefaultConfig().(*awsappsignals.Config)
+	cfg := t.factory.CreateDefaultConfig().(*appsignalsconfig.Config)
+
+	hostedInConfigKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in")
+	hostedIn, hostedInConfigured := common.GetString(conf, hostedInConfigKey)
 	if common.IsAppSignalsKubernetes() {
-		cfg.Resolvers = []string{"eks"}
+		if !hostedInConfigured {
+			hostedIn = util.GetClusterNameFromEc2Tagger()
+		}
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewEKSResolver(hostedIn),
+		}
 	} else {
-		cfg.Resolvers = []string{"generic"}
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewGenericResolver(hostedIn),
+		}
 	}
+
 	return t.translateCustomRules(conf, configKey, cfg)
 }
 
-func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, cfg *awsappsignals.Config) (component.Config, error) {
+func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, cfg *appsignalsconfig.Config) (component.Config, error) {
 	var rulesList []rules.Rule
 	rulesConfigKey := common.ConfigKey(configKey, common.AppSignalsRules)
 	if conf.IsSet(rulesConfigKey) {

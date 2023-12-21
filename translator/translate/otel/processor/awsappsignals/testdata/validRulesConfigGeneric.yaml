@@ -1,4 +1,6 @@
-resolvers: ["generic"]
+resolvers:
+  - platform: generic
+    name: test
 rules:
   - selectors:
       - dimension: Operation

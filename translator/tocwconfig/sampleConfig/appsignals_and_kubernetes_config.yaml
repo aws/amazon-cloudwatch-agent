@@ -294,7 +294,8 @@ extensions:
 processors:
     awsappsignals:
         resolvers:
-            - eks
+          - platform: eks
+            name: TestCluster
         rules: []
     batch/containerinsights:
         metadata_cardinality_limit: 1000

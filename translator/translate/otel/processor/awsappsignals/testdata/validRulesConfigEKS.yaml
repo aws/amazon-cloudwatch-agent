@@ -1,4 +1,6 @@
-resolvers: ["eks"]
+resolvers:
+  - platform: eks
+    name: test
 rules:
   - selectors:
     - dimension: Operation

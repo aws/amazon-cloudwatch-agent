@@ -663,8 +663,9 @@ type eksHostedInAttributeResolver struct {
 	attributeMap map[string]string
 }
 
-func newEKSHostedInAttributeResolver() *eksHostedInAttributeResolver {
+func newEKSHostedInAttributeResolver(clusterName string) *eksHostedInAttributeResolver {
 	return &eksHostedInAttributeResolver{
+		clusterName: clusterName,
 		attributeMap: map[string]string{
 			semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
 		},
@@ -677,23 +678,7 @@ func (h *eksHostedInAttributeResolver) Process(attributes, resourceAttributes pc
 		}
 	}
 
-	if h.clusterName != "" {
-		attributes.PutStr(attr.HostedInClusterName, h.clusterName)
-	} else {
-		platform, _ := resourceAttributes.Get(semconv.AttributeCloudProvider)
-		if platform.AsString() == semconv.AttributeCloudProviderAWS {
-			// iterate resource attributes to find the cluster name
-			resourceAttributes.Range(func(key string, value pcommon.Value) bool {
-				if strings.HasPrefix(key, "ec2.tag.kubernetes.io/cluster/") && value.Type() == pcommon.ValueTypeStr && value.AsString() == "owned" {
-					h.clusterName = strings.TrimPrefix(key, "ec2.tag.kubernetes.io/cluster/")
-					attributes.PutStr(attr.HostedInClusterName, h.clusterName)
-					return false
-				}
-				return true
-			})
-		}
-	}
-
+	attributes.PutStr(attr.HostedInClusterName, h.clusterName)
 	return nil
 }
 
