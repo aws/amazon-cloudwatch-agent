@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 
+	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/normalizer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/resolver"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
@@ -37,7 +38,7 @@ type stopper interface {
 
 type awsappsignalsprocessor struct {
 	logger            *zap.Logger
-	config            *Config
+	config            *appsignalsconfig.Config
 	replaceActions    *rules.ReplaceActions
 	allowlistMutators []allowListMutator
 	metricMutators    []attributesMutator

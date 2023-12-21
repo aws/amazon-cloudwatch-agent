@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -51,7 +52,9 @@ func TestTranslate(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"app_signals": map[string]interface{}{
+							"hosted_in": "test",
+						},
 					},
 				}},
 			want:         validAppSignalsYamlEKS,
@@ -93,12 +96,12 @@ func TestTranslate(t *testing.T) {
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {
 				require.NotNil(t, got)
-				gotCfg, ok := got.(*awsappsignals.Config)
+				gotCfg, ok := got.(*config.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
 				yamlConfig, err := common.GetYamlFileToYamlConfig(wantCfg, testCase.want)
 				require.NoError(t, err)
-				assert.Equal(t, yamlConfig.(*awsappsignals.Config), gotCfg)
+				assert.Equal(t, yamlConfig.(*config.Config), gotCfg)
 			}
 		})
 	}

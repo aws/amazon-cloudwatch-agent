@@ -1,1 +1,3 @@
-resolvers: ["eks"]
+resolvers:
+  - platform: eks
+    name: test

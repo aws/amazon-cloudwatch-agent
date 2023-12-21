@@ -514,6 +514,11 @@
             "app_signals": {
               "type": "object",
               "properties": {
+                "hosted_in": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
                 "rules": {
                   "description": "Custom rules defined by customer",
                   "type": "array",

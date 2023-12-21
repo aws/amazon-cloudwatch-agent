@@ -97,6 +97,7 @@ func TestLogWindowsEventConfig(t *testing.T) {
 func TestMetricsConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLinuxMetrics.json", true, map[string]int{})
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validWindowsMetrics.json", true, map[string]int{})
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validMetricsWithAppSignals.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}
 	expectedErrorMap["invalid_type"] = 2
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithInvalidAggregationDimensions.json", false, expectedErrorMap)
