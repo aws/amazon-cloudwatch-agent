@@ -12,6 +12,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/cardinalitycontrol"
+
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/normalizer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/resolver"
@@ -21,6 +23,7 @@ import (
 const (
 	failedToProcessAttribute               = "failed to process attributes"
 	failedToProcessAttributeWithCustomRule = "failed to process attributes with custom rule, will drop the metric"
+	failedToProcessAttributeWithLimiter    = "failed to process attributes with limiter, keep the data"
 )
 
 // this is used to Process some attributes (like IP addresses) to a generic form to reduce high cardinality
@@ -43,24 +46,46 @@ type awsappsignalsprocessor struct {
 	allowlistMutators []allowListMutator
 	metricMutators    []attributesMutator
 	traceMutators     []attributesMutator
+	limiter           cardinalitycontrol.Limiter
 	stoppers          []stopper
 }
 
-func (ap *awsappsignalsprocessor) Start(_ context.Context, _ component.Host) error {
+func (ap *awsappsignalsprocessor) StartMetrics(ctx context.Context, _ component.Host) error {
 	attributesResolver := resolver.NewAttributesResolver(ap.config.Resolvers, ap.logger)
 	ap.stoppers = []stopper{attributesResolver}
-	ap.metricMutators = []attributesMutator{attributesResolver}
-
 	attributesNormalizer := normalizer.NewAttributesNormalizer(ap.logger)
 	ap.metricMutators = []attributesMutator{attributesResolver, attributesNormalizer}
 
-	ap.replaceActions = rules.NewReplacer(ap.config.Rules)
-	ap.traceMutators = []attributesMutator{attributesResolver, attributesNormalizer, ap.replaceActions}
+	limiterConfig := ap.config.Limiter
+	if limiterConfig == nil {
+		limiterConfig = appsignalsconfig.NewDefaultLimiterConfig()
+	}
+	if limiterConfig.ParentContext == nil {
+		limiterConfig.ParentContext = ctx
+	}
 
-	keeper := rules.NewKeeper(ap.config.Rules)
+	if !limiterConfig.Disabled {
+		ap.limiter = cardinalitycontrol.NewMetricsLimiter(limiterConfig, ap.logger)
+	} else {
+		ap.logger.Info("metrics limiter is disabled.")
+	}
+
+	ap.replaceActions = rules.NewReplacer(ap.config.Rules, !limiterConfig.Disabled)
+
+	keeper := rules.NewKeeper(ap.config.Rules, !limiterConfig.Disabled)
 	dropper := rules.NewDropper(ap.config.Rules)
 	ap.allowlistMutators = []allowListMutator{keeper, dropper}
 
+	return nil
+}
+
+func (ap *awsappsignalsprocessor) StartTraces(_ context.Context, _ component.Host) error {
+	attributesResolver := resolver.NewAttributesResolver(ap.config.Resolvers, ap.logger)
+	attributesNormalizer := normalizer.NewAttributesNormalizer(ap.logger)
+	customReplacer := rules.NewReplacer(ap.config.Rules, false)
+
+	ap.stoppers = append(ap.stoppers, attributesResolver)
+	ap.traceMutators = append(ap.traceMutators, attributesResolver, attributesNormalizer, customReplacer)
 	return nil
 }
 
@@ -74,7 +99,7 @@ func (ap *awsappsignalsprocessor) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (ap *awsappsignalsprocessor) processTraces(ctx context.Context, td ptrace.Traces) (ptrace.Traces, error) {
+func (ap *awsappsignalsprocessor) processTraces(_ context.Context, td ptrace.Traces) (ptrace.Traces, error) {
 	rss := td.ResourceSpans()
 	for i := 0; i < rss.Len(); i++ {
 		rs := rss.At(i)
@@ -117,7 +142,7 @@ func (ap *awsappsignalsprocessor) processMetrics(ctx context.Context, md pmetric
 
 // Attributes are provided for each log and trace, but not at the metric level
 // Need to process attributes for every data point within a metric.
-func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m pmetric.Metric, resourceAttribes pcommon.Map) {
+func (ap *awsappsignalsprocessor) processMetricAttributes(_ context.Context, m pmetric.Metric, resourceAttribes pcommon.Map) {
 
 	// This is a lot of repeated code, but since there is no single parent superclass
 	// between metric data types, we can't use polymorphism.
@@ -150,6 +175,13 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 			}
 		}
+		if ap.limiter != nil {
+			for i := 0; i < dps.Len(); i++ {
+				if _, err := ap.limiter.Admit(m.Name(), dps.At(i).Attributes(), resourceAttribes); err != nil {
+					ap.logger.Debug(failedToProcessAttributeWithLimiter, zap.Error(err))
+				}
+			}
+		}
 	case pmetric.MetricTypeSum:
 		dps := m.Sum().DataPoints()
 		for i := 0; i < dps.Len(); i++ {
@@ -176,6 +208,13 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 			err := ap.replaceActions.Process(dps.At(i).Attributes(), resourceAttribes, false)
 			if err != nil {
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
+			}
+		}
+		if ap.limiter != nil {
+			for i := 0; i < dps.Len(); i++ {
+				if _, err := ap.limiter.Admit(m.Name(), dps.At(i).Attributes(), resourceAttribes); err != nil {
+					ap.logger.Debug(failedToProcessAttributeWithLimiter, zap.Error(err))
+				}
 			}
 		}
 	case pmetric.MetricTypeHistogram:
@@ -206,6 +245,13 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 			}
 		}
+		if ap.limiter != nil {
+			for i := 0; i < dps.Len(); i++ {
+				if _, err := ap.limiter.Admit(m.Name(), dps.At(i).Attributes(), resourceAttribes); err != nil {
+					ap.logger.Debug(failedToProcessAttributeWithLimiter, zap.Error(err))
+				}
+			}
+		}
 	case pmetric.MetricTypeExponentialHistogram:
 		dps := m.ExponentialHistogram().DataPoints()
 		for i := 0; i < dps.Len(); i++ {
@@ -234,6 +280,13 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 			}
 		}
+		if ap.limiter != nil {
+			for i := 0; i < dps.Len(); i++ {
+				if _, err := ap.limiter.Admit(m.Name(), dps.At(i).Attributes(), resourceAttribes); err != nil {
+					ap.logger.Debug(failedToProcessAttributeWithLimiter, zap.Error(err))
+				}
+			}
+		}
 	case pmetric.MetricTypeSummary:
 		dps := m.Summary().DataPoints()
 		for i := 0; i < dps.Len(); i++ {
@@ -260,6 +313,13 @@ func (ap *awsappsignalsprocessor) processMetricAttributes(ctx context.Context, m
 			err := ap.replaceActions.Process(dps.At(i).Attributes(), resourceAttribes, false)
 			if err != nil {
 				ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
+			}
+		}
+		if ap.limiter != nil {
+			for i := 0; i < dps.Len(); i++ {
+				if _, err := ap.limiter.Admit(m.Name(), dps.At(i).Attributes(), resourceAttribes); err != nil {
+					ap.logger.Debug(failedToProcessAttributeWithLimiter, zap.Error(err))
+				}
 			}
 		}
 	default:

@@ -137,6 +137,7 @@ processors:
             - name: ""
               platform: generic
         rules: []
+        limiter: null
     resourcedetection:
         aks:
             resource_attributes:

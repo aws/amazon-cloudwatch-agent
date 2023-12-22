@@ -5,7 +5,11 @@
   "logs": {
     "metrics_collected": {
       "app_signals": {
-        "hosted_in": "TestCluster"
+        "hosted_in": "TestCluster",
+        "limiter": {
+          "log_dropped_metrics": true,
+          "rotation_interval": "10m"
+        }
       },
       "kubernetes": {
         "cluster_name": "TestCluster",

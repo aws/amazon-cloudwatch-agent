@@ -3,6 +3,11 @@
     "metrics_collected": {
       "app_signals": {
         "hosted_in": "test",
+        "limiter": {
+          "drop_threshold": 20,
+          "log_dropped_metrics": true,
+          "rotation_interval": "10m"
+        },
         "rules": [
           {
             "selectors": [
