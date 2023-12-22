@@ -1,0 +1,70 @@
+name: go mod cache
+env:
+  CWA_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent"
+  CACHE_DIR: "s3://cloudwatch-agent-integration-bucket/GoVendorCache/vendor.zip"
+on:
+  push:
+    branches:
+      - uniform-build-env
+      - main
+    workflow_dispatch:
+
+jobs:
+  cache:
+    name: Caching Go Mod files
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_REPO_NAME}}
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ~1.20.5
+      - name: go mod optimization
+        run: |
+          if aws s3 ls ${{env.CACHE_DIR}}; then
+             echo "time for copy file to vendor from s3 bucket"
+             aws s3 cp ${{env.CACHE_DIR}} ./vendor.zip
+             echo "time for unzipping the vendor file"
+             unzip vendor.zip
+             rm -r vendor.zip
+             set +e
+             echo "building the cloudwatch agent"
+             time make build GOMODCACHE=true
+             build_exit_status=$?
+             echo  "build status code:$build_exit_status"
+             echo "updating the vendor file as build_exit_status is not equal to 0 because we have new dependencies added to the package"
+             if [ $build_exit_status -ne 0 ]; then   #To handle the updated mod file
+                 go mod tidy
+                 go mod vendor
+                 time make build GOMODCACHE=true
+                 zip -r vendor.zip vendor
+                 echo "updating the vendor file and uploading zip file to s3 bucket"
+                 aws s3 cp vendor.zip ${{env.CACHE_DIR}}
+                 rm -f vendor.zip
+                 echo "vendor zip is updated and uploaded to s3 bucket"
+             else
+                echo "Build successful"
+             fi
+          else
+            echo "created a zip file and adding to the s3 bucket"
+            go mod tidy
+            go clean -modcache
+            go mod vendor 
+            time make build GOMODCACHE=true
+            echo "creating zip file"
+            zip -r vendor.zip vendor
+            echo "copying zip file to s3 bucket"
+            aws s3 cp vendor.zip ${{env.CACHE_DIR}}
+            echo "vendor zip added to the bucket"
+           fi
+           set -e

@@ -1,0 +1,25 @@
+name: RPMBuild
+description: RPM build package download
+schemaVersion: 1.0
+
+phases:
+  - name: build
+    steps:
+      - name: UpdateAptRepo
+        action: ExecuteBash
+        inputs:
+          commands:
+            - add-apt-repository -y 'deb http://security.ubuntu.com/ubuntu xenial-security main'
+      - name: InstallRPMBuild
+        action: ExecuteBash
+        inputs:
+          commands:
+            - apt-get install -y rpm
+
+  - name: validate
+    steps:
+      - name: Check_rpm_build_version
+        action: ExecuteBash
+        inputs:
+          commands:
+            - rpmbuild --version
