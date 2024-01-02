@@ -3,7 +3,9 @@
 
 name: Windows containers Internal Test Release
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - 'main-ciwindows'
 jobs:
   BuildAndUpload:
     uses: ./.github/workflows/test-build.yml
