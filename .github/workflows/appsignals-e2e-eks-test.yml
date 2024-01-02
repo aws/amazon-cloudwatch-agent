@@ -135,7 +135,8 @@ jobs:
 
       - name: Save CloudWatch image to environment before patching
         run: |
-          echo "OLD_CW_AGENT_IMAGE"=$(kubectl get amazoncloudwatchagents -n amazon-cloudwatch -o json | jq '.items[0].spec.image') >> $GITHUB_ENV
+          echo "OLD_CW_AGENT_IMAGE"=$(kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o json | \
+          jq '.items[0].status.containerStatuses[0].image') >> $GITHUB_ENV
 
       - name: Patch the CloudWatch Agent image and restart CloudWatch pods
         run: |
@@ -159,12 +160,12 @@ jobs:
 
       - name: Log pod ADOT image ID
         run: |
-          kubectl get pods -n ${{ env.SAMPLE_APP_NAMESPACE }} --output json | \
-          jq '.items[0].status.initContainerStatuses[0].imageID'
+            kubectl get pods -n ${{ env.SAMPLE_APP_NAMESPACE }} --output json | \
+            jq '.items[0].status.initContainerStatuses[0].imageID'
 
-      - name: Log pod CWAgent image ID
+      - name: Log pod CWAgent Operator image ID
         run: |
-          kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o json | \
+          kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=amazon-cloudwatch-observability -o json | \
           jq '.items[0].status.containerStatuses[0].imageID'
 
       - name: Log pod Fluent Bit image ID
@@ -174,7 +175,11 @@ jobs:
 
       - name: Log pod CWAgent image ID and save image to the environment
         run: |
-          echo "NEW_CW_AGENT_IMAGE"=$(kubectl get amazoncloudwatchagents -n amazon-cloudwatch -o json | jq '.items[0].spec.image') >> $GITHUB_ENV
+          kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o json | \
+          jq '.items[0].status.containerStatuses[0].imageID'
+          
+          echo "NEW_CW_AGENT_IMAGE"=$(kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o json | \
+          jq '.items[0].status.containerStatuses[0].image') >> $GITHUB_ENV
 
       - name: Check if CW Agent image has changed
         run: |
