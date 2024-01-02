@@ -1170,3 +1170,23 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
+          
+  E2E_EKS_Test:
+    name: "E2E EKS Test"
+    needs: [ BuildAndUpload ]
+    uses: ./.github/workflows/appsignals-e2e-eks-test.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
+    with:
+      test-cluster-name: 'e2e-cw-agent-test'
+      
+  E2E_EC2_Test:
+    name: "E2E EC2 Test"
+    needs: [ BuildAndUpload ]
+    uses: ./.github/workflows/appsignals-e2e-ec2-test.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
