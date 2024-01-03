@@ -5,6 +5,7 @@
 
 set -e
 set -u
+set -x
 
 readonly AGENTDIR="/opt/aws/amazon-cloudwatch-agent"
 readonly CMDDIR="${AGENTDIR}/bin"
