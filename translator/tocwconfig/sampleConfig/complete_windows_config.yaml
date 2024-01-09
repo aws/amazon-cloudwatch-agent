@@ -135,13 +135,10 @@ receivers:
             role_arn: trace_role_arn_value_test
             tls:
                 ca_file: ""
-                ca_pem: "[REDACTED]"
                 cert_file: ""
-                cert_pem: "[REDACTED]"
                 insecure: true
                 insecure_skip_verify: false
                 key_file: ""
-                key_pem: "[REDACTED]"
                 max_version: ""
                 min_version: ""
                 reload_interval: 0s
