@@ -5,6 +5,7 @@ package cmdutil
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"log"
 	"os"
 	"path/filepath"
@@ -224,9 +225,64 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 	if err = conf.Marshal(cfg); err != nil {
 		return nil, err
 	}
-	return conf.ToStringMap(), nil
+	strMap := conf.ToStringMap()
+	ConvertOtelNullToEmpty(strMap)
+	RemoveTLSRedacted(strMap)
+	return strMap, nil
 }
-
+func RemoveTLSRedacted(stringMap map[string]interface{}) {
+	type Node struct {
+		isTLSParent bool
+		isJMXParent bool
+		data        map[string]interface{}
+	}
+	root := Node{isTLSParent: false, isJMXParent: false, data: stringMap}
+	queue := []Node{root}
+	// Using BFS search through string Map and find sub settings of TLS
+	// Then delete REDACTED settings under TLS
+	for len(queue) > 0 {
+		node := queue[0]
+		queue = queue[1:]
+		for key, child := range node.data {
+			if childMap, ok := child.(map[string]interface{}); ok {
+				queue = append(queue, Node{key == common.TLSKey, strings.Contains(key, common.JmxKey), childMap})
+			} else if child == "[REDACTED]" && node.isTLSParent {
+				delete(node.data, key)
+			} else if child == "[REDACTED]" && node.isJMXParent {
+				delete(node.data, key)
+			}
+		}
+	}
+}
+func ConvertOtelNullToEmpty(stringMap map[string]interface{}) {
+	receivers, ok := stringMap["receivers"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	for key, value := range receivers {
+		if !strings.Contains(key, "otlp/metrics") {
+			continue
+		}
+		otlp, ok := value.(map[string]interface{})
+		if !ok {
+			return
+		}
+		protocols, ok := otlp["protocols"].(map[string]interface{})
+		if !ok {
+			return
+		}
+		//Remove either HTTP or GRPC depending on if one of them is used and other isn't
+		http, ok := protocols["http"]
+		if http == nil {
+			delete(protocols, "http")
+		}
+		grpc, ok := protocols["grpc"]
+		if grpc == nil {
+			delete(protocols, "grpc")
+		}
+	}
+	return
+}
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
 	res := totomlconfig.ToTomlConfig(config)
 	return os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
