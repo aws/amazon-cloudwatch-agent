@@ -5,6 +5,7 @@ package adapter
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 	"log"
 	"time"
 
@@ -72,6 +73,7 @@ var (
 	// exports to Cloudwatch while not having to follow the adapter rules
 	OtelReceivers = map[string]common.Translator[component.Config]{
 		common.OtlpKey: otlp.NewTranslator(otlp.WithDataType(component.DataTypeMetrics)),
+		common.JmxKey: jmx.NewTranslator(),
 	}
 )
 
