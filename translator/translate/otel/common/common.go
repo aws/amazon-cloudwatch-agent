@@ -32,6 +32,9 @@ const (
 	DisableMetricExtraction            = "disable_metric_extraction"
 	XrayKey                            = "xray"
 	OtlpKey                            = "otlp"
+	JmxKey                             = "jmx"
+	TLSKey                             = "tls"
+	Endpoint                           = "endpoint"
 	EndpointOverrideKey                = "endpoint_override"
 	RegionOverrideKey                  = "region_override"
 	ProxyOverrideKey                   = "proxy_override"
@@ -60,6 +63,7 @@ const (
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"
+	Reacted                            = "[REDACTED]"
 )
 
 const (

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	receiversCount  = 5
+	receiversCount  = 6
 	processorCount  = 8
 	exportersCount  = 5
 	extensionsCount = 2

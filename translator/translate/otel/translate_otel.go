@@ -18,7 +18,6 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
-	receiverAdapter "github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
@@ -28,7 +27,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 )
 
 var registry = common.NewTranslatorMap[*common.ComponentTranslators]()
@@ -51,9 +49,9 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		log.Printf("W! CSM has already been deprecated")
 	}
 
-	adapterReceivers, err := adapter.FindReceiversInConfig(conf, os)
+	translators, err := host.NewTranslators(conf, os)
 	if err != nil {
-		return nil, fmt.Errorf("unable to find receivers in config: %w", err)
+		return nil, err
 	}
 
 	// split out delta receiver types
