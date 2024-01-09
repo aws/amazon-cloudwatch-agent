@@ -134,6 +134,9 @@
             },
             "nvidia_smi": {
               "$ref": "#/definitions/metricsDefinition/definitions/nvidiaGpuDefinitions"
+            },
+            "jmx": {
+              "$ref": "#/definitions/metricsDefinition/definitions/jmxDefinitions"
             }
           },
           "minProperties": 1,
@@ -293,6 +296,21 @@
             },
             {
               "$ref": "#/definitions/metricsDefinition/definitions/basicResourcesDefinition"
+            }
+          ]
+        },
+        "jmxDefinitions": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 255,
+              "items": {
+                "$ref": "#/definitions/jmxObjectDefinition"
+              }
+            },
+            {
+              "$ref": "#/definitions/jmxObjectDefinition"
             }
           ]
         },
@@ -1174,6 +1192,99 @@
         "http_endpoint": {
           "description": "HTTP endpoint to use to listen for OTLP JSON information",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        }
+      },
+      "additionalProperties": false
+    },
+    "jmxObjectDefinition": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "description": "The endpoint to listen for JMX",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "jar_path": {
+          "description": "The path to the JMX metric gatherer jar file",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "target_system": {
+          "description": "built-in target system (or systems) metric gatherer script to run",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "metrics_collection_interval": {
+          "$ref": "#/definitions/timeIntervalDefinition"
+        },
+        "username": {
+          "description": "The username to use for JMX authentication",
+          "type": "string"
+        },
+        "password": {
+          "description": "The password to use for JMX authentication",
+          "type": "string"
+        },
+        "keystore_path": {
+          "description": "The keystore path is required if SSL is enabled on the target JVM",
+          "type": "string"
+        },
+        "keystore_password": {
+          "description": "The keystore file password if required by SSL",
+          "type": "string"
+        },
+        "keystore_type": {
+          "description": "The keystore type if required by SSL",
+          "type": "string"
+        },
+        "truststore_path": {
+          "description": "The truststore path is required if SSL is enabled on the target JVM",
+          "type": "string"
+        },
+        "truststore_password": {
+          "description": "The truststore file password if required by SSL",
+          "type": "string"
+        },
+        "truststore_type": {
+          "description": "The truststore type if required by SSL",
+          "type": "string"
+        },
+        "remote_profile": {
+          "description": "Supported JMX remote profiles in combination with SASL profiles",
+          "type": "string"
+        },
+        "realm": {
+          "description": "The realm, as required by remote profile SASL/DIGEST-MD5.",
+          "type": "string"
+        },
+        "otlp": {
+          "type": "object",
+          "properties": {
+            "endpoint": {
+              "$ref": "#/definitions/endpointOverrideDefinition"
+            },
+            "timeout": {
+              "description": "The otlp exporter request timeout",
+              "type": "string"
+            },
+            "headers": {
+              "description": "The otlp exporter request header",
+              "type": "object",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "resource_attributes": {
+          "type": "object",
+          "description": "List of resource attributes that will be applied to any metrics emitted from the metrics gatherer.",
+          "properties": {
+            "items": {
+              "type": "string"
+            }
+          }
         }
       },
       "additionalProperties": false
