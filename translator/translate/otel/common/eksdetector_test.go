@@ -74,7 +74,6 @@ func TestNotEKS(t *testing.T) {
 	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{}, fmt.Errorf("error"))
 	isEks, err = IsEKS()
 	assert.False(t, isEks)
-	assert.Error(t, err)
 }
 
 func Test_getConfigMap(t *testing.T) {

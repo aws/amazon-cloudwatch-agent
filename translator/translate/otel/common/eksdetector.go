@@ -63,7 +63,7 @@ func IsEKS() (bool, error) {
 	// Make HTTP GET request
 	awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 
 	return awsAuth != nil, nil
