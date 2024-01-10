@@ -66,6 +66,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if !hostedInConfigured {
 			hostedIn = util.GetClusterNameFromEc2Tagger()
 		}
+		// TODO: Implement `NewK8sResolver` and logic to detect platform
 		cfg.Resolvers = []appsignalsconfig.Resolver{
 			appsignalsconfig.NewEKSResolver(hostedIn),
 		}

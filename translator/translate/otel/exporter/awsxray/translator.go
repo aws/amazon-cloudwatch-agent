@@ -57,7 +57,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.IndexedAttributes = []string{
 			"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
 			"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
-			"HostedIn.Environment",
+			"HostedIn.Environment", "HostedIn.K8s.Cluster",
 		}
 	}
 
