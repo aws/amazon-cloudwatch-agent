@@ -53,15 +53,20 @@ var (
 
 // IsEKS checks if the agent is running on EKS. This is done by using the kubernetes API to determine if the aws-auth
 // configmap exists in the kube-system namespace
-func IsEKS(eksDetector Detector) bool {
+func IsEKS() (bool, error) {
+	// Create eks detector
+	eksDetector, err := NewDetector()
+	if err != nil {
+		return false, err
+	}
 
 	// Make HTTP GET request
 	awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
 	if err != nil {
-		return false
+		return false, err
 	}
 
-	return awsAuth != nil
+	return awsAuth != nil, nil
 }
 
 // getConfigMap retrieves the configmap with the provided name in the provided namespace

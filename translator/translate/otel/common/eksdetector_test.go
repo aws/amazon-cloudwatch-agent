@@ -44,19 +44,37 @@ func TestNewDetector(t *testing.T) {
 // Tests EKS resource detector running in EKS environment
 func TestEKS(t *testing.T) {
 	testDetector := new(MockDetector)
+	NewDetector = func() (Detector, error) {
+		return testDetector, nil
+	}
 
 	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{conventions.AttributeK8SClusterName: "my-cluster"}, nil)
-	isEks := IsEKS(testDetector)
+	isEks, err := IsEKS()
 	assert.True(t, isEks)
+	assert.NoError(t, err)
 }
 
 // Tests EKS resource detector not running in EKS environment by verifying resource is not running on k8s
 func TestNotEKS(t *testing.T) {
 	testDetector := new(MockDetector)
 
-	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{}, fmt.Errorf("error"))
-	isEks := IsEKS(testDetector)
+	// Detector creation failure
+	NewDetector = func() (Detector, error) {
+		return nil, fmt.Errorf("test error")
+	}
+	isEks, err := IsEKS()
 	assert.False(t, isEks)
+	assert.Error(t, err)
+
+	//get configmap failure
+	NewDetector = func() (Detector, error) {
+		return testDetector, nil
+	}
+
+	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{}, fmt.Errorf("error"))
+	isEks, err = IsEKS()
+	assert.False(t, isEks)
+	assert.Error(t, err)
 }
 
 func Test_getConfigMap(t *testing.T) {
