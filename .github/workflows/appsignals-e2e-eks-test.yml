@@ -5,7 +5,7 @@
 # including logs, metrics, and traces, then cleans up the cluster. The testing resources can be found in the
 # ADOT java instrumentation repo: https://github.com/aws-observability/aws-otel-java-instrumentation/tree/main/testing
 # Read more about reusable workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
-name: App Signals Enablement E2E Testing
+name: App Signals Enablement E2E Testing - EKS
 on:
   workflow_call:
     inputs:
@@ -168,7 +168,7 @@ jobs:
           kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=amazon-cloudwatch-observability -o json | \
           jq '.items[0].status.containerStatuses[0].imageID'
 
-      - name: Log pod Fluent Bit image ID
+      - name: Log pod FluentBit image ID
         run: |
           kubectl get pods -n amazon-cloudwatch -l k8s-app=fluent-bit -o json | \
           jq '.items[0].status.containerStatuses[0].imageID'
@@ -187,19 +187,6 @@ jobs:
             echo "Operator image did not change"
             exit 1
           fi
-
-      # cache local patch outputs
-      - name: Cache local Maven repository
-        id: cache-local-maven-repo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.m2/repository/io/opentelemetry/
-          key: ${{ runner.os }}-maven-local-${{ hashFiles('.github/patches/opentelemetry-java*.patch') }}
-
-      - name: Publish patched dependencies to maven local
-        uses: ./.github/actions/patch-dependencies
-        if: steps.cache-local-maven-repo.outputs.cache-hit != 'true'
 
       - name: Get the sample app endpoint
         run: |
@@ -230,6 +217,19 @@ jobs:
           curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/aws-sdk-call/
           curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_POD_IP }}/
           curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/client-call/
+
+      # cache local patch outputs
+      - name: Cache local Maven repository
+        id: cache-local-maven-repo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.m2/repository/io/opentelemetry/
+          key: ${{ runner.os }}-maven-local-${{ hashFiles('.github/patches/opentelemetry-java*.patch') }}
+
+      - name: Publish patched dependencies to maven local
+        uses: ./.github/actions/patch-dependencies
+        if: steps.cache-local-maven-repo.outputs.cache-hit != 'true'
 
       # Validation for app signals telemetry data
       - name: Call endpoint and validate generated EMF logs
