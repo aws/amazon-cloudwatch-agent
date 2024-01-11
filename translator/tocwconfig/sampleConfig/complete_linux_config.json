@@ -56,7 +56,6 @@
           "username": "cwagent",
           "password": "testpassword",
           "keystore_path": "/keystore",
-          "keystore_password": "keystore_password",
           "keystore_type": "PKCS",
           "truststore_path": "/truststore",
           "truststore_password": "truststore_password",

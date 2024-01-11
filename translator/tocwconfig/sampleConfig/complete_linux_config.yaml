@@ -161,7 +161,7 @@ receivers:
                 reload_interval: 0s
                 server_name_override: ""
         transport: udp
-    jmx/metrics0:
+    jmx/metrics/0:
         jar_path: ../../opentelemetry-jmx-metrics.jar
         endpoint: my_jmx_host:12345
         target_system: jvm
@@ -182,7 +182,10 @@ receivers:
             service.name: jmx_app
         log_level: ""
         additional_jars: [ ]
-    jmx/metrics1:
+        keystore_password: keystore_password
+        password: testpassword
+        truststore_password: truststore_password
+    jmx/metrics/1:
         jar_path: ../../opentelemetry-jmx-metrics.jar
         endpoint: my_jmx_host:12345
         target_system: jvm
@@ -203,6 +206,8 @@ receivers:
             service.name: jmx_app
         log_level: ""
         additional_jars: [ ]
+        password: testpassword
+        truststore_password: truststore_password
     otlp:
         protocols:
             grpc:
@@ -320,8 +325,8 @@ service:
                 - telegraf_netstat
                 - telegraf_cpu
                 - telegraf_statsd
-                - jmx/metrics0
-                - jmx/metrics1
+                - jmx/metrics/0
+                - jmx/metrics/1
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

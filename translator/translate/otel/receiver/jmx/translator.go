@@ -34,13 +34,15 @@ const (
 	timeout             = "timeout"
 	headers             = "headers"
 	defaultOTLPEndpoint = "127.0.0.1:3000"
-	defaultJMXJarPath   = "opt/aws/amazon-cloudwatch-agent/bin/opentelemetry-jmx-metrics.jar"
+	defaultJMXJarPath   = "/opt/aws/amazon-cloudwatch-agent/bin/opentelemetry-jmx-metrics.jar"
+	defaultTargetSystem = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
 )
 
 var (
 	configKeys = map[component.DataType]string{
 		component.DataTypeMetrics: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey),
 	}
+	redactedMap = make(map[string]string)
 )
 
 type translator struct {
@@ -88,7 +90,7 @@ func NewTranslatorWithName(name string, opts ...Option) common.Translator[compon
 	if name == "" && t.dataType != "" {
 		t.name = string(t.dataType)
 		if t.index != -1 {
-			t.name += strconv.Itoa(t.index)
+			t.name += "/" + strconv.Itoa(t.index)
 		}
 	}
 	return t
@@ -126,6 +128,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.Endpoint = endpoint
 	}
 
+	cfg.TargetSystem = defaultTargetSystem
 	if targetSystem, ok := jmxKeyMap[targetSystem].(string); ok {
 		cfg.TargetSystem = targetSystem
 	}
@@ -145,16 +148,18 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.Username = username
 	}
 
-	if password, ok := jmxKeyMap[password].(string); ok {
-		cfg.Password = configopaque.String(password)
+	if pass, ok := jmxKeyMap[password].(string); ok {
+		t.addRedactedMap(password, pass)
+		cfg.Password = configopaque.String(pass)
 	}
 
 	if keystorePath, ok := jmxKeyMap[keystorePath].(string); ok {
 		cfg.KeystorePath = keystorePath
 	}
 
-	if keystorePassword, ok := jmxKeyMap[keystorePassword].(string); ok {
-		cfg.KeystorePassword = configopaque.String(keystorePassword)
+	if keystorePass, ok := jmxKeyMap[keystorePassword].(string); ok {
+		t.addRedactedMap(keystorePassword, keystorePass)
+		cfg.KeystorePassword = configopaque.String(keystorePass)
 	}
 
 	if keystoreType, ok := jmxKeyMap[keystoreType].(string); ok {
@@ -165,8 +170,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.TruststorePath = truststorePath
 	}
 
-	if truststorePassword, ok := jmxKeyMap[truststorePassword].(string); ok {
-		cfg.TruststorePassword = configopaque.String(truststorePassword)
+	if truststorePass, ok := jmxKeyMap[truststorePassword].(string); ok {
+		t.addRedactedMap(truststorePassword, truststorePass)
+		cfg.TruststorePassword = configopaque.String(truststorePass)
 	}
 
 	if truststoreType, ok := jmxKeyMap[truststoreType].(string); ok {
@@ -211,4 +217,12 @@ func convertToStringMap(input map[string]interface{}) map[string]string {
 		convertedMap[strKey] = strValue
 	}
 	return convertedMap
+}
+
+func (t *translator) addRedactedMap(postfix string, value string) {
+	redactedMap[fmt.Sprintf("%v", t.factory.Type())+"/"+t.name+"/"+postfix] = value
+}
+
+func GetRedactedMap(prefix string, key string) string {
+	return redactedMap[prefix+"/"+key]
 }

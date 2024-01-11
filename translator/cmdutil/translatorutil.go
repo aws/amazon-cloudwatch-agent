@@ -5,7 +5,6 @@ package cmdutil
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"log"
 	"os"
 	"path/filepath"
@@ -24,6 +23,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -234,9 +235,10 @@ func RemoveTLSRedacted(stringMap map[string]interface{}) {
 	type Node struct {
 		isTLSParent bool
 		isJMXParent bool
+		parentKey   string
 		data        map[string]interface{}
 	}
-	root := Node{isTLSParent: false, isJMXParent: false, data: stringMap}
+	root := Node{isTLSParent: false, parentKey: "", data: stringMap}
 	queue := []Node{root}
 	// Using BFS search through string Map and find sub settings of TLS
 	// Then delete REDACTED settings under TLS
@@ -245,10 +247,10 @@ func RemoveTLSRedacted(stringMap map[string]interface{}) {
 		queue = queue[1:]
 		for key, child := range node.data {
 			if childMap, ok := child.(map[string]interface{}); ok {
-				queue = append(queue, Node{key == common.TLSKey, strings.Contains(key, common.JmxKey), childMap})
-			} else if child == "[REDACTED]" && node.isTLSParent {
-				delete(node.data, key)
-			} else if child == "[REDACTED]" && node.isJMXParent {
+				queue = append(queue, Node{key == common.TLSKey, strings.Contains(key, common.JmxKey), key, childMap})
+			} else if jmx.GetRedactedMap(node.parentKey, key) != "" {
+				node.data[key] = jmx.GetRedactedMap(node.parentKey, key)
+			} else if child == "[REDACTED]" && (node.isTLSParent || node.isJMXParent) {
 				delete(node.data, key)
 			}
 		}

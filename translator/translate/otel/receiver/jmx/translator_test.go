@@ -35,7 +35,8 @@ func TestTranslator(t *testing.T) {
 		"WithDefault": {
 			input: map[string]interface{}{"metrics": map[string]interface{}{"metrics_collected": map[string]interface{}{"jmx": nil}}},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"jar_path":            "opt/aws/amazon-cloudwatch-agent/bin/opentelemetry-jmx-metrics.jar",
+				"jar_path":            defaultJMXJarPath,
+				"target_system":       defaultTargetSystem,
 				"collection_interval": "10s",
 				"otlp": map[string]interface{}{
 					"endpoint": "127.0.0.1:3000",
