@@ -18,8 +18,8 @@ env:
   APP_SIGNALS_E2E_TEST_ACCOUNT_ID: ${{ secrets.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
   SAMPLE_APP_FRONTEND_SERVICE_JAR: "s3://aws-appsignals-sample-app/main-service.jar"
   SAMPLE_APP_REMOTE_SERVICE_JAR: "s3://aws-appsignals-sample-app/remote-service.jar"
-  APP_SIGNALS_ADOT_JAR: "https://github.com/aws-observability/aws-otel-java-instrumentation/releases/latest/download/aws-opentelemetry-agent.jar"
-  APP_SIGNALS_CW_AGENT_RPM: s3://${{ secrets.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ github.sha }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+  APP_SIGNALS_GET_ADOT_JAR: "wget -O adot.jar https://github.com/aws-observability/aws-otel-java-instrumentation/releases/latest/download/aws-opentelemetry-agent.jar"
+  APP_SIGNALS_GET_CW_AGENT_RPM: "aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ github.sha }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm ./cw-agent.rpm"
   METRIC_NAMESPACE: AppSignals
   LOG_GROUP_NAME: /aws/appsignals/generic
 
@@ -58,20 +58,6 @@ jobs:
           role-to-assume: ${{ secrets.APP_SIGNALS_E2E_IAM_ROLE }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
-      - name: Update main.tf to download the new cw-agent.rpm
-        working-directory: testing/terraform/ec2
-        run: |
-          old_command='"wget -O cw-agent.rpm ${var.cw_agent_rpm}",'
-          new_command='"aws s3 cp ${{ env.APP_SIGNALS_CW_AGENT_RPM }} ./cw-agent.rpm",'
-          sed -i "s|$old_command|$new_command|" "main.tf"
-          
-          if grep -Fq '"aws s3 cp ${{ env.APP_SIGNALS_CW_AGENT_RPM }} ./cw-agent.rpm",' main.tf; then
-            echo "Command replaced successfully"
-          else
-            echo "sed command failed, exiting."
-            exit 1
-          fi
-
       - name: Set up terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -87,8 +73,8 @@ jobs:
             -var="test_id=${{ env.TESTING_ID }}" \
             -var="sample_app_jar=${{ env.SAMPLE_APP_FRONTEND_SERVICE_JAR }}" \
             -var="sample_remote_app_jar=${{ env.SAMPLE_APP_REMOTE_SERVICE_JAR }}" \
-            -var="cw_agent_rpm=\"${{ env.APP_SIGNALS_CW_AGENT_RPM }}\"" \
-            -var="adot_jar=${{ env.APP_SIGNALS_ADOT_JAR }}"
+            -var="get_cw_agent_rpm=\"${{ env.APP_SIGNALS_GET_CW_AGENT_RPM }}\"" \
+            -var="get_adot_jar=${{ env.APP_SIGNALS_GET_ADOT_JAR }}"
 
       - name: Get the ec2 instance ami id
         working-directory: testing/terraform/ec2
