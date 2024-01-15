@@ -1171,7 +1171,7 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
           
-  E2EEKSTest:
+  EKSEndToEndTest:
     name: "E2E EKS Test"
     needs: [ BuildAndUpload ]
     uses: ./.github/workflows/appsignals-e2e-eks-test.yml
@@ -1182,7 +1182,7 @@ jobs:
     with:
       test-cluster-name: 'e2e-cw-agent-test'
       
-  E2EEC2Test:
+  EC2EndToEndTest:
     name: "E2E EC2 Test"
     needs: [ BuildAndUpload ]
     uses: ./.github/workflows/appsignals-e2e-ec2-test.yml

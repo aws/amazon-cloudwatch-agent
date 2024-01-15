@@ -22,8 +22,8 @@ env:
   AWS_DEFAULT_REGION: us-east-1
   APP_SIGNALS_E2E_TEST_ACCOUNT_ID: ${{ secrets.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
   SAMPLE_APP_NAMESPACE: sample-app-namespace
-  APP_SIGNALS_E2E_SAMPLE_APP_FRONTEND_SVC_IMG: ${{ secrets.APP_SIGNALS_E2E_SAMPLE_APP_FRONTEND_SVC_IMG }}
-  APP_SIGNALS_E2E_SAMPLE_APP_REMOTE_SVC_IMG: ${{ secrets.APP_SIGNALS_E2E_SAMPLE_APP_REMOTE_SVC_IMG }}
+  SAMPLE_APP_FRONTEND_SERVICE_IMAGE: ${{ secrets.APP_SIGNALS_E2E_SAMPLE_APP_FRONTEND_SVC_IMG }}
+  SAMPLE_APP_REMOTE_SERVICE_IMAGE: ${{ secrets.APP_SIGNALS_E2E_SAMPLE_APP_REMOTE_SVC_IMG }}
   METRIC_NAMESPACE: AppSignals
   LOG_GROUP_NAME: /aws/appsignals/eks
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
@@ -121,8 +121,8 @@ jobs:
             -var="eks_cluster_context_name=$(kubectl config current-context)" \
             -var="test_namespace=${{ env.SAMPLE_APP_NAMESPACE }}" \
             -var="service_account_aws_access=service-account-${{ env.TESTING_ID }}" \
-            -var="sample_app_image=${{ env.APP_SIGNALS_E2E_SAMPLE_APP_FRONTEND_SVC_IMG }}" \
-            -var="sample_remote_app_image=${{ env.APP_SIGNALS_E2E_SAMPLE_APP_REMOTE_SVC_IMG }}"
+            -var="sample_app_image=${{ env.SAMPLE_APP_FRONTEND_SERVICE_IMAGE }}" \
+            -var="sample_remote_app_image=${{ env.SAMPLE_APP_REMOTE_SERVICE_IMAGE }}"
 
       # Enable App Signals on the test cluster
       - name: Enable App Signals
