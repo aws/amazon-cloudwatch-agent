@@ -20,6 +20,7 @@ metric_declarations:
       - [HostedIn.Environment, Service, RemoteService]
       - [HostedIn.Environment, Service, RemoteService, RemoteOperation, RemoteTarget]
       - [HostedIn.Environment, Service, RemoteService, RemoteOperation]
+      - [RemoteService, RemoteTarget]
       - [RemoteService]
     label_matchers:
       - label_names:
