@@ -4,8 +4,10 @@
 package cloudwatchlogs
 
 import (
+	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"math/rand"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -16,6 +18,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
+        
+	"go.uber.org/zap"
 )
 
 const (
@@ -129,6 +133,8 @@ func hasValidTime(e logs.LogEvent) bool {
 func (p *pusher) start() {
 	defer p.wg.Done()
 
+	sampledLogger := cwaLogger.SampledLogger()
+
 	ec := make(chan logs.LogEvent)
 
 	// Merge events from both blocking and non-blocking channel
@@ -154,7 +160,7 @@ func (p *pusher) start() {
 				p.resetFlushTimer()
 			}
 
-			ce := p.convertEvent(e)
+			ce := p.convertEvent(e, sampledLogger)
 			et := time.Unix(*ce.Timestamp/1000, *ce.Timestamp%1000) // Cloudwatch Log Timestamp is in Millisecond
 
 			// A batch of log events in a single request cannot span more than 24 hours.
@@ -410,7 +416,7 @@ func (p *pusher) resetFlushTimer() {
 	p.flushTimer.Reset(p.FlushTimeout)
 }
 
-func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
+func (p *pusher) convertEvent(e logs.LogEvent, sampledLogger *zap.Logger) *cloudwatchlogs.InputLogEvent {
 	message := e.Message()
 
 	if len(message) > msgSizeLimit {
@@ -424,9 +430,9 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 			// not have a timestamp.
 			t = p.lastValidTime
 			if !p.lastUpdateTime.IsZero() {
-				// Check when timestamp has an interval of 5 days.
+				// Check when timestamp has an interval of 1 days.
 				if time.Since(p.lastUpdateTime) > warnOldTimeStamp {
-					p.Log.Warnf("Unable to parse timestamp, using last valid timestamp found in the logs %v: which is at least older than 1 day for log group %v: ", p.lastValidTime, p.Group)
+					sampledLogger.Warn("Unable to parse timestamp, using last valid timestamp found in the logs " + strconv.Itoa(int(p.lastValidTime)) + ": which is at least older than 1 day for log group " + p.Group + ": ")
 				}
 			}
 		} else {
@@ -461,3 +467,4 @@ func (inputLogEvents ByTimestamp) Swap(i, j int) {
 func (inputLogEvents ByTimestamp) Less(i, j int) bool {
 	return *inputLogEvents[i].Timestamp < *inputLogEvents[j].Timestamp
 }
+

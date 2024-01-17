@@ -5,6 +5,8 @@ package logger
 
 import (
 	"io"
+        "os"
+	"time"
 
 	"github.com/influxdata/wlog"
 	"go.uber.org/zap"
@@ -94,6 +96,28 @@ func ConvertToLetterLevel(l zapcore.Level) string {
 	return string(l.CapitalString()[0])
 }
 
+func SampledLogger() *zap.Logger {
+	stdout := zapcore.AddSync(os.Stdout)
+
+	level := zap.NewAtomicLevelAt(zap.InfoLevel)
+	productionCfg := newProductionEncoderConfig()
+	productionCfg.TimeKey = "timestamp"
+	productionCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	jsonEncoder := zapcore.NewJSONEncoder(productionCfg)
+
+	jsonOutCore := zapcore.NewCore(jsonEncoder, stdout, level)
+
+	// Create a logger that samples every Nth message after the first M messages every S seconds
+	// where N = sc.Thereafter, M = sc.Initial, S = sc.Tick.
+	samplingCore := zapcore.NewSamplerWithOptions(
+		jsonOutCore,
+		time.Hour, // interval
+		5,           // log first 3 entries
+		500,           // thereafter log zero entires within the interval
+	)
+	return zap.New(samplingCore)
+}
 func init() {
 	loggerLevel = zap.NewAtomicLevelAt(zapcore.InfoLevel)
 }
+
