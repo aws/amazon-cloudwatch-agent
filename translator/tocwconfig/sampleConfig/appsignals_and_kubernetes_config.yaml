@@ -95,6 +95,8 @@ exporters:
                   - RemoteService
                   - Service
                 - - RemoteService
+                  - RemoteTarget
+                - - RemoteService
               label_matchers:
                 - label_names:
                     - aws.span.kind
