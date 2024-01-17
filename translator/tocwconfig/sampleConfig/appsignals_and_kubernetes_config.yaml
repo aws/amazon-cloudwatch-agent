@@ -94,6 +94,11 @@ exporters:
                   - RemoteOperation
                   - RemoteService
                   - Service
+                - - HostedIn.EKS.Cluster
+                  - HostedIn.K8s.Namespace
+                  - RemoteService
+                  - RemoteTarget
+                  - Service
                 - - RemoteService
                   - RemoteTarget
                 - - RemoteService

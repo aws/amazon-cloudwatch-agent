@@ -25,6 +25,7 @@ metric_declarations:
       - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation, K8s.RemoteNamespace]
       - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation, RemoteTarget]
       - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation]
+      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteTarget]
       - [RemoteService, RemoteTarget]
       - [RemoteService]
     label_matchers:
