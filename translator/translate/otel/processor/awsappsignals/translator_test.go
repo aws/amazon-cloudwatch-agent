@@ -13,6 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
@@ -22,6 +25,9 @@ import (
 var (
 	//go:embed testdata/config_eks.yaml
 	validAppSignalsYamlEKS string
+	//go:embed testdata/config_k8s.yaml
+	validAppSignalsYamlK8s string
+
 	//go:embed testdata/config_generic.yaml
 	validAppSignalsYamlGeneric string
 	//go:embed testdata/validRulesConfig.json
@@ -32,6 +38,19 @@ var (
 	validAppSignalsRulesYamlGeneric string
 	//go:embed testdata/invalidRulesConfig.json
 	invalidAppSignalsRulesConfig string
+	// TestEKSDetector is used for unit testing EKS route
+	testEKSDetector = func() (common.Detector, error) {
+		cm := &v1.ConfigMap{
+			TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "aws-auth"},
+			Data:       make(map[string]string),
+		}
+		return &common.EksDetector{Clientset: fake.NewSimpleClientset(cm)}, nil
+	}
+	// TestK8sDetector is used for unit testing k8s route
+	testK8sDetector = func() (common.Detector, error) {
+		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
+	}
 )
 
 func TestTranslate(t *testing.T) {
@@ -45,6 +64,7 @@ func TestTranslate(t *testing.T) {
 		want         string
 		wantErr      error
 		isKubernetes bool
+		detector     func() (common.Detector, error)
 	}{
 		//The config for the awsappsignals processor is https://code.amazon.com/packages/AWSTracingSamplePetClinic/blobs/97ce3c409986ac8ae014de1e3fe71fdb98080f22/--/eks/appsignals/auto-instrumentation-new.yaml#L20
 		//The awsappsignals processor config does not have a platform field, instead it gets added to resolvers when marshalled
@@ -59,11 +79,26 @@ func TestTranslate(t *testing.T) {
 				}},
 			want:         validAppSignalsYamlEKS,
 			isKubernetes: true,
+			detector:     testEKSDetector,
 		},
 		"WithAppSignalsCustomRulesEnabledEKS": {
 			input:        validJsonMap,
 			want:         validAppSignalsRulesYamlEKS,
 			isKubernetes: true,
+			detector:     testEKSDetector,
+		},
+		"WithAppSignalsEnabledK8S": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"hosted_in": "test",
+						},
+					},
+				}},
+			want:         validAppSignalsYamlK8s,
+			isKubernetes: true,
+			detector:     testK8sDetector,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]interface{}{
@@ -91,6 +126,7 @@ func TestTranslate(t *testing.T) {
 			if testCase.isKubernetes {
 				t.Setenv(common.KubernetesEnvVar, "TEST")
 			}
+			common.NewDetector = testCase.detector
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)

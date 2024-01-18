@@ -24,6 +24,10 @@ func (cfg *Config) Validate() error {
 			if resolver.Name == "" {
 				return errors.New("name must not be empty for eks resolver")
 			}
+		case PlatformK8s:
+			if resolver.Name == "" {
+				return errors.New("name must not be empty for k8s resolver")
+			}
 		case PlatformGeneric:
 		default:
 			return errors.New("unknown resolver")

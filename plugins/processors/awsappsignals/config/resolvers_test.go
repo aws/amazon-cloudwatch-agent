@@ -14,6 +14,11 @@ func TestNewEKSResolver(t *testing.T) {
 	assert.Equal(t, "eks", resolver.Platform)
 }
 
+func TestK8sResolver(t *testing.T) {
+	resolver := NewK8sResolver("test")
+	assert.Equal(t, "k8s", resolver.Platform)
+}
+
 func TestNewGenericResolver(t *testing.T) {
 	resolver := NewGenericResolver("")
 	assert.Equal(t, "generic", resolver.Platform)

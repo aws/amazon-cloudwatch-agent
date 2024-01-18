@@ -1,0 +1,36 @@
+log_group_name: "/aws/appsignals/k8s"
+namespace: "AppSignals"
+middleware: agenthealth/logs
+dimension_rollup_option: "NoDimensionRollup"
+metric_declarations:
+  - dimensions:
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, Operation]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service]
+    label_matchers:
+      - label_names:
+          - aws.span.kind
+        regex: '^(SERVER|LOCAL_ROOT)$'
+    metric_name_selectors:
+      - Latency
+      - Fault
+      - Error
+  - dimensions:
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, Operation, RemoteService, RemoteOperation, K8s.RemoteNamespace, RemoteTarget]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, Operation, RemoteService, RemoteOperation, K8s.RemoteNamespace]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, Operation, RemoteService, RemoteOperation, RemoteTarget]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, Operation, RemoteService, RemoteOperation]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, K8s.RemoteNamespace]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, RemoteService]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation, K8s.RemoteNamespace, RemoteTarget]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation, K8s.RemoteNamespace]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation, RemoteTarget]
+      - [HostedIn.K8s.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation]
+      - [RemoteService]
+    label_matchers:
+      - label_names:
+          - aws.span.kind
+        regex: '^(CLIENT|PRODUCER|CONSUMER)$'
+    metric_name_selectors:
+      - Latency
+      - Fault
+      - Error

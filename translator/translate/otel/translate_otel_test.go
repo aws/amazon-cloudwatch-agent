@@ -4,6 +4,9 @@
 package otel
 
 import (
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,11 +20,24 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+var (
+	// TestEKSDetector is used for unit testing EKS route
+	testEKSDetector = func() (common.Detector, error) {
+		cm := &v1.ConfigMap{
+			TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "aws-auth"},
+			Data:       make(map[string]string),
+		}
+		return &common.EksDetector{Clientset: fake.NewSimpleClientset(cm)}, nil
+	}
+)
+
 func TestTranslator(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
+		detector        func() (common.Detector, error)
 	}{
 		"WithInvalidConfig": {
 			input:           "",
@@ -54,6 +70,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
+			detector: testEKSDetector,
 		},
 		"WithAppSignalsTracesEnabled": {
 			input: map[string]interface{}{
@@ -63,6 +80,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
+			detector: testEKSDetector,
 		},
 		"WithAppSignalsMetricsAndTracesEnabled": {
 			input: map[string]interface{}{
@@ -77,10 +95,12 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
+			detector: testEKSDetector,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			common.NewDetector = testCase.detector
 			translator.SetTargetPlatform("linux")
 			got, err := Translate(testCase.input, "linux")
 			if testCase.wantErrContains != "" {

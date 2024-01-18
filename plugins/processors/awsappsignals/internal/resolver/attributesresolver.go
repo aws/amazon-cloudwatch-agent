@@ -31,6 +31,7 @@ type attributesResolver struct {
 
 // create a new attributes resolver
 func NewAttributesResolver(resolvers []appsignalsconfig.Resolver, logger *zap.Logger) *attributesResolver {
+	//TODO: Logic for native k8s needs to be implemented
 	subResolvers := []subResolver{}
 	for _, resolver := range resolvers {
 		if resolver.Platform == appsignalsconfig.PlatformEKS {

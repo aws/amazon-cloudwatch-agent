@@ -34,6 +34,9 @@ var defaultPrometheusConfig string
 //go:embed appsignals_config_eks.yaml
 var appSignalsConfigEks string
 
+//go:embed appsignals_config_k8s.yaml
+var appSignalsConfigK8s string
+
 //go:embed appsignals_config_generic.yaml
 var appSignalsConfigGeneric string
 
@@ -71,7 +74,15 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg.MiddlewareID = &agenthealth.LogsID
 
 	if common.IsAppSignalsKubernetes() && t.name == common.AppSignals {
-		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEks)
+		isEks, err := common.IsEKS()
+		if err != nil {
+			return nil, err
+		}
+
+		if isEks {
+			return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEks)
+		}
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigK8s)
 	} else if t.name == common.AppSignals {
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigGeneric)
 	}
