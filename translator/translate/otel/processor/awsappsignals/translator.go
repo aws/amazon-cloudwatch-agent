@@ -6,6 +6,7 @@ package awsappsignals
 import (
 	_ "embed"
 	"errors"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
