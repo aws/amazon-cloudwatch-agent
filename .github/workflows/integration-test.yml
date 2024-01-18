@@ -82,18 +82,18 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
-          echo "::set-output name=ec2_gpu_matrix::$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))"
-          echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
-          echo "::set-output name=ec2_windows_matrix::$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))"
-          echo "::set-output name=ec2_mac_matrix::$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))"
-          echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
-          echo "::set-output name=ec2_windows_performance_matrix::$(echo $(cat generator/resources/ec2_windows_performance_complete_test_matrix.json))"
-          echo "::set-output name=ec2_stress_matrix::$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))"
-          echo "::set-output name=ec2_windows_stress_matrix::$(echo $(cat generator/resources/ec2_windows_stress_complete_test_matrix.json))"
-          echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
-          echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
-          echo "::set-output name=eks_daemon_matrix::$(echo $(cat generator/resources/eks_daemon_complete_test_matrix.json))"
-          echo "::set-output name=eks_deployment_matrix::$(echo $(cat generator/resources/eks_deployment_complete_test_matrix.json))"
+          echo "ec2_gpu_matrix=$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ec2_linux_matrix=$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ec2_windows_matrix=$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ec2_mac_matrix=$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ec2_performance_matrix=$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ec2_windows_performance_matrix=$(echo $(cat generator/resources/ec2_windows_performance_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ec2_stress_matrix=$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ec2_windows_stress_matrix=$(echo $(cat generator/resources/ec2_windows_stress_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ecs_ec2_launch_daemon_matrix=$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "ecs_fargate_matrix=$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "eks_daemon_matrix=$(echo $(cat generator/resources/eks_daemon_complete_test_matrix.json))" >> $GITHUB_OUTPUT
+          echo "eks_deployment_matrix=$(echo $(cat generator/resources/eks_deployment_complete_test_matrix.json))" >> $GITHUB_OUTPUT
 
       - name: Echo test plan matrix
         run: |
@@ -193,7 +193,7 @@ jobs:
           -var="ssh_key_name=${KEY_NAME}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
-          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
+          echo "local_stack_host_name=$LOCAL_STACK_HOST_NAME" >> $GITHUB_OUTPUT &&
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
   EC2NvidiaGPUIntegrationTest:
@@ -332,9 +332,9 @@ jobs:
       - name: SetOutputs
         id: set-outputs
         run: |
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> $GITHUB_OUTPUT
+          echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> $GITHUB_OUTPUT
+          echo "CWA_GITHUB_TEST_REPO_BRANCH=${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}" >> $GITHUB_OUTPUT
 
       - name: Echo test variables
         run: |
