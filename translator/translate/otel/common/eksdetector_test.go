@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,15 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
-
-type MockDetector struct {
-	mock.Mock
-}
-
-func (detector *MockDetector) getConfigMap(namespace string, name string) (map[string]string, error) {
-	args := detector.Called(namespace, name)
-	return args.Get(0).(map[string]string), args.Error(1)
-}
 
 func TestNewDetector(t *testing.T) {
 	getInClusterConfig = func() (*rest.Config, error) {

@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 const (
@@ -67,7 +68,7 @@ var (
 	replicaSetFromPodPattern     = regexp.MustCompile(podWithReplicaSetNamePattern)
 )
 
-type eksResolver struct {
+type kubernetesResolver struct {
 	logger                         *zap.Logger
 	clientset                      kubernetes.Interface
 	ipToPod                        *sync.Map
@@ -77,7 +78,7 @@ type eksResolver struct {
 	workloadAndNamespaceToLabels   *sync.Map
 	serviceToWorkload              *sync.Map // computed from serviceAndNamespaceToSelectors and workloadAndNamespaceToLabels every 1 min
 	workloadPodCount               map[string]int
-	safeStopCh                     *safeChannel // trace and metric processors share the same eksResolver and might close the same channel separately
+	safeStopCh                     *safeChannel // trace and metric processors share the same kubernetesResolver and might close the same channel separately
 }
 
 // a safe channel which can be closed multiple times
@@ -100,7 +101,7 @@ func (sc *safeChannel) Close() {
 
 var (
 	once     sync.Once
-	instance *eksResolver
+	instance *kubernetesResolver
 )
 
 func jitterSleep(seconds int) {
@@ -508,7 +509,7 @@ func (m *ServiceToWorkloadMapper) Start(stopCh chan struct{}) {
 	}()
 }
 
-func getEksResolver(logger *zap.Logger) subResolver {
+func getKubernetesResolver(logger *zap.Logger) subResolver {
 	once.Do(func() {
 		config, err := clientcmd.BuildConfigFromFlags("", "")
 		if err != nil {
@@ -517,7 +518,7 @@ func getEksResolver(logger *zap.Logger) subResolver {
 
 		clientset, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			logger.Fatal("Failed to create eks client", zap.Error(err))
+			logger.Fatal("Failed to create kubernetes client", zap.Error(err))
 		}
 
 		// jitter calls to the kubernetes api
@@ -543,7 +544,7 @@ func getEksResolver(logger *zap.Logger) subResolver {
 		serviceToWorkloadMapper := NewServiceToWorkloadMapper(serviceWatcher.serviceAndNamespaceToSelectors, podWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
 		serviceToWorkloadMapper.Start(safeStopCh.ch)
 
-		instance = &eksResolver{
+		instance = &kubernetesResolver{
 			logger:                         logger,
 			clientset:                      clientset,
 			ipToServiceAndNamespace:        serviceWatcher.ipToServiceAndNamespace,
@@ -560,13 +561,13 @@ func getEksResolver(logger *zap.Logger) subResolver {
 	return instance
 }
 
-func (e *eksResolver) Stop(_ context.Context) error {
+func (e *kubernetesResolver) Stop(_ context.Context) error {
 	e.safeStopCh.Close()
 	return nil
 }
 
-// add a method to eksResolver
-func (e *eksResolver) GetWorkloadAndNamespaceByIP(ip string) (string, string, error) {
+// add a method to kubernetesResolver
+func (e *kubernetesResolver) GetWorkloadAndNamespaceByIP(ip string) (string, string, error) {
 	var workload, namespace string
 	if podKey, ok := e.ipToPod.Load(ip); ok {
 		pod := podKey.(string)
@@ -584,10 +585,10 @@ func (e *eksResolver) GetWorkloadAndNamespaceByIP(ip string) (string, string, er
 		}
 	}
 
-	return "", "", errors.New("no EKS workload found for ip: " + ip)
+	return "", "", errors.New("no kubernetes workload found for ip: " + ip)
 }
 
-func (e *eksResolver) Process(attributes, resourceAttributes pcommon.Map) error {
+func (e *kubernetesResolver) Process(attributes, resourceAttributes pcommon.Map) error {
 	if value, ok := attributes.Get(attr.AWSRemoteService); ok {
 		valueStr := value.AsString()
 		ipStr := ""
@@ -658,30 +659,35 @@ func getHostNetworkPorts(pod *corev1.Pod) []string {
 	return ports
 }
 
-type eksHostedInAttributeResolver struct {
+type kubernetesHostedInAttributeResolver struct {
 	clusterName  string
 	attributeMap map[string]string
 }
 
-func newEKSHostedInAttributeResolver(clusterName string) *eksHostedInAttributeResolver {
-	return &eksHostedInAttributeResolver{
+func newKubernetesHostedInAttributeResolver(clusterName string) *kubernetesHostedInAttributeResolver {
+	return &kubernetesHostedInAttributeResolver{
 		clusterName: clusterName,
 		attributeMap: map[string]string{
 			semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
 		},
 	}
 }
-func (h *eksHostedInAttributeResolver) Process(attributes, resourceAttributes pcommon.Map) error {
+func (h *kubernetesHostedInAttributeResolver) Process(attributes, resourceAttributes pcommon.Map) error {
 	for attrKey, mappingKey := range h.attributeMap {
 		if val, ok := resourceAttributes.Get(attrKey); ok {
 			attributes.PutStr(mappingKey, val.AsString())
 		}
 	}
 
-	attributes.PutStr(attr.HostedInClusterName, h.clusterName)
+	if isEks, _ := common.IsEKS(); isEks {
+		attributes.PutStr(attr.HostedInClusterNameEKS, h.clusterName)
+	} else {
+		attributes.PutStr(attr.HostedInClusterNameK8s, h.clusterName)
+	}
+
 	return nil
 }
 
-func (h *eksHostedInAttributeResolver) Stop(ctx context.Context) error {
+func (h *kubernetesHostedInAttributeResolver) Stop(ctx context.Context) error {
 	return nil
 }

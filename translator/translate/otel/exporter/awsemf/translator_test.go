@@ -702,6 +702,7 @@ func TestTranslateAppSignals(t *testing.T) {
 		want         *confmap.Conf
 		wantErr      error
 		isKubernetes bool
+		detector     func() (common.Detector, error)
 	}{
 		"WithAppSignalsEnabledEKS": {
 			input: map[string]any{
@@ -712,6 +713,18 @@ func TestTranslateAppSignals(t *testing.T) {
 				}},
 			want:         testutil.GetConf(t, filepath.Join("appsignals_config_eks.yaml")),
 			isKubernetes: true,
+			detector:     common.TestEKSDetector,
+		},
+		"WithAppSignalsEnabledK8s": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want:         testutil.GetConf(t, filepath.Join("appsignals_config_k8s.yaml")),
+			isKubernetes: true,
+			detector:     common.TestK8sDetector,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]any{
@@ -730,6 +743,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			if testCase.isKubernetes {
 				t.Setenv(common.KubernetesEnvVar, "TEST")
 			}
+			common.NewDetector = testCase.detector
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
