@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 const (
@@ -678,7 +679,12 @@ func (h *eksHostedInAttributeResolver) Process(attributes, resourceAttributes pc
 		}
 	}
 
-	attributes.PutStr(attr.HostedInClusterName, h.clusterName)
+	if isEks, _ := common.IsEKS(); isEks {
+		attributes.PutStr(attr.HostedInClusterName, h.clusterName)
+	} else {
+		attributes.PutStr(attr.HostedInClusterNameK8s, h.clusterName)
+	}
+
 	return nil
 }
 
