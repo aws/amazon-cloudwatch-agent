@@ -94,6 +94,13 @@ exporters:
                   - RemoteOperation
                   - RemoteService
                   - Service
+                - - HostedIn.K8s.Cluster
+                  - HostedIn.K8s.Namespace
+                  - RemoteService
+                  - RemoteTarget
+                  - Service
+                - - RemoteService
+                  - RemoteTarget
                 - - RemoteService
               label_matchers:
                 - label_names:
