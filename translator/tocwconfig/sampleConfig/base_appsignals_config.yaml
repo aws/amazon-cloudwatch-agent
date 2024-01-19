@@ -54,6 +54,12 @@ exporters:
                   - RemoteOperation
                   - RemoteService
                   - Service
+                - - HostedIn.Environment
+                  - RemoteService
+                  - RemoteTarget
+                  - Service
+                - - RemoteService
+                  - RemoteTarget
                 - - RemoteService
               label_matchers:
                 - label_names:
