@@ -15,9 +15,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -31,18 +29,6 @@ func (md *MockDeleter) DeleteWithDelay(m *sync.Map, key interface{}) {
 }
 
 var mockDeleter = &MockDeleter{}
-
-var (
-	// TestEKSDetector is used for unit testing EKS route
-	testEKSDetector = func() (common.Detector, error) {
-		cm := &v1.ConfigMap{
-			TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-			ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "aws-auth"},
-			Data:       make(map[string]string),
-		}
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset(cm)}, nil
-	}
-)
 
 // TestAttachNamespace function
 func TestAttachNamespace(t *testing.T) {
@@ -830,7 +816,7 @@ func TestEksResolver(t *testing.T) {
 }
 
 func TestHostedInEksResolver(t *testing.T) {
-	common.NewDetector = testEKSDetector
+	common.NewDetector = common.TestEKSDetector
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {

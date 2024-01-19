@@ -23,8 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
@@ -51,18 +49,6 @@ const (
 //go:embed sampleConfig/prometheus_config.yaml
 var prometheusConfig string
 
-var (
-	// TestEKSDetector is used for unit testing EKS route
-	testEKSDetector = func() (common.Detector, error) {
-		cm := &v1.ConfigMap{
-			TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-			ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "aws-auth"},
-			Data:       make(map[string]string),
-		}
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset(cm)}, nil
-	}
-)
-
 type testCase struct {
 	filename        string
 	targetPlatform  string
@@ -84,7 +70,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 }
 
 func TestGenericAppSignalsConfig(t *testing.T) {
-	common.NewDetector = testEKSDetector
+	common.NewDetector = common.TestEKSDetector
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
@@ -100,7 +86,7 @@ func TestAppSignalsAndKubernetesConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	common.NewDetector = testEKSDetector
+	common.NewDetector = common.TestEKSDetector
 
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")

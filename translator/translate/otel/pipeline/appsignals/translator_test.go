@@ -11,28 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-)
-
-var (
-	// TestEKSDetector is used for unit testing EKS route
-	testEKSDetector = func() (common.Detector, error) {
-		cm := &v1.ConfigMap{
-			TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-			ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "aws-auth"},
-			Data:       make(map[string]string),
-		}
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset(cm)}, nil
-	}
-	// TestK8sDetector is used for unit testing k8s route
-	testK8sDetector = func() (common.Detector, error) {
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
-	}
 )
 
 func TestTranslatorTraces(t *testing.T) {
@@ -68,7 +49,7 @@ func TestTranslatorTraces(t *testing.T) {
 				exporters:  []string{"awsxray/app_signals"},
 				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
 			},
-			detector: testEKSDetector,
+			detector: common.TestEKSDetector,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]interface{}{
@@ -84,7 +65,7 @@ func TestTranslatorTraces(t *testing.T) {
 				exporters:  []string{"awsxray/app_signals"},
 				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
 			},
-			detector: testK8sDetector,
+			detector: common.TestK8sDetector,
 		},
 	}
 	for name, testCase := range testCases {
@@ -139,7 +120,7 @@ func TestTranslatorMetrics(t *testing.T) {
 				exporters:  []string{"awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector: testEKSDetector,
+			detector: common.TestEKSDetector,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]interface{}{
@@ -155,7 +136,7 @@ func TestTranslatorMetrics(t *testing.T) {
 				exporters:  []string{"awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector: testK8sDetector,
+			detector: common.TestK8sDetector,
 		},
 	}
 	for name, testCase := range testCases {

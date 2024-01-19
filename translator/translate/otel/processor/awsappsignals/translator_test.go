@@ -13,9 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
@@ -38,19 +35,6 @@ var (
 	validAppSignalsRulesYamlGeneric string
 	//go:embed testdata/invalidRulesConfig.json
 	invalidAppSignalsRulesConfig string
-	// TestEKSDetector is used for unit testing EKS route
-	testEKSDetector = func() (common.Detector, error) {
-		cm := &v1.ConfigMap{
-			TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-			ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "aws-auth"},
-			Data:       make(map[string]string),
-		}
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset(cm)}, nil
-	}
-	// TestK8sDetector is used for unit testing k8s route
-	testK8sDetector = func() (common.Detector, error) {
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
-	}
 )
 
 func TestTranslate(t *testing.T) {
@@ -79,13 +63,13 @@ func TestTranslate(t *testing.T) {
 				}},
 			want:         validAppSignalsYamlEKS,
 			isKubernetes: true,
-			detector:     testEKSDetector,
+			detector:     common.TestEKSDetector,
 		},
 		"WithAppSignalsCustomRulesEnabledEKS": {
 			input:        validJsonMap,
 			want:         validAppSignalsRulesYamlEKS,
 			isKubernetes: true,
-			detector:     testEKSDetector,
+			detector:     common.TestEKSDetector,
 		},
 		"WithAppSignalsEnabledK8S": {
 			input: map[string]interface{}{
@@ -98,7 +82,7 @@ func TestTranslate(t *testing.T) {
 				}},
 			want:         validAppSignalsYamlK8s,
 			isKubernetes: true,
-			detector:     testK8sDetector,
+			detector:     common.TestK8sDetector,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]interface{}{

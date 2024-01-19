@@ -13,9 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
@@ -26,22 +23,6 @@ import (
 
 var nilSlice []string
 var nilMetricDescriptorsSlice []awsemfexporter.MetricDescriptor
-
-var (
-	// TestEKSDetector is used for unit testing EKS route
-	testEKSDetector = func() (common.Detector, error) {
-		cm := &v1.ConfigMap{
-			TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-			ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "aws-auth"},
-			Data:       make(map[string]string),
-		}
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset(cm)}, nil
-	}
-	// TestK8sDetector is used for unit testing k8s route
-	testK8sDetector = func() (common.Detector, error) {
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
-	}
-)
 
 func TestTranslator(t *testing.T) {
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
@@ -732,7 +713,7 @@ func TestTranslateAppSignals(t *testing.T) {
 				}},
 			want:         testutil.GetConf(t, filepath.Join("appsignals_config_eks.yaml")),
 			isKubernetes: true,
-			detector:     testEKSDetector,
+			detector:     common.TestEKSDetector,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]any{
@@ -743,7 +724,7 @@ func TestTranslateAppSignals(t *testing.T) {
 				}},
 			want:         testutil.GetConf(t, filepath.Join("appsignals_config_k8s.yaml")),
 			isKubernetes: true,
-			detector:     testK8sDetector,
+			detector:     common.TestK8sDetector,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]any{
