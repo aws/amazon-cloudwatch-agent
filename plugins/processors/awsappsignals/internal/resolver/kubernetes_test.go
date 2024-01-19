@@ -694,7 +694,7 @@ func TestEksResolver(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Test GetWorkloadAndNamespaceByIP", func(t *testing.T) {
-		resolver := &eksResolver{
+		resolver := &kubernetesResolver{
 			logger:                    logger,
 			ipToPod:                   &sync.Map{},
 			podToWorkloadAndNamespace: &sync.Map{},
@@ -718,7 +718,7 @@ func TestEksResolver(t *testing.T) {
 
 		// Test non-existing IP
 		_, _, err = resolver.GetWorkloadAndNamespaceByIP("5.6.7.8")
-		if err == nil || !strings.Contains(err.Error(), "no EKS workload found for ip: 5.6.7.8") {
+		if err == nil || !strings.Contains(err.Error(), "no kubernetes workload found for ip: 5.6.7.8") {
 			t.Errorf("Expected error, got %v", err)
 		}
 
@@ -734,7 +734,7 @@ func TestEksResolver(t *testing.T) {
 	})
 
 	t.Run("Test Stop", func(t *testing.T) {
-		resolver := &eksResolver{
+		resolver := &kubernetesResolver{
 			logger:     logger,
 			safeStopCh: &safeChannel{ch: make(chan struct{}), closed: false},
 		}
@@ -767,7 +767,7 @@ func TestEksResolver(t *testing.T) {
 		}
 
 		logger, _ := zap.NewProduction()
-		resolver := &eksResolver{
+		resolver := &kubernetesResolver{
 			logger:                    logger,
 			ipToPod:                   &sync.Map{},
 			podToWorkloadAndNamespace: &sync.Map{},
@@ -827,7 +827,7 @@ func TestHostedInEksResolver(t *testing.T) {
 		}
 	}
 
-	resolver := newEKSHostedInAttributeResolver("test-cluster")
+	resolver := newKubernetesHostedInAttributeResolver("test-cluster")
 
 	// Test case 1 and 2: resourceAttributes contains "k8s.namespace.name" and EKS cluster name
 	attributes := pcommon.NewMap()
@@ -837,7 +837,7 @@ func TestHostedInEksResolver(t *testing.T) {
 	err := resolver.Process(attributes, resourceAttributes)
 	assert.NoError(t, err)
 	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, attr.HostedInK8SNamespace, t))
-	assert.Equal(t, "test-cluster", getStrAttr(attributes, attr.HostedInClusterName, t))
+	assert.Equal(t, "test-cluster", getStrAttr(attributes, attr.HostedInClusterNameEKS, t))
 }
 
 func TestExtractIPPort(t *testing.T) {

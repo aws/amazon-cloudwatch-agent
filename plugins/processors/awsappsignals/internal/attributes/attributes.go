@@ -22,7 +22,7 @@ const (
 	K8SRemoteNamespace = "K8s.RemoteNamespace"
 
 	// hosted in attribute names
-	HostedInClusterName    = "HostedIn.EKS.Cluster"
+	HostedInClusterNameEKS = "HostedIn.EKS.Cluster"
 	HostedInClusterNameK8s = "HostedIn.K8s.Cluster"
 	HostedInK8SNamespace   = "HostedIn.K8s.Namespace"
 	HostedInEnvironment    = "HostedIn.Environment"

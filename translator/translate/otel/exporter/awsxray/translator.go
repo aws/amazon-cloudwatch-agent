@@ -32,11 +32,19 @@ type translator struct {
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-var indexedAttributes = []string{
-	"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-	"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
-	"HostedIn.Environment",
-}
+var (
+	indexedAttributesEKS = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+		"HostedIn.Environment", "HostedIn.EKS.Cluster",
+	}
+
+	indexedAttributesK8s = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+		"HostedIn.Environment", "HostedIn.K8s.Cluster",
+	}
+)
 
 func NewTranslator() common.Translator[component.Config] {
 	return NewTranslatorWithName("")
@@ -66,9 +74,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 
 		if isEks {
-			cfg.IndexedAttributes = append(indexedAttributes, "HostedIn.EKS.Cluster")
+			cfg.IndexedAttributes = indexedAttributesEKS
 		} else {
-			cfg.IndexedAttributes = append(indexedAttributes, "HostedIn.K8s.Cluster")
+			cfg.IndexedAttributes = indexedAttributesK8s
 		}
 	}
 
