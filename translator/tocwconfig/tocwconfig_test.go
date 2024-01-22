@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -69,6 +70,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 }
 
 func TestGenericAppSignalsConfig(t *testing.T) {
+	common.NewDetector = common.TestEKSDetector
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
@@ -84,9 +86,18 @@ func TestAppSignalsAndKubernetesConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
+	common.NewDetector = common.TestEKSDetector
+
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "appsignals_and_kubernetes_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "appsignals_and_kubernetes_config", "windows", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_eks_config", "windows", expectedEnvVars, "")
+
+	common.NewDetector = func() (common.Detector, error) {
+		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
+	}
+
+	checkTranslation(t, "appsignals_and_k8s_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
 }
 
 func TestEmfAndKubernetesConfig(t *testing.T) {
