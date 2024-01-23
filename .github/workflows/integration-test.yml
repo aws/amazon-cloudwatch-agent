@@ -1172,7 +1172,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
           
   EKSEndToEndTest:
-    name: "E2E EKS Test"
+    name: "AppSignals E2E EKS Test"
     needs: [ BuildAndUpload ]
     uses: ./.github/workflows/appsignals-e2e-eks-test.yml
     permissions:
@@ -1183,7 +1183,7 @@ jobs:
       test-cluster-name: 'e2e-cw-agent-test'
       
   EC2EndToEndTest:
-    name: "E2E EC2 Test"
+    name: "AppSignals E2E EC2 Test"
     needs: [ BuildAndUpload ]
     uses: ./.github/workflows/appsignals-e2e-ec2-test.yml
     permissions:
