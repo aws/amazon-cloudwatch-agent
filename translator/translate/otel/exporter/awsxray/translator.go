@@ -32,6 +32,20 @@ type translator struct {
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
+var (
+	indexedAttributesEKS = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+		"HostedIn.Environment", "HostedIn.EKS.Cluster",
+	}
+
+	indexedAttributesK8s = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+		"HostedIn.Environment", "HostedIn.K8s.Cluster",
+	}
+)
+
 func NewTranslator() common.Translator[component.Config] {
 	return NewTranslatorWithName("")
 }
@@ -54,10 +68,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
 
 	if isAppSignals(conf) {
-		cfg.IndexedAttributes = []string{
-			"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-			"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
-			"HostedIn.Environment",
+		isEks, err := common.IsEKS()
+		if err != nil {
+			return nil, err
+		}
+
+		if isEks {
+			cfg.IndexedAttributes = indexedAttributesEKS
+		} else {
+			cfg.IndexedAttributes = indexedAttributesK8s
 		}
 	}
 

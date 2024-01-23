@@ -15,6 +15,12 @@ func TestValidatePassed(t *testing.T) {
 		Rules:     nil,
 	}
 	assert.Nil(t, config.Validate())
+
+	config = Config{
+		Resolvers: []Resolver{NewK8sResolver("test"), NewGenericResolver("")},
+		Rules:     nil,
+	}
+	assert.Nil(t, config.Validate())
 }
 
 func TestValidateFailedOnEmptyResolver(t *testing.T) {
@@ -28,6 +34,12 @@ func TestValidateFailedOnEmptyResolver(t *testing.T) {
 func TestValidateFailedOnEmptyClusterName(t *testing.T) {
 	config := Config{
 		Resolvers: []Resolver{NewEKSResolver("")},
+		Rules:     nil,
+	}
+	assert.NotNil(t, config.Validate())
+
+	config = Config{
+		Resolvers: []Resolver{NewK8sResolver("")},
 		Rules:     nil,
 	}
 	assert.NotNil(t, config.Validate())

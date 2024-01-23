@@ -54,6 +54,12 @@ exporters:
                   - RemoteOperation
                   - RemoteService
                   - Service
+                - - HostedIn.Environment
+                  - RemoteService
+                  - RemoteTarget
+                  - Service
+                - - RemoteService
+                  - RemoteTarget
                 - - RemoteService
               label_matchers:
                 - label_names:
@@ -93,11 +99,11 @@ exporters:
             - aws.local.operation
             - aws.remote.service
             - aws.remote.operation
-            - HostedIn.EKS.Cluster
             - HostedIn.K8s.Namespace
             - K8s.RemoteNamespace
             - aws.remote.target
             - HostedIn.Environment
+            - HostedIn.EKS.Cluster
         local_mode: false
         max_retries: 2
         middleware: agenthealth/traces
