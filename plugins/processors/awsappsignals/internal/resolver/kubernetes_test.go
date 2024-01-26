@@ -13,6 +13,7 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	semconv "go.opentelemetry.io/collector/semconv/v1.17.0"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -838,6 +839,7 @@ func TestHostedInEksResolver(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, attr.HostedInK8SNamespace, t))
 	assert.Equal(t, "test-cluster", getStrAttr(attributes, attr.HostedInClusterNameEKS, t))
+	assert.Equal(t, "/aws/containerinsights/test-cluster/application", getStrAttr(resourceAttributes, semconv.AttributeAWSLogGroupNames, t))
 }
 
 func TestExtractIPPort(t *testing.T) {
