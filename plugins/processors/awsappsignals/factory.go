@@ -58,7 +58,7 @@ func createTracesProcessor(
 		next,
 		ap.processTraces,
 		processorhelper.WithCapabilities(consumerCapabilities),
-		processorhelper.WithStart(ap.Start),
+		processorhelper.WithStart(ap.StartTraces),
 		processorhelper.WithShutdown(ap.Shutdown))
 }
 
@@ -80,7 +80,7 @@ func createMetricsProcessor(
 		nextMetricsConsumer,
 		ap.processMetrics,
 		processorhelper.WithCapabilities(consumerCapabilities),
-		processorhelper.WithStart(ap.Start),
+		processorhelper.WithStart(ap.StartMetrics),
 		processorhelper.WithShutdown(ap.Shutdown))
 }
 

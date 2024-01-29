@@ -304,6 +304,11 @@ processors:
           - platform: eks
             name: TestCluster
         rules: []
+        limiter:
+          disabled: true
+          drop_threshold: 500
+          log_dropped_metrics: true
+          rotation_interval: 10m0s
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         metadata_keys: []

@@ -4,14 +4,47 @@
 package config
 
 import (
+	"context"
 	"errors"
+	"time"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
 )
 
 type Config struct {
-	Resolvers []Resolver   `mapstructure:"resolvers"`
-	Rules     []rules.Rule `mapstructure:"rules"`
+	Resolvers []Resolver     `mapstructure:"resolvers"`
+	Rules     []rules.Rule   `mapstructure:"rules"`
+	Limiter   *LimiterConfig `mapstructure:"limiter"`
+}
+
+type LimiterConfig struct {
+	Threshold                 int             `mapstructure:"drop_threshold"`
+	Disabled                  bool            `mapstructure:"disabled"`
+	LogDroppedMetrics         bool            `mapstructure:"log_dropped_metrics"`
+	RotationInterval          time.Duration   `mapstructure:"rotation_interval"`
+	GarbageCollectionInterval time.Duration   `mapstructure:"-"`
+	ParentContext             context.Context `mapstructure:"-"`
+}
+
+const (
+	DefaultThreshold        = 500
+	DefaultRotationInterval = 1 * time.Hour
+	DefaultGCInterval       = 10 * time.Minute
+)
+
+func NewDefaultLimiterConfig() *LimiterConfig {
+	return &LimiterConfig{
+		Threshold:         DefaultThreshold,
+		Disabled:          true,
+		LogDroppedMetrics: false,
+		RotationInterval:  DefaultRotationInterval,
+	}
+}
+
+func (lc *LimiterConfig) Validate() {
+	if lc.GarbageCollectionInterval == 0 {
+		lc.GarbageCollectionInterval = DefaultGCInterval
+	}
 }
 
 func (cfg *Config) Validate() error {
@@ -32,6 +65,10 @@ func (cfg *Config) Validate() error {
 		default:
 			return errors.New("unknown resolver")
 		}
+	}
+
+	if cfg.Limiter != nil {
+		cfg.Limiter.Validate()
 	}
 	return nil
 }
