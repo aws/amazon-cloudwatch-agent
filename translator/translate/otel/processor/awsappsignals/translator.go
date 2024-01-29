@@ -6,6 +6,7 @@ package awsappsignals
 import (
 	_ "embed"
 	"errors"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -88,7 +89,58 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
+	limiterConfig, _ := t.translateMetricLimiterConfig(conf, configKey)
+	cfg.Limiter = limiterConfig
+
 	return t.translateCustomRules(conf, configKey, cfg)
+}
+
+func (t *translator) translateMetricLimiterConfig(conf *confmap.Conf, configKey string) (*appsignalsconfig.LimiterConfig, error) {
+	limiterConfigKey := common.ConfigKey(configKey, "limiter")
+	if !conf.IsSet(limiterConfigKey) {
+		return nil, nil
+	}
+
+	configJson, ok := conf.Get(limiterConfigKey).(map[string]interface{})
+	if !ok {
+		return nil, errors.New("type conversion error: limiter is not an object")
+	}
+
+	limiterConfig := appsignalsconfig.NewDefaultLimiterConfig()
+	if rawVal, exists := configJson["drop_threshold"]; exists {
+		if val, ok := rawVal.(float64); !ok {
+			return nil, errors.New("type conversion error: drop_threshold is not a number")
+		} else {
+			limiterConfig.Threshold = int(val)
+		}
+	}
+	if rawVal, exists := configJson["disabled"]; exists {
+		if val, ok := rawVal.(bool); !ok {
+			return nil, errors.New("type conversion error: disabled is not a boolean")
+		} else {
+			limiterConfig.Disabled = val
+		}
+	}
+	if rawVal, exists := configJson["log_dropped_metrics"]; exists {
+		if val, ok := rawVal.(bool); !ok {
+			return nil, errors.New("type conversion error: log_dropped_metrics is not a boolean")
+		} else {
+			limiterConfig.LogDroppedMetrics = val
+		}
+	}
+	if rawVal, exists := configJson["rotation_interval"]; exists {
+		if val, ok := rawVal.(string); !ok {
+			return nil, errors.New("type conversion error: rotation_interval is not a string")
+		} else {
+			if interval, err := time.ParseDuration(val); err != nil {
+				return nil, errors.New("type conversion error: rotation_interval is not a time string")
+			} else {
+				limiterConfig.RotationInterval = interval
+			}
+		}
+	}
+	return limiterConfig, nil
+
 }
 
 func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, cfg *appsignalsconfig.Config) (component.Config, error) {

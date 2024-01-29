@@ -67,7 +67,7 @@ func TestProcessMetrics(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ap.Start(ctx, nil)
+	ap.StartMetrics(ctx, nil)
 
 	keepMetrics := generateMetrics(map[string]string{
 		"dim_action": "reserved",
@@ -111,7 +111,7 @@ func TestProcessTraces(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ap.Start(ctx, nil)
+	ap.StartTraces(ctx, nil)
 
 	traces := ptrace.NewTraces()
 	span := traces.ResourceSpans().AppendEmpty().ScopeSpans().AppendEmpty().Spans().AppendEmpty()
