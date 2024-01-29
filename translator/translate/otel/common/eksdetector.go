@@ -37,7 +37,6 @@ var (
 	detector            Detector
 	isEKSCacheSingleton IsEKSCache
 	once                sync.Once
-	isEKSOnce           sync.Once
 )
 
 var (
@@ -58,7 +57,7 @@ var (
 	// IsEKS checks if the agent is running on EKS. This is done by using the kubernetes API to determine if the aws-auth
 	// configmap exists in the kube-system namespace
 	IsEKS = func() IsEKSCache {
-		isEKSOnce.Do(func() {
+		once.Do(func() {
 			var errors error
 			var value bool
 			// Create eks detector
