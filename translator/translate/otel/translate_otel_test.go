@@ -23,6 +23,7 @@ func TestTranslator(t *testing.T) {
 		input           interface{}
 		wantErrContains string
 		detector        func() (common.Detector, error)
+		isEKSDataStore  func() common.IsEKSDataStore
 	}{
 		"WithInvalidConfig": {
 			input:           "",
@@ -55,7 +56,8 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector: common.TestEKSDetector,
+			detector:       common.TestEKSDetector,
+			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
 		},
 		"WithAppSignalsTracesEnabled": {
 			input: map[string]interface{}{
@@ -65,7 +67,8 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector: common.TestEKSDetector,
+			detector:       common.TestEKSDetector,
+			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
 		},
 		"WithAppSignalsMetricsAndTracesEnabled": {
 			input: map[string]interface{}{
@@ -80,12 +83,14 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector: common.TestEKSDetector,
+			detector:       common.TestEKSDetector,
+			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			common.NewDetector = testCase.detector
+			common.IsEKS = testCase.isEKSDataStore
 			translator.SetTargetPlatform("linux")
 			got, err := Translate(testCase.input, "linux")
 			if testCase.wantErrContains != "" {

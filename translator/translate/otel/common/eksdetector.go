@@ -21,6 +21,11 @@ type EksDetector struct {
 	Clientset kubernetes.Interface
 }
 
+type IsEKSDataStore struct {
+	Value bool
+	Err   error
+}
+
 const (
 	authConfigNamespace = "kube-system"
 	authConfigConfigMap = "aws-auth"
@@ -29,8 +34,10 @@ const (
 var _ Detector = (*EksDetector)(nil)
 
 var (
-	detectorSingleton Detector
-	once              sync.Once
+	detectorSingleton       Detector
+	isEKSDataStoreSingleton IsEKSDataStore
+	once                    sync.Once
+	isEKSOnce               sync.Once
 )
 
 var (
@@ -39,35 +46,40 @@ var (
 	// NewDetector creates a new singleton detector for EKS
 	NewDetector = func() (Detector, error) {
 		var errors error
-		once.Do(func() {
-			if clientset, err := getClient(); err != nil {
-				errors = err
-			} else {
-				detectorSingleton = &EksDetector{Clientset: clientset}
-			}
-		})
+		if clientset, err := getClient(); err != nil {
+			errors = err
+		} else {
+			detectorSingleton = &EksDetector{Clientset: clientset}
+		}
 
 		return detectorSingleton, errors
 	}
+
+	// IsEKS checks if the agent is running on EKS. This is done by using the kubernetes API to determine if the aws-auth
+	// configmap exists in the kube-system namespace
+	IsEKS = func() IsEKSDataStore {
+		isEKSOnce.Do(func() {
+			var errors error
+			var value bool
+			// Create eks detector
+			eksDetector, err := NewDetector()
+			if err != nil {
+				errors = err
+			}
+
+			if eksDetector != nil {
+				// Make HTTP GET request
+				awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
+				if err == nil {
+					value = awsAuth != nil
+				}
+			}
+			isEKSDataStoreSingleton = IsEKSDataStore{Value: value, Err: errors}
+		})
+
+		return isEKSDataStoreSingleton
+	}
 )
-
-// IsEKS checks if the agent is running on EKS. This is done by using the kubernetes API to determine if the aws-auth
-// configmap exists in the kube-system namespace
-func IsEKS() (bool, error) {
-	// Create eks detector
-	eksDetector, err := NewDetector()
-	if err != nil {
-		return false, err
-	}
-
-	// Make HTTP GET request
-	awsAuth, err := eksDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
-	if err != nil {
-		return false, nil
-	}
-
-	return awsAuth != nil, nil
-}
 
 // getConfigMap retrieves the configmap with the provided name in the provided namespace
 func (d *EksDetector) getConfigMap(namespace string, name string) (map[string]string, error) {

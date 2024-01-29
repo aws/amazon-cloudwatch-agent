@@ -74,12 +74,12 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg.MiddlewareID = &agenthealth.LogsID
 
 	if common.IsAppSignalsKubernetes() && t.name == common.AppSignals {
-		isEks, err := common.IsEKS()
-		if err != nil {
-			return nil, err
+		isEks := common.IsEKS()
+		if isEks.Err != nil {
+			return nil, isEks.Err
 		}
 
-		if isEks {
+		if isEks.Value {
 			return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEks)
 		}
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigK8s)
