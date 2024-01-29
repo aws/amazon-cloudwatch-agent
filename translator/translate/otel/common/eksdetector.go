@@ -21,7 +21,7 @@ type EksDetector struct {
 	Clientset kubernetes.Interface
 }
 
-type IsEKSDataStore struct {
+type IsEKSCache struct {
 	Value bool
 	Err   error
 }
@@ -34,10 +34,10 @@ const (
 var _ Detector = (*EksDetector)(nil)
 
 var (
-	detectorSingleton       Detector
-	isEKSDataStoreSingleton IsEKSDataStore
-	once                    sync.Once
-	isEKSOnce               sync.Once
+	detector            Detector
+	isEKSCacheSingleton IsEKSCache
+	once                sync.Once
+	isEKSOnce           sync.Once
 )
 
 var (
@@ -49,15 +49,15 @@ var (
 		if clientset, err := getClient(); err != nil {
 			errors = err
 		} else {
-			detectorSingleton = &EksDetector{Clientset: clientset}
+			detector = &EksDetector{Clientset: clientset}
 		}
 
-		return detectorSingleton, errors
+		return detector, errors
 	}
 
 	// IsEKS checks if the agent is running on EKS. This is done by using the kubernetes API to determine if the aws-auth
 	// configmap exists in the kube-system namespace
-	IsEKS = func() IsEKSDataStore {
+	IsEKS = func() IsEKSCache {
 		isEKSOnce.Do(func() {
 			var errors error
 			var value bool
@@ -74,10 +74,10 @@ var (
 					value = awsAuth != nil
 				}
 			}
-			isEKSDataStoreSingleton = IsEKSDataStore{Value: value, Err: errors}
+			isEKSCacheSingleton = IsEKSCache{Value: value, Err: errors}
 		})
 
-		return isEKSDataStoreSingleton
+		return isEKSCacheSingleton
 	}
 )
 

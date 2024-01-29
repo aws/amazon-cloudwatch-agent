@@ -71,7 +71,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 
 func TestGenericAppSignalsConfig(t *testing.T) {
 	common.NewDetector = common.TestEKSDetector
-	common.IsEKS = common.TestValidIsEKSDataStoreTrue
+	common.IsEKS = common.TestIsEKSCacheEKS
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
@@ -88,7 +88,7 @@ func TestAppSignalsAndKubernetesConfig(t *testing.T) {
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
 	common.NewDetector = common.TestEKSDetector
-	common.IsEKS = common.TestValidIsEKSDataStoreTrue
+	common.IsEKS = common.TestIsEKSCacheEKS
 
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")
@@ -97,7 +97,7 @@ func TestAppSignalsAndKubernetesConfig(t *testing.T) {
 	common.NewDetector = func() (common.Detector, error) {
 		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
 	}
-	common.IsEKS = common.TestValidIsEKSDataStoreFalse
+	common.IsEKS = common.TestIsEKSCacheK8s
 
 	checkTranslation(t, "appsignals_and_k8s_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")

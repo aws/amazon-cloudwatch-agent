@@ -4,7 +4,6 @@
 package common
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,16 +25,14 @@ var (
 		return &EksDetector{Clientset: fake.NewSimpleClientset()}, nil
 	}
 
-	TestValidIsEKSDataStoreTrue = func() IsEKSDataStore {
-		return IsEKSDataStore{Value: true, Err: nil}
+	// TestIsEKSCacheEKS os used for unit testing EKS route
+	TestIsEKSCacheEKS = func() IsEKSCache {
+		return IsEKSCache{Value: true, Err: nil}
 	}
 
-	TestValidIsEKSDataStoreFalse = func() IsEKSDataStore {
-		return IsEKSDataStore{Value: false, Err: nil}
-	}
-
-	TestIsEKSDataStoreError = func() IsEKSDataStore {
-		return IsEKSDataStore{Value: false, Err: fmt.Errorf("failed to create Clientset for Kubernetes client")}
+	// TestIsEKSCacheK8s is used for unit testing K8s route
+	TestIsEKSCacheK8s = func() IsEKSCache {
+		return IsEKSCache{Value: false, Err: nil}
 	}
 )
 

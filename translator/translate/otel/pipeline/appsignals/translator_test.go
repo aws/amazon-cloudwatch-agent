@@ -26,11 +26,11 @@ func TestTranslatorTraces(t *testing.T) {
 	tt := NewTranslator(component.DataTypeTraces)
 	assert.EqualValues(t, "traces/app_signals", tt.ID().String())
 	testCases := map[string]struct {
-		input          map[string]interface{}
-		want           *want
-		wantErr        error
-		detector       func() (common.Detector, error)
-		isEKSDataStore func() common.IsEKSDataStore
+		input      map[string]interface{}
+		want       *want
+		wantErr    error
+		detector   func() (common.Detector, error)
+		isEKSCache func() common.IsEKSCache
 	}{
 		"WithoutTracesCollectedKey": {
 			input:   map[string]interface{}{},
@@ -50,8 +50,8 @@ func TestTranslatorTraces(t *testing.T) {
 				exporters:  []string{"awsxray/app_signals"},
 				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
 			},
-			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			detector:   common.TestEKSDetector,
+			isEKSCache: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]interface{}{
@@ -67,14 +67,14 @@ func TestTranslatorTraces(t *testing.T) {
 				exporters:  []string{"awsxray/app_signals"},
 				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
 			},
-			detector:       common.TestK8sDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreFalse,
+			detector:   common.TestK8sDetector,
+			isEKSCache: common.TestIsEKSCacheK8s,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			common.NewDetector = testCase.detector
-			common.IsEKS = testCase.isEKSDataStore
+			common.IsEKS = testCase.isEKSCache
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
@@ -101,11 +101,11 @@ func TestTranslatorMetrics(t *testing.T) {
 	tt := NewTranslator(component.DataTypeMetrics)
 	assert.EqualValues(t, "metrics/app_signals", tt.ID().String())
 	testCases := map[string]struct {
-		input          map[string]interface{}
-		want           *want
-		wantErr        error
-		detector       func() (common.Detector, error)
-		isEKSDataStore func() common.IsEKSDataStore
+		input      map[string]interface{}
+		want       *want
+		wantErr    error
+		detector   func() (common.Detector, error)
+		isEKSCache func() common.IsEKSCache
 	}{
 		"WithoutMetricsCollectedKey": {
 			input:   map[string]interface{}{},
@@ -125,8 +125,8 @@ func TestTranslatorMetrics(t *testing.T) {
 				exporters:  []string{"awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			detector:   common.TestEKSDetector,
+			isEKSCache: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]interface{}{
@@ -142,14 +142,14 @@ func TestTranslatorMetrics(t *testing.T) {
 				exporters:  []string{"awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector:       common.TestK8sDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreFalse,
+			detector:   common.TestK8sDetector,
+			isEKSCache: common.TestIsEKSCacheK8s,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			common.NewDetector = testCase.detector
-			common.IsEKS = testCase.isEKSDataStore
+			common.IsEKS = testCase.isEKSCache
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)

@@ -49,7 +49,7 @@ func TestTranslate(t *testing.T) {
 		wantErr        error
 		isKubernetes   bool
 		detector       func() (common.Detector, error)
-		isEKSDataStore func() common.IsEKSDataStore
+		isEKSDataStore func() common.IsEKSCache
 	}{
 		//The config for the awsappsignals processor is https://code.amazon.com/packages/AWSTracingSamplePetClinic/blobs/97ce3c409986ac8ae014de1e3fe71fdb98080f22/--/eks/appsignals/auto-instrumentation-new.yaml#L20
 		//The awsappsignals processor config does not have a platform field, instead it gets added to resolvers when marshalled
@@ -65,14 +65,14 @@ func TestTranslate(t *testing.T) {
 			want:           validAppSignalsYamlEKS,
 			isKubernetes:   true,
 			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsCustomRulesEnabledEKS": {
 			input:          validJsonMap,
 			want:           validAppSignalsRulesYamlEKS,
 			isKubernetes:   true,
 			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8S": {
 			input: map[string]interface{}{
@@ -86,7 +86,7 @@ func TestTranslate(t *testing.T) {
 			want:           validAppSignalsYamlK8s,
 			isKubernetes:   true,
 			detector:       common.TestK8sDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreFalse,
+			isEKSDataStore: common.TestIsEKSCacheK8s,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]interface{}{

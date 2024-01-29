@@ -703,7 +703,7 @@ func TestTranslateAppSignals(t *testing.T) {
 		wantErr        error
 		isKubernetes   bool
 		detector       func() (common.Detector, error)
-		isEKSDataStore func() common.IsEKSDataStore
+		isEKSDataStore func() common.IsEKSCache
 	}{
 		"WithAppSignalsEnabledEKS": {
 			input: map[string]any{
@@ -715,7 +715,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			want:           testutil.GetConf(t, filepath.Join("appsignals_config_eks.yaml")),
 			isKubernetes:   true,
 			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]any{
@@ -727,7 +727,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			want:           testutil.GetConf(t, filepath.Join("appsignals_config_k8s.yaml")),
 			isKubernetes:   true,
 			detector:       common.TestK8sDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreFalse,
+			isEKSDataStore: common.TestIsEKSCacheK8s,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]any{

@@ -23,7 +23,7 @@ func TestTranslator(t *testing.T) {
 		input           interface{}
 		wantErrContains string
 		detector        func() (common.Detector, error)
-		isEKSDataStore  func() common.IsEKSDataStore
+		isEKSDataStore  func() common.IsEKSCache
 	}{
 		"WithInvalidConfig": {
 			input:           "",
@@ -57,7 +57,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsTracesEnabled": {
 			input: map[string]interface{}{
@@ -68,7 +68,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsMetricsAndTracesEnabled": {
 			input: map[string]interface{}{
@@ -84,7 +84,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 	}
 	for name, testCase := range testCases {

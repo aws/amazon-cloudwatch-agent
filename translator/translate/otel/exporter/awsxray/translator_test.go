@@ -30,7 +30,7 @@ func TestTranslator(t *testing.T) {
 		want           *confmap.Conf
 		wantErr        error
 		detector       func() (common.Detector, error)
-		isEKSDataStore func() common.IsEKSDataStore
+		isEKSDataStore func() common.IsEKSCache
 	}{
 		"WithMissingKey": {
 			input: map[string]any{"logs": map[string]any{}},
@@ -87,7 +87,7 @@ func TestTranslator(t *testing.T) {
 				"middleware": "agenthealth/traces",
 			}),
 			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreTrue,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]any{
@@ -119,7 +119,7 @@ func TestTranslator(t *testing.T) {
 				"middleware": "agenthealth/traces",
 			}),
 			detector:       common.TestK8sDetector,
-			isEKSDataStore: common.TestValidIsEKSDataStoreFalse,
+			isEKSDataStore: common.TestIsEKSCacheK8s,
 		},
 	}
 	factory := awsxrayexporter.NewFactory()
