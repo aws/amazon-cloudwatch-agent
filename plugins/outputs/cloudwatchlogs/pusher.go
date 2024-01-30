@@ -19,10 +19,10 @@ import (
 )
 
 const (
-	reqSizeLimit     = 1024 * 1024
-	reqEventsLimit   = 10000
-	warnOldTimeStamp = 1 * 24 * time.Hour
-	logWarnInterval  = 1 * 5 * time.Minute
+	reqSizeLimit                = 1024 * 1024
+	reqEventsLimit              = 10000
+	warnOldTimeStamp            = 1 * 24 * time.Hour
+	warnOldTimeStampLogInterval = 1 * 5 * time.Minute
 )
 
 var (
@@ -427,12 +427,10 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 			t = p.lastValidTime
 			if !p.lastUpdateTime.IsZero() {
 				// Check when timestamp has an interval of 1 days.
-				if time.Since(p.lastUpdateTime) > warnOldTimeStamp {
+				if (time.Since(p.lastUpdateTime) > warnOldTimeStamp) && (time.Since(p.lastWarnMessage) > warnOldTimeStampLogInterval) {
 					{
-						if time.Since(p.lastWarnMessage) > logWarnInterval {
-							p.Log.Warnf("Unable to parse timestamp, using last valid timestamp found in the logs %v: which is at least older than 1 day for log group %v: ", p.lastValidTime, p.Group)
-							p.lastWarnMessage = time.Now()
-						}
+						p.Log.Warnf("Unable to parse timestamp, using last valid timestamp found in the logs %v: which is at least older than 1 day for log group %v: ", p.lastValidTime, p.Group)
+						p.lastWarnMessage = time.Now()
 					}
 				}
 			}
