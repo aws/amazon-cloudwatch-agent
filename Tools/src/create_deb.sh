@@ -32,6 +32,7 @@ cp ${PREPKGPATH}/config-translator ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent
 cp ${PREPKGPATH}/config-downloader ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-config-wizard ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/start-amazon-cloudwatch-agent ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
+cp ${PREPKGPATH}/opentelemetry-jmx-metrics.jar ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/bin/
 cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/etc/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent.conf ${BUILD_ROOT}/etc/init/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}/opt/aws/amazon-cloudwatch-agent/doc/

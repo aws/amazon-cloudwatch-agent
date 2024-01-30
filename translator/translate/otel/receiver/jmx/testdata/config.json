@@ -1,0 +1,32 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "jmx": {
+        "jar_path": "/jmxtest/opentelemetry-java-contrib-jmx-metrics.jar",
+        "endpoint": "my_jmx_host:12345",
+        "target_system": "jvm",
+        "metrics_collection_interval": 60,
+        "otlp": {
+          "endpoint": "mycollectorotlpreceiver:4317",
+          "timeout": "60s",
+          "headers": {
+            "header_test": "test"
+          }
+        },
+        "username": "cwagent",
+        "password": "testpassword",
+        "keystore_path": "/keystore",
+        "keystore_password": "keystore_password",
+        "keystore_type": "PKCS",
+        "truststore_path": "/truststore",
+        "truststore_password": "truststore_password",
+        "truststore_type": "PKCS12",
+        "remote_profile": "SASL/PLAIN",
+        "realm": "test_realm",
+        "resource_attributes": {
+          "service.name": "jmx_app"
+        }
+      }
+    }
+  }
+}

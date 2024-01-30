@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	receiversCount  = 5
+	receiversCount  = 6
 	processorCount  = 7
 	exportersCount  = 5
 	extensionsCount = 2
@@ -24,6 +24,7 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, receivers["awscontainerinsightreceiver"])
 	assert.NotNil(t, receivers["awsxray"])
 	assert.NotNil(t, receivers["otlp"])
+	assert.NotNil(t, receivers["jmx"])
 	assert.NotNil(t, receivers["tcplog"])
 	assert.NotNil(t, receivers["udplog"])
 
