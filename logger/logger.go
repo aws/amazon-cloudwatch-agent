@@ -4,6 +4,8 @@
 package logger
 
 import (
+	"io"
+
 	"github.com/influxdata/wlog"
 	"go.uber.org/zap"
 	"go.uber.org/zap/buffer"
