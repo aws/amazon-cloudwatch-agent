@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
@@ -18,9 +19,10 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	receiverAdapter "github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/appsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
@@ -66,6 +68,8 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	})
 
 	translators := common.NewTranslatorMap(
+		appsignals.NewTranslator(component.DataTypeTraces),
+		appsignals.NewTranslator(component.DataTypeMetrics),
 		host.NewTranslator(common.PipelineNameHost, hostReceivers),
 		host.NewTranslator(common.PipelineNameHostDeltaMetrics, deltaMetricsReceivers),
 		containerinsights.NewTranslator(),
@@ -101,16 +105,6 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	return cfg, nil
 }
 
-// parseAgentLogFile returns the log file path form the JSON config, or the
-// default value.
-func parseAgentLogFile(conf *confmap.Conf) string {
-	v, ok := common.GetString(conf, common.ConfigKey("agent", "logfile"))
-	if !ok {
-		return agent.GetDefaultValue()
-	}
-	return v
-}
-
 // parseAgentLogLevel returns the logging level from the JSON config, or the
 // default value.
 func parseAgentLogLevel(conf *confmap.Conf) zapcore.Level {
@@ -130,7 +124,7 @@ func parseAgentLogLevel(conf *confmap.Conf) zapcore.Level {
 // logging configuration that should go in the YAML.
 func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 	var outputPaths []string
-	filename := parseAgentLogFile(conf)
+	filename := context.CurrentContext().GetAgentLogFile()
 	// A slice with an empty string causes OTEL issues, so avoid it.
 	if filename != "" {
 		outputPaths = []string{filename}
@@ -140,9 +134,12 @@ func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 		OutputPaths: outputPaths,
 		Level:       logLevel,
 		Encoding:    common.Console,
+		// enabled by default with 10 second tick
 		Sampling: &telemetry.LogsSamplingConfig{
+			Enabled:    true,
 			Initial:    2,
 			Thereafter: 500,
+			Tick:       10 * time.Second,
 		},
 	}
 }

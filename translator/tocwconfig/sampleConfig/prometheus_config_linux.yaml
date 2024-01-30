@@ -111,8 +111,10 @@ service:
             level: info
             output_paths: []
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None

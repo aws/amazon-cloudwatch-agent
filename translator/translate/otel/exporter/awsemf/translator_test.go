@@ -4,41 +4,49 @@
 package awsemf
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 var nilSlice []string
 var nilMetricDescriptorsSlice []awsemfexporter.MetricDescriptor
 
 func TestTranslator(t *testing.T) {
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
 	tt := NewTranslator()
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
 	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
 		env     map[string]string
-		input   map[string]interface{}
-		want    map[string]interface{} // Can't construct & use awsemfexporter.Config as it uses internal only types
+		input   map[string]any
+		want    map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
 		wantErr error
 	}{
 		"GenerateAwsEmfExporterConfigEcs": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"ecs": map[string]interface{}{},
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"ecs": map[string]any{},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ECS/ContainerInsights",
 				"log_group_name":                         "/aws/ecs/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
@@ -70,16 +78,16 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigEcsDisableMetricExtraction": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"ecs": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"ecs": map[string]any{
 							"disable_metric_extraction": true,
 						},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ECS/ContainerInsights",
 				"log_group_name":                         "/aws/ecs/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
@@ -111,14 +119,14 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetes": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{},
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"kubernetes": map[string]any{},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ContainerInsights",
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
@@ -177,16 +185,16 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesDisableMetricExtraction": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"kubernetes": map[string]any{
 							"disable_metric_extraction": true,
 						},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ContainerInsights",
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
@@ -245,16 +253,16 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesWithEnableFullPodAndContainerMetrics": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"kubernetes": map[string]any{
 							"enhanced_container_insights": true,
 						},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ContainerInsights",
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
@@ -493,22 +501,22 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheus": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
 							"log_group_name":  "/test/log/group",
 							"log_stream_name": "{LogStreamName}",
-							"emf_processor": map[string]interface{}{
-								"metric_declaration": []interface{}{
-									map[string]interface{}{
+							"emf_processor": map[string]any{
+								"metric_declaration": []any{
+									map[string]any{
 										"source_labels":    []string{"Service", "Namespace"},
 										"label_matcher":    "(.*node-exporter.*|.*kube-dns.*);kube-system$",
 										"dimensions":       [][]string{{"Service", "Namespace"}},
 										"metric_selectors": []string{"^coredns_dns_request_type_count_total$"},
 									},
 								},
-								"metric_unit": map[string]interface{}{
+								"metric_unit": map[string]any{
 									"jvm_gc_collection_seconds_sum": "Milliseconds",
 								},
 							},
@@ -516,7 +524,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "CWAgent/Prometheus",
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{JobName}",
@@ -550,10 +558,10 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusDisableMetricExtraction": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
 							"disable_metric_extraction": true,
 							"log_group_name":            "/test/log/group",
 							"log_stream_name":           "{JobName}",
@@ -561,7 +569,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "",
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{JobName}",
@@ -583,14 +591,14 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoDeclarations": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
 							"log_group_name":  "/test/log/group",
 							"log_stream_name": "{JobName}",
-							"emf_processor": map[string]interface{}{
-								"metric_unit": map[string]interface{}{
+							"emf_processor": map[string]any{
+								"metric_unit": map[string]any{
 									"jvm_gc_collection_seconds_sum": "Milliseconds",
 								},
 							},
@@ -598,7 +606,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "CWAgent/Prometheus",
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{JobName}",
@@ -625,17 +633,17 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoEmfProcessor": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
 							"log_group_name":  "/test/log/group",
 							"log_stream_name": "{JobName}",
 						},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "",
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{JobName}",
@@ -679,10 +687,75 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
 				assert.Equal(t, "global_arn", gotCfg.RoleARN)
 				assert.Equal(t, "us-east-1", gotCfg.Region)
 				assert.NotNil(t, gotCfg.MiddlewareID)
 				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
+			}
+		})
+	}
+}
+
+func TestTranslateAppSignals(t *testing.T) {
+	tt := NewTranslatorWithName(common.AppSignals)
+	testCases := map[string]struct {
+		input        map[string]any
+		want         *confmap.Conf
+		wantErr      error
+		isKubernetes bool
+		detector     func() (common.Detector, error)
+	}{
+		"WithAppSignalsEnabledEKS": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want:         testutil.GetConf(t, filepath.Join("appsignals_config_eks.yaml")),
+			isKubernetes: true,
+			detector:     common.TestEKSDetector,
+		},
+		"WithAppSignalsEnabledK8s": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want:         testutil.GetConf(t, filepath.Join("appsignals_config_k8s.yaml")),
+			isKubernetes: true,
+			detector:     common.TestK8sDetector,
+		},
+		"WithAppSignalsEnabledGeneric": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want:         testutil.GetConf(t, filepath.Join("appsignals_config_generic.yaml")),
+			isKubernetes: false,
+		},
+	}
+	factory := awsemfexporter.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if testCase.isKubernetes {
+				t.Setenv(common.KubernetesEnvVar, "TEST")
+			}
+			common.NewDetector = testCase.detector
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*awsemfexporter.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})
 	}

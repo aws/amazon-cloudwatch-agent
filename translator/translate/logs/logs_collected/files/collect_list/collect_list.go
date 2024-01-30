@@ -48,7 +48,6 @@ type FileConfig struct {
 func (f *FileConfig) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
 	res := []interface{}{}
-	//if translator.IsValid(input, SectionKey, CurrentPath+SectionKey) {
 	if translator.IsValid(input, SectionKey, GetCurPath()) {
 		configArr := m[SectionKey].([]interface{})
 		for i := 0; i < len(configArr); i++ {
@@ -64,7 +63,7 @@ func (f *FileConfig) ApplyRule(input interface{}) (returnKey string, returnVal i
 			}
 			res = append(res, result)
 		}
-		logUtil.ValidateLogRetentionSettings(res, GetCurPath())
+		logUtil.ValidateLogGroupFields(res, GetCurPath())
 		outputLogConfig(res)
 	}
 	returnKey = "file_config"

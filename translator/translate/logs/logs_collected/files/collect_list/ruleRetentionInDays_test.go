@@ -17,8 +17,9 @@ func TestApplyRetentionInDaysRule(t *testing.T) {
 			"retention_in_days": 5
 	}`), &input)
 	if e == nil {
-		actualReturnKey, _ := r.ApplyRule(input)
+		actualReturnKey, actualReturnValue := r.ApplyRule(input)
 		assert.Equal(t, "retention_in_days", actualReturnKey)
+		assert.Equal(t, 5, actualReturnValue)
 	} else {
 		panic(e)
 	}

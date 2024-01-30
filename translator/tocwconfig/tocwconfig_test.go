@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -36,6 +37,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -65,6 +67,37 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 	}
 	checkTranslation(t, "base_container_insights_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_container_insights_config", "darwin", nil, "")
+}
+
+func TestGenericAppSignalsConfig(t *testing.T) {
+	common.NewDetector = common.TestEKSDetector
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsAndKubernetesConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
+	common.NewDetector = common.TestEKSDetector
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_eks_config", "windows", expectedEnvVars, "")
+
+	common.NewDetector = func() (common.Detector, error) {
+		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
+	}
+
+	checkTranslation(t, "appsignals_and_k8s_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
 }
 
 func TestEmfAndKubernetesConfig(t *testing.T) {

@@ -5,6 +5,7 @@ package translator
 
 import (
 	"fmt"
+	"strings"
 )
 
 // DefaultCase check if current input overrides the default value for the given config entry key.
@@ -84,4 +85,19 @@ func DefaultRetentionInDaysCase(key string, defaultVal, input interface{}) (retu
 			fmt.Sprintf("%s value (%v) in is not valid retention in days.", key, returnVal))
 	}
 	return
+}
+
+func DefaultLogGroupClassCase(key string, defaultVal, input interface{}) (returnKey string, returnVal interface{}) {
+	returnKey, returnVal = DefaultCase(key, defaultVal, input)
+	if classVal, ok := returnVal.(string); ok && IsValidLogGroupClass(strings.ToUpper(classVal)) {
+		//CreateLogGroup API only accepts values STANDARD or INFREQUENT_ACCESS
+		returnVal = strings.ToUpper(classVal)
+	} else {
+		AddInfoMessages(
+			fmt.Sprintf("LogGroupClass key: %s", key),
+			fmt.Sprintf("%s value (%v) in is not a valid Log Group Class field. Agent will not set the LogGroupClass parameter.", key, returnVal))
+		returnVal = ""
+	}
+	return
+
 }

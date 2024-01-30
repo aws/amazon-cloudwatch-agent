@@ -22,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 type tailerTestResources struct {
@@ -59,8 +60,8 @@ func TestTailerSrc(t *testing.T) {
 	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
 	ts := NewTailerSrc(
 		"groupName", "streamName",
-		"destination",
-		statefile.Name(),
+		"destination", statefile.Name(),
+		util.InfrequentAccessLogGroupClass,
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
@@ -171,6 +172,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		"groupName", "streamName",
 		"destination",
 		statefile.Name(),
+		util.InfrequentAccessLogGroupClass,
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
@@ -388,6 +390,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		t.Name(),
 		t.Name(),
 		"destination",
+		util.InfrequentAccessLogGroupClass,
 		statefile.Name(),
 		tailer,
 		false, // AutoRemoval

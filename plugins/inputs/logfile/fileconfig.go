@@ -39,6 +39,8 @@ type FileConfig struct {
 	LogGroupName string `toml:"log_group_name"`
 	//log stream name
 	LogStreamName string `toml:"log_stream_name"`
+	//log group class
+	LogGroupClass string `toml:"log_group_class"`
 
 	//The regex of the timestampFromLogLine presents in the log entry
 	TimestampRegex string `toml:"timestamp_regex"`

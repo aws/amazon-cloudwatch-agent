@@ -22,9 +22,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:
@@ -62,8 +62,10 @@ service:
             output_paths:
                 - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None

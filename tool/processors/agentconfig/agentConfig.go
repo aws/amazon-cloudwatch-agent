@@ -36,7 +36,7 @@ func whichRunAsUser(ctx *runtime.Context, config *data.Config) {
 
 	answer := util.Choice("Which user are you planning to run the agent?",
 		1,
-		[]string{RUNASUSER_ROOT, RUNASUSER_CWAGENT, RUNASUSER_OTHERS})
+		[]string{RUNASUSER_CWAGENT, RUNASUSER_ROOT, RUNASUSER_OTHERS})
 
 	if answer == RUNASUSER_OTHERS {
 		answer = util.Ask("Please specify your own user(remember the user must exist before the agent running):")

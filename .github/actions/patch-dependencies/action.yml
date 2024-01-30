@@ -1,0 +1,97 @@
+name: "Patch dependencies"
+description: |
+  Patches direct dependencies of this project leveraging maven local to publish the results.
+
+  This workflow supports patching opentelemetry-java and opentelemetry-java-instrumentation repositories by executing
+  the `patch.sh` script that will try to patch those repositories and after that will optionally test and then publish
+  the artifacts to maven local.
+  To add a patch you have to add a file in the `.github/patches/` directory with the name of the repository that must
+  be patched.
+  This action assumes that java was set correctly.
+inputs:
+  run_tests:
+    default: "false"
+    required: false
+    description: "If the workflow should run tests of the dependencies. Anything different than false will evaluate to true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: check patches
+      run: |
+        if [[ -f .github/patches/opentelemetry-java.patch ]]; then
+          echo 'patch_otel_java=true' >> $GITHUB_ENV
+        fi
+        if [[ -f .github/patches/opentelemetry-java-instrumentation.patch ]]; then
+            echo 'patch_otel_java_instrumentation=true' >> $GITHUB_ENV
+        fi
+        if [[ -f .github/patches/opentelemetry-java-contrib.patch ]]; then
+            echo 'patch_otel_java_contrib=true' >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Clone and patch repositories
+      run: .github/scripts/patch.sh
+      if: ${{ env.patch_otel_java == 'true' ||
+        env.patch_otel_java_instrumentation == 'true' ||
+        env.patch_otel_java_contrib == 'true' }}
+      shell: bash
+
+    - name: Build opentelemetry-java with tests
+      uses: gradle/gradle-build-action@v2
+      if: ${{ env.patch_otel_java == 'true' && inputs.run_tests != 'false' }}
+      with:
+        arguments: build publishToMavenLocal
+        build-root-directory: opentelemetry-java
+
+    - name: Build opentelemetry-java
+      uses: gradle/gradle-build-action@v2
+      if: ${{ env.patch_otel_java == 'true' && inputs.run_tests == 'false' }}
+      with:
+        arguments: publishToMavenLocal
+        build-root-directory: opentelemetry-java
+
+    - name: cleanup opentelemetry-java
+      run: rm -rf opentelemetry-java
+      if: ${{ env.patch_otel_java == 'true' }}
+      shell: bash
+
+    - name: Build opentelemetry-java-contrib with tests
+      uses: gradle/gradle-build-action@v2
+      if: ${{ env.patch_otel_java_contrib == 'true' && inputs.run_tests != 'false' }}
+      with:
+        arguments: build publishToMavenLocal
+        build-root-directory: opentelemetry-java-contrib
+
+    - name: Build opentelemetry-java-contrib
+      uses: gradle/gradle-build-action@v2
+      if: ${{ env.patch_otel_java_contrib == 'true' && inputs.run_tests == 'false' }}
+      with:
+        arguments: publishToMavenLocal
+        build-root-directory: opentelemetry-java-contrib
+
+    - name: cleanup opentelemetry-java-contrib
+      run: rm -rf opentelemetry-java-contrib
+      if: ${{ env.patch_otel_java_contrib == 'true' }}
+      shell: bash
+
+    - name: Build opentelemetry-java-instrumentation with tests
+      uses: gradle/gradle-build-action@v2
+      if: ${{ env.patch_otel_java_instrumentation == 'true' && inputs.run_tests != 'false' }}
+      with:
+        arguments: check -x spotlessCheck publishToMavenLocal
+        build-root-directory: opentelemetry-java-instrumentation
+        cache-read-only: false
+
+    - name: Build opentelemetry java instrumentation
+      uses: gradle/gradle-build-action@v2
+      if: ${{ env.patch_otel_java_instrumentation == 'true' && inputs.run_tests == 'false' }}
+      with:
+        arguments: publishToMavenLocal
+        build-root-directory: opentelemetry-java-instrumentation
+        cache-read-only: false
+
+    - name: cleanup opentelmetry-java-instrumentation
+      run: rm -rf opentelemetry-java-instrumentation
+      if: ${{ env.patch_otel_java_instrumentation == 'true' }}
+      shell: bash

@@ -31,12 +31,22 @@ var defaultKubernetesConfig string
 //go:embed awsemf_default_prometheus.yaml
 var defaultPrometheusConfig string
 
+//go:embed appsignals_config_eks.yaml
+var appSignalsConfigEks string
+
+//go:embed appsignals_config_k8s.yaml
+var appSignalsConfigK8s string
+
+//go:embed appsignals_config_generic.yaml
+var appSignalsConfigGeneric string
+
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
 	kubernetesBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey)
 	prometheusBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 	emfProcessorBasePathKey = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
 	endpointOverrideKey     = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
+	roleARNPathKey          = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 )
 
 type translator struct {
@@ -63,6 +73,20 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
 
+	if common.IsAppSignalsKubernetes() && t.name == common.AppSignals {
+		isEks, err := common.IsEKS()
+		if err != nil {
+			return nil, err
+		}
+
+		if isEks {
+			return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEks)
+		}
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigK8s)
+	} else if t.name == common.AppSignals {
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigGeneric)
+	}
+
 	var defaultConfig string
 	if isEcs(c) {
 		defaultConfig = defaultEcsConfig
@@ -83,20 +107,22 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 			return nil, fmt.Errorf("unable to unmarshal config: %w", err)
 		}
 	}
-	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	if c.IsSet(endpointOverrideKey) {
 		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
 	}
-	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
+	if c.IsSet(roleARNPathKey) {
+		cfg.AWSSessionSettings.RoleARN, _ = common.GetString(c, roleARNPathKey)
 	}
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
-	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {

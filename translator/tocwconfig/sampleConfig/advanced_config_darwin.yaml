@@ -75,11 +75,11 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_mem
                 - telegraf_netstat
                 - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -100,8 +100,10 @@ service:
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None

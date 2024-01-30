@@ -1,0 +1,3 @@
+resolvers:
+  - platform: eks
+    name: test

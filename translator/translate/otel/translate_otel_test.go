@@ -22,6 +22,7 @@ func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
+		detector        func() (common.Detector, error)
 	}{
 		"WithInvalidConfig": {
 			input:           "",
@@ -46,9 +47,45 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 		},
+		"WithAppSignalsMetricsEnabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+			},
+			detector: common.TestEKSDetector,
+		},
+		"WithAppSignalsTracesEnabled": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+			},
+			detector: common.TestEKSDetector,
+		},
+		"WithAppSignalsMetricsAndTracesEnabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+			},
+			detector: common.TestEKSDetector,
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			common.NewDetector = testCase.detector
 			translator.SetTargetPlatform("linux")
 			got, err := Translate(testCase.input, "linux")
 			if testCase.wantErrContains != "" {

@@ -42,8 +42,8 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_mem
                 - telegraf_disk
+                - telegraf_mem
     telemetry:
         logs:
             development: false
@@ -56,8 +56,10 @@ service:
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None
