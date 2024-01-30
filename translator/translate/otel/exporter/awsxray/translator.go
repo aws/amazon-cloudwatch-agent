@@ -69,10 +69,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	if isAppSignals(conf) {
 		isEks := common.IsEKS()
-		if isEks.Err != nil {
-			return nil, isEks.Err
-		}
-
 		if isEks.Value {
 			cfg.IndexedAttributes = indexedAttributesEKS
 		} else {

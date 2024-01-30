@@ -75,10 +75,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 
 	if common.IsAppSignalsKubernetes() && t.name == common.AppSignals {
 		isEks := common.IsEKS()
-		if isEks.Err != nil {
-			return nil, isEks.Err
-		}
-
 		if isEks.Value {
 			return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEks)
 		}
