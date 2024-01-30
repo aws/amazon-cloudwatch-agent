@@ -1,0 +1,28 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Enhanced Container Insights Beta Release
+on:
+  workflow_dispatch:
+jobs:
+  BuildAndPushToUSWEST2:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "enhanced-container-insights-beta:latest"
+      BucketKey: "enhanced-container-insights-beta"
+      PackageBucketKey: "enhanced-container-insights-beta"
+  BuildAndPushToUSEAST1:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "enhanced-container-insights-beta:latest"
+      BucketKey: "enhanced-container-insights-beta"
+      PackageBucketKey: "enhanced-container-insights-beta"
+      TargetRegion: "us-east-1"

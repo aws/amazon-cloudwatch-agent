@@ -1,0 +1,15 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: APM Beta Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  no-op:
+    runs-on: ubuntu-latest
+    steps:
+      - name: do nothing
+        run: |
+          echo "This is a no-op"

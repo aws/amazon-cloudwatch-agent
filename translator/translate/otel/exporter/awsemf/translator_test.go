@@ -29,6 +29,8 @@ func TestTranslator(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
 	tt := NewTranslator()
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
 	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
 		env     map[string]string

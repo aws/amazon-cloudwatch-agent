@@ -194,6 +194,44 @@ func TestTimestampFormatAll(t *testing.T) {
 			input: `{
 					"collect_list":[
 						{
+							"file_path":"path4",
+                            "timestamp_format": "%b %d %H:%M:%S"
+						}
+					]
+				}`,
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path4",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"Jan _2 15:04:05"},
+				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
+							"file_path":"path5",
+                            "timestamp_format": "%b %-d %H:%M:%S"
+						}
+					]
+				}`,
+			expected: []interface{}{map[string]interface{}{
+				"file_path":         "path5",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"Jan _2 15:04:05"},
+				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "",
+			}},
+		},
+		{
+			input: `{
+					"collect_list":[
+						{
 							"file_path":"path1",
 							"timestamp_format":"%-S %-d %-m %H:%M:%S"
 						}

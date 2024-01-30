@@ -66,9 +66,9 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_nvidia_smi
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_nvidia_smi
     telemetry:
         logs:
             development: false
