@@ -61,6 +61,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		if isEks.Value {
 			translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
 		}
+	} else {
+		translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
 	}
 
 	translators.Processors.Set(awsappsignals.NewTranslator(awsappsignals.WithDataType(t.dataType)))
