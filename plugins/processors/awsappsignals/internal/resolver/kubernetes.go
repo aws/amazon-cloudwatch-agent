@@ -679,7 +679,7 @@ func (h *kubernetesHostedInAttributeResolver) Process(attributes, resourceAttrib
 		}
 	}
 
-	if isEks, _ := common.IsEKS(); isEks {
+	if isEks := common.IsEKS(); isEks.Value {
 		attributes.PutStr(attr.HostedInClusterNameEKS, h.clusterName)
 	} else {
 		attributes.PutStr(attr.HostedInClusterNameK8s, h.clusterName)

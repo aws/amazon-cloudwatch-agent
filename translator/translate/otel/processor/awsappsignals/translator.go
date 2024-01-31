@@ -68,12 +68,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			hostedIn = util.GetClusterNameFromEc2Tagger()
 		}
 
-		isEks, err := common.IsEKS()
-		if err != nil {
-			return nil, err
-		}
-
-		if isEks {
+		isEks := common.IsEKS()
+		if isEks.Value {
 			cfg.Resolvers = []appsignalsconfig.Resolver{
 				appsignalsconfig.NewEKSResolver(hostedIn),
 			}
