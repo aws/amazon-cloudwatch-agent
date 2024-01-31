@@ -5,6 +5,7 @@ package jmx
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -35,6 +36,8 @@ const (
 	headers             = "headers"
 	defaultOTLPEndpoint = "127.0.0.1:3000"
 	defaultJMXJarPath   = "/opt/aws/amazon-cloudwatch-agent/bin/opentelemetry-jmx-metrics.jar"
+
+	defaultJMXJarPathWin = "C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\opentelemetry-jmx-metrics.jar"
 	defaultTargetSystem = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
 )
 
@@ -120,6 +123,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.JARPath = defaultJMXJarPath
+	if runtime.GOOS == "windows" {
+		cfg.JARPath = defaultJMXJarPathWin
+	}
 	if jarPath, ok := jmxKeyMap[jarPath].(string); ok {
 		cfg.JARPath = jarPath
 	}
