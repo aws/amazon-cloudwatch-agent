@@ -26,10 +26,11 @@ func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
 	assert.EqualValues(t, "awsxray", tt.ID().String())
 	testCases := map[string]struct {
-		input    map[string]any
-		want     *confmap.Conf
-		wantErr  error
-		detector func() (common.Detector, error)
+		input          map[string]any
+		want           *confmap.Conf
+		wantErr        error
+		detector       func() (common.Detector, error)
+		isEKSDataStore func() common.IsEKSCache
 	}{
 		"WithMissingKey": {
 			input: map[string]any{"logs": map[string]any{}},
@@ -85,7 +86,8 @@ func TestTranslator(t *testing.T) {
 				},
 				"middleware": "agenthealth/traces",
 			}),
-			detector: common.TestEKSDetector,
+			detector:       common.TestEKSDetector,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]any{
@@ -116,13 +118,15 @@ func TestTranslator(t *testing.T) {
 				},
 				"middleware": "agenthealth/traces",
 			}),
-			detector: common.TestK8sDetector,
+			detector:       common.TestK8sDetector,
+			isEKSDataStore: common.TestIsEKSCacheK8s,
 		},
 	}
 	factory := awsxrayexporter.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			common.NewDetector = testCase.detector
+			common.IsEKS = testCase.isEKSDataStore
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)

@@ -44,11 +44,12 @@ func TestTranslate(t *testing.T) {
 
 	tt := NewTranslator(WithDataType(component.DataTypeMetrics))
 	testCases := map[string]struct {
-		input        map[string]interface{}
-		want         string
-		wantErr      error
-		isKubernetes bool
-		detector     func() (common.Detector, error)
+		input          map[string]interface{}
+		want           string
+		wantErr        error
+		isKubernetes   bool
+		detector       func() (common.Detector, error)
+		isEKSDataStore func() common.IsEKSCache
 	}{
 		//The config for the awsappsignals processor is https://code.amazon.com/packages/AWSTracingSamplePetClinic/blobs/97ce3c409986ac8ae014de1e3fe71fdb98080f22/--/eks/appsignals/auto-instrumentation-new.yaml#L20
 		//The awsappsignals processor config does not have a platform field, instead it gets added to resolvers when marshalled
@@ -61,15 +62,17 @@ func TestTranslate(t *testing.T) {
 						},
 					},
 				}},
-			want:         validAppSignalsYamlEKS,
-			isKubernetes: true,
-			detector:     common.TestEKSDetector,
+			want:           validAppSignalsYamlEKS,
+			isKubernetes:   true,
+			detector:       common.TestEKSDetector,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsCustomRulesEnabledEKS": {
-			input:        validJsonMap,
-			want:         validAppSignalsRulesYamlEKS,
-			isKubernetes: true,
-			detector:     common.TestEKSDetector,
+			input:          validJsonMap,
+			want:           validAppSignalsRulesYamlEKS,
+			isKubernetes:   true,
+			detector:       common.TestEKSDetector,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8S": {
 			input: map[string]interface{}{
@@ -80,9 +83,10 @@ func TestTranslate(t *testing.T) {
 						},
 					},
 				}},
-			want:         validAppSignalsYamlK8s,
-			isKubernetes: true,
-			detector:     common.TestK8sDetector,
+			want:           validAppSignalsYamlK8s,
+			isKubernetes:   true,
+			detector:       common.TestK8sDetector,
+			isEKSDataStore: common.TestIsEKSCacheK8s,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]interface{}{
@@ -111,6 +115,7 @@ func TestTranslate(t *testing.T) {
 				t.Setenv(common.KubernetesEnvVar, "TEST")
 			}
 			common.NewDetector = testCase.detector
+			common.IsEKS = testCase.isEKSDataStore
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)

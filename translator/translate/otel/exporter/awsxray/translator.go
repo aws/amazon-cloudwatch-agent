@@ -68,12 +68,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
 
 	if isAppSignals(conf) {
-		isEks, err := common.IsEKS()
-		if err != nil {
-			return nil, err
-		}
-
-		if isEks {
+		isEks := common.IsEKS()
+		if isEks.Value {
 			cfg.IndexedAttributes = indexedAttributesEKS
 		} else {
 			cfg.IndexedAttributes = indexedAttributesK8s
