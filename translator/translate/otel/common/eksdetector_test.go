@@ -24,6 +24,26 @@ func TestNewDetector(t *testing.T) {
 	testDetector1, err := NewDetector()
 	assert.NoError(t, err)
 	assert.NotNil(t, testDetector1)
+
+	getInClusterConfig = func() (*rest.Config, error) {
+		return nil, fmt.Errorf("error")
+	}
+	_, err = NewDetector()
+	assert.Error(t, err)
+}
+
+func TestIsEKSSingleton(t *testing.T) {
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{}, nil
+	}
+
+	NewDetector = TestEKSDetector
+	value1 := IsEKS()
+	assert.NoError(t, value1.Err)
+	value2 := IsEKS()
+	assert.NoError(t, value2.Err)
+
+	assert.True(t, value1 == value2)
 }
 
 // Tests EKS resource detector running in EKS environment

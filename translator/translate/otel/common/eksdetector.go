@@ -37,8 +37,6 @@ var (
 	detector            Detector
 	isEKSCacheSingleton IsEKSCache
 	once                sync.Once
-
-	EKSTrue bool
 )
 
 var (

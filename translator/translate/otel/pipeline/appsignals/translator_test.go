@@ -73,6 +73,7 @@ func TestTranslatorTraces(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			t.Setenv(common.KubernetesEnvVar, "TEST")
 			common.NewDetector = testCase.detector
 			common.IsEKS = testCase.isEKSCache
 			conf := confmap.NewFromStringMap(testCase.input)
@@ -148,6 +149,7 @@ func TestTranslatorMetrics(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			t.Setenv(common.KubernetesEnvVar, "TEST")
 			common.NewDetector = testCase.detector
 			common.IsEKS = testCase.isEKSCache
 			conf := confmap.NewFromStringMap(testCase.input)
