@@ -53,6 +53,10 @@ var (
 		gpu.SectionKey,
 		statsd.SectionKey,
 	)
+	// skipWindowsInputSet contains all the supported metric input plugins that should not be included in telegraf windows plugins
+	skipWindowsInputSet = collections.NewSet[string](
+		common.JmxKey,
+	)
 	// aliasMap contains mappings for all input plugins that use another
 	// name in Telegraf.
 	aliasMap = map[string]string{
@@ -66,13 +70,6 @@ var (
 	defaultCollectionIntervalMap = map[string]time.Duration{
 		statsd.SectionKey: 10 * time.Second,
 	}
-
-	// otelReceivers is used for receivers that need to be in the same pipeline that
-	// exports to Cloudwatch while not having to follow the adapter rules
-	otelReceivers = collections.NewSet[string](
-		common.JmxKey,
-		common.OtlpKey,
-	)
 )
 
 // FindReceiversInConfig looks in the metrics and logs sections to determine which
@@ -219,7 +216,7 @@ func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.Translat
 				}
 			}
 		}
-	} else if os == translatorconfig.OS_TYPE_WINDOWS && !windowsInputSet.Contains(inputName) {
+	} else if os == translatorconfig.OS_TYPE_WINDOWS && !windowsInputSet.Contains(inputName) && !skipWindowsInputSet.Contains(inputName) {
 		/* For customized metrics from Windows and  window performance counters metrics
 		   	[[inputs.win_perf_counters.object]]
 		   		ObjectName = "Processor"
