@@ -19,6 +19,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
+var REGIONS = []string{"us-east-1", "us-west-2"}
+
 // Clean integration hosts if they have been open longer than 1 day
 func main() {
 	err := cleanHost()
@@ -31,13 +33,16 @@ func cleanHost() error {
 	log.Print("Begin to clean EC2 Host")
 
 	cxt := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
-	if err != nil {
-		return err
-	}
-	ec2client := ec2.NewFromConfig(defaultConfig)
+	var err error
+	for _, region := range REGIONS {
+		defaultConfig, err := config.LoadDefaultConfig(cxt, config.WithRegion(region))
+		if err != nil {
+			return err
+		}
+		ec2client := ec2.NewFromConfig(defaultConfig)
 
-	terminateInstances(cxt, ec2client)
+		terminateInstances(cxt, ec2client)
+	}
 	return err
 }
 
@@ -57,6 +62,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 		"cwagent-performance-*",
 		"cwagent-stress-*",
 		"LocalStackIntegrationTestInstance",
+		"NvidiaDataCollector-*",
 	}}
 
 	instanceInput := ec2.DescribeInstancesInput{
