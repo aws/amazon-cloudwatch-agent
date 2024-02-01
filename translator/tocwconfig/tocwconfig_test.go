@@ -70,8 +70,6 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 }
 
 func TestGenericAppSignalsConfig(t *testing.T) {
-	common.NewDetector = common.TestEKSDetector
-	common.IsEKS = common.TestIsEKSCacheEKS
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
