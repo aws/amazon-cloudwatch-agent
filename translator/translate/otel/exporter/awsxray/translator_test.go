@@ -31,6 +31,7 @@ func TestTranslator(t *testing.T) {
 		wantErr        error
 		detector       func() (common.Detector, error)
 		isEKSDataStore func() common.IsEKSCache
+		isKubernetes   bool
 	}{
 		"WithMissingKey": {
 			input: map[string]any{"logs": map[string]any{}},
@@ -88,6 +89,7 @@ func TestTranslator(t *testing.T) {
 			}),
 			detector:       common.TestEKSDetector,
 			isEKSDataStore: common.TestIsEKSCacheEKS,
+			isKubernetes:   true,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]any{
@@ -120,13 +122,17 @@ func TestTranslator(t *testing.T) {
 			}),
 			detector:       common.TestK8sDetector,
 			isEKSDataStore: common.TestIsEKSCacheK8s,
+			isKubernetes:   true,
 		},
 	}
 	factory := awsxrayexporter.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			common.NewDetector = testCase.detector
-			common.IsEKS = testCase.isEKSDataStore
+			if testCase.isKubernetes {
+				t.Setenv(common.KubernetesEnvVar, "TEST")
+				common.NewDetector = testCase.detector
+				common.IsEKS = testCase.isEKSDataStore
+			}
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
