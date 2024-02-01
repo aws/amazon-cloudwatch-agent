@@ -79,6 +79,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			}
 		}
 
+		// TODO: Add check for IsAppSignalsEC2() once translation changes are ready for EC2
 	} else {
 		cfg.Resolvers = []appsignalsconfig.Resolver{
 			appsignalsconfig.NewGenericResolver(hostedIn),

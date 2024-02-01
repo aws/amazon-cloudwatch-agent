@@ -21,9 +21,13 @@ const (
 	K8SPodName         = "k8s.pod.name"
 	K8SRemoteNamespace = "K8s.RemoteNamespace"
 
+	// ec2 resource attributes
+	EC2AutoScalingGroupName = "EC2.AutoScalingGroupName"
+
 	// hosted in attribute names
 	HostedInClusterNameEKS = "HostedIn.EKS.Cluster"
 	HostedInClusterNameK8s = "HostedIn.K8s.Cluster"
 	HostedInK8SNamespace   = "HostedIn.K8s.Namespace"
+	HostedInEC2Environment = "HostedIn.EC2.Environment"
 	HostedInEnvironment    = "HostedIn.Environment"
 )
