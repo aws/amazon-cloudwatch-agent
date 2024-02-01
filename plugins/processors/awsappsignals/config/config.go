@@ -61,6 +61,10 @@ func (cfg *Config) Validate() error {
 			if resolver.Name == "" {
 				return errors.New("name must not be empty for k8s resolver")
 			}
+		case PlatformEC2:
+			if resolver.Name == "" {
+				return errors.New("name must not be empty for ec2 resolver")
+			}
 		case PlatformGeneric:
 		default:
 			return errors.New("unknown resolver")
