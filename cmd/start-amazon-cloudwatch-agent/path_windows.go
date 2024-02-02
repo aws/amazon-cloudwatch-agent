@@ -18,29 +18,36 @@ import (
 )
 
 func startAgent(writer io.WriteCloser) error {
-	cmd := exec.Command(
-		paths.AgentBinaryPath,
-		"-config", paths.TomlConfigPath,
-		"-envconfig", paths.EnvConfigPath,
-		"-otelconfig", paths.YamlConfigPath,
-		"-console", "true",
-	)
 
 	if os.Getenv(config.RUN_IN_CONTAINER) != config.RUN_IN_CONTAINER_TRUE {
 		if err := writer.Close(); err != nil {
 			log.Printf("E! Cannot close the log file, ERROR is %v \n", err)
 			return err
 		}
-		cmd = exec.Command(
+		cmd := exec.Command(
 			paths.AgentBinaryPath,
 			"-config", paths.TomlConfigPath,
 			"-envconfig", paths.EnvConfigPath,
 			"-otelconfig", paths.YamlConfigPath,
 		)
+		stdoutStderr, err := cmd.CombinedOutput()
+		// log file is closed, so use fmt here
+		fmt.Printf("%s \n", stdoutStderr)
+		return err
+	} else {
+		cmd := exec.Command(
+			paths.AgentBinaryPath,
+			"-config", paths.TomlConfigPath,
+			"-envconfig", paths.EnvConfigPath,
+			"-otelconfig", paths.YamlConfigPath,
+			"-console", "true",
+		)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
+		fmt.Printf("%s \n", err)
+		return err
 	}
 
-	stdoutStderr, err := cmd.CombinedOutput()
-	// log file is closed, so use fmt here
-	fmt.Printf("%s \n", stdoutStderr)
-	return err
 }
