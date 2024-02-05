@@ -323,6 +323,29 @@
           },
           "additionalProperties": false
         },
+        "tlsDefinitions": {
+          "type": "object",
+          "properties": {
+            "ca_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "cert_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "key_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "insecure": {
+              "type": "boolean"
+            }
+          }
+        },
         "swapDefinitions": {
           "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
         },
@@ -987,6 +1010,9 @@
             "http_endpoint": {
               "description": "HTTP endpoint to use to listen for OTLP JSON traces",
               "$ref": "#/definitions/endpointOverrideDefinition"
+            },
+            "tls": {
+              "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
             }
           },
           "additionalProperties": false

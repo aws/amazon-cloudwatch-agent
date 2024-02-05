@@ -558,13 +558,10 @@ processors:
                     enabled: true
             tls:
                 ca_file: ""
-                ca_pem: '[REDACTED]'
                 cert_file: ""
-                cert_pem: '[REDACTED]'
                 insecure: false
                 insecure_skip_verify: false
                 key_file: ""
-                key_pem: '[REDACTED]'
                 max_version: ""
                 min_version: ""
                 reload_interval: 0s
@@ -641,9 +638,6 @@ receivers:
                   ca_file: ""
                   client_ca_file: ""
                   client_ca_file_reload: false
-                  ca_pem: "[REDACTED]"
-                  cert_pem: "[REDACTED]"
-                  key_pem: "[REDACTED]"
                   max_version: ""
                   min_version: ""
                   reload_interval: 0s
@@ -664,9 +658,6 @@ receivers:
                   client_ca_file: ""
                   client_ca_file_reload: false
                   ca_file: ""
-                  ca_pem: "[REDACTED]"
-                  cert_pem: "[REDACTED]"
-                  key_pem: "[REDACTED]"
                   max_version: ""
                   min_version: ""
                   reload_interval: 0s
