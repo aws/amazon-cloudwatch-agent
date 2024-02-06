@@ -4,12 +4,13 @@
   },
   "logs": {
     "metrics_collected": {
+      "emf": {
+      },
       "kubernetes": {
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
         "disable_metric_extraction": true,
-        "enhanced_container_insights": true,
-        "gpu_metrics": false
+        "enhanced_container_insights": true
       }
     },
     "force_flush_interval": 5,

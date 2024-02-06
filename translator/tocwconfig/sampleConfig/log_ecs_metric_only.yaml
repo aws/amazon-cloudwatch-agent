@@ -140,6 +140,7 @@ receivers:
         resource_arn: ""
         role_arn: ""
         shared_credentials_file: []
+        gpu_metrics: true
     tcplog/emf_logs:
         attributes: {}
         encoding: utf-8

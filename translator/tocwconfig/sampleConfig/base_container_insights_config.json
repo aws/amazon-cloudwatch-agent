@@ -10,7 +10,8 @@
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
         "disable_metric_extraction": true,
-        "prefer_full_pod_name": true
+        "prefer_full_pod_name": true,
+        "gpu_metrics": false
       }
     },
     "force_flush_interval": 5,

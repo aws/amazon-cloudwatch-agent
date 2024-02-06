@@ -426,6 +426,7 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - fake-path
+        gpu_metrics: false
 service:
     extensions:
         - agenthealth/logs
