@@ -108,9 +108,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.PrefFullPodName = true
 			cfg.EnableControlPlaneMetrics = true
 		}
+
 	}
 
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
+	cfg.EnableGpuMetric = cfg.EnableGpuMetric || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableGpuMetric), true)
 
 	return cfg, nil
 }

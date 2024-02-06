@@ -10,7 +10,8 @@
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
         "disable_metric_extraction": true,
-        "enhanced_container_insights": true
+        "enhanced_container_insights": true,
+        "gpu_metrics": false
       }
     },
     "force_flush_interval": 5,

@@ -4,6 +4,7 @@
 package awsemf
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
 
@@ -45,6 +46,9 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 
 	// Setup control plane metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getControlPlaneMetricDeclarations(conf)...)
+
+	// Setup GPU metrics
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getGPUMetricDeclarations(conf)...)
 
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
@@ -456,4 +460,49 @@ func getControlPlaneMetricDescriptors(conf *confmap.Conf) []awsemfexporter.Metri
 	}
 	return []awsemfexporter.MetricDescriptor{}
 
+}
+
+func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	EnableGpuMetric := common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableGpuMetric), true)
+	enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
+	if EnableGpuMetric && enhancedContainerInsightsEnabled {
+		metricDeclarations = append(metricDeclarations, []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{{"Namespace", "ClusterName", "FullPodName", "PodName", "UUID"}, {"Namespace", "ClusterName", "PodName", "UUID"}, {"Namespace", "ClusterName", "Service"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"pod_gpu_utilization",
+					"pod_gpu_utilization_memory",
+					"pod_gpu_memory_total",
+					"pod_gpu_memory_used",
+					"pod_gpu_power_draw",
+					"pod_gpu_temperature",
+				},
+			},
+			{
+				Dimensions: [][]string{{"ClusterName", "NodeName", "InstanceId", "UUID"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"node_gpu_utilization",
+					"node_gpu_utilization_memory",
+					"node_gpu_memory_total",
+					"node_gpu_memory_used",
+					"node_gpu_power_draw",
+					"node_gpu_temperature",
+				},
+			},
+			{
+				Dimensions: [][]string{{"ClusterName", "NodeName", "InstanceId"}, {"ClusterName"}},
+				MetricNameSelectors: []string{
+					"node_gpu_total",
+				},
+			},
+			{
+				Dimensions: [][]string{{"ClusterName"}},
+				MetricNameSelectors: []string{
+					"cluster_gpu_total",
+				},
+			},
+		}...)
+	}
+	return metricDeclarations
 }
