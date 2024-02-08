@@ -15,10 +15,10 @@ RUN dpkg -i -E /tmp/amazon-cloudwatch-agent.deb && \
     rm -rf /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl && \
     rm -rf /opt/aws/amazon-cloudwatch-agent/bin/config-downloader
 
-FROM scratch
+FROM amazoncorretto:latest
 
 COPY --from=build /tmp /tmp
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt
 COPY --from=build /opt/aws/amazon-cloudwatch-agent /opt/aws/amazon-cloudwatch-agent
 
 ENV RUN_IN_CONTAINER="True"
