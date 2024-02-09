@@ -5,8 +5,6 @@ package jmxprocessor
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"path/filepath"
 	"testing"
 
@@ -14,6 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -56,6 +57,27 @@ func TestTranslator(t *testing.T) {
 								"jvm.memory.nonheap.used",
 								"jvm.threads.count",
 								"tomcat*",
+							},
+						},
+					},
+				},
+			}),
+		},
+		"ConfigWithJmxTargetNoMetricNameNoTarget": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"jmx": map[string]interface{}{},
+						},
+					},
+				},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"filter/1": map[string]interface{}{
+					"metrics": map[string]interface{}{
+						"include": map[string]interface{}{
+							"match_type": "regexp",
+							"metric_names": []interface{}{
+								"*",
 							},
 						},
 					},

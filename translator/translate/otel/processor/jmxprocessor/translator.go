@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
@@ -115,4 +114,3 @@ func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []s
 	}
 	return includeMetricName
 }
-
