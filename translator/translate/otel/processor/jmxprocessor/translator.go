@@ -18,23 +18,35 @@ import (
 const (
 	// Match types are in internal package from contrib
 	// Strict is the FilterType for filtering by exact string matches.
-	regexp = "regexp"
+	regexp           = "regexp"
+	ActiveMqKey      = "activemq"
+	CassandraKey     = "cassandra"
+	HbaseKey         = "hbase"
+	HadoopKey        = "hadoop"
+	JettyKey         = "jetty"
+	JvmKey           = "jvm"
+	KafkaKey         = "kafka"
+	KafkaConsumerKey = "kafka-consumer"
+	KafkaProducerKey = "kafka-producer"
+	SolrKey          = "solr"
+	TomcatKey        = "tomcat"
+	WildflyKey       = "wildfly"
 )
 
 var (
 	jmxKey           = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
-	activeMqKey      = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.ActiveMqKey)
-	cassandraKey     = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.CassandraKey)
-	hbaseKey         = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.HbaseKey)
-	hadoopKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.HadoopKey)
-	jettyKey         = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.JettyKey)
-	jvmKey           = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.JvmKey)
-	kafkaKey         = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.KafkaKey)
-	kafkaConsumerKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.KafkaConsumerKey)
-	kafkaProducerKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.KafkaProducerKey)
-	solrKey          = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.SolrKey)
-	tomcatKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.TomcatKey)
-	wildflyKey       = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, common.WildflyKey)
+	activeMqKey      = common.ConfigKey(jmxKey, ActiveMqKey)
+	cassandraKey     = common.ConfigKey(jmxKey, CassandraKey)
+	hbaseKey         = common.ConfigKey(jmxKey, HbaseKey)
+	hadoopKey        = common.ConfigKey(jmxKey, HadoopKey)
+	jettyKey         = common.ConfigKey(jmxKey, JettyKey)
+	jvmKey           = common.ConfigKey(jmxKey, JvmKey)
+	kafkaKey         = common.ConfigKey(jmxKey, KafkaKey)
+	kafkaConsumerKey = common.ConfigKey(jmxKey, KafkaConsumerKey)
+	kafkaProducerKey = common.ConfigKey(jmxKey, KafkaProducerKey)
+	solrKey          = common.ConfigKey(jmxKey, SolrKey)
+	tomcatKey        = common.ConfigKey(jmxKey, TomcatKey)
+	wildflyKey       = common.ConfigKey(jmxKey, WildflyKey)
 
 	jmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 )
@@ -67,7 +79,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	// If no target system or no filter is given, then the metric name should be
+	//If no target system or no filter is given, the metric is supposed to be allowed by default
 	if !conf.IsSet(activeMqKey) && !conf.IsSet(cassandraKey) && !conf.IsSet(hbaseKey) &&
 		!conf.IsSet(hadoopKey) && !conf.IsSet(jettyKey) && !conf.IsSet(jvmKey) &&
 		!conf.IsSet(kafkaKey) && !conf.IsSet(kafkaConsumerKey) && !conf.IsSet(kafkaProducerKey) &&
@@ -75,7 +87,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return cfg, nil
 	}
 
-	// If target name is given
+	// When target name is given
 	var includeMetricNames []string
 	for _, jmxTarget := range jmxTargets {
 		if conf.IsSet(jmxTarget) {

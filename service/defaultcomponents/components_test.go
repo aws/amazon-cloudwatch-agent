@@ -11,7 +11,7 @@ import (
 
 const (
 	receiversCount  = 6
-	processorCount  = 7
+	processorCount  = 8
 	exportersCount  = 5
 	extensionsCount = 2
 )
@@ -34,6 +34,7 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, processors["batch"])
 	assert.NotNil(t, processors["cumulativetodelta"])
 	assert.NotNil(t, processors["ec2tagger"])
+	assert.NotNil(t, processors["filter"])
 	assert.NotNil(t, processors["metricstransform"])
 	assert.NotNil(t, processors["transform"])
 
@@ -50,3 +51,4 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, extensions["agenthealth"])
 	assert.NotNil(t, extensions["awsproxy"])
 }
+

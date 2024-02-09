@@ -80,3 +80,4 @@ func Factories() (otelcol.Factories, error) {
 
 	return factories, nil
 }
+
