@@ -13,7 +13,6 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -32,6 +31,18 @@ const (
 	XrayKey                            = "xray"
 	OtlpKey                            = "otlp"
 	JmxKey                             = "jmx"
+	ActiveMqKey                        = "activemq"
+	CassandraKey                       = "cassandra"
+	HbaseKey                           = "hbase"
+	HadoopKey                          = "hadoop"
+	JettyKey                           = "jetty"
+	JvmKey                             = "jvm"
+	KafkaKey                           = "kafka"
+	KafkaConsumerKey                   = "kafka-consumer"
+	KafkaProducerKey                   = "kafka-producer"
+	SolrKey                            = "solr"
+	TomcatKey                          = "tomcat"
+	WildflyKey                         = "wildfly"
 	TLSKey                             = "tls"
 	Endpoint                           = "endpoint"
 	EndpointOverrideKey                = "endpoint_override"

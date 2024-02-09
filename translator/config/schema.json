@@ -1125,6 +1125,78 @@
           "description": "The realm, as required by remote profile SASL/DIGEST-MD5.",
           "type": "string"
         },
+        "activemq": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cassandra": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hbase": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hadoop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "jetty": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "jvm": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kafka": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kafka-consumer": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kafka-producer": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "solr": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tomcat": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "wildfly": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "otlp": {
           "type": "object",
           "properties": {
