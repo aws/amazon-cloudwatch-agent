@@ -13,6 +13,8 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+        "gopkg.in/yaml.v3"
+
 )
 
 const (

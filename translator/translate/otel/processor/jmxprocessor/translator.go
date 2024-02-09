@@ -77,13 +77,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	// If target name is given
 	var includeMetricNames []string
-	for jmxTarget, _ := range jmxTargets {
+	for _, jmxTarget := range jmxTargets {
 		if conf.IsSet(jmxTarget) {
-			includeMetricNames = append(includeMetricNames, t.getExcludeNetAndDiskIOMetrics(conf, jmxTarget))
+			includeMetricNames = append(includeMetricNames, t.getIncludeJmxMetrics(conf, jmxTarget)...)
 		}
 	}
-	cfg.MetricFilters.RegexpConfig = regexp
-	cfg.MetricFilters.Include = includeMetricNames
+	cfg.Metrics.Include.MatchType = regexp
+	cfg.Metrics.Include.MetricNames = includeMetricNames
 
 	return cfg, nil
 }
@@ -98,8 +98,9 @@ func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []s
 		includeMetricName = append(includeMetricName, targetKeyRegex)
 	} else {
 		for targetMetricName := range targetMetrics {
-			includeMetricName = append((includeMetricName, targetMetricName))
+			includeMetricName = append(includeMetricName, targetMetricName)
 		}
 	}
 	return includeMetricName
 }
+
