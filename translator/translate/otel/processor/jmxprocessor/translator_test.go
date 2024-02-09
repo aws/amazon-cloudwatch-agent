@@ -225,4 +225,3 @@ func TestTranslator(t *testing.T) {
 		})
 	}
 }
-
