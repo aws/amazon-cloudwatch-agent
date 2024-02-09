@@ -52,7 +52,7 @@ func Factories() (otelcol.Factories, error) {
 		awsappsignals.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
-		filterprocessor.Newfactory(),
+		filterprocessor.NewFactory(),
 		ec2tagger.NewFactory(),
 		metricstransformprocessor.NewFactory(),
 		resourcedetectionprocessor.NewFactory(),
@@ -80,3 +80,4 @@ func Factories() (otelcol.Factories, error) {
 
 	return factories, nil
 }
+
