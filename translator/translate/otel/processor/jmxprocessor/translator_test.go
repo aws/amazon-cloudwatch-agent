@@ -68,9 +68,9 @@ func TestTranslator(t *testing.T) {
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"jmx": map[string]interface{}{},
-						},
 					},
 				},
+			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"filter/1": map[string]interface{}{
 					"metrics": map[string]interface{}{
@@ -224,4 +224,3 @@ func TestTranslator(t *testing.T) {
 		})
 	}
 }
-

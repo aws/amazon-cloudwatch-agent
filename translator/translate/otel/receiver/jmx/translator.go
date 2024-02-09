@@ -39,8 +39,8 @@ const (
 	defaultJMXJarPath   = "/opt/aws/amazon-cloudwatch-agent/bin/opentelemetry-jmx-metrics.jar"
 
 	defaultJMXJarPathWin = "C:\\Program Files\\Amazon\\AmazonCloudWatchAgent\\opentelemetry-jmx-metrics.jar"
-	defaultTargetSystem = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
-	jmxEnvJarPath = "JMX_JAR_PATH"
+	defaultTargetSystem  = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
+	jmxEnvJarPath        = "JMX_JAR_PATH"
 )
 
 var (
@@ -133,7 +133,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	} else if os.Getenv(jmxEnvJarPath) != "" {
 		cfg.JARPath = os.Getenv(jmxEnvJarPath)
 	}
-
 
 	if endpoint, ok := jmxKeyMap[common.Endpoint].(string); ok {
 		cfg.Endpoint = endpoint

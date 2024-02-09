@@ -336,4 +336,3 @@ func GetYamlFileToYamlConfig(cfg interface{}, yamlFile string) (interface{}, err
 	}
 	return cfg, nil
 }
-

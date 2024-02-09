@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/jmxprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 )
 
@@ -63,6 +64,11 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, "append_dimensions")) {
 		log.Printf("D! ec2tagger processor required because append_dimensions is set")
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+	}
+
+	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)) {
+		log.Printf("D! jmx processor required because jmx metrics is set")
+		translators.Processors.Set(jmxprocessor.NewTranslator())
 	}
 
 	if metricsdecorator.IsSet(conf) {

@@ -51,4 +51,3 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, extensions["agenthealth"])
 	assert.NotNil(t, extensions["awsproxy"])
 }
-

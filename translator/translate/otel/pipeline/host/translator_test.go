@@ -126,6 +126,31 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics"},
 			},
 		},
+		"WithJmx": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{
+							"measurement": []interface{}{
+								"cpu_usage_guest",
+							},
+						},
+						"jmx": map[string]interface{}{
+							"jvm": []string{
+								"jvm.memory.heap.init"},
+						},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHost,
+			want: &want{
+				pipelineID: "metrics/host",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"filter"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
