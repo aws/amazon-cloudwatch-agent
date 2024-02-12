@@ -109,18 +109,19 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	} else {
 		otlpKeyMap = conf.Get(configKey).(map[string]interface{})
 	}
-
-	var tlsSettings *configtls.TLSServerSetting
-	if tls, ok := otlpKeyMap["tls"].(map[string]interface{}); ok {
-		tlsSettings = &configtls.TLSServerSetting{}
-		tlsSettings.CertFile = tls["cert_file"].(string)
-		tlsSettings.KeyFile = tls["key_file"].(string)
+	if t.name == common.AppSignals {
+		var tlsSettings *configtls.TLSServerSetting
+		if tls, ok := otlpKeyMap["tls"].(map[string]interface{}); ok {
+			tlsSettings = &configtls.TLSServerSetting{}
+			tlsSettings.CertFile = tls["cert_file"].(string)
+			tlsSettings.KeyFile = tls["key_file"].(string)
+		}
+		cfg.GRPC.TLSSetting = tlsSettings
+		cfg.HTTP.TLSSetting = tlsSettings
 	}
 	grpcEndpoint, grpcOk := otlpKeyMap["grpc_endpoint"]
 	httpEndpoint, httpOk := otlpKeyMap["http_endpoint"]
 
-	cfg.GRPC.TLSSetting = tlsSettings
-	cfg.HTTP.TLSSetting = tlsSettings
 	if grpcOk {
 		cfg.GRPC.NetAddr.Endpoint = grpcEndpoint.(string)
 	}
