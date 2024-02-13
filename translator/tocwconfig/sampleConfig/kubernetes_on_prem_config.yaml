@@ -399,6 +399,8 @@ processors:
               new_name: apiserver_request_total_5xx
               operations: []
               submatch_case: ""
+    gpu/containerinsights:
+        drop_original_metrics: false
 receivers:
     awscontainerinsightreceiver:
         add_container_name_metric_label: true
@@ -437,6 +439,7 @@ service:
             processors:
                 - metricstransform/containerinsights
                 - batch/containerinsights
+                - gpu/containerinsights
             receivers:
                 - awscontainerinsightreceiver
     telemetry:

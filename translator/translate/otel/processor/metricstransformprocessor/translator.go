@@ -41,74 +41,135 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		},
 	}
 
-	if isGpuEnabled(conf) {
-		transformRules = append(transformRules, []map[string]interface{}{
-			{
-				"include":  "DCGM_FI_DEV_GPU_UTIL",
-				"action":   "insert",
-				"new_name": "pod_gpu_utilization",
-			},
-			{
-				"include":  "DCGM_FI_DEV_GPU_UTIL",
-				"action":   "insert",
-				"new_name": "node_gpu_utilization",
-			},
-			{
-				"include":  "DCGM_FI_DEV_MEM_COPY_UTIL",
-				"action":   "insert",
-				"new_name": "pod_gpu_utilization_memory",
-			},
-			{
-				"include":  "DCGM_FI_DEV_MEM_COPY_UTIL",
-				"action":   "insert",
-				"new_name": "node_gpu_utilization_memory",
-			},
-			{
-				"include":  "DCGM_FI_DEV_FB_USED",
-				"action":   "insert",
-				"new_name": "pod_gpu_memory_used",
-			},
-			{
-				"include":  "DCGM_FI_DEV_FB_USED",
-				"action":   "insert",
-				"new_name": "node_gpu_memory_used",
-			},
-			{
-				"include":          "^DCGM_FI_DEV_FB_(USED|FREE)$",
-				"action":           "insert",
-				"new_name":         "pod_gpu_memory_total",
-				"aggregation_type": "sum",
-				"match_type":       "regexp",
-			},
-			{
-				"include":          "^DCGM_FI_DEV_FB_(USED|FREE)$",
-				"action":           "insert",
-				"new_name":         "node_gpu_memory_total",
-				"aggregation_type": "sum",
-				"match_type":       "regexp",
-			},
-			{
-				"include":  "DCGM_FI_DEV_GPU_TEMP",
-				"action":   "insert",
-				"new_name": "pod_gpu_temperature",
-			},
-			{
-				"include":  "DCGM_FI_DEV_GPU_TEMP",
-				"action":   "insert",
-				"new_name": "node_gpu_temperature",
-			},
-			{
-				"include":  "DCGM_FI_DEV_POWER_USAGE",
-				"action":   "insert",
-				"new_name": "pod_gpu_power_draw",
-			},
-			{
-				"include":  "DCGM_FI_DEV_POWER_USAGE",
-				"action":   "insert",
-				"new_name": "node_gpu_power_draw",
-			},
-		}...)
-	}
+	//if isGpuEnabled(conf) {
+	//	gpuTransformRules := []map[string]interface{}{
+	//		{
+	//			"include":  "DCGM_FI_DEV_GPU_UTIL",
+	//			"action":   "insert",
+	//			"new_name": "container_gpu_utilization",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_GPU_UTIL",
+	//			"action":   "insert",
+	//			"new_name": "pod_gpu_utilization",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_GPU_UTIL",
+	//			"action":   "insert",
+	//			"new_name": "node_gpu_utilization",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_MEM_COPY_UTIL",
+	//			"action":   "insert",
+	//			"new_name": "container_gpu_utilization_memory",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_MEM_COPY_UTIL",
+	//			"action":   "insert",
+	//			"new_name": "pod_gpu_utilization_memory",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_MEM_COPY_UTIL",
+	//			"action":   "insert",
+	//			"new_name": "node_gpu_utilization_memory",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_FB_USED",
+	//			"action":   "insert",
+	//			"new_name": "container_gpu_memory_used",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_FB_USED",
+	//			"action":   "insert",
+	//			"new_name": "pod_gpu_memory_used",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_FB_USED",
+	//			"action":   "insert",
+	//			"new_name": "node_gpu_memory_used",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_FB_TOTAL",
+	//			"action":   "insert",
+	//			"new_name": "container_gpu_memory_total",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_FB_TOTAL",
+	//			"action":   "insert",
+	//			"new_name": "pod_gpu_memory_total",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_FB_TOTAL",
+	//			"action":   "insert",
+	//			"new_name": "node_gpu_memory_total",
+	//		},
+	//		//{
+	//		//	"include":          "^DCGM_FI_DEV_FB_(USED|FREE)$",
+	//		//	"action":           "combine",
+	//		//	"new_name":         "pod_gpu_memory_total",
+	//		//	"aggregation_type": "sum",
+	//		//	"match_type":       "regexp",
+	//		//},
+	//		//{
+	//		//	"include":          "^DCGM_FI_DEV_FB_(USED|FREE)$",
+	//		//	"action":           "combine",
+	//		//	"new_name":         "node_gpu_memory_total",
+	//		//	"aggregation_type": "sum",
+	//		//	"match_type":       "regexp",
+	//		//},
+	//		{
+	//			"include":  "DCGM_FI_DEV_GPU_TEMP",
+	//			"action":   "insert",
+	//			"new_name": "cotainer_gpu_temperature",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_GPU_TEMP",
+	//			"action":   "insert",
+	//			"new_name": "pod_gpu_temperature",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_GPU_TEMP",
+	//			"action":   "insert",
+	//			"new_name": "node_gpu_temperature",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_POWER_USAGE",
+	//			"action":   "insert",
+	//			"new_name": "container_gpu_power_draw",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_POWER_USAGE",
+	//			"action":   "insert",
+	//			"new_name": "pod_gpu_power_draw",
+	//		},
+	//		{
+	//			"include":  "DCGM_FI_DEV_POWER_USAGE",
+	//			"action":   "insert",
+	//			"new_name": "node_gpu_power_draw",
+	//		},
+	//	}
+	//
+	//	for _, rule := range gpuTransformRules {
+	//		logType := ""
+	//		metricName := rule["new_name"].(string)
+	//		if strings.HasPrefix(metricName, "container_") {
+	//			logType = "Node"
+	//		} else if strings.HasPrefix(metricName, "node_") {
+	//			logType = "Node"
+	//		} else if strings.HasPrefix(metricName, "cluster_") {
+	//			logType = "Cluster"
+	//		} else {
+	//			logType = "Pod"
+	//		}
+	//		rule["operations"] = map[string]interface{}{
+	//			"action":    "add_label",
+	//			"new_label": containerinsightscommon.MetricType,
+	//			"new_value": logType,
+	//		}
+	//	}
+	//
+	//	transformRules = append(transformRules, gpuTransformRules...)
+	//}
 
 	c := confmap.NewFromStringMap(map[string]interface{}{
 		"transforms": transformRules,
@@ -120,6 +181,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func isGpuEnabled(conf *confmap.Conf) bool {
-	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableGpuMetric), true)
-}
+//func isGpuEnabled(conf *confmap.Conf) bool {
+//	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableGpuMetric), true)
+//}

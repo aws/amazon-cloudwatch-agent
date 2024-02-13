@@ -4,6 +4,7 @@
 package defaultcomponents
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpu"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -53,6 +54,7 @@ func Factories() (otelcol.Factories, error) {
 		metricstransformprocessor.NewFactory(),
 		resourcedetectionprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
+		gpu.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
