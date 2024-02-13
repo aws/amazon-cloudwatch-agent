@@ -469,7 +469,29 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 	if EnableGpuMetric && enhancedContainerInsightsEnabled {
 		metricDeclarations = append(metricDeclarations, []*awsemfexporter.MetricDeclaration{
 			{
-				Dimensions: [][]string{{"Namespace", "ClusterName", "FullPodName", "PodName", "UUID"}, {"Namespace", "ClusterName", "PodName", "UUID"}, {"Namespace", "ClusterName", "Service"}, {"ClusterName"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}},
+				MetricNameSelectors: []string{
+					"container_gpu_utilization",
+					"container_gpu_utilization_memory",
+					"container_gpu_memory_total",
+					"container_gpu_memory_used",
+					"container_gpu_power_draw",
+					"container_gpu_temperature",
+				},
+			},
+			{
+				Dimensions: [][]string{{"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "GpuDevice"}},
+				MetricNameSelectors: []string{
+					"container_gpu_utilization",
+					"container_gpu_utilization_memory",
+					"container_gpu_memory_total",
+					"container_gpu_memory_used",
+					"container_gpu_power_draw",
+					"container_gpu_temperature",
+				},
+			},
+			{
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}},
 				MetricNameSelectors: []string{
 					"pod_gpu_utilization",
 					"pod_gpu_utilization_memory",
@@ -480,7 +502,29 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName", "NodeName", "InstanceId", "UUID"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName"}},
+				Dimensions: [][]string{{"ClusterName", "Namespace", "PodName", "FullPodName", "GpuDevice"}},
+				MetricNameSelectors: []string{
+					"pod_gpu_utilization",
+					"pod_gpu_utilization_memory",
+					"pod_gpu_memory_total",
+					"pod_gpu_memory_used",
+					"pod_gpu_power_draw",
+					"pod_gpu_temperature",
+				},
+			},
+			{
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}},
+				MetricNameSelectors: []string{
+					"node_gpu_utilization",
+					"node_gpu_utilization_memory",
+					"node_gpu_memory_total",
+					"node_gpu_memory_used",
+					"node_gpu_power_draw",
+					"node_gpu_temperature",
+				},
+			},
+			{
+				Dimensions: [][]string{{"ClusterName", "NodeName", "InstanceId", "GpuDevice"}},
 				MetricNameSelectors: []string{
 					"node_gpu_utilization",
 					"node_gpu_utilization_memory",

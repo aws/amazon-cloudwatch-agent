@@ -72,6 +72,13 @@ const (
 	DiskIOWrite              = "Write"
 	DiskIOTotal              = "Total"
 
+	GpuUtilization    = "gpu_utilization"
+	GpuMemUtilization = "gpu_utilization_memory"
+	GpuMemUsed        = "gpu_memory_used"
+	GpuMemTotal       = "gpu_memory_total"
+	GpuTemperature    = "gpu_temperature"
+	GpuPowerDraw      = "gpu_power_draw"
+
 	TypeCluster          = "Cluster"
 	TypeClusterService   = "ClusterService"
 	TypeClusterNamespace = "ClusterNamespace"

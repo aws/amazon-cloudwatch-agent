@@ -329,18 +329,52 @@ exporters:
                 - apiserver_flowcontrol_request_concurrency_limit
             - dimensions:
                 - - ClusterName
+                - - ClusterName
+                  - ContainerName
+                  - Namespace
+                  - PodName
+                - - ClusterName
+                  - ContainerName
                   - FullPodName
                   - Namespace
                   - PodName
-                  - UUID
+              label_matchers: []
+              metric_name_selectors:
+                - container_gpu_utilization
+                - container_gpu_utilization_memory
+                - container_gpu_memory_total
+                - container_gpu_memory_used
+                - container_gpu_power_draw
+                - container_gpu_temperature
+            - dimensions:
                 - - ClusterName
+                  - ContainerName
+                  - FullPodName
+                  - GpuDevice
                   - Namespace
                   - PodName
-                  - UUID
+              label_matchers: []
+              metric_name_selectors:
+                - container_gpu_utilization
+                - container_gpu_utilization_memory
+                - container_gpu_memory_total
+                - container_gpu_memory_used
+                - container_gpu_power_draw
+                - container_gpu_temperature
+            - dimensions:
+                - - ClusterName
+                - - ClusterName
+                  - Namespace
                 - - ClusterName
                   - Namespace
                   - Service
                 - - ClusterName
+                  - Namespace
+                  - PodName
+                - - ClusterName
+                  - FullPodName
+                  - Namespace
+                  - PodName
               label_matchers: []
               metric_name_selectors:
                 - pod_gpu_utilization
@@ -351,13 +385,36 @@ exporters:
                 - pod_gpu_temperature
             - dimensions:
                 - - ClusterName
-                  - InstanceId
-                  - NodeName
-                  - UUID
+                  - FullPodName
+                  - GpuDevice
+                  - Namespace
+                  - PodName
+              label_matchers: []
+              metric_name_selectors:
+                - pod_gpu_utilization
+                - pod_gpu_utilization_memory
+                - pod_gpu_memory_total
+                - pod_gpu_memory_used
+                - pod_gpu_power_draw
+                - pod_gpu_temperature
+            - dimensions:
+                - - ClusterName
                 - - ClusterName
                   - InstanceId
                   - NodeName
+              label_matchers: []
+              metric_name_selectors:
+                - node_gpu_utilization
+                - node_gpu_utilization_memory
+                - node_gpu_memory_total
+                - node_gpu_memory_used
+                - node_gpu_power_draw
+                - node_gpu_temperature
+            - dimensions:
                 - - ClusterName
+                  - GpuDevice
+                  - InstanceId
+                  - NodeName
               label_matchers: []
               metric_name_selectors:
                 - node_gpu_utilization
@@ -491,114 +548,116 @@ processors:
               new_name: apiserver_request_total_5xx
               operations: []
               submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_GPU_UTIL
-              match_type: ""
-              new_name: pod_gpu_utilization
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_GPU_UTIL
-              match_type: ""
-              new_name: node_gpu_utilization
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_MEM_COPY_UTIL
-              match_type: ""
-              new_name: pod_gpu_utilization_memory
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_MEM_COPY_UTIL
-              match_type: ""
-              new_name: node_gpu_utilization_memory
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_FB_USED
-              match_type: ""
-              new_name: pod_gpu_memory_used
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_FB_USED
-              match_type: ""
-              new_name: node_gpu_memory_used
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: "sum"
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: ^DCGM_FI_DEV_FB_(USED|FREE)$
-              match_type: "regexp"
-              new_name: pod_gpu_memory_total
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: "sum"
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: ^DCGM_FI_DEV_FB_(USED|FREE)$
-              match_type: "regexp"
-              new_name: node_gpu_memory_total
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_GPU_TEMP
-              match_type: ""
-              new_name: pod_gpu_temperature
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_GPU_TEMP
-              match_type: ""
-              new_name: node_gpu_temperature
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: pod_gpu_power_draw
-              operations: [ ]
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              experimental_match_labels: { }
-              group_resource_labels: { }
-              include: DCGM_FI_DEV_POWER_USAGE
-              match_type: ""
-              new_name: node_gpu_power_draw
-              operations: [ ]
-              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_GPU_UTIL
+#              match_type: ""
+#              new_name: pod_gpu_utilization
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_GPU_UTIL
+#              match_type: ""
+#              new_name: node_gpu_utilization
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_MEM_COPY_UTIL
+#              match_type: ""
+#              new_name: pod_gpu_utilization_memory
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_MEM_COPY_UTIL
+#              match_type: ""
+#              new_name: node_gpu_utilization_memory
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_FB_USED
+#              match_type: ""
+#              new_name: pod_gpu_memory_used
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_FB_USED
+#              match_type: ""
+#              new_name: node_gpu_memory_used
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: "sum"
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: ^DCGM_FI_DEV_FB_(USED|FREE)$
+#              match_type: "regexp"
+#              new_name: pod_gpu_memory_total
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: "sum"
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: ^DCGM_FI_DEV_FB_(USED|FREE)$
+#              match_type: "regexp"
+#              new_name: node_gpu_memory_total
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_GPU_TEMP
+#              match_type: ""
+#              new_name: pod_gpu_temperature
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_GPU_TEMP
+#              match_type: ""
+#              new_name: node_gpu_temperature
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_POWER_USAGE
+#              match_type: ""
+#              new_name: pod_gpu_power_draw
+#              operations: [ ]
+#              submatch_case: ""
+#            - action: insert
+#              aggregation_type: ""
+#              experimental_match_labels: { }
+#              group_resource_labels: { }
+#              include: DCGM_FI_DEV_POWER_USAGE
+#              match_type: ""
+#              new_name: node_gpu_power_draw
+#              operations: [ ]
+#              submatch_case: ""
+    gpu/containerinsights:
+        drop_original_metrics: false
 
 receivers:
     awscontainerinsightreceiver:
@@ -680,6 +739,7 @@ service:
             processors:
                 - metricstransform/containerinsights
                 - batch/containerinsights
+                - gpu/containerinsights
             receivers:
                 - awscontainerinsightreceiver
     telemetry:
