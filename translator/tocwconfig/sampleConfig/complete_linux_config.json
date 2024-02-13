@@ -27,6 +27,9 @@
               "header_test": "test"
             }
           },
+          "jvm": [
+            "jvm.memory.heap.used"
+          ],
           "username": "cwagent",
           "password": "testpassword",
           "keystore_path": "/keystore",

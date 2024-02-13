@@ -65,8 +65,8 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		log.Printf("D! ec2tagger processor required because append_dimensions is set")
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
-
-	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)) {
+	
+	if jmxprocessor.IsSet(conf) {
 		log.Printf("D! jmx processor required because jmx metrics is set")
 		translators.Processors.Set(jmxprocessor.NewTranslator())
 	}
@@ -77,3 +77,4 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	}
 	return &translators, nil
 }
+
