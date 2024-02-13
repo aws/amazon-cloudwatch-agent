@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	// Match types are in internal package from contrib
-	// Strict is the FilterType for filtering by exact string matches.
 	regexp           = "regexp"
 	ActiveMqKey      = "activemq"
 	CassandraKey     = "cassandra"
@@ -78,23 +76,26 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	//If no target system or no filter is given, the metric is supposed to be allowed by default
-	if !conf.IsSet(activeMqKey) && !conf.IsSet(cassandraKey) && !conf.IsSet(hbaseKey) &&
-		!conf.IsSet(hadoopKey) && !conf.IsSet(jettyKey) && !conf.IsSet(jvmKey) &&
-		!conf.IsSet(kafkaKey) && !conf.IsSet(kafkaConsumerKey) && !conf.IsSet(kafkaProducerKey) &&
-		!conf.IsSet(solrKey) && !conf.IsSet(tomcatKey) && !conf.IsSet(wildflyKey) {
-		return cfg, nil
-	}
-
-	// When target name is given
 	var includeMetricNames []string
+
+	// When target name is set in configuration
 	for _, jmxTarget := range jmxTargets {
 		if conf.IsSet(jmxTarget) {
 			includeMetricNames = append(includeMetricNames, t.getIncludeJmxMetrics(conf, jmxTarget)...)
 		}
 	}
-	cfg.Metrics.Include.MatchType = regexp
-	cfg.Metrics.Include.MetricNames = includeMetricNames
+	c := confmap.NewFromStringMap(map[string]interface{}{
+		"metrics": map[string]interface{}{
+			"include": map[string]interface{}{
+				"match_type":   regexp,
+				"metric_names": includeMetricNames,
+			},
+		},
+	})
+
+	if err := c.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal jmx processor: %w", err)
+	}
 
 	return cfg, nil
 }
@@ -105,7 +106,7 @@ func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []s
 	targetMetrics, ok := targetMap.(map[string]interface{})
 	if !ok {
 		// add regex to target when no metric names provided
-		targetKeyRegex := target + "*"
+		targetKeyRegex := target + ".*"
 		includeMetricName = append(includeMetricName, targetKeyRegex)
 	} else {
 		for targetMetricName := range targetMetrics {
@@ -114,3 +115,14 @@ func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []s
 	}
 	return includeMetricName
 }
+
+func IsSet(conf *confmap.Conf) bool {
+	for _, jmxTarget := range jmxTargets {
+		path := common.ConfigKey(jmxKey, jmxTarget)
+		if conf.IsSet(path) {
+			return true
+		}
+	}
+	return false
+}
+

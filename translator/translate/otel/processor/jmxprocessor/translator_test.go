@@ -5,6 +5,7 @@ package jmxprocessor
 
 import (
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"path/filepath"
 	"testing"
 
@@ -13,7 +14,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -46,44 +46,17 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter/1": map[string]interface{}{
-					"metrics": map[string]interface{}{
-						"include": map[string]interface{}{
-							"match_type": "regexp",
-							"metric_names": []interface{}{
-								"jvm.memory.heap.init",
-								"jvm.memory.heap.used",
-								"jvm.memory.nonheap.init",
-								"jvm.memory.nonheap.used",
-								"jvm.threads.count",
-								"tomcat*",
-							},
-						},
-					},
-				},
-			}),
-		},
-		"ConfigWithJmxTargetNoMetricNameNoTarget": {
-			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"jmx": map[string]interface{}{},
-					},
-				},
-			},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter/1": map[string]interface{}{
-					"metrics": map[string]interface{}{
-						"include": map[string]interface{}{
-							"match_type": "regexp",
-							"metric_names": []interface{}{
-								"*",
-							},
+					"include": map[string]interface{}{
+						"match_type": "regexp",
+						"metric_names": []interface{}{
+							"jvm*",
 						},
 					},
 				},
 			}),
 		},
+
 		"ConfigWithJmxTargetWithMetricName": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
@@ -96,15 +69,15 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter/1": map[string]interface{}{
-					"metrics": map[string]interface{}{
-						"include": map[string]interface{}{
-							"match_type": "regexp",
-							"metric_names": []interface{}{
-								"jvm.memory.heap.init",
-							},
+				"filter": map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"include": map[string]interface{}{
+						"match_type": "regexp",
+						"metric_names": []interface{}{
+							"jvm.memory.heap.init",
 						},
 					},
+				},
 				},
 			}),
 		},
@@ -120,7 +93,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter/1": map[string]interface{}{
+				"filter": map[string]interface{}{
 					"metrics": map[string]interface{}{
 						"include": map[string]interface{}{
 							"match_type": "regexp",
@@ -146,7 +119,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter/1": map[string]interface{}{
+				"filter": map[string]interface{}{
 					"metrics": map[string]interface{}{
 						"include": map[string]interface{}{
 							"match_type": "regexp",
@@ -225,3 +198,4 @@ func TestTranslator(t *testing.T) {
 		})
 	}
 }
+
