@@ -119,12 +119,6 @@ processors:
             regexp: null
         initial_value: 0
         max_staleness: 0s
-    filter/1:
-        metrics:
-            include:
-                match_type: regexp
-                metric_names:
-                    - jvm.memory.heap.used
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName

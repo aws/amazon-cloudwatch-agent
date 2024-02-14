@@ -1076,12 +1076,6 @@
           "minLength": 1,
           "maxLength": 2048
         },
-        "target_system": {
-          "description": "built-in target system (or systems) metric gatherer script to run",
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 255
-        },
         "metrics_collection_interval": {
           "$ref": "#/definitions/timeIntervalDefinition"
         },
@@ -1406,3 +1400,4 @@
     }
   }
 }
+

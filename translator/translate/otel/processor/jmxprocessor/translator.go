@@ -5,6 +5,7 @@ package jmxprocessor
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -15,53 +16,70 @@ import (
 )
 
 const (
-	regexp           = "regexp"
-	ActiveMqKey      = "activemq"
-	CassandraKey     = "cassandra"
-	HbaseKey         = "hbase"
-	HadoopKey        = "hadoop"
-	JettyKey         = "jetty"
-	JvmKey           = "jvm"
-	KafkaKey         = "kafka"
-	KafkaConsumerKey = "kafka-consumer"
-	KafkaProducerKey = "kafka-producer"
-	SolrKey          = "solr"
-	TomcatKey        = "tomcat"
-	WildflyKey       = "wildfly"
+	regexp = "regexp"
 )
 
 var (
-	jmxKey           = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
-	activeMqKey      = common.ConfigKey(jmxKey, ActiveMqKey)
-	cassandraKey     = common.ConfigKey(jmxKey, CassandraKey)
-	hbaseKey         = common.ConfigKey(jmxKey, HbaseKey)
-	hadoopKey        = common.ConfigKey(jmxKey, HadoopKey)
-	jettyKey         = common.ConfigKey(jmxKey, JettyKey)
-	jvmKey           = common.ConfigKey(jmxKey, JvmKey)
-	kafkaKey         = common.ConfigKey(jmxKey, KafkaKey)
-	kafkaConsumerKey = common.ConfigKey(jmxKey, KafkaConsumerKey)
-	kafkaProducerKey = common.ConfigKey(jmxKey, KafkaProducerKey)
-	solrKey          = common.ConfigKey(jmxKey, SolrKey)
-	tomcatKey        = common.ConfigKey(jmxKey, TomcatKey)
-	wildflyKey       = common.ConfigKey(jmxKey, WildflyKey)
+	jmxKey     = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
+	configKeys = map[component.DataType]string{
+		component.DataTypeMetrics: common.ConfigKey(jmxKey),
+	}
 
 	jmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 )
 
 type translator struct {
-	name    string
-	factory processor.Factory
+	dataType component.DataType
+	name     string
+	index    int
+	factory  processor.Factory
+}
+
+type Option interface {
+	apply(t *translator)
+}
+
+type optionFunc func(t *translator)
+
+func (o optionFunc) apply(t *translator) {
+	o(t)
+}
+
+// WithDataType determines where the translator should look to find
+// the configuration.
+func WithDataType(dataType component.DataType) Option {
+	return optionFunc(func(t *translator) {
+		t.dataType = dataType
+	})
+}
+
+func WithIndex(index int) Option {
+	return optionFunc(func(t *translator) {
+		t.index = index
+	})
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
-func NewTranslator() common.Translator[component.Config] {
-	return NewTranslatorWithName("")
+func NewTranslator(opts ...Option) common.Translator[component.Config] {
+	return NewTranslatorWithName("", opts...)
 }
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
-	return &translator{name, filterprocessor.NewFactory()}
+func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
+	t := &translator{name: name, index: -1, factory: filterprocessor.NewFactory()}
+	for _, opt := range opts {
+		opt.apply(t)
+	}
+	if name == "" && t.dataType != "" {
+		t.name = string(t.dataType)
+		if t.index != -1 {
+			t.name += "/" + strconv.Itoa(t.index)
+		}
+	}
+	return t
 }
+
+var _ common.Translator[component.Config] = (*translator)(nil)
 
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
@@ -70,17 +88,28 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(jmxKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(jmxKey)}
+	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
+
+	configKey, ok := configKeys[t.dataType]
+	if !ok {
+		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
+	}
+	if conf == nil || !conf.IsSet(configKey) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}
 
-	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
+	var jmxKeyMap map[string]interface{}
+	if jmxSlice := common.GetArray[any](conf, configKey); t.index != -1 && len(jmxSlice) > t.index {
+		jmxKeyMap = jmxSlice[t.index].(map[string]interface{})
+	} else {
+		jmxKeyMap = conf.Get(configKey).(map[string]interface{})
+	}
 
 	var includeMetricNames []string
 
 	// When target name is set in configuration
 	for _, jmxTarget := range jmxTargets {
-		if conf.IsSet(common.ConfigKey(jmxKey, jmxTarget)) {
+		if _, ok := jmxKeyMap[jmxTarget]; ok {
 			includeMetricNames = append(includeMetricNames, t.getIncludeJmxMetrics(conf, jmxTarget)...)
 		}
 	}
@@ -119,7 +148,7 @@ func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []s
 
 func IsSet(conf *confmap.Conf) bool {
 	for _, jmxTarget := range jmxTargets {
-		if conf.IsSet(common.ConfigKey(jmxKey, jmxTarget)) {
+		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, jmxTarget)) {
 			return true
 		}
 	}

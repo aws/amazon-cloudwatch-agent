@@ -17,8 +17,9 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
-	jmxTranslator := NewTranslator()
-	require.EqualValues(t, "filter", jmxTranslator.ID().String())
+	jmxTranslator := NewTranslator(WithDataType(component.DataTypeMetrics))
+
+	require.EqualValues(t, "filter/metrics", jmxTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf
@@ -55,7 +56,7 @@ func TestTranslator(t *testing.T) {
 				},
 			}),
 		},
-
+		
 		"ConfigWithJmxTargetWithMetricName": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{

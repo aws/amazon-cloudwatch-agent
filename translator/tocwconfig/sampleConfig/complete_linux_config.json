@@ -18,7 +18,6 @@
         {
           "jar_path": "../../opentelemetry-jmx-metrics.jar",
           "endpoint": "my_jmx_host:12345",
-          "target_system": "jvm",
           "metrics_collection_interval": 60,
           "otlp": {
             "endpoint": "mycollectorotlpreceiver:4317",
@@ -27,9 +26,7 @@
               "header_test": "test"
             }
           },
-          "jvm": [
-            "jvm.memory.heap.used"
-          ],
+          "jvm": [],
           "username": "cwagent",
           "password": "testpassword",
           "keystore_path": "/keystore",
@@ -47,7 +44,7 @@
         {
           "jar_path": "../../opentelemetry-jmx-metrics.jar",
           "endpoint": "my_jmx_host:12345",
-          "target_system": "jvm",
+          "jvm": [],
           "metrics_collection_interval": 60,
           "otlp": {
             "endpoint": "mycollectorotlpreceiver:4317",
