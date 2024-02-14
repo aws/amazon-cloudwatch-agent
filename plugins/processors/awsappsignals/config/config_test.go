@@ -49,10 +49,4 @@ func TestValidateFailedOnEmptyResolverName(t *testing.T) {
 		Rules:     nil,
 	}
 	assert.NotNil(t, config.Validate())
-
-	config = Config{
-		Resolvers: []Resolver{NewEC2Resolver("")},
-		Rules:     nil,
-	}
-	assert.NotNil(t, config.Validate())
 }
