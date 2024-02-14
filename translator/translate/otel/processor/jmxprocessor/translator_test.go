@@ -6,6 +6,7 @@ package jmxprocessor
 import (
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"path/filepath"
 	"testing"
 
@@ -13,8 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -50,7 +49,7 @@ func TestTranslator(t *testing.T) {
 					"include": map[string]interface{}{
 						"match_type": "regexp",
 						"metric_names": []interface{}{
-							"jvm*",
+							"jvm.*",
 						},
 					},
 				},
@@ -62,14 +61,14 @@ func TestTranslator(t *testing.T) {
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"jmx": map[string]interface{}{
-							"jvm": []string{
-								"jvm.memory.heap.init"},
+							"jvm": []interface{}{
+								"jvm.memory.heap.init",
+							},
 						},
 					},
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter": map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"include": map[string]interface{}{
 						"match_type": "regexp",
@@ -77,7 +76,6 @@ func TestTranslator(t *testing.T) {
 							"jvm.memory.heap.init",
 						},
 					},
-				},
 				},
 			}),
 		},
@@ -93,14 +91,12 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter": map[string]interface{}{
-					"metrics": map[string]interface{}{
-						"include": map[string]interface{}{
-							"match_type": "regexp",
-							"metric_names": []interface{}{
-								"jvm*",
-								"hadoop*",
-							},
+				"metrics": map[string]interface{}{
+					"include": map[string]interface{}{
+						"match_type": "regexp",
+						"metric_names": []interface{}{
+							"hadoop.*",
+							"jvm.*",
 						},
 					},
 				},
@@ -111,7 +107,7 @@ func TestTranslator(t *testing.T) {
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"jmx": map[string]interface{}{
-							"jvm": []string{
+							"jvm": []interface{}{
 								"jvm.memory.heap.init"},
 							"hadoop": map[string]interface{}{},
 						},
@@ -119,14 +115,12 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter": map[string]interface{}{
-					"metrics": map[string]interface{}{
-						"include": map[string]interface{}{
-							"match_type": "regexp",
-							"metric_names": []interface{}{
-								"jvm.memory.heap.init",
-								"hadoop*",
-							},
+				"metrics": map[string]interface{}{
+					"include": map[string]interface{}{
+						"match_type": "regexp",
+						"metric_names": []interface{}{
+							"hadoop.*",
+							"jvm.memory.heap.init",
 						},
 					},
 				},
@@ -137,39 +131,27 @@ func TestTranslator(t *testing.T) {
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"jmx": map[string]interface{}{
-							"jvm": []string{
+							"jvm": []interface{}{
 								"jvm.memory.heap.init",
-								"jvm.memory.heap.used",
-								"jvm.memory.nonheap.init",
-								"jvm.memory.nonheap.used",
 								"jvm.threads.count"},
 							"hadoop": map[string]interface{}{},
-							"tomcat": []string{
+							"tomcat": []interface{}{
 								"tomcat.sessions",
-								"tomcat.request_count",
-								"tomcat.traffic",
 								"tomcat.errors"},
 						},
 					},
 				},
 			},
 			want: confmap.NewFromStringMap(map[string]interface{}{
-				"filter/1": map[string]interface{}{
-					"metrics": map[string]interface{}{
-						"include": map[string]interface{}{
-							"match_type": "regexp",
-							"metric_names": []interface{}{
-								"jvm.memory.heap.init",
-								"jvm.memory.heap.used",
-								"jvm.memory.nonheap.init",
-								"jvm.memory.nonheap.used",
-								"jvm.threads.count",
-								"hadoop*",
-								"tomcat.sessions",
-								"tomcat.request_count",
-								"tomcat.traffic",
-								"tomcat.errors",
-							},
+				"metrics": map[string]interface{}{
+					"include": map[string]interface{}{
+						"match_type": "regexp",
+						"metric_names": []interface{}{
+							"hadoop.*",
+							"jvm.memory.heap.init",
+							"jvm.threads.count",
+							"tomcat.sessions",
+							"tomcat.errors",
 						},
 					},
 				},
@@ -180,7 +162,6 @@ func TestTranslator(t *testing.T) {
 			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
 		},
 	}
-
 	factory := filterprocessor.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

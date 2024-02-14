@@ -1,12 +1,11 @@
-processors:
-  filter/1:
-    metrics:
-      include:
-        match_type: regexp
-        metric_names:
-          - jvm.memory.heap.init
-          - jvm.memory.heap.used
-          - jvm.memory.nonheap.init
-          - jvm.memory.nonheap.used
-          - jvm.threads.count
-          - tomcat*
+metrics:
+  include:
+    match_type: regexp
+    metric_names:
+        - jvm.memory.heap.init
+        - jvm.memory.heap.used
+        - jvm.memory.nonheap.init
+        - jvm.memory.nonheap.used
+        - jvm.threads.count
+        - tomcat.*
+

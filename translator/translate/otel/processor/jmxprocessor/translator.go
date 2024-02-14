@@ -80,7 +80,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	// When target name is set in configuration
 	for _, jmxTarget := range jmxTargets {
-		if conf.IsSet(jmxTarget) {
+		if conf.IsSet(common.ConfigKey(jmxKey, jmxTarget)) {
 			includeMetricNames = append(includeMetricNames, t.getIncludeJmxMetrics(conf, jmxTarget)...)
 		}
 	}
@@ -102,15 +102,16 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []string {
 	var includeMetricName []string
-	targetMap := conf.Get(target)
-	targetMetrics, ok := targetMap.(map[string]interface{})
-	if !ok {
+	targetMap := conf.Get(common.ConfigKey(jmxKey, target))
+	targetMetrics, _ := targetMap.([]interface{})
+
+	if len(targetMetrics) == 0 {
 		// add regex to target when no metric names provided
 		targetKeyRegex := target + ".*"
 		includeMetricName = append(includeMetricName, targetKeyRegex)
 	} else {
-		for targetMetricName := range targetMetrics {
-			includeMetricName = append(includeMetricName, targetMetricName)
+		for _, targetMetricName := range targetMetrics {
+			includeMetricName = append(includeMetricName, targetMetricName.(string))
 		}
 	}
 	return includeMetricName
@@ -118,8 +119,7 @@ func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []s
 
 func IsSet(conf *confmap.Conf) bool {
 	for _, jmxTarget := range jmxTargets {
-		path := common.ConfigKey(jmxKey, jmxTarget)
-		if conf.IsSet(path) {
+		if conf.IsSet(common.ConfigKey(jmxKey, jmxTarget)) {
 			return true
 		}
 	}

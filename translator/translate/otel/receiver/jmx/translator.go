@@ -48,6 +48,7 @@ var (
 		component.DataTypeMetrics: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey),
 	}
 	redactedMap = make(map[string]string)
+	jmxTargets  = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 )
 
 type translator struct {
@@ -139,8 +140,18 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.TargetSystem = defaultTargetSystem
-	if targetSystem, ok := jmxKeyMap[targetSystem].(string); ok {
-		cfg.TargetSystem = targetSystem
+	targetSystems := ""
+	for _, jmxTarget := range jmxTargets {
+		if _, ok := jmxKeyMap[jmxTarget]; ok {
+			if targetSystems == "" {
+				targetSystems = jmxTarget
+			} else {
+				targetSystems = targetSystems + "," + jmxTarget
+			}
+		}
+	}
+	if targetSystems != "" {
+		cfg.TargetSystem = targetSystems
 	}
 
 	// Prioritize metric collection internal in JMX section, then agent section
@@ -236,3 +247,4 @@ func (t *translator) addRedactedMap(postfix string, value string) {
 func GetRedactedMap(prefix string, key string) string {
 	return redactedMap[prefix+"/"+key]
 }
+
