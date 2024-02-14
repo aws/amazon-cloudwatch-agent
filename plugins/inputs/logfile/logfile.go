@@ -143,7 +143,7 @@ func (t *LogFile) Stop() {
 // Try to find if there is any new file needs to be added for monitoring.
 func (t *LogFile) FindLogSrc() []logs.LogSrc {
 	if !t.started {
-		t.Log.Warn("not started with file state folder %s", t.FileStateFolder)
+		t.Log.Warnf("not started with file state folder %s", t.FileStateFolder)
 		return nil
 	}
 
