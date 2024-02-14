@@ -408,6 +408,7 @@ processors:
                     enabled: true
             tags:
                 - ^kubernetes.io/cluster/.*$
+                - ^aws:autoscaling:groupName
         ecs:
             resource_attributes:
                 aws.ecs.cluster.arn:
