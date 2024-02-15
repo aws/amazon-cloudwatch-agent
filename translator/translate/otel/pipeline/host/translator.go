@@ -65,10 +65,27 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		log.Printf("D! ec2tagger processor required because append_dimensions is set")
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
-	
-	if jmxprocessor.IsSet(conf) {
-		log.Printf("D! jmx processor required because jmx metrics is set")
-		translators.Processors.Set(jmxprocessor.NewTranslator())
+
+	switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)).(type) {
+	case []interface{}:
+		logged := true
+		for index, val := range v {
+			if jmxprocessor.IsSet(val.(map[string]interface{})) {
+				if logged {
+					log.Printf("D! jmx processor required because jmx metrics is set")
+					logged = false
+				}
+				translators.Processors.Set(jmxprocessor.NewTranslator(
+					jmxprocessor.WithDataType(component.DataTypeMetrics),
+					jmxprocessor.WithIndex(index),
+				))
+			}
+		}
+	case map[string]interface{}:
+		if jmxprocessor.IsSet(v) {
+			log.Printf("D! jmx processor required because jmx metrics is set")
+			translators.Processors.Set(jmxprocessor.NewTranslator(jmxprocessor.WithDataType(component.DataTypeMetrics)))
+		}
 	}
 
 	if metricsdecorator.IsSet(conf) {
@@ -77,4 +94,3 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 	}
 	return &translators, nil
 }
-

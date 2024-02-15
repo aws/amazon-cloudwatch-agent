@@ -119,6 +119,54 @@ processors:
             regexp: null
         initial_value: 0
         max_staleness: 0s
+    filter/metrics/0:
+        error_mode: propagate
+        logs:
+            exclude:
+            include:
+            log_record: []
+        metrics:
+            datapoint: []
+            exclude: null
+            metric: [ ]
+            regexp: null
+            include:
+                expressions: []
+                match_type: regexp
+                metric_names:
+                    - jvm.*
+                resource_attributes: []
+                regexp:
+        spans:
+            include: null
+            exclude: null
+        traces:
+            span: []
+            spanevent: []
+    filter/metrics/1:
+        error_mode: propagate
+        logs:
+            exclude:
+            include:
+            log_record: [ ]
+        metrics:
+            datapoint: [ ]
+            exclude: null
+            metric: [ ]
+            regexp: null
+            include:
+                expressions: [ ]
+                match_type: regexp
+                metric_names:
+                    - jvm.*
+                resource_attributes: [ ]
+                regexp:
+        spans:
+            include: null
+            exclude: null
+        traces:
+            span: [ ]
+            spanevent: [ ]
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -314,6 +362,8 @@ service:
                 - awscloudwatch
             processors:
                 - ec2tagger
+                - filter/metrics/0
+                - filter/metrics/1
                 - transform
             receivers:
                 - telegraf_mem
@@ -333,6 +383,8 @@ service:
             processors:
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
+                - filter/metrics/0
+                - filter/metrics/1
                 - transform
             receivers:
                 - telegraf_net

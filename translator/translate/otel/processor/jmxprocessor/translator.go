@@ -146,12 +146,11 @@ func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []s
 	return includeMetricName
 }
 
-func IsSet(conf *confmap.Conf) bool {
+func IsSet(jmxMap map[string]interface{}) bool {
 	for _, jmxTarget := range jmxTargets {
-		if conf.IsSet(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey, jmxTarget)) {
+		if _, ok := jmxMap[jmxTarget]; ok {
 			return true
 		}
 	}
 	return false
 }
-

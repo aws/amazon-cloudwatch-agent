@@ -247,4 +247,3 @@ func (t *translator) addRedactedMap(postfix string, value string) {
 func GetRedactedMap(prefix string, key string) string {
 	return redactedMap[prefix+"/"+key]
 }
-

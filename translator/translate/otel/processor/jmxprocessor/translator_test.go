@@ -5,8 +5,6 @@ package jmxprocessor
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"path/filepath"
 	"testing"
 
@@ -14,6 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -56,7 +57,7 @@ func TestTranslator(t *testing.T) {
 				},
 			}),
 		},
-		
+
 		"ConfigWithJmxTargetWithMetricName": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
@@ -180,4 +181,3 @@ func TestTranslator(t *testing.T) {
 		})
 	}
 }
-
