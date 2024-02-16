@@ -17,7 +17,7 @@
       "jmx": [
         {
           "jar_path": "../../opentelemetry-jmx-metrics.jar",
-          "endpoint": "my_jmx_host:12345",
+          "endpoint": "localhost:12345",
           "target_system": "jvm",
           "metrics_collection_interval": 60,
           "otlp": {
@@ -28,12 +28,9 @@
             }
           },
           "username": "cwagent",
-          "password": "testpassword",
           "keystore_path": "/keystore",
-          "keystore_password": "keystore_password",
           "keystore_type": "PKCS",
           "truststore_path": "/truststore",
-          "truststore_password": "truststore_password",
           "truststore_type": "PKCS12",
           "remote_profile": "SASL/PLAIN",
           "realm": "test_realm",
@@ -43,7 +40,7 @@
         },
         {
           "jar_path": "../../opentelemetry-jmx-metrics.jar",
-          "endpoint": "my_jmx_host:12345",
+          "endpoint": "localhost:4567",
           "target_system": "jvm",
           "metrics_collection_interval": 60,
           "otlp": {
@@ -54,11 +51,9 @@
             }
           },
           "username": "cwagent",
-          "password": "testpassword",
           "keystore_path": "/keystore",
           "keystore_type": "PKCS",
           "truststore_path": "/truststore",
-          "truststore_password": "truststore_password",
           "truststore_type": "PKCS12",
           "remote_profile": "SASL/PLAIN",
           "realm": "test_realm",

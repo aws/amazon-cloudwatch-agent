@@ -8,12 +8,10 @@ otlp:
   headers:
     header_test: test
 username: cwagent
-password: testpassword
+password_file: /path/to/password/file
 keystore_path: /keystore
-keystore_password: keystore_password
 keystore_type: PKCS
 truststore_path: /truststore
-truststore_password: truststore_password
 truststore_type: PKCS12
 remote_profile: SASL/PLAIN
 realm: test_realm

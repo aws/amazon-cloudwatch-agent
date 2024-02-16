@@ -37,13 +37,10 @@ func NewTranslators(conf *confmap.Conf, os string) (pipeline.TranslatorMap, erro
 	switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)).(type) {
 	case []interface{}:
 		for index := range v {
-			hostReceivers.Set(jmx.NewTranslator(
-				jmx.WithDataType(component.DataTypeMetrics),
-				jmx.WithIndex(index),
-			))
+			hostReceivers.Set(jmx.NewTranslator(jmx.WithIndex(index)))
 		}
 	case map[string]interface{}:
-		hostReceivers.Set(jmx.NewTranslator(jmx.WithDataType(component.DataTypeMetrics)))
+		hostReceivers.Set(jmx.NewTranslator())
 	}
 
 	hasHostPipeline := hostReceivers.Len() != 0

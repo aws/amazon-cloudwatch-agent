@@ -54,8 +54,8 @@ var Registered_Metrics_Windows = map[string][]string{
 }
 
 var DisableWinPerfCounters = map[string]bool{
-	"statsd":     true,
-	"procstat":   true,
-	"nvidia_smi": true,
+	"statsd":      true,
+	"procstat":    true,
+	"nvidia_smi":  true,
 	common.JmxKey: true,
 }
