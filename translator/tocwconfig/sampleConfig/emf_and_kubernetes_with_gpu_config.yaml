@@ -338,22 +338,13 @@ exporters:
                   - FullPodName
                   - Namespace
                   - PodName
-              label_matchers: []
-              metric_name_selectors:
-                - container_gpu_utilization
-                - container_gpu_utilization_memory
-                - container_gpu_memory_total
-                - container_gpu_memory_used
-                - container_gpu_power_draw
-                - container_gpu_temperature
-            - dimensions:
                 - - ClusterName
                   - ContainerName
                   - FullPodName
                   - GpuDevice
                   - Namespace
                   - PodName
-              label_matchers: []
+              label_matchers: [ ]
               metric_name_selectors:
                 - container_gpu_utilization
                 - container_gpu_utilization_memory
@@ -375,21 +366,12 @@ exporters:
                   - FullPodName
                   - Namespace
                   - PodName
-              label_matchers: []
-              metric_name_selectors:
-                - pod_gpu_utilization
-                - pod_gpu_utilization_memory
-                - pod_gpu_memory_total
-                - pod_gpu_memory_used
-                - pod_gpu_power_draw
-                - pod_gpu_temperature
-            - dimensions:
                 - - ClusterName
                   - FullPodName
                   - GpuDevice
                   - Namespace
                   - PodName
-              label_matchers: []
+              label_matchers: [ ]
               metric_name_selectors:
                 - pod_gpu_utilization
                 - pod_gpu_utilization_memory
@@ -402,20 +384,11 @@ exporters:
                 - - ClusterName
                   - InstanceId
                   - NodeName
-              label_matchers: []
-              metric_name_selectors:
-                - node_gpu_utilization
-                - node_gpu_utilization_memory
-                - node_gpu_memory_total
-                - node_gpu_memory_used
-                - node_gpu_power_draw
-                - node_gpu_temperature
-            - dimensions:
                 - - ClusterName
                   - GpuDevice
                   - InstanceId
                   - NodeName
-              label_matchers: []
+              label_matchers: [ ]
               metric_name_selectors:
                 - node_gpu_utilization
                 - node_gpu_utilization_memory
@@ -423,18 +396,22 @@ exporters:
                 - node_gpu_memory_used
                 - node_gpu_power_draw
                 - node_gpu_temperature
+                - node_gpu_fan_speed
             - dimensions:
                 - - ClusterName
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
+              label_matchers: [ ]
               metric_name_selectors:
                 - node_gpu_total
+                - node_gpu_request
+                - node_gpu_limit
             - dimensions:
                 - - ClusterName
-              label_matchers: []
+              label_matchers: [ ]
               metric_name_selectors:
+                - cluster_gpu_request
                 - cluster_gpu_total
         metric_descriptors:
             - metric_name: apiserver_admission_controller_admission_duration_seconds
@@ -537,127 +514,390 @@ processors:
         send_batch_size: 8192
         timeout: 5s
     metricstransform/containerinsights:
-        transforms:
-            - action: insert
+      transforms:
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels:
+            code: ^5.*
+          group_resource_labels: { }
+          include: apiserver_request_total
+          match_type: regexp
+          new_name: apiserver_request_total_5xx
+          operations: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_USED
+          match_type: ""
+          new_name: container_gpu_memory_used
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
               aggregation_type: ""
-              experimental_match_labels:
-                code: ^5.*
-              group_resource_labels: {}
-              include: apiserver_request_total
-              match_type: regexp
-              new_name: apiserver_request_total_5xx
-              operations: []
-              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_GPU_UTIL
-#              match_type: ""
-#              new_name: pod_gpu_utilization
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_GPU_UTIL
-#              match_type: ""
-#              new_name: node_gpu_utilization
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_MEM_COPY_UTIL
-#              match_type: ""
-#              new_name: pod_gpu_utilization_memory
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_MEM_COPY_UTIL
-#              match_type: ""
-#              new_name: node_gpu_utilization_memory
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_FB_USED
-#              match_type: ""
-#              new_name: pod_gpu_memory_used
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_FB_USED
-#              match_type: ""
-#              new_name: node_gpu_memory_used
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: "sum"
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: ^DCGM_FI_DEV_FB_(USED|FREE)$
-#              match_type: "regexp"
-#              new_name: pod_gpu_memory_total
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: "sum"
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: ^DCGM_FI_DEV_FB_(USED|FREE)$
-#              match_type: "regexp"
-#              new_name: node_gpu_memory_total
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_GPU_TEMP
-#              match_type: ""
-#              new_name: pod_gpu_temperature
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_GPU_TEMP
-#              match_type: ""
-#              new_name: node_gpu_temperature
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_POWER_USAGE
-#              match_type: ""
-#              new_name: pod_gpu_power_draw
-#              operations: [ ]
-#              submatch_case: ""
-#            - action: insert
-#              aggregation_type: ""
-#              experimental_match_labels: { }
-#              group_resource_labels: { }
-#              include: DCGM_FI_DEV_POWER_USAGE
-#              match_type: ""
-#              new_name: node_gpu_power_draw
-#              operations: [ ]
-#              submatch_case: ""
-    gpu/containerinsights:
-        drop_original_metrics: false
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: ContainerGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_USED
+          match_type: ""
+          new_name: pod_gpu_memory_used
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: PodGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_USED
+          match_type: ""
+          new_name: node_gpu_memory_used
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: NodeGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_TOTAL
+          match_type: ""
+          new_name: container_gpu_memory_total
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: ContainerGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_TOTAL
+          match_type: ""
+          new_name: pod_gpu_memory_total
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: PodGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_TOTAL
+          match_type: ""
+          new_name: node_gpu_memory_total
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: NodeGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_GPU_TEMP
+          match_type: ""
+          new_name: container_gpu_temperature
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: ContainerGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_GPU_TEMP
+          match_type: ""
+          new_name: pod_gpu_temperature
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: PodGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_GPU_TEMP
+          match_type: ""
+          new_name: node_gpu_temperature
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: NodeGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_POWER_USAGE
+          match_type: ""
+          new_name: container_gpu_power_draw
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: ContainerGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_POWER_USAGE
+          match_type: ""
+          new_name: pod_gpu_power_draw
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: PodGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_POWER_USAGE
+          match_type: ""
+          new_name: node_gpu_power_draw
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: NodeGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_GPU_UTIL
+          match_type: ""
+          new_name: container_gpu_utilization
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: ContainerGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_GPU_UTIL
+          match_type: ""
+          new_name: pod_gpu_utilization
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: PodGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_GPU_UTIL
+          match_type: ""
+          new_name: node_gpu_utilization
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: NodeGPU
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_USED_PERCENT
+          match_type: ""
+          new_name: container_gpu_utilization_memory
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: ContainerGPU
+              value_actions: [ ]
+            - action: experimental_scale_value
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 100
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: ""
+              new_value: ""
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_USED_PERCENT
+          match_type: ""
+          new_name: pod_gpu_utilization_memory
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: PodGPU
+              value_actions: [ ]
+            - action: experimental_scale_value
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 100
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: ""
+              new_value: ""
+              value_actions: [ ]
+          submatch_case: ""
+        - action: insert
+          aggregation_type: ""
+          experimental_match_labels: { }
+          group_resource_labels: { }
+          include: DCGM_FI_DEV_FB_USED_PERCENT
+          match_type: ""
+          new_name: node_gpu_utilization_memory
+          operations:
+            - action: add_label
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 0
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: Type
+              new_value: NodeGPU
+              value_actions: [ ]
+            - action: experimental_scale_value
+              aggregated_values: [ ]
+              aggregation_type: ""
+              experimental_scale: 100
+              label: ""
+              label_set: [ ]
+              label_value: ""
+              new_label: ""
+              new_value: ""
+              value_actions: [ ]
+          submatch_case: ""
+    gpu/containerinsights: {}
 
 receivers:
     awscontainerinsightreceiver:

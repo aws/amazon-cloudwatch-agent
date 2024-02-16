@@ -7,9 +7,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 )
 
-type Config struct {
-	DropOriginalMetrics bool `mapstructure:"drop_original_metrics"`
-}
+type Config struct{}
 
 // Verify Config implements Processor interface.
 var _ component.Config = (*Config)(nil)

@@ -6,11 +6,12 @@ package metricstransformprocessor
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -40,7 +41,6 @@ var renameMapForDcgm = map[string]string{
 	"DCGM_FI_DEV_FB_TOTAL":        containerinsightscommon.GpuMemTotal,
 	"DCGM_FI_DEV_GPU_TEMP":        containerinsightscommon.GpuTemperature,
 	"DCGM_FI_DEV_POWER_USAGE":     containerinsightscommon.GpuPowerDraw,
-	// "DCGM_FI_DEV_FAN_SPEED":       containerinsightscommon.GpuFanSpeed,
 }
 
 type translator struct {
@@ -71,7 +71,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	if isGpuEnabled(conf) {
-		var operations []map[string]interface{}
 		// appends DCGM metric transform rules for each metric type (container/pod/node) with following format:
 		// {
 		//		"include":  "DCGM_FI_DEV_GPU_UTIL",
@@ -87,14 +86,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		//      ]
 		//	},
 		for old, new := range renameMapForDcgm {
+			var operations []map[string]interface{}
+			// convert decimals to percent
+			if new == containerinsightscommon.GpuMemUtilization {
+				operations = append(operations, map[string]interface{}{
+					"action":             "experimental_scale_value",
+					"experimental_scale": 100,
+				})
+			}
 			for _, t := range metricDuplicateTypes {
-				// convert decimals to percent
-				if new == containerinsightscommon.GpuMemUtilization {
-					operations = append(operations, map[string]interface{}{
-						"action":             "experimental_scale_value",
-						"experimental_scale": 100,
-					})
-				}
 				transformRules = append(transformRules, map[string]interface{}{
 					"include":  old,
 					"action":   "insert",
