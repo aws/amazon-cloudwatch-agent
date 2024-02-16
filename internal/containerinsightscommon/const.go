@@ -78,6 +78,7 @@ const (
 	GpuMemTotal       = "gpu_memory_total"
 	GpuTemperature    = "gpu_temperature"
 	GpuPowerDraw      = "gpu_power_draw"
+	GpuFanSpeed       = "gpu_fan_speed"
 
 	TypeCluster          = "Cluster"
 	TypeClusterService   = "ClusterService"

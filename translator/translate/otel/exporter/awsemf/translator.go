@@ -191,8 +191,6 @@ func setKubernetesFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 		cfg.EnhancedContainerInsights = true
 	}
 
-	setEnableGpuMetrics(kubernetesBasePathKey, conf, cfg)
-
 	return nil
 }
 
@@ -229,8 +227,4 @@ func setPrometheusFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
 
 func setDisableMetricExtraction(baseKey string, conf *confmap.Conf, cfg *awsemfexporter.Config) {
 	cfg.DisableMetricExtraction = common.GetOrDefaultBool(conf, common.ConfigKey(baseKey, common.DisableMetricExtraction), false)
-}
-
-func setEnableGpuMetrics(baseKey string, conf *confmap.Conf, cfg *awsemfexporter.Config) {
-	cfg.EnableGpuMetric = common.GetOrDefaultBool(conf, common.ConfigKey(baseKey, common.EnableGpuMetric), true)
 }
