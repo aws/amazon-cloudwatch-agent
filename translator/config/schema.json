@@ -613,6 +613,9 @@
                   }
                 }
               },
+              "tls": {
+                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
+              },
               "additionalProperties": true
             },
             "ecs": {
@@ -936,6 +939,9 @@
               "$ref": "#/definitions/tracesDefinition/definitions/xrayDefinition"
             },
             "otlp": {
+              "tls": {
+                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
+              },
               "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinition"
             }
           },
@@ -1010,9 +1016,6 @@
             "http_endpoint": {
               "description": "HTTP endpoint to use to listen for OTLP JSON traces",
               "$ref": "#/definitions/endpointOverrideDefinition"
-            },
-            "tls": {
-              "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
             }
           },
           "additionalProperties": false

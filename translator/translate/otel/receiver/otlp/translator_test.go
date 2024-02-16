@@ -52,6 +52,25 @@ func TestTracesTranslator(t *testing.T) {
 				},
 			}),
 		},
+		"WithTLS": {
+			input: map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:4317",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:4318",
+					},
+					"tls": map[string]interface{}{
+						"cert_file": "path/to/cert.crt",
+						"key_file":  "path/to/key.key",
+					},
+				}},
+			wantErr: &common.MissingKeyError{
+				ID:      tt.ID(),
+				JsonKey: common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
+			},
+		},
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "traces", "config.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "traces", "config.yaml")),
