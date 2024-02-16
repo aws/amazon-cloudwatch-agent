@@ -1273,14 +1273,8 @@
             }
           }
         },
-        "resource_attributes": {
-          "type": "object",
-          "description": "List of resource attributes that will be applied to any metrics emitted from the metrics gatherer.",
-          "properties": {
-            "items": {
-              "type": "string"
-            }
-          }
+        "append_dimensions": {
+          "$ref": "#/definitions/generalAppendDimensionsDefinition"
         }
       },
       "additionalProperties": false

@@ -21,7 +21,7 @@
         "truststore_type": "PKCS12",
         "remote_profile": "SASL/PLAIN",
         "realm": "test_realm",
-        "resource_attributes": {
+        "append_dimensions": {
           "service.name": "jmx_app"
         }
       }

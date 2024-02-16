@@ -49,6 +49,7 @@ const (
 	EnhancedContainerInsights          = "enhanced_container_insights"
 	PreferFullPodName                  = "prefer_full_pod_name"
 	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
+	AppendDimensionsKey                = "append_dimensions"
 	Console                            = "console"
 	DiskKey                            = "disk"
 	DiskIOKey                          = "diskio"
