@@ -12,6 +12,18 @@ import (
 	"go.uber.org/zap"
 )
 
+const logTypeSuffix = "GPU"
+
+var defaultGpuLabels = []string{
+	"ClusterName",
+	"Namespace",
+	"Service",
+	"ContainerName",
+	"FullPodName",
+	"PodName",
+	"GpuDevice",
+}
+
 type logTypeAttribute struct {
 	logger *zap.Logger
 }
@@ -23,7 +35,8 @@ func NewLogTypeAttribute(logger *zap.Logger) *logTypeAttribute {
 }
 
 func (an *logTypeAttribute) Process(m pmetric.Metric, attributes pcommon.Map, removeOriginal bool) error {
-	an.addLogTypeAttribute(m, attributes)
+	//an.addLogTypeAttribute(m, attributes)
+	an.addDefaultAttributes(m, attributes)
 	return nil
 }
 
@@ -43,5 +56,13 @@ func (an *logTypeAttribute) addLogTypeAttribute(m pmetric.Metric, attributes pco
 	default:
 		an.logger.Warn("metric name is either empty or not a supported type")
 	}
-	attributes.PutStr("Type", logType)
+	attributes.PutStr("Type", logType+logTypeSuffix)
+}
+
+func (an *logTypeAttribute) addDefaultAttributes(m pmetric.Metric, attributes pcommon.Map) {
+	for _, k := range defaultGpuLabels {
+		if _, ok := attributes.Get(k); !ok {
+			attributes.PutStr(k, "")
+		}
+	}
 }

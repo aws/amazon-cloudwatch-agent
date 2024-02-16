@@ -42,7 +42,7 @@ func createMetricsProcessor(
 		return nil, fmt.Errorf("configuration parsing error")
 	}
 
-	metricsProcessor := newDecorator(processorConfig, set.Logger)
+	metricsProcessor := newGpuProcessor(processorConfig, set.Logger)
 
 	return processorhelper.NewMetricsProcessor(
 		ctx,
