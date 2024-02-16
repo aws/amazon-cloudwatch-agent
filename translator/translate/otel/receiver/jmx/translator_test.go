@@ -72,14 +72,22 @@ func TestValidateAuth(t *testing.T) {
 	tt := NewTranslator()
 	testCases := map[string]struct {
 		jmxSectionInput map[string]any
-		wantErrStr      string
+		wantErr         error
 	}{
 		"WithMissingFields": {
 			jmxSectionInput: map[string]any{
 				"endpoint":      "my_jmx_host:12345",
 				"password_file": "/path/to/password_file",
 			},
-			wantErrStr: "missing required field(s) for remote JMX access: username, keystore_path, keystore_type, truststore_type",
+			wantErr: &missingFieldsError{
+				fields: []string{
+					usernameKey,
+					keystorePathKey,
+					keystoreTypeKey,
+					truststorePathKey,
+					truststoreTypeKey,
+				},
+			},
 		},
 		"WithOptOut": {
 			jmxSectionInput: map[string]any{
@@ -109,8 +117,8 @@ func TestValidateAuth(t *testing.T) {
 				},
 			})
 			_, err := tt.Translate(conf)
-			if testCase.wantErrStr != "" {
-				assert.ErrorContains(t, err, testCase.wantErrStr)
+			if testCase.wantErr != nil {
+				assert.ErrorContains(t, err, testCase.wantErr.Error())
 			} else {
 				assert.NoError(t, err)
 			}

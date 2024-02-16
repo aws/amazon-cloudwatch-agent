@@ -163,7 +163,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	if resourceAttributes, ok := jmxKeyMap[resourceAttributesKey].(map[string]any); ok {
-		cfg.ResourceAttributes = convertToStringMap(resourceAttributes)
+		c := confmap.NewFromStringMap(resourceAttributes)
+		if err = c.Unmarshal(&cfg.ResourceAttributes); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal %s::%s: %w", configKey, resourceAttributesKey, err)
+		}
 	}
 
 	// set OTLP settings
@@ -177,7 +180,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.OTLPExporterConfig.Timeout = timeout
 		}
 		if headers, ok := otlpMap[otlpHeadersKey].(map[string]any); ok {
-			cfg.OTLPExporterConfig.Headers = convertToStringMap(headers)
+			c := confmap.NewFromStringMap(headers)
+			if err = c.Unmarshal(&cfg.OTLPExporterConfig.Headers); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal %s::%s::%s: %w", configKey, common.OtlpKey, otlpHeadersKey, err)
+			}
 		}
 	}
 
@@ -204,6 +210,14 @@ func validate(cfg *jmxreceiver.Config, skipAuthValidation bool) error {
 	return nil
 }
 
+type missingFieldsError struct {
+	fields []string
+}
+
+func (e *missingFieldsError) Error() string {
+	return fmt.Sprintf("missing required field(s) for remote access: %v", strings.Join(e.fields, ", "))
+}
+
 func validateAuth(cfg *jmxreceiver.Config) error {
 	var missingFields []string
 	for _, fields := range [][2]string{
@@ -211,6 +225,7 @@ func validateAuth(cfg *jmxreceiver.Config) error {
 		{cfg.PasswordFile, passwordFileKey},
 		{cfg.KeystorePath, keystorePathKey},
 		{cfg.KeystoreType, keystoreTypeKey},
+		{cfg.TruststorePath, truststorePathKey},
 		{cfg.TruststoreType, truststoreTypeKey},
 	} {
 		field, key := fields[0], fields[1]
@@ -219,16 +234,7 @@ func validateAuth(cfg *jmxreceiver.Config) error {
 		}
 	}
 	if missingFields != nil {
-		return fmt.Errorf("missing required field(s) for remote JMX access: %v", strings.Join(missingFields, ", "))
+		return &missingFieldsError{fields: missingFields}
 	}
 	return nil
-}
-
-func convertToStringMap(input map[string]any) map[string]string {
-	convertedMap := make(map[string]string)
-	for key, value := range input {
-		strValue := fmt.Sprintf("%v", value)
-		convertedMap[key] = strValue
-	}
-	return convertedMap
 }
