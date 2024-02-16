@@ -48,6 +48,7 @@ const (
 	ContainerInsightsMetricGranularity = "metric_granularity" // replaced with enhanced_container_insights
 	EnhancedContainerInsights          = "enhanced_container_insights"
 	PreferFullPodName                  = "prefer_full_pod_name"
+	AppendDimensionsKey                = "append_dimensions"
 	Console                            = "console"
 	DiskIOKey                          = "diskio"
 	NetKey                             = "net"

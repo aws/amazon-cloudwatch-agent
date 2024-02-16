@@ -22,19 +22,18 @@ import (
 )
 
 const (
-	jarPathKey            = "jar_path"
-	targetSystemKey       = "target_system"
-	usernameKey           = "username"
-	keystorePathKey       = "keystore_path"
-	keystoreTypeKey       = "keystore_type"
-	truststorePathKey     = "truststore_path"
-	truststoreTypeKey     = "truststore_type"
-	remoteProfileKey      = "remote_profile"
-	realmKey              = "realm"
-	resourceAttributesKey = "resource_attributes"
-	passwordFileKey       = "password_file"
-	otlpTimeoutKey        = "timeout"
-	otlpHeadersKey        = "headers"
+	jarPathKey        = "jar_path"
+	targetSystemKey   = "target_system"
+	usernameKey       = "username"
+	keystorePathKey   = "keystore_path"
+	keystoreTypeKey   = "keystore_type"
+	truststorePathKey = "truststore_path"
+	truststoreTypeKey = "truststore_type"
+	remoteProfileKey  = "remote_profile"
+	realmKey          = "realm"
+	passwordFileKey   = "password_file"
+	otlpTimeoutKey    = "timeout"
+	otlpHeadersKey    = "headers"
 
 	defaultOTLPEndpoint = "127.0.0.1:3000"
 	defaultTargetSystem = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
@@ -162,10 +161,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.Realm = realm
 	}
 
-	if resourceAttributes, ok := jmxKeyMap[resourceAttributesKey].(map[string]any); ok {
-		c := confmap.NewFromStringMap(resourceAttributes)
+	if appendDimensions, ok := jmxKeyMap[common.AppendDimensionsKey].(map[string]any); ok {
+		c := confmap.NewFromStringMap(appendDimensions)
 		if err = c.Unmarshal(&cfg.ResourceAttributes); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal %s::%s: %w", configKey, resourceAttributesKey, err)
+			return nil, fmt.Errorf("unable to unmarshal %s::%s: %w", configKey, common.AppendDimensionsKey, err)
 		}
 	}
 
