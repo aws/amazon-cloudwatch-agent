@@ -4,11 +4,11 @@
 package gpu
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpu"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpu"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
