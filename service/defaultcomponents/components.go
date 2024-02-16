@@ -4,7 +4,6 @@
 package defaultcomponents
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpu"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -25,6 +24,8 @@ import (
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpu"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"

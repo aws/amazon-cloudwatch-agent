@@ -29,6 +29,5 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*gpu.Config)
-	cfg.DropOriginalMetrics = false
 	return cfg, nil
 }

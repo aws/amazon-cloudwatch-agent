@@ -7,7 +7,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -18,14 +17,14 @@ const (
 	gpuMetric = "_gpu_"
 )
 
-var renameMapForDcgm = map[string]string{
-	"DCGM_FI_DEV_GPU_UTIL":        containerinsightscommon.GpuUtilization,
-	"DCGM_FI_DEV_FB_USED_PERCENT": containerinsightscommon.GpuMemUtilization,
-	"DCGM_FI_DEV_FB_USED":         containerinsightscommon.GpuMemUsed,
-	"DCGM_FI_DEV_FB_TOTAL":        containerinsightscommon.GpuMemTotal,
-	"DCGM_FI_DEV_GPU_TEMP":        containerinsightscommon.GpuTemperature,
-	"DCGM_FI_DEV_POWER_USAGE":     containerinsightscommon.GpuPowerDraw,
-	// "DCGM_FI_DEV_FAN_SPEED":       containerinsightscommon.GpuFanSpeed,
+var defaultGpuLabels = []string{
+	"ClusterName",
+	"Namespace",
+	"Service",
+	"ContainerName",
+	"FullPodName",
+	"PodName",
+	"GpuDevice",
 }
 
 type gpuprocessor struct {
@@ -90,6 +89,7 @@ func (d *gpuprocessor) processMetricAttributes(_ context.Context, m pmetric.Metr
 	}
 }
 
+// adds empty string for default attributes since prometheus drops them during relabeling process
 func addDefaultAttributes(attributes pcommon.Map) {
 	for _, k := range defaultGpuLabels {
 		if _, ok := attributes.Get(k); !ok {

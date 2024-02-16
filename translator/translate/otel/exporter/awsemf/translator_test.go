@@ -399,6 +399,36 @@ func TestTranslator(t *testing.T) {
 						Dimensions:          [][]string{{"ClusterName", "priority_level"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"apiserver_flowcontrol_request_concurrency_limit"},
 					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"container_gpu_utilization", "container_gpu_utilization_memory", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"pod_gpu_utilization", "pod_gpu_utilization_memory", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"node_gpu_utilization", "node_gpu_utilization_memory", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature", "node_gpu_fan_speed",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName", "NodeName", "InstanceId"}, {"ClusterName"}},
+						MetricNameSelectors: []string{
+							"node_gpu_total", "node_gpu_request", "node_gpu_limit",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{
+							"cluster_gpu_request", "cluster_gpu_total",
+						},
+					},
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
 					{

@@ -6,9 +6,10 @@ package containerinsights
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
