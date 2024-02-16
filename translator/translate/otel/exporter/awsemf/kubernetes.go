@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 

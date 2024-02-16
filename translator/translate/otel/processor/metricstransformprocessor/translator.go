@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
-
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
