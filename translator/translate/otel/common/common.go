@@ -62,7 +62,6 @@ const (
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"
-	Reacted                            = "[REDACTED]"
 )
 
 const (

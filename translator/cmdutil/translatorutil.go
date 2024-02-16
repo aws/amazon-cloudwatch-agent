@@ -25,7 +25,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -239,7 +238,6 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 func RemoveTLSRedacted(stringMap map[string]interface{}) {
 	type Node struct {
 		isTLSParent bool
-		isJMXParent bool
 		parentKey   string
 		data        map[string]interface{}
 	}
@@ -252,10 +250,8 @@ func RemoveTLSRedacted(stringMap map[string]interface{}) {
 		queue = queue[1:]
 		for key, child := range node.data {
 			if childMap, ok := child.(map[string]interface{}); ok {
-				queue = append(queue, Node{key == common.TLSKey, strings.Contains(key, common.JmxKey), key, childMap})
-			} else if jmx.GetRedactedMap(node.parentKey, key) != "" {
-				node.data[key] = jmx.GetRedactedMap(node.parentKey, key)
-			} else if child == "[REDACTED]" && (node.isTLSParent || node.isJMXParent) {
+				queue = append(queue, Node{key == common.TLSKey, key, childMap})
+			} else if child == "[REDACTED]" && (node.isTLSParent) {
 				delete(node.data, key)
 			}
 		}
