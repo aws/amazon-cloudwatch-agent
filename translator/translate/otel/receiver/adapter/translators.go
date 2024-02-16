@@ -31,13 +31,9 @@ const (
 )
 
 var (
-	logKey       = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
-	logMetricKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
-	metricKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
-	skipInputSet = collections.NewSet[string](files.SectionKey, windows_events.SectionKey)
-)
-
-var (
+	logKey           = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
+	metricKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
+	skipInputSet     = collections.NewSet[string](common.JmxKey, files.SectionKey, windows_events.SectionKey)
 	multipleInputSet = collections.NewSet[string](
 		procstat.SectionKey,
 	)
@@ -158,6 +154,10 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 	translators := common.NewTranslatorMap[component.Config]()
 	if inputs, ok := conf.Get(baseKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
+			if skipInputSet.Contains(inputName) {
+				// logs agent is separate from otel agent
+				continue
+			}
 			if validInputs != nil {
 				if _, ok := validInputs[inputName]; !ok {
 					log.Printf("W! Ignoring unrecognized input %s", inputName)
@@ -165,10 +165,7 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 				}
 			}
 			cfgKey := common.ConfigKey(baseKey, inputName)
-			if skipInputSet.Contains(inputName) {
-				// logs agent is separate from otel agent
-				continue
-			} else if measurement := common.GetArray[any](conf, common.ConfigKey(cfgKey, common.MeasurementKey)); measurement != nil && len(measurement) == 0 {
+			if measurement := common.GetArray[any](conf, common.ConfigKey(cfgKey, common.MeasurementKey)); measurement != nil && len(measurement) == 0 {
 				log.Printf("W! Agent will not emit any metrics for %s due to empty measurement field ", inputName)
 				continue
 			} else if multipleInputSet.Contains(inputName) {

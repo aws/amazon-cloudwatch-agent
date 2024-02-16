@@ -1222,16 +1222,12 @@
           "description": "The username to use for JMX authentication",
           "type": "string"
         },
-        "password": {
-          "description": "The password to use for JMX authentication",
+        "password_file": {
+          "description": "The password file to read in the passwords for JMX authentication",
           "type": "string"
         },
         "keystore_path": {
           "description": "The keystore path is required if SSL is enabled on the target JVM",
-          "type": "string"
-        },
-        "keystore_password": {
-          "description": "The keystore file password if required by SSL",
           "type": "string"
         },
         "keystore_type": {
@@ -1240,10 +1236,6 @@
         },
         "truststore_path": {
           "description": "The truststore path is required if SSL is enabled on the target JVM",
-          "type": "string"
-        },
-        "truststore_password": {
-          "description": "The truststore file password if required by SSL",
           "type": "string"
         },
         "truststore_type": {
@@ -1257,6 +1249,10 @@
         "realm": {
           "description": "The realm, as required by remote profile SASL/DIGEST-MD5.",
           "type": "string"
+        },
+        "insecure": {
+          "description": "Disable JMX remote TLS/password authentication requirements",
+          "type": "boolean"
         },
         "otlp": {
           "type": "object",
