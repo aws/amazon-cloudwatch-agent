@@ -77,7 +77,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslatorWithName(t.name))
 	}
 
-	if conf.IsSet(common.ConfigKey(common.MetricsKey, "append_dimensions")) {
+	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 		log.Printf("D! ec2tagger processor required because append_dimensions is set")
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
