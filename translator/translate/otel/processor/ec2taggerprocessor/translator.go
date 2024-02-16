@@ -16,11 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-const (
-	AppendDimensionsKey = "append_dimensions"
-)
-
-var ec2taggerKey = common.ConfigKey(common.MetricsKey, AppendDimensionsKey)
+var ec2taggerKey = common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)
 
 type translator struct {
 	name    string
