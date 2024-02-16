@@ -166,9 +166,9 @@ receivers:
                 reload_interval: 0s
                 server_name_override: ""
         transport: udp
-    jmx/metrics/0:
+    jmx/0:
         jar_path: ../../opentelemetry-jmx-metrics.jar
-        endpoint: my_jmx_host:12345
+        endpoint: localhost:12345
         target_system: jvm
         collection_interval: 1m0s
         otlp:
@@ -185,14 +185,9 @@ receivers:
         realm: test_realm
         resource_attributes:
             service.name: jmx_app
-        log_level: ""
-        additional_jars: [ ]
-        keystore_password: keystore_password
-        password: testpassword
-        truststore_password: truststore_password
-    jmx/metrics/1:
+    jmx/1:
         jar_path: ../../opentelemetry-jmx-metrics.jar
-        endpoint: my_jmx_host:12345
+        endpoint: localhost:4567
         target_system: jvm
         collection_interval: 1m0s
         otlp:

@@ -14,31 +14,32 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
-	tt := NewTranslator(WithDataType(component.DataTypeMetrics))
-	assert.EqualValues(t, "jmx/metrics", tt.ID().String())
+	tt := NewTranslator()
+	assert.EqualValues(t, "jmx", tt.ID().String())
 	testCases := map[string]struct {
-		input   map[string]interface{}
+		input   map[string]any
 		want    *confmap.Conf
 		wantErr error
 	}{
 		"WithMissingKey": {
-			input: map[string]interface{}{"logs": map[string]interface{}{}},
+			input: map[string]any{"logs": map[string]any{}},
 			wantErr: &common.MissingKeyError{
 				ID:      tt.ID(),
 				JsonKey: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey),
 			},
 		},
 		"WithDefault": {
-			input: map[string]interface{}{"metrics": map[string]interface{}{"metrics_collected": map[string]interface{}{"jmx": nil}}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"jar_path":            defaultJMXJarPath,
+			input: map[string]any{"metrics": map[string]any{"metrics_collected": map[string]any{"jmx": nil}}},
+			want: confmap.NewFromStringMap(map[string]any{
+				"jar_path":            paths.JMXJarPath,
 				"target_system":       defaultTargetSystem,
 				"collection_interval": "10s",
-				"otlp": map[string]interface{}{
+				"otlp": map[string]any{
 					"endpoint": "127.0.0.1:3000",
 					"timeout":  "5s",
 				},
@@ -52,7 +53,6 @@ func TestTranslator(t *testing.T) {
 	factory := jmxreceiver.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			t.Log(name)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
@@ -63,6 +63,64 @@ func TestTranslator(t *testing.T) {
 				wantCfg := factory.CreateDefaultConfig()
 				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
+			}
+		})
+	}
+}
+
+func TestValidateAuth(t *testing.T) {
+	tt := NewTranslator()
+	testCases := map[string]struct {
+		jmxSectionInput map[string]any
+		wantErr         error
+	}{
+		"WithMissingFields": {
+			jmxSectionInput: map[string]any{
+				"endpoint":      "my_jmx_host:12345",
+				"password_file": "/path/to/password_file",
+			},
+			wantErr: &missingFieldsError{
+				fields: []string{
+					usernameKey,
+					keystorePathKey,
+					keystoreTypeKey,
+					truststorePathKey,
+					truststoreTypeKey,
+				},
+			},
+		},
+		"WithOptOut": {
+			jmxSectionInput: map[string]any{
+				"endpoint": "my_jmx_host:12345",
+				"insecure": true,
+			},
+		},
+		"WithAllSet": {
+			jmxSectionInput: map[string]any{
+				"endpoint":        "my_jmx_host:12345",
+				"username":        "myusername",
+				"password_file":   "/path/to/password_file",
+				"keystore_path":   "/path/to/keystore",
+				"keystore_type":   "PKCS",
+				"truststore_path": "/path/to/truststore",
+				"truststore_type": "PKCS12",
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"jmx": testCase.jmxSectionInput,
+					},
+				},
+			})
+			_, err := tt.Translate(conf)
+			if testCase.wantErr != nil {
+				assert.ErrorContains(t, err, testCase.wantErr.Error())
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
