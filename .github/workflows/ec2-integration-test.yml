@@ -35,6 +35,8 @@ on:
         type: string
       localstack_host:
         type: string
+      region:
+        type: string
 
 jobs:
   EC2IntegrationTest:
@@ -100,6 +102,7 @@ jobs:
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="local_stack_host_name=${{ inputs.localstack_host }}" \
+              -var="region=${{ inputs.region }}" \
               -var="s3_bucket=${{env.S3_INTEGRATION_BUCKET}}" \
               -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
               -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \

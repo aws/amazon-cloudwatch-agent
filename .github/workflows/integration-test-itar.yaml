@@ -145,6 +145,7 @@ jobs:
           -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}"
           -var="cwa_github_sha=${GITHUB_SHA}"
           -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
+          -var="region=us-gov-east-1"
           -var="ssh_key_name=${KEY_NAME}" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
@@ -164,6 +165,7 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-gov-east-1
     secrets: inherit
 
   StopLocalStack:
