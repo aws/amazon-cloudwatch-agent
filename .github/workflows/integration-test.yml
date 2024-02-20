@@ -127,6 +127,7 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-gov-east-1
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+          output-credentials: true
 
       - name: Verify Terraform version
         run: terraform --version
@@ -188,6 +189,7 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-gov-east-1
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+          output-credentials: true
 
       - name: Copy state
         run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
