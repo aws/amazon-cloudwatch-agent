@@ -128,7 +128,7 @@ jobs:
 
       - name: Set up QEMU
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       # Build dir is ignored in our .dockerignore thus need to copy to another dir.
       - name: Copy Binary For Agent Image Build
