@@ -26,8 +26,8 @@ const (
 )
 
 var metricNameCase = map[string]string{
-	"error": "Error",
-	"fault": "Fault",
+	"error":   "Error",
+	"fault":   "Fault",
 	"latency": "Latency",
 }
 
