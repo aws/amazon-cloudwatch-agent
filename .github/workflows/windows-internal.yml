@@ -3,9 +3,8 @@
 
 name: Windows containers Internal Test Release
 on:
-  push:
-    branches:
-      - 'main-ciwindows'
+  workflow_dispatch:
+
 jobs:
   BuildAndUpload:
     uses: ./.github/workflows/test-build.yml
@@ -15,5 +14,6 @@ jobs:
       contents: read
     with:
       ContainerRepositoryNameAndTag: "windows-container-internal:latest"
+      ContainerRepositoryName: "windows-container-internal"
       BucketKey: "windows-container-internal"
       PackageBucketKey: "windows-container-internal"
