@@ -11,6 +11,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/cardinalitycontrol"
@@ -25,11 +27,7 @@ const (
 	failedToProcessAttributeWithLimiter    = "failed to process attributes with limiter, keep the data"
 )
 
-var metricNameCase = map[string]string{
-	"error":   "Error",
-	"fault":   "Fault",
-	"latency": "Latency",
-}
+var metricCaser = cases.Title(language.English)
 
 // this is used to Process some attributes (like IP addresses) to a generic form to reduce high cardinality
 type attributesMutator interface {
@@ -138,10 +136,7 @@ func (ap *awsappsignalsprocessor) processMetrics(ctx context.Context, md pmetric
 			metrics := ils.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
-				// Check if metric name is lowercase
-				if normalizedName, exists := metricNameCase[m.Name()]; exists {
-					m.SetName(normalizedName)
-				}
+				m.SetName(metricCaser.String(m.Name())) // Ensure metric name is uppercase
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
 			}
 		}
