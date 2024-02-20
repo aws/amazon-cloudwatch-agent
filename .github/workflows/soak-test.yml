@@ -30,13 +30,22 @@ jobs:
       id-token: write
       contents: read
     with:
-      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/binary/${{ github.sha }}"
 
+  BuildDocker:
+    uses: ./.github/workflows/test-build-docker.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+
   DeploySoakTest:
     name: "DeploySoakTest"
-    needs: [BuildAndUpload]
+    needs: [BuildAndUpload, BuildDocker]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
