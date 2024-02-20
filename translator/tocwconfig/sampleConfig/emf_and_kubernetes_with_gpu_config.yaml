@@ -897,7 +897,6 @@ processors:
               new_value: ""
               value_actions: [ ]
           submatch_case: ""
-    gpu/containerinsights: {}
 
 receivers:
     awscontainerinsightreceiver:
@@ -979,7 +978,6 @@ service:
             processors:
                 - metricstransform/containerinsights
                 - batch/containerinsights
-                - gpu/containerinsights
             receivers:
                 - awscontainerinsightreceiver
     telemetry:
