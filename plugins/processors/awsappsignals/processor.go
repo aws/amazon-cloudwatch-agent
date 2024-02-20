@@ -138,6 +138,10 @@ func (ap *awsappsignalsprocessor) processMetrics(ctx context.Context, md pmetric
 			metrics := ils.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
+				// Check if metric name is lowercase
+				if normalizedName, exists := metricNameCase[m.Name()]; exists {
+					m.SetName(normalizedName)
+				}
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
 			}
 		}
@@ -148,11 +152,6 @@ func (ap *awsappsignalsprocessor) processMetrics(ctx context.Context, md pmetric
 // Attributes are provided for each log and trace, but not at the metric level
 // Need to process attributes for every data point within a metric.
 func (ap *awsappsignalsprocessor) processMetricAttributes(_ context.Context, m pmetric.Metric, resourceAttribes pcommon.Map) {
-	// Check if metric name is lowercase
-	if normalizedName, exists := metricNameCase[m.Name()]; exists {
-		m.SetName(normalizedName)
-	}
-
 	// This is a lot of repeated code, but since there is no single parent superclass
 	// between metric data types, we can't use polymorphism.
 	switch m.Type() {
