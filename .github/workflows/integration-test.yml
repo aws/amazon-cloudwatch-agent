@@ -47,9 +47,18 @@ jobs:
       id-token: write
       contents: read
     with:
-      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+
+  BuildDocker:
+    uses: ./.github/workflows/test-build-docker.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
+      BucketKey: "integration-test/binary/${{ github.sha }}"
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
@@ -575,7 +584,7 @@ jobs:
   ECSEC2IntegrationTest:
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -658,7 +667,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [BuildAndUpload, BuildDocker, GenerateTestMatrix]
     strategy:
       fail-fast: false
       matrix:
@@ -736,7 +745,7 @@ jobs:
   EKSIntegrationTest:
     name: 'EKSIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -818,7 +827,7 @@ jobs:
   EKSPrometheusIntegrationTest:
     name: 'EKSPrometheusIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -1174,7 +1183,7 @@ jobs:
           
   EKSEndToEndTest:
     name: "AppSignals E2E EKS Test"
-    needs: [ BuildAndUpload ]
+    needs: [ BuildAndUpload, BuildDocker ]
     uses: ./.github/workflows/appsignals-e2e-eks-test.yml
     permissions:
       id-token: write
@@ -1185,7 +1194,7 @@ jobs:
       
   EC2EndToEndTest:
     name: "AppSignals E2E EC2 Test"
-    needs: [ BuildAndUpload ]
+    needs: [ BuildAndUpload, BuildDocker ]
     uses: ./.github/workflows/appsignals-e2e-ec2-test.yml
     permissions:
       id-token: write

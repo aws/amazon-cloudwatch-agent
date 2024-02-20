@@ -13,6 +13,15 @@ jobs:
       id-token: write
       contents: read
     with:
-      ContainerRepositoryNameAndTag: "nightly-build:latest"
       BucketKey: "nightly-build/latest"
       PackageBucketKey: "nightly-build/latest"
+
+  BuildDocker:
+    uses: ./.github/workflows/test-build-docker.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "nightly-build:latest"
+      BucketKey: "nightly-build/latest"
