@@ -8,13 +8,6 @@ env:
 on:
   workflow_dispatch:
     inputs:
-      ContainerRepositoryNameAndTag:
-        # e.g. "cwagent-integration-test:SHA"
-        # e.g. "cwa-release:latest"
-        # e.g. "cwa_nonprod:latest"
-        description: "ECR repo name and tag"
-        required: true
-        type: string
       BucketKey:
         # e.g. s3://<bucket>/integration-test/binary/<SHA>"
         # e.g. s3://<bucket>/nonprod
@@ -24,17 +17,23 @@ on:
         type: string
       PackageBucketKey:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+      Region:
+        description: "Region to upload binaries"
+        required: false
+        type: string
+        default: "us-west-2"
+      TerraformAWSAssumeRole:
+        description: "Role to assume to upload artifacts"
+        required: true
+        type: string
+      Bucket:
+        description: "Bucket to upload the artifacts to"
         required: true
         type: string
   workflow_call:
     inputs:
-      ContainerRepositoryNameAndTag:
-        # e.g. "cwagent-integration-test:SHA"
-        # e.g. "cwa-release:latest"
-        # e.g. "cwa_nonprod:latest"
-        description: "ECR repo name and tag"
-        required: true
-        type: string
       BucketKey:
         # e.g. s3://<bucket>/integration-test/binary/<SHA>"
         # e.g. s3://<bucket>/nonprod
@@ -44,6 +43,19 @@ on:
         type: string
       PackageBucketKey:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+      Region:
+        description: "Region to upload binaries"
+        required: false
+        type: string
+        default: "us-west-2"
+      TerraformAWSAssumeRole:
+        description: "Role to assume to upload artifacts"
+        required: true
+        type: string
+      Bucket:
+        description: "Bucket to upload the artifacts to"
         required: true
         type: string
 
@@ -72,14 +84,14 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
 
       - name: Cache binaries
         id: cached_binaries
         uses: actions/cache@v3
         with:
-          key: "cached_binaries_${{ github.sha }}"
+          key: "cached_binaries_${{ github.sha }}_${{ inputs.PackageBucketKey }}_${{ inputs.Bucket }}_${{ inputs.BucketKey }}"
           path: go.mod
 
       - name: Cache go
@@ -112,258 +124,7 @@ jobs:
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         # Copy the RPM to .../amazon_linux/... because BETA customers expect it there.
         run: |
-          echo "BucketKey: ${{ secrets.S3_INTEGRATION_BUCKET}} ${{ inputs.BucketKey }}"
-          aws s3 cp build/bin s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} --recursive
-          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
-          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
-
-      - name: Login ECR
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Set up Docker Buildx
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        uses: docker/setup-buildx-action@v1
-
-      - name: Set up QEMU
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        uses: docker/setup-qemu-action@v1
-
-      # Build dir is ignored in our .dockerignore thus need to copy to another dir.
-      - name: Copy Binary For Agent Image Build
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        run: cp -r build/bin/linux/* .
-
-      - name: Build Cloudwatch Agent Image
-        uses: docker/build-push-action@v4
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        with:
-          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localdeb/Dockerfile
-          context: .
-          push: true
-          tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ inputs.ContainerRepositoryNameAndTag }}
-          platforms: linux/amd64, linux/arm64
-
-  MakeMSIZip:
-    name: 'MakeMSIZip'
-    runs-on: ubuntu-latest
-    needs: [MakeBinary]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.21.1
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-
-      - name: Cache win zip
-        id: cached_win_zip
-        uses: actions/cache@v3
-        with:
-          key: "cached_win_zip_${{ github.sha }}"
-          path: go.mod
-
-      - name: Copy binary
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: |
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} . --recursive
-      - name: Unzip
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: |
-          sudo apt install unzip
-          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
-      - name: Create msi dep folder and copy deps
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: |
-          export version=$(cat CWAGENT_VERSION)
-          echo cw agent version $version
-          mkdir msi_dep
-          cp -r msi/tools/. msi_dep/
-          cp -r windows-agent/amazon-cloudwatch-agent/. msi_dep/
-          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>'
-          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__
-
-      - name: Zip
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: |
-          sudo apt install zip
-          zip buildMSI.zip msi_dep/*
-
-      - name: Upload zip
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: aws s3 cp buildMSI.zip s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip
-
-  MakeMacPkg:
-    name: 'MakeMacPkg'
-    runs-on: macos-11
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          path: cwa
-          fetch-depth: 0
-
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          path: test
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.21.1
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-
-      - name: Cache binaries
-        id: cached_binaries
-        uses: actions/cache@v3
-        with:
-          key: "cached-binaries-${{ runner.os }}-${{ inputs.BucketKey }}"
-          path: go.mod
-
-      - name: Cache pkg
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/Library/Caches/go-build
-            ~/go/pkg/mod
-          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
-
-      - name: Build Binaries
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        working-directory: cwa
-        run: make amazon-cloudwatch-agent-darwin package-darwin
-
-      - name: Copy binary
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        working-directory: cwa
-        run: |
-          echo cw agent version $(cat CWAGENT_VERSION)
-          cp -r build/bin/darwin/amd64/. /tmp/
-          cp -r build/bin/darwin/arm64/. /tmp/arm64/
-          cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION
-
-      - name: Create pkg dep folder and copy deps
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        working-directory: test
-        run: |
-          cp -r pkg/tools/. /tmp/
-          cp -r pkg/tools/. /tmp/arm64/
-
-      - name: Build And Upload PKG
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
-        working-directory: /tmp/
-        run : |
-          chmod +x create_pkg.sh
-          chmod +x arm64/create_pkg.sh
-          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} "nosha" amd64
-          cd arm64
-          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} "nosha" arm64
-
-  BuildMSI:
-    name: 'BuildMSI'
-    runs-on: windows-latest
-    needs: [MakeMSIZip]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-
-      - name: Cache msi
-        id: cached_msi
-        uses: actions/cache@v3
-        with:
-          key: "cached_msi_${{ github.sha }}"
-          path: go.mod
-
-      # Using the env variable returns "" for bucket name thus use the secret
-      - name: Copy msi
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip .
-
-      - name: Create msi
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run : |
-          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
-          .\wix311.exe /install /quiet /norestart
-          $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.11\bin;"
-          $env:PATH = $env:PATH + $wixToolsetBinPath
-          Expand-Archive buildMSI.zip -Force
-          cd buildMSI/msi_dep
-          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
-
-  #GH actions set up gpg only works on ubuntu as of this commit date
-  GPGSignMacAndWindowsPackage:
-    name: 'SignMacAndWindowsPackage'
-    runs-on: ubuntu-latest
-    needs: [BuildMSI, MakeMacPkg]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-
-      - name: Cache sig
-        id: cached_sig
-        uses: actions/cache@v3
-        with:
-          key: "cached_sig_${{ github.sha }}"
-          path: go.mod
-
-      - name: Download from s3
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
-        run: |
-          mkdir -p packages/amd64
-          mkdir packages/arm64
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
-      - name: Import GPG Key
-        uses: crazy-max/ghaction-import-gpg@v5
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-
-      - name: Sign Build Files
-        run: for f in $(find packages/); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
-
-      - name: Upload to s3
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
-        run: |
-          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi.sig
-          aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg.sig
-          aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg.sig
+          echo "BucketKey: ${{ inputs.Bucket }} ${{ inputs.BucketKey }}"
+          aws s3 cp build/bin s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }} --recursive
+          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
