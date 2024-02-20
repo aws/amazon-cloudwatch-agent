@@ -16,6 +16,7 @@ on:
   push:
     branches:
       - main*
+      - add-itar-ec2-tests
     paths-ignore:
       - '**/*.md'
       - 'NOTICE'
