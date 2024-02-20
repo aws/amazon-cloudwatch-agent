@@ -136,7 +136,7 @@ func (ap *awsappsignalsprocessor) processMetrics(ctx context.Context, md pmetric
 			metrics := ils.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
-				m.SetName(metricCaser.String(m.Name())) // Ensure metric name is uppercase
+				m.SetName(metricCaser.String(m.Name())) // Ensure metric name is in sentence case
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
 			}
 		}
