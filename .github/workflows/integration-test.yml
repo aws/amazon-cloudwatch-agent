@@ -188,6 +188,7 @@ jobs:
           terraform apply --auto-approve
           -var="ssh_key_value=${PRIVATE_KEY}"
           -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}"
+          -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}"
           -var="cwa_github_sha=${GITHUB_SHA}"
           -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
           -var="ssh_key_name=${KEY_NAME}" &&
