@@ -100,6 +100,33 @@ func TestProcessMetrics(t *testing.T) {
 	assert.True(t, isMetricNil(dropMetricsByKeep))
 }
 
+func TestProcessMetricsLowercase(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ap := &awsappsignalsprocessor{
+		logger: logger,
+		config: &config.Config{
+			Resolvers: []config.Resolver{config.NewGenericResolver("")},
+			Rules:     testRules,
+		},
+	}
+
+	ctx := context.Background()
+	ap.StartMetrics(ctx, nil)
+
+	lowercaseMetrics := pmetric.NewMetrics()
+	errorMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	errorMetric.SetName("error")
+	latencyMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	latencyMetric.SetName("latency")
+	faultMetric := lowercaseMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	faultMetric.SetName("fault")
+
+	ap.processMetrics(ctx, lowercaseMetrics)
+	assert.Equal(t, "Error", lowercaseMetrics.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Name())
+	assert.Equal(t, "Latency", lowercaseMetrics.ResourceMetrics().At(1).ScopeMetrics().At(0).Metrics().At(0).Name())
+	assert.Equal(t, "Fault", lowercaseMetrics.ResourceMetrics().At(2).ScopeMetrics().At(0).Metrics().At(0).Name())
+}
+
 func TestProcessTraces(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ap := &awsappsignalsprocessor{
