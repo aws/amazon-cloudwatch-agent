@@ -1,0 +1,63 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Stop Localstack
+
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+
+on:
+  workflow_call:
+    inputs:
+      region:
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      terraform_assume_role:
+        type: string
+      github_sha:
+        required: true
+        type: string
+      s3_integration_bucket:
+        type: string
+
+
+jobs:
+  StopLocalStack:
+    name: 'StopLocalStack'
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    defaults:
+      run:
+        working-directory: terraform/ec2/localstack
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Copy state
+        run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform destroy
+        run: terraform destroy -var="region=${{ inputs.region }}" --auto-approve
