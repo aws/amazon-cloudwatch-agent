@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	UnprocessedMetricValue = "AggregatedHighCardinalityMetrics"
+	UnprocessedServiceOperationValue = "AllOtherOperations"
+	UnprocessedRemoteServiceValue    = "AllOtherDependencies"
 )
 
 const (
@@ -37,6 +38,8 @@ var awsDeclaredMetricAttributes = []string{
 	common.MetricAttributeRemoteOperation,
 	common.MetricAttributeRemoteTarget,
 	common.MetricAttributeRemoteNamespace,
+	common.HostedInAttributeK8SClusterName,
+	common.HostedInAttributeEC2Environment,
 }
 
 type Limiter interface {
@@ -338,8 +341,10 @@ func (s *service) rollupMetricData(attributes pcommon.Map) {
 		if strings.HasPrefix(indexAttr, "HostedIn.") || (indexAttr == common.MetricAttributeLocalService) {
 			continue
 		}
-		if indexAttr == common.MetricAttributeLocalOperation || indexAttr == common.MetricAttributeRemoteService {
-			attributes.PutStr(indexAttr, UnprocessedMetricValue)
+		if indexAttr == common.MetricAttributeLocalOperation {
+			attributes.PutStr(indexAttr, UnprocessedServiceOperationValue)
+		} else if indexAttr == common.MetricAttributeRemoteService {
+			attributes.PutStr(indexAttr, UnprocessedRemoteServiceValue)
 		} else {
 			attributes.PutStr(indexAttr, "-")
 		}
