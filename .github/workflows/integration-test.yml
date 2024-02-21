@@ -10,7 +10,7 @@ env:
   KEY_NAME: ${{ vars.KEY_NAME_ITAR }}
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "support-itar-testing"
 
 on:
   push:
@@ -67,7 +67,7 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
-          echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_itar_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
@@ -152,9 +152,9 @@ jobs:
           echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
           aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
-  EC2LinuxIntegrationTest:
+  EC2LinuxIntegrationTestItar:
     needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2Linux'
+    name: 'EC2LinuxItar'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
       github_sha: ${{github.sha}}
@@ -172,7 +172,7 @@ jobs:
     name: 'StopLocalStack'
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest ]
+    needs: [ StartLocalStack, EC2LinuxIntegrationTestItar ]
     defaults:
       run:
         working-directory: terraform/ec2/localstack
@@ -203,4 +203,4 @@ jobs:
         run: terraform init
 
       - name: Terraform destroy
-        run: terraform destroy --auto-approve
+        run: terraform destroy -var="region=us-gov-east-1" --auto-approve
