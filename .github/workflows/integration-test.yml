@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 
-name: Run Integration Tests In ITAR
+name: Run Integration Tests
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_ITAR  }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
