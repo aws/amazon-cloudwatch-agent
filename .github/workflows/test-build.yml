@@ -19,6 +19,21 @@ on:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
         required: true
         type: string
+      Region:
+        description: "Region to upload binaries"
+        required: false
+        type: string
+        default: "us-west-2"
+      TerraformAWSAssumeRole:
+        description: "Role to assume to upload artifacts"
+        required: false
+        type: string
+        default: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket:
+        description: "Bucket to upload the artifacts to"
+        required: false
+        type: string
+        default: ${{ secrets.S3_INTEGRATION_BUCKET }}
   workflow_call:
     inputs:
       BucketKey:
@@ -32,6 +47,21 @@ on:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
         required: true
         type: string
+      Region:
+        description: "Region to upload binaries"
+        required: false
+        type: string
+        default: "us-west-2"
+      TerraformAWSAssumeRole:
+        description: "Role to assume to upload artifacts"
+        required: false
+        type: string
+        default: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket:
+        description: "Bucket to upload the artifacts to"
+        required: false
+        type: string
+        default: ${{ secrets.S3_INTEGRATION_BUCKET }}
 
 jobs:
   MakeBinary:
@@ -58,8 +88,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
 
       - name: Cache binaries
         id: cached_binaries
@@ -98,10 +128,10 @@ jobs:
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         # Copy the RPM to .../amazon_linux/... because BETA customers expect it there.
         run: |
-          echo "BucketKey: ${{ secrets.S3_INTEGRATION_BUCKET}} ${{ inputs.BucketKey }}"
-          aws s3 cp build/bin s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} --recursive
-          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
-          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
+          echo "BucketKey: ${{ inputs.Bucket }} ${{ inputs.BucketKey }}"
+          aws s3 cp build/bin s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }} --recursive
+          aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+          aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://$${{ inputs.Bucket }}/${{ inputs.BucketKey }}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm
 
   MakeMSIZip:
     name: 'MakeMSIZip'
@@ -123,8 +153,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
 
       - name: Cache win zip
         id: cached_win_zip
@@ -136,7 +166,7 @@ jobs:
       - name: Copy binary
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
         run: |
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} . --recursive
+          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }} . --recursive
       - name: Unzip
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
         run: |
@@ -161,7 +191,7 @@ jobs:
 
       - name: Upload zip
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: aws s3 cp buildMSI.zip s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip
+        run: aws s3 cp buildMSI.zip s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/buildMSI.zip
 
   MakeMacPkg:
     name: 'MakeMacPkg'
@@ -188,8 +218,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
 
       - name: Cache binaries
         id: cached_binaries
@@ -234,9 +264,9 @@ jobs:
         run : |
           chmod +x create_pkg.sh
           chmod +x arm64/create_pkg.sh
-          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} "nosha" amd64
+          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" amd64
           cd arm64
-          ./create_pkg.sh ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }} "nosha" arm64
+          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" arm64
 
   BuildMSI:
     name: 'BuildMSI'
@@ -251,8 +281,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
 
       - name: Cache msi
         id: cached_msi
@@ -264,7 +294,7 @@ jobs:
       # Using the env variable returns "" for bucket name thus use the secret
       - name: Copy msi
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip .
+        run: aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/buildMSI.zip .
 
       - name: Create msi
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
@@ -275,7 +305,7 @@ jobs:
           $env:PATH = $env:PATH + $wixToolsetBinPath
           Expand-Archive buildMSI.zip -Force
           cd buildMSI/msi_dep
-          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
+          .\create_msi.ps1 "nosha" ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}
 
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:
@@ -291,8 +321,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
 
       - name: Cache sig
         id: cached_sig
@@ -306,9 +336,9 @@ jobs:
         run: |
           mkdir -p packages/amd64
           mkdir packages/arm64
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
-          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
+          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
+          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
+          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
       - name: Import GPG Key
         uses: crazy-max/ghaction-import-gpg@v5
         with:
@@ -321,6 +351,6 @@ jobs:
       - name: Upload to s3
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
         run: |
-          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi.sig
-          aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg.sig
-          aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg.sig
+          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi.sig
+          aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg.sig
+          aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg.sig

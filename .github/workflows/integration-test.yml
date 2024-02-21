@@ -46,12 +46,15 @@ jobs:
     with:
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      Region: "us-gov-east-1"
+      TerraformAWSAssumeRole: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ env.S3_INTEGRATION_BUCKET }}
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
-      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+      ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -67,11 +70,11 @@ jobs:
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
-          echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_itar_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_itar_matrix::$(echo $(cat generator/resources/ec2_linux_itar_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
-          echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_linux_itar__matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}"
 
   OutputEnvVariables:
     name: 'OutputEnvVariables'
@@ -160,7 +163,7 @@ jobs:
       github_sha: ${{github.sha}}
       test_dir: terraform/ec2/linux
       job_id: ec2-linux-integration-test
-      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_matrix}}
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_itar_matrix}}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
