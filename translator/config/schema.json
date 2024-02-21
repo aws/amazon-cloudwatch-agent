@@ -942,7 +942,7 @@
               "tls": {
                 "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
               },
-              "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinition"
+              "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinitions"
             }
           },
           "minProperties": 1,
@@ -1006,19 +1006,20 @@
           },
           "additionalProperties": false
         },
-        "otlpDefinition": {
-          "type": "object",
-          "properties": {
-            "grpc_endpoint": {
-              "description": "gRPC endpoint to use to listen for OTLP protobuf traces",
-              "$ref": "#/definitions/endpointOverrideDefinition"
+        "otlpDefinitions": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 255,
+              "items": {
+                "$ref": "#/definitions/otlpObjectDefinition"
+              }
             },
-            "http_endpoint": {
-              "description": "HTTP endpoint to use to listen for OTLP JSON traces",
-              "$ref": "#/definitions/endpointOverrideDefinition"
+            {
+              "$ref": "#/definitions/otlpObjectDefinition"
             }
-          },
-          "additionalProperties": false
+          ]
         }
       }
     },
@@ -1069,6 +1070,20 @@
       "properties": {
         "bind_address": {
           "description": "TCP endpoint for proxy server",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        }
+      },
+      "additionalProperties": false
+    },
+    "otlpObjectDefinition": {
+      "type": "object",
+      "properties": {
+        "grpc_endpoint": {
+          "description": "gRPC endpoint to use to listen for OTLP protobuf information",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "http_endpoint": {
+          "description": "HTTP endpoint to use to listen for OTLP JSON information",
           "$ref": "#/definitions/endpointOverrideDefinition"
         }
       },

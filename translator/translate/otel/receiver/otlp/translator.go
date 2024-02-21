@@ -55,6 +55,11 @@ func WithDataType(dataType component.DataType) Option {
 		t.dataType = dataType
 	})
 }
+func WithInstanceNum(instanceNum int) Option {
+	return optionFunc(func(t *translator) {
+		t.instanceNum = instanceNum
+	})
+}
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
@@ -83,20 +88,18 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	// init default configuration
-	configKeyExt := common.OtlpKey
-	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
-	cfg.HTTP.Endpoint = defaultHttpEndpoint
-
-	if t.name == common.AppSignals {
-		configKeyExt = common.AppSignals
-		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
-		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
-	}
-	configKeyBase, ok := configKeys[t.dataType]
+	configBase, ok := configKeys[t.dataType]
 	if !ok {
 		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
 	}
-	configKey := common.ConfigKey(configKeyBase, configKeyExt)
+	configKey := common.ConfigKey(configBase, common.OtlpKey)
+	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
+	cfg.HTTP.Endpoint = defaultHttpEndpoint
+	if t.name == common.AppSignals {
+		configKey = common.ConfigKey(configKeys[t.dataType], common.AppSignals)
+		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
+		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
+	}
 	if conf == nil || !conf.IsSet(configKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}

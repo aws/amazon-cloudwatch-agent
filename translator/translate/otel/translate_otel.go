@@ -66,7 +66,6 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			hostReceivers.Set(translator)
 		}
 	})
-
 	translators := common.NewTranslatorMap(
 		appsignals.NewTranslator(component.DataTypeTraces),
 		appsignals.NewTranslator(component.DataTypeMetrics),
