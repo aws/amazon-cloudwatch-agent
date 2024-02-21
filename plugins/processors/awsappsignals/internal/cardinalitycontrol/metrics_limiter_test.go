@@ -46,8 +46,10 @@ func TestAdmitAndRollup(t *testing.T) {
 					continue
 				}
 				attrValue, _ := attr.Get(indexedAttrKey)
-				if indexedAttrKey == common.MetricAttributeLocalOperation || indexedAttrKey == common.MetricAttributeRemoteService {
-					assert.Equal(t, UnprocessedMetricValue, attrValue.AsString())
+				if indexedAttrKey == common.MetricAttributeLocalOperation {
+					assert.Equal(t, UnprocessedServiceOperationValue, attrValue.AsString())
+				} else if indexedAttrKey == common.MetricAttributeRemoteService {
+					assert.Equal(t, UnprocessedRemoteServiceValue, attrValue.AsString())
 				} else {
 					assert.Equal(t, "-", attrValue.AsString())
 				}
