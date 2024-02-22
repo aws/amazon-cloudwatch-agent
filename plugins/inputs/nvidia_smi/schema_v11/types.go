@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package schema_v11
 
 // SMI defines the structure for the output of _nvidia-smi -q -x_.

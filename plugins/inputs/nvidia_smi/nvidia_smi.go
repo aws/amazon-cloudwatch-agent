@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 //go:generate ../../../tools/readme_config_includer/generator
 package nvidia_smi
 
