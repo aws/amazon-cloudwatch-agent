@@ -2,7 +2,7 @@ resolvers:
   - platform: eks
     name: test
 limiter:
-  disabled: true
+  disabled: false
   drop_threshold: 20
   log_dropped_metrics: true
   rotation_interval: 10m

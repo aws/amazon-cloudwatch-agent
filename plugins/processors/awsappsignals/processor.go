@@ -11,6 +11,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.uber.org/zap"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/cardinalitycontrol"
@@ -24,6 +26,8 @@ const (
 	failedToProcessAttributeWithCustomRule = "failed to process attributes with custom rule, will drop the metric"
 	failedToProcessAttributeWithLimiter    = "failed to process attributes with limiter, keep the data"
 )
+
+var metricCaser = cases.Title(language.English)
 
 // this is used to Process some attributes (like IP addresses) to a generic form to reduce high cardinality
 type attributesMutator interface {
@@ -132,6 +136,7 @@ func (ap *awsappsignalsprocessor) processMetrics(ctx context.Context, md pmetric
 			metrics := ils.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
+				m.SetName(metricCaser.String(m.Name())) // Ensure metric name is in sentence case
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
 			}
 		}
@@ -142,7 +147,6 @@ func (ap *awsappsignalsprocessor) processMetrics(ctx context.Context, md pmetric
 // Attributes are provided for each log and trace, but not at the metric level
 // Need to process attributes for every data point within a metric.
 func (ap *awsappsignalsprocessor) processMetricAttributes(_ context.Context, m pmetric.Metric, resourceAttribes pcommon.Map) {
-
 	// This is a lot of repeated code, but since there is no single parent superclass
 	// between metric data types, we can't use polymorphism.
 	switch m.Type() {

@@ -35,7 +35,7 @@ const (
 func NewDefaultLimiterConfig() *LimiterConfig {
 	return &LimiterConfig{
 		Threshold:         DefaultThreshold,
-		Disabled:          true,
+		Disabled:          false,
 		LogDroppedMetrics: false,
 		RotationInterval:  DefaultRotationInterval,
 	}

@@ -305,7 +305,7 @@ processors:
             name: TestCluster
         rules: []
         limiter:
-          disabled: true
+          disabled: false
           drop_threshold: 500
           log_dropped_metrics: true
           rotation_interval: 10m0s
