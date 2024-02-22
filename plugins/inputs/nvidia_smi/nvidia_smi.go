@@ -17,12 +17,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi/schema_v11"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi/schema_v12"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi/schema_v11"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi/schema_v12"
 )
 
 //go:embed sample.conf

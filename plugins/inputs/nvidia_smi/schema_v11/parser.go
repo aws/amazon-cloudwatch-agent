@@ -7,8 +7,9 @@ import (
 	"encoding/xml"
 	"strconv"
 
-	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi/common"
 	"github.com/influxdata/telegraf"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi/common"
 )
 
 func Parse(acc telegraf.Accumulator, buf []byte) error {
