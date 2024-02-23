@@ -16,6 +16,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -39,6 +41,9 @@ var appSignalsConfigK8s string
 
 //go:embed appsignals_config_generic.yaml
 var appSignalsConfigGeneric string
+
+//go:embed appsignals_config_ec2.yaml
+var appSignalsConfigEC2 string
 
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
@@ -80,6 +85,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		}
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigK8s)
 	} else if t.name == common.AppSignals {
+		ctx := context.CurrentContext()
+		if ctx.Mode() == config.ModeEC2 {
+			return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEC2)
+		}
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigGeneric)
 	}
 
