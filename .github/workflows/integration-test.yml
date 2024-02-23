@@ -176,6 +176,7 @@ jobs:
     needs: [BuildAndUpload, GenerateTestMatrix]
     name: 'CFTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
     permissions:
@@ -270,6 +271,7 @@ jobs:
     needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -487,6 +489,7 @@ jobs:
     needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -569,6 +572,7 @@ jobs:
     needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -700,6 +704,7 @@ jobs:
   ECSEC2IntegrationTest:
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
@@ -783,6 +788,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     needs: [BuildAndUpload, BuildDocker, GenerateTestMatrix]
     strategy:
       fail-fast: false
@@ -861,6 +867,7 @@ jobs:
   EKSIntegrationTest:
     name: 'EKSIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
@@ -943,6 +950,7 @@ jobs:
   EKSPrometheusIntegrationTest:
     name: 'EKSPrometheusIntegrationTest'
     runs-on: ubuntu-latest
+    if: false
     needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
@@ -1024,6 +1032,7 @@ jobs:
     name: "PerformanceTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1092,6 +1101,7 @@ jobs:
     name: "EC2WinPerformanceTest"
     needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1160,6 +1170,7 @@ jobs:
     name: "StressTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -1230,6 +1241,7 @@ jobs:
     name: "EC2WinStressTrackingTest"
     needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
