@@ -13,8 +13,11 @@ import (
 
 const AttributePlatformEC2 = "EC2"
 
+// EC2HostedInAttributes is an allow-list that also renames attributes from the resource detection processor
 var EC2HostedInAttributes = map[string]string{
-	attr.AWSHostedInEnvironment: attr.HostedInEC2Environment,
+	attr.ResourceDetectionHostId:   attr.EC2InstanceId,
+	attr.ResourceDetectionHostName: attr.ResourceDetectionHostName,
+	attr.ResourceDetectionASG:      attr.EC2AutoScalingGroupName,
 }
 
 type ec2HostedInAttributeResolver struct {
@@ -27,10 +30,8 @@ func newEC2HostedInAttributeResolver(name string) *ec2HostedInAttributeResolver 
 		name = AttributePlatformEC2
 	}
 	return &ec2HostedInAttributeResolver{
-		name: name,
-		attributeMap: map[string]string{
-			attr.EC2AutoScalingGroupName: attr.HostedInEC2Environment,
-		},
+		name:         name,
+		attributeMap: EC2HostedInAttributes,
 	}
 }
 func (h *ec2HostedInAttributeResolver) Process(attributes, resourceAttributes pcommon.Map) error {
@@ -44,7 +45,7 @@ func (h *ec2HostedInAttributeResolver) Process(attributes, resourceAttributes pc
 	// Otherwise, keep ASG name if it exists
 	if val, ok := resourceAttributes.Get(attr.AWSHostedInEnvironment); ok {
 		attributes.PutStr(attr.HostedInEC2Environment, val.AsString())
-	} else if val, ok := resourceAttributes.Get(attr.EC2AutoScalingGroupName); ok {
+	} else if val, ok := resourceAttributes.Get(attr.ResourceDetectionASG); ok {
 		attributes.PutStr(attr.HostedInEC2Environment, val.AsString())
 	} else {
 		attributes.PutStr(attr.HostedInEC2Environment, h.name)

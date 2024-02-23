@@ -12,6 +12,11 @@ const (
 	AWSRemoteTarget        = "aws.remote.target"
 	AWSHostedInEnvironment = "aws.hostedin.environment"
 
+	// resource detection processor attributes
+	ResourceDetectionHostId   = "host.id"
+	ResourceDetectionHostName = "host.name"
+	ResourceDetectionASG      = "ec2.tag.aws:autoscaling:groupName"
+
 	// kubernetes resource attributes
 	K8SDeploymentName  = "k8s.deployment.name"
 	K8SStatefulSetName = "k8s.statefulset.name"
@@ -23,6 +28,7 @@ const (
 
 	// ec2 resource attributes
 	EC2AutoScalingGroupName = "EC2.AutoScalingGroupName"
+	EC2InstanceId           = "EC2.InstanceId"
 
 	// hosted in attribute names
 	HostedInClusterNameEKS = "HostedIn.EKS.Cluster"

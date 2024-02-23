@@ -30,7 +30,7 @@ func TestEC2HostedInAttributeResolverWithNoConfiguredName_ASGExists_NoEnv(t *tes
 	asgName := "ASG"
 	attributes := pcommon.NewMap()
 	resourceAttributes := pcommon.NewMap()
-	resourceAttributes.PutStr(attr.EC2AutoScalingGroupName, asgName)
+	resourceAttributes.PutStr(attr.ResourceDetectionASG, asgName)
 
 	resolver.Process(attributes, resourceAttributes)
 	envAttr, ok := attributes.Get(attr.HostedInEC2Environment)
@@ -56,7 +56,7 @@ func TestEC2HostedInAttributeResolverWithConfiguredName_ASGExists_NoEnv(t *testi
 	asgName := "ASG"
 	attributes := pcommon.NewMap()
 	resourceAttributes := pcommon.NewMap()
-	resourceAttributes.PutStr(attr.EC2AutoScalingGroupName, asgName)
+	resourceAttributes.PutStr(attr.ResourceDetectionASG, asgName)
 
 	resolver.Process(attributes, resourceAttributes)
 	envAttr, ok := attributes.Get(attr.HostedInEC2Environment)
@@ -122,4 +122,27 @@ func TestEC2HostedInAttributeResolverWithConfiguredName_ASGExists_EnvExists(t *t
 	envAttr, ok := attributes.Get(attr.HostedInEC2Environment)
 	assert.True(t, ok)
 	assert.Equal(t, envName, envAttr.AsString())
+}
+
+func TestEC2HostedInAttributeResolverWithResourceDetectionAttributes(t *testing.T) {
+	resolver := newEC2HostedInAttributeResolver("")
+
+	attributes := pcommon.NewMap()
+	resourceAttributes := pcommon.NewMap()
+	resourceAttributes.PutStr(attr.ResourceDetectionHostId, "hostid")
+	resourceAttributes.PutStr(attr.ResourceDetectionHostName, "hostname")
+	resourceAttributes.PutStr(attr.ResourceDetectionASG, "asg")
+
+	resolver.Process(attributes, resourceAttributes)
+	expectedInstanceId, ok := attributes.Get(attr.EC2InstanceId)
+	assert.True(t, ok)
+	assert.Equal(t, "hostid", expectedInstanceId.AsString())
+
+	expectedHostName, ok := attributes.Get(attr.ResourceDetectionHostName)
+	assert.True(t, ok)
+	assert.Equal(t, "hostname", expectedHostName.AsString())
+
+	expectedASG, ok := attributes.Get(attr.EC2AutoScalingGroupName)
+	assert.True(t, ok)
+	assert.Equal(t, "asg", expectedASG.AsString())
 }
