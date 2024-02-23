@@ -13,6 +13,31 @@ jobs:
       id-token: write
       contents: read
     with:
-      ContainerRepositoryNameAndTag: "nightly-build:latest"
       BucketKey: "nightly-build/latest"
       PackageBucketKey: "nightly-build/latest"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BuildAndUploadPackages:
+    uses: ./.github/workflows/test-build-packages.yml
+    needs: [ BuildAndUpload ]
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "nightly-build/latest"
+      PackageBucketKey: "nightly-build/latest"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BuildDocker:
+    uses: ./.github/workflows/test-build-docker.yml
+    needs: [ BuildAndUpload ]
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "nightly-build:latest"
+      BucketKey: "nightly-build/latest"

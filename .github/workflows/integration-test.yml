@@ -4,9 +4,9 @@
 name: Run Integration Tests
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
-  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
-  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+  S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
   CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
   CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
@@ -14,6 +14,8 @@ env:
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
 on:
   push:
@@ -47,9 +49,47 @@ jobs:
       id-token: write
       contents: read
     with:
-      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BuildAndUploadPackages:
+    uses: ./.github/workflows/test-build-packages.yml
+    needs: [BuildAndUpload]
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BuildDocker:
+    needs: [BuildAndUpload]
+    uses: ./.github/workflows/test-build-docker.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+
+  BuildAndUploadITAR:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      Region: "us-gov-east-1"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
@@ -67,6 +107,7 @@ jobs:
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
       eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
       eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
+      ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -94,6 +135,7 @@ jobs:
           echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
           echo "::set-output name=eks_daemon_matrix::$(echo $(cat generator/resources/eks_daemon_complete_test_matrix.json))"
           echo "::set-output name=eks_deployment_matrix::$(echo $(cat generator/resources/eks_deployment_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_itar_matrix::$(echo $(cat generator/resources/ec2_linux_itar_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
@@ -109,6 +151,7 @@ jobs:
           echo "ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
           echo "eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}"
           echo "eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}"
+          echo "ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}"
 
   CloudformationTest:
     needs: [BuildAndUpload, GenerateTestMatrix]
@@ -153,49 +196,38 @@ jobs:
 
   StartLocalStack:
     name: 'StartLocalStack'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: terraform/ec2/localstack
-    outputs:
-      local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
+    needs: [OutputEnvVariables]
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
     permissions:
       id-token: write
       contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+  StartLocalStackITAR:
+    name: 'StartLocalStackITAR'
+    needs: [OutputEnvVariables]
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-gov-east-1
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
-      - name: Verify Terraform version
-        run: terraform --version
-
-      - name: Terraform init
-        run: terraform init
-
-      - name: Terraform apply
-        id: localstack
-        run: >
-          echo run terraform and execute test code &&
-          terraform apply --auto-approve
-          -var="ssh_key_value=${PRIVATE_KEY}"
-          -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}"
-          -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}"
-          -var="cwa_github_sha=${GITHUB_SHA}"
-          -var="s3_bucket=${S3_INTEGRATION_BUCKET}"
-          -var="ssh_key_name=${KEY_NAME}" &&
-          LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
-          echo $LOCAL_STACK_HOST_NAME &&
-          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
-          aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate
 
   EC2NvidiaGPUIntegrationTest:
     needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix ]
@@ -356,6 +388,27 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+    secrets: inherit
+
+  EC2LinuxIntegrationTestITAR:
+    needs: [ BuildAndUpload, BuildAndUploadITAR, StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2LinuxITAR'
+    uses: ./.github/workflows/ec2-integration-test.yml
+    with:
+      github_sha: ${{github.sha}}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_itar_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{needs.StartLocalStackITAR.outputs.local_stack_host_name}}
+      region: us-gov-east-1
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
     secrets: inherit
 
   LinuxOnPremIntegrationTest:
@@ -371,10 +424,11 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
       localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-west-2
     secrets: inherit
 
   EC2WinIntegrationTest:
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -456,7 +510,7 @@ jobs:
             terraform destroy --auto-approve
 
   EC2DarwinIntegrationTest:
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -538,44 +592,42 @@ jobs:
 
   StopLocalStack:
     name: 'StopLocalStack'
-    runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest ]
-    defaults:
-      run:
-        working-directory: terraform/ec2/localstack
+    needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
     permissions:
       id-token: write
       contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-
-      - name: Copy state
-        run: aws s3 cp s3://${S3_INTEGRATION_BUCKET}/integration-test/local-stack-terraform-state/${GITHUB_SHA}/terraform.tfstate .
-
-      - name: Verify Terraform version
-        run: terraform --version
-
-      - name: Terraform init
-        run: terraform init
-
-      - name: Terraform destroy
-        run: terraform destroy --auto-approve
+  StopLocalStackITAR:
+    name: 'StopLocalStackITAR'
+    if: ${{ always() }}
+    needs: [ EC2LinuxIntegrationTestITAR, OutputEnvVariables ]
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-gov-east-1
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
   ECSEC2IntegrationTest:
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -658,7 +710,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [BuildAndUpload, BuildDocker, GenerateTestMatrix]
     strategy:
       fail-fast: false
       matrix:
@@ -736,7 +788,7 @@ jobs:
   EKSIntegrationTest:
     name: 'EKSIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -818,7 +870,7 @@ jobs:
   EKSPrometheusIntegrationTest:
     name: 'EKSPrometheusIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -965,7 +1017,7 @@ jobs:
 
   EC2WinPerformanceTest:
     name: "EC2WinPerformanceTest"
-    needs: [ BuildAndUpload, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1103,7 +1155,7 @@ jobs:
 
   EC2WinStressTrackingTest:
     name: "EC2WinStressTrackingTest"
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1171,10 +1223,10 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
-          
+
   EKSEndToEndTest:
     name: "AppSignals E2E EKS Test"
-    needs: [ BuildAndUpload ]
+    needs: [ BuildAndUpload, BuildDocker ]
     uses: ./.github/workflows/appsignals-e2e-eks-test.yml
     permissions:
       id-token: write
@@ -1182,10 +1234,10 @@ jobs:
     secrets: inherit
     with:
       test-cluster-name: 'e2e-cw-agent-test'
-      
+
   EC2EndToEndTest:
     name: "AppSignals E2E EC2 Test"
-    needs: [ BuildAndUpload ]
+    needs: [ BuildAndUpload, BuildDocker ]
     uses: ./.github/workflows/appsignals-e2e-ec2-test.yml
     permissions:
       id-token: write
