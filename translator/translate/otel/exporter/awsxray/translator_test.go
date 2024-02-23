@@ -15,6 +15,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -32,6 +34,7 @@ func TestTranslator(t *testing.T) {
 		detector       func() (common.Detector, error)
 		isEKSDataStore func() common.IsEKSCache
 		isKubernetes   bool
+		isEC2          bool
 	}{
 		"WithMissingKey": {
 			input: map[string]any{"logs": map[string]any{}},
@@ -124,6 +127,34 @@ func TestTranslator(t *testing.T) {
 			isEKSDataStore: common.TestIsEKSCacheK8s,
 			isKubernetes:   true,
 		},
+		"WithAppSignalsEnabledEC2": {
+			input: map[string]any{
+				"traces": map[string]any{
+					"traces_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]any{
+				"indexed_attributes": []string{
+					"aws.local.service",
+					"aws.local.operation",
+					"aws.remote.service",
+					"aws.remote.operation",
+					"HostedIn.EC2.Environment",
+					"aws.remote.target",
+				},
+				"certificate_file_path": "/ca/bundle",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"imds_retries":          1,
+				"telemetry": map[string]any{
+					"enabled":          true,
+					"include_metadata": true,
+				},
+				"middleware": "agenthealth/traces",
+			}),
+			isEC2: true,
+		},
 	}
 	factory := awsxrayexporter.NewFactory()
 	for name, testCase := range testCases {
@@ -132,6 +163,10 @@ func TestTranslator(t *testing.T) {
 				t.Setenv(common.KubernetesEnvVar, "TEST")
 				common.NewDetector = testCase.detector
 				common.IsEKS = testCase.isEKSDataStore
+			}
+			if testCase.isEC2 {
+				ctx := context.CurrentContext()
+				ctx.SetMode(config.ModeEC2)
 			}
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)

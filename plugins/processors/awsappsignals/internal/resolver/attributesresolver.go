@@ -34,9 +34,12 @@ func NewAttributesResolver(resolvers []appsignalsconfig.Resolver, logger *zap.Lo
 	//TODO: Logic for native k8s needs to be implemented
 	subResolvers := []subResolver{}
 	for _, resolver := range resolvers {
-		if resolver.Platform == appsignalsconfig.PlatformEKS || resolver.Platform == appsignalsconfig.PlatformK8s {
+		switch resolver.Platform {
+		case appsignalsconfig.PlatformEKS, appsignalsconfig.PlatformK8s:
 			subResolvers = append(subResolvers, getKubernetesResolver(logger), newKubernetesHostedInAttributeResolver(resolver.Name))
-		} else {
+		case appsignalsconfig.PlatformEC2:
+			subResolvers = append(subResolvers, newEC2HostedInAttributeResolver(resolver.Name))
+		default:
 			subResolvers = append(subResolvers, newHostedInAttributeResolver(resolver.Name, DefaultHostedInAttributes))
 		}
 	}

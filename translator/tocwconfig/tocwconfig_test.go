@@ -71,7 +71,8 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 
 func TestGenericAppSignalsConfig(t *testing.T) {
 	resetContext(t)
-	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPrem)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
