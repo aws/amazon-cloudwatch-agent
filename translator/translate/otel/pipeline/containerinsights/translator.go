@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/gpu"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
@@ -52,7 +53,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if enhancedContainerInsightsEnabled {
 		return &common.ComponentTranslators{
 			Receivers:  common.NewTranslatorMap(awscontainerinsight.NewTranslator()),
-			Processors: common.NewTranslatorMap(metricstransformprocessor.NewTranslatorWithName(pipelineName), batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey)), // EKS & ECS CI sit under metrics_collected in "logs"
+			Processors: common.NewTranslatorMap(metricstransformprocessor.NewTranslatorWithName(pipelineName), batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey), gpu.NewTranslatorWithName(pipelineName)), // EKS & ECS CI sit under metrics_collected in "logs"
 			Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
 			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
 		}, nil
