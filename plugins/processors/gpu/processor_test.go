@@ -26,64 +26,66 @@ func TestProcessMetrics(t *testing.T) {
 
 	testcases := map[string]struct {
 		metrics pmetric.Metrics
+		labels  map[string]map[string]interface{}
 		want    map[string]string
 	}{
-		"keepExisting": {
-			metrics: generateMetrics(map[string]string{
-				"ClusterName":   "cluster",
-				"Namespace":     "namespace",
-				"Service":       "service",
-				"ContainerName": "container",
-				"FullPodName":   "fullpod",
-				"PodName":       "pod",
-				"GpuDevice":     "gpu",
+		"nonNode": {
+			metrics: generateMetrics("prefix", map[string]string{
+				"ClusterName": "cluster",
 			}),
+			labels: map[string]map[string]interface{}{},
 			want: map[string]string{
-				"ClusterName":   "cluster",
-				"Namespace":     "namespace",
-				"Service":       "service",
-				"ContainerName": "container",
-				"FullPodName":   "fullpod",
-				"PodName":       "pod",
-				"GpuDevice":     "gpu",
+				"ClusterName": "cluster",
 			},
 		},
-		"addMissing": {
-			metrics: generateMetrics(map[string]string{
-				"ClusterName":   "cluster",
-				"Namespace":     "namespace",
-				"Service":       "service",
-				"ContainerName": "container",
-				"FullPodName":   "fullpod",
+		"nodeDropSimple": {
+			metrics: generateMetrics("node", map[string]string{
+				"ClusterName": "cluster",
+				"Drop":        "val",
 			}),
+			labels: map[string]map[string]interface{}{
+				"ClusterName": {},
+			},
 			want: map[string]string{
-				"ClusterName":   "cluster",
-				"Namespace":     "namespace",
-				"Service":       "service",
-				"ContainerName": "container",
-				"FullPodName":   "fullpod",
-				"PodName":       "",
-				"GpuDevice":     "",
+				"ClusterName": "cluster",
 			},
 		},
-		"addAll": {
-			metrics: generateMetrics(map[string]string{}),
+		"nodeDropJson": {
+			metrics: generateMetrics("node", map[string]string{
+				"ClusterName": "cluster",
+				"kubernetes":  "{\"a\":\"1\",\"b\":\"2\"}",
+			}),
+			labels: map[string]map[string]interface{}{
+				"ClusterName": {},
+				"kubernetes":  {"a": map[string]interface{}{}},
+			},
 			want: map[string]string{
-				"ClusterName":   "",
-				"Namespace":     "",
-				"Service":       "",
-				"ContainerName": "",
-				"FullPodName":   "",
-				"PodName":       "",
-				"GpuDevice":     "",
+				"ClusterName": "cluster",
+				"kubernetes":  "{\"a\":\"1\"}",
+			},
+		},
+		"nodeDropMixed": {
+			metrics: generateMetrics("node", map[string]string{
+				"ClusterName": "cluster",
+				"Drop":        "val",
+				"kubernetes":  "{\"a\":\"1\",\"b\":\"2\"}",
+			}),
+			labels: map[string]map[string]interface{}{
+				"ClusterName": {},
+				"kubernetes":  {"a": map[string]interface{}{}},
+			},
+			want: map[string]string{
+				"ClusterName": "cluster",
+				"kubernetes":  "{\"a\":\"1\"}",
 			},
 		},
 	}
 
 	for _, tc := range testcases {
+		nodeMetricLabels = tc.labels
 		ms, _ := gp.processMetrics(ctx, tc.metrics)
 		attrs := ms.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes()
-		assert.Equal(t, len(defaultGpuLabels), attrs.Len())
+		assert.Equal(t, len(tc.want), attrs.Len())
 		for k, v := range tc.want {
 			got, ok := attrs.Get(k)
 			assert.True(t, ok)
@@ -92,11 +94,11 @@ func TestProcessMetrics(t *testing.T) {
 	}
 }
 
-func generateMetrics(dimensions map[string]string) pmetric.Metrics {
+func generateMetrics(prefix string, dimensions map[string]string) pmetric.Metrics {
 	md := pmetric.NewMetrics()
 
 	m := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
-	m.SetName("test" + gpuMetric)
+	m.SetName(prefix + gpuMetric)
 	gauge := m.SetEmptyGauge().DataPoints().AppendEmpty()
 	gauge.SetIntValue(10)
 

@@ -347,7 +347,7 @@ exporters:
               label_matchers: [ ]
               metric_name_selectors:
                 - container_gpu_utilization
-                - container_gpu_utilization_memory
+                - container_gpu_memory_utilization
                 - container_gpu_memory_total
                 - container_gpu_memory_used
                 - container_gpu_power_draw
@@ -374,7 +374,7 @@ exporters:
               label_matchers: [ ]
               metric_name_selectors:
                 - pod_gpu_utilization
-                - pod_gpu_utilization_memory
+                - pod_gpu_memory_utilization
                 - pod_gpu_memory_total
                 - pod_gpu_memory_used
                 - pod_gpu_power_draw
@@ -391,7 +391,7 @@ exporters:
               label_matchers: [ ]
               metric_name_selectors:
                 - node_gpu_utilization
-                - node_gpu_utilization_memory
+                - node_gpu_memory_utilization
                 - node_gpu_memory_total
                 - node_gpu_memory_used
                 - node_gpu_power_draw
@@ -816,7 +816,7 @@ processors:
           group_resource_labels: { }
           include: DCGM_FI_DEV_FB_USED_PERCENT
           match_type: ""
-          new_name: container_gpu_utilization_memory
+          new_name: container_gpu_memory_utilization
           operations:
             - action: add_label
               aggregated_values: [ ]
@@ -845,7 +845,7 @@ processors:
           group_resource_labels: { }
           include: DCGM_FI_DEV_FB_USED_PERCENT
           match_type: ""
-          new_name: pod_gpu_utilization_memory
+          new_name: pod_gpu_memory_utilization
           operations:
             - action: add_label
               aggregated_values: [ ]
@@ -874,7 +874,7 @@ processors:
           group_resource_labels: { }
           include: DCGM_FI_DEV_FB_USED_PERCENT
           match_type: ""
-          new_name: node_gpu_utilization_memory
+          new_name: node_gpu_memory_utilization
           operations:
             - action: add_label
               aggregated_values: [ ]
