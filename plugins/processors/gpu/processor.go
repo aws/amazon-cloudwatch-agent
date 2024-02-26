@@ -5,6 +5,7 @@ package gpu
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -14,17 +15,39 @@ import (
 )
 
 const (
-	gpuMetric = "_gpu_"
+	gpuMetric                = "_gpu_"
+	gpuContainerMetricPrefix = "container_"
+	gpuPodMetricPrefix       = "pod_"
+	gpuNodeMetricPrefix      = "node_"
 )
 
-var defaultGpuLabels = []string{
-	"ClusterName",
-	"Namespace",
-	"Service",
-	"ContainerName",
-	"FullPodName",
-	"PodName",
-	"GpuDevice",
+var podContainerMetricLabels = map[string]map[string]interface{}{
+	"ClusterName":  nil,
+	"FullPodName":  nil,
+	"PodName":      nil,
+	"InstanceId":   nil,
+	"InstanceType": nil,
+	"NodeName":     nil,
+	"Timestamp":    nil,
+	"Type":         nil,
+	"Version":      nil,
+	"Namespace":    nil,
+	"Sources":      nil,
+	"UUID":         nil,
+	"kubernetes":   nil,
+}
+
+var nodeMetricLabels = map[string]map[string]interface{}{
+	"ClusterName":  nil,
+	"InstanceId":   nil,
+	"InstanceType": nil,
+	"NodeName":     nil,
+	"Timestamp":    nil,
+	"Type":         nil,
+	"Version":      nil,
+	"kubernetes": {
+		"host": nil,
+	},
 }
 
 type gpuprocessor struct {
@@ -73,27 +96,87 @@ func (d *gpuprocessor) processMetricAttributes(_ context.Context, m pmetric.Metr
 		return
 	}
 
+	var labels map[string]map[string]interface{}
+	if strings.HasPrefix(m.Name(), gpuNodeMetricPrefix) {
+		labels = nodeMetricLabels
+	} else if strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) {
+		labels = podContainerMetricLabels
+		labels["kubernetes"] = map[string]interface{}{
+			"container_name": nil,
+			"containerd":     nil,
+			"host":           nil,
+			"labels":         nil,
+			"pod_id":         nil,
+			"pod_name":       nil,
+			"pod_owners":     nil,
+			"namespace":      nil,
+		}
+	} else if strings.HasPrefix(m.Name(), gpuPodMetricPrefix) {
+		labels = podContainerMetricLabels
+		labels["kubernetes"] = map[string]interface{}{
+			"host":       nil,
+			"labels":     nil,
+			"pod_id":     nil,
+			"pod_name":   nil,
+			"pod_owners": nil,
+			"namespace":  nil,
+		}
+	}
+
+	var dps pmetric.NumberDataPointSlice
 	switch m.Type() {
 	case pmetric.MetricTypeGauge:
-		dps := m.Gauge().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			addDefaultAttributes(dps.At(i).Attributes())
-		}
+		dps = m.Gauge().DataPoints()
 	case pmetric.MetricTypeSum:
-		dps := m.Sum().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			addDefaultAttributes(dps.At(i).Attributes())
-		}
+		dps = m.Sum().DataPoints()
 	default:
 		d.logger.Debug("Ignore unknown metric type", zap.String("type", m.Type().String()))
 	}
+
+	for i := 0; i < dps.Len(); i++ {
+		d.filterAttributes(dps.At(i).Attributes(), labels)
+	}
 }
 
-// adds empty string for default attributes since prometheus drops them during relabeling process
-func addDefaultAttributes(attributes pcommon.Map) {
-	for _, k := range defaultGpuLabels {
-		if _, ok := attributes.Get(k); !ok {
-			attributes.PutStr(k, "")
+func (d *gpuprocessor) filterAttributes(attributes pcommon.Map, labels map[string]map[string]interface{}) {
+	if len(labels) < 1 {
+		return
+	}
+	// remove labels that are no in the keep list
+	attributes.RemoveIf(func(k string, _ pcommon.Value) bool {
+		if _, ok := labels[k]; !ok {
+			return true
+		}
+		return false
+	})
+
+	// if a label has child level filter list, that means the label is map type
+	// only handles map type since there are currently only map and value types with GPU
+	for lk, ls := range labels {
+		if len(ls) < 1 {
+			continue
+		}
+		if av, ok := attributes.Get(lk); ok {
+			// decode json formatted string value into a map then encode again after filtering elements
+			var blob map[string]json.RawMessage
+			strVal := av.Str()
+			err := json.Unmarshal([]byte(strVal), &blob)
+			if err != nil {
+				d.logger.Warn("gpuprocessor: failed to unmarshal label", zap.String("label", lk))
+				continue
+			}
+			newBlob := make(map[string]json.RawMessage)
+			for bkey, bval := range blob {
+				if _, ok := ls[bkey]; ok {
+					newBlob[bkey] = bval
+				}
+			}
+			bytes, err := json.Marshal(newBlob)
+			if err != nil {
+				d.logger.Warn("gpuprocessor: failed to marshall label", zap.String("label", lk))
+				continue
+			}
+			attributes.PutStr(lk, string(bytes))
 		}
 	}
 }

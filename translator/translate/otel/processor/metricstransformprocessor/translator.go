@@ -92,6 +92,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 					"action":             "experimental_scale_value",
 					"experimental_scale": 100,
 				})
+			} else if new == containerinsightscommon.GpuMemTotal || new == containerinsightscommon.GpuMemUsed {
+				operations = append(operations, map[string]interface{}{
+					"action":             "experimental_scale_value",
+					"experimental_scale": 1024 * 1024,
+				})
 			}
 			for _, t := range metricDuplicateTypes {
 				transformRules = append(transformRules, map[string]interface{}{

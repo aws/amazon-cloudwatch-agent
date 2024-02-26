@@ -402,19 +402,19 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"container_gpu_utilization", "container_gpu_utilization_memory", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature",
+							"container_gpu_utilization", "container_gpu_memory_utilization", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature",
 						},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"pod_gpu_utilization", "pod_gpu_utilization_memory", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature",
+							"pod_gpu_utilization", "pod_gpu_memory_utilization", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature",
 						},
 					},
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"node_gpu_utilization", "node_gpu_utilization_memory", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature", "node_gpu_fan_speed",
+							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature", "node_gpu_fan_speed",
 						},
 					},
 					{
