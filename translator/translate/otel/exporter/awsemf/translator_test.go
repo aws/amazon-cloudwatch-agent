@@ -17,6 +17,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -702,6 +704,7 @@ func TestTranslateAppSignals(t *testing.T) {
 		want           *confmap.Conf
 		wantErr        error
 		isKubernetes   bool
+		isEC2          bool
 		detector       func() (common.Detector, error)
 		isEKSDataStore func() common.IsEKSCache
 	}{
@@ -738,6 +741,17 @@ func TestTranslateAppSignals(t *testing.T) {
 				}},
 			want:         testutil.GetConf(t, filepath.Join("appsignals_config_generic.yaml")),
 			isKubernetes: false,
+			isEC2:        false,
+		},
+		"WithAppSignalsEnabledEC2": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want:  testutil.GetConf(t, filepath.Join("appsignals_config_ec2.yaml")),
+			isEC2: true,
 		},
 	}
 	factory := awsemfexporter.NewFactory()
@@ -745,6 +759,13 @@ func TestTranslateAppSignals(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if testCase.isKubernetes {
 				t.Setenv(common.KubernetesEnvVar, "TEST")
+			}
+			if testCase.isEC2 {
+				ctx := context.CurrentContext()
+				ctx.SetMode(config.ModeEC2)
+			} else {
+				ctx := context.CurrentContext()
+				ctx.SetMode(config.ModeOnPrem)
 			}
 			common.NewDetector = testCase.detector
 			common.IsEKS = testCase.isEKSDataStore

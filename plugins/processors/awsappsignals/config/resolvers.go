@@ -10,6 +10,8 @@ const (
 	PlatformEKS = "eks"
 	// PlatformK8s Native Kubernetes
 	PlatformK8s = "k8s"
+	// PlatformEC2 Amazon EC2 platform
+	PlatformEC2 = "ec2"
 )
 
 type Resolver struct {
@@ -28,6 +30,13 @@ func NewK8sResolver(name string) Resolver {
 	return Resolver{
 		Name:     name,
 		Platform: PlatformK8s,
+	}
+}
+
+func NewEC2Resolver(name string) Resolver {
+	return Resolver{
+		Name:     name,
+		Platform: PlatformEC2,
 	}
 }
 

@@ -1,0 +1,98 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Build And Upload Docker Image
+env:
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+
+on:
+  workflow_dispatch:
+    inputs:
+      ContainerRepositoryNameAndTag:
+        # e.g. "cwagent-integration-test:SHA"
+        # e.g. "cwa-release:latest"
+        # e.g. "cwa_nonprod:latest"
+        description: "ECR repo name and tag"
+        required: true
+        type: string
+      BucketKey:
+        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
+        # e.g. s3://<bucket>/nonprod
+        # e.g. s3://<bucket>/release
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      ContainerRepositoryNameAndTag:
+        # e.g. "cwagent-integration-test:SHA"
+        # e.g. "cwa-release:latest"
+        # e.g. "cwa_nonprod:latest"
+        description: "ECR repo name and tag"
+        required: true
+        type: string
+      BucketKey:
+        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
+        # e.g. s3://<bucket>/nonprod
+        # e.g. s3://<bucket>/release
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+
+jobs:
+  MakeBinary:
+    name: 'MakeBinary'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache container
+        id: cached_container
+        uses: actions/cache@v3
+        with:
+          key: "cached_container_${{ github.sha }}"
+          path: go.mod
+
+      - name: Login ECR
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set up QEMU
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        uses: docker/setup-qemu-action@v1
+
+      # Build dir is ignored in our .dockerignore thus need to copy to another dir.
+      - name: Copy Binary For Agent Image Build
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        run: |
+          mkdir amd64
+          mkdir arm64
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/amd64/amazon-cloudwatch-agent.deb amd64/amazon-cloudwatch-agent.deb
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/arm64/amazon-cloudwatch-agent.deb arm64/amazon-cloudwatch-agent.deb
+
+      - name: Build Cloudwatch Agent Image
+        uses: docker/build-push-action@v4
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        with:
+          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localdeb/Dockerfile
+          context: .
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ inputs.ContainerRepositoryNameAndTag }}
+          platforms: linux/amd64, linux/arm64
