@@ -1,14 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package gpu
+package gpuattributes
 
 import (
 	"context"
 	"encoding/json"
 	"strings"
 
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
@@ -34,6 +33,8 @@ var podContainerMetricLabels = map[string]map[string]interface{}{
 	"Namespace":    nil,
 	"Sources":      nil,
 	"UUID":         nil,
+	"Service":      nil,
+	"GpuDevice":    nil,
 	"kubernetes":   nil,
 }
 
@@ -52,26 +53,18 @@ var nodeMetricLabels = map[string]map[string]interface{}{
 
 type gpuprocessor struct {
 	*Config
-	logger     *zap.Logger
-	cancelFunc context.CancelFunc
-	shutdownC  chan bool
-	started    bool
+	logger *zap.Logger
 }
 
 func newGpuProcessor(config *Config, logger *zap.Logger) *gpuprocessor {
-	_, cancel := context.WithCancel(context.Background())
 	d := &gpuprocessor{
-		Config:     config,
-		logger:     logger,
-		cancelFunc: cancel,
+		Config: config,
+		logger: logger,
 	}
 	return d
 }
 
-func (d *gpuprocessor) processMetrics(ctx context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
-	if !d.started {
-		return pmetric.NewMetrics(), nil
-	}
+func (d *gpuprocessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 
 	rms := md.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
@@ -82,14 +75,14 @@ func (d *gpuprocessor) processMetrics(ctx context.Context, md pmetric.Metrics) (
 			metrics := ils.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
-				d.processMetricAttributes(ctx, m)
+				d.processMetricAttributes(m)
 			}
 		}
 	}
 	return md, nil
 }
 
-func (d *gpuprocessor) processMetricAttributes(_ context.Context, m pmetric.Metric) {
+func (d *gpuprocessor) processMetricAttributes(m pmetric.Metric) {
 	// only decorate GPU metrics
 	// another option is to separate GPU of its own pipeline to minimize extra processing of metrics
 	if !strings.Contains(m.Name(), gpuMetric) {
@@ -101,6 +94,7 @@ func (d *gpuprocessor) processMetricAttributes(_ context.Context, m pmetric.Metr
 		labels = nodeMetricLabels
 	} else if strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) {
 		labels = podContainerMetricLabels
+		labels["ContainerName"] = nil
 		labels["kubernetes"] = map[string]interface{}{
 			"container_name": nil,
 			"containerd":     nil,
@@ -139,7 +133,7 @@ func (d *gpuprocessor) processMetricAttributes(_ context.Context, m pmetric.Metr
 }
 
 func (d *gpuprocessor) filterAttributes(attributes pcommon.Map, labels map[string]map[string]interface{}) {
-	if len(labels) < 1 {
+	if len(labels) == 0 {
 		return
 	}
 	// remove labels that are no in the keep list
@@ -179,16 +173,4 @@ func (d *gpuprocessor) filterAttributes(attributes pcommon.Map, labels map[strin
 			attributes.PutStr(lk, string(bytes))
 		}
 	}
-}
-
-func (d *gpuprocessor) Shutdown(context.Context) error {
-	close(d.shutdownC)
-	d.cancelFunc()
-	return nil
-}
-
-func (d *gpuprocessor) Start(ctx context.Context, _ component.Host) error {
-	d.shutdownC = make(chan bool)
-	d.started = true
-	return nil
 }

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package gpu
+package gpuattributes
 
 import (
 	"context"
@@ -50,7 +50,5 @@ func createMetricsProcessor(
 		cfg,
 		nextConsumer,
 		metricsProcessor.processMetrics,
-		processorhelper.WithCapabilities(processorCapabilities),
-		processorhelper.WithStart(metricsProcessor.Start),
-		processorhelper.WithShutdown(metricsProcessor.Shutdown))
+		processorhelper.WithCapabilities(processorCapabilities))
 }

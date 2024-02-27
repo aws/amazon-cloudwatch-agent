@@ -23,16 +23,6 @@ var metricDuplicateTypes = []string{
 	containerinsightscommon.TypeNode,
 }
 
-var defaultGpuLabels = []string{
-	"ClusterName",
-	"Namespace",
-	"Service",
-	"ContainerName",
-	"FullPodName",
-	"PodName",
-	"GpuDevice",
-}
-
 var renameMapForDcgm = map[string]string{
 	"DCGM_FI_DEV_GPU_UTIL":        containerinsightscommon.GpuUtilization,
 	"DCGM_FI_DEV_FB_USED_PERCENT": containerinsightscommon.GpuMemUtilization,
