@@ -22,7 +22,6 @@ func TestProcessMetrics(t *testing.T) {
 		Config: createDefaultConfig().(*Config),
 	}
 	ctx := context.Background()
-	gp.Start(ctx, nil)
 
 	testcases := map[string]struct {
 		metrics pmetric.Metrics
