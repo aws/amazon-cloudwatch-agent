@@ -40,7 +40,7 @@ func TestTranslator(t *testing.T) {
 				"target_system":       defaultTargetSystem,
 				"collection_interval": "10s",
 				"otlp": map[string]any{
-					"endpoint": "127.0.0.1:3000",
+					"endpoint": "0.0.0.0:0",
 					"timeout":  "5s",
 				},
 			}),

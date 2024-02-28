@@ -35,7 +35,6 @@ const (
 	otlpTimeoutKey    = "timeout"
 	otlpHeadersKey    = "headers"
 
-	defaultOTLPEndpoint = "127.0.0.1:3000"
 	defaultTargetSystem = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
 
 	envJmxJarPath = "JMX_JAR_PATH"
@@ -169,7 +168,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	// set OTLP settings
-	cfg.OTLPExporterConfig.Endpoint = defaultOTLPEndpoint
 	if otlpMap, ok := jmxKeyMap[common.OtlpKey].(map[string]any); ok {
 		if endpoint, ok := otlpMap[common.Endpoint].(string); ok {
 			cfg.OTLPExporterConfig.Endpoint = endpoint
