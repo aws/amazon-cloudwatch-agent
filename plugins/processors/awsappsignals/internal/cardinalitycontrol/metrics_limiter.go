@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	UnprocessedServiceOperationValue = "AllOtherOperations"
-	UnprocessedRemoteServiceValue    = "AllOtherDependencies"
+	UnprocessedServiceOperationValue       = "AllOtherOperations"
+	UnprocessedRemoteServiceOperationValue = "AllOtherRemoteOperations"
 )
 
 const (
@@ -338,13 +338,13 @@ func (s *service) admitMetricData(metric *MetricData) bool {
 
 func (s *service) rollupMetricData(attributes pcommon.Map) {
 	for _, indexAttr := range awsDeclaredMetricAttributes {
-		if strings.HasPrefix(indexAttr, "HostedIn.") || (indexAttr == common.MetricAttributeLocalService) {
+		if strings.HasPrefix(indexAttr, "HostedIn.") || (indexAttr == common.MetricAttributeLocalService) || (indexAttr == common.MetricAttributeRemoteService) {
 			continue
 		}
 		if indexAttr == common.MetricAttributeLocalOperation {
 			attributes.PutStr(indexAttr, UnprocessedServiceOperationValue)
-		} else if indexAttr == common.MetricAttributeRemoteService {
-			attributes.PutStr(indexAttr, UnprocessedRemoteServiceValue)
+		} else if indexAttr == common.MetricAttributeRemoteOperation {
+			attributes.PutStr(indexAttr, UnprocessedRemoteServiceOperationValue)
 		} else {
 			attributes.PutStr(indexAttr, "-")
 		}
