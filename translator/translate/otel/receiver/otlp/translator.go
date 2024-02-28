@@ -6,8 +6,10 @@ package otlp
 import (
 	_ "embed"
 	"fmt"
+	"strconv"
 
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
@@ -16,23 +18,24 @@ import (
 )
 
 const (
-	defaultGrpcEndpoint = "127.0.0.1:4317"
-	defaultHttpEndpoint = "127.0.0.1:4318"
+	defaultGrpcEndpoint           = "127.0.0.1:4317"
+	defaultHttpEndpoint           = "127.0.0.1:4318"
+	defaultAppSignalsGrpcEndpoint = "0.0.0.0:4315"
+	defaultAppSignalsHttpEndpoint = "0.0.0.0:4316"
 )
 
 var (
 	configKeys = map[component.DataType]string{
-		component.DataTypeTraces: common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
+		component.DataTypeTraces:  common.ConfigKey(common.TracesKey, common.TracesCollectedKey),
+		component.DataTypeMetrics: common.ConfigKey(common.LogsKey, common.MetricsCollectedKey),
 	}
-
-	//go:embed appsignals_config.yaml
-	appSignalsConfig string
 )
 
 type translator struct {
-	name     string
-	dataType component.DataType
-	factory  receiver.Factory
+	name        string
+	dataType    component.DataType
+	instanceNum int
+	factory     receiver.Factory
 }
 
 type Option interface {
@@ -52,21 +55,28 @@ func WithDataType(dataType component.DataType) Option {
 		t.dataType = dataType
 	})
 }
+func WithInstanceNum(instanceNum int) Option {
+	return optionFunc(func(t *translator) {
+		t.instanceNum = instanceNum
+	})
+}
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	t := &translator{factory: otlpreceiver.NewFactory()}
-	for _, opt := range opts {
-		opt.apply(t)
-	}
-	return t
+	return NewTranslatorWithName("", opts...)
 }
 
 func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
-	t := &translator{name: name, factory: otlpreceiver.NewFactory()}
+	t := &translator{name: name, instanceNum: -1, factory: otlpreceiver.NewFactory()}
 	for _, opt := range opts {
 		opt.apply(t)
+	}
+	if name == "" && t.dataType != "" {
+		t.name = string(t.dataType)
+		if t.instanceNum != -1 {
+			t.name += strconv.Itoa(t.instanceNum)
+		}
 	}
 	return t
 }
@@ -77,26 +87,46 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
-
-	// TODO: Should follow pattern done in awsemf and awsexray exporter translations (i.e should be integrated with standard otlp translation)
-	if t.name == common.AppSignals {
-		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfig)
-	}
-
-	configKey, ok := configKeys[t.dataType]
+	// init default configuration
+	configBase, ok := configKeys[t.dataType]
 	if !ok {
 		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
+	}
+	configKey := common.ConfigKey(configBase, common.OtlpKey)
+	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
+	cfg.HTTP.Endpoint = defaultHttpEndpoint
+	if t.name == common.AppSignals {
+		configKey = common.ConfigKey(configKeys[t.dataType], common.AppSignals)
+		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
+		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
 	}
 	if conf == nil || !conf.IsSet(configKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}
-	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
-	cfg.HTTP.Endpoint = defaultHttpEndpoint
-	if endpoint, ok := common.GetString(conf, common.ConfigKey(configKey, "grpc_endpoint")); ok {
-		cfg.GRPC.NetAddr.Endpoint = endpoint
+
+	var otlpKeyMap map[string]interface{}
+	if otlpSlice := common.GetArray[any](conf, configKey); t.instanceNum != -1 && len(otlpSlice) > t.instanceNum {
+		otlpKeyMap = otlpSlice[t.instanceNum].(map[string]interface{})
+	} else {
+		otlpKeyMap = conf.Get(configKey).(map[string]interface{})
 	}
-	if endpoint, ok := common.GetString(conf, common.ConfigKey(configKey, "http_endpoint")); ok {
-		cfg.HTTP.Endpoint = endpoint
+	var tlsSettings *configtls.TLSServerSetting
+	if tls, ok := otlpKeyMap["tls"].(map[string]interface{}); ok {
+		tlsSettings = &configtls.TLSServerSetting{}
+		tlsSettings.CertFile = tls["cert_file"].(string)
+		tlsSettings.KeyFile = tls["key_file"].(string)
+	}
+	cfg.GRPC.TLSSetting = tlsSettings
+	cfg.HTTP.TLSSetting = tlsSettings
+
+	grpcEndpoint, grpcOk := otlpKeyMap["grpc_endpoint"]
+	httpEndpoint, httpOk := otlpKeyMap["http_endpoint"]
+
+	if grpcOk {
+		cfg.GRPC.NetAddr.Endpoint = grpcEndpoint.(string)
+	}
+	if httpOk {
+		cfg.HTTP.Endpoint = httpEndpoint.(string)
 	}
 	return cfg, nil
 }
