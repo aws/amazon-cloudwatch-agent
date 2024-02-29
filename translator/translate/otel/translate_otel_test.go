@@ -86,6 +86,25 @@ func TestTranslator(t *testing.T) {
 			detector:       common.TestEKSDetector,
 			isEKSDataStore: common.TestIsEKSCacheEKS,
 		},
+		"WithAppSignalsMultipleMetricsReceiversConfig": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+						"cpu":         map[string]interface{}{},
+					},
+				},
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+						"otlp":        map[string]interface{}{},
+						"otlp2":       map[string]interface{}{},
+					},
+				},
+			},
+			detector:       common.TestEKSDetector,
+			isEKSDataStore: common.TestIsEKSCacheEKS,
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

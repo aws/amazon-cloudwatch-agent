@@ -53,6 +53,7 @@ const (
 	ServiceAddress                     = "service_address"
 	Udp                                = "udp"
 	Tcp                                = "tcp"
+	TlsKey                             = "tls"
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"

@@ -66,6 +66,19 @@ func TestHostedInAttributeResolverWithConflictedName(t *testing.T) {
 	assert.Equal(t, "self-defined", envAttr.AsString())
 }
 
+func TestHostedInAttributeResolverWithHostname(t *testing.T) {
+	resolver := newHostedInAttributeResolver("test", DefaultHostedInAttributes)
+
+	attributes := pcommon.NewMap()
+	resourceAttributes := pcommon.NewMap()
+	resourceAttributes.PutStr(attr.ResourceDetectionHostName, "hostname")
+
+	resolver.Process(attributes, resourceAttributes)
+	envAttr, ok := attributes.Get(attr.ResourceDetectionHostName)
+	assert.True(t, ok)
+	assert.Equal(t, "hostname", envAttr.AsString())
+}
+
 func TestAttributesResolver_Process(t *testing.T) {
 	attributes := pcommon.NewMap()
 	resourceAttributes := pcommon.NewMap()
