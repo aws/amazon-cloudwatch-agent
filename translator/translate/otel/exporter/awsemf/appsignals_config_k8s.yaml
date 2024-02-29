@@ -12,6 +12,7 @@ metric_declarations:
         regex: '^(SERVER|LOCAL_ROOT)$'
       - label_names:
           - EC2.InstanceId
+          - EC2.AutoScalingGroupName
           - host.name
           regex: '.*'
     metric_name_selectors:
@@ -38,6 +39,7 @@ metric_declarations:
         regex: '^(CLIENT|PRODUCER|CONSUMER)$'
       - label_names:
           - EC2.InstanceId
+          - EC2.AutoScalingGroupName
           - host.name
         regex: '.*'
     metric_name_selectors:
