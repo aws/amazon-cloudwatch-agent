@@ -11,7 +11,7 @@ metric_declarations:
           - aws.span.kind
         regex: '^(SERVER|LOCAL_ROOT)$'
       - label_names:
-          - EC2.instanceId
+          - EC2.InstanceId
           - EC2.AutoScalingGroupName
           - host.name
         regex: '.*'
@@ -33,7 +33,7 @@ metric_declarations:
           - aws.span.kind
         regex: '^(CLIENT|PRODUCER|CONSUMER)$'
       - label_names:
-          - EC2.instanceId
+          - EC2.InstanceId
           - EC2.AutoScalingGroupName
           - host.name
         regex: '.*'
