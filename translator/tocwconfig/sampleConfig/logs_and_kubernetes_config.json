@@ -10,7 +10,7 @@
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
         "enhanced_container_insights": true,
-        "gpu_metrics": false
+        "accelerated_compute_metrics": false
       }
     },
     "logs_collected": {

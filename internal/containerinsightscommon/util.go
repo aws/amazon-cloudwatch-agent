@@ -34,35 +34,23 @@ func MetricName(mType string, name string) string {
 	namespace := "namespace_"
 
 	switch mType {
-	case TypeInstance:
-		prefix = instancePrefix
-	case TypeInstanceFS:
-		prefix = instancePrefix
-	case TypeInstanceDiskIO:
+	case TypeInstance, TypeInstanceFS, TypeInstanceDiskIO:
 		prefix = instancePrefix
 	case TypeInstanceNet:
 		prefix = instanceNetPrefix
-	case TypeNode:
-		prefix = nodePrefix
-	case TypeNodeFS:
-		prefix = nodePrefix
-	case TypeNodeDiskIO:
+	case TypeNode, TypeNodeFS, TypeNodeDiskIO, TypeGpuNode:
 		prefix = nodePrefix
 	case TypeNodeNet:
 		prefix = nodeNetPrefix
-	case TypePod:
+	case TypePod, TypeGpuPod:
 		prefix = podPrefix
 	case TypePodNet:
 		prefix = podNetPrefix
-	case TypeContainer:
-		prefix = containerPrefix
-	case TypeContainerDiskIO:
-		prefix = containerPrefix
-	case TypeContainerFS:
+	case TypeContainer, TypeContainerDiskIO, TypeContainerFS, TypeGpuContainer:
 		prefix = containerPrefix
 	case TypeService:
 		prefix = service
-	case TypeCluster:
+	case TypeCluster, TypeGpuCluster:
 		prefix = cluster
 	case K8sNamespace:
 		prefix = namespace

@@ -15,7 +15,7 @@ import (
 )
 
 func TestTagMetricSourceForTypeInstance(t *testing.T) {
-	tags := map[string]string{MetricType: TypeInstance, InstanceId: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
+	tags := map[string]string{MetricType: TypeInstance, InstanceIdKey: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
 	fields := map[string]interface{}{MetricName(TypeInstance, CpuUtilization): 0, MetricName(TypeInstance, MemUtilization): 0,
 		MetricName(TypeInstance, NetTotalBytes): 0, MetricName(TypeInstance, CpuReservedCapacity): 0, MetricName(TypeInstance, MemReservedCapacity): 0,
 		MetricName(TypeInstance, RunningTaskCount): 0, MetricName(TypeInstance, CpuTotal): 0,
@@ -29,7 +29,7 @@ func TestTagMetricSourceForTypeInstance(t *testing.T) {
 }
 
 func TestTagMetricSourceForTypeInstanceFS(t *testing.T) {
-	tags := map[string]string{MetricType: TypeInstanceFS, InstanceId: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
+	tags := map[string]string{MetricType: TypeInstanceFS, InstanceIdKey: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
 	fields := map[string]interface{}{MetricName(TypeInstance, CpuUtilization): 0, MetricName(TypeInstance, MemUtilization): 0,
 		MetricName(TypeInstance, NetTotalBytes): 0, MetricName(TypeInstance, CpuReservedCapacity): 0, MetricName(TypeInstance, MemReservedCapacity): 0,
 		MetricName(TypeInstance, RunningTaskCount): 0, MetricName(TypeInstance, CpuTotal): 0,
@@ -43,7 +43,7 @@ func TestTagMetricSourceForTypeInstanceFS(t *testing.T) {
 }
 
 func TestTagMetricSourceForTypeInstanceNet(t *testing.T) {
-	tags := map[string]string{MetricType: TypeInstanceNet, InstanceId: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
+	tags := map[string]string{MetricType: TypeInstanceNet, InstanceIdKey: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
 	fields := map[string]interface{}{MetricName(TypeInstance, CpuUtilization): 0, MetricName(TypeInstance, MemUtilization): 0,
 		MetricName(TypeInstance, NetTotalBytes): 0, MetricName(TypeInstance, CpuReservedCapacity): 0, MetricName(TypeInstance, MemReservedCapacity): 0,
 		MetricName(TypeInstance, RunningTaskCount): 0, MetricName(TypeInstance, CpuTotal): 0,
@@ -57,7 +57,7 @@ func TestTagMetricSourceForTypeInstanceNet(t *testing.T) {
 }
 
 func TestTagMetricSourceForTypeInstanceDiskIO(t *testing.T) {
-	tags := map[string]string{MetricType: TypeInstanceDiskIO, InstanceId: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
+	tags := map[string]string{MetricType: TypeInstanceDiskIO, InstanceIdKey: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
 	fields := map[string]interface{}{MetricName(TypeInstance, CpuUtilization): 0, MetricName(TypeInstance, MemUtilization): 0,
 		MetricName(TypeInstance, NetTotalBytes): 0, MetricName(TypeInstance, CpuReservedCapacity): 0, MetricName(TypeInstance, MemReservedCapacity): 0,
 		MetricName(TypeInstance, RunningTaskCount): 0, MetricName(TypeInstance, CpuTotal): 0,
@@ -71,7 +71,7 @@ func TestTagMetricSourceForTypeInstanceDiskIO(t *testing.T) {
 }
 
 func TestTagLogGroup(t *testing.T) {
-	tags := map[string]string{MetricType: TypeInstance, InstanceId: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
+	tags := map[string]string{MetricType: TypeInstance, InstanceIdKey: "TestEC2InstanceId", ContainerInstanceIdKey: "TestContainerInstanceId", ClusterNameKey: "TestClusterName"}
 	fields := map[string]interface{}{MetricName(TypeInstance, CpuUtilization): 0, MetricName(TypeInstance, MemUtilization): 0,
 		MetricName(TypeInstance, NetTotalBytes): 0, MetricName(TypeInstance, CpuReservedCapacity): 0, MetricName(TypeInstance, MemReservedCapacity): 0,
 		MetricName(TypeInstance, RunningTaskCount): 0, MetricName(TypeInstance, CpuTotal): 0,

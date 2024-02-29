@@ -51,9 +51,14 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	// Append the metricstransformprocessor only if enhanced container insights is enabled
 	enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
 	if enhancedContainerInsightsEnabled {
+		processors := common.NewTranslatorMap(metricstransformprocessor.NewTranslatorWithName(pipelineName), batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey))
+		acceleratedComputeMetricsEnabled := awscontainerinsight.AcceleratedComputeMetricsEnabled(conf)
+		if acceleratedComputeMetricsEnabled {
+			processors.Set(gpu.NewTranslatorWithName(pipelineName))
+		}
 		return &common.ComponentTranslators{
 			Receivers:  common.NewTranslatorMap(awscontainerinsight.NewTranslator()),
-			Processors: common.NewTranslatorMap(metricstransformprocessor.NewTranslatorWithName(pipelineName), batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey), gpu.NewTranslatorWithName(pipelineName)), // EKS & ECS CI sit under metrics_collected in "logs"
+			Processors: processors, // EKS & ECS CI sit under metrics_collected in "logs"
 			Exporters:  common.NewTranslatorMap(awsemf.NewTranslatorWithName(pipelineName)),
 			Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeLogs, []string{agenthealth.OperationPutLogEvents})),
 		}, nil
