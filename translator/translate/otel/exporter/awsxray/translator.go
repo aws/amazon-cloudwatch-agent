@@ -81,20 +81,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	if isAppSignals(conf) {
 		ctx := context.CurrentContext()
-		switch ctx.KubernetesMode() {
-		case config.ModeEKS:
+		if ctx.KubernetesMode() == config.ModeEKS {
 			cfg.IndexedAttributes = indexedAttributesEKS
-		case config.ModeK8sEC2, config.ModeK8sOnPrem:
+		} else if ctx.KubernetesMode() == config.ModeK8sEC2 || ctx.KubernetesMode() == config.ModeK8sOnPrem {
 			cfg.IndexedAttributes = indexedAttributesK8s
-		}
-
-		if ctx.KubernetesMode() == "" {
-			switch ctx.Mode() {
-			case config.ModeEC2:
-				cfg.IndexedAttributes = indexedAttributesEC2
-			default:
-				cfg.IndexedAttributes = indexedAttributesGeneric
-			}
+		} else if ctx.Mode() == config.ModeEC2 {
+			cfg.IndexedAttributes = indexedAttributesEC2
+		} else {
+			cfg.IndexedAttributes = indexedAttributesGeneric
 		}
 	}
 
