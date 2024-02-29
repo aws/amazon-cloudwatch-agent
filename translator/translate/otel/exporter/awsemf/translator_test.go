@@ -4,15 +4,18 @@
 package awsemf
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -712,7 +715,7 @@ func TestTranslateAppSignals(t *testing.T) {
 	tt := NewTranslatorWithName(common.AppSignals)
 	testCases := map[string]struct {
 		input          map[string]any
-		want           map[string]any
+		want           *confmap.Conf
 		wantErr        error
 		isKubernetes   bool
 		isEC2          bool
@@ -726,61 +729,12 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: map[string]any{
-				"namespace":                              "AppSignals",
-				"log_group_name":                         "/aws/appsignals/eks",
-				"log_stream_name":                        "",
-				"dimension_rollup_option":                "NoDimensionRollup",
-				"disable_metric_extraction":              false,
-				"enhanced_container_insights":            false,
-				"parse_json_encoded_attr_values":         nilSlice,
-				"output_destination":                     "cloudwatch",
-				"eks_fargate_container_insights_enabled": false,
-				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
-					Enabled: false,
-				},
-				"metric_declarations": []*awsemfexporter.MetricDeclaration{
-					{
-						Dimensions: [][]string{
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service"},
-						},
-						LabelMatchers: []*awsemfexporter.LabelMatcher{
-							{
-								LabelNames: []string{"aws.span.kind"},
-								Regex:      "^(SERVER|LOCAL_ROOT)$",
-							},
-						},
-						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
-					},
-					{
-						Dimensions: [][]string{
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace", "RemoteTarget"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "RemoteTarget"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "K8s.RemoteNamespace"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace", "RemoteTarget"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "RemoteTarget"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteOperation"},
-							{"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteTarget"},
-							{"RemoteService", "RemoteTarget"},
-							{"RemoteService"},
-						},
-						LabelMatchers: []*awsemfexporter.LabelMatcher{
-							{
-								LabelNames: []string{"aws.span.kind"},
-								Regex:      "^(CLIENT|PRODUCER|CONSUMER)$",
-							},
-						},
-						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
-					},
-				},
-				"metric_descriptors": nilMetricDescriptorsSlice,
-				"local_mode":         true,
-			},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
 			isKubernetes:   true,
 			detector:       common.TestEKSDetector,
 			isEKSDataStore: common.TestIsEKSCacheEKS,
@@ -792,61 +746,12 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: map[string]any{
-				"namespace":                              "AppSignals",
-				"log_group_name":                         "/aws/appsignals/k8s",
-				"log_stream_name":                        "",
-				"dimension_rollup_option":                "NoDimensionRollup",
-				"disable_metric_extraction":              false,
-				"enhanced_container_insights":            false,
-				"parse_json_encoded_attr_values":         nilSlice,
-				"output_destination":                     "cloudwatch",
-				"eks_fargate_container_insights_enabled": false,
-				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
-					Enabled: false,
-				},
-				"metric_declarations": []*awsemfexporter.MetricDeclaration{
-					{
-						Dimensions: [][]string{
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service"},
-						},
-						LabelMatchers: []*awsemfexporter.LabelMatcher{
-							{
-								LabelNames: []string{"aws.span.kind"},
-								Regex:      "^(SERVER|LOCAL_ROOT)$",
-							},
-						},
-						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
-					},
-					{
-						Dimensions: [][]string{
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace", "RemoteTarget"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation", "RemoteTarget"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "Operation", "RemoteService", "RemoteOperation"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "K8s.RemoteNamespace"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace", "RemoteTarget"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "K8s.RemoteNamespace"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteOperation", "RemoteTarget"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteOperation"},
-							{"HostedIn.K8s.Cluster", "HostedIn.K8s.Namespace", "Service", "RemoteService", "RemoteTarget"},
-							{"RemoteService", "RemoteTarget"},
-							{"RemoteService"},
-						},
-						LabelMatchers: []*awsemfexporter.LabelMatcher{
-							{
-								LabelNames: []string{"aws.span.kind"},
-								Regex:      "^(CLIENT|PRODUCER|CONSUMER)$",
-							},
-						},
-						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
-					},
-				},
-				"metric_descriptors": nilMetricDescriptorsSlice,
-				"local_mode":         true,
-			},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
 			isKubernetes:   true,
 			detector:       common.TestK8sDetector,
 			isEKSDataStore: common.TestIsEKSCacheK8s,
@@ -858,56 +763,12 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: map[string]any{
-				"namespace":                              "AppSignals",
-				"log_group_name":                         "/aws/appsignals/generic",
-				"log_stream_name":                        "",
-				"dimension_rollup_option":                "NoDimensionRollup",
-				"disable_metric_extraction":              false,
-				"enhanced_container_insights":            false,
-				"parse_json_encoded_attr_values":         nilSlice,
-				"output_destination":                     "cloudwatch",
-				"eks_fargate_container_insights_enabled": false,
-				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
-					Enabled: false,
-				},
-				"metric_declarations": []*awsemfexporter.MetricDeclaration{
-					{
-						Dimensions: [][]string{
-							{"HostedIn.Environment", "Service", "Operation"},
-							{"HostedIn.Environment", "Service"},
-						},
-						LabelMatchers: []*awsemfexporter.LabelMatcher{
-							{
-								LabelNames: []string{"aws.span.kind"},
-								Regex:      "^(SERVER|LOCAL_ROOT)$",
-							},
-						},
-						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
-					},
-					{
-						Dimensions: [][]string{
-							{"HostedIn.Environment", "Service", "Operation", "RemoteService", "RemoteOperation", "RemoteTarget"},
-							{"HostedIn.Environment", "Service", "Operation", "RemoteService", "RemoteOperation"},
-							{"HostedIn.Environment", "Service", "RemoteService"},
-							{"HostedIn.Environment", "Service", "RemoteService", "RemoteOperation", "RemoteTarget"},
-							{"HostedIn.Environment", "Service", "RemoteService", "RemoteOperation"},
-							{"HostedIn.Environment", "Service", "RemoteService", "RemoteTarget"},
-							{"RemoteService", "RemoteTarget"},
-							{"RemoteService"},
-						},
-						LabelMatchers: []*awsemfexporter.LabelMatcher{
-							{
-								LabelNames: []string{"aws.span.kind"},
-								Regex:      "^(CLIENT|PRODUCER|CONSUMER)$",
-							},
-						},
-						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
-					},
-				},
-				"metric_descriptors": nilMetricDescriptorsSlice,
-				"local_mode":         true,
-			},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
 			isKubernetes: false,
 			isEC2:        false,
 		},
@@ -918,67 +779,16 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: map[string]any{
-				"namespace":                              "AppSignals",
-				"log_group_name":                         "/aws/appsignals/ec2",
-				"log_stream_name":                        "",
-				"dimension_rollup_option":                "NoDimensionRollup",
-				"disable_metric_extraction":              false,
-				"enhanced_container_insights":            false,
-				"parse_json_encoded_attr_values":         nilSlice,
-				"output_destination":                     "cloudwatch",
-				"eks_fargate_container_insights_enabled": false,
-				"resource_to_telemetry_conversion": resourcetotelemetry.Settings{
-					Enabled: false,
-				},
-				"metric_declarations": []*awsemfexporter.MetricDeclaration{
-					{
-						Dimensions: [][]string{
-							{"HostedIn.EC2.Environment", "Service", "Operation"},
-							{"HostedIn.EC2.Environment", "Service"},
-						},
-						LabelMatchers: []*awsemfexporter.LabelMatcher{
-							{
-								LabelNames: []string{"aws.span.kind"},
-								Regex:      "^(SERVER|LOCAL_ROOT)$",
-							},
-							{
-								LabelNames: []string{"EC2.instanceId", "EC2.AutoScalingGroupName", "host.name"},
-								Regex:      ".*",
-							},
-						},
-						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
-					},
-					{
-						Dimensions: [][]string{
-							{"HostedIn.EC2.Environment", "Service", "Operation", "RemoteService", "RemoteOperation", "RemoteTarget"},
-							{"HostedIn.EC2.Environment", "Service", "Operation", "RemoteService", "RemoteOperation"},
-							{"HostedIn.EC2.Environment", "Service", "RemoteService"},
-							{"HostedIn.EC2.Environment", "Service", "RemoteService", "RemoteOperation", "RemoteTarget"},
-							{"HostedIn.EC2.Environment", "Service", "RemoteService", "RemoteOperation"},
-							{"HostedIn.EC2.Environment", "Service", "RemoteService", "RemoteTarget"},
-							{"RemoteService", "RemoteTarget"},
-							{"RemoteService"},
-						},
-						LabelMatchers: []*awsemfexporter.LabelMatcher{
-							{
-								LabelNames: []string{"aws.span.kind"},
-								Regex:      "^(CLIENT|PRODUCER|CONSUMER)$",
-							},
-							{
-								LabelNames: []string{"EC2.instanceId", "EC2.AutoScalingGroupName", "host.name"},
-								Regex:      ".*",
-							},
-						},
-						MetricNameSelectors: []string{"Latency", "Fault", "Error"},
-					},
-				},
-				"metric_descriptors": nilMetricDescriptorsSlice,
-				"local_mode":         false,
-			},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_ec2.yaml"), map[string]any{
+				"local_mode":            "false",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
 			isEC2: true,
 		},
 	}
+	factory := awsemfexporter.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			if testCase.isKubernetes {
@@ -1000,24 +810,9 @@ func TestTranslateAppSignals(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*awsemfexporter.Config)
 				require.True(t, ok)
-				assert.Equal(t, testCase.want["namespace"], gotCfg.Namespace)
-				assert.Equal(t, testCase.want["log_group_name"], gotCfg.LogGroupName)
-				assert.Equal(t, testCase.want["log_stream_name"], gotCfg.LogStreamName)
-				assert.Equal(t, testCase.want["dimension_rollup_option"], gotCfg.DimensionRollupOption)
-				assert.Equal(t, testCase.want["disable_metric_extraction"], gotCfg.DisableMetricExtraction)
-				assert.Equal(t, testCase.want["enhanced_container_insights"], gotCfg.EnhancedContainerInsights)
-				assert.Equal(t, testCase.want["parse_json_encoded_attr_values"], gotCfg.ParseJSONEncodedAttributeValues)
-				assert.Equal(t, testCase.want["output_destination"], gotCfg.OutputDestination)
-				assert.Equal(t, testCase.want["eks_fargate_container_insights_enabled"], gotCfg.EKSFargateContainerInsightsEnabled)
-				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
-				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
-				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
-				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
-				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
-				assert.Equal(t, "global_arn", gotCfg.RoleARN)
-				assert.Equal(t, "us-east-1", gotCfg.Region)
-				assert.NotNil(t, gotCfg.MiddlewareID)
-				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})
 	}
