@@ -717,10 +717,8 @@ func TestTranslateAppSignals(t *testing.T) {
 		input          map[string]any
 		want           *confmap.Conf
 		wantErr        error
-		isKubernetes   bool
-		isEC2          bool
-		detector       func() (common.Detector, error)
-		isEKSDataStore func() common.IsEKSCache
+		kubernetesMode string
+		mode           string
 	}{
 		"WithAppSignalsEnabledEKS": {
 			input: map[string]any{
@@ -730,14 +728,13 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            "false",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
 			}),
-			isKubernetes:   true,
-			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestIsEKSCacheEKS,
+			kubernetesMode: config.ModeEKS,
+			mode:           config.ModeEC2,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]any{
@@ -752,9 +749,8 @@ func TestTranslateAppSignals(t *testing.T) {
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
 			}),
-			isKubernetes:   true,
-			detector:       common.TestK8sDetector,
-			isEKSDataStore: common.TestIsEKSCacheK8s,
+			kubernetesMode: config.ModeK8sOnPrem,
+			mode:           config.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]any{
@@ -769,8 +765,8 @@ func TestTranslateAppSignals(t *testing.T) {
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
 			}),
-			isKubernetes: false,
-			isEC2:        false,
+			kubernetesMode: "",
+			mode:           config.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledEC2": {
 			input: map[string]any{
@@ -785,24 +781,15 @@ func TestTranslateAppSignals(t *testing.T) {
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
 			}),
-			isEC2: true,
+			kubernetesMode: "",
+			mode:           config.ModeEC2,
 		},
 	}
 	factory := awsemfexporter.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			if testCase.isKubernetes {
-				t.Setenv(common.KubernetesEnvVar, "TEST")
-			}
-			if testCase.isEC2 {
-				ctx := context.CurrentContext()
-				ctx.SetMode(config.ModeEC2)
-			} else {
-				ctx := context.CurrentContext()
-				ctx.SetMode(config.ModeOnPrem)
-			}
-			common.NewDetector = testCase.detector
-			common.IsEKS = testCase.isEKSDataStore
+			context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			context.CurrentContext().SetMode(testCase.mode)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)

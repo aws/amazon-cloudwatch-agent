@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 // MockDeleter deletes a key immediately, useful for testing.
@@ -817,7 +817,7 @@ func TestEksResolver(t *testing.T) {
 }
 
 func TestHostedInEksResolver(t *testing.T) {
-	common.NewDetector = common.TestEKSDetector
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {

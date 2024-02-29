@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 type translator struct {
@@ -54,7 +55,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	if common.IsAppSignalsKubernetes() {
-		isEks := common.IsEKS()
+		isEks := eksdetector.IsEKS()
 		if isEks.Err != nil {
 			return nil, isEks.Err
 		}

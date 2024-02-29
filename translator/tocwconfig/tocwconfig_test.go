@@ -39,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
@@ -86,17 +87,19 @@ func TestAppSignalsAndKubernetesConfig(t *testing.T) {
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	common.NewDetector = common.TestEKSDetector
-	common.IsEKS = common.TestIsEKSCacheEKS
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_and_eks_config", "windows", expectedEnvVars, "")
 
-	common.NewDetector = func() (common.Detector, error) {
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
+	eksdetector.NewDetector = func() (eksdetector.Detector, error) {
+		return &eksdetector.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
 	}
-	common.IsEKS = common.TestIsEKSCacheK8s
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheK8s
+	context.CurrentContext().SetKubernetesMode(config.ModeK8sEC2)
 
 	checkTranslation(t, "appsignals_and_k8s_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
