@@ -14,7 +14,7 @@ metric_declarations:
           - EC2.InstanceId
           - EC2.AutoScalingGroupName
           - host.name
-          regex: '.*'
+        regex: '.*'
     metric_name_selectors:
       - Latency
       - Fault
