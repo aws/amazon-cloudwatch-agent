@@ -10,6 +10,9 @@ metric_declarations:
       - label_names:
           - aws.span.kind
         regex: '^(SERVER|LOCAL_ROOT)$'
+      - label_names:
+          - host.name
+        regex: '.*'
     metric_name_selectors:
       - Latency
       - Fault
@@ -27,6 +30,9 @@ metric_declarations:
       - label_names:
           - aws.span.kind
         regex: '^(CLIENT|PRODUCER|CONSUMER)$'
+      - label_names:
+          - host.name
+        regex: '.*'
     metric_name_selectors:
       - Latency
       - Fault
