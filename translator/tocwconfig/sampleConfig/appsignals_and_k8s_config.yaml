@@ -286,11 +286,17 @@ extensions:
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+              mode: EC2
+              region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutTraceSegments
+            usage_flags:
+              mode: EC2
+              region_type: ACJ
     awsproxy/app_signals:
         aws_endpoint: ""
         endpoint: 0.0.0.0:2000

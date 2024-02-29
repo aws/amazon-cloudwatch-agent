@@ -18,8 +18,6 @@ type Config struct {
 	AccessKey                string          `mapstructure:"access_key,omitempty"`
 	SecretKey                string          `mapstructure:"secret_key,omitempty"`
 	RoleARN                  string          `mapstructure:"role_arn,omitempty"`
-	RegionType               string          `mapstructure:"region_type,omitempty"`
-	Mode                     string          `mapstructure:"mode,omitempty"`
 	Profile                  string          `mapstructure:"profile,omitempty"`
 	SharedCredentialFilename string          `mapstructure:"shared_credential_file,omitempty"`
 	Token                    string          `mapstructure:"token,omitempty"`

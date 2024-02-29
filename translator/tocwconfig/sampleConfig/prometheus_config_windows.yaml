@@ -59,6 +59,9 @@ extensions:
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     batch/prometheus:
         metadata_cardinality_limit: 1000
