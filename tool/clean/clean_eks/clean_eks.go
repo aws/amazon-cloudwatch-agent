@@ -32,7 +32,7 @@ func main() {
 }
 
 func cleanCluster() error {
-	log.Print("Begin to clean EBS Volumes")
+	log.Print("Begin to clean EKS Clusters")
 	ctx := context.Background()
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
