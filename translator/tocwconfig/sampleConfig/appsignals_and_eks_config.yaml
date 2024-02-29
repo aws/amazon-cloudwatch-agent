@@ -6,9 +6,9 @@ exporters:
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
-        endpoint: ""
+        endpoint: https://fake_endpoint
         enhanced_container_insights: false
-        imds_retries: 0
+        imds_retries: 1
         local_mode: false
         log_group_name: /aws/appsignals/eks
         log_retention: 0
@@ -120,7 +120,7 @@ exporters:
         parse_json_encoded_attr_values: []
         profile: ""
         proxy_address: ""
-        region: ""
+        region: us-east-1
         request_timeout_seconds: 30
         resource_arn: ""
         resource_to_telemetry_conversion:
@@ -296,7 +296,7 @@ extensions:
         endpoint: 0.0.0.0:2000
         local_mode: false
         proxy_address: ""
-        region: ""
+        region: us-east-1
         role_arn: ""
 processors:
     awsappsignals:

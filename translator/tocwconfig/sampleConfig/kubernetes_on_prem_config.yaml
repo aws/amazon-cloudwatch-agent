@@ -9,7 +9,7 @@ exporters:
         endpoint: https://fake_endpoint
         enhanced_container_insights: true
         imds_retries: 1
-        local_mode: false
+        local_mode: true
         log_group_name: /aws/containerinsights/{ClusterName}/performance
         log_retention: 0
         log_stream_name: '{NodeName}'

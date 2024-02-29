@@ -6,10 +6,10 @@ exporters:
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
-        endpoint: ""
+        endpoint: https://fake_endpoint
         enhanced_container_insights: false
-        imds_retries: 0
-        local_mode: false
+        imds_retries: 1
+        local_mode: true
         log_group_name: /aws/appsignals/generic
         log_retention: 0
         log_stream_name: ""
@@ -77,16 +77,16 @@ exporters:
         num_workers: 8
         output_destination: cloudwatch
         parse_json_encoded_attr_values: []
-        profile: ""
+        profile: AmazonCloudWatchAgent
         proxy_address: ""
-        region: ""
+        region: us-east-1
         request_timeout_seconds: 30
         resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
-        shared_credentials_file: []
+        shared_credentials_file: ["fake-path"]
         version: "1"
     awsxray/app_signals:
         aws_log_groups: []
@@ -101,7 +101,7 @@ exporters:
             - aws.remote.operation
             - aws.remote.target
             - HostedIn.Environment
-        local_mode: false
+        local_mode: true
         max_retries: 2
         middleware: agenthealth/traces
         no_verify_ssl: false
@@ -130,9 +130,9 @@ extensions:
     awsproxy/app_signals:
         aws_endpoint: ""
         endpoint: 0.0.0.0:2000
-        local_mode: false
+        local_mode: true
         proxy_address: ""
-        region: ""
+        region: us-east-1
         role_arn: ""
 processors:
     awsappsignals:
