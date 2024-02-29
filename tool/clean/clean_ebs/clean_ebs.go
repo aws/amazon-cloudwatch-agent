@@ -5,13 +5,15 @@ package main
 
 import (
 	"context"
-	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
+	"log"
+	"time"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"log"
-	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
 // Clean eks clusters if they have been open longer than 7 day
@@ -23,7 +25,7 @@ func main() {
 }
 
 func cleanVolumes() error {
-	log.Print("Begin to clean EKS Clusters")
+	log.Print("Begin to clean EBS Volumes")
 	ctx := context.Background()
 	defaultConfig, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
