@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
+	otlpReceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 type translator struct {
@@ -42,7 +43,23 @@ func (t translator) ID() component.ID {
 func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	if conf == nil || !conf.IsSet(common.MetricsKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.MetricsKey}
-	} else if t.receivers.Len() == 0 {
+	}
+
+	hostReceivers := t.receivers
+	if common.PipelineNameHost == t.name {
+		switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)).(type) {
+		case []interface{}:
+			for index, _ := range v {
+				hostReceivers.Set(otlpReceiver.NewTranslator(
+					otlpReceiver.WithDataType(component.DataTypeMetrics),
+					otlpReceiver.WithInstanceNum(index)))
+			}
+		case map[string]interface{}:
+			hostReceivers.Set(otlpReceiver.NewTranslator(otlpReceiver.WithDataType(component.DataTypeMetrics)))
+		}
+	}
+
+	if hostReceivers.Len() == 0 {
 		log.Printf("D! pipeline %s has no receivers", t.name)
 		return nil, nil
 	}

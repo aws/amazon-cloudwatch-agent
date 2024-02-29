@@ -16,6 +16,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
+	translatorConfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -24,7 +26,8 @@ var (
 	validAppSignalsYamlEKS string
 	//go:embed testdata/config_k8s.yaml
 	validAppSignalsYamlK8s string
-
+	//go:embed testdata/config_ec2.yaml
+	validAppSignalsYamlEC2 string
 	//go:embed testdata/config_generic.yaml
 	validAppSignalsYamlGeneric string
 	//go:embed testdata/validRulesConfig.json
@@ -48,6 +51,7 @@ func TestTranslate(t *testing.T) {
 		want           string
 		wantErr        error
 		isKubernetes   bool
+		isEC2          bool
 		detector       func() (common.Detector, error)
 		isEKSDataStore func() common.IsEKSCache
 	}{
@@ -97,6 +101,7 @@ func TestTranslate(t *testing.T) {
 				}},
 			want:         validAppSignalsYamlGeneric,
 			isKubernetes: false,
+			isEC2:        false,
 		},
 		"WithAppSignalsCustomRulesEnabledGeneric": {
 			input:        validJsonMap,
@@ -107,12 +112,30 @@ func TestTranslate(t *testing.T) {
 			input:   invalidJsonMap,
 			wantErr: errors.New("replace action set, but no replacements defined for service rule"),
 		},
+		"WithAppSignalsEnabledEC2": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"hosted_in": "test",
+						},
+					},
+				}},
+			want:  validAppSignalsYamlEC2,
+			isEC2: true,
+		},
 	}
 	factory := awsappsignals.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			if testCase.isKubernetes {
 				t.Setenv(common.KubernetesEnvVar, "TEST")
+			}
+			ctx := context.CurrentContext()
+			if testCase.isEC2 {
+				ctx.SetMode(translatorConfig.ModeEC2)
+			} else {
+				ctx.SetMode(translatorConfig.ModeOnPrem)
 			}
 			common.NewDetector = testCase.detector
 			common.IsEKS = testCase.isEKSDataStore

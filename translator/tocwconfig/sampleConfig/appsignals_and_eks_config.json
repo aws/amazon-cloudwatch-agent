@@ -5,6 +5,10 @@
   "logs": {
     "metrics_collected": {
       "app_signals": {
+        "tls": {
+          "cert_file": "path/to/cert.crt",
+          "key_file": "path/to/key.key"
+        },
         "hosted_in": "TestCluster",
         "limiter": {
           "log_dropped_metrics": true,

@@ -17,6 +17,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -73,6 +75,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigEcsDisableMetricExtraction": {
@@ -114,6 +117,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetes": {
@@ -180,6 +184,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesDisableMetricExtraction": {
@@ -248,6 +253,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesWithEnableFullPodAndContainerMetrics": {
@@ -496,6 +502,7 @@ func TestTranslator(t *testing.T) {
 						Overwrite:  true,
 					},
 				},
+				"local_mode": false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheus": {
@@ -553,6 +560,7 @@ func TestTranslator(t *testing.T) {
 						Unit:       "Milliseconds",
 					},
 				},
+				"local_mode": false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusDisableMetricExtraction": {
@@ -586,6 +594,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoDeclarations": {
@@ -628,6 +637,7 @@ func TestTranslator(t *testing.T) {
 						Unit:       "Milliseconds",
 					},
 				},
+				"local_mode": false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoEmfProcessor": {
@@ -660,6 +670,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 	}
@@ -685,6 +696,7 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
 				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
 				assert.Equal(t, "global_arn", gotCfg.RoleARN)
 				assert.Equal(t, "us-east-1", gotCfg.Region)
@@ -696,12 +708,17 @@ func TestTranslator(t *testing.T) {
 }
 
 func TestTranslateAppSignals(t *testing.T) {
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
 	tt := NewTranslatorWithName(common.AppSignals)
 	testCases := map[string]struct {
 		input          map[string]any
 		want           *confmap.Conf
 		wantErr        error
 		isKubernetes   bool
+		isEC2          bool
 		detector       func() (common.Detector, error)
 		isEKSDataStore func() common.IsEKSCache
 	}{
@@ -712,7 +729,12 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want:           testutil.GetConf(t, filepath.Join("appsignals_config_eks.yaml")),
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
 			isKubernetes:   true,
 			detector:       common.TestEKSDetector,
 			isEKSDataStore: common.TestIsEKSCacheEKS,
@@ -724,7 +746,12 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want:           testutil.GetConf(t, filepath.Join("appsignals_config_k8s.yaml")),
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
 			isKubernetes:   true,
 			detector:       common.TestK8sDetector,
 			isEKSDataStore: common.TestIsEKSCacheK8s,
@@ -736,8 +763,29 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want:         testutil.GetConf(t, filepath.Join("appsignals_config_generic.yaml")),
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
 			isKubernetes: false,
+			isEC2:        false,
+		},
+		"WithAppSignalsEnabledEC2": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_ec2.yaml"), map[string]any{
+				"local_mode":            "false",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			isEC2: true,
 		},
 	}
 	factory := awsemfexporter.NewFactory()
@@ -745,6 +793,13 @@ func TestTranslateAppSignals(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if testCase.isKubernetes {
 				t.Setenv(common.KubernetesEnvVar, "TEST")
+			}
+			if testCase.isEC2 {
+				ctx := context.CurrentContext()
+				ctx.SetMode(config.ModeEC2)
+			} else {
+				ctx := context.CurrentContext()
+				ctx.SetMode(config.ModeOnPrem)
 			}
 			common.NewDetector = testCase.detector
 			common.IsEKS = testCase.isEKSDataStore
