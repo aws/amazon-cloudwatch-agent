@@ -633,7 +633,7 @@ receivers:
         resource_arn: ""
         role_arn: ""
         shared_credentials_file: []
-        gpu_metrics: false
+        accelerated_compute_metrics: false
     otlp/app_signals:
         protocols:
             grpc:

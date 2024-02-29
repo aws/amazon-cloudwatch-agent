@@ -4,15 +4,19 @@
 package containerinsightscommon
 
 const (
-	InstanceId         = "InstanceId"
 	GoPSUtilProcDirEnv = "HOST_PROC"
 
-	MinTimeDiff    = 50 * 1000 // We assume 50 micro-seconds is the minimal gap between two collected data sample to be valid to calculate delta
-	ClusterNameKey = "ClusterName"
-	NodeNameKey    = "NodeName"
+	MinTimeDiff = 50 * 1000 // We assume 50 micro-seconds is the minimal gap between two collected data sample to be valid to calculate delta
 
-	MetricType = "Type"
-	SourcesKey = "Sources"
+	ClusterNameKey          = "ClusterName"
+	NodeNameKey             = "NodeName" // Attribute names
+	InstanceIdKey           = "InstanceIdKey"
+	InstanceTypeKey         = "InstanceType"
+	AutoScalingGroupNameKey = "AutoScalingGroupName"
+	VersionKey              = "Version"
+	MetricType              = "Type"
+	SourcesKey              = "Sources"
+	GpuDeviceKey            = "GpuDevice"
 
 	// metric collected
 	CpuTotal                   = "cpu_usage_total"
@@ -81,6 +85,7 @@ const (
 	GpuRequest        = "gpu_request"
 	GpuLimit          = "gpu_limit"
 	GpuTotal          = "gpu_total"
+	GpuUniqueId       = "UUID"
 
 	TypeCluster          = "Cluster"
 	TypeClusterService   = "ClusterService"
@@ -96,6 +101,10 @@ const (
 	TypeNodeNet        = "NodeNet"
 	TypeInstanceDiskIO = "InstanceDiskIO"
 	TypeNodeDiskIO     = "NodeDiskIO"
+	TypeGpuContainer   = "ContainerGPU"
+	TypeGpuPod         = "PodGPU"
+	TypeGpuNode        = "NodeGPU"
+	TypeGpuCluster     = "ClusterGPU"
 
 	TypePod             = "Pod"
 	TypePodNet          = "PodNet"

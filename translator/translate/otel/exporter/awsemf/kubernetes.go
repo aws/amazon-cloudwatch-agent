@@ -7,7 +7,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
@@ -464,9 +463,8 @@ func getControlPlaneMetricDescriptors(conf *confmap.Conf) []awsemfexporter.Metri
 
 func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var metricDeclarations []*awsemfexporter.MetricDeclaration
-	EnableGpuMetric := common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableGpuMetric), true)
 	enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
-	if EnableGpuMetric && enhancedContainerInsightsEnabled {
+	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) && enhancedContainerInsightsEnabled {
 		metricDeclarations = append(metricDeclarations, []*awsemfexporter.MetricDeclaration{
 			{
 				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "GpuDevice"}},

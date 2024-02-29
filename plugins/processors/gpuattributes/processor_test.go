@@ -17,22 +17,21 @@ var normalizedNameRegex = regexp.MustCompile("^(container|pod|node)_gpu_[a-z_]+$
 
 func TestProcessMetrics(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	gp := &gpuprocessor{
+	gp := &gpuAttributesProcessor{
 		logger: logger,
 		Config: createDefaultConfig().(*Config),
 	}
 	ctx := context.Background()
 
 	testcases := map[string]struct {
-		metrics pmetric.Metrics
-		labels  map[string]map[string]interface{}
-		want    map[string]string
+		resource string
+		metrics  pmetric.Metrics
+		want     map[string]string
 	}{
 		"nonNode": {
 			metrics: generateMetrics("prefix", map[string]string{
 				"ClusterName": "cluster",
 			}),
-			labels: map[string]map[string]interface{}{},
 			want: map[string]string{
 				"ClusterName": "cluster",
 			},
@@ -42,9 +41,6 @@ func TestProcessMetrics(t *testing.T) {
 				"ClusterName": "cluster",
 				"Drop":        "val",
 			}),
-			labels: map[string]map[string]interface{}{
-				"ClusterName": {},
-			},
 			want: map[string]string{
 				"ClusterName": "cluster",
 			},
@@ -52,36 +48,27 @@ func TestProcessMetrics(t *testing.T) {
 		"nodeDropJson": {
 			metrics: generateMetrics("node", map[string]string{
 				"ClusterName": "cluster",
-				"kubernetes":  "{\"a\":\"1\",\"b\":\"2\"}",
+				"kubernetes":  "{\"host\":\"test\"}",
 			}),
-			labels: map[string]map[string]interface{}{
-				"ClusterName": {},
-				"kubernetes":  {"a": map[string]interface{}{}},
-			},
 			want: map[string]string{
 				"ClusterName": "cluster",
-				"kubernetes":  "{\"a\":\"1\"}",
+				"kubernetes":  "{\"host\":\"test\"}",
 			},
 		},
 		"nodeDropMixed": {
 			metrics: generateMetrics("node", map[string]string{
 				"ClusterName": "cluster",
 				"Drop":        "val",
-				"kubernetes":  "{\"a\":\"1\",\"b\":\"2\"}",
+				"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
 			}),
-			labels: map[string]map[string]interface{}{
-				"ClusterName": {},
-				"kubernetes":  {"a": map[string]interface{}{}},
-			},
 			want: map[string]string{
 				"ClusterName": "cluster",
-				"kubernetes":  "{\"a\":\"1\"}",
+				"kubernetes":  "{\"host\":\"test\"}",
 			},
 		},
 	}
 
 	for _, tc := range testcases {
-		nodeMetricLabels = tc.labels
 		ms, _ := gp.processMetrics(ctx, tc.metrics)
 		attrs := ms.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes()
 		assert.Equal(t, len(tc.want), attrs.Len())
@@ -97,7 +84,7 @@ func generateMetrics(prefix string, dimensions map[string]string) pmetric.Metric
 	md := pmetric.NewMetrics()
 
 	m := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
-	m.SetName(prefix + gpuMetric)
+	m.SetName(prefix + gpuMetricIdentifier)
 	gauge := m.SetEmptyGauge().DataPoints().AppendEmpty()
 	gauge.SetIntValue(10)
 

@@ -6,6 +6,7 @@ package metricstransformprocessor
 import (
 	"fmt"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -18,9 +19,9 @@ import (
 const gpuLogSuffix = "GPU"
 
 var metricDuplicateTypes = []string{
-	containerinsightscommon.TypeContainer,
-	containerinsightscommon.TypePod,
-	containerinsightscommon.TypeNode,
+	containerinsightscommon.TypeGpuContainer,
+	containerinsightscommon.TypeGpuPod,
+	containerinsightscommon.TypeGpuNode,
 }
 
 var renameMapForDcgm = map[string]string{
@@ -59,19 +60,19 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		},
 	}
 
-	if isGpuEnabled(conf) {
+	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
 		// appends DCGM metric transform rules for each metric type (container/pod/node) with following format:
 		// {
 		//		"include":  "DCGM_FI_DEV_GPU_UTIL",
 		//		"action":   "insert",
 		//		"new_name": "container_gpu_utilization",
-		//      "operations": [
+		//		"operations": [
 		//     		{
 		//				"action":   "add_label",
-		//          	"new_label": "Type",
+		//				"new_label": "Type",
 		//				"new_value": "ContainerGPU",
 		//			},
-		//          <additional operations>...
+		//			<additional operations>...
 		//      ]
 		//	},
 		for old, new := range renameMapForDcgm {
@@ -97,7 +98,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 						{
 							"action":    "add_label",
 							"new_label": containerinsightscommon.MetricType,
-							"new_value": t + gpuLogSuffix,
+							"new_value": t,
 						},
 					}, operations...),
 				})
@@ -113,8 +114,4 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
-}
-
-func isGpuEnabled(conf *confmap.Conf) bool {
-	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableGpuMetric), true)
 }

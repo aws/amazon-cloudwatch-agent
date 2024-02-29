@@ -8,64 +8,85 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 )
 
 const (
-	gpuMetric                = "_gpu_"
+	gpuMetricIdentifier      = "_gpu_"
 	gpuContainerMetricPrefix = "container_"
 	gpuPodMetricPrefix       = "pod_"
 	gpuNodeMetricPrefix      = "node_"
 )
 
-var podContainerMetricLabels = map[string]map[string]interface{}{
-	"ClusterName":  nil,
-	"FullPodName":  nil,
-	"PodName":      nil,
-	"InstanceId":   nil,
-	"InstanceType": nil,
-	"NodeName":     nil,
-	"Timestamp":    nil,
-	"Type":         nil,
-	"Version":      nil,
-	"Namespace":    nil,
-	"Sources":      nil,
-	"UUID":         nil,
-	"Service":      nil,
-	"GpuDevice":    nil,
-	"kubernetes":   nil,
+// schemas at each resource level
+// - Container Schema
+//   - ClusterName
+//   - ClusterName, Namespace, PodName, ContainerName
+//   - ClusterName, Namespace, PodName, FullPodName, ContainerName
+//   - ClusterName, Namespace, PodName, FullPodName, ContainerName, GpuDevice
+//
+// - Pod
+//   - ClusterName
+//   - ClusterName, Namespace
+//   - ClusterName, Namespace, Service
+//   - ClusterName, Namespace, PodName
+//   - ClusterName, Namespace, PodName, FullPodName
+//   - ClusterName, Namespace, PodName, FullPodName, GpuDevice
+//
+// - Node
+//   - ClusterName
+//   - ClusterName, InstanceIdKey, NodeName
+//   - ClusterName, InstanceIdKey, NodeName, GpuDevice
+
+var commonLabels = []string{
+	containerinsightscommon.ClusterNameKey,
+	containerinsightscommon.InstanceIdKey,
+	containerinsightscommon.GpuDeviceKey,
+	containerinsightscommon.MetricType,
+	containerinsightscommon.NodeNameKey,
+	containerinsightscommon.VersionKey,
+	containerinsightscommon.SourcesKey,
+	containerinsightscommon.Timestamp,
 }
 
-var nodeMetricLabels = map[string]map[string]interface{}{
-	"ClusterName":  nil,
-	"InstanceId":   nil,
-	"InstanceType": nil,
-	"NodeName":     nil,
-	"Timestamp":    nil,
-	"Type":         nil,
-	"Version":      nil,
-	"kubernetes": {
-		"host": nil,
-	},
+var podAndContainerLabels = []string{
+	containerinsightscommon.K8sNamespace,
+	containerinsightscommon.FullPodNameKey,
+	containerinsightscommon.PodNameKey,
+	containerinsightscommon.TypeService,
+	containerinsightscommon.GpuUniqueId,
 }
 
-type gpuprocessor struct {
+var containerK8sBlobLabels = []string{
+	"container_name",
+	"containerd",
+}
+var podK8sBlobLabels = []string{
+	"host",
+	"labels",
+	"pod_id",
+	"pod_name",
+	"pod_owners",
+	"namespace",
+}
+
+type gpuAttributesProcessor struct {
 	*Config
 	logger *zap.Logger
 }
 
-func newGpuProcessor(config *Config, logger *zap.Logger) *gpuprocessor {
-	d := &gpuprocessor{
+func newGpuAttributesProcessor(config *Config, logger *zap.Logger) *gpuAttributesProcessor {
+	d := &gpuAttributesProcessor{
 		Config: config,
 		logger: logger,
 	}
 	return d
 }
 
-func (d *gpuprocessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
-
+func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	rms := md.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rs := rms.At(i)
@@ -82,39 +103,36 @@ func (d *gpuprocessor) processMetrics(_ context.Context, md pmetric.Metrics) (pm
 	return md, nil
 }
 
-func (d *gpuprocessor) processMetricAttributes(m pmetric.Metric) {
+func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 	// only decorate GPU metrics
-	// another option is to separate GPU of its own pipeline to minimize extra processing of metrics
-	if !strings.Contains(m.Name(), gpuMetric) {
+	if !strings.Contains(m.Name(), gpuMetricIdentifier) {
 		return
 	}
 
-	var labels map[string]map[string]interface{}
-	if strings.HasPrefix(m.Name(), gpuNodeMetricPrefix) {
-		labels = nodeMetricLabels
-	} else if strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) {
-		labels = podContainerMetricLabels
-		labels["ContainerName"] = nil
-		labels["kubernetes"] = map[string]interface{}{
-			"container_name": nil,
-			"containerd":     nil,
-			"host":           nil,
-			"labels":         nil,
-			"pod_id":         nil,
-			"pod_name":       nil,
-			"pod_owners":     nil,
-			"namespace":      nil,
-		}
+	var labels []string
+	labels = append(labels, commonLabels...)
+	k8sBlobLabels := []string{containerinsightscommon.HostKey}
+	if strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) {
+		labels = append(labels, podAndContainerLabels...)
+		labels = append(labels, containerinsightscommon.ContainerNamekey)
+		k8sBlobLabels = append(k8sBlobLabels, containerK8sBlobLabels...)
+		k8sBlobLabels = append(k8sBlobLabels, podK8sBlobLabels...)
 	} else if strings.HasPrefix(m.Name(), gpuPodMetricPrefix) {
-		labels = podContainerMetricLabels
-		labels["kubernetes"] = map[string]interface{}{
-			"host":       nil,
-			"labels":     nil,
-			"pod_id":     nil,
-			"pod_name":   nil,
-			"pod_owners": nil,
-			"namespace":  nil,
-		}
+		labels = append(labels, podAndContainerLabels...)
+		k8sBlobLabels = append(k8sBlobLabels, podK8sBlobLabels...)
+	}
+
+	labelFilter := map[string]map[string]interface{}{}
+	for _, attr := range labels {
+		labelFilter[attr] = nil
+	}
+
+	k8sBlobMap := map[string]interface{}{}
+	for _, attr := range k8sBlobLabels {
+		k8sBlobMap[attr] = nil
+	}
+	if len(k8sBlobMap) > 0 {
+		labelFilter[containerinsightscommon.K8sKey] = k8sBlobMap
 	}
 
 	var dps pmetric.NumberDataPointSlice
@@ -124,19 +142,19 @@ func (d *gpuprocessor) processMetricAttributes(m pmetric.Metric) {
 	case pmetric.MetricTypeSum:
 		dps = m.Sum().DataPoints()
 	default:
-		d.logger.Debug("Ignore unknown metric type", zap.String("type", m.Type().String()))
+		d.logger.Debug("Ignore unknown metric type", zap.String(containerinsightscommon.MetricType, m.Type().String()))
 	}
 
 	for i := 0; i < dps.Len(); i++ {
-		d.filterAttributes(dps.At(i).Attributes(), labels)
+		d.filterAttributes(dps.At(i).Attributes(), labelFilter)
 	}
 }
 
-func (d *gpuprocessor) filterAttributes(attributes pcommon.Map, labels map[string]map[string]interface{}) {
+func (d *gpuAttributesProcessor) filterAttributes(attributes pcommon.Map, labels map[string]map[string]interface{}) {
 	if len(labels) == 0 {
 		return
 	}
-	// remove labels that are no in the keep list
+	// remove labels that are not in the keep list
 	attributes.RemoveIf(func(k string, _ pcommon.Value) bool {
 		if _, ok := labels[k]; !ok {
 			return true
@@ -147,7 +165,7 @@ func (d *gpuprocessor) filterAttributes(attributes pcommon.Map, labels map[strin
 	// if a label has child level filter list, that means the label is map type
 	// only handles map type since there are currently only map and value types with GPU
 	for lk, ls := range labels {
-		if len(ls) < 1 {
+		if len(ls) == 0 {
 			continue
 		}
 		if av, ok := attributes.Get(lk); ok {
@@ -156,7 +174,7 @@ func (d *gpuprocessor) filterAttributes(attributes pcommon.Map, labels map[strin
 			strVal := av.Str()
 			err := json.Unmarshal([]byte(strVal), &blob)
 			if err != nil {
-				d.logger.Warn("gpuprocessor: failed to unmarshal label", zap.String("label", lk))
+				d.logger.Warn("gpuAttributesProcessor: failed to unmarshal label", zap.String("label", lk))
 				continue
 			}
 			newBlob := make(map[string]json.RawMessage)
@@ -167,7 +185,7 @@ func (d *gpuprocessor) filterAttributes(attributes pcommon.Map, labels map[strin
 			}
 			bytes, err := json.Marshal(newBlob)
 			if err != nil {
-				d.logger.Warn("gpuprocessor: failed to marshall label", zap.String("label", lk))
+				d.logger.Warn("gpuAttributesProcessor: failed to marshall label", zap.String("label", lk))
 				continue
 			}
 			attributes.PutStr(lk, string(bytes))

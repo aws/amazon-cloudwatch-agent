@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	TypeStr   = "gpu"
+	TypeStr   = "gpuattributes"
 	stability = component.StabilityLevelBeta
 )
 
@@ -42,7 +42,7 @@ func createMetricsProcessor(
 		return nil, fmt.Errorf("configuration parsing error")
 	}
 
-	metricsProcessor := newGpuProcessor(processorConfig, set.Logger)
+	metricsProcessor := newGpuAttributesProcessor(processorConfig, set.Logger)
 
 	return processorhelper.NewMetricsProcessor(
 		ctx,
