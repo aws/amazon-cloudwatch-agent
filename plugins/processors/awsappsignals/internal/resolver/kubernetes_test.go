@@ -818,6 +818,7 @@ func TestEksResolver(t *testing.T) {
 
 func TestHostedInEksResolver(t *testing.T) {
 	common.NewDetector = common.TestEKSDetector
+	common.IsEKS = common.TestIsEKSCacheEKS
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {
@@ -850,6 +851,7 @@ func TestHostedInEksResolver(t *testing.T) {
 
 func TestHostedInNativeK8sEC2Resolver(t *testing.T) {
 	common.NewDetector = common.TestK8sDetector
+	common.IsEKS = common.TestIsEKSCacheK8s
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {
