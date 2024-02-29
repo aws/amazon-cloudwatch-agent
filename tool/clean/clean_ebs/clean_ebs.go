@@ -52,7 +52,7 @@ func deleteUnusedVolumes(ctx context.Context, client *ec2.Client) error {
 		return err
 	}
 	for _, volume := range volumes.Volumes {
-		if time.Since(*volume.CreateTime) > clean.KeepDurationOneWeek {
+		if time.Since(*volume.CreateTime) > clean.KeepDurationOneWeek && len(volume.Attachments) == 0 {
 			log.Printf("Deleting unused volume %s", *volume.VolumeId)
 			_, err = client.DeleteVolume(ctx, &ec2.DeleteVolumeInput{
 				VolumeId: volume.VolumeId,
