@@ -9,8 +9,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
@@ -19,7 +17,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 type translator struct {
@@ -54,23 +51,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
-	if common.IsAppSignalsKubernetes() {
-		isEks := eksdetector.IsEKS()
-		if isEks.Err != nil {
-			return nil, isEks.Err
-		}
-
-		if isEks.Value {
-			translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
-		}
-	} else {
-		// Non-kubernetes environment detected.
-		ctx := context.CurrentContext()
-		if ctx.Mode() == config.ModeEC2 {
-			translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
-		}
-	}
-
+	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
 	translators.Processors.Set(awsappsignals.NewTranslator(awsappsignals.WithDataType(t.dataType)))
 
 	if t.dataType == component.DataTypeTraces {

@@ -48,8 +48,11 @@ const (
 	jitterKubernetesAPISeconds = 10
 )
 
-var DefaultHostedInAttributeMap = map[string]string{
+var kubernetesHostedInAttributeMap = map[string]string{
 	semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
+	attr.ResourceDetectionHostId:      attr.EC2InstanceId,
+	attr.ResourceDetectionHostName:    attr.ResourceDetectionHostName,
+	attr.ResourceDetectionASG:         attr.EC2AutoScalingGroupName,
 }
 
 var (
@@ -666,10 +669,8 @@ type kubernetesHostedInAttributeResolver struct {
 
 func newKubernetesHostedInAttributeResolver(clusterName string) *kubernetesHostedInAttributeResolver {
 	return &kubernetesHostedInAttributeResolver{
-		clusterName: clusterName,
-		attributeMap: map[string]string{
-			semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
-		},
+		clusterName:  clusterName,
+		attributeMap: kubernetesHostedInAttributeMap,
 	}
 }
 func (h *kubernetesHostedInAttributeResolver) Process(attributes, resourceAttributes pcommon.Map) error {
