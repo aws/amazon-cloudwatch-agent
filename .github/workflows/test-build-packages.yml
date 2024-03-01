@@ -60,65 +60,6 @@ on:
         type: string
 
 jobs:
-  MakeMSIZip:
-    name: 'MakeMSIZip'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v4
-        with:
-          go-version: ~1.21.1
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
-          aws-region: ${{ inputs.Region }}
-
-      - name: Cache win zip
-        id: cached_win_zip
-        uses: actions/cache@v3
-        with:
-          key: "cached_win_zip_${{ github.sha }}_${{ inputs.PackageBucketKey }}_${{ inputs.Bucket }}_${{ inputs.BucketKey }}"
-          path: go.mod
-
-      - name: Copy binary
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: |
-          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }} . --recursive
-      - name: Unzip
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: |
-          sudo apt install unzip
-          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
-      - name: Create msi dep folder and copy deps
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: |
-          export version=$(cat CWAGENT_VERSION)
-          echo cw agent version $version
-          mkdir msi_dep
-          cp -r msi/tools/. msi_dep/
-          cp -r windows-agent/amazon-cloudwatch-agent/. msi_dep/
-          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>'
-          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__
-
-      - name: Zip
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: |
-          sudo apt install zip
-          zip buildMSI.zip msi_dep/*
-
-      - name: Upload zip
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: aws s3 cp buildMSI.zip s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/buildMSI.zip
-
   MakeMacPkg:
     name: 'MakeMacPkg'
     runs-on: macos-11
@@ -193,45 +134,6 @@ jobs:
           ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" amd64
           cd arm64
           ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" arm64
-
-  BuildMSI:
-    name: 'BuildMSI'
-    runs-on: windows-latest
-    needs: [ MakeMSIZip ]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
-          aws-region: ${{ inputs.Region }}
-
-      - name: Cache msi
-        id: cached_msi
-        uses: actions/cache@v3
-        with:
-          key: "cached_msi_${{ github.sha }}"
-          path: go.mod
-
-      # Using the env variable returns "" for bucket name thus use the secret
-      - name: Copy msi
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run: aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/buildMSI.zip .
-
-      - name: Create msi
-        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run: |
-          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311.exe
-          .\wix311.exe /install /quiet /norestart
-          $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.11\bin;"
-          $env:PATH = $env:PATH + $wixToolsetBinPath
-          Expand-Archive buildMSI.zip -Force
-          cd buildMSI/msi_dep
-          .\create_msi.ps1 "nosha" ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}
 
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacAndWindowsPackage:
