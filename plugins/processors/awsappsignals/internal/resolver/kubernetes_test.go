@@ -883,7 +883,7 @@ func TestHostedInNativeK8sEC2Resolver(t *testing.T) {
 }
 
 func TestHostedInNativeK8sOnPremResolver(t *testing.T) {
-	common.NewDetector = common.TestK8sDetector
+	eksdetector.NewDetector = eksdetector.TestK8sDetector
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {
