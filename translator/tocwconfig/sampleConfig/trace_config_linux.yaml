@@ -44,11 +44,16 @@ receivers:
         endpoint: 127.0.0.1:2000
         proxy_server:
             aws_endpoint: ""
+            certificate_file_path: ""
             endpoint: 127.0.0.1:2000
+            imds_retries: 2
             local_mode: false
+            profile: default
             proxy_address: ""
             region: us-west-2
             role_arn: ""
+            shared_credentials_file:
+                - /root/.aws/credentials
         transport: udp
     otlp/traces:
         protocols:

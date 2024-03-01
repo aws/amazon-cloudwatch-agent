@@ -73,7 +73,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 func TestGenericAppSignalsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
-	context.CurrentContext().SetMode(config.ModeOnPrem)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
@@ -108,7 +108,7 @@ func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	context.CurrentContext().SetRunInContainer(true)
-	context.CurrentContext().SetMode(config.ModeOnPrem)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}

@@ -16,6 +16,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -56,8 +58,6 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	// Add more else if when otel supports log reading
 	if t.name == common.PipelineNameEmfLogs && t.isEmf(c) {
 		defaultConfig = defaultAwsCloudwatchLogsDefault
-	} else {
-		return cfg, nil
 	}
 
 	if defaultConfig != "" {
@@ -93,6 +93,9 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+	}
+	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+		cfg.AWSSessionSettings.LocalMode = true
 	}
 	return cfg, nil
 }
