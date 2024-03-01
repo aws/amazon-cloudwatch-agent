@@ -16,7 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
-// Clean ebs volumes if they have been open longer than 7 day and unused and volume not attached
+// Clean ebs volumes if they have been open longer than 7 day and unused
 func main() {
 	err := cleanVolumes()
 	if err != nil {
