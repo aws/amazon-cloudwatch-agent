@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -39,6 +38,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
@@ -81,25 +81,32 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
 
-func TestAppSignalsAndKubernetesConfig(t *testing.T) {
+func TestAppSignalsAndEKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
-	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
-	common.NewDetector = common.TestEKSDetector
-	common.IsEKS = common.TestIsEKSCacheEKS
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_and_eks_config", "windows", expectedEnvVars, "")
+}
 
-	common.NewDetector = func() (common.Detector, error) {
-		return &common.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
-	}
-	common.IsEKS = common.TestIsEKSCacheK8s
+func TestAppSignalsAndNativeKubernetesConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_k8s_config")
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheK8s
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeK8sEC2)
 
+	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_and_k8s_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
 }

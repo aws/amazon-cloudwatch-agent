@@ -61,7 +61,10 @@ func initFlags() {
 	}
 	translatorUtil.SetProxyEnv(ctx.Proxy())
 	translatorUtil.SetSSLEnv(ctx.SSL())
-	ctx.SetMode(translatorUtil.DetectAgentMode(*inputMode))
+
+	mode := translatorUtil.DetectAgentMode(*inputMode)
+	ctx.SetMode(mode)
+	ctx.SetKubernetesMode(translatorUtil.DetectKubernetesMode(mode))
 }
 
 /**

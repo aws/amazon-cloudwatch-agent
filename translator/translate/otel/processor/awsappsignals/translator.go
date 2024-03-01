@@ -15,6 +15,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -67,19 +69,18 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if !hostedInConfigured {
 			hostedIn = util.GetClusterNameFromEc2Tagger()
 		}
+	}
 
-		isEks := common.IsEKS()
-		if isEks.Value {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewEKSResolver(hostedIn),
-			}
-		} else {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewK8sResolver(hostedIn),
-			}
+	kubernetesMode := context.CurrentContext().KubernetesMode()
+	if kubernetesMode == config.ModeEKS {
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewEKSResolver(hostedIn),
+		}
+	} else if kubernetesMode == config.ModeK8sEC2 || kubernetesMode == config.ModeK8sOnPrem {
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewK8sResolver(hostedIn),
 		}
 	} else {
-		// Non-kubernetes environment detected.
 		cfg.Resolvers = []appsignalsconfig.Resolver{
 			appsignalsconfig.NewGenericResolver(hostedIn),
 		}
