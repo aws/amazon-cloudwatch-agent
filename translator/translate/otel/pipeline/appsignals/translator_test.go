@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 func TestTranslatorTraces(t *testing.T) {
@@ -31,8 +32,8 @@ func TestTranslatorTraces(t *testing.T) {
 		input      map[string]interface{}
 		want       *want
 		wantErr    error
-		detector   func() (common.Detector, error)
-		isEKSCache func() common.IsEKSCache
+		detector   func() (eksdetector.Detector, error)
+		isEKSCache func() eksdetector.IsEKSCache
 	}{
 		"WithoutTracesCollectedKey": {
 			input:   map[string]interface{}{},
@@ -52,8 +53,8 @@ func TestTranslatorTraces(t *testing.T) {
 				exporters:  []string{"awsxray/app_signals"},
 				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
 			},
-			detector:   common.TestEKSDetector,
-			isEKSCache: common.TestIsEKSCacheEKS,
+			detector:   eksdetector.TestEKSDetector,
+			isEKSCache: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]interface{}{
@@ -69,15 +70,15 @@ func TestTranslatorTraces(t *testing.T) {
 				exporters:  []string{"awsxray/app_signals"},
 				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
 			},
-			detector:   common.TestK8sDetector,
-			isEKSCache: common.TestIsEKSCacheK8s,
+			detector:   eksdetector.TestK8sDetector,
+			isEKSCache: eksdetector.TestIsEKSCacheK8s,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(common.KubernetesEnvVar, "TEST")
-			common.NewDetector = testCase.detector
-			common.IsEKS = testCase.isEKSCache
+			eksdetector.NewDetector = testCase.detector
+			eksdetector.IsEKS = testCase.isEKSCache
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
@@ -107,8 +108,8 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 		input      map[string]interface{}
 		want       *want
 		wantErr    error
-		detector   func() (common.Detector, error)
-		isEKSCache func() common.IsEKSCache
+		detector   func() (eksdetector.Detector, error)
+		isEKSCache func() eksdetector.IsEKSCache
 	}{
 		"WithoutMetricsCollectedKey": {
 			input:   map[string]interface{}{},
@@ -128,8 +129,8 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				exporters:  []string{"awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector:   common.TestEKSDetector,
-			isEKSCache: common.TestIsEKSCacheEKS,
+			detector:   eksdetector.TestEKSDetector,
+			isEKSCache: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]interface{}{
@@ -145,15 +146,15 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				exporters:  []string{"awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector:   common.TestK8sDetector,
-			isEKSCache: common.TestIsEKSCacheK8s,
+			detector:   eksdetector.TestK8sDetector,
+			isEKSCache: eksdetector.TestIsEKSCacheK8s,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(common.KubernetesEnvVar, "TEST")
-			common.NewDetector = testCase.detector
-			common.IsEKS = testCase.isEKSCache
+			eksdetector.NewDetector = testCase.detector
+			eksdetector.IsEKS = testCase.isEKSCache
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
@@ -182,8 +183,8 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 		input      map[string]interface{}
 		want       *want
 		wantErr    error
-		detector   func() (common.Detector, error)
-		isEKSCache func() common.IsEKSCache
+		detector   func() (eksdetector.Detector, error)
+		isEKSCache func() eksdetector.IsEKSCache
 	}{
 		"WithoutMetricsCollectedKey": {
 			input:   map[string]interface{}{},
@@ -203,8 +204,8 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				exporters:  []string{"awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
-			detector:   common.TestEKSDetector,
-			isEKSCache: common.TestIsEKSCacheEKS,
+			detector:   eksdetector.TestEKSDetector,
+			isEKSCache: eksdetector.TestIsEKSCacheEKS,
 		},
 	}
 	for name, testCase := range testCases {

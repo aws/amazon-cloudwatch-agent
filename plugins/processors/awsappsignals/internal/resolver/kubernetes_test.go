@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 // MockDeleter deletes a key immediately, useful for testing.
@@ -817,8 +817,8 @@ func TestEksResolver(t *testing.T) {
 }
 
 func TestHostedInEksResolver(t *testing.T) {
-	common.NewDetector = common.TestEKSDetector
-	common.IsEKS = common.TestIsEKSCacheEKS
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {
@@ -850,8 +850,8 @@ func TestHostedInEksResolver(t *testing.T) {
 }
 
 func TestHostedInNativeK8sEC2Resolver(t *testing.T) {
-	common.NewDetector = common.TestK8sDetector
-	common.IsEKS = common.TestIsEKSCacheK8s
+	eksdetector.NewDetector = eksdetector.TestK8sDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheK8s
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {
@@ -883,7 +883,7 @@ func TestHostedInNativeK8sEC2Resolver(t *testing.T) {
 }
 
 func TestHostedInNativeK8sOnPremResolver(t *testing.T) {
-	common.NewDetector = common.TestK8sDetector
+	eksdetector.NewDetector = eksdetector.TestK8sDetector
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {
