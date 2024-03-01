@@ -40,8 +40,7 @@ const (
 //   - ClusterName
 //   - ClusterName, InstanceIdKey, NodeName
 //   - ClusterName, InstanceIdKey, NodeName, GpuDevice
-
-var commonLabels = []string{
+var nodeLabels = []string{
 	containerinsightscommon.ClusterNameKey,
 	containerinsightscommon.InstanceIdKey,
 	containerinsightscommon.GpuDeviceKey,
@@ -51,27 +50,30 @@ var commonLabels = []string{
 	containerinsightscommon.SourcesKey,
 	containerinsightscommon.Timestamp,
 }
-
-var podAndContainerLabels = []string{
+var podLabels = append([]string{
 	containerinsightscommon.K8sNamespace,
 	containerinsightscommon.FullPodNameKey,
 	containerinsightscommon.PodNameKey,
 	containerinsightscommon.TypeService,
 	containerinsightscommon.GpuUniqueId,
-}
+}, nodeLabels...)
+var containerLabels = append([]string{
+	containerinsightscommon.ContainerNamekey,
+}, podLabels...)
 
-var containerK8sBlobLabels = []string{
-	"container_name",
-	"containerd",
-}
-var podK8sBlobLabels = []string{
+var nodeK8sLabels = []string{containerinsightscommon.HostKey}
+var podK8sLabels = append([]string{
 	"host",
 	"labels",
 	"pod_id",
 	"pod_name",
 	"pod_owners",
 	"namespace",
-}
+}, nodeK8sLabels...)
+var containerK8sLabels = append([]string{
+	"container_name",
+	"containerd",
+}, podK8sLabels...)
 
 type gpuAttributesProcessor struct {
 	*Config
@@ -109,24 +111,22 @@ func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 		return
 	}
 
-	var labels []string
-	labels = append(labels, commonLabels...)
-	k8sBlobLabels := []string{containerinsightscommon.HostKey}
+	var labels, k8sBlobLabels []string
 	if strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) {
-		labels = append(labels, podAndContainerLabels...)
-		labels = append(labels, containerinsightscommon.ContainerNamekey)
-		k8sBlobLabels = append(k8sBlobLabels, containerK8sBlobLabels...)
-		k8sBlobLabels = append(k8sBlobLabels, podK8sBlobLabels...)
+		labels = containerLabels
+		k8sBlobLabels = containerK8sLabels
 	} else if strings.HasPrefix(m.Name(), gpuPodMetricPrefix) {
-		labels = append(labels, podAndContainerLabels...)
-		k8sBlobLabels = append(k8sBlobLabels, podK8sBlobLabels...)
+		labels = podLabels
+		k8sBlobLabels = podK8sLabels
+	} else if strings.HasPrefix(m.Name(), gpuNodeMetricPrefix) {
+		labels = nodeLabels
+		k8sBlobLabels = nodeK8sLabels
 	}
 
 	labelFilter := map[string]map[string]interface{}{}
 	for _, attr := range labels {
 		labelFilter[attr] = nil
 	}
-
 	k8sBlobMap := map[string]interface{}{}
 	for _, attr := range k8sBlobLabels {
 		k8sBlobMap[attr] = nil
@@ -156,10 +156,10 @@ func (d *gpuAttributesProcessor) filterAttributes(attributes pcommon.Map, labels
 	}
 	// remove labels that are not in the keep list
 	attributes.RemoveIf(func(k string, _ pcommon.Value) bool {
-		if _, ok := labels[k]; !ok {
-			return true
+		if _, ok := labels[k]; ok {
+			return false
 		}
-		return false
+		return true
 	})
 
 	// if a label has child level filter list, that means the label is map type

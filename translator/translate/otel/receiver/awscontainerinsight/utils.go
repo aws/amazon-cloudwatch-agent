@@ -25,5 +25,5 @@ func EnhancedContainerInsightsEnabled(conf *confmap.Conf) bool {
 }
 
 func AcceleratedComputeMetricsEnabled(conf *confmap.Conf) bool {
-	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableAcceleratedComputingMetric), true)
+	return common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.EnableAcceleratedComputeMetric), true)
 }
