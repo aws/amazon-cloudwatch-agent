@@ -90,7 +90,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		//		appsignalsconfig.NewGenericResolver(hostedIn),
 		//	}
 		//}
-		appsignalsconfig.NewGenericResolver(hostedIn)
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewGenericResolver(hostedIn),
+		}
 	}
 
 	limiterConfig, _ := t.translateMetricLimiterConfig(conf, configKey)
