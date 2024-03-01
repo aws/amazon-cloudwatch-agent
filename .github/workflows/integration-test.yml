@@ -16,6 +16,8 @@ env:
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
   TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 on:
   push:
@@ -91,6 +93,19 @@ jobs:
       TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
 
+  BuildAndUploadCN:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      Region: "cn-north-1"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
@@ -108,6 +123,8 @@ jobs:
       eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
       eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
+      ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -136,6 +153,7 @@ jobs:
           echo "::set-output name=eks_daemon_matrix::$(echo $(cat generator/resources/eks_daemon_complete_test_matrix.json))"
           echo "::set-output name=eks_deployment_matrix::$(echo $(cat generator/resources/eks_deployment_complete_test_matrix.json))"
           echo "::set-output name=ec2_linux_itar_matrix::$(echo $(cat generator/resources/ec2_linux_itar_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_china_matrix::$(echo $(cat generator/resources/ec2_linux_china_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
         run: |
@@ -152,6 +170,7 @@ jobs:
           echo "eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}"
           echo "eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}"
           echo "ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}"
+          echo "ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}"
 
   CloudformationTest:
     needs: [BuildAndUpload, GenerateTestMatrix]
@@ -227,6 +246,24 @@ jobs:
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+
+  StartLocalStackCN:
+    name: 'StartLocalStackCN'
+    needs: [ OutputEnvVariables ]
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: cn-north-1
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+
 
 
   EC2NvidiaGPUIntegrationTest:
@@ -410,6 +447,25 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
     secrets: inherit
+
+  EC2LinuxIntegrationTestCN:
+    needs: [ BuildAndUpload, BuildAndUploadCN, StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2LinuxCN'
+    uses: ./.github/workflows/ec2-integration-test.yml
+    with:
+      github_sha: ${{github.sha}}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{needs.StartLocalStackCN.outputs.local_stack_host_name}}
+      region: cn-north-1
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+    secrets: inherit
+
 
   LinuxOnPremIntegrationTest:
     needs: [BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
@@ -623,6 +679,23 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+
+  StopLocalStackCN:
+    name: 'StopLocalStackCN'
+    if: ${{ always() }}
+    needs: [ EC2LinuxIntegrationTestCN ]
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: cn-north-1
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   ECSEC2IntegrationTest:
     name: 'ECSEC2IntegrationTest'

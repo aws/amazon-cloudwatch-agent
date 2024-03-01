@@ -17,7 +17,8 @@ import (
 const AttributePlatformGeneric = "Generic"
 
 var DefaultHostedInAttributes = map[string]string{
-	attr.AWSHostedInEnvironment: attr.HostedInEnvironment,
+	attr.AWSHostedInEnvironment:    attr.HostedInEnvironment,
+	attr.ResourceDetectionHostName: attr.ResourceDetectionHostName,
 }
 
 type subResolver interface {
