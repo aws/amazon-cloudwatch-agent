@@ -5,7 +5,7 @@ exporters:
         emf_only: true
         endpoint: https://fake_endpoint
         imds_retries: 2
-        local_mode: false
+        local_mode: true
         log_group_name: emf/logs/default
         log_retention: 0
         log_stream_name: host_name_from_env
@@ -43,7 +43,7 @@ exporters:
         endpoint: https://fake_endpoint
         enhanced_container_insights: true
         imds_retries: 2
-        local_mode: false
+        local_mode: true
         log_group_name: /aws/containerinsights/{ClusterName}/performance
         log_retention: 0
         log_stream_name: '{NodeName}'
@@ -453,7 +453,7 @@ receivers:
         imds_retries: 2
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
-        local_mode: false
+        local_mode: true
         max_retries: 0
         no_verify_ssl: false
         num_workers: 0
