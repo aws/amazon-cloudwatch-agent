@@ -412,7 +412,7 @@ jobs:
         run: |
           mkdir -p packages/amd64
           mkdir packages/arm64
-          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
       - name: Import GPG Key
         uses: crazy-max/ghaction-import-gpg@v5
         with:
