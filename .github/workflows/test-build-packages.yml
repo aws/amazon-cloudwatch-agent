@@ -136,10 +136,10 @@ jobs:
           ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" arm64
 
   #GH actions set up gpg only works on ubuntu as of this commit date
-  GPGSignMacAndWindowsPackage:
-    name: 'SignMacAndWindowsPackage'
+  GPGSignMacPackage:
+    name: 'GPGSignMacPackage'
     runs-on: ubuntu-latest
-    needs: [ BuildMSI, MakeMacPkg ]
+    needs: [  MakeMacPkg ]
     permissions:
       id-token: write
       contents: read
@@ -164,7 +164,6 @@ jobs:
         run: |
           mkdir -p packages/amd64
           mkdir packages/arm64
-          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
           aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
           aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
       - name: Import GPG Key
@@ -179,6 +178,5 @@ jobs:
       - name: Upload to s3
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
         run: |
-          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi.sig
           aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg.sig
           aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg.sig
