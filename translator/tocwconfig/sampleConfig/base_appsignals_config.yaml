@@ -26,10 +26,6 @@ exporters:
                     - aws.span.kind
                   regex: ^(SERVER|LOCAL_ROOT)$
                   separator: ;
-                - label_names:
-                    - host.name
-                  regex: .*
-                  separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
@@ -69,10 +65,6 @@ exporters:
                 - label_names:
                     - aws.span.kind
                   regex: ^(CLIENT|PRODUCER|CONSUMER)$
-                  separator: ;
-                - label_names:
-                    - host.name
-                  regex: .*
                   separator: ;
               metric_name_selectors:
                 - Latency
@@ -153,6 +145,288 @@ processors:
               platform: generic
         rules: []
         limiter: null
+    resourcedetection:
+      aks:
+        resource_attributes:
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+      attributes: []
+      auth: null
+      azure:
+        resource_attributes:
+          azure.resourcegroup.name:
+            enabled: true
+          azure.vm.name:
+            enabled: true
+          azure.vm.scaleset.name:
+            enabled: true
+          azure.vm.size:
+            enabled: true
+          cloud.account.id:
+            enabled: true
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+          cloud.region:
+            enabled: true
+          host.id:
+            enabled: true
+          host.name:
+            enabled: true
+      compression: ""
+      consul:
+        address: ""
+        datacenter: ""
+        meta: {}
+        namespace: ""
+        resource_attributes:
+          azure.resourcegroup.name:
+            enabled: true
+          azure.vm.name:
+            enabled: true
+          azure.vm.scaleset.name:
+            enabled: true
+          azure.vm.size:
+            enabled: true
+          cloud.account.id:
+            enabled: true
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+          cloud.region:
+            enabled: true
+          host.id:
+            enabled: true
+          host.name:
+            enabled: true
+        token: '[REDACTED]'
+        token_file: ""
+      detectors:
+        - eks
+        - env
+        - ec2
+      disable_keep_alives: false
+      docker:
+        resource_attributes:
+          host.name:
+            enabled: true
+          os.type:
+            enabled: true
+      ec2:
+        resource_attributes:
+          cloud.account.id:
+            enabled: true
+          cloud.availability_zone:
+            enabled: true
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+          cloud.region:
+            enabled: true
+          host.id:
+            enabled: true
+          host.image.id:
+            enabled: true
+          host.name:
+            enabled: true
+          host.type:
+            enabled: true
+        tags:
+          - ^kubernetes.io/cluster/.*$
+          - ^aws:autoscaling:groupName
+      ecs:
+        resource_attributes:
+          aws.ecs.cluster.arn:
+            enabled: true
+          aws.ecs.launchtype:
+            enabled: true
+          aws.ecs.task.arn:
+            enabled: true
+          aws.ecs.task.family:
+            enabled: true
+          aws.ecs.task.revision:
+            enabled: true
+          aws.log.group.arns:
+            enabled: true
+          aws.log.group.names:
+            enabled: true
+          aws.log.stream.arns:
+            enabled: true
+          aws.log.stream.names:
+            enabled: true
+          cloud.account.id:
+            enabled: true
+          cloud.availability_zone:
+            enabled: true
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+          cloud.region:
+            enabled: true
+      eks:
+        resource_attributes:
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+      elasticbeanstalk:
+        resource_attributes:
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+          deployment.environment:
+            enabled: true
+          service.instance.id:
+            enabled: true
+          service.version:
+            enabled: true
+      endpoint: ""
+      gcp:
+        resource_attributes:
+          cloud.account.id:
+            enabled: true
+          cloud.availability_zone:
+            enabled: true
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+          cloud.region:
+            enabled: true
+          faas.id:
+            enabled: true
+          faas.instance:
+            enabled: true
+          faas.name:
+            enabled: true
+          faas.version:
+            enabled: true
+          gcp.cloud_run.job.execution:
+            enabled: true
+          gcp.cloud_run.job.task_index:
+            enabled: true
+          gcp.gce.instance.hostname:
+            enabled: false
+          gcp.gce.instance.name:
+            enabled: false
+          host.id:
+            enabled: true
+          host.name:
+            enabled: true
+          host.type:
+            enabled: true
+          k8s.cluster.name:
+            enabled: true
+      headers: {}
+      heroku:
+        resource_attributes:
+          cloud.provider:
+            enabled: true
+          heroku.app.id:
+            enabled: true
+          heroku.dyno.id:
+            enabled: true
+          heroku.release.commit:
+            enabled: true
+          heroku.release.creation_timestamp:
+            enabled: true
+          service.instance.id:
+            enabled: true
+          service.name:
+            enabled: true
+          service.version:
+            enabled: true
+      idle_conn_timeout: 1m30s
+      k8snode:
+        auth_type: serviceAccount
+        context: ""
+        node_from_env_var: ""
+        resource_attributes:
+          k8s.node.name:
+            enabled: true
+          k8s.node.uid:
+            enabled: true
+      lambda:
+        resource_attributes:
+          aws.log.group.names:
+            enabled: true
+          aws.log.stream.names:
+            enabled: true
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+          cloud.region:
+            enabled: true
+          faas.instance:
+            enabled: true
+          faas.max_memory:
+            enabled: true
+          faas.name:
+            enabled: true
+          faas.version:
+            enabled: true
+      max_conns_per_host: null
+      max_idle_conns: 100
+      max_idle_conns_per_host: null
+      openshift:
+        address: ""
+        resource_attributes:
+          cloud.platform:
+            enabled: true
+          cloud.provider:
+            enabled: true
+          cloud.region:
+            enabled: true
+          k8s.cluster.name:
+            enabled: true
+        tls:
+          ca_file: ""
+          cert_file: ""
+          insecure: false
+          insecure_skip_verify: false
+          key_file: ""
+          max_version: ""
+          min_version: ""
+          reload_interval: 0s
+          server_name_override: ""
+        token: ""
+      override: true
+      read_buffer_size: 0
+      system:
+        hostname_sources: []
+        resource_attributes:
+          host.arch:
+            enabled: false
+          host.cpu.cache.l2.size:
+            enabled: false
+          host.cpu.family:
+            enabled: false
+          host.cpu.model.id:
+            enabled: false
+          host.cpu.model.name:
+            enabled: false
+          host.cpu.stepping:
+            enabled: false
+          host.cpu.vendor.id:
+            enabled: false
+          host.id:
+            enabled: false
+          host.name:
+            enabled: true
+          os.description:
+            enabled: false
+          os.type:
+            enabled: true
+      timeout: 2s
+      write_buffer_size: 0
 receivers:
     otlp/app_signals:
         protocols:
@@ -188,6 +462,7 @@ service:
             exporters:
                 - awsemf/app_signals
             processors:
+                - resourcedetection
                 - awsappsignals
             receivers:
                 - otlp/app_signals
@@ -195,6 +470,7 @@ service:
             exporters:
                 - awsxray/app_signals
             processors:
+                - resourcedetection
                 - awsappsignals
             receivers:
                 - otlp/app_signals
