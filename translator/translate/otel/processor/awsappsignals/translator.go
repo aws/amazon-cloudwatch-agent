@@ -69,25 +69,27 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if !hostedInConfigured {
 			hostedIn = util.GetClusterNameFromEc2Tagger()
 		}
+	}
 
-		isEks := common.IsEKS()
-		if isEks.Value {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewEKSResolver(hostedIn),
-			}
-		} else {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewK8sResolver(hostedIn),
-			}
+	kubernetesMode := context.CurrentContext().KubernetesMode()
+	switch kubernetesMode {
+	case config.ModeEKS:
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewEKSResolver(hostedIn),
 		}
-	} else {
-		// Non-kubernetes environment detected.
-		ctx := context.CurrentContext()
-		if ctx.Mode() == config.ModeEC2 {
+	case config.ModeK8sEC2, config.ModeK8sOnPrem:
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewK8sResolver(hostedIn),
+		}
+	}
+
+	if kubernetesMode == "" {
+		switch context.CurrentContext().Mode() {
+		case config.ModeEC2:
 			cfg.Resolvers = []appsignalsconfig.Resolver{
 				appsignalsconfig.NewEC2Resolver(hostedIn),
 			}
-		} else {
+		default:
 			cfg.Resolvers = []appsignalsconfig.Resolver{
 				appsignalsconfig.NewGenericResolver(hostedIn),
 			}

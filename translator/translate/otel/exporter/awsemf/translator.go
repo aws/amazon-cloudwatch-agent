@@ -141,15 +141,14 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 }
 
 func getAppSignalsConfig() string {
-	if common.IsAppSignalsKubernetes() {
-		isEks := common.IsEKS()
-		if isEks.Value {
-			return appSignalsConfigEks
-		}
-		return appSignalsConfigK8s
-	}
 	ctx := context.CurrentContext()
-	if ctx.Mode() == config.ModeEC2 {
+	kubernetesMode := ctx.KubernetesMode()
+
+	if kubernetesMode == config.ModeEKS {
+		return appSignalsConfigEks
+	} else if kubernetesMode == config.ModeK8sEC2 || kubernetesMode == config.ModeK8sOnPrem {
+		return appSignalsConfigK8s
+	} else if ctx.Mode() == config.ModeEC2 {
 		return appSignalsConfigEC2
 	}
 	return appSignalsConfigGeneric
