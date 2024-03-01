@@ -1,4 +1,23 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300034.0 (2024-03-04)
+========================================================================
+Features:
+* [ContainerInsights] Add NVIDIA GPU observability with Kubernetes
+
+Enhancements:
+* [AppSignals] Improve Kubernetes support
+
+========================================================================
+Amazon CloudWatch Agent 1.300033.0 (2023-01-31)
+========================================================================
+
+Enchancements:
+* [AppSignals] Log correlation
+* [AppSignals] New Metric Rollup
+* [AppSignals] Add metrics cardinality control
+* [AppSignals] Add application log group info
+
+========================================================================
 Amazon CloudWatch Agent 1.300032.3 (2023-12-21)
 ========================================================================
 
