@@ -15,8 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/rules"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -82,16 +80,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	} else {
 		// Non-kubernetes environment detected.
-		ctx := context.CurrentContext()
-		if ctx.Mode() == config.ModeEC2 {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewEC2Resolver(hostedIn),
-			}
-		} else {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewGenericResolver(hostedIn),
-			}
-		}
+		//ctx := context.CurrentContext()
+		//if ctx.Mode() == config.ModeEC2 {
+		//	cfg.Resolvers = []appsignalsconfig.Resolver{
+		//		appsignalsconfig.NewEC2Resolver(hostedIn),
+		//	}
+		//} else {
+		//	cfg.Resolvers = []appsignalsconfig.Resolver{
+		//		appsignalsconfig.NewGenericResolver(hostedIn),
+		//	}
+		//}
+		appsignalsconfig.NewGenericResolver(hostedIn)
 	}
 
 	limiterConfig, _ := t.translateMetricLimiterConfig(conf, configKey)

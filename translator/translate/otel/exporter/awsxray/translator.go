@@ -88,12 +88,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				cfg.IndexedAttributes = indexedAttributesK8s
 			}
 		} else {
-			ctx := context.CurrentContext()
-			if ctx.Mode() == config.ModeEC2 {
-				cfg.IndexedAttributes = indexedAttributesEC2
-			} else {
-				cfg.IndexedAttributes = indexedAttributesGeneric
-			}
+			//ctx := context.CurrentContext()
+			//if ctx.Mode() == config.ModeEC2 {
+			//	cfg.IndexedAttributes = indexedAttributesEC2
+			//} else {
+			//	cfg.IndexedAttributes = indexedAttributesGeneric
+			//}
+			cfg.IndexedAttributes = indexedAttributesGeneric
 		}
 	}
 
