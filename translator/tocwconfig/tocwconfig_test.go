@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -82,27 +81,32 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
 
-func TestAppSignalsAndKubernetesConfig(t *testing.T) {
+func TestAppSignalsAndEKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
-	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
 	eksdetector.NewDetector = eksdetector.TestEKSDetector
-	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
+	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_and_eks_config", "windows", expectedEnvVars, "")
+}
 
-	eksdetector.NewDetector = func() (eksdetector.Detector, error) {
-		return &eksdetector.EksDetector{Clientset: fake.NewSimpleClientset()}, nil
-	}
+func TestAppSignalsAndNativeKubernetesConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_k8s_config")
 	eksdetector.IsEKS = eksdetector.TestIsEKSCacheK8s
+	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeK8sEC2)
 
+	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_and_k8s_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
 }
