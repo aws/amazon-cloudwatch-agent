@@ -72,27 +72,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	kubernetesMode := context.CurrentContext().KubernetesMode()
-	switch kubernetesMode {
-	case config.ModeEKS:
+	if kubernetesMode == config.ModeEKS {
 		cfg.Resolvers = []appsignalsconfig.Resolver{
 			appsignalsconfig.NewEKSResolver(hostedIn),
 		}
-	case config.ModeK8sEC2, config.ModeK8sOnPrem:
+	} else if kubernetesMode == config.ModeK8sEC2 || kubernetesMode == config.ModeK8sOnPrem {
 		cfg.Resolvers = []appsignalsconfig.Resolver{
 			appsignalsconfig.NewK8sResolver(hostedIn),
 		}
-	}
-
-	if kubernetesMode == "" {
-		switch context.CurrentContext().Mode() {
-		case config.ModeEC2:
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewEC2Resolver(hostedIn),
-			}
-		default:
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewGenericResolver(hostedIn),
-			}
+	} else {
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewGenericResolver(hostedIn),
 		}
 	}
 
