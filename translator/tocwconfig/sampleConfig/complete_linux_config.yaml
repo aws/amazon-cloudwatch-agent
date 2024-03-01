@@ -145,11 +145,15 @@ receivers:
         endpoint: 0.0.0.0:2001
         proxy_server:
             aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+            certificate_file_path: ""
             endpoint: 0.0.0.0:1234
+            imds_retries: 1
             local_mode: true
+            profile: ""
             proxy_address: https://proxy.proxy.com
             region: us-west-2
             role_arn: trace_role_arn_value_test
+            shared_credentials_file: []
             tls:
                 ca_file: ""
                 cert_file: ""
