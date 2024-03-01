@@ -5,7 +5,7 @@ exporters:
         emf_only: true
         endpoint: https://fake_endpoint
         imds_retries: 2
-        local_mode: true
+        local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
         log_stream_name: host_name_from_env
