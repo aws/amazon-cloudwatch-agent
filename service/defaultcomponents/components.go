@@ -29,6 +29,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -53,6 +54,7 @@ func Factories() (otelcol.Factories, error) {
 		metricstransformprocessor.NewFactory(),
 		resourcedetectionprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
+		gpuattributes.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}

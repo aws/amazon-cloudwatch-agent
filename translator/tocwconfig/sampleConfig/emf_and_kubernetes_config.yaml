@@ -469,6 +469,7 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - /root/.aws/credentials
+        accelerated_compute_metrics: false
     tcplog/emf_logs:
         attributes: {}
         encoding: utf-8
