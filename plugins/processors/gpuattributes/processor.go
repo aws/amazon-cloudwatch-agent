@@ -41,40 +41,68 @@ const (
 //   - ClusterName
 //   - ClusterName, InstanceIdKey, NodeName
 //   - ClusterName, InstanceIdKey, NodeName, GpuDevice
-var nodeLabels = []string{
-	containerinsightscommon.ClusterNameKey,
-	containerinsightscommon.InstanceIdKey,
-	containerinsightscommon.GpuDeviceKey,
-	containerinsightscommon.MetricType,
-	containerinsightscommon.NodeNameKey,
-	containerinsightscommon.VersionKey,
-	containerinsightscommon.SourcesKey,
-	containerinsightscommon.Timestamp,
+var containerLabelFilter = map[string]map[string]interface{}{
+	containerinsightscommon.ClusterNameKey:   nil,
+	containerinsightscommon.InstanceIdKey:    nil,
+	containerinsightscommon.GpuDeviceKey:     nil,
+	containerinsightscommon.MetricType:       nil,
+	containerinsightscommon.NodeNameKey:      nil,
+	containerinsightscommon.K8sNamespace:     nil,
+	containerinsightscommon.FullPodNameKey:   nil,
+	containerinsightscommon.PodNameKey:       nil,
+	containerinsightscommon.TypeService:      nil,
+	containerinsightscommon.GpuUniqueId:      nil,
+	containerinsightscommon.ContainerNamekey: nil,
+	containerinsightscommon.VersionKey:       nil,
+	containerinsightscommon.SourcesKey:       nil,
+	containerinsightscommon.Timestamp:        nil,
+	containerinsightscommon.K8sKey: {
+		containerinsightscommon.HostKey: nil,
+		"labels":                        nil,
+		"pod_id":                        nil,
+		"pod_name":                      nil,
+		"pod_owners":                    nil,
+		"namespace":                     nil,
+		"container_name":                nil,
+		"containerd":                    nil,
+	},
 }
-var podLabels = append([]string{
-	containerinsightscommon.K8sNamespace,
-	containerinsightscommon.FullPodNameKey,
-	containerinsightscommon.PodNameKey,
-	containerinsightscommon.TypeService,
-	containerinsightscommon.GpuUniqueId,
-}, nodeLabels...)
-var containerLabels = append([]string{
-	containerinsightscommon.ContainerNamekey,
-}, podLabels...)
-
-var nodeK8sLabels = []string{containerinsightscommon.HostKey}
-var podK8sLabels = append([]string{
-	"host",
-	"labels",
-	"pod_id",
-	"pod_name",
-	"pod_owners",
-	"namespace",
-}, nodeK8sLabels...)
-var containerK8sLabels = append([]string{
-	"container_name",
-	"containerd",
-}, podK8sLabels...)
+var podLabelFilter = map[string]map[string]interface{}{
+	containerinsightscommon.ClusterNameKey: nil,
+	containerinsightscommon.InstanceIdKey:  nil,
+	containerinsightscommon.GpuDeviceKey:   nil,
+	containerinsightscommon.MetricType:     nil,
+	containerinsightscommon.NodeNameKey:    nil,
+	containerinsightscommon.K8sNamespace:   nil,
+	containerinsightscommon.FullPodNameKey: nil,
+	containerinsightscommon.PodNameKey:     nil,
+	containerinsightscommon.TypeService:    nil,
+	containerinsightscommon.GpuUniqueId:    nil,
+	containerinsightscommon.VersionKey:     nil,
+	containerinsightscommon.SourcesKey:     nil,
+	containerinsightscommon.Timestamp:      nil,
+	containerinsightscommon.K8sKey: {
+		containerinsightscommon.HostKey: nil,
+		"labels":                        nil,
+		"pod_id":                        nil,
+		"pod_name":                      nil,
+		"pod_owners":                    nil,
+		"namespace":                     nil,
+	},
+}
+var nodeLabelFilter = map[string]map[string]interface{}{
+	containerinsightscommon.ClusterNameKey: nil,
+	containerinsightscommon.InstanceIdKey:  nil,
+	containerinsightscommon.GpuDeviceKey:   nil,
+	containerinsightscommon.MetricType:     nil,
+	containerinsightscommon.NodeNameKey:    nil,
+	containerinsightscommon.VersionKey:     nil,
+	containerinsightscommon.SourcesKey:     nil,
+	containerinsightscommon.Timestamp:      nil,
+	containerinsightscommon.K8sKey: {
+		containerinsightscommon.HostKey: nil,
+	},
+}
 
 type gpuAttributesProcessor struct {
 	*Config
@@ -112,28 +140,13 @@ func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 		return
 	}
 
-	var labels, k8sBlobLabels []string
-	if strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) {
-		labels = containerLabels
-		k8sBlobLabels = containerK8sLabels
-	} else if strings.HasPrefix(m.Name(), gpuPodMetricPrefix) {
-		labels = podLabels
-		k8sBlobLabels = podK8sLabels
-	} else if strings.HasPrefix(m.Name(), gpuNodeMetricPrefix) {
-		labels = nodeLabels
-		k8sBlobLabels = nodeK8sLabels
-	}
-
 	labelFilter := map[string]map[string]interface{}{}
-	for _, attr := range labels {
-		labelFilter[attr] = nil
-	}
-	k8sBlobMap := map[string]interface{}{}
-	for _, attr := range k8sBlobLabels {
-		k8sBlobMap[attr] = nil
-	}
-	if len(k8sBlobMap) > 0 {
-		labelFilter[containerinsightscommon.K8sKey] = k8sBlobMap
+	if strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) {
+		labelFilter = containerLabelFilter
+	} else if strings.HasPrefix(m.Name(), gpuPodMetricPrefix) {
+		labelFilter = podLabelFilter
+	} else if strings.HasPrefix(m.Name(), gpuNodeMetricPrefix) {
+		labelFilter = nodeLabelFilter
 	}
 
 	var dps pmetric.NumberDataPointSlice
