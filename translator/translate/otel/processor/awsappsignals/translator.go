@@ -80,16 +80,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	} else {
 		// Non-kubernetes environment detected.
-		//ctx := context.CurrentContext()
-		//if ctx.Mode() == config.ModeEC2 {
-		//	cfg.Resolvers = []appsignalsconfig.Resolver{
-		//		appsignalsconfig.NewEC2Resolver(hostedIn),
-		//	}
-		//} else {
-		//	cfg.Resolvers = []appsignalsconfig.Resolver{
-		//		appsignalsconfig.NewGenericResolver(hostedIn),
-		//	}
-		//}
 		cfg.Resolvers = []appsignalsconfig.Resolver{
 			appsignalsconfig.NewGenericResolver(hostedIn),
 		}

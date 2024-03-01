@@ -148,10 +148,6 @@ func getAppSignalsConfig() string {
 		}
 		return appSignalsConfigK8s
 	}
-	//ctx := context.CurrentContext()
-	//if ctx.Mode() == config.ModeEC2 {
-	//	return appSignalsConfigEC2
-	//}
 	return appSignalsConfigGeneric
 }
 
