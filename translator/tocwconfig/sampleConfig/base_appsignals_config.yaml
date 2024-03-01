@@ -136,12 +136,16 @@ extensions:
             operations:
                 - PutTraceSegments
     awsproxy/app_signals:
-        aws_endpoint: ""
+        aws_endpoint: "https://fake_endpoint"
+        certificate_file_path: ""
         endpoint: 0.0.0.0:2000
+        imds_retries: 1
         local_mode: true
+        profile: "AmazonCloudWatchAgent"
         proxy_address: ""
         region: us-east-1
         role_arn: ""
+        shared_credentials_file: ["fake-path"]
 processors:
     awsappsignals:
         resolvers:

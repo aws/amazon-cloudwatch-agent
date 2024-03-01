@@ -293,11 +293,15 @@ extensions:
                 - PutTraceSegments
     awsproxy/app_signals:
         aws_endpoint: ""
+        certificate_file_path: ""
         endpoint: 0.0.0.0:2000
+        imds_retries: 1
         local_mode: false
+        profile: ""
         proxy_address: ""
         region: us-east-1
         role_arn: ""
+        shared_credentials_file: []
 processors:
     awsappsignals:
         resolvers:
