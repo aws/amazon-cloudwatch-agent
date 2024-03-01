@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
@@ -52,7 +52,7 @@ func (c *metadataClient) InstanceID(ctx context.Context) (string, error) {
 		log.Printf("D! could not get instance id without imds v1 fallback enable thus enable fallback")
 		instanceInner, errorInner := c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "instance-id")
 		if errorInner == nil {
-			provider.GetFlagsStats().SetFlag(provider.FlagIMDSFallbackSucceed)
+			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
 		}
 		return instanceInner, errorInner
 	}
@@ -65,7 +65,7 @@ func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
 		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
 		hostnameInner, errorInner := c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "hostname")
 		if errorInner == nil {
-			provider.GetFlagsStats().SetFlag(provider.FlagIMDSFallbackSucceed)
+			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
 		}
 		return hostnameInner, errorInner
 	}
@@ -78,7 +78,7 @@ func (c *metadataClient) Get(ctx context.Context) (ec2metadata.EC2InstanceIdenti
 		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
 		instanceDocumentInner, errorInner := c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(ctx)
 		if errorInner == nil {
-			provider.GetFlagsStats().SetFlag(provider.FlagIMDSFallbackSucceed)
+			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
 		}
 		return instanceDocumentInner, errorInner
 	}

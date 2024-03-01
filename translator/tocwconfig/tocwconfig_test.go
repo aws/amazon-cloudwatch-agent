@@ -60,6 +60,7 @@ type testCase struct {
 func TestBaseContainerInsightsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/etc/test/ca_bundle.pem")
@@ -73,7 +74,7 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 func TestGenericAppSignalsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
-	context.CurrentContext().SetMode(config.ModeOnPrem)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
@@ -84,6 +85,7 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 func TestAppSignalsAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
@@ -130,6 +132,7 @@ func TestKubernetesModeOnPremiseConfig(t *testing.T) {
 func TestLogsAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	// for otel components and not our adapter components like
@@ -192,6 +195,7 @@ func TestCollectDConfig(t *testing.T) {
 func TestPrometheusConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	temp := t.TempDir()
 	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
@@ -413,6 +417,7 @@ func TestTraceConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
 			readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
@@ -421,6 +426,7 @@ func TestTraceConfig(t *testing.T) {
 
 func TestConfigWithEnvironmentVariables(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "config_with_env", "linux", expectedEnvVars, "")
 }
@@ -476,6 +482,8 @@ func TestDeltaNetConfigLinux(t *testing.T) {
 
 func TestECSNodeMetricConfig(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv("RUN_IN_CONTAINER", "True")
 	t.Setenv("HOST_NAME", "fake-host-name")
 	t.Setenv("HOST_IP", "127.0.0.1")
