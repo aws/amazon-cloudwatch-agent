@@ -5,6 +5,7 @@ package gpuattributes
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/grafana/regexp"
@@ -68,7 +69,8 @@ func TestProcessMetrics(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
+	for tname, tc := range testcases {
+		fmt.Printf("running %s\n", tname)
 		ms, _ := gp.processMetrics(ctx, tc.metrics)
 		attrs := ms.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes()
 		assert.Equal(t, len(tc.want), attrs.Len())

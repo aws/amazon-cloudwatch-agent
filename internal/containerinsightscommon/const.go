@@ -10,7 +10,7 @@ const (
 
 	ClusterNameKey          = "ClusterName"
 	NodeNameKey             = "NodeName" // Attribute names
-	InstanceIdKey           = "InstanceIdKey"
+	InstanceIdKey           = "InstanceId"
 	InstanceTypeKey         = "InstanceType"
 	AutoScalingGroupNameKey = "AutoScalingGroupName"
 	VersionKey              = "Version"

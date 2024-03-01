@@ -513,7 +513,7 @@ processors:
     send_batch_max_size: 0
     send_batch_size: 8192
     timeout: 5s
-  gpu/containerinsights: {}
+  gpuattributes/containerinsights: {}
   metricstransform/containerinsights:
     transforms:
       - action: insert
@@ -1038,7 +1038,7 @@ service:
       processors:
         - metricstransform/containerinsights
         - batch/containerinsights
-        - gpu/containerinsights
+        - gpuattributes/containerinsights
       receivers:
         - awscontainerinsightreceiver
   telemetry:
