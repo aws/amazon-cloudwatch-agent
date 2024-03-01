@@ -79,6 +79,7 @@ jobs:
     with:
       ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
       BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
 
   BuildAndUploadITAR:
     uses: ./.github/workflows/test-build.yml
