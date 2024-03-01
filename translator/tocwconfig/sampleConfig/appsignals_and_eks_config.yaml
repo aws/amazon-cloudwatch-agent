@@ -28,12 +28,6 @@ exporters:
                     - aws.span.kind
                   regex: ^(SERVER|LOCAL_ROOT)$
                   separator: ;
-                - label_names:
-                    - EC2.InstanceId
-                    - EC2.AutoScalingGroupName
-                    - host.name
-                  regex: .*
-                  separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
@@ -112,12 +106,6 @@ exporters:
                 - label_names:
                     - aws.span.kind
                   regex: ^(CLIENT|PRODUCER|CONSUMER)$
-                  separator: ;
-                - label_names:
-                    - EC2.InstanceId
-                    - EC2.AutoScalingGroupName
-                    - host.name
-                  regex: .*
                   separator: ;
               metric_name_selectors:
                 - Latency
