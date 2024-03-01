@@ -111,4 +111,6 @@ func NewOperationsFilter(operations ...string) OperationsFilter {
 type StatsConfig struct {
 	// Operations are the allowed operation names to gather stats for.
 	Operations []string `mapstructure:"operations,omitempty"`
+	// UsageFlags are the usage flags to set on start up.
+	UsageFlags map[Flag]any `mapstructure:"usage_flags,omitempty"`
 }
