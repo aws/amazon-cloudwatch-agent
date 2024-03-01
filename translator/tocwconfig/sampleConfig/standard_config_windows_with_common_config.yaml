@@ -5,11 +5,9 @@ exporters:
         max_datums_per_call: 1000
         max_values_per_datum: 150
         middleware: agenthealth/metrics
-        mode: EC2
         namespace: CWAgent
         profile: AmazonCloudWatchAgent
         region: us-west-2
-        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
         shared_credential_file: fake-path
@@ -19,6 +17,9 @@ extensions:
         stats:
             operations:
                 - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     ec2tagger:
         ec2_instance_tag_keys:
