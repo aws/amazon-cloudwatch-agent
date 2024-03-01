@@ -9,10 +9,8 @@ exporters:
         max_datums_per_call: 1000
         max_values_per_datum: 5000
         middleware: agenthealth/metrics
-        mode: EC2
         namespace: CWAgent
         region: us-west-2
-        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
         role_arn: metrics_role_arn_value_test
@@ -83,16 +81,25 @@ extensions:
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/metrics:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutTraceSegments
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000

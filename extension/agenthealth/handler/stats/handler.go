@@ -25,6 +25,7 @@ func NewHandlers(logger *zap.Logger, cfg agent.StatsConfig) ([]awsmiddleware.Req
 	filter := agent.NewOperationsFilter(cfg.Operations...)
 	clientStats := client.NewHandler(filter)
 	stats := newStatsHandler(logger, filter, []agent.StatsProvider{clientStats, provider.GetProcessStats(), provider.GetFlagsStats()})
+	agent.UsageFlags().SetValues(cfg.UsageFlags)
 	return []awsmiddleware.RequestHandler{stats, clientStats}, []awsmiddleware.ResponseHandler{clientStats}
 }
 
