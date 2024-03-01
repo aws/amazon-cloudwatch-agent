@@ -177,6 +177,24 @@ jobs:
       - name: Clean old eks cluster
         working-directory: tool/clean
         run: go run ./clean_eks/clean_eks.go --tags=clean
+  clean-ebs-volumes:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old unused ebs volumes
+        working-directory: tool/clean
+        run: go run ./clean_ebs/clean_ebs.go --tags=clean
 
   clean-asg:
     runs-on: ubuntu-latest
