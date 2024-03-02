@@ -84,7 +84,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: ${{ inputs.Region }}
 
       - name: Cache binaries
@@ -125,6 +125,6 @@ jobs:
         # Copy the RPM to .../amazon_linux/... because BETA customers expect it there.
         run: |
           echo "BucketKey: ${{ inputs.Bucket }} ${{ inputs.BucketKey }}"
-          aws s3 cp build/bin s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }} --recursive
+          aws s3 cp build/bin s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} --recursive
           aws s3 cp build/bin/linux/amd64/amazon-cloudwatch-agent.rpm s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
           aws s3 cp build/bin/linux/arm64/amazon-cloudwatch-agent.rpm s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/amazon_linux/arm64/latest/amazon-cloudwatch-agent.rpm

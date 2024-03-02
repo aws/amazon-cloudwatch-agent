@@ -1,0 +1,43 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Enhanced Container Insights Internal Test Release
+on:
+  workflow_dispatch:
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BuildAndUploadPackages:
+    uses: ./.github/workflows/test-build-packages.yml
+    needs: [BuildAndUpload]
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BuildDocker:
+    needs: [BuildAndUpload]
+    uses: ./.github/workflows/test-build-docker.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "windows-container-internal:latest"
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"

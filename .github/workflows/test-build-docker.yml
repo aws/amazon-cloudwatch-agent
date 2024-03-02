@@ -87,10 +87,13 @@ jobs:
 
       # Build dir is ignored in our .dockerignore thus need to copy to another dir.
       - name: Copy Binary For Agent Image Build
+        env:
+          S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
         run: |
           mkdir amd64
           mkdir arm64
+          echo $S3_INTEGRATION_BUCKET
           aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/amd64/amazon-cloudwatch-agent.deb amd64/amazon-cloudwatch-agent.deb
           aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/arm64/amazon-cloudwatch-agent.deb arm64/amazon-cloudwatch-agent.deb
 
@@ -397,7 +400,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
       - name: Cache sig
