@@ -35,7 +35,7 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, processors["ec2tagger"])
 	assert.NotNil(t, processors["metricstransform"])
 	assert.NotNil(t, processors["transform"])
-	assert.NotNil(t, processors["gpu"])
+	assert.NotNil(t, processors["gpuattributes"])
 
 	exporters := factories.Exporters
 	assert.Len(t, exporters, exportersCount)
