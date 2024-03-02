@@ -17,4 +17,4 @@ RUN msiexec /i C:\\tmp\\amazon-cloudwatch-agent.msi
 WORKDIR $CONTAINER_CLOUDWATCHAGENT_PATH
 
 ENV RUN_IN_CONTAINER="True"
-ENTRYPOINT ["start-amazon-cloudwatch-agent.exe"]
+CMD ["start-amazon-cloudwatch-agent.exe"]

@@ -16,4 +16,4 @@ WORKDIR $CONTAINER_CLOUDWATCHAGENT_PATH
 COPY "./tmp/windows_${TARGETARCH}" $CONTAINER_CLOUDWATCHAGENT_PATH
 
 ENV RUN_IN_CONTAINER="True"
-ENTRYPOINT ["start-amazon-cloudwatch-agent.exe"]
+CMD ["start-amazon-cloudwatch-agent.exe"]
