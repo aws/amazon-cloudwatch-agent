@@ -9,6 +9,8 @@ package paths
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 const (
@@ -31,6 +33,12 @@ func init() {
 	} else {
 		// Windows 2003
 		programData = filepath.Join(os.Getenv("ALLUSERSPROFILE"), "Application Data")
+	}
+
+	if envconfig.IsWindowsHostProcessContainer() {
+		CONFIG_DIR_IN_CONTAINER = filepath.Join(os.Getenv("CONTAINER_SANDBOX_MOUNT_POINT"), "Program Files", AgentDir, "cwagentconfig", "cwagentconfig.json")
+		programFiles = filepath.Join(os.Getenv("CONTAINER_SANDBOX_MOUNT_POINT"), "Program Files")
+		programData = filepath.Join(os.Getenv("CONTAINER_SANDBOX_MOUNT_POINT"), "ProgramData")
 	}
 
 	AgentRootDir := filepath.Join(programFiles, AgentDir)
