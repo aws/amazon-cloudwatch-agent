@@ -90,6 +90,7 @@ var fServiceName = flag.String("service-name", "telegraf", "service name (window
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
+var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
 
 var stop chan struct{}
 
@@ -175,6 +176,14 @@ func reloadLoop(
 
 		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
+			if *fStartUpErrorFile != "" {
+				f, err := os.OpenFile(*fStartUpErrorFile, os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					log.Printf("E! Unable to create errorFile: %s", err)
+				} else {
+					_ = f.Close()
+				}
+			}
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
