@@ -78,7 +78,7 @@ jobs:
       id-token: write
       contents: read
     with:
-      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
+      ContainerRepositoryNameAndTag: "windows-container-internal:${{ github.sha }}"
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
 

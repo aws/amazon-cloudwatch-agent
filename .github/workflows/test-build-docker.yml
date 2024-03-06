@@ -295,6 +295,12 @@ jobs:
           cd buildMSI/msi_dep
           .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
 
+      - name: clean ecr login credential cache
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run : |
+          cat $HOME/.docker/config.json
+          Remove-Item -Recurse -Force $HOME/.docker
+
       - name: Login ECR
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
         id: login-ecr
