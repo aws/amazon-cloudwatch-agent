@@ -222,6 +222,11 @@ jobs:
           cd buildMSI/msi_dep
           .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
 
+      - name: clean ecr login credential cache
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run : |
+          echo '{"auths": {"https://index.docker.io/v1/": {}}, "HttpHeaders": { "User-Agent": "Docker-Client/19.03.12 (windows)"}}' > ~/.docker/config.json
+
       - name: Login ECR
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
         id: login-ecr
@@ -291,6 +296,11 @@ jobs:
           Expand-Archive buildMSI.zip -Force
           cd buildMSI/msi_dep
           .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
+
+      - name: clean ecr login credential cache
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run : |
+          echo '{"auths": {"https://index.docker.io/v1/": {}}, "HttpHeaders": { "User-Agent": "Docker-Client/19.03.12 (windows)"}}' > ~/.docker/config.json
 
       - name: Login ECR
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
