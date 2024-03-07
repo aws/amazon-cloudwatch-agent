@@ -13,6 +13,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -129,20 +130,25 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				fmt.Printf("Cannot access %v: %v \n", path, err)
 				return err
 			}
-			if info.Mode()&os.ModeSymlink != 0 {
-				log.Printf("Find symbolic link %s \n", path)
-				path, err := filepath.EvalSymlinks(path)
-				if err != nil {
-					log.Printf("Symbolic link %v will be ignored due to err: %v. \n", path, err)
+			if envconfig.IsWindowsHostProcessContainer() {
+				log.Printf("Skipping checking symbolic link for Windows host process containers %s. \n"+
+					"These symbolic links are skipped as valuating symlinks is common failures for Windows containers", path)
+			} else {
+				if info.Mode()&os.ModeSymlink != 0 {
+					log.Printf("Find symbolic link %s \n", path)
+					path, err := filepath.EvalSymlinks(path)
+					if err != nil {
+						log.Printf("Symbolic link %v will be ignored due to err: %v. \n", path, err)
+						return nil
+					}
+					info, err = os.Stat(path)
+					if err != nil {
+						log.Printf("Path %v will be ignored due to err: %v. \n", path, err)
+					}
+				}
+				if info.IsDir() {
 					return nil
 				}
-				info, err = os.Stat(path)
-				if err != nil {
-					log.Printf("Path %v will be ignored due to err: %v. \n", path, err)
-				}
-			}
-			if info.IsDir() {
-				return nil
 			}
 
 			if filepath.Ext(path) == context.TmpFileSuffix {
