@@ -214,7 +214,7 @@ jobs:
       - name: Create msi
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
         run: |
-          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix314.exe
+          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314.exe
           .\wix314.exe /install /quiet /norestart
           $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.14\bin;"
           $env:PATH = $env:PATH + $wixToolsetBinPath
@@ -289,7 +289,7 @@ jobs:
       - name: Create msi
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
         run : |
-          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix314.exe
+          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314.exe
           .\wix314.exe /install /quiet /norestart
           $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.14\bin;"
           $env:PATH = $env:PATH + $wixToolsetBinPath
