@@ -23,6 +23,7 @@ on:
   push:
     branches:
       - main*
+      - nginx-poc
     paths-ignore:
       - '**/*.md'
       - 'NOTICE'
@@ -51,8 +52,8 @@ jobs:
       id-token: write
       contents: read
     with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      BucketKey: "integration-test/binary/nginx-poc"
+      PackageBucketKey: "integration-test/packaging/nginx-poc"
       TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
