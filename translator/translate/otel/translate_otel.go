@@ -6,6 +6,7 @@ package otel
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nginx"
 	"log"
 	"time"
 
@@ -75,6 +76,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		prometheus.NewTranslator(),
 		emf_logs.NewTranslator(),
 		xray.NewTranslator(),
+		nginx.NewTranslator(),
 	)
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)

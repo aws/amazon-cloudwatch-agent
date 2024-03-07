@@ -96,6 +96,10 @@
         "metrics_collected": {
           "type": "object",
           "properties": {
+            "nginx": {
+              "type": "object",
+              "additionalProperties": true
+            },
             "collectd": {
               "$ref": "#/definitions/metricsDefinition/definitions/collectdDefinitions"
             },
