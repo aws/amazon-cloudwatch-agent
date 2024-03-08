@@ -4,7 +4,11 @@
 package normalizer
 
 import (
+	"fmt"
+	"strings"
+
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	conventions "go.opentelemetry.io/collector/semconv/v1.18.0"
 	"go.uber.org/zap"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
@@ -48,6 +52,11 @@ var copyMapForMetric = map[string]string{
 	attr.K8SPodName:         "K8s.Pod",
 }
 
+const (
+	instrumentationModeAuto   = "Auto"
+	instrumentationModeManual = "Manual"
+)
+
 func NewAttributesNormalizer(logger *zap.Logger) *attributesNormalizer {
 	return &attributesNormalizer{
 		logger: logger,
@@ -57,6 +66,7 @@ func NewAttributesNormalizer(logger *zap.Logger) *attributesNormalizer {
 func (n *attributesNormalizer) Process(attributes, resourceAttributes pcommon.Map, isTrace bool) error {
 	n.copyResourceAttributesToAttributes(attributes, resourceAttributes, isTrace)
 	n.renameAttributes(attributes, resourceAttributes, isTrace)
+	n.appendNewAttributes(attributes, resourceAttributes, isTrace)
 	return nil
 }
 
@@ -90,6 +100,41 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 			}
 		}
 	}
+}
+
+func (n *attributesNormalizer) appendNewAttributes(attributes, resourceAttributes pcommon.Map, isTrace bool) {
+	if isTrace {
+		return
+	}
+
+	var (
+		sdkName        string
+		sdkVersion     string
+		sdkAutoVersion string
+		sdkLang        string
+	)
+	sdkName, sdkVersion, sdkLang = "-", "-", "-"
+	mode := instrumentationModeManual
+
+	// TODO read telemetry.auto.version from telemetry.distro.* from v1.22
+	resourceAttributes.Range(func(k string, v pcommon.Value) bool {
+		switch k {
+		case conventions.AttributeTelemetrySDKName:
+			sdkName = strings.ReplaceAll(v.Str(), " ", "")
+		case conventions.AttributeTelemetrySDKLanguage:
+			sdkLang = strings.ReplaceAll(v.Str(), " ", "")
+		case conventions.AttributeTelemetrySDKVersion:
+			sdkVersion = strings.ReplaceAll(v.Str(), " ", "")
+		case conventions.AttributeTelemetryAutoVersion:
+			sdkAutoVersion = strings.ReplaceAll(v.Str(), " ", "")
+		}
+		return true
+	})
+	if sdkAutoVersion != "" {
+		sdkVersion = sdkAutoVersion
+		mode = instrumentationModeAuto
+	}
+	attributes.PutStr(attr.MetricAttributeSDKMetadata, fmt.Sprintf("%s,%s,%s,%s", sdkName, sdkVersion, sdkLang, mode))
 }
 
 func rename(attrs pcommon.Map, renameMap map[string]string) {

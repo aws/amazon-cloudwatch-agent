@@ -6,7 +6,9 @@ package normalizer
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
 	"go.uber.org/zap"
 )
 
@@ -101,5 +103,75 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 
 	if value, ok := attributes.Get("K8s.Node"); !ok || value.AsString() != "i-01ef7d37f42caa168" {
 		t.Errorf("Attribute was not copied correctly: got %v, want %v", value.AsString(), "i-01ef7d37f42caa168")
+	}
+}
+
+func Test_attributesNormalizer_appendNewAttributes(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+
+	completeResourceAttributes := pcommon.NewMap()
+	completeResourceAttributes.PutStr(conventions.AttributeTelemetrySDKName, "opentelemetry")
+	completeResourceAttributes.PutStr(conventions.AttributeTelemetryAutoVersion, "0.0.1 auto")
+	completeResourceAttributes.PutStr(conventions.AttributeTelemetrySDKVersion, "0.0.1 test")
+	completeResourceAttributes.PutStr(conventions.AttributeTelemetrySDKLanguage, "go")
+
+	incompleteResourceAttributes := pcommon.NewMap()
+	incompleteResourceAttributes.PutStr(conventions.AttributeTelemetrySDKName, "opentelemetry")
+	incompleteResourceAttributes.PutStr(conventions.AttributeTelemetrySDKVersion, "0.0.1 test")
+
+	tests := []struct {
+		name                   string
+		attributes             pcommon.Map
+		resourceAttributes     pcommon.Map
+		isTrace                bool
+		expectedAttributeValue string
+	}{
+		{
+			"testAppendNoAttributesToTrace",
+			pcommon.NewMap(),
+			completeResourceAttributes,
+			true,
+			"",
+		}, {
+			"testAppendAttributesToMetricWithValuesFound",
+			pcommon.NewMap(),
+			completeResourceAttributes,
+			false,
+			"opentelemetry,0.0.1auto,go,Auto",
+		},
+		{
+			"testAppendAttributesToMetricWithSomeValuesMissing",
+			pcommon.NewMap(),
+			incompleteResourceAttributes,
+			false,
+			"opentelemetry,0.0.1test,-,Manual",
+		},
+		{
+
+			"testAppendAttributesToMetricWithAllValuesMissing",
+			pcommon.NewMap(),
+			pcommon.NewMap(),
+			false,
+			"-,-,-,Manual",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := &attributesNormalizer{
+				logger: logger,
+			}
+			n.appendNewAttributes(tt.attributes, tt.resourceAttributes, tt.isTrace)
+
+			if value, ok := tt.attributes.Get("SDK"); !ok {
+				if !tt.isTrace {
+					t.Errorf("attribute is not found.")
+				}
+			} else {
+				if tt.isTrace {
+					t.Errorf("unexpected attribute is found.")
+				}
+				assert.Equal(t, tt.expectedAttributeValue, value.Str())
+			}
+		})
 	}
 }
