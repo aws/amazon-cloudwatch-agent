@@ -162,12 +162,14 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v3 v3.0.1
-	gotest.tools/v3 v3.2.0
+	gotest.tools/v3 v3.4.0
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
 	k8s.io/klog/v2 v2.100.1
 )
+
+require github.com/tufanbarisyildirim/gonginx v0.0.0-20240119045539-829f28d11c3c
 
 require (
 	cloud.google.com/go/compute v1.23.2 // indirect

@@ -98,7 +98,14 @@
           "properties": {
             "nginx": {
               "type": "object",
-              "additionalProperties": true
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                }
+              },
+              "additionalProperties": false
             },
             "collectd": {
               "$ref": "#/definitions/metricsDefinition/definitions/collectdDefinitions"

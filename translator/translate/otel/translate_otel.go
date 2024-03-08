@@ -6,6 +6,7 @@ package otel
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/discovery"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nginx"
 	"log"
 	"time"
@@ -47,6 +48,20 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		return nil, errors.New("invalid json config")
 	}
 	conf := confmap.NewFromStringMap(m)
+
+	discoverers := []common.Discoverer{
+		discovery.NginxDiscoverer(),
+	}
+	for _, discoverer := range discoverers {
+		overrides, err := discoverer.Discover()
+		if err != nil {
+			return nil, fmt.Errorf("unable to discover for %s : %w", discoverer.ID(), err)
+		}
+		err = conf.Merge(confmap.NewFromStringMap(overrides))
+		if err != nil {
+			return nil, fmt.Errorf("unable to merge discover results for %s : %w", discoverer.ID(), err)
+		}
+	}
 
 	if conf.IsSet("csm") {
 		log.Printf("W! CSM has already been deprecated")

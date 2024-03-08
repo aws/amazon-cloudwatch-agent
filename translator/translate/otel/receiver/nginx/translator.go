@@ -43,5 +43,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprintf("missing %s for nginx", baseKey)}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*nginxreceiver.Config)
+	if endpoint, ok := common.GetString(conf, common.ConfigKey(baseKey, "endpoint")); ok {
+		cfg.Endpoint = endpoint
+	}
 	return cfg, nil
 }

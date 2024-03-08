@@ -78,6 +78,11 @@ var (
 	}
 )
 
+type Discoverer interface {
+	Discover() (map[string]any, error)
+	ID() string
+}
+
 // Translator is used to translate the JSON config into an
 // OTEL config.
 type Translator[C any] interface {
