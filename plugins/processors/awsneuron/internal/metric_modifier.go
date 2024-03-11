@@ -75,7 +75,7 @@ func (md *MetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metr
 		// Creating body for the aggregated metric and add it to the new newMetricSlice
 		aggregatedMetric.SetName(originalMetric.Name() + aggregatedMetricSuffix)
 		originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
-
+		aggregatedMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 		aggregatedValue := 0.0
 		for i := 0; i < originalMetricDatapoints.Len(); i++ {
 			originalDatapoint := originalMetricDatapoints.At(i)
@@ -85,6 +85,7 @@ func (md *MetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metr
 			// Creating a new metric from the current datapoint and adding it to the new newMetricSlice
 			newNameMetric := newMetricSlice.AppendEmpty()
 			originalDatapoint.CopyTo(newNameMetric.SetEmptySum().DataPoints().AppendEmpty())
+			newNameMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 			subtypeValue, _ := originalDatapoint.Attributes().Get(aggregationAttributeKey)
 			newNameMetric.SetName(originalMetric.Name() + "_" + subtypeValue.Str())
 		}
