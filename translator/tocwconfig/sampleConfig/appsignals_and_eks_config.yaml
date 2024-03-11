@@ -634,6 +634,7 @@ receivers:
         role_arn: ""
         shared_credentials_file: []
         accelerated_compute_metrics: false
+        aws_neuron_metrics: false
     otlp/app_signals:
         protocols:
             grpc:

@@ -429,6 +429,8 @@ func TestTranslator(t *testing.T) {
 							"cluster_gpu_request", "cluster_gpu_total",
 						},
 					},
+
+					// PURANGA FILL THESE
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
 					{

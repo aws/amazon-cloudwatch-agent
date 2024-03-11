@@ -33,6 +33,22 @@ var renameMapForDcgm = map[string]string{
 	"DCGM_FI_DEV_POWER_USAGE":     containerinsightscommon.GpuPowerDraw,
 }
 
+var renameMapForNeuronMonitor = map[string]string{
+	"execution_errors_total":                          containerinsightscommon.NeuronExecutionErrors,
+	"execution_status_total":                          containerinsightscommon.NeuronExecutionStatus,
+	"neuron_runtime_memory_used_bytes":                containerinsightscommon.NeuronRuntimeMemoryUsage,
+	"neuroncore_memory_usage_constants":               containerinsightscommon.NeuronCoreMemoryUtilizationConstants,
+	"neuroncore_memory_usage_model_code":              containerinsightscommon.NeuronCoreMemoryUtilizationModelCode,
+	"neuroncore_memory_usage_model_shared_scratchpad": containerinsightscommon.NeuronCoreMemoryUtilizationSharedScratchpad,
+	"neuroncore_memory_usage_runtime_memory":          containerinsightscommon.NeuronCoreMemoryUtilizationRuntimeMemory,
+	"neuroncore_memory_usage_tensors":                 containerinsightscommon.NeuronCoreMemoryUtilizationTensors,
+	"neuroncore_utilization_ratio":                    containerinsightscommon.NeuronCoreUtilization,
+	"instance_info":                                   containerinsightscommon.NeuronInstanceInfo,
+	"neuron_hardware":                                 containerinsightscommon.NeuronHardware,
+	"hardware_ecc_events_total":                       containerinsightscommon.NeuronDeviceHardwareEccEvents,
+	"execution_latency_seconds":                       containerinsightscommon.NeuronExecutionLatency,
+}
+
 type translator struct {
 	name    string
 	factory processor.Factory
@@ -103,6 +119,26 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 					}, operations...),
 				})
 			}
+		}
+	}
+
+	if awscontainerinsight.AwsNeuronMetricsEnabled(conf) {
+		for oldName, newName := range renameMapForNeuronMonitor {
+			var operations []map[string]interface{}
+			if newName == containerinsightscommon.NeuronCoreUtilization {
+				operations = append(operations, map[string]interface{}{
+					"action":             "experimental_scale_value",
+					"experimental_scale": 100,
+				})
+			}
+
+			transformRules = append(transformRules, map[string]interface{}{
+				"include":  oldName,
+				"action":   "insert",
+				"new_name": newName,
+				"operations": append([]map[string]interface{}{},
+					operations...),
+			})
 		}
 	}
 

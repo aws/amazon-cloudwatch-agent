@@ -9,7 +9,8 @@
         "metrics_collection_interval": 30,
         "disable_metric_extraction": true,
         "enhanced_container_insights": true,
-        "accelerated_compute_metrics": false
+        "accelerated_compute_metrics": false,
+        "aws_neuron_metrics": false
       }
     },
     "force_flush_interval": 5,

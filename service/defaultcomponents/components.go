@@ -4,6 +4,7 @@
 package defaultcomponents
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsneuron"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -55,6 +56,7 @@ func Factories() (otelcol.Factories, error) {
 		resourcedetectionprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
 		gpuattributes.NewFactory(),
+		awsneuron.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
