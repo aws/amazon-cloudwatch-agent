@@ -117,10 +117,10 @@ func (md *MetricModifier) duplicateMetrics(metricsSlice pmetric.MetricSlice, ori
 	for i := 0; i < metricsSlice.Len(); i++ {
 		metric := metricsSlice.At(i)
 		if duplicateForNodeOnly {
-			duplicateMetricForType(metric, containerinsightscommon.TypeNode).CopyTo(newMetricsSlice.AppendEmpty(), originalMetricName)
+			duplicateMetricForType(metric, containerinsightscommon.TypeNode, originalMetricName).CopyTo(newMetricsSlice.AppendEmpty())
 		} else {
 			for _, prefix := range metricModifications.DuplicationTypes {
-				duplicateMetricForType(metric, prefix).CopyTo(newMetricsSlice.AppendEmpty(), originalMetricName)
+				duplicateMetricForType(metric, prefix, originalMetricName).CopyTo(newMetricsSlice.AppendEmpty())
 			}
 		}
 	}
