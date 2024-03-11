@@ -169,7 +169,7 @@ func handleLatencyMetric(originalMetric pmetric.Metric) pmetric.MetricSlice {
 	newMetricSlice := pmetric.NewMetricSlice()
 	newMetric := newMetricSlice.AppendEmpty()
 	newMetric.SetName(originalMetric.Name())
-	datapoint := newMetric.SetEmptyGauge().DataPoints().AppendEmpty()
+	datapoint := newMetric.SetEmptySum().DataPoints().AppendEmpty()
 
 	for i := 0; i < originalMetricDatapoints.Len(); i++ {
 		dp := originalMetricDatapoints.At(i)
