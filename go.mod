@@ -13,13 +13,13 @@ replace (
 )
 
 // replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20231221155153-92710a714293
-replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => ../opentelemetry-collector-contrib-TI/exporter/awsemfexporter
+replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => ../opentelemetry-collector-contrib/exporter/awsemfexporter
 // replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20231221155153-92710a714293
-replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => ../opentelemetry-collector-contrib-TI/receiver/awscontainerinsightreceiver
+replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => ../opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver
 // replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20231221155153-92710a714293
-replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s => ../opentelemetry-collector-contrib-TI/internal/aws/k8s
+replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s => ../opentelemetry-collector-contrib/internal/aws/k8s
 //replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20231221155153-92710a714293
-replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight => ../opentelemetry-collector-contrib-TI/internal/aws/containerinsight
+replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight => ../opentelemetry-collector-contrib/internal/aws/containerinsight
 // Replace with contrib to revert upstream change https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/20519
 replace github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20231221155153-92710a714293
 
