@@ -78,7 +78,12 @@ func (md *MetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metr
 	originalMetricDatapoints := getMetricDatapoints(originalMetric)
 
 	if aggregationAttributeKey := metricModificationsMap[originalMetric.Name()].AggregationAttributeKey; aggregationAttributeKey != "" && originalMetric.Type() == pmetric.MetricTypeSum {
-		aggregatedMetric := newMetricSlice.AppendEmpty()
+		aggregatedMetric := pmetric.NewMetric()
+		if originalMetric.Name() != containerinsightscommon.NeuronDeviceHardwareEccEvents {
+			//aggregated metric for ecc error is not required
+			aggregatedMetric = newMetricSlice.AppendEmpty()
+		}
+
 		// Creating body for the aggregated metric and add it to the new newMetricSlice
 		aggregatedMetric.SetName(originalMetric.Name() + aggregatedMetricSuffix)
 		originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
