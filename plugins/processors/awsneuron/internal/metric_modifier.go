@@ -63,7 +63,9 @@ func (md *MetricModifier) ModifyMetric(originalMetric pmetric.Metric) pmetric.Me
 	modifiedMetricSlice := pmetric.NewMetricSlice()
 
 	if originalMetricName == containerinsightscommon.NeuronExecutionLatency {
-		modifiedMetricSlice = handleLatencyMetric(originalMetric)
+		modifiedMetricSlice = keepSpecificDatapointBasedOnAttribute(originalMetric, metricModificationsMap[originalMetricName].AttributeKeysToBeRemoved[0], "p50")
+	} else if originalMetricName == containerinsightscommon.NeuronRuntimeMemoryUsage {
+		modifiedMetricSlice = keepSpecificDatapointBasedOnAttribute(originalMetric, metricModificationsMap[originalMetricName].AttributeKeysToBeRemoved[0], "neuron_device")
 	} else {
 		modifiedMetricSlice = md.createAggregatedSumMetrics(originalMetric)
 	}
@@ -164,7 +166,7 @@ func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
 	}
 }
 
-func handleLatencyMetric(originalMetric pmetric.Metric) pmetric.MetricSlice {
+func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attributeKey string, attributeValueToKeep string) pmetric.MetricSlice {
 	originalMetricDatapoints := getMetricDatapoints(originalMetric)
 
 	newMetricSlice := pmetric.NewMetricSlice()
@@ -174,7 +176,7 @@ func handleLatencyMetric(originalMetric pmetric.Metric) pmetric.MetricSlice {
 
 	for i := 0; i < originalMetricDatapoints.Len(); i++ {
 		dp := originalMetricDatapoints.At(i)
-		if value, exists := dp.Attributes().Get("percentile"); exists && value.AsString() == "p50" {
+		if value, exists := dp.Attributes().Get(attributeKey); exists && value.AsString() == attributeValueToKeep {
 			dp.CopyTo(datapoint)
 			break
 		}
