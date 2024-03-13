@@ -432,11 +432,9 @@ exporters:
       - dimensions:
           - - ClusterName
           - - ClusterName
-            - InstanceType
             - InstanceId
             - NodeName
           - - ClusterName
-            - InstanceType
             - InstanceId
             - NodeName
             - NeuronDevice
@@ -452,7 +450,6 @@ exporters:
       - dimensions:
           - - ClusterName
             - InstanceId
-            - InstanceType
             - NodeName
           - - ClusterName
         label_matchers: [ ]
@@ -472,11 +469,9 @@ exporters:
       - dimensions:
           - - ClusterName
           - - ClusterName
-            - InstanceType
             - InstanceId
             - NodeName
           - - ClusterName
-            - InstanceType
             - InstanceId
             - NodeName
             - NeuronDevice

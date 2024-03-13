@@ -569,7 +569,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
 				MetricNameSelectors: []string{
 					"node_neuroncore_utilization",
 					"node_neuroncore_memory_usage_constants",
@@ -580,7 +580,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}},
 				MetricNameSelectors: []string{
 					"node_neuron_execution_errors_total",
 					"node_neuron_execution_errors_generic",
@@ -597,7 +597,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
 				MetricNameSelectors: []string{
 					"node_neurondevice_hw_ecc_events_total_mem_ecc_corrected",
 					"node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected",
