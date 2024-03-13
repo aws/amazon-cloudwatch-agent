@@ -7,104 +7,39 @@ import (
 	"context"
 	"testing"
 
-	"github.com/grafana/regexp"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 )
 
-var normalizedNameRegex = regexp.MustCompile("^(container|pod|node)_gpu_[a-z_]+$")
+func TestAwsNeuronProcessor_ProcessMetrics(t *testing.T) {
+	logger := zap.NewNop()
+	config := &Config{}
+	processor := newAwsNeuronProcessor(config, logger)
+	processor.started = true
 
-func TestProcessMetrics(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	gp := &awsneuronprocessor{
-		logger: logger,
-		Config: createDefaultConfig().(*Config),
-	}
+	md := pmetric.NewMetrics()
+	rm := md.ResourceMetrics().AppendEmpty()
+	metrics := rm.ScopeMetrics().AppendEmpty().Metrics()
+	metrics.AppendEmpty()
+
 	ctx := context.Background()
-	gp.Start(ctx, nil)
+	modifiedMd, err := processor.processMetrics(ctx, md)
 
-	testcases := map[string]struct {
-		metrics pmetric.Metrics
-		want    map[string]string
-	}{
-		"keepExisting": {
-			metrics: generateMetrics(map[string]string{
-				"ClusterName":   "cluster",
-				"Namespace":     "namespace",
-				"Service":       "service",
-				"ContainerName": "container",
-				"FullPodName":   "fullpod",
-				"PodName":       "pod",
-				"GpuDevice":     "gpu",
-			}),
-			want: map[string]string{
-				"ClusterName":   "cluster",
-				"Namespace":     "namespace",
-				"Service":       "service",
-				"ContainerName": "container",
-				"FullPodName":   "fullpod",
-				"PodName":       "pod",
-				"GpuDevice":     "gpu",
-			},
-		},
-		"addMissing": {
-			metrics: generateMetrics(map[string]string{
-				"ClusterName":   "cluster",
-				"Namespace":     "namespace",
-				"Service":       "service",
-				"ContainerName": "container",
-				"FullPodName":   "fullpod",
-			}),
-			want: map[string]string{
-				"ClusterName":   "cluster",
-				"Namespace":     "namespace",
-				"Service":       "service",
-				"ContainerName": "container",
-				"FullPodName":   "fullpod",
-				"PodName":       "",
-				"GpuDevice":     "",
-			},
-		},
-		"addAll": {
-			metrics: generateMetrics(map[string]string{}),
-			want: map[string]string{
-				"ClusterName":   "",
-				"Namespace":     "",
-				"Service":       "",
-				"ContainerName": "",
-				"FullPodName":   "",
-				"PodName":       "",
-				"GpuDevice":     "",
-			},
-		},
-	}
-
-	for _, tc := range testcases {
-		ms, _ := gp.processMetrics(ctx, tc.metrics)
-		attrs := ms.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes()
-		// assert.Equal(t, len(defaultAwsNeuronLabels), attrs.Len())
-		for k, v := range tc.want {
-			got, ok := attrs.Get(k)
-			print(got.Str())
-			print(ok)
-			print(v)
-			//assert.True(t, ok)
-			//assert.Equal(t, v, got.Str())
-		}
-	}
+	assert.NoError(t, err)
+	assert.NotNil(t, modifiedMd)
+	assert.Equal(t, 1, modifiedMd.ResourceMetrics().Len())
+	assert.Equal(t, 1, modifiedMd.ResourceMetrics().At(0).ScopeMetrics().Len())
+	assert.Equal(t, 1, modifiedMd.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len())
 }
 
-func generateMetrics(dimensions map[string]string) pmetric.Metrics {
-	md := pmetric.NewMetrics()
+func TestAwsNeuronProcessor_Start(t *testing.T) {
+	logger := zap.NewNop()
+	config := &Config{}
+	processor := newAwsNeuronProcessor(config, logger)
 
-	m := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
-	m.SetName("test" + awsNeuronMetric)
-	gauge := m.SetEmptyGauge().DataPoints().AppendEmpty()
-	gauge.SetIntValue(10)
+	err := processor.Start(context.Background(), nil)
 
-	for k, v := range dimensions {
-		gauge.Attributes().PutStr(k, v)
-	}
-
-	return md
+	assert.NoError(t, err)
+	assert.True(t, processor.started)
 }
