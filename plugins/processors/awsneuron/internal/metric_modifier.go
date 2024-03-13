@@ -70,12 +70,12 @@ func (md *MetricModifier) ModifyMetric(originalMetric pmetric.Metric) pmetric.Me
 		modifiedMetricSlice = md.createAggregatedSumMetrics(originalMetric)
 	}
 	filterLabels(modifiedMetricSlice, originalMetricName)
-	return md.duplicateMetrics(modifiedMetricSlice, originalMetricName, getMetricDatapoints(originalMetric))
+	return md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints())
 }
 
 func (md *MetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metric) pmetric.MetricSlice {
 	newMetricSlice := pmetric.NewMetricSlice()
-	originalMetricDatapoints := getMetricDatapoints(originalMetric)
+	originalMetricDatapoints := originalMetric.Sum().DataPoints()
 
 	if aggregationAttributeKey := metricModificationsMap[originalMetric.Name()].AggregationAttributeKey; aggregationAttributeKey != "" && originalMetric.Type() == pmetric.MetricTypeSum {
 		aggregatedMetric := pmetric.NewMetric()
@@ -140,7 +140,7 @@ func duplicateMetricForType(metric pmetric.Metric, duplicateType string, origina
 	metric.CopyTo(metricCopy)
 	metricCopy.SetName(strings.ToLower(duplicateType) + "_" + metricCopy.Name())
 
-	datapoints := getMetricDatapoints(metricCopy)
+	datapoints := metricCopy.Sum().DataPoints()
 	for i := 0; i < datapoints.Len(); i++ {
 		datapoints.At(i).Attributes().PutStr(containerinsightscommon.MetricType, duplicateType+logTypeSuffix+metricModificationsMap[originalMetricName].LogTypeSuffix)
 	}
@@ -148,21 +148,11 @@ func duplicateMetricForType(metric pmetric.Metric, duplicateType string, origina
 	return &metricCopy
 }
 
-func getMetricDatapoints(m pmetric.Metric) pmetric.NumberDataPointSlice {
-	switch m.Type() {
-	case pmetric.MetricTypeGauge:
-		return m.Gauge().DataPoints()
-	case pmetric.MetricTypeSum:
-		return m.Sum().DataPoints()
-	default:
-		return pmetric.NewNumberDataPointSlice()
-	}
-}
 func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
 	for i := 0; i < slice.Len(); i++ {
 		m := slice.At(i)
 		for _, attributeRemovalKey := range metricModificationsMap[originalMetricName].AttributeKeysToBeRemoved {
-			dps := getMetricDatapoints(m)
+			dps := m.Sum().DataPoints()
 			for i := 0; i < dps.Len(); i++ {
 				dp := dps.At(i)
 				dp.Attributes().Remove(attributeRemovalKey)
@@ -172,7 +162,7 @@ func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
 }
 
 func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attributeKey string, attributeValueToKeep string) pmetric.MetricSlice {
-	originalMetricDatapoints := getMetricDatapoints(originalMetric)
+	originalMetricDatapoints := originalMetric.Sum().DataPoints()
 
 	newMetricSlice := pmetric.NewMetricSlice()
 	newMetric := newMetricSlice.AppendEmpty()
