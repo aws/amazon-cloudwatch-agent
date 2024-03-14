@@ -332,12 +332,14 @@ service:
         - awscloudwatch
       processors:
         - filter/jmx/0
+        - ec2tagger
       receivers:
         - jmx/0
     metrics/jmx/1:
       exporters:
         - awscloudwatch
-      processors: [ ]
+      processors:
+        - ec2tagger
       receivers:
         - jmx/1
     metrics/host:

@@ -4,6 +4,7 @@
 package jmxpipeline
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"log"
 	"strconv"
 
@@ -49,6 +50,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
+	}
+
+	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
+		log.Printf("D! ec2tagger processor required because append_dimensions is set")
+		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
 
 	if jmxfilterprocessor.IsSet(conf, t.index) {
