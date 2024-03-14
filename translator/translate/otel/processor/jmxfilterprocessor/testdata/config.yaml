@@ -1,18 +1,18 @@
 metrics:
-  datapoint: []
+  datapoint: null
   exclude: null
-  metric: [ ]
+  metric: null
   regexp: null
   include:
-    expressions: []
+    expressions: null
     match_type: regexp
     metric_names:
-      - tomcat.*
       - jvm.memory.heap.init
       - jvm.memory.heap.used
       - jvm.memory.nonheap.init
       - jvm.memory.nonheap.used
       - jvm.threads.count
-    resource_attributes: []
+      - tomcat.*
+    resource_attributes: null
     regexp:
 

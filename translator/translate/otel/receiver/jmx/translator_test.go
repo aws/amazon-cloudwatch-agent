@@ -19,7 +19,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
-	assert.EqualValues(t, "jmx", tt.ID().String())
+	assert.EqualValues(t, "jmx/metrics", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf
@@ -33,7 +33,10 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"WithDefault": {
-			input: map[string]interface{}{"metrics": map[string]interface{}{"metrics_collected": map[string]interface{}{"jmx": nil}}},
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"jmx": nil}}},
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"jar_path":            defaultJMXJarPath,
 				"target_system":       defaultTargetSystem,

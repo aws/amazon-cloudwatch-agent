@@ -1,12 +1,12 @@
 {
   "metrics": {
     "metrics_collected": {
-      "jmx": [
+      "jmx":
         {
         "jar_path": "/jmxtest/opentelemetry-java-contrib-jmx-metrics.jar",
         "endpoint": "my_jmx_host:12345",
         "jvm":
-                [],
+                ["jvm.memory.heap.init"],
         "tomcat":
                 [],
         "metrics_collection_interval": 60,
@@ -31,7 +31,6 @@
           "service.name": "jmx_app"
         }
       }
-      ]
     }
   }
 }

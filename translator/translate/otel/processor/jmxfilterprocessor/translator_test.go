@@ -41,7 +41,7 @@ func TestTranslator(t *testing.T) {
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"jmx": map[string]interface{}{
-							"jvm": map[string]interface{}{},
+							"jvm": []interface{}{},
 						},
 					},
 				},
@@ -49,10 +49,8 @@ func TestTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"include": map[string]interface{}{
-						"match_type": "regexp",
-						"metric_names": []interface{}{
-							"jvm.*",
-						},
+						"match_type":   "regexp",
+						"metric_names": []interface{}{"jvm.*"},
 					},
 				},
 			}),
@@ -73,10 +71,8 @@ func TestTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"metrics": map[string]interface{}{
 					"include": map[string]interface{}{
-						"match_type": "regexp",
-						"metric_names": []interface{}{
-							"jvm.memory.heap.init",
-						},
+						"match_type":   "regexp",
+						"metric_names": []interface{}{"jvm.memory.heap.init"},
 					},
 				},
 			}),
@@ -86,8 +82,8 @@ func TestTranslator(t *testing.T) {
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"jmx": map[string]interface{}{
-							"jvm":    map[string]interface{}{},
-							"hadoop": map[string]interface{}{},
+							"jvm":    []interface{}{},
+							"hadoop": []interface{}{},
 						},
 					},
 				},
@@ -111,7 +107,7 @@ func TestTranslator(t *testing.T) {
 						"jmx": map[string]interface{}{
 							"jvm": []interface{}{
 								"jvm.memory.heap.init"},
-							"hadoop": map[string]interface{}{},
+							"hadoop": []interface{}{},
 						},
 					},
 				},
@@ -136,7 +132,7 @@ func TestTranslator(t *testing.T) {
 							"jvm": []interface{}{
 								"jvm.memory.heap.init",
 								"jvm.threads.count"},
-							"hadoop": map[string]interface{}{},
+							"hadoop": []interface{}{},
 							"tomcat": []interface{}{
 								"tomcat.sessions",
 								"tomcat.errors"},
@@ -153,8 +149,7 @@ func TestTranslator(t *testing.T) {
 							"jvm.memory.heap.init",
 							"jvm.threads.count",
 							"tomcat.sessions",
-							"tomcat.errors",
-						},
+							"tomcat.errors"},
 					},
 				},
 			}),

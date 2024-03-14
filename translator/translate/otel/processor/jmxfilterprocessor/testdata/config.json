@@ -1,7 +1,7 @@
 {
   "metrics": {
     "metrics_collected": {
-      "jmx": [
+      "jmx":
         {
           "jvm": [
             "jvm.memory.heap.init",
@@ -12,7 +12,7 @@
           ],
           "tomcat": []
         }
-      ]
+
     }
   }
 }

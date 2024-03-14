@@ -5,6 +5,7 @@ package jmxfilterprocessor
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
@@ -21,18 +22,13 @@ const (
 
 var (
 	jmxKey     = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
-	configKeys = map[component.DataType]string{
-		component.DataTypeMetrics: common.ConfigKey(jmxKey),
-	}
-
 	jmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 )
 
 type translator struct {
-	dataType component.DataType
-	name     string
-	index    int
-	factory  processor.Factory
+	name    string
+	index   int
+	factory processor.Factory
 }
 
 type Option interface {
@@ -96,21 +92,21 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	// When target name is set in configuration
 	for _, jmxTarget := range jmxTargets {
-		if metrics, ok := jmxKeyMap[jmxTarget]; ok {
-			switch metrics.(type) {
-			case []interface{}:
-				fmt.Println("printer2")
-
-				//var jmxMetrics []string = metrics.([]string)
-				for index, _ := range str {
-					includeMetricNames = append(includeMetricNames, strconv.Itoa(index))
+		if values, isSlice := jmxKeyMap[jmxTarget].([]interface{}); isSlice {
+			if len(values) > 0 {
+				// target name is set and has specific metrics set
+				for _, value := range values {
+					if reflect.TypeOf(value).String() == "string" {
+						includeMetricNames = append(includeMetricNames, value.(string))
+					}
 				}
-				//includeMetricNames = append(includeMetricNames, t.getIncludeJmxMetrics(metrics)...)
-			case interface{}:
+			} else {
+				// target name is set and wildcard for all metrics
 				includeMetricNames = append(includeMetricNames, jmxTarget+".*")
 			}
 		}
 	}
+
 	c := confmap.NewFromStringMap(map[string]interface{}{
 		"metrics": map[string]interface{}{
 			"include": map[string]interface{}{
@@ -126,14 +122,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	return cfg, nil
 }
-
-//func (t *translator) getIncludeJmxMetrics(metrics []interface{}) []string {
-//	var includeMetricName []string
-//	for _, metric := range metrics {
-//		includeMetricName = append(includeMetricName, metric.(string))
-//	}
-//	return includeMetricName
-//}
 
 func IsSet(conf *confmap.Conf, pipelineIndex int) bool {
 	jmxMetrics := conf.Get(jmxKey).([]interface{})

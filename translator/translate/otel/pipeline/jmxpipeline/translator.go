@@ -4,14 +4,16 @@
 package jmxpipeline
 
 import (
+	"log"
+	"strconv"
+
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/jmxfilterprocessor"
-	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/confmap"
-	"log"
-	"strconv"
 )
 
 var (
