@@ -387,6 +387,7 @@ exporters:
           - - ClusterName
             - GpuDevice
             - InstanceId
+            - InstanceType
             - NodeName
         label_matchers: []
         metric_name_selectors:
@@ -396,7 +397,6 @@ exporters:
           - node_gpu_memory_used
           - node_gpu_power_draw
           - node_gpu_temperature
-          - node_gpu_fan_speed
       - dimensions:
           - - ClusterName
             - InstanceId
