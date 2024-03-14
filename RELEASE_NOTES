@@ -1,4 +1,77 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300035.0 (2024-03-11)
+========================================================================
+Features:
+* [ContainerInsights] Add Container Insights for Windows in kubernetes.
+
+========================================================================
+Amazon CloudWatch Agent 1.300034.0 (2024-03-04)
+========================================================================
+Features:
+* [ContainerInsights] Add NVIDIA GPU observability with Kubernetes
+
+Enhancements:
+* [AppSignals] Improve Kubernetes support
+
+========================================================================
+Amazon CloudWatch Agent 1.300033.0 (2023-01-31)
+========================================================================
+
+Enchancements:
+* [AppSignals] Log correlation
+* [AppSignals] New Metric Rollup
+* [AppSignals] Add metrics cardinality control
+* [AppSignals] Add application log group info
+
+========================================================================
+Amazon CloudWatch Agent 1.300032.3 (2023-12-21)
+========================================================================
+
+Enhancements:
+* Configure appsignals processor on EKS with cluster name
+
+========================================================================
+Amazon CloudWatch Agent 1.300032.2 (2023-12-08)
+========================================================================
+
+Bug fixes:
+* Fix CW Log Group creation in regions where LogGroupClass parameter is unsupported
+* Fix CA bundle configuration for X-Ray exporter and region configuration for CW Logs exporter
+
+========================================================================
+Amazon CloudWatch Agent 1.300032.1 (2023-12-06)
+========================================================================
+
+Bug fixes:
+* Have YAML use context log path from TOML rules
+
+========================================================================
+Amazon CloudWatch Agent 1.300032.0 (2023-12-04)
+========================================================================
+
+New Features:
+* Support CloudWatch Logs log group classes
+
+Enhancements:
+* Use cwagent as the default user to run the agent with configuration wizard
+* Reduce CPU spikes when using procstat on Windows by grabbing only individual processes specified
+
+========================================================================
+Amazon CloudWatch Agent 1.300031.1 (2023-11-10)
+========================================================================
+
+Bug fixes:
+* Fix logger not rotating log file after file size reaches 100MB
+* Fix enhanced container insights not publishing metrics for pods in pending status
+
+========================================================================
+Amazon CloudWatch Agent 1.300031.0 (2023-11-7)
+========================================================================
+
+Enhancements:
+* Allow empty measurement field in the agent configuration for backward-compatibility
+
+========================================================================
 Amazon CloudWatch Agent 1.300030.2 (2023-11-2)
 ========================================================================
 

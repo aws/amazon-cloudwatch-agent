@@ -323,6 +323,29 @@
           },
           "additionalProperties": false
         },
+        "tlsDefinitions": {
+          "type": "object",
+          "properties": {
+            "ca_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "cert_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "key_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "insecure": {
+              "type": "boolean"
+            }
+          }
+        },
         "swapDefinitions": {
           "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
         },
@@ -514,6 +537,11 @@
             "app_signals": {
               "type": "object",
               "properties": {
+                "hosted_in": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
                 "rules": {
                   "description": "Custom rules defined by customer",
                   "type": "array",
@@ -584,6 +612,9 @@
                     ]
                   }
                 }
+              },
+              "tls": {
+                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
               },
               "additionalProperties": true
             },
@@ -695,6 +726,9 @@
                   "log_stream_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
                   },
+                  "log_group_class": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupClassDefinition"
+                  },
                   "multi_line_start_pattern": {
                     "type": "string",
                     "minLength": 1,
@@ -795,6 +829,9 @@
                   "log_group_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
                   },
+                  "log_group_class": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupClassDefinition"
+                  },
                   "retention_in_days": {
                     "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
                   },
@@ -828,6 +865,11 @@
           "maxLength": 512
         },
         "logStreamNameDefinition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "logGroupClassDefinition": {
           "type": "string",
           "minLength": 1,
           "maxLength": 512
@@ -897,7 +939,10 @@
               "$ref": "#/definitions/tracesDefinition/definitions/xrayDefinition"
             },
             "otlp": {
-              "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinition"
+              "tls": {
+                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
+              },
+              "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinitions"
             }
           },
           "minProperties": 1,
@@ -961,19 +1006,20 @@
           },
           "additionalProperties": false
         },
-        "otlpDefinition": {
-          "type": "object",
-          "properties": {
-            "grpc_endpoint": {
-              "description": "gRPC endpoint to use to listen for OTLP protobuf traces",
-              "$ref": "#/definitions/endpointOverrideDefinition"
+        "otlpDefinitions": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 255,
+              "items": {
+                "$ref": "#/definitions/otlpObjectDefinition"
+              }
             },
-            "http_endpoint": {
-              "description": "HTTP endpoint to use to listen for OTLP JSON traces",
-              "$ref": "#/definitions/endpointOverrideDefinition"
+            {
+              "$ref": "#/definitions/otlpObjectDefinition"
             }
-          },
-          "additionalProperties": false
+          ]
         }
       }
     },
@@ -1024,6 +1070,20 @@
       "properties": {
         "bind_address": {
           "description": "TCP endpoint for proxy server",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        }
+      },
+      "additionalProperties": false
+    },
+    "otlpObjectDefinition": {
+      "type": "object",
+      "properties": {
+        "grpc_endpoint": {
+          "description": "gRPC endpoint to use to listen for OTLP protobuf information",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "http_endpoint": {
+          "description": "HTTP endpoint to use to listen for OTLP JSON information",
           "$ref": "#/definitions/endpointOverrideDefinition"
         }
       },

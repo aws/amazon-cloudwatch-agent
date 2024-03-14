@@ -6,13 +6,17 @@ package awsxray
 import (
 	_ "embed"
 	"fmt"
+	"os"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -29,6 +33,30 @@ type translator struct {
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
+
+var (
+	indexedAttributesEKS = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+		"HostedIn.Environment", "HostedIn.EKS.Cluster",
+	}
+
+	indexedAttributesK8s = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
+		"HostedIn.Environment", "HostedIn.K8s.Cluster",
+	}
+
+	indexedAttributesEC2 = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.EC2.Environment", "aws.remote.target",
+	}
+
+	indexedAttributesGeneric = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation", "aws.remote.target",
+		"HostedIn.Environment",
+	}
+)
 
 func NewTranslator() common.Translator[component.Config] {
 	return NewTranslatorWithName("")
@@ -52,10 +80,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
 
 	if isAppSignals(conf) {
-		cfg.IndexedAttributes = []string{
-			"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-			"HostedIn.EKS.Cluster", "HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
-			"HostedIn.Environment",
+		ctx := context.CurrentContext()
+		if ctx.KubernetesMode() == config.ModeEKS {
+			cfg.IndexedAttributes = indexedAttributesEKS
+		} else if ctx.KubernetesMode() == config.ModeK8sEC2 || ctx.KubernetesMode() == config.ModeK8sOnPrem {
+			cfg.IndexedAttributes = indexedAttributesK8s
+		} else {
+			cfg.IndexedAttributes = indexedAttributesGeneric
 		}
 	}
 
@@ -68,33 +99,37 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if err := c.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal into awsxrayexporter config: %w", err)
 	}
-	cfg.RoleARN = getRoleARN(conf)
-	cfg.Region = getRegion(conf)
+	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
+	if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
+		cfg.AWSSessionSettings.Endpoint = endpointOverride
+	}
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+		cfg.AWSSessionSettings.LocalMode = true
+	}
+	if localMode, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.LocalModeKey)); ok {
+		cfg.AWSSessionSettings.LocalMode = localMode
+	}
+	if insecure, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.InsecureKey)); ok {
+		cfg.AWSSessionSettings.NoVerifySSL = insecure
+	}
+	if concurrency, ok := common.GetNumber(conf, common.ConfigKey(common.TracesKey, concurrencyKey)); ok {
+		cfg.AWSSessionSettings.NumberOfWorkers = int(concurrency)
+	}
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
 	}
+	if proxyAddress, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.ProxyOverrideKey)); ok {
+		cfg.AWSSessionSettings.ProxyAddress = proxyAddress
+	}
+	if resourceARN, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, resourceARNKey)); ok {
+		cfg.AWSSessionSettings.ResourceARN = resourceARN
+	}
+	cfg.AWSSessionSettings.Region = getRegion(conf)
+	cfg.AWSSessionSettings.RoleARN = getRoleARN(conf)
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
-	if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
-		cfg.Endpoint = endpointOverride
-	}
-	if concurrency, ok := common.GetNumber(conf, common.ConfigKey(common.TracesKey, concurrencyKey)); ok {
-		cfg.NumberOfWorkers = int(concurrency)
-	}
-	if resourceARN, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, resourceARNKey)); ok {
-		cfg.ResourceARN = resourceARN
-	}
-	if insecure, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.InsecureKey)); ok {
-		cfg.NoVerifySSL = insecure
-	}
-	if localMode, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.LocalModeKey)); ok {
-		cfg.LocalMode = localMode
-	}
-	if proxyAddress, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.ProxyOverrideKey)); ok {
-		cfg.ProxyAddress = proxyAddress
-	}
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	cfg.MiddlewareID = &agenthealth.TracesID
 	return cfg, nil
 }

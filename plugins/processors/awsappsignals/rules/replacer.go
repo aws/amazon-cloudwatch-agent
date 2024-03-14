@@ -5,15 +5,19 @@ package rules
 
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/common"
 )
 
 type ReplaceActions struct {
-	Actions []ActionItem
+	Actions                 []ActionItem
+	markDataPointAsReserved bool
 }
 
-func NewReplacer(rules []Rule) *ReplaceActions {
+func NewReplacer(rules []Rule, markDataPointAsReserved bool) *ReplaceActions {
 	return &ReplaceActions{
-		generateActionDetails(rules, AllowListActionReplace),
+		Actions:                 generateActionDetails(rules, AllowListActionReplace),
+		markDataPointAsReserved: markDataPointAsReserved,
 	}
 }
 
@@ -27,7 +31,7 @@ func (r *ReplaceActions) Process(attributes, _ pcommon.Map, isTrace bool) error 
 	finalRules := make(map[string]string)
 	for i := len(actions) - 1; i >= 0; i = i - 1 {
 		element := actions[i]
-		isMatched, _ := matchesSelectors(attributes, element.SelectorMatchers, isTrace)
+		isMatched := matchesSelectors(attributes, element.SelectorMatchers, isTrace)
 		if !isMatched {
 			continue
 		}
@@ -49,6 +53,10 @@ func (r *ReplaceActions) Process(attributes, _ pcommon.Map, isTrace bool) error 
 
 	for key, value := range finalRules {
 		attributes.PutStr(key, value)
+	}
+
+	if len(finalRules) > 0 && r.markDataPointAsReserved {
+		attributes.PutBool(common.AttributeTmpReserved, true)
 	}
 	return nil
 }

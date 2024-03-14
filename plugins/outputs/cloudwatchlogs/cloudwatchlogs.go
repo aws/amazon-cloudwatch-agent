@@ -23,17 +23,18 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 const (
 	LogGroupNameTag   = "log_group_name"
 	LogStreamNameTag  = "log_stream_name"
+	LogGroupClassTag  = "log_group_class"
 	LogTimestampField = "log_timestamp"
 	LogEntryField     = "value"
 
@@ -103,7 +104,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.LogDest {
+func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGroupClass string) logs.LogDest {
 	if group == "" {
 		group = c.LogGroupName
 	}
@@ -118,6 +119,7 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int) logs.Lo
 		Group:     group,
 		Stream:    stream,
 		Retention: retention,
+		Class:     logGroupClass,
 	}
 	return c.getDest(t)
 }
@@ -147,8 +149,8 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			Logger:   configaws.SDKLogger{},
 		},
 	)
-	provider.GetFlagsStats().SetFlagWithValue(provider.FlagRegionType, c.RegionType)
-	provider.GetFlagsStats().SetFlagWithValue(provider.FlagMode, c.Mode)
+	agent.UsageFlags().SetValue(agent.FlagRegionType, c.RegionType)
+	agent.UsageFlags().SetValue(agent.FlagMode, c.Mode)
 	if containerInsightsRegexp.MatchString(t.Group) {
 		useragent.Get().SetContainerInsightsFlag()
 	}
@@ -203,7 +205,7 @@ func (c *CloudWatchLogs) getTargetFromMetric(m telegraf.Metric) (Target, error) 
 		logStream = c.LogStreamName
 	}
 
-	return Target{logGroup, logStream, -1}, nil
+	return Target{logGroup, logStream, util.StandardLogGroupClass, -1}, nil
 }
 
 func (c *CloudWatchLogs) getLogEventFromMetric(metric telegraf.Metric) *structuredLogEvent {
@@ -354,8 +356,8 @@ func (cd *cwDest) setRetryer(r request.Retryer) {
 }
 
 type Target struct {
-	Group, Stream string
-	Retention     int
+	Group, Stream, Class string
+	Retention            int
 }
 
 // Description returns a one-sentence description on the Output

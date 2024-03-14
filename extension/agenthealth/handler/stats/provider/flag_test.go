@@ -10,28 +10,29 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 func TestFlagStats(t *testing.T) {
 	t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
-	provider := newFlagStats(time.Microsecond)
-	got := provider.getStats()
+	fs := newFlagStats(agent.UsageFlags(), time.Microsecond)
+	got := fs.getStats()
 	assert.Nil(t, got.ImdsFallbackSucceed)
 	assert.Nil(t, got.SharedConfigFallback)
 	assert.NotNil(t, got.RunningInContainer)
 	assert.Equal(t, 1, *got.RunningInContainer)
-	provider.SetFlag(FlagIMDSFallbackSucceed)
+	fs.flagSet.Set(agent.FlagIMDSFallbackSuccess)
 	assert.Nil(t, got.ImdsFallbackSucceed)
-	got = provider.getStats()
+	got = fs.getStats()
 	assert.NotNil(t, got.ImdsFallbackSucceed)
 	assert.Equal(t, 1, *got.ImdsFallbackSucceed)
 	assert.Nil(t, got.SharedConfigFallback)
-	provider.SetFlag(FlagSharedConfigFallback)
-	got = provider.getStats()
+	fs.flagSet.Set(agent.FlagSharedConfigFallback)
+	got = fs.getStats()
 	assert.NotNil(t, got.SharedConfigFallback)
 	assert.Equal(t, 1, *got.SharedConfigFallback)
-	provider.SetFlagWithValue(FlagMode, "test")
-	got = provider.getStats()
+	fs.flagSet.SetValue(agent.FlagMode, "test")
+	got = fs.getStats()
 	assert.NotNil(t, got.Mode)
 	assert.Equal(t, "test", *got.Mode)
 }

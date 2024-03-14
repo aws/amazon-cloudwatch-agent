@@ -14,8 +14,11 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -24,25 +27,26 @@ var nilSlice []string
 var nilMetricDescriptorsSlice []awsemfexporter.MetricDescriptor
 
 func TestTranslator(t *testing.T) {
-	tt := NewTranslator()
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
+	tt := NewTranslator()
 	require.EqualValues(t, "awsemf", tt.ID().String())
 	testCases := map[string]struct {
 		env     map[string]string
-		input   map[string]interface{}
-		want    map[string]interface{} // Can't construct & use awsemfexporter.Config as it uses internal only types
+		input   map[string]any
+		want    map[string]any // Can't construct & use awsemfexporter.Config as it uses internal only types
 		wantErr error
 	}{
 		"GenerateAwsEmfExporterConfigEcs": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"ecs": map[string]interface{}{},
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"ecs": map[string]any{},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ECS/ContainerInsights",
 				"log_group_name":                         "/aws/ecs/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
@@ -71,19 +75,20 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigEcsDisableMetricExtraction": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"ecs": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"ecs": map[string]any{
 							"disable_metric_extraction": true,
 						},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ECS/ContainerInsights",
 				"log_group_name":                         "/aws/ecs/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "NodeTelemetry-{ContainerInstanceId}",
@@ -112,17 +117,18 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetes": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{},
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"kubernetes": map[string]any{},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ContainerInsights",
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
@@ -178,19 +184,20 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesDisableMetricExtraction": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"kubernetes": map[string]any{
 							"disable_metric_extraction": true,
 						},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ContainerInsights",
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
@@ -246,19 +253,20 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigKubernetesWithEnableFullPodAndContainerMetrics": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"kubernetes": map[string]any{
 							"enhanced_container_insights": true,
 						},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "ContainerInsights",
 				"log_group_name":                         "/aws/containerinsights/{ClusterName}/performance",
 				"log_stream_name":                        "{NodeName}",
@@ -391,6 +399,36 @@ func TestTranslator(t *testing.T) {
 						Dimensions:          [][]string{{"ClusterName", "priority_level"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"apiserver_flowcontrol_request_concurrency_limit"},
 					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"container_gpu_utilization", "container_gpu_memory_utilization", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"pod_gpu_utilization", "pod_gpu_memory_utilization", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature", "node_gpu_fan_speed",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName", "NodeName", "InstanceId"}, {"ClusterName"}},
+						MetricNameSelectors: []string{
+							"node_gpu_total", "node_gpu_request", "node_gpu_limit",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{
+							"cluster_gpu_request", "cluster_gpu_total",
+						},
+					},
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
 					{
@@ -494,25 +532,26 @@ func TestTranslator(t *testing.T) {
 						Overwrite:  true,
 					},
 				},
+				"local_mode": false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheus": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
 							"log_group_name":  "/test/log/group",
 							"log_stream_name": "{LogStreamName}",
-							"emf_processor": map[string]interface{}{
-								"metric_declaration": []interface{}{
-									map[string]interface{}{
+							"emf_processor": map[string]any{
+								"metric_declaration": []any{
+									map[string]any{
 										"source_labels":    []string{"Service", "Namespace"},
 										"label_matcher":    "(.*node-exporter.*|.*kube-dns.*);kube-system$",
 										"dimensions":       [][]string{{"Service", "Namespace"}},
 										"metric_selectors": []string{"^coredns_dns_request_type_count_total$"},
 									},
 								},
-								"metric_unit": map[string]interface{}{
+								"metric_unit": map[string]any{
 									"jvm_gc_collection_seconds_sum": "Milliseconds",
 								},
 							},
@@ -520,7 +559,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "CWAgent/Prometheus",
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{JobName}",
@@ -551,13 +590,14 @@ func TestTranslator(t *testing.T) {
 						Unit:       "Milliseconds",
 					},
 				},
+				"local_mode": false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusDisableMetricExtraction": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
 							"disable_metric_extraction": true,
 							"log_group_name":            "/test/log/group",
 							"log_stream_name":           "{JobName}",
@@ -565,7 +605,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "",
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{JobName}",
@@ -584,17 +624,18 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoDeclarations": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
 							"log_group_name":  "/test/log/group",
 							"log_stream_name": "{JobName}",
-							"emf_processor": map[string]interface{}{
-								"metric_unit": map[string]interface{}{
+							"emf_processor": map[string]any{
+								"metric_unit": map[string]any{
 									"jvm_gc_collection_seconds_sum": "Milliseconds",
 								},
 							},
@@ -602,7 +643,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "CWAgent/Prometheus",
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{JobName}",
@@ -626,20 +667,21 @@ func TestTranslator(t *testing.T) {
 						Unit:       "Milliseconds",
 					},
 				},
+				"local_mode": false,
 			},
 		},
 		"GenerateAwsEmfExporterConfigPrometheusNoEmfProcessor": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"prometheus": map[string]interface{}{
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"prometheus": map[string]any{
 							"log_group_name":  "/test/log/group",
 							"log_stream_name": "{JobName}",
 						},
 					},
 				},
 			},
-			want: map[string]interface{}{
+			want: map[string]any{
 				"namespace":                              "",
 				"log_group_name":                         "/test/log/group",
 				"log_stream_name":                        "{JobName}",
@@ -658,6 +700,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 				"metric_descriptors": nilMetricDescriptorsSlice,
+				"local_mode":         false,
 			},
 		},
 	}
@@ -683,6 +726,8 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
+				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
 				assert.Equal(t, "global_arn", gotCfg.RoleARN)
 				assert.Equal(t, "us-east-1", gotCfg.Region)
 				assert.NotNil(t, gotCfg.MiddlewareID)
@@ -693,40 +738,88 @@ func TestTranslator(t *testing.T) {
 }
 
 func TestTranslateAppSignals(t *testing.T) {
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, "0")
 	tt := NewTranslatorWithName(common.AppSignals)
 	testCases := map[string]struct {
-		input        map[string]interface{}
-		want         *confmap.Conf
-		wantErr      error
-		isKubernetes bool
+		input          map[string]any
+		want           *confmap.Conf
+		wantErr        error
+		kubernetesMode string
+		mode           string
 	}{
 		"WithAppSignalsEnabledEKS": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
 					},
 				}},
-			want:         testutil.GetConf(t, filepath.Join("appsignals_config_eks.yaml")),
-			isKubernetes: true,
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
+				"local_mode":            "false",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: config.ModeEKS,
+			mode:           config.ModeEC2,
+		},
+		"WithAppSignalsEnabledK8s": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: config.ModeK8sOnPrem,
+			mode:           config.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledGeneric": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
 					},
 				}},
-			want:         testutil.GetConf(t, filepath.Join("appsignals_config_generic.yaml")),
-			isKubernetes: false,
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: "",
+			mode:           config.ModeOnPrem,
+		},
+		"WithAppSignalsEnabledEC2": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+				"local_mode":            "false",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: "",
+			mode:           config.ModeEC2,
 		},
 	}
 	factory := awsemfexporter.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			if testCase.isKubernetes {
-				t.Setenv(common.KubernetesEnvVar, "TEST")
-			}
+			context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			context.CurrentContext().SetMode(testCase.mode)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)

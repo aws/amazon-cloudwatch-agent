@@ -46,10 +46,13 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	translators := &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap(otlp.NewTranslatorWithName(common.AppSignals, otlp.WithDataType(t.dataType))),
-		Processors: common.NewTranslatorMap(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)), awsappsignals.NewTranslator(awsappsignals.WithDataType(t.dataType))),
+		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
+
+	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
+	translators.Processors.Set(awsappsignals.NewTranslator(awsappsignals.WithDataType(t.dataType)))
 
 	if t.dataType == component.DataTypeTraces {
 		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))

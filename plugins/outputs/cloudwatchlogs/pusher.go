@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	reqSizeLimit     = 1024 * 1024
-	reqEventsLimit   = 10000
-	warnOldTimeStamp = 1 * 24 * time.Hour
+	reqSizeLimit                = 1024 * 1024
+	reqEventsLimit              = 10000
+	warnOldTimeStamp            = 1 * 24 * time.Hour
+	warnOldTimeStampLogInterval = 1 * 5 * time.Minute
 )
 
 var (
@@ -52,6 +53,7 @@ type pusher struct {
 	sequenceToken       *string
 	lastValidTime       int64
 	lastUpdateTime      time.Time
+	lastWarnMessage     time.Time
 	needSort            bool
 	stop                <-chan struct{}
 	lastSentTime        time.Time
@@ -340,9 +342,7 @@ func (p *pusher) createLogGroupAndStream() error {
 
 	p.Log.Debugf("creating stream fail due to : %v", err)
 	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
-		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
-			LogGroupName: &p.Group,
-		})
+		err = p.createLogGroup()
 
 		// attempt to create stream again if group created successfully.
 		if err == nil {
@@ -366,6 +366,21 @@ func (p *pusher) createLogGroupAndStream() error {
 		return nil // if the log group or log stream already exist, this is not worth returning an error for
 	}
 
+	return err
+}
+
+func (p *pusher) createLogGroup() error {
+	var err error
+	if p.Class != "" {
+		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
+			LogGroupName:  &p.Group,
+			LogGroupClass: &p.Class,
+		})
+	} else {
+		_, err = p.Service.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
+			LogGroupName: &p.Group,
+		})
+	}
 	return err
 }
 
@@ -411,9 +426,12 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 			// not have a timestamp.
 			t = p.lastValidTime
 			if !p.lastUpdateTime.IsZero() {
-				// Check when timestamp has an interval of 5 days.
-				if time.Since(p.lastUpdateTime) > warnOldTimeStamp {
-					p.Log.Warnf("Unable to parse timestamp, using last valid timestamp found in the logs %v: which is at least older than 1 day for log group %v: ", p.lastValidTime, p.Group)
+				// Check when timestamp has an interval of 1 days.
+				if (time.Since(p.lastUpdateTime) > warnOldTimeStamp) && (time.Since(p.lastWarnMessage) > warnOldTimeStampLogInterval) {
+					{
+						p.Log.Warnf("Unable to parse timestamp, using last valid timestamp found in the logs %v: which is at least older than 1 day for log group %v: ", p.lastValidTime, p.Group)
+						p.lastWarnMessage = time.Now()
+					}
 				}
 			}
 		} else {
@@ -423,6 +441,7 @@ func (p *pusher) convertEvent(e logs.LogEvent) *cloudwatchlogs.InputLogEvent {
 		t = e.Time().UnixNano() / 1000000
 		p.lastValidTime = t
 		p.lastUpdateTime = time.Now()
+		p.lastWarnMessage = time.Time{}
 	}
 	return &cloudwatchlogs.InputLogEvent{
 		Message:   &message,

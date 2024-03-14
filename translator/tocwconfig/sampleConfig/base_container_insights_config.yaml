@@ -28,7 +28,10 @@ exporters:
             randomization_factor: 0.5
         role_arn: ""
         sending_queue:
+            enabled: true
+            num_consumers: 1
             queue_size: 1000
+            storage: null
         shared_credentials_file: []
     awsemf/containerinsights:
         certificate_file_path: /etc/test/ca_bundle.pem
@@ -156,6 +159,9 @@ extensions:
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+              mode: EC2
+              region_type: ACJ
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -195,6 +201,7 @@ receivers:
         resource_arn: ""
         role_arn: ""
         shared_credentials_file: []
+        accelerated_compute_metrics: false
     tcplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -218,6 +225,7 @@ receivers:
         multiline:
             line_end_pattern: .^
             line_start_pattern: ""
+            omit_pattern: false
         operators: []
         output: []
         resource: {}
@@ -258,8 +266,10 @@ service:
             level: info
             output_paths: []
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None

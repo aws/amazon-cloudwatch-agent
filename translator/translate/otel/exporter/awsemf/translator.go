@@ -16,6 +16,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -34,8 +36,14 @@ var defaultPrometheusConfig string
 //go:embed appsignals_config_eks.yaml
 var appSignalsConfigEks string
 
+//go:embed appsignals_config_k8s.yaml
+var appSignalsConfigK8s string
+
 //go:embed appsignals_config_generic.yaml
 var appSignalsConfigGeneric string
+
+//go:embed appsignals_config_ec2.yaml
+var appSignalsConfigEC2 string
 
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
@@ -43,6 +51,7 @@ var (
 	prometheusBasePathKey   = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.PrometheusKey)
 	emfProcessorBasePathKey = common.ConfigKey(prometheusBasePathKey, common.EMFProcessorKey)
 	endpointOverrideKey     = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
+	roleARNPathKey          = common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 )
 
 type translator struct {
@@ -69,14 +78,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
 
-	if common.IsAppSignalsKubernetes() && t.name == common.AppSignals {
-		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEks)
-	} else if t.name == common.AppSignals {
-		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigGeneric)
-	}
-
 	var defaultConfig string
-	if isEcs(c) {
+	if t.isAppSignals(c) {
+		defaultConfig = getAppSignalsConfig()
+	} else if isEcs(c) {
 		defaultConfig = defaultEcsConfig
 	} else if isKubernetes(c) {
 		defaultConfig = defaultKubernetesConfig
@@ -95,22 +100,31 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 			return nil, fmt.Errorf("unable to unmarshal config: %w", err)
 		}
 	}
-	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	if c.IsSet(endpointOverrideKey) {
 		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
 	}
-	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
+	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
+	if c.IsSet(roleARNPathKey) {
+		cfg.AWSSessionSettings.RoleARN, _ = common.GetString(c, roleARNPathKey)
 	}
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
-	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+		cfg.AWSSessionSettings.LocalMode = true
+	}
 
-	if isEcs(c) {
+	if t.isAppSignals(c) {
+		if err := setAppSignalsFields(c, cfg); err != nil {
+			return nil, err
+		}
+	} else if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {
 			return nil, err
 		}
@@ -126,6 +140,22 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
+func getAppSignalsConfig() string {
+	ctx := context.CurrentContext()
+	kubernetesMode := ctx.KubernetesMode()
+
+	if kubernetesMode == config.ModeEKS {
+		return appSignalsConfigEks
+	} else if kubernetesMode == config.ModeK8sEC2 || kubernetesMode == config.ModeK8sOnPrem {
+		return appSignalsConfigK8s
+	}
+	return appSignalsConfigGeneric
+}
+
+func (t *translator) isAppSignals(conf *confmap.Conf) bool {
+	return t.name == common.AppSignals && (conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces))
+}
+
 func isEcs(conf *confmap.Conf) bool {
 	return conf.IsSet(ecsBasePathKey)
 }
@@ -136,6 +166,10 @@ func isKubernetes(conf *confmap.Conf) bool {
 
 func isPrometheus(conf *confmap.Conf) bool {
 	return conf.IsSet(prometheusBasePathKey)
+}
+
+func setAppSignalsFields(_ *confmap.Conf, _ *awsemfexporter.Config) error {
+	return nil
 }
 
 func setEcsFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {

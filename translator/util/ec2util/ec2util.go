@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -116,7 +116,7 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 		hostnameInner, errInner := mdEnableFallback.GetMetadata("hostname")
 		if errInner == nil {
 			e.Hostname = hostnameInner
-			provider.GetFlagsStats().SetFlag(provider.FlagIMDSFallbackSucceed)
+			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
 		} else {
 			fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", errInner)
 		}
@@ -136,7 +136,7 @@ func (e *ec2Util) deriveEC2MetadataFromIMDS() error {
 			e.AccountID = instanceIdentityDocumentInner.AccountID
 			e.PrivateIP = instanceIdentityDocumentInner.PrivateIP
 			e.InstanceID = instanceIdentityDocumentInner.InstanceID
-			provider.GetFlagsStats().SetFlag(provider.FlagIMDSFallbackSucceed)
+			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
 		} else {
 			fmt.Println("E! [EC2] Fetch identity document from EC2 metadata fail:", errInner)
 		}

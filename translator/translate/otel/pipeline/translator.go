@@ -8,7 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/service"
+	"go.opentelemetry.io/collector/service/pipelines"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -21,7 +21,7 @@ type Translator common.Translator[*common.ComponentTranslators]
 
 type Translation struct {
 	// Pipelines is a map of component IDs to service pipelines.
-	Pipelines   map[component.ID]*service.PipelineConfig
+	Pipelines   pipelines.Config
 	Translators common.ComponentTranslators
 }
 
@@ -42,7 +42,7 @@ func (t *translator) ID() component.ID {
 // Translate creates the pipeline configuration.
 func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 	translation := Translation{
-		Pipelines: make(map[component.ID]*service.PipelineConfig),
+		Pipelines: make(pipelines.Config),
 		Translators: common.ComponentTranslators{
 			Receivers:  common.NewTranslatorMap[component.Config](),
 			Processors: common.NewTranslatorMap[component.Config](),
@@ -52,7 +52,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 	}
 	t.translators.Range(func(pt common.Translator[*common.ComponentTranslators]) {
 		if pipeline, _ := pt.Translate(conf); pipeline != nil {
-			translation.Pipelines[pt.ID()] = &service.PipelineConfig{
+			translation.Pipelines[pt.ID()] = &pipelines.PipelineConfig{
 				Receivers:  pipeline.Receivers.Keys(),
 				Processors: pipeline.Processors.Keys(),
 				Exporters:  pipeline.Exporters.Keys(),

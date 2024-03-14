@@ -1,4 +1,11 @@
-resolvers: ["generic"]
+resolvers:
+  - platform: generic
+    name: test
+limiter:
+  disabled: false
+  drop_threshold: 20
+  log_dropped_metrics: true
+  rotation_interval: 10m
 rules:
   - selectors:
       - dimension: Operation

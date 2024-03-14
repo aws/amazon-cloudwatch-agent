@@ -41,9 +41,10 @@ func TestTranslator(t *testing.T) {
 				"endpoint":  "127.0.0.1:2000",
 				"transport": "udp",
 				"proxy_server": map[string]interface{}{
-					"endpoint": "127.0.0.1:2000",
-					"region":   "us-east-1",
-					"role_arn": "global_arn",
+					"endpoint":     "127.0.0.1:2000",
+					"region":       "us-east-1",
+					"role_arn":     "global_arn",
+					"imds_retries": 1,
 				},
 			}),
 		},

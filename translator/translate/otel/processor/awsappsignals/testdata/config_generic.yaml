@@ -1,1 +1,2 @@
-resolvers: ["generic"]
+resolvers:
+  - platform: generic

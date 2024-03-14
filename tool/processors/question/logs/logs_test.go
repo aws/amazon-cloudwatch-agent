@@ -25,7 +25,7 @@ func TestProcessor_Process(t *testing.T) {
 
 	conf := new(data.Config)
 
-	testutil.Type(inputChan, "", "/var/log/messages", "", "", "", "2")
+	testutil.Type(inputChan, "", "/var/log/messages", "", "2", "", "", "2")
 	Processor.Process(ctx, conf)
 	_, confMap := conf.ToMap(ctx)
 	assert.Equal(t,
@@ -39,6 +39,7 @@ func TestProcessor_Process(t *testing.T) {
 								"log_group_name":    "messages",
 								"log_stream_name":   "{instance_id}",
 								"retention_in_days": -1,
+								"log_group_class":   util.InfrequentAccessLogGroupClass,
 							},
 						},
 					},

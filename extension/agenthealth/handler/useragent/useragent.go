@@ -18,7 +18,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
@@ -91,11 +91,11 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 				cfg := otelCfg.Exporters[exporter].(*awsemfexporter.Config)
 				if cfg.IsAppSignalsEnabled() {
 					ua.outputs.Add(flagAppSignals)
-					provider.GetFlagsStats().SetFlag(provider.FlagAppSignal)
+					agent.UsageFlags().Set(agent.FlagAppSignal)
 				}
 				if cfg.IsEnhancedContainerInsights() {
 					ua.outputs.Add(flagEnhancedContainerInsights)
-					provider.GetFlagsStats().SetFlag(provider.FlagEnhancedContainerInsights)
+					agent.UsageFlags().Set(agent.FlagEnhancedContainerInsights)
 				}
 			}
 		}

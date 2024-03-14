@@ -25,7 +25,8 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old ami
-        run: go run ./tool/clean/clean_ami/clean_ami.go --tags=clean
+        working-directory: tool/clean
+        run: go run ./clean_ami/clean_ami.go --tags=clean
 
   clean-old-file-systems:
     runs-on: ubuntu-latest
@@ -43,7 +44,8 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old file system
-        run: go run ./tool/clean/clean_file_system/clean_file_system.go --tags=clean
+        working-directory: tool/clean
+        run: go run ./clean_file_system/clean_file_system.go --tags=clean
 
   clean-opensource-dedicated-hosts:
     runs-on: ubuntu-latest
@@ -61,7 +63,8 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old dedicated host
-        run: go run ./tool/clean/clean_dedicated_host/clean_dedicated_host.go --tags=clean
+        working-directory: tool/clean
+        run: go run ./clean_dedicated_host/clean_dedicated_host.go --tags=clean
 
   clean-internal-dedicated-hosts:
     runs-on: ubuntu-latest
@@ -94,7 +97,8 @@ jobs:
           aws-region: ${{ matrix.region }}
 
       - name: Clean old dedicated host
-        run: go run ./tool/clean/clean_dedicated_host/clean_dedicated_host.go --tags=clean
+        working-directory: tool/clean
+        run: go run ./clean_dedicated_host/clean_dedicated_host.go --tags=clean
 
   clean-hosts:
     runs-on: ubuntu-latest
@@ -133,7 +137,8 @@ jobs:
           aws-region: ${{ matrix.region }}
 
       - name: Clean old dedicated host
-        run: go run ./tool/clean/clean_host/clean_host.go --tags=clean
+        working-directory: tool/clean
+        run: go run ./clean_host/clean_host.go --tags=clean
 
   clean-ecs-clusters:
     runs-on: ubuntu-latest
@@ -151,7 +156,8 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old ecs cluster
-        run: go run ./tool/clean/clean_ecs/clean_ecs.go --tags=clean
+        working-directory: tool/clean
+        run: go run ./clean_ecs/clean_ecs.go --tags=clean
 
   clean-eks-clusters:
     runs-on: ubuntu-latest
@@ -169,7 +175,26 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old eks cluster
-        run: go run ./tool/clean/clean_eks/clean_eks.go --tags=clean
+        working-directory: tool/clean
+        run: go run ./clean_eks/clean_eks.go --tags=clean
+  clean-ebs-volumes:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old unused ebs volumes
+        working-directory: tool/clean
+        run: go run ./clean_ebs/clean_ebs.go --tags=clean
 
   clean-asg:
     runs-on: ubuntu-latest
@@ -187,4 +212,24 @@ jobs:
           aws-region: us-west-2
 
       - name: Clean old asg
-        run: go run ./tool/clean/clean_auto_scaling_groups/clean_auto_scaling_groups.go --tags=clean
+        working-directory: tool/clean
+        run: go run ./clean_auto_scaling_groups/clean_auto_scaling_groups.go --tags=clean
+
+  clean-iam-roles:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean old IAM roles
+        working-directory: tool/clean
+        run: go run ./clean_iam_roles/clean_iam_roles.go --tags=clean

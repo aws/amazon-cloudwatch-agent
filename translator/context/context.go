@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
@@ -42,6 +41,7 @@ type Context struct {
 	multiConfig         string
 	outputTomlFilePath  string
 	mode                string
+	kubernetesMode      string
 	shortMode           string
 	credentials         map[string]string
 	proxy               map[string]string
@@ -98,6 +98,10 @@ func (ctx *Context) Mode() string {
 	return ctx.mode
 }
 
+func (ctx *Context) KubernetesMode() string {
+	return ctx.kubernetesMode
+}
+
 func (ctx *Context) ShortMode() string {
 	return ctx.shortMode
 }
@@ -118,18 +122,34 @@ func (ctx *Context) SetMode(mode string) {
 	switch mode {
 	case config.ModeEC2:
 		ctx.mode = config.ModeEC2
-		ctx.shortMode = agentinfo.ModeEC2
+		ctx.shortMode = config.ShortModeEC2
 	case config.ModeOnPrem:
 		ctx.mode = config.ModeOnPrem
-		ctx.shortMode = agentinfo.ModeOnPrem
+		ctx.shortMode = config.ShortModeOnPrem
 	case config.ModeOnPremise:
 		ctx.mode = config.ModeOnPremise
-		ctx.shortMode = agentinfo.ModeOnPrem
+		ctx.shortMode = config.ShortModeOnPrem
 	case config.ModeWithIRSA:
 		ctx.mode = config.ModeWithIRSA
-		ctx.shortMode = agentinfo.ModeWithIRSA
+		ctx.shortMode = config.ShortModeWithIRSA
 	default:
-		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA)
+		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s, and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA)
+	}
+}
+
+func (ctx *Context) SetKubernetesMode(mode string) {
+	switch mode {
+	case config.ModeEKS:
+		ctx.kubernetesMode = config.ModeEKS
+		ctx.shortMode = config.ShortModeEKS
+	case config.ModeK8sEC2:
+		ctx.kubernetesMode = config.ModeK8sEC2
+		ctx.shortMode = config.ShortModeK8sEC2
+	case config.ModeK8sOnPrem:
+		ctx.kubernetesMode = config.ModeK8sOnPrem
+		ctx.shortMode = config.ShortModeK8sOnPrem
+	default:
+		ctx.kubernetesMode = ""
 	}
 }
 

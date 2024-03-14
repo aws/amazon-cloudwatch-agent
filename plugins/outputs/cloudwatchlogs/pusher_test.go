@@ -20,6 +20,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 var wg sync.WaitGroup
@@ -458,7 +460,7 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	require.Equal(t, 1, cnt, fmt.Sprintf("Expecting pusher to call send 1 time, but %d times called", cnt))
 }
 
-func TestCreateLogGroupAndLogSteamWhenNotFound(t *testing.T) {
+func TestCreateLogGroupAndLogStreamWhenNotFound(t *testing.T) {
 	var s svcMock
 	nst := "NEXT_SEQ_TOKEN"
 
@@ -763,6 +765,6 @@ func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
 
 func testPreparation(retention int, s *svcMock, flushTimeout time.Duration, retryDuration time.Duration) (chan struct{}, *pusher) {
 	stop := make(chan struct{})
-	p := NewPusher(Target{"G", "S", retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg)
+	p := NewPusher(Target{"G", "S", util.StandardLogGroupClass, retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg)
 	return stop, p
 }

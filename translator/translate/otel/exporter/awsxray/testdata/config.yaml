@@ -7,6 +7,7 @@ endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
 region: us-west-2
 imds_retries: 1
 proxy_address: https://proxy.proxy.com
+certificate_file_path: /ca/bundle
 telemetry:
   enabled: true
   include_metadata: true

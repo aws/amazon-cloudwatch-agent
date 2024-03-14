@@ -13,78 +13,154 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
+	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"
 	agent.Global_Config.Role_arn = "global_arn"
 	tt := NewTranslator()
 	assert.EqualValues(t, "awsxray", tt.ID().String())
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *confmap.Conf
-		wantErr error
+		input          map[string]any
+		want           *confmap.Conf
+		wantErr        error
+		kubernetesMode string
+		mode           string
 	}{
 		"WithMissingKey": {
-			input: map[string]interface{}{"logs": map[string]interface{}{}},
+			input: map[string]any{"logs": map[string]any{}},
 			wantErr: &common.MissingKeyError{
 				ID:      tt.ID(),
 				JsonKey: common.TracesKey,
 			},
+			mode: config.ModeOnPrem,
 		},
 		"WithDefault": {
-			input: map[string]interface{}{"traces": map[string]interface{}{}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
-				"region":       "us-east-1",
-				"role_arn":     "global_arn",
-				"imds_retries": 1,
-				"telemetry": map[string]interface{}{
+			input: map[string]any{"traces": map[string]any{}},
+			want: confmap.NewFromStringMap(map[string]any{
+				"certificate_file_path": "/ca/bundle",
+				"region":                "us-east-1",
+				"local_mode":            "true",
+				"role_arn":              "global_arn",
+				"imds_retries":          1,
+				"telemetry": map[string]any{
 					"enabled":          true,
 					"include_metadata": true,
 				},
 				"middleware": "agenthealth/traces",
 			}),
+			mode: config.ModeOnPrem,
 		},
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
+			mode:  config.ModeOnPrem,
 		},
-		"WithAppSignalsEnabled": {
-			input: map[string]interface{}{
-				"traces": map[string]interface{}{
-					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+		"WithAppSignalsEnabledEKS": {
+			input: map[string]any{
+				"traces": map[string]any{
+					"traces_collected": map[string]any{
+						"app_signals": map[string]any{},
 					},
 				}},
-			want: confmap.NewFromStringMap(map[string]interface{}{
+			want: confmap.NewFromStringMap(map[string]any{
 				"indexed_attributes": []string{
 					"aws.local.service",
 					"aws.local.operation",
 					"aws.remote.service",
 					"aws.remote.operation",
-					"HostedIn.EKS.Cluster",
 					"HostedIn.K8s.Namespace",
 					"K8s.RemoteNamespace",
 					"aws.remote.target",
 					"HostedIn.Environment",
+					"HostedIn.EKS.Cluster",
 				},
-				"region":       "us-east-1",
-				"role_arn":     "global_arn",
-				"imds_retries": 1,
-				"telemetry": map[string]interface{}{
+				"certificate_file_path": "/ca/bundle",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"imds_retries":          1,
+				"telemetry": map[string]any{
 					"enabled":          true,
 					"include_metadata": true,
 				},
 				"middleware": "agenthealth/traces",
 			}),
+			kubernetesMode: config.ModeEKS,
+			mode:           config.ModeEC2,
+		},
+		"WithAppSignalsEnabledK8s": {
+			input: map[string]any{
+				"traces": map[string]any{
+					"traces_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]any{
+				"indexed_attributes": []string{
+					"aws.local.service",
+					"aws.local.operation",
+					"aws.remote.service",
+					"aws.remote.operation",
+					"HostedIn.K8s.Namespace",
+					"K8s.RemoteNamespace",
+					"aws.remote.target",
+					"HostedIn.Environment",
+					"HostedIn.K8s.Cluster",
+				},
+				"certificate_file_path": "/ca/bundle",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"imds_retries":          1,
+				"telemetry": map[string]any{
+					"enabled":          true,
+					"include_metadata": true,
+				},
+				"middleware": "agenthealth/traces",
+			}),
+			kubernetesMode: config.ModeK8sEC2,
+			mode:           config.ModeEC2,
+		},
+		"WithAppSignalsEnabledEC2": {
+			input: map[string]any{
+				"traces": map[string]any{
+					"traces_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]any{
+				"indexed_attributes": []string{
+					"aws.local.service",
+					"aws.local.operation",
+					"aws.remote.service",
+					"aws.remote.operation",
+					"aws.remote.target",
+					"HostedIn.Environment",
+				},
+				"certificate_file_path": "/ca/bundle",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"imds_retries":          1,
+				"telemetry": map[string]any{
+					"enabled":          true,
+					"include_metadata": true,
+				},
+				"middleware": "agenthealth/traces",
+			}),
+			mode: config.ModeEC2,
 		},
 	}
 	factory := awsxrayexporter.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			context.CurrentContext().SetMode(testCase.mode)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)

@@ -9,6 +9,7 @@ type Config struct {
 	FilePath              string `file_path`
 	LogGroup              string `log_group_name`
 	LogStream             string `log_stream_name`
+	LogGroupClass         string `log_group_class`
 	TimestampFormat       string `timestamp_format`
 	Timezone              string `timezone`
 	MultiLineStartPattern string `multi_line_start_pattern`
@@ -37,6 +38,9 @@ func (config *Config) ToMap(ctx *runtime.Context) (string, map[string]interface{
 	}
 	if config.Retention != 0 {
 		resultMap["retention_in_days"] = config.Retention
+	}
+	if config.LogGroupClass != "" {
+		resultMap["log_group_class"] = config.LogGroupClass
 	}
 	return "", resultMap
 }

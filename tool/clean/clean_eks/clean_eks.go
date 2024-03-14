@@ -16,6 +16,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
+var (
+	ClustersToClean = []string{
+		"cwagent-eks-integ-",
+		"cwagent-operator-helm-integ-",
+	}
+)
+
 // Clean eks clusters if they have been open longer than 7 day
 func main() {
 	err := cleanCluster()
@@ -37,6 +44,15 @@ func cleanCluster() error {
 	return nil
 }
 
+func clusterNameMatchesClustersToClean(clusterName string, clustersToClean []string) bool {
+	for _, clusterToClean := range clustersToClean {
+		if strings.HasPrefix(clusterName, clusterToClean) {
+			return true
+		}
+	}
+	return false
+}
+
 func terminateClusters(ctx context.Context, client *eks.Client) {
 	listClusterInput := eks.ListClustersInput{}
 	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationOneWeek)
@@ -50,7 +66,7 @@ func terminateClusters(ctx context.Context, client *eks.Client) {
 		if err != nil {
 			return
 		}
-		if expirationDateCluster.After(*describeClusterOutput.Cluster.CreatedAt) && strings.HasPrefix(*describeClusterOutput.Cluster.Name, "cwagent-eks-integ-") {
+		if expirationDateCluster.After(*describeClusterOutput.Cluster.CreatedAt) && clusterNameMatchesClustersToClean(*describeClusterOutput.Cluster.Name, ClustersToClean) {
 			log.Printf("Try to delete cluster %s launch-date %s", cluster, *describeClusterOutput.Cluster.CreatedAt)
 			describeNodegroupInput := eks.ListNodegroupsInput{ClusterName: aws.String(cluster)}
 			nodeGroupOutput, err := client.ListNodegroups(ctx, &describeNodegroupInput)

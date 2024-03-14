@@ -6,8 +6,8 @@ package agent
 import (
 	"fmt"
 
-	"github.com/aws/amazon-cloudwatch-agent/handlers/agentinfo"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
@@ -27,7 +27,7 @@ func (r *Region) ApplyRule(input interface{}) (returnKey string, returnVal inter
 	_, inputRegion := translator.DefaultCase(RegionKey, "", input)
 	if inputRegion != "" {
 		Global_Config.Region = inputRegion.(string)
-		Global_Config.RegionType = agentinfo.AgentConfigJson
+		Global_Config.RegionType = config.RegionTypeAgentConfigJson
 		return
 	}
 	region, regionType := util.DetectRegion(ctx.Mode(), ctx.Credentials())

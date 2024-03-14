@@ -5,7 +5,7 @@ exporters:
         emf_only: true
         endpoint: https://fake_endpoint
         imds_retries: 2
-        local_mode: false
+        local_mode: true
         log_group_name: emf/logs/default
         log_retention: 0
         log_stream_name: host_name_from_env
@@ -28,7 +28,10 @@ exporters:
             randomization_factor: 0.5
         role_arn: ""
         sending_queue:
+            enabled: true
+            num_consumers: 1
             queue_size: 1000
+            storage: null
         shared_credentials_file:
             - /root/.aws/credentials
     awsemf/containerinsights:
@@ -40,7 +43,7 @@ exporters:
         endpoint: https://fake_endpoint
         enhanced_container_insights: true
         imds_retries: 2
-        local_mode: false
+        local_mode: true
         log_group_name: /aws/containerinsights/{ClusterName}/performance
         log_retention: 0
         log_stream_name: '{NodeName}'
@@ -411,6 +414,9 @@ extensions:
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+              mode: OP
+              region_type: ACJ
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -450,7 +456,7 @@ receivers:
         imds_retries: 2
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
-        local_mode: false
+        local_mode: true
         max_retries: 0
         no_verify_ssl: false
         num_workers: 0
@@ -463,6 +469,7 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - /root/.aws/credentials
+        accelerated_compute_metrics: false
     tcplog/emf_logs:
         attributes: {}
         encoding: utf-8
@@ -486,6 +493,7 @@ receivers:
         multiline:
             line_end_pattern: .^
             line_start_pattern: ""
+            omit_pattern: false
         operators: []
         output: []
         resource: {}
@@ -527,8 +535,10 @@ service:
             level: info
             output_paths: []
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -36,6 +37,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
+	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -88,6 +90,7 @@ var fServiceName = flag.String("service-name", "telegraf", "service name (window
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
+var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
 
 var stop chan struct{}
 
@@ -158,6 +161,7 @@ func reloadLoop(
 							if err := wlog.SetLevelFromName(logLevel); err != nil {
 								log.Printf("E! Unable to set log level: %v\n", err)
 							}
+							cwaLogger.SetLevel(cwaLogger.ConvertToAtomicLevel(wlog.LogLevel()))
 							// Set AWS SDK logging
 							sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
 							configaws.SetSDKLogLevel(sdkLogLevel)
@@ -172,6 +176,14 @@ func reloadLoop(
 
 		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
+			if *fStartUpErrorFile != "" {
+				f, err := os.OpenFile(*fStartUpErrorFile, os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					log.Printf("E! Unable to create errorFile: %s", err)
+				} else {
+					_ = f.Close()
+				}
+			}
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
@@ -257,9 +269,9 @@ func runAgent(ctx context.Context,
 		LogWithTimezone:     "",
 	}
 
-	logger.SetupLogging(logConfig)
+	writer := logger.NewLogWriter(logConfig)
 
-	log.Printf("I! Starting AmazonCloudWatchAgent %s\n", version.Full())
+	log.Printf("I! Starting AmazonCloudWatchAgent %s with log file %s with log target %s\n", version.Full(), ag.Config.Agent.Logfile, ag.Config.Agent.LogTarget)
 	// Need to set SDK log level before plugins get loaded.
 	// Some aws.Config objects get created early and live forever which means
 	// we cannot change the sdk log level without restarting the Agent.
@@ -331,7 +343,7 @@ func runAgent(ctx context.Context,
 
 	useragent.Get().SetComponents(cfg, c)
 
-	params := getCollectorParams(factories, provider)
+	params := getCollectorParams(factories, provider, writer)
 
 	cmd := otelcol.NewCommand(params)
 
@@ -344,9 +356,13 @@ func runAgent(ctx context.Context,
 	return cmd.Execute()
 }
 
-func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider) otelcol.CollectorSettings {
-	params := otelcol.CollectorSettings{
-		Factories:      factories,
+func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider, writer io.Writer) otelcol.CollectorSettings {
+	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
+	loggingOptions := cwaLogger.NewLoggerOptions(writer, level)
+	return otelcol.CollectorSettings{
+		Factories: func() (otelcol.Factories, error) {
+			return factories, nil
+		},
 		ConfigProvider: provider,
 		// build info is essential for populating the user agent string in otel contrib upstream exporters, like the EMF exporter
 		BuildInfo: component.BuildInfo{
@@ -354,8 +370,8 @@ func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProv
 			Description: "CloudWatch Agent",
 			Version:     version.Number(),
 		},
+		LoggingOptions: loggingOptions,
 	}
-	return params
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {

@@ -10,11 +10,15 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
 
+	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
+const AttributePlatformGeneric = "Generic"
+
 var DefaultHostedInAttributes = map[string]string{
-	attr.AWSHostedInEnvironment: attr.HostedInEnvironment,
+	attr.AWSHostedInEnvironment:    attr.HostedInEnvironment,
+	attr.ResourceDetectionHostName: attr.ResourceDetectionHostName,
 }
 
 type subResolver interface {
@@ -27,13 +31,17 @@ type attributesResolver struct {
 }
 
 // create a new attributes resolver
-func NewAttributesResolver(resolverNames []string, logger *zap.Logger) *attributesResolver {
+func NewAttributesResolver(resolvers []appsignalsconfig.Resolver, logger *zap.Logger) *attributesResolver {
+	//TODO: Logic for native k8s needs to be implemented
 	subResolvers := []subResolver{}
-	for _, resolverName := range resolverNames {
-		if resolverName == "eks" {
-			subResolvers = append(subResolvers, getEksResolver(logger), newEKSHostedInAttributeResolver())
-		} else {
-			subResolvers = append(subResolvers, newHostedInAttributeResolver(DefaultHostedInAttributes))
+	for _, resolver := range resolvers {
+		switch resolver.Platform {
+		case appsignalsconfig.PlatformEKS, appsignalsconfig.PlatformK8s:
+			subResolvers = append(subResolvers, getKubernetesResolver(logger), newKubernetesHostedInAttributeResolver(resolver.Name))
+		case appsignalsconfig.PlatformEC2:
+			subResolvers = append(subResolvers, newEC2HostedInAttributeResolver(resolver.Name))
+		default:
+			subResolvers = append(subResolvers, newHostedInAttributeResolver(resolver.Name, DefaultHostedInAttributes))
 		}
 	}
 	return &attributesResolver{
@@ -62,11 +70,16 @@ func (r *attributesResolver) Stop(ctx context.Context) error {
 }
 
 type hostedInAttributeResolver struct {
+	name         string
 	attributeMap map[string]string
 }
 
-func newHostedInAttributeResolver(attributeMap map[string]string) *hostedInAttributeResolver {
+func newHostedInAttributeResolver(name string, attributeMap map[string]string) *hostedInAttributeResolver {
+	if name == "" {
+		name = AttributePlatformGeneric
+	}
 	return &hostedInAttributeResolver{
+		name:         name,
 		attributeMap: attributeMap,
 	}
 }
@@ -78,8 +91,7 @@ func (h *hostedInAttributeResolver) Process(attributes, resourceAttributes pcomm
 	}
 
 	if _, ok := resourceAttributes.Get(attr.AWSHostedInEnvironment); !ok {
-		hostedInEnv := "Generic"
-		attributes.PutStr(attr.HostedInEnvironment, hostedInEnv)
+		attributes.PutStr(attr.HostedInEnvironment, h.name)
 	}
 
 	return nil

@@ -9,7 +9,7 @@ exporters:
         endpoint: https://fake_endpoint
         enhanced_container_insights: true
         imds_retries: 1
-        local_mode: false
+        local_mode: true
         log_group_name: /aws/containerinsights/{ClusterName}/performance
         log_retention: 0
         log_stream_name: '{NodeName}'
@@ -380,6 +380,9 @@ extensions:
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+              mode: OP
+              region_type: ACJ
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -426,6 +429,7 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - fake-path
+        accelerated_compute_metrics: false
 service:
     extensions:
         - agenthealth/logs
@@ -449,8 +453,10 @@ service:
             level: info
             output_paths: []
             sampling:
+                enabled: true
                 initial: 2
                 thereafter: 500
+                tick: 10s
         metrics:
             address: ""
             level: None
