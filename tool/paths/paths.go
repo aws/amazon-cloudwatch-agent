@@ -12,6 +12,7 @@ const (
 	AGENT_LOG_FILE = "amazon-cloudwatch-agent.log"
 	//TODO this CONFIG_DIR_IN_CONTAINER should change to something indicate dir, keep it for now to avoid break testing
 	CONFIG_DIR_IN_CONTAINER = "/etc/cwagentconfig"
+	JMXJarName              = "opentelemetry-jmx-metrics.jar"
 )
 
 var (
@@ -24,4 +25,5 @@ var (
 	AgentLogFilePath     string
 	TranslatorBinaryPath string
 	AgentBinaryPath      string
+	JMXJarPath           string
 )

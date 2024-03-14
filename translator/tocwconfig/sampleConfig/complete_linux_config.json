@@ -17,7 +17,13 @@
       "jmx": [
         {
           "jar_path": "../../opentelemetry-jmx-metrics.jar",
-          "endpoint": "my_jmx_host:12345",
+          "endpoint": "localhost:12345",
+          "jvm" : [
+            "jvm.memory.heap.init",
+            "jvm.memory.heap.used",
+            "jvm.memory.nonheap.init"
+            ],
+          "tomcat" : [],
           "metrics_collection_interval": 60,
           "otlp": {
             "endpoint": "mycollectorotlpreceiver:4317",
@@ -26,23 +32,14 @@
               "header_test": "test"
             }
           },
-          "jvm": [
-            "jvm.memory.heap.init",
-            "jvm.memory.heap.used",
-            "jvm.memory.nonheap.init"
-          ],
-          "tomcat": [],
           "username": "cwagent",
-          "password": "testpassword",
           "keystore_path": "/keystore",
-          "keystore_password": "keystore_password",
           "keystore_type": "PKCS",
           "truststore_path": "/truststore",
-          "truststore_password": "truststore_password",
           "truststore_type": "PKCS12",
           "remote_profile": "SASL/PLAIN",
           "realm": "test_realm",
-          "resource_attributes": {
+          "append_dimensions": {
             "service.name": "jmx_app"
           }
         },
@@ -64,11 +61,11 @@
           "truststore_type": "PKCS12",
           "remote_profile": "SASL/PLAIN",
           "realm": "test_realm",
-          "resource_attributes": {
+          "append_dimensions": {
             "service.name": "jmx_app"
           }
         }
-        ],
+      ],
       "collectd": {
         "service_address": "udp://127.0.0.1:25826",
         "name_prefix": "collectd_",

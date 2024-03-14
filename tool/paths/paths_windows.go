@@ -42,4 +42,5 @@ func init() {
 	AgentLogFilePath = filepath.Join(AgentConfigDir, AGENT_LOG_FILE)
 	TranslatorBinaryPath = filepath.Join(AgentRootDir, TranslatorBinaryName)
 	AgentBinaryPath = filepath.Join(AgentRootDir, AgentBinaryName)
+	JMXJarPath = filepath.Join(AgentRootDir, JMXJarName)
 }
