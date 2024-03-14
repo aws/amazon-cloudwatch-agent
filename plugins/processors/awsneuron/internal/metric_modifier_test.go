@@ -28,7 +28,7 @@ const (
 	NeuronExecutionStatus                      = "neuron_execution_status"
 	NeuronCoreMemoryUsageModelSharedScratchpad = "neuroncore_memory_usage_model_shared_scratchpad"
 	NeuronDeviceRuntimeMemoryUsedBytes         = "neurondevice_runtime_memory_used_bytes"
-	NeuronExecutionLatencySeconds              = "neuron_execution_latency_seconds"
+	NeuronExecutionLatency                     = "neuron_execution_latency"
 	NeuronDeviceHwEccEventsTotal               = "neurondevice_hw_ecc_events_total"
 	NeuronCore                                 = "NeuronCore"
 	NeuronDevice                               = "NeuronDevice"
@@ -58,7 +58,7 @@ var metricNameToMetricLayout = map[string]MetricDefinition{
 	NeuronExecutionStatus:                      {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4, 5, 6}, SpecialAttributes: [][]string{{StatusType, "completed"}, {StatusType, "completed_with_err"}, {StatusType, "completed_with_num_err"}, {StatusType, "timed_out"}, {StatusType, "incorrect_input"}, {StatusType, "failed_to_queue"}}, Unit: Count},
 	NeuronCoreMemoryUsageModelSharedScratchpad: {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1, 2, 3}, SpecialAttributes: [][]string{{NeuronCore, "0", NeuronDevice, "0", MemoryLocation, "None", PodName, DummyPod}, {NeuronCore, "1", NeuronDevice, "0", MemoryLocation, "None", PodName, DummyPod}, {NeuronCore, "2", NeuronDevice, "1", MemoryLocation, "None", PodName, DummyPod}}, Unit: Bytes},
 	NeuronDeviceRuntimeMemoryUsedBytes:         {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1, 2}, SpecialAttributes: [][]string{{MemoryLocation, "host"}, {MemoryLocation, "neuron_device"}}, Unit: Bytes},
-	NeuronExecutionLatencySeconds:              {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{0, 0, 0, 0, 1, 0, 0}, SpecialAttributes: [][]string{{Percentile, "p0"}, {Percentile, "p1"}, {Percentile, "p100"}, {Percentile, "p25"}, {Percentile, "p50"}, {Percentile, "p75"}, {Percentile, "p99"}}, Unit: Seconds},
+	NeuronExecutionLatency:                     {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{0, 0, 0, 0, 1, 0, 0}, SpecialAttributes: [][]string{{Percentile, "p0"}, {Percentile, "p1"}, {Percentile, "p100"}, {Percentile, "p25"}, {Percentile, "p50"}, {Percentile, "p75"}, {Percentile, "p99"}}, Unit: Seconds},
 	NeuronDeviceHwEccEventsTotal:               {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4}, SpecialAttributes: [][]string{{NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_corrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_uncorrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_corrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_uncorrected", PodName, DummyPod}}, Unit: Count},
 }
 
@@ -68,10 +68,10 @@ func setupMetricModifier() *MetricModifier {
 }
 func TestMetricModifierForExecutionLatencyMetric(t *testing.T) {
 	metricModifier := setupMetricModifier()
-	actual := metricModifier.ModifyMetric(createActualMetricForKey(NeuronExecutionLatencySeconds))
+	actual := metricModifier.ModifyMetric(createActualMetricForKey(NeuronExecutionLatency))
 
 	expectedMetrics := map[string]pmetric.Metric{
-		"node_neuron_execution_latency_seconds": createExpectedMetric("node_neuron_execution_latency_seconds", false, []map[string]string{{Type: NodeAWSNeuron}}, []float64{1}, pmetric.MetricTypeSum, Seconds),
+		"node_neuron_execution_latency": createExpectedMetric("node_neuron_execution_latency", false, []map[string]string{{Type: NodeAWSNeuron}}, []float64{1}, pmetric.MetricTypeSum, Seconds),
 	}
 
 	assertModifiedMetric(t, actual, expectedMetrics)

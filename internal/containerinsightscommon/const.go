@@ -99,7 +99,7 @@ const (
 	NeuronRuntimeMemoryUsage                    = "neurondevice_runtime_memory_used_bytes"
 	NeuronInstanceInfo                          = "instance_info"
 	NeuronHardware                              = "neuron_hardware"
-	NeuronExecutionLatency                      = "neuron_execution_latency_seconds"
+	NeuronExecutionLatency                      = "neuron_execution_latency"
 
 	TypeCluster          = "Cluster"
 	TypeClusterService   = "ClusterService"

@@ -597,7 +597,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 					"node_neuron_execution_status_incorrect_input",
 					"node_neuron_execution_status_failed_to_queue",
 					"node_neurondevice_runtime_memory_used_bytes",
-					"node_neuron_execution_latency_seconds",
+					"node_neuron_execution_latency",
 				},
 			},
 			{
