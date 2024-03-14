@@ -5,6 +5,12 @@ Features:
 * [ContainerInsights] Add Container Insights for Windows in kubernetes.
 
 ========================================================================
+Amazon CloudWatch Agent 1.300034.1 (2024-03-14)
+========================================================================
+Enhancements:
+* [ContainerInsights] Add InstanceType attribute to GPU metrics
+
+========================================================================
 Amazon CloudWatch Agent 1.300034.0 (2024-03-04)
 ========================================================================
 Features:
