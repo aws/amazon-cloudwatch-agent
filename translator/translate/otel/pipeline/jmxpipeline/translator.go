@@ -8,44 +8,51 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/jmxfilterprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"log"
+	"strconv"
 )
 
 var (
-	jmxKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.JmxKey)
+	jmxKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
 )
 
 type translator struct {
-	id component.ID
+	name      string
+	index     int
+	receivers common.TranslatorMap[component.Config]
 }
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
-func NewTranslator() common.Translator[*common.ComponentTranslators] {
-	return &translator{}
+func NewTranslator(name string, index int, receivers common.TranslatorMap[component.Config]) common.Translator[*common.ComponentTranslators] {
+	return &translator{name, index, receivers}
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.DataTypeMetrics, common.PipelineNameJmx)
+	pipelineName := common.PipelineNameJmx + "/" + strconv.Itoa(t.index)
+	return component.NewIDWithName(component.DataTypeMetrics, pipelineName)
 }
 
 // Translate creates a pipeline for jmx if jmx metrics are collected
 // section is present.
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || !conf.IsSet(jmxKey) {
+	if conf == nil || !(conf.IsSet(jmxKey)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: jmxKey}
 	}
+
 	translators := common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config](),
+		Receivers:  t.receivers,
 		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
 	}
 
-	translators.Receivers.Set(jmx.NewTranslator())
-	translators.Processors.Set(jmxfilterprocessor.NewTranslator())
+	if jmxfilterprocessor.IsSet(conf, t.index) {
+		log.Printf("D! jmx filter processor required for pipeline %s because target names are set", t.ID())
+		translators.Processors.Set(jmxfilterprocessor.NewTranslator(jmxfilterprocessor.WithIndex(t.index)))
+	}
 
 	return &translators, nil
 }

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package jmxprocessor
+package jmxfilterprocessor
 
 import (
 	"fmt"
@@ -45,14 +45,6 @@ func (o optionFunc) apply(t *translator) {
 	o(t)
 }
 
-// WithDataType determines where the translator should look to find
-// the configuration.
-func WithDataType(dataType component.DataType) Option {
-	return optionFunc(func(t *translator) {
-		t.dataType = dataType
-	})
-}
-
 func WithIndex(index int) Option {
 	return optionFunc(func(t *translator) {
 		t.index = index
@@ -62,7 +54,7 @@ func WithIndex(index int) Option {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	return NewTranslatorWithName("", opts...)
+	return NewTranslatorWithName("jmx", opts...)
 }
 
 func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
@@ -70,11 +62,8 @@ func NewTranslatorWithName(name string, opts ...Option) common.Translator[compon
 	for _, opt := range opts {
 		opt.apply(t)
 	}
-	if name == "" && t.dataType != "" {
-		t.name = string(t.dataType)
-		if t.index != -1 {
-			t.name += "/" + strconv.Itoa(t.index)
-		}
+	if t.index != -1 {
+		t.name += "/" + strconv.Itoa(t.index)
 	}
 	return t
 }
@@ -88,29 +77,38 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	if conf == nil || !conf.IsSet(jmxKey) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: jmxKey}
+	}
+
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	configKey, ok := configKeys[t.dataType]
-	if !ok {
-		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
-	}
-	if conf == nil || !conf.IsSet(configKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
-	}
-
 	var jmxKeyMap map[string]interface{}
-	if jmxSlice := common.GetArray[any](conf, configKey); t.index != -1 && len(jmxSlice) > t.index {
+	if jmxSlice := common.GetArray[any](conf, jmxKey); t.index != -1 && len(jmxSlice) > t.index {
 		jmxKeyMap = jmxSlice[t.index].(map[string]interface{})
+	} else if _, ok := conf.Get(jmxKey).(map[string]interface{}); !ok {
+		jmxKeyMap = make(map[string]interface{})
 	} else {
-		jmxKeyMap = conf.Get(configKey).(map[string]interface{})
+		jmxKeyMap = conf.Get(jmxKey).(map[string]interface{})
 	}
 
 	var includeMetricNames []string
 
 	// When target name is set in configuration
 	for _, jmxTarget := range jmxTargets {
-		if _, ok := jmxKeyMap[jmxTarget]; ok {
-			includeMetricNames = append(includeMetricNames, t.getIncludeJmxMetrics(conf, jmxTarget)...)
+		if metrics, ok := jmxKeyMap[jmxTarget]; ok {
+			switch metrics.(type) {
+			case []interface{}:
+				fmt.Println("printer2")
+
+				//var jmxMetrics []string = metrics.([]string)
+				for index, _ := range str {
+					includeMetricNames = append(includeMetricNames, strconv.Itoa(index))
+				}
+				//includeMetricNames = append(includeMetricNames, t.getIncludeJmxMetrics(metrics)...)
+			case interface{}:
+				includeMetricNames = append(includeMetricNames, jmxTarget+".*")
+			}
 		}
 	}
 	c := confmap.NewFromStringMap(map[string]interface{}{
@@ -129,24 +127,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func (t *translator) getIncludeJmxMetrics(conf *confmap.Conf, target string) []string {
-	var includeMetricName []string
-	targetMap := conf.Get(common.ConfigKey(jmxKey, target))
-	targetMetrics, _ := targetMap.([]interface{})
+//func (t *translator) getIncludeJmxMetrics(metrics []interface{}) []string {
+//	var includeMetricName []string
+//	for _, metric := range metrics {
+//		includeMetricName = append(includeMetricName, metric.(string))
+//	}
+//	return includeMetricName
+//}
 
-	if len(targetMetrics) == 0 {
-		// add regex to target when no metric names provided
-		targetKeyRegex := target + ".*"
-		includeMetricName = append(includeMetricName, targetKeyRegex)
-	} else {
-		for _, targetMetricName := range targetMetrics {
-			includeMetricName = append(includeMetricName, targetMetricName.(string))
-		}
-	}
-	return includeMetricName
-}
-
-func IsSet(jmxMap map[string]interface{}) bool {
+func IsSet(conf *confmap.Conf, pipelineIndex int) bool {
+	jmxMetrics := conf.Get(jmxKey).([]interface{})
+	jmxMap, _ := jmxMetrics[pipelineIndex].(map[string]interface{})
 	for _, jmxTarget := range jmxTargets {
 		if _, ok := jmxMap[jmxTarget]; ok {
 			return true

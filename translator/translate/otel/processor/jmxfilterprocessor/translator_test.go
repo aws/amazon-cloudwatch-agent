@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package jmxprocessor
+package jmxfilterprocessor
 
 import (
 	"fmt"
@@ -18,9 +18,9 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
-	jmxTranslator := NewTranslator(WithDataType(component.DataTypeMetrics))
+	jmxTranslator := NewTranslator()
 
-	require.EqualValues(t, "filter/metrics", jmxTranslator.ID().String())
+	require.EqualValues(t, "filter/jmx", jmxTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf

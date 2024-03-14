@@ -18,8 +18,8 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
-	tt := NewTranslator(WithDataType(component.DataTypeMetrics))
-	assert.EqualValues(t, "jmx/metrics", tt.ID().String())
+	tt := NewTranslator()
+	assert.EqualValues(t, "jmx", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *confmap.Conf

@@ -47,15 +47,16 @@ var (
 	configKeys = map[component.DataType]string{
 		component.DataTypeMetrics: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey),
 	}
+	jmxKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
+
 	redactedMap = make(map[string]string)
 	jmxTargets  = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 )
 
 type translator struct {
-	name     string
-	dataType component.DataType
-	factory  receiver.Factory
-	index    int
+	name    string
+	factory receiver.Factory
+	index   int
 }
 
 type Option interface {
@@ -68,14 +69,6 @@ func (o optionFunc) apply(t *translator) {
 	o(t)
 }
 
-// WithDataType determines where the translator should look to find
-// the configuration.
-func WithDataType(dataType component.DataType) Option {
-	return optionFunc(func(t *translator) {
-		t.dataType = dataType
-	})
-}
-
 func WithIndex(index int) Option {
 	return optionFunc(func(t *translator) {
 		t.index = index
@@ -85,7 +78,7 @@ func WithIndex(index int) Option {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	return NewTranslatorWithName("", opts...)
+	return NewTranslatorWithName("metrics", opts...)
 }
 
 func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
@@ -93,11 +86,8 @@ func NewTranslatorWithName(name string, opts ...Option) common.Translator[compon
 	for _, opt := range opts {
 		opt.apply(t)
 	}
-	if name == "" && t.dataType != "" {
-		t.name = string(t.dataType)
-		if t.index != -1 {
-			t.name += "/" + strconv.Itoa(t.index)
-		}
+	if t.index != -1 {
+		t.name += "/" + strconv.Itoa(t.index)
 	}
 	return t
 }
@@ -107,22 +97,18 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	configKey, ok := configKeys[t.dataType]
-	if !ok {
-		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
-	}
-	if conf == nil || !conf.IsSet(configKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
+	if conf == nil || !conf.IsSet(jmxKey) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: jmxKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*jmxreceiver.Config)
 
 	var jmxKeyMap map[string]interface{}
-	if jmxSlice := common.GetArray[any](conf, configKey); t.index != -1 && len(jmxSlice) > t.index {
+	if jmxSlice := common.GetArray[any](conf, jmxKey); t.index != -1 && len(jmxSlice) > t.index {
 		jmxKeyMap = jmxSlice[t.index].(map[string]interface{})
-	} else if _, ok := conf.Get(configKey).(map[string]interface{}); !ok {
+	} else if _, ok := conf.Get(jmxKey).(map[string]interface{}); !ok {
 		jmxKeyMap = make(map[string]interface{})
 	} else {
-		jmxKeyMap = conf.Get(configKey).(map[string]interface{})
+		jmxKeyMap = conf.Get(jmxKey).(map[string]interface{})
 	}
 
 	cfg.JARPath = defaultJMXJarPath

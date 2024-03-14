@@ -5,7 +5,6 @@ package pipeline
 
 import (
 	"errors"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/service/pipelines"
