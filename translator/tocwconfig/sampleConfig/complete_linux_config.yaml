@@ -119,7 +119,7 @@ processors:
             regexp: null
         initial_value: 0
         max_staleness: 0s
-    filter/metrics/0:
+    filter/jmx/0:
         error_mode: propagate
         logs:
             exclude:
@@ -134,7 +134,10 @@ processors:
                 expressions: []
                 match_type: regexp
                 metric_names:
-                    - jvm.*
+                    - jvm.memory.heap.init
+                    - jvm.memory.heap.used
+                    - jvm.memory.nonheap.init
+                    - tomcat.*
                 resource_attributes: []
                 regexp:
         spans:
@@ -143,30 +146,6 @@ processors:
         traces:
             span: []
             spanevent: []
-    filter/metrics/1:
-        error_mode: propagate
-        logs:
-            exclude:
-            include:
-            log_record: [ ]
-        metrics:
-            datapoint: [ ]
-            exclude: null
-            metric: [ ]
-            regexp: null
-            include:
-                expressions: [ ]
-                match_type: regexp
-                metric_names:
-                    - jvm.*
-                resource_attributes: [ ]
-                regexp:
-        spans:
-            include: null
-            exclude: null
-        traces:
-            span: [ ]
-            spanevent: [ ]
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -184,6 +163,7 @@ processors:
               statements:
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+
                 - set(unit, "unit") where name == "cpu_usage_nice"
                 - set(unit, "unit") where name == "disk_free"
                 - set(name, "DISK_FREE") where name == "disk_free"
@@ -212,7 +192,7 @@ receivers:
     jmx/metrics/0:
         jar_path: ../../opentelemetry-jmx-metrics.jar
         endpoint: my_jmx_host:12345
-        target_system: jvm
+        target_system: jvm, tomcat
         collection_interval: 1m0s
         otlp:
             endpoint: mycollectorotlpreceiver:4317
@@ -234,28 +214,26 @@ receivers:
         password: testpassword
         truststore_password: truststore_password
     jmx/metrics/1:
-        jar_path: ../../opentelemetry-jmx-metrics.jar
-        endpoint: my_jmx_host:12345
-        target_system: jvm
+        additional_jars: [ ]
         collection_interval: 1m0s
+        endpoint: localhost:4567
+        jar_path: ../../opentelemetry-jmx-metrics.jar
+        keystore_path: /keystore
+        keystore_type: PKCS
+        log_level: ""
         otlp:
             endpoint: mycollectorotlpreceiver:4317
             timeout: 1m0s
             headers:
                 header_test: test
-        username: cwagent
-        keystore_path: /keystore
-        keystore_type: PKCS
-        truststore_path: /truststore
-        truststore_type: PKCS12
-        remote_profile: SASL/PLAIN
         realm: test_realm
+        remote_profile: SASL/PLAIN
         resource_attributes:
             service.name: jmx_app
-        log_level: ""
-        additional_jars: [ ]
-        password: testpassword
-        truststore_password: truststore_password
+        target_system: activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly
+        truststore_path: /truststore
+        truststore_type: PKCS12
+        username: cwagent
     otlp:
         protocols:
             grpc:
@@ -357,13 +335,24 @@ service:
                 - batch/emf_logs
             receivers:
                 - udplog/emf_logs
+        metrics/jmx/0:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx/0
+            receivers:
+                - jmx/metrics/0
+        metrics/jmx/1:
+            exporters:
+                - awscloudwatch
+            processors: []
+            receivers:
+                - jmx/metrics/1
         metrics/host:
             exporters:
                 - awscloudwatch
             processors:
                 - ec2tagger
-                - filter/metrics/0
-                - filter/metrics/1
                 - transform
             receivers:
                 - telegraf_mem
@@ -375,16 +364,12 @@ service:
                 - telegraf_netstat
                 - telegraf_cpu
                 - telegraf_statsd
-                - jmx/metrics/0
-                - jmx/metrics/1
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
-                - filter/metrics/0
-                - filter/metrics/1
                 - transform
             receivers:
                 - telegraf_net
