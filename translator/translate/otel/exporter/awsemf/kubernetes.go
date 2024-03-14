@@ -569,7 +569,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
 				MetricNameSelectors: []string{
 					"node_neuroncore_utilization",
 					"node_neuroncore_memory_usage_constants",
