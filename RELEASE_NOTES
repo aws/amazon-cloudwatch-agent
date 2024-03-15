@@ -1,6 +1,9 @@
 ========================================================================
 Amazon CloudWatch Agent 1.300034.1 (2024-03-14)
 ========================================================================
+Bug fixes:
+* [AppSignals] Explicitly set the default GC interval for metrics limiter
+
 Enhancements:
 * [ContainerInsights] Add InstanceType attribute to GPU metrics
 
