@@ -125,6 +125,17 @@ func (t *translator) translateMetricLimiterConfig(conf *confmap.Conf, configKey 
 			limiterConfig.LogDroppedMetrics = val
 		}
 	}
+	if rawVal, exists := configJson["garbage_collection_interval"]; exists {
+		if val, ok := rawVal.(string); !ok {
+			return nil, errors.New("type conversion error: garbage_collection_interval is not a string")
+		} else {
+			if interval, err := time.ParseDuration(val); err != nil {
+				return nil, errors.New("type conversion error: garbage_collection_interval is not a time string")
+			} else {
+				limiterConfig.GarbageCollectionInterval = interval
+			}
+		}
+	}
 	if rawVal, exists := configJson["rotation_interval"]; exists {
 		if val, ok := rawVal.(string); !ok {
 			return nil, errors.New("type conversion error: rotation_interval is not a string")
