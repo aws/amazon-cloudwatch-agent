@@ -45,13 +45,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config](),
+		Receivers:  common.NewTranslatorMap(jmx.NewTranslator(jmx.WithIndex(t.index))),
 		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
 	}
-
-	translators.Receivers.Set(jmx.NewTranslator(jmx.WithIndex(t.index)))
 
 	if jmxfilterprocessor.IsSet(conf, t.index) {
 		log.Printf("D! jmx filter processor required for pipeline %s because target names are set", t.ID())

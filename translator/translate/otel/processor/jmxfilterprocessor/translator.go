@@ -21,7 +21,7 @@ const (
 
 var (
 	jmxKey     = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
-	jmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
+	jmxTargets = common.JmxTargets
 )
 
 type translator struct {

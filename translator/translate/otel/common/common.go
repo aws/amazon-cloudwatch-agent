@@ -79,6 +79,7 @@ var (
 		component.DataTypeTraces:  AppSignalsTraces,
 		component.DataTypeMetrics: AppSignalsMetrics,
 	}
+	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 )
 
 // Translator is used to translate the JSON config into an

@@ -43,7 +43,7 @@ const (
 var (
 	configKey  = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
 	localhost  = collections.NewSet("localhost", "127.0.0.1")
-	jmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
+	jmxTargets = common.JmxTargets
 )
 
 type translator struct {
