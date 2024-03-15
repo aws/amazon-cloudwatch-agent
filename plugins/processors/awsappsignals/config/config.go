@@ -22,7 +22,7 @@ type LimiterConfig struct {
 	Disabled                  bool            `mapstructure:"disabled"`
 	LogDroppedMetrics         bool            `mapstructure:"log_dropped_metrics"`
 	RotationInterval          time.Duration   `mapstructure:"rotation_interval"`
-	GarbageCollectionInterval time.Duration   `mapstructure:"-"`
+	GarbageCollectionInterval time.Duration   `mapstructure:"garbage_collection_interval"`
 	ParentContext             context.Context `mapstructure:"-"`
 }
 
