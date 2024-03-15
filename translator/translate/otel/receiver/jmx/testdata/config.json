@@ -4,7 +4,10 @@
       "jmx": {
         "jar_path": "/jmxtest/opentelemetry-java-contrib-jmx-metrics.jar",
         "endpoint": "my_jmx_host:12345",
-        "target_system": "jvm",
+        "jvm":
+                ["jvm.memory.heap.init"],
+        "tomcat":
+                [],
         "metrics_collection_interval": 60,
         "otlp": {
           "endpoint": "mycollectorotlpreceiver:4317",

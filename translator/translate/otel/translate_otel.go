@@ -25,6 +25,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxpipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
 )
@@ -53,12 +54,17 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	jmxTranslators, err := jmxpipeline.NewTranslators(conf)
+	if err != nil {
+		return nil, err
+	}
 	translators.Set(appsignals.NewTranslator(component.DataTypeTraces))
 	translators.Set(appsignals.NewTranslator(component.DataTypeMetrics))
 	translators.Set(containerinsights.NewTranslator())
 	translators.Set(prometheus.NewTranslator())
 	translators.Set(emf_logs.NewTranslator())
 	translators.Set(xray.NewTranslator())
+	translators.Merge(jmxTranslators)
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)
 	if err != nil {

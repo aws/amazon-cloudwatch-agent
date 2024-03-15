@@ -949,6 +949,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetr
 github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.89.0 h1:Lu16kQylQWaI217RMA3E3mPos2RUEN7oybg+7YzCbzM=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.89.0 h1:VaxkGMEy9QqDmngEFU5zgy2lra216CEz05p1cP/g8FE=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.89.0/go.mod h1:n7Ha6X8VPlgWoYby+V32W9jmMEu0u3SdnWSYWBuAano=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.89.0 h1:L1JTMEGA4WSCvPf2QE4HW8wj9olwqVRDGUEdZNWXzK0=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.89.0/go.mod h1:rv4vyVGE+UheFtYDPrCfQd7LakG6SkGFvINfOkSRVrI=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.89.0 h1:JimsaOmtYrYOAA35JzkqnkDFGZi9D50GfaHVG5W7iUQ=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.89.0/go.mod h1:dMuzeobFNwvW7TgxHVVF1UH2HMK4jcU1JxzGdv+WZVk=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.89.0 h1:aX/JOO9uRSuu1QXOw6pgKoofobxkFqz0nkevwctbkFU=
