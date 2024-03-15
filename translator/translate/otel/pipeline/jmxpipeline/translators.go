@@ -15,7 +15,7 @@ func NewTranslators(conf *confmap.Conf) (pipeline.TranslatorMap, error) {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
 	switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)).(type) {
 	case []interface{}:
-		for index, _ := range v {
+		for index := range v {
 			translators.Set(NewTranslator(index))
 		}
 	case map[string]interface{}:
