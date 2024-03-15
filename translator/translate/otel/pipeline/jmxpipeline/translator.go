@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/jmxfilterprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 )
 
 var (
@@ -22,15 +23,13 @@ var (
 )
 
 type translator struct {
-	name      string
-	index     int
-	receivers common.TranslatorMap[component.Config]
+	index int
 }
 
 var _ common.Translator[*common.ComponentTranslators] = (*translator)(nil)
 
-func NewTranslator(name string, index int, receivers common.TranslatorMap[component.Config]) common.Translator[*common.ComponentTranslators] {
-	return &translator{name, index, receivers}
+func NewTranslator(index int) common.Translator[*common.ComponentTranslators] {
+	return &translator{index}
 }
 
 func (t *translator) ID() component.ID {
@@ -46,20 +45,22 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := common.ComponentTranslators{
-		Receivers:  t.receivers,
+		Receivers:  common.NewTranslatorMap[component.Config](),
 		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
 	}
 
-	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
-		log.Printf("D! ec2tagger processor required because append_dimensions is set")
-		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
-	}
+	translators.Receivers.Set(jmx.NewTranslator(jmx.WithIndex(t.index)))
 
 	if jmxfilterprocessor.IsSet(conf, t.index) {
 		log.Printf("D! jmx filter processor required for pipeline %s because target names are set", t.ID())
 		translators.Processors.Set(jmxfilterprocessor.NewTranslator(jmxfilterprocessor.WithIndex(t.index)))
+	}
+
+	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
+		log.Printf("D! ec2tagger processor required because append_dimensions is set")
+		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
 
 	return &translators, nil

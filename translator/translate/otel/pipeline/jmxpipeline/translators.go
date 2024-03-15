@@ -4,14 +4,10 @@
 package jmxpipeline
 
 import (
-	"strconv"
-
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 )
 
 func NewTranslators(conf *confmap.Conf) (pipeline.TranslatorMap, error) {
@@ -20,17 +16,10 @@ func NewTranslators(conf *confmap.Conf) (pipeline.TranslatorMap, error) {
 	switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)).(type) {
 	case []interface{}:
 		for index, _ := range v {
-			jmxReceivers := common.NewTranslatorMap[component.Config]()
-
-			jmxReceivers.Set(jmx.NewTranslator(jmx.WithIndex(index)))
-			name := common.PipelineNameJmx + "/" + strconv.Itoa(index)
-
-			translators.Set(NewTranslator(name, index, jmxReceivers))
+			translators.Set(NewTranslator(index))
 		}
 	case map[string]interface{}:
-		jmxReceivers := common.NewTranslatorMap[component.Config]()
-		jmxReceivers.Set(jmx.NewTranslator())
-		translators.Set(NewTranslator(common.PipelineNameJmx, -1, jmxReceivers))
+		translators.Set(NewTranslator(-1))
 	}
 
 	return translators, nil

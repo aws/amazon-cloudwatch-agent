@@ -12,7 +12,7 @@ metrics:
       - jvm.memory.nonheap.init
       - jvm.memory.nonheap.used
       - jvm.threads.count
-      - tomcat.*
+      - tomcat\..*
     resource_attributes: null
     regexp:
 

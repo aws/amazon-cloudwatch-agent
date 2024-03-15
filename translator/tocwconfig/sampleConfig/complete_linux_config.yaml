@@ -137,7 +137,7 @@ processors:
           - jvm.memory.heap.init
           - jvm.memory.heap.used
           - jvm.memory.nonheap.init
-          - tomcat.*
+          - tomcat\..*
         resource_attributes: [ ]
         regexp:
     spans:
