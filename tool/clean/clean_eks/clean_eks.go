@@ -20,7 +20,7 @@ var (
 	ClustersToClean = []string{
 		"cwagent-eks-integ-",
 		"cwagent-operator-helm-integ-",
-		"cwagent-operator-eks-integ-*",
+		"cwagent-operator-eks-integ-",
 	}
 )
 
