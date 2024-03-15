@@ -68,6 +68,7 @@ const (
 const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
+	PipelineNameJmx              = "jmx"
 	PipelineNameEmfLogs          = "emf_logs"
 	AppSignals                   = "application_signals"
 	AppSignalsFallback           = "app_signals"
@@ -84,6 +85,7 @@ var (
 		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
+	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 )
 
 // Translator is used to translate the JSON config into an

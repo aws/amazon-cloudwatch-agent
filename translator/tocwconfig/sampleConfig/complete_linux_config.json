@@ -18,7 +18,12 @@
         {
           "jar_path": "../../opentelemetry-jmx-metrics.jar",
           "endpoint": "localhost:12345",
-          "target_system": "jvm",
+          "jvm" : [
+            "jvm.memory.heap.init",
+            "jvm.memory.heap.used",
+            "jvm.memory.nonheap.init"
+            ],
+          "tomcat" : [],
           "metrics_collection_interval": 60,
           "otlp": {
             "endpoint": "mycollectorotlpreceiver:4317",
@@ -41,7 +46,6 @@
         {
           "jar_path": "../../opentelemetry-jmx-metrics.jar",
           "endpoint": "localhost:4567",
-          "target_system": "jvm",
           "metrics_collection_interval": 60,
           "otlp": {
             "endpoint": "mycollectorotlpreceiver:4317",

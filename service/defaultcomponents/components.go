@@ -9,6 +9,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
@@ -52,6 +53,7 @@ func Factories() (otelcol.Factories, error) {
 		awsapplicationsignals.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
+		filterprocessor.NewFactory(),
 		ec2tagger.NewFactory(),
 		metricstransformprocessor.NewFactory(),
 		resourcedetectionprocessor.NewFactory(),

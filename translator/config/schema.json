@@ -1209,12 +1209,6 @@
           "minLength": 1,
           "maxLength": 2048
         },
-        "target_system": {
-          "description": "built-in target system (or systems) metric gatherer script to run",
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 255
-        },
         "metrics_collection_interval": {
           "$ref": "#/definitions/timeIntervalDefinition"
         },
@@ -1249,6 +1243,78 @@
         "realm": {
           "description": "The realm, as required by remote profile SASL/DIGEST-MD5.",
           "type": "string"
+        },
+        "activemq": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cassandra": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hbase": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hadoop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "jetty": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "jvm": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kafka": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kafka-consumer": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "kafka-producer": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "solr": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tomcat": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "wildfly": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "insecure": {
           "description": "Disable JMX remote TLS/password authentication requirements",
@@ -1457,3 +1523,4 @@
     }
   }
 }
+
