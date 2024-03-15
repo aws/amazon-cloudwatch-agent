@@ -6,6 +6,7 @@ package otel
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 	"log"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxpipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
 )
@@ -53,6 +55,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	jmxTranslators, err := jmxpipeline.NewTranslators(conf)
+	if err != nil {
+		return nil, err
+	}
 
 	// split out delta receiver types
 	deltaMetricsReceivers := common.NewTranslatorMap[component.Config]()
@@ -73,6 +79,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		prometheus.NewTranslator(),
 		emf_logs.NewTranslator(),
 		xray.NewTranslator(),
+		jmx.NewTranslator(),
 	)
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)

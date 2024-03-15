@@ -69,6 +69,7 @@ const (
 const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
+	PipelineNameJmx              = "jmx"
 	PipelineNameEmfLogs          = "emf_logs"
 	AppSignals                   = "application_signals"
 	AppSignalsFallback           = "app_signals"
@@ -85,6 +86,7 @@ var (
 		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
+	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 
 	AgentDebugConfigKey = ConfigKey(AgentKey, DebugKey)
 )
