@@ -5,7 +5,6 @@ package jmxfilterprocessor
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
@@ -50,7 +49,7 @@ func WithIndex(index int) Option {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	return NewTranslatorWithName("jmx", opts...)
+	return NewTranslatorWithName(common.PipelineNameJmx, opts...)
 }
 
 func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
@@ -96,13 +95,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			if len(values) > 0 {
 				// target name is set and has specific metrics set
 				for _, value := range values {
-					if reflect.TypeOf(value).String() == "string" {
-						includeMetricNames = append(includeMetricNames, value.(string))
+					if valueStr, ok := value.(string); ok {
+						includeMetricNames = append(includeMetricNames, valueStr)
 					}
 				}
 			} else {
 				// target name is set and wildcard for all metrics
-				includeMetricNames = append(includeMetricNames, jmxTarget+".*")
+				includeMetricNames = append(includeMetricNames, jmxTarget+"\\..*")
 			}
 		}
 	}

@@ -50,7 +50,7 @@ func TestTranslator(t *testing.T) {
 				"metrics": map[string]interface{}{
 					"include": map[string]interface{}{
 						"match_type":   "regexp",
-						"metric_names": []interface{}{"jvm.*"},
+						"metric_names": []interface{}{"jvm\\..*"},
 					},
 				},
 			}),
@@ -93,8 +93,8 @@ func TestTranslator(t *testing.T) {
 					"include": map[string]interface{}{
 						"match_type": "regexp",
 						"metric_names": []interface{}{
-							"hadoop.*",
-							"jvm.*",
+							"hadoop\\..*",
+							"jvm\\..*",
 						},
 					},
 				},
@@ -117,7 +117,7 @@ func TestTranslator(t *testing.T) {
 					"include": map[string]interface{}{
 						"match_type": "regexp",
 						"metric_names": []interface{}{
-							"hadoop.*",
+							"hadoop\\..*",
 							"jvm.memory.heap.init",
 						},
 					},
@@ -145,7 +145,7 @@ func TestTranslator(t *testing.T) {
 					"include": map[string]interface{}{
 						"match_type": "regexp",
 						"metric_names": []interface{}{
-							"hadoop.*",
+							"hadoop\\..*",
 							"jvm.memory.heap.init",
 							"jvm.threads.count",
 							"tomcat.sessions",
