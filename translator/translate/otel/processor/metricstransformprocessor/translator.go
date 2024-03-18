@@ -134,7 +134,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 			transformRules = append(transformRules, map[string]interface{}{
 				"include":  oldName,
-				"action":   "insert",
+				"action":   "update",
 				"new_name": newName,
 				"operations": append([]map[string]interface{}{},
 					operations...),

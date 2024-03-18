@@ -11,26 +11,24 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	awsNeuronMetric = "neuron_"
-)
-
 type awsneuronprocessor struct {
 	*Config
-	logger         *zap.Logger
-	cancelFunc     context.CancelFunc
-	shutdownC      chan bool
-	started        bool
-	metricModifier *internal.MetricModifier
+	logger                 *zap.Logger
+	cancelFunc             context.CancelFunc
+	shutdownC              chan bool
+	started                bool
+	metricModifier         *internal.MetricModifier
+	memoryMetricAggregator *internal.MemoryMetricAggregator
 }
 
 func newAwsNeuronProcessor(config *Config, logger *zap.Logger) *awsneuronprocessor {
 	_, cancel := context.WithCancel(context.Background())
 	d := &awsneuronprocessor{
-		Config:         config,
-		logger:         logger,
-		cancelFunc:     cancel,
-		metricModifier: internal.NewMetricModifier(logger),
+		Config:                 config,
+		logger:                 logger,
+		cancelFunc:             cancel,
+		metricModifier:         internal.NewMetricModifier(logger),
+		memoryMetricAggregator: internal.NewMemoryMemoryAggregator(),
 	}
 	return d
 }
@@ -39,8 +37,7 @@ func (d *awsneuronprocessor) processMetrics(ctx context.Context, md pmetric.Metr
 	if !d.started {
 		return pmetric.NewMetrics(), nil
 	}
-	originalMd := pmetric.NewMetrics()
-	md.CopyTo(originalMd)
+
 	rms := md.ResourceMetrics()
 	for i := 0; i < rms.Len(); i++ {
 		rs := rms.At(i)
@@ -52,8 +49,14 @@ func (d *awsneuronprocessor) processMetrics(ctx context.Context, md pmetric.Metr
 			newMetrics := pmetric.NewMetricSlice()
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
+				d.memoryMetricAggregator.AggregateMemoryMetric(m)
 				d.metricModifier.ModifyMetric(m).MoveAndAppendTo(newMetrics)
 			}
+			if d.memoryMetricAggregator.MemoryMetricsFound {
+				aggregatedMemoryMetric := d.memoryMetricAggregator.FlushAggregatedMemoryMetric()
+				d.metricModifier.ModifyMetric(aggregatedMemoryMetric).MoveAndAppendTo(newMetrics)
+			}
+
 			newMetrics.CopyTo(metrics)
 		}
 	}

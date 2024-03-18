@@ -348,6 +348,7 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - container_neuroncore_utilization
+          - container_neuroncore_memory_usage_total
           - container_neuroncore_memory_usage_constants
           - container_neuroncore_memory_usage_model_code
           - container_neuroncore_memory_usage_model_shared_scratchpad
@@ -399,6 +400,7 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - pod_neuroncore_utilization
+          - pod_neuroncore_memory_usage_total
           - pod_neuroncore_memory_usage_constants
           - pod_neuroncore_memory_usage_model_code
           - pod_neuroncore_memory_usage_model_shared_scratchpad
@@ -443,6 +445,7 @@ exporters:
         label_matchers: [ ]
         metric_name_selectors:
           - node_neuroncore_utilization
+          - node_neuroncore_memory_usage_total
           - node_neuroncore_memory_usage_constants
           - node_neuroncore_memory_usage_model_code
           - node_neuroncore_memory_usage_model_shared_scratchpad

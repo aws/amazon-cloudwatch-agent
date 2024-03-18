@@ -88,6 +88,7 @@ const (
 	GpuUniqueId       = "UUID"
 
 	NeuronCoreUtilization                       = "neuroncore_utilization"
+	NeuronCoreMemoryUtilizationTotal            = "neuroncore_memory_usage_total"
 	NeuronCoreMemoryUtilizationConstants        = "neuroncore_memory_usage_constants"
 	NeuronCoreMemoryUtilizationModelCode        = "neuroncore_memory_usage_model_code"
 	NeuronCoreMemoryUtilizationSharedScratchpad = "neuroncore_memory_usage_model_shared_scratchpad"
