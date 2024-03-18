@@ -1,5 +1,5 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300035.0 (2024-03-11)
+Amazon CloudWatch Agent 1.300035.0 (2024-03-18)
 ========================================================================
 Features:
 * [ContainerInsights] Add Container Insights for Windows in kubernetes.
