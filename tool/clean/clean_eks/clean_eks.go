@@ -56,7 +56,7 @@ func clusterNameMatchesClustersToClean(clusterName string, clustersToClean []str
 
 func terminateClusters(ctx context.Context, client *eks.Client) {
 	listClusterInput := eks.ListClustersInput{}
-	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationOneWeek)
+	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationThreeDays)
 	clusters, err := client.ListClusters(ctx, &listClusterInput)
 	if err != nil {
 		log.Fatalf("could not get cluster list")
@@ -94,6 +94,8 @@ func terminateClusters(ctx context.Context, client *eks.Client) {
 			if err != nil {
 				log.Printf("could not delete cluster %s err %v", cluster, err)
 			}
+		} else {
+			log.Printf("Ignoring cluster %s with a launch-date %s", cluster, *describeClusterOutput.Cluster.CreatedAt)
 		}
 	}
 }

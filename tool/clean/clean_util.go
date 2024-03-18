@@ -7,6 +7,7 @@ import "time"
 
 const (
 	KeepDurationOneWeek        = KeepDurationOneDay * 7
+	KeepDurationThreeDays      = KeepDurationOneDay * 3
 	KeepDurationOneDay         = -1 * time.Hour * 24
 	KeepDurationSixtyDay       = KeepDurationOneDay * time.Duration(60)
 	KeepDurationTwentySixHours = KeepDurationOneDay + time.Hour*2
