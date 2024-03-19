@@ -412,9 +412,9 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 					{
-						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "GpuDevice"}},
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "GpuDevice"}},
 						MetricNameSelectors: []string{
-							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature", "node_gpu_fan_speed",
+							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature",
 						},
 					},
 					{

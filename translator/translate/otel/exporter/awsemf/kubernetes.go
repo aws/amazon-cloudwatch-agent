@@ -492,7 +492,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "GpuDevice"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "GpuDevice"}},
 				MetricNameSelectors: []string{
 					"node_gpu_utilization",
 					"node_gpu_memory_utilization",
@@ -500,7 +500,6 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 					"node_gpu_memory_used",
 					"node_gpu_power_draw",
 					"node_gpu_temperature",
-					"node_gpu_fan_speed",
 				},
 			},
 			{
