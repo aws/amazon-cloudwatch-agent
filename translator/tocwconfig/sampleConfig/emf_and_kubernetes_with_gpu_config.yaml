@@ -973,7 +973,6 @@ receivers:
     enable_control_plane_metrics: true
     endpoint: ""
     accelerated_compute_metrics: true
-    aws_neuron_metrics: false
     imds_retries: 2
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true

@@ -5,7 +5,6 @@ package containerinsights
 
 import (
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsneuron"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -56,10 +55,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		acceleratedComputeMetricsEnabled := awscontainerinsight.AcceleratedComputeMetricsEnabled(conf)
 		if acceleratedComputeMetricsEnabled {
 			processors.Set(gpu.NewTranslatorWithName(pipelineName))
-		}
-		awsNeuronMetricsEnabled := awscontainerinsight.AwsNeuronMetricsEnabled(conf)
-		if awsNeuronMetricsEnabled {
-			processors.Set(awsneuron.NewTranslatorWithName(pipelineName))
 		}
 		processors.Set(batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey))
 		return &common.ComponentTranslators{

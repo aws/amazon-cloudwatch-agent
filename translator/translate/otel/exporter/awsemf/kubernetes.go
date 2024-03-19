@@ -526,7 +526,7 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
 	var metricDeclarations []*awsemfexporter.MetricDeclaration
 	enhancedContainerInsightsEnabled := awscontainerinsight.EnhancedContainerInsightsEnabled(conf)
-	if awscontainerinsight.AwsNeuronMetricsEnabled(conf) && enhancedContainerInsightsEnabled {
+	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) && enhancedContainerInsightsEnabled {
 		metricDeclarations = append(metricDeclarations, []*awsemfexporter.MetricDeclaration{
 			{
 				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NeuronDevice", "NeuronCore"}},

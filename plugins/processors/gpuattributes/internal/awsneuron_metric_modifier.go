@@ -32,7 +32,7 @@ const (
 	RuntimeTag                      = "runtime_tag"
 )
 
-type MetricModifier struct {
+type AwsNeuronMetricModifier struct {
 	logger *zap.Logger
 }
 
@@ -64,14 +64,14 @@ var (
 	attributeValuePrefixingMap = map[string]string{NeuronCoreAttributeKey: "core", NeuronDeviceAttributeKey: "device"}
 )
 
-func NewMetricModifier(logger *zap.Logger) *MetricModifier {
-	d := &MetricModifier{
+func NewMetricModifier(logger *zap.Logger) *AwsNeuronMetricModifier {
+	d := &AwsNeuronMetricModifier{
 		logger: logger,
 	}
 	return d
 }
 
-func (md *MetricModifier) ModifyMetric(originalMetric pmetric.Metric) pmetric.MetricSlice {
+func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric) pmetric.MetricSlice {
 	// only decorate Aws Neuron metrics
 	// another option is to separate Aws Neuron in its own pipeline to minimize extra processing of metrics
 	newMetricSlice := pmetric.NewMetricSlice()
@@ -108,7 +108,7 @@ func (md *MetricModifier) ModifyMetric(originalMetric pmetric.Metric) pmetric.Me
 
 // This method takes a metric and creates an aggregated metric from its datapoint values.
 // It also creates a new metric for each datapoint based on the target attribute.
-func (md *MetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metric) pmetric.MetricSlice {
+func (md *AwsNeuronMetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metric) pmetric.MetricSlice {
 	newMetricSlice := pmetric.NewMetricSlice()
 	originalMetricDatapoints := originalMetric.Sum().DataPoints()
 
@@ -159,7 +159,7 @@ func (md *MetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metr
 
 // This method duplicates metrics performs selective duplication of a metric based on the types for which duplication needs to be performed
 // and by checking that pod correlation has been performed before duplicating metrics for pod and container.
-func (md *MetricModifier) duplicateMetrics(metricsSlice pmetric.MetricSlice, originalMetricName string, originalMetricDatapoints pmetric.NumberDataPointSlice) pmetric.MetricSlice {
+func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricSlice, originalMetricName string, originalMetricDatapoints pmetric.NumberDataPointSlice) pmetric.MetricSlice {
 	newMetricsSlice := pmetric.NewMetricSlice()
 	metricModifications := metricModificationsMap[originalMetricName]
 

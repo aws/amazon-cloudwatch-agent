@@ -10,8 +10,7 @@
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
         "disable_metric_extraction": true,
-        "enhanced_container_insights": true,
-        "aws_neuron_metrics": false
+        "enhanced_container_insights": true
       }
     },
     "force_flush_interval": 5,

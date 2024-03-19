@@ -144,7 +144,6 @@ receivers:
         role_arn: ""
         shared_credentials_file: []
         accelerated_compute_metrics: true
-        aws_neuron_metrics: true
     tcplog/emf_logs:
         attributes: {}
         encoding: utf-8

@@ -62,9 +62,9 @@ var metricNameToMetricLayout = map[string]MetricDefinition{
 	NeuronDeviceHwEccEventsTotal:               {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4}, SpecialAttributes: [][]string{{NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_corrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_uncorrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_corrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_uncorrected", PodName, DummyPod}}, Unit: Count},
 }
 
-func setupMetricModifier() *MetricModifier {
+func setupMetricModifier() *AwsNeuronMetricModifier {
 	logger, _ := zap.NewDevelopment()
-	return &MetricModifier{logger: logger}
+	return &AwsNeuronMetricModifier{logger: logger}
 }
 func TestMetricModifierForExecutionLatencyMetric(t *testing.T) {
 	metricModifier := setupMetricModifier()

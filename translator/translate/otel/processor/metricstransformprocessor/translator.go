@@ -120,9 +120,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				})
 			}
 		}
-	}
 
-	if awscontainerinsight.AwsNeuronMetricsEnabled(conf) {
 		for oldName, newName := range renameMapForNeuronMonitor {
 			var operations []map[string]interface{}
 			if newName == containerinsightscommon.NeuronCoreUtilization {

@@ -22,18 +22,18 @@ type NeuronCoreInfo struct {
 	neuronDeviceIndex string
 }
 
-type MemoryMetricAggregator struct {
+type AwsNeuronMemoryMetricsAggregator struct {
 	memoryMetricValuesAggregator     map[NeuronCoreInfo]float64
 	aggregatedMemoryMetricAttributes pcommon.Map
 	metricTimestamp                  pcommon.Timestamp
 	MemoryMetricsFound               bool
 }
 
-func NewMemoryMemoryAggregator() *MemoryMetricAggregator {
-	return &MemoryMetricAggregator{memoryMetricValuesAggregator: map[NeuronCoreInfo]float64{}, MemoryMetricsFound: false}
+func NewMemoryMemoryAggregator() *AwsNeuronMemoryMetricsAggregator {
+	return &AwsNeuronMemoryMetricsAggregator{memoryMetricValuesAggregator: map[NeuronCoreInfo]float64{}, MemoryMetricsFound: false}
 }
 
-func (d *MemoryMetricAggregator) AggregateMemoryMetric(originalMetric pmetric.Metric) {
+func (d *AwsNeuronMemoryMetricsAggregator) AggregateMemoryMetric(originalMetric pmetric.Metric) {
 	if _, exists := memoryMetricsNames[originalMetric.Name()]; exists {
 		datapoints := originalMetric.Gauge().DataPoints()
 		if datapoints.Len() > 0 {
@@ -62,7 +62,7 @@ func (d *MemoryMetricAggregator) AggregateMemoryMetric(originalMetric pmetric.Me
 	}
 }
 
-func (d *MemoryMetricAggregator) FlushAggregatedMemoryMetric() pmetric.Metric {
+func (d *AwsNeuronMemoryMetricsAggregator) FlushAggregatedMemoryMetric() pmetric.Metric {
 	aggregatedMemoryMetric := pmetric.NewMetric()
 	aggregatedMemoryMetric.SetName(containerinsightscommon.NeuronCoreMemoryUtilizationTotal)
 	datapoints := aggregatedMemoryMetric.SetEmptySum().DataPoints()
@@ -82,7 +82,7 @@ func (d *MemoryMetricAggregator) FlushAggregatedMemoryMetric() pmetric.Metric {
 	return aggregatedMemoryMetric
 }
 
-func (d *MemoryMetricAggregator) resetMemoryMetricAggregator() {
+func (d *AwsNeuronMemoryMetricsAggregator) resetMemoryMetricAggregator() {
 	d.memoryMetricValuesAggregator = map[NeuronCoreInfo]float64{}
 	d.MemoryMetricsFound = false
 }
