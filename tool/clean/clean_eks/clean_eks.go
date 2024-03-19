@@ -93,7 +93,7 @@ func terminateClusters(ctx context.Context, client *eks.Client) {
 			}
 			_, err := client.DeleteNodegroup(ctx, &deleteNodegroupInput)
 			if err != nil {
-				log.Printf("could delete node groups %s cluster %s err %v", nodegroup, cluster, err)
+				log.Printf("could not delete node groups %s cluster %s err %v", nodegroup, cluster, err)
 			}
 		}
 		deleteClusterInput := eks.DeleteClusterInput{Name: aws.String(cluster)}
