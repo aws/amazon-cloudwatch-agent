@@ -6,6 +6,7 @@ limiter:
   drop_threshold: 20
   log_dropped_metrics: true
   rotation_interval: 10m
+  garbage_collection_interval: 10m
 rules:
   - selectors:
     - dimension: Operation

@@ -36,4 +36,7 @@ const (
 	HostedInK8SNamespace   = "HostedIn.K8s.Namespace"
 	HostedInEC2Environment = "HostedIn.EC2.Environment"
 	HostedInEnvironment    = "HostedIn.Environment"
+
+	// sdk attributes
+	MetricAttributeSDKMetadata = "SDK"
 )
