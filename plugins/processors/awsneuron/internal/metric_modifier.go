@@ -29,6 +29,7 @@ const (
 	NeuronCoreAttributeKey          = "NeuronCore"
 	duplicateNeuronCoreAttributeKey = "neuroncore"
 	NeuronDeviceAttributeKey        = "NeuronDevice"
+	RuntimeTag                      = "runtime_tag"
 )
 
 type MetricModifier struct {
@@ -112,20 +113,15 @@ func (md *MetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metr
 	originalMetricDatapoints := originalMetric.Sum().DataPoints()
 
 	if aggregationAttributeKey := metricModificationsMap[originalMetric.Name()].AggregationAttributeKey; aggregationAttributeKey != "" && originalMetric.Type() == pmetric.MetricTypeSum {
-		aggregatedMetric := pmetric.NewMetric()
-		if originalMetric.Name() != containerinsightscommon.NeuronDeviceHardwareEccEvents {
-			// Aggregated metric for neuron device ecc events is not required
-			aggregatedMetric = newMetricSlice.AppendEmpty()
-		}
+		aggregatedValuesPerRuntimeTag := map[string]float64{}
 
-		// Creating body for the aggregated metric and add it to the new newMetricSlice
-		aggregatedMetric.SetName(originalMetric.Name() + aggregatedMetricSuffix)
-		aggregatedMetric.SetUnit(originalMetric.Unit())
-		originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
-		aggregatedValue := 0.0
 		for i := 0; i < originalMetricDatapoints.Len(); i++ {
 			originalDatapoint := originalMetricDatapoints.At(i)
+
+			runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
+			aggregatedValue, _ := aggregatedValuesPerRuntimeTag[runtimeTag.AsString()]
 			aggregatedValue += originalDatapoint.DoubleValue()
+			aggregatedValuesPerRuntimeTag[runtimeTag.AsString()] = aggregatedValue
 
 			// Creating a new metric from the current datapoint and adding it to the new newMetricSlice
 			newNameMetric := newMetricSlice.AppendEmpty()
@@ -136,9 +132,24 @@ func (md *MetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metr
 			// setting value of temporality to cumulative so that agent performs delta conversion on this metric
 			newNameMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 		}
-		aggregatedMetric.Sum().DataPoints().At(0).SetDoubleValue(aggregatedValue)
-		// setting value of temporality to cumulative so that agent performs delta conversion on this metric
-		aggregatedMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+
+		if originalMetric.Name() != containerinsightscommon.NeuronDeviceHardwareEccEvents {
+			// Creating body for the aggregated metric and add it to the new newMetricSlice for each runtime
+			for runtimeTag, value := range aggregatedValuesPerRuntimeTag {
+				// Aggregated metric for neuron device ecc events is not required
+				aggregatedMetric := newMetricSlice.AppendEmpty()
+
+				aggregatedMetric.SetName(originalMetric.Name() + aggregatedMetricSuffix)
+				aggregatedMetric.SetUnit(originalMetric.Unit())
+
+				originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
+				aggregatedMetric.Sum().DataPoints().At(0).SetDoubleValue(value)
+				aggregatedMetric.Sum().DataPoints().At(0).Attributes().PutStr(RuntimeTag, runtimeTag)
+
+				// setting value of temporality to cumulative so that agent performs delta conversion on this metric
+				aggregatedMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+			}
+		}
 	} else {
 		originalMetric.CopyTo(newMetricSlice.AppendEmpty())
 	}
