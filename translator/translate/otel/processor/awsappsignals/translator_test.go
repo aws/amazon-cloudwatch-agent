@@ -26,7 +26,7 @@ var (
 	validAppSignalsYamlEKS string
 	//go:embed testdata/config_k8s.yaml
 	validAppSignalsYamlK8s string
-	//go:embed testdata/config_generic.yaml
+	//go:embed testdata/config_ec2.yaml
 	validAppSignalsYamlEC2 string
 	//go:embed testdata/config_generic.yaml
 	validAppSignalsYamlGeneric string
@@ -169,7 +169,7 @@ func TestTranslate(t *testing.T) {
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"app_signals": map[string]interface{}{
-							"hosted_in": "",
+							"hosted_in": "test",
 						},
 					},
 				}},

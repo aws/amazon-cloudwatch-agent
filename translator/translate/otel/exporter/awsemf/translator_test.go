@@ -949,7 +949,7 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_ec2.yaml"), map[string]any{
 				"local_mode":            "false",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
