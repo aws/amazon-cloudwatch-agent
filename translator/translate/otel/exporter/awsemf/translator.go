@@ -148,6 +148,8 @@ func getAppSignalsConfig() string {
 		return appSignalsConfigEks
 	} else if kubernetesMode == config.ModeK8sEC2 || kubernetesMode == config.ModeK8sOnPrem {
 		return appSignalsConfigK8s
+	} else if ctx.Mode() == config.ModeEC2 {
+		return appSignalsConfigEC2
 	}
 	return appSignalsConfigGeneric
 }

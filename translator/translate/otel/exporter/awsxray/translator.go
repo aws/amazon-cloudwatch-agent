@@ -85,6 +85,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.IndexedAttributes = indexedAttributesEKS
 		} else if ctx.KubernetesMode() == config.ModeK8sEC2 || ctx.KubernetesMode() == config.ModeK8sOnPrem {
 			cfg.IndexedAttributes = indexedAttributesK8s
+		} else if ctx.Mode() == config.ModeEC2 {
+			cfg.IndexedAttributes = indexedAttributesEC2
 		} else {
 			cfg.IndexedAttributes = indexedAttributesGeneric
 		}
