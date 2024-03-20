@@ -163,12 +163,11 @@ func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricS
 	newMetricsSlice := pmetric.NewMetricSlice()
 	metricModifications := metricModificationsMap[originalMetricName]
 
+	// check if pod correlation has been performed, if not then don't emit metric for container and pod
 	duplicateForNodeOnly := false
-	if originalMetricName == containerinsightscommon.NeuronDeviceHardwareEccEvents {
-		podname, exists := originalMetricDatapoints.At(0).Attributes().Get(PodName)
-		if !exists || len(podname.Str()) == 0 {
-			duplicateForNodeOnly = true
-		}
+	podName, exists := originalMetricDatapoints.At(0).Attributes().Get(PodName)
+	if !exists || len(podName.Str()) == 0 {
+		duplicateForNodeOnly = true
 	}
 
 	for i := 0; i < metricsSlice.Len(); i++ {

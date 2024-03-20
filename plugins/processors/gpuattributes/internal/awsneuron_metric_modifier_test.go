@@ -54,12 +54,12 @@ type MetricDefinition struct {
 
 var metricNameToMetricLayout = map[string]MetricDefinition{
 	NonNeuronMetric:                            {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1}, SpecialAttributes: [][]string{}, Unit: Count},
-	NeuronExecutionErrors:                      {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4, 5, 6}, SpecialAttributes: [][]string{{ErrorType, "generic"}, {ErrorType, "numerical"}, {ErrorType, "transient"}, {ErrorType, "model"}, {ErrorType, "runtime"}, {ErrorType, "hardware"}}, Unit: Count},
-	NeuronExecutionStatus:                      {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4, 5, 6}, SpecialAttributes: [][]string{{StatusType, "completed"}, {StatusType, "completed_with_err"}, {StatusType, "completed_with_num_err"}, {StatusType, "timed_out"}, {StatusType, "incorrect_input"}, {StatusType, "failed_to_queue"}}, Unit: Count},
+	NeuronExecutionErrors:                      {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4, 5, 6}, SpecialAttributes: [][]string{{ErrorType, "generic", RuntimeTag, "1"}, {ErrorType, "numerical", RuntimeTag, "1"}, {ErrorType, "transient", RuntimeTag, "1"}, {ErrorType, "model", RuntimeTag, "1"}, {ErrorType, "runtime", RuntimeTag, "1"}, {ErrorType, "hardware", RuntimeTag, "1"}}, Unit: Count},
+	NeuronExecutionStatus:                      {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4, 5, 6}, SpecialAttributes: [][]string{{StatusType, "completed", RuntimeTag, "1"}, {StatusType, "completed_with_err", RuntimeTag, "1"}, {StatusType, "completed_with_num_err", RuntimeTag, "1"}, {StatusType, "timed_out", RuntimeTag, "1"}, {StatusType, "incorrect_input", RuntimeTag, "1"}, {StatusType, "failed_to_queue", RuntimeTag, "1"}}, Unit: Count},
 	NeuronCoreMemoryUsageModelSharedScratchpad: {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1, 2, 3}, SpecialAttributes: [][]string{{NeuronCore, "0", NeuronDevice, "0", MemoryLocation, "None", PodName, DummyPod}, {NeuronCore, "1", NeuronDevice, "0", MemoryLocation, "None", PodName, DummyPod}, {NeuronCore, "2", NeuronDevice, "1", MemoryLocation, "None", PodName, DummyPod}}, Unit: Bytes},
 	NeuronDeviceRuntimeMemoryUsedBytes:         {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{1, 2}, SpecialAttributes: [][]string{{MemoryLocation, "host"}, {MemoryLocation, "neuron_device"}}, Unit: Bytes},
 	NeuronExecutionLatency:                     {MetricType: pmetric.MetricTypeGauge, MetricValues: []float64{0, 0, 0, 0, 1, 0, 0}, SpecialAttributes: [][]string{{Percentile, "p0"}, {Percentile, "p1"}, {Percentile, "p100"}, {Percentile, "p25"}, {Percentile, "p50"}, {Percentile, "p75"}, {Percentile, "p99"}}, Unit: Seconds},
-	NeuronDeviceHwEccEventsTotal:               {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4}, SpecialAttributes: [][]string{{NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_corrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_uncorrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_corrected", PodName, DummyPod}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_uncorrected", PodName, DummyPod}}, Unit: Count},
+	NeuronDeviceHwEccEventsTotal:               {MetricType: pmetric.MetricTypeSum, MetricValues: []float64{1, 2, 3, 4}, SpecialAttributes: [][]string{{NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_corrected", PodName, DummyPod, RuntimeTag, "1"}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "mem_ecc_uncorrected", PodName, DummyPod, RuntimeTag, "1"}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_corrected", PodName, DummyPod, RuntimeTag, "1"}, {NeuronDeviceIndex, "1", NeuronDevice, "1", EventType, "sram_ecc_uncorrected", PodName, DummyPod, RuntimeTag, "1"}}, Unit: Count},
 }
 
 func setupMetricModifier() *AwsNeuronMetricModifier {
@@ -81,13 +81,13 @@ func TestMetricModifierForExecutionErrorMetric(t *testing.T) {
 	actual := metricModifier.ModifyMetric(createActualMetricForKey(NeuronExecutionErrors))
 
 	expectedMetrics := map[string]pmetric.Metric{
-		"node_neuron_execution_errors_generic":   createExpectedMetric("node_neuron_execution_errors_generic", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{1}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_errors_numerical": createExpectedMetric("node_neuron_execution_errors_numerical", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{2}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_errors_transient": createExpectedMetric("node_neuron_execution_errors_transient", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{3}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_errors_model":     createExpectedMetric("node_neuron_execution_errors_model", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{4}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_errors_runtime":   createExpectedMetric("node_neuron_execution_errors_runtime", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{5}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_errors_hardware":  createExpectedMetric("node_neuron_execution_errors_hardware", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{6}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_errors_total":     createExpectedMetric("node_neuron_execution_errors_total", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{21}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_errors_generic":   createExpectedMetric("node_neuron_execution_errors_generic", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{1}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_errors_numerical": createExpectedMetric("node_neuron_execution_errors_numerical", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{2}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_errors_transient": createExpectedMetric("node_neuron_execution_errors_transient", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{3}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_errors_model":     createExpectedMetric("node_neuron_execution_errors_model", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{4}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_errors_runtime":   createExpectedMetric("node_neuron_execution_errors_runtime", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{5}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_errors_hardware":  createExpectedMetric("node_neuron_execution_errors_hardware", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{6}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_errors_total":     createExpectedMetric("node_neuron_execution_errors_total", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{21}, pmetric.MetricTypeSum, Count),
 	}
 
 	assertModifiedMetric(t, actual, expectedMetrics)
@@ -101,13 +101,13 @@ func TestMetricModifierForExecutionStatusMetric(t *testing.T) {
 	expectedMap[Type] = NodeAWSNeuron
 
 	expectedMetrics := map[string]pmetric.Metric{
-		"node_neuron_execution_status_completed":              createExpectedMetric("node_neuron_execution_status_completed", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{1}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_status_completed_with_err":     createExpectedMetric("node_neuron_execution_status_completed_with_err", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{2}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_status_completed_with_num_err": createExpectedMetric("node_neuron_execution_status_completed_with_num_err", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{3}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_status_timed_out":              createExpectedMetric("node_neuron_execution_status_timed_out", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{4}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_status_incorrect_input":        createExpectedMetric("node_neuron_execution_status_incorrect_input", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{5}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_status_failed_to_queue":        createExpectedMetric("node_neuron_execution_status_failed_to_queue", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{6}, pmetric.MetricTypeSum, Count),
-		"node_neuron_execution_status_total":                  createExpectedMetric("node_neuron_execution_status_total", true, []map[string]string{{Type: NodeAWSNeuron}}, []float64{21}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_status_completed":              createExpectedMetric("node_neuron_execution_status_completed", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{1}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_status_completed_with_err":     createExpectedMetric("node_neuron_execution_status_completed_with_err", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{2}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_status_completed_with_num_err": createExpectedMetric("node_neuron_execution_status_completed_with_num_err", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{3}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_status_timed_out":              createExpectedMetric("node_neuron_execution_status_timed_out", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{4}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_status_incorrect_input":        createExpectedMetric("node_neuron_execution_status_incorrect_input", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{5}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_status_failed_to_queue":        createExpectedMetric("node_neuron_execution_status_failed_to_queue", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{6}, pmetric.MetricTypeSum, Count),
+		"node_neuron_execution_status_total":                  createExpectedMetric("node_neuron_execution_status_total", true, []map[string]string{{Type: NodeAWSNeuron, RuntimeTag: "1"}}, []float64{21}, pmetric.MetricTypeSum, Count),
 	}
 
 	assertModifiedMetric(t, actual, expectedMetrics)
@@ -131,9 +131,7 @@ func TestMetricModifierForNeuronCoreMemoryUsageMetric_PodNameMissing(t *testing.
 	actual := metricModifier.ModifyMetric(removeAttributefromMetric(createActualMetricForKey(NeuronCoreMemoryUsageModelSharedScratchpad), PodName))
 
 	expectedMetrics := map[string]pmetric.Metric{
-		"node_neuroncore_memory_usage_model_shared_scratchpad":      createExpectedMetric("node_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: NodeAWSNeuronCore}, {NeuronCore: "core1", NeuronDevice: "device0", Type: NodeAWSNeuronCore}, {NeuronCore: "core2", NeuronDevice: "device1", Type: NodeAWSNeuronCore}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
-		"pod_neuroncore_memory_usage_model_shared_scratchpad":       createExpectedMetric("pod_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: PodAWSNeuronCore}, {NeuronCore: "core1", NeuronDevice: "device0", Type: PodAWSNeuronCore}, {NeuronCore: "core2", NeuronDevice: "device1", Type: PodAWSNeuronCore}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
-		"container_neuroncore_memory_usage_model_shared_scratchpad": createExpectedMetric("container_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: ContainerAWSNeuronCore}, {NeuronCore: "core1", NeuronDevice: "device0", Type: ContainerAWSNeuronCore}, {NeuronCore: "core2", NeuronDevice: "device1", Type: ContainerAWSNeuronCore}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
+		"node_neuroncore_memory_usage_model_shared_scratchpad": createExpectedMetric("node_neuroncore_memory_usage_model_shared_scratchpad", false, []map[string]string{{NeuronCore: "core0", NeuronDevice: "device0", Type: NodeAWSNeuronCore}, {NeuronCore: "core1", NeuronDevice: "device0", Type: NodeAWSNeuronCore}, {NeuronCore: "core2", NeuronDevice: "device1", Type: NodeAWSNeuronCore}}, []float64{1, 2, 3}, pmetric.MetricTypeSum, Bytes),
 	}
 
 	assertModifiedMetric(t, actual, expectedMetrics)
@@ -155,18 +153,18 @@ func TestMetricModifierForNeuronDeviceEccEventMetric(t *testing.T) {
 	actual := metricModifier.ModifyMetric(createActualMetricForKey(NeuronDeviceHwEccEventsTotal))
 
 	expectedMetrics := map[string]pmetric.Metric{
-		"node_neurondevice_hw_ecc_events_total_mem_ecc_corrected":         createExpectedMetric("node_neurondevice_hw_ecc_events_total_mem_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: NodeAWSNeuronDevice}}, []float64{1}, pmetric.MetricTypeSum, Count),
-		"node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected":       createExpectedMetric("node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: NodeAWSNeuronDevice}}, []float64{2}, pmetric.MetricTypeSum, Count),
-		"node_neurondevice_hw_ecc_events_total_sram_ecc_corrected":        createExpectedMetric("node_neurondevice_hw_ecc_events_total_sram_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: NodeAWSNeuronDevice}}, []float64{3}, pmetric.MetricTypeSum, Count),
-		"node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected":      createExpectedMetric("node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: NodeAWSNeuronDevice}}, []float64{4}, pmetric.MetricTypeSum, Count),
-		"pod_neurondevice_hw_ecc_events_total_mem_ecc_corrected":          createExpectedMetric("pod_neurondevice_hw_ecc_events_total_mem_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: PodAWSNeuronDevice}}, []float64{1}, pmetric.MetricTypeSum, Count),
-		"pod_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected":        createExpectedMetric("pod_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: PodAWSNeuronDevice}}, []float64{2}, pmetric.MetricTypeSum, Count),
-		"pod_neurondevice_hw_ecc_events_total_sram_ecc_corrected":         createExpectedMetric("pod_neurondevice_hw_ecc_events_total_sram_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: PodAWSNeuronDevice}}, []float64{3}, pmetric.MetricTypeSum, Count),
-		"pod_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected":       createExpectedMetric("pod_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: PodAWSNeuronDevice}}, []float64{4}, pmetric.MetricTypeSum, Count),
-		"container_neurondevice_hw_ecc_events_total_mem_ecc_corrected":    createExpectedMetric("container_neurondevice_hw_ecc_events_total_mem_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: ContainerAWSNeuronDevice}}, []float64{1}, pmetric.MetricTypeSum, Count),
-		"container_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected":  createExpectedMetric("container_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: ContainerAWSNeuronDevice}}, []float64{2}, pmetric.MetricTypeSum, Count),
-		"container_neurondevice_hw_ecc_events_total_sram_ecc_corrected":   createExpectedMetric("container_neurondevice_hw_ecc_events_total_sram_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: ContainerAWSNeuronDevice}}, []float64{3}, pmetric.MetricTypeSum, Count),
-		"container_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected": createExpectedMetric("container_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: ContainerAWSNeuronDevice}}, []float64{4}, pmetric.MetricTypeSum, Count),
+		"node_neurondevice_hw_ecc_events_total_mem_ecc_corrected":         createExpectedMetric("node_neurondevice_hw_ecc_events_total_mem_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: NodeAWSNeuronDevice, RuntimeTag: "1"}}, []float64{1}, pmetric.MetricTypeSum, Count),
+		"node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected":       createExpectedMetric("node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: NodeAWSNeuronDevice, RuntimeTag: "1"}}, []float64{2}, pmetric.MetricTypeSum, Count),
+		"node_neurondevice_hw_ecc_events_total_sram_ecc_corrected":        createExpectedMetric("node_neurondevice_hw_ecc_events_total_sram_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: NodeAWSNeuronDevice, RuntimeTag: "1"}}, []float64{3}, pmetric.MetricTypeSum, Count),
+		"node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected":      createExpectedMetric("node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: NodeAWSNeuronDevice, RuntimeTag: "1"}}, []float64{4}, pmetric.MetricTypeSum, Count),
+		"pod_neurondevice_hw_ecc_events_total_mem_ecc_corrected":          createExpectedMetric("pod_neurondevice_hw_ecc_events_total_mem_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: PodAWSNeuronDevice, RuntimeTag: "1"}}, []float64{1}, pmetric.MetricTypeSum, Count),
+		"pod_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected":        createExpectedMetric("pod_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: PodAWSNeuronDevice, RuntimeTag: "1"}}, []float64{2}, pmetric.MetricTypeSum, Count),
+		"pod_neurondevice_hw_ecc_events_total_sram_ecc_corrected":         createExpectedMetric("pod_neurondevice_hw_ecc_events_total_sram_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: PodAWSNeuronDevice, RuntimeTag: "1"}}, []float64{3}, pmetric.MetricTypeSum, Count),
+		"pod_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected":       createExpectedMetric("pod_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: PodAWSNeuronDevice, RuntimeTag: "1"}}, []float64{4}, pmetric.MetricTypeSum, Count),
+		"container_neurondevice_hw_ecc_events_total_mem_ecc_corrected":    createExpectedMetric("container_neurondevice_hw_ecc_events_total_mem_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: ContainerAWSNeuronDevice, RuntimeTag: "1"}}, []float64{1}, pmetric.MetricTypeSum, Count),
+		"container_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected":  createExpectedMetric("container_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: ContainerAWSNeuronDevice, RuntimeTag: "1"}}, []float64{2}, pmetric.MetricTypeSum, Count),
+		"container_neurondevice_hw_ecc_events_total_sram_ecc_corrected":   createExpectedMetric("container_neurondevice_hw_ecc_events_total_sram_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: ContainerAWSNeuronDevice, RuntimeTag: "1"}}, []float64{3}, pmetric.MetricTypeSum, Count),
+		"container_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected": createExpectedMetric("container_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", PodName: DummyPod, Type: ContainerAWSNeuronDevice, RuntimeTag: "1"}}, []float64{4}, pmetric.MetricTypeSum, Count),
 	}
 
 	assertModifiedMetric(t, actual, expectedMetrics)
@@ -177,10 +175,10 @@ func TestMetricModifierForNeuronDeviceEccEventMetric_PodNameMissing(t *testing.T
 	actual := metricModifier.ModifyMetric(removeAttributefromMetric(createActualMetricForKey(NeuronDeviceHwEccEventsTotal), PodName))
 
 	expectedMetrics := map[string]pmetric.Metric{
-		"node_neurondevice_hw_ecc_events_total_mem_ecc_corrected":    createExpectedMetric("node_neurondevice_hw_ecc_events_total_mem_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", Type: NodeAWSNeuronDevice}}, []float64{1}, pmetric.MetricTypeSum, Count),
-		"node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected":  createExpectedMetric("node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", Type: NodeAWSNeuronDevice}}, []float64{2}, pmetric.MetricTypeSum, Count),
-		"node_neurondevice_hw_ecc_events_total_sram_ecc_corrected":   createExpectedMetric("node_neurondevice_hw_ecc_events_total_sram_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", Type: NodeAWSNeuronDevice}}, []float64{3}, pmetric.MetricTypeSum, Count),
-		"node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected": createExpectedMetric("node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", Type: NodeAWSNeuronDevice}}, []float64{4}, pmetric.MetricTypeSum, Count),
+		"node_neurondevice_hw_ecc_events_total_mem_ecc_corrected":    createExpectedMetric("node_neurondevice_hw_ecc_events_total_mem_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", Type: NodeAWSNeuronDevice, RuntimeTag: "1"}}, []float64{1}, pmetric.MetricTypeSum, Count),
+		"node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected":  createExpectedMetric("node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", Type: NodeAWSNeuronDevice, RuntimeTag: "1"}}, []float64{2}, pmetric.MetricTypeSum, Count),
+		"node_neurondevice_hw_ecc_events_total_sram_ecc_corrected":   createExpectedMetric("node_neurondevice_hw_ecc_events_total_sram_ecc_corrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", Type: NodeAWSNeuronDevice, RuntimeTag: "1"}}, []float64{3}, pmetric.MetricTypeSum, Count),
+		"node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected": createExpectedMetric("node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected", false, []map[string]string{{NeuronDeviceIndex: "1", NeuronDevice: "device1", Type: NodeAWSNeuronDevice, RuntimeTag: "1"}}, []float64{4}, pmetric.MetricTypeSum, Count),
 	}
 
 	assertModifiedMetric(t, actual, expectedMetrics)
@@ -227,6 +225,7 @@ func createActualMetricForKey(key string) pmetric.Metric {
 }
 
 func assertModifiedMetric(t *testing.T, actualSlice pmetric.MetricSlice, expectedMetrics map[string]pmetric.Metric) {
+	assert.Equal(t, len(expectedMetrics), actualSlice.Len())
 	for i := 0; i < actualSlice.Len(); i++ {
 		actualMetric := actualSlice.At(i)
 		expectedMetric, exists := expectedMetrics[actualMetric.Name()]
