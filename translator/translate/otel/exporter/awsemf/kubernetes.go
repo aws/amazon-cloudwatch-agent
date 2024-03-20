@@ -52,6 +52,8 @@ func setKubernetesMetricDeclaration(conf *confmap.Conf, cfg *awsemfexporter.Conf
 	// Setup Aws Neuron metrics
 	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getAwsNeuronMetricDeclarations(conf)...)
 
+	kubernetesMetricDeclarations = append(kubernetesMetricDeclarations, getEFAMetricDeclarations(conf)...)
+
 	cfg.MetricDeclarations = kubernetesMetricDeclarations
 	cfg.MetricDescriptors = getControlPlaneMetricDescriptors(conf)
 
@@ -612,6 +614,63 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				},
 			},
 		}...)
+	}
+	return metricDeclarations
+}
+
+func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclaration {
+	var metricDeclarations []*awsemfexporter.MetricDeclaration
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) && awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
+		metricDeclarations = []*awsemfexporter.MetricDeclaration{
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "Namespace", "PodName", "ContainerName"},
+					{"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"},
+					{"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "EfaDevice"}},
+				MetricNameSelectors: []string{
+					"container_efa_rx_bytes",
+					"container_efa_tx_bytes",
+					"container_efa_rx_dropped",
+					"container_efa_rdma_read_bytes",
+					"container_efa_rdma_write_bytes",
+					"container_efa_rdma_write_recv_bytes",
+				},
+			},
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "Namespace"},
+					{"ClusterName", "Namespace", "Service"},
+					{"ClusterName", "Namespace", "PodName"},
+					{"ClusterName", "Namespace", "PodName", "FullPodName"},
+					{"ClusterName", "Namespace", "PodName", "FullPodName", "EfaDevice"},
+				},
+				MetricNameSelectors: []string{
+					"pod_efa_rx_bytes",
+					"pod_efa_tx_bytes",
+					"pod_efa_rx_dropped",
+					"pod_efa_rdma_read_bytes",
+					"pod_efa_rdma_write_bytes",
+					"pod_efa_rdma_write_recv_bytes",
+				},
+			},
+			{
+				Dimensions: [][]string{
+					{"ClusterName"},
+					{"ClusterName", "NodeName", "InstanceId"},
+					{"ClusterName", "NodeName", "InstanceId", "EfaDevice"},
+				},
+				MetricNameSelectors: []string{
+					"node_efa_rx_bytes",
+					"node_efa_tx_bytes",
+					"node_efa_rx_dropped",
+					"node_efa_rdma_read_bytes",
+					"node_efa_rdma_write_bytes",
+					"node_efa_rdma_write_recv_bytes",
+				},
+			},
+		}
 	}
 	return metricDeclarations
 }
