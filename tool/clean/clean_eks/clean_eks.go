@@ -20,6 +20,7 @@ var (
 	ClustersToClean = []string{
 		"cwagent-eks-integ-",
 		"cwagent-operator-helm-integ-",
+		"cwagent-operator-eks-integ-",
 	}
 )
 
@@ -55,7 +56,7 @@ func clusterNameMatchesClustersToClean(clusterName string, clustersToClean []str
 
 func terminateClusters(ctx context.Context, client *eks.Client) {
 	listClusterInput := eks.ListClustersInput{}
-	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationOneWeek)
+	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationFourDays)
 	clusters, err := client.ListClusters(ctx, &listClusterInput)
 	if err != nil {
 		log.Fatalf("could not get cluster list")
@@ -66,33 +67,39 @@ func terminateClusters(ctx context.Context, client *eks.Client) {
 		if err != nil {
 			return
 		}
-		if expirationDateCluster.After(*describeClusterOutput.Cluster.CreatedAt) && clusterNameMatchesClustersToClean(*describeClusterOutput.Cluster.Name, ClustersToClean) {
-			log.Printf("Try to delete cluster %s launch-date %s", cluster, *describeClusterOutput.Cluster.CreatedAt)
-			describeNodegroupInput := eks.ListNodegroupsInput{ClusterName: aws.String(cluster)}
-			nodeGroupOutput, err := client.ListNodegroups(ctx, &describeNodegroupInput)
+		if !expirationDateCluster.After(*describeClusterOutput.Cluster.CreatedAt) {
+			log.Printf("Ignoring cluster %s with a launch-date %s since it was created in the last %s", cluster, *describeClusterOutput.Cluster.CreatedAt, clean.KeepDurationFourDays)
+			continue
+		}
+		if !clusterNameMatchesClustersToClean(*describeClusterOutput.Cluster.Name, ClustersToClean) {
+			log.Printf("Ignoring cluster %s since it doesnt match any of the clean regexes", cluster)
+			continue
+		}
+		log.Printf("Try to delete cluster %s launch-date %s", cluster, *describeClusterOutput.Cluster.CreatedAt)
+		describeNodegroupInput := eks.ListNodegroupsInput{ClusterName: aws.String(cluster)}
+		nodeGroupOutput, err := client.ListNodegroups(ctx, &describeNodegroupInput)
+		if err != nil {
+			log.Printf("could not query node groups cluster %s err %v", cluster, err)
+		}
+		// it takes about 5 minutes to delete node groups
+		// it will fail to delete cluster if we need to delete node groups
+		// this will delete the cluster on next run the next day
+		// I do not want to wait for node groups to be deleted
+		// as it will increase the runtime of this cleaner
+		for _, nodegroup := range nodeGroupOutput.Nodegroups {
+			deleteNodegroupInput := eks.DeleteNodegroupInput{
+				ClusterName:   aws.String(cluster),
+				NodegroupName: aws.String(nodegroup),
+			}
+			_, err := client.DeleteNodegroup(ctx, &deleteNodegroupInput)
 			if err != nil {
-				log.Printf("could not query node groups cluster %s err %v", cluster, err)
+				log.Printf("could not delete node groups %s cluster %s err %v", nodegroup, cluster, err)
 			}
-			// it takes about 5 minutes to delete node groups
-			// it will fail to delete cluster if we need to delete node groups
-			// this will delete the cluster on next run the next day
-			// I do not want to wait for node groups to be deleted
-			// as it will increase the runtime of this cleaner
-			for _, nodegroup := range nodeGroupOutput.Nodegroups {
-				deleteNodegroupInput := eks.DeleteNodegroupInput{
-					ClusterName:   aws.String(cluster),
-					NodegroupName: aws.String(nodegroup),
-				}
-				_, err := client.DeleteNodegroup(ctx, &deleteNodegroupInput)
-				if err != nil {
-					log.Printf("could delete node groups %s cluster %s err %v", nodegroup, cluster, err)
-				}
-			}
-			deleteClusterInput := eks.DeleteClusterInput{Name: aws.String(cluster)}
-			_, err = client.DeleteCluster(ctx, &deleteClusterInput)
-			if err != nil {
-				log.Printf("could not delete cluster %s err %v", cluster, err)
-			}
+		}
+		deleteClusterInput := eks.DeleteClusterInput{Name: aws.String(cluster)}
+		_, err = client.DeleteCluster(ctx, &deleteClusterInput)
+		if err != nil {
+			log.Printf("could not delete cluster %s err %v", cluster, err)
 		}
 	}
 }
