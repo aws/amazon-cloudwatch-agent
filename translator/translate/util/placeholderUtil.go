@@ -4,6 +4,7 @@
 package util
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -19,6 +20,7 @@ type Metadata struct {
 	Hostname   string
 	PrivateIP  string
 	AccountID  string
+	Tags       map[string]string
 }
 
 type MetadataInfoProvider func() *Metadata
@@ -30,6 +32,7 @@ var Ec2MetadataInfoProvider = func() *Metadata {
 		Hostname:   ec2.Hostname,
 		PrivateIP:  ec2.PrivateIP,
 		AccountID:  ec2.AccountID,
+		Tags:       ec2.Tags,
 	}
 }
 
@@ -90,10 +93,22 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 		accountID = unknownAccountId
 	}
 
-	return map[string]string{instanceIdPlaceholder: instanceID, hostnamePlaceholder: hostname,
-		localHostnamePlaceholder: localHostname, ipAddressPlaceholder: ipAddress, awsRegionPlaceholder: awsRegion,
-		accountIdPlaceholder: accountID,
+	metadata := map[string]string{
+		instanceIdPlaceholder:    instanceID,
+		hostnamePlaceholder:      hostname,
+		localHostnamePlaceholder: localHostname,
+		ipAddressPlaceholder:     ipAddress,
+		awsRegionPlaceholder:     awsRegion,
+		accountIdPlaceholder:     accountID,
 	}
+
+	tags := provider().Tags
+	for tagKey, tagValue := range tags {
+		tagPlaceholder := fmt.Sprintf("{tag:%s}", tagKey)
+		metadata[tagPlaceholder] = tagValue
+	}
+
+	return metadata
 }
 
 func getHostName() string {
