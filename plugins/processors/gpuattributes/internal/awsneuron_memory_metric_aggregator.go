@@ -49,13 +49,7 @@ func (d *AwsNeuronMemoryMetricsAggregator) AggregateMemoryMetric(originalMetric 
 
 				if neuronCoreIndexValueExists && neuronDeviceIndexValueExists {
 					neuronCoreInfo := NeuronCoreInfo{neuronCoreIndex: neuronCoreIndexValue.AsString(), neuronDeviceIndex: neuronDeviceIndexValue.AsString()}
-
-					currentValue, exists := d.memoryMetricValuesAggregator[neuronCoreInfo]
-					if exists {
-						d.memoryMetricValuesAggregator[neuronCoreInfo] = currentValue + datapoint.DoubleValue()
-					} else {
-						d.memoryMetricValuesAggregator[neuronCoreInfo] = datapoint.DoubleValue()
-					}
+					d.memoryMetricValuesAggregator[neuronCoreInfo] += datapoint.DoubleValue()
 				}
 			}
 		}

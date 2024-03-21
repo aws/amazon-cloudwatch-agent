@@ -106,6 +106,42 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric) p
 	return md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints())
 }
 
+func convertGaugeToSum(originalMetric pmetric.Metric) pmetric.Metric {
+	convertedMetric := getMetricWithMetadata(pmetric.NewMetric(), originalMetric.Name(), originalMetric.Unit())
+	convertedMetric.SetEmptySum()
+	originalMetric.Gauge().DataPoints().CopyTo(convertedMetric.Sum().DataPoints())
+
+	// default value of temporality is undefined so even after conversion from gauge to sum
+	// the agent won't take delta.
+	return convertedMetric
+}
+
+func addUnit(originalMetric pmetric.Metric) {
+	originalMetric.SetUnit(metricModificationsMap[originalMetric.Name()].Unit)
+}
+
+// This method keeps a specific datapoint in the list of datapoints,
+// filtering out the rest based on value of the target attribute.
+// - For neuron_execution_latency metric we keep p50 percentile
+// - For neurondevice_runtime_memory we keep the neuron_device memory datapoint
+func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attributeKey string, attributeValueToKeep string) pmetric.MetricSlice {
+	originalMetricDatapoints := originalMetric.Sum().DataPoints()
+
+	newMetricSlice := pmetric.NewMetricSlice()
+	newMetric := getMetricWithMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name(), originalMetric.Unit())
+	datapoint := newMetric.SetEmptySum().DataPoints().AppendEmpty()
+
+	for i := 0; i < originalMetricDatapoints.Len(); i++ {
+		dp := originalMetricDatapoints.At(i)
+		if value, exists := dp.Attributes().Get(attributeKey); exists && value.AsString() == attributeValueToKeep {
+			dp.CopyTo(datapoint)
+			break
+		}
+	}
+
+	return newMetricSlice
+}
+
 // This method takes a metric and creates an aggregated metric from its datapoint values.
 // It also creates a new metric for each datapoint based on the target attribute.
 func (md *AwsNeuronMetricModifier) createAggregatedSumMetrics(originalMetric pmetric.Metric) pmetric.MetricSlice {
@@ -119,16 +155,12 @@ func (md *AwsNeuronMetricModifier) createAggregatedSumMetrics(originalMetric pme
 			originalDatapoint := originalMetricDatapoints.At(i)
 
 			runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
-			aggregatedValue, _ := aggregatedValuesPerRuntimeTag[runtimeTag.AsString()]
-			aggregatedValue += originalDatapoint.DoubleValue()
-			aggregatedValuesPerRuntimeTag[runtimeTag.AsString()] = aggregatedValue
+			aggregatedValuesPerRuntimeTag[runtimeTag.AsString()] += originalDatapoint.DoubleValue()
 
 			// Creating a new metric from the current datapoint and adding it to the new newMetricSlice
-			newNameMetric := newMetricSlice.AppendEmpty()
-			originalDatapoint.CopyTo(newNameMetric.SetEmptySum().DataPoints().AppendEmpty())
 			subtypeValue, _ := originalDatapoint.Attributes().Get(aggregationAttributeKey)
-			newNameMetric.SetName(originalMetric.Name() + "_" + subtypeValue.Str())
-			newNameMetric.SetUnit(originalMetric.Unit())
+			newNameMetric := getMetricWithMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+"_"+subtypeValue.Str(), originalMetric.Unit())
+			originalDatapoint.CopyTo(newNameMetric.SetEmptySum().DataPoints().AppendEmpty())
 			// setting value of temporality to cumulative so that agent performs delta conversion on this metric
 			newNameMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 		}
@@ -137,10 +169,7 @@ func (md *AwsNeuronMetricModifier) createAggregatedSumMetrics(originalMetric pme
 			// Creating body for the aggregated metric and add it to the new newMetricSlice for each runtime
 			for runtimeTag, value := range aggregatedValuesPerRuntimeTag {
 				// Aggregated metric for neuron device ecc events is not required
-				aggregatedMetric := newMetricSlice.AppendEmpty()
-
-				aggregatedMetric.SetName(originalMetric.Name() + aggregatedMetricSuffix)
-				aggregatedMetric.SetUnit(originalMetric.Unit())
+				aggregatedMetric := getMetricWithMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+aggregatedMetricSuffix, originalMetric.Unit())
 
 				originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
 				aggregatedMetric.Sum().DataPoints().At(0).SetDoubleValue(value)
@@ -155,6 +184,28 @@ func (md *AwsNeuronMetricModifier) createAggregatedSumMetrics(originalMetric pme
 	}
 
 	return newMetricSlice
+}
+
+// This method performs the following removal and update operations on a datapoint's attributes:
+// 1. It removes the attribute keys which are not required. The removal is necessary so that the metrics are grouped thogether
+// 2. It prefixes NeuronCore and NeuronDevice values with `core` and `device` respectively.
+func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
+	for i := 0; i < slice.Len(); i++ {
+		m := slice.At(i)
+
+		dps := m.Sum().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			dp := dps.At(i)
+			for _, attributeRemovalKey := range metricModificationsMap[originalMetricName].AttributeKeysToBeRemoved {
+				dp.Attributes().Remove(attributeRemovalKey)
+			}
+			for attributeKey, attributeValuePrefix := range attributeValuePrefixingMap {
+				if value, exists := dp.Attributes().Get(attributeKey); exists {
+					dp.Attributes().PutStr(attributeKey, attributeValuePrefix+value.AsString())
+				}
+			}
+		}
+	}
 }
 
 // This method duplicates metrics performs selective duplication of a metric based on the types for which duplication needs to be performed
@@ -199,64 +250,8 @@ func duplicateMetricForType(metric pmetric.Metric, duplicateType string, origina
 	return &metricCopy
 }
 
-// This method performs the following removal and update operations on a datapoint's attributes:
-// 1. It removes the attribute keys which are not required. The removal is necessary so that the metrics are grouped thogether
-// 2. It prefixes NeuronCore and NeuronDevice values with `core` and `device` respectively.
-func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
-	for i := 0; i < slice.Len(); i++ {
-		m := slice.At(i)
-
-		dps := m.Sum().DataPoints()
-		for i := 0; i < dps.Len(); i++ {
-			dp := dps.At(i)
-			for _, attributeRemovalKey := range metricModificationsMap[originalMetricName].AttributeKeysToBeRemoved {
-				dp.Attributes().Remove(attributeRemovalKey)
-			}
-			for attributeKey, attributeValuePrefix := range attributeValuePrefixingMap {
-				if value, exists := dp.Attributes().Get(attributeKey); exists {
-					dp.Attributes().PutStr(attributeKey, attributeValuePrefix+value.AsString())
-				}
-			}
-		}
-	}
-}
-
-// This method keeps a specific datapoint in the list of datapoints,
-// filtering out the rest based on value of the target attribute.
-// - For neuron_execution_latency metric we keep p50 percentile
-// - For neurondevice_runtime_memory we keep the neuron_device memory datapoint
-func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attributeKey string, attributeValueToKeep string) pmetric.MetricSlice {
-	originalMetricDatapoints := originalMetric.Sum().DataPoints()
-
-	newMetricSlice := pmetric.NewMetricSlice()
-	newMetric := newMetricSlice.AppendEmpty()
-	newMetric.SetName(originalMetric.Name())
-	newMetric.SetUnit(originalMetric.Unit())
-	datapoint := newMetric.SetEmptySum().DataPoints().AppendEmpty()
-
-	for i := 0; i < originalMetricDatapoints.Len(); i++ {
-		dp := originalMetricDatapoints.At(i)
-		if value, exists := dp.Attributes().Get(attributeKey); exists && value.AsString() == attributeValueToKeep {
-			dp.CopyTo(datapoint)
-			break
-		}
-	}
-
-	return newMetricSlice
-}
-
-func convertGaugeToSum(originalMetric pmetric.Metric) pmetric.Metric {
-	convertedMetric := pmetric.NewMetric()
-	convertedMetric.SetName(originalMetric.Name())
-	convertedMetric.SetUnit(originalMetric.Unit())
-	convertedMetric.SetEmptySum()
-	originalMetric.Gauge().DataPoints().CopyTo(convertedMetric.Sum().DataPoints())
-
-	// default value of temporality is undefined so even after conversion from gauge to sum
-	// the agent won't take delta.
-	return convertedMetric
-}
-
-func addUnit(originalMetric pmetric.Metric) {
-	originalMetric.SetUnit(metricModificationsMap[originalMetric.Name()].Unit)
+func getMetricWithMetadata(metric pmetric.Metric, name string, unit string) pmetric.Metric {
+	metric.SetName(name)
+	metric.SetUnit(unit)
+	return metric
 }
