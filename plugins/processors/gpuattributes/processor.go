@@ -146,7 +146,7 @@ func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Me
 				aggregatedMemoryMetric := d.awsNeuronMemoryMetricAggregator.FlushAggregatedMemoryMetric()
 				d.awsNeuronMetricModifier.ModifyMetric(aggregatedMemoryMetric).MoveAndAppendTo(newMetrics)
 			}
-			newMetrics.CopyTo(metrics)
+			replaceMetricSlice(newMetrics, metrics)
 		}
 	}
 	return md, nil
@@ -223,4 +223,11 @@ func (d *gpuAttributesProcessor) filterAttributes(attributes pcommon.Map, labels
 			attributes.PutStr(lk, string(bytes))
 		}
 	}
+}
+
+func replaceMetricSlice(source pmetric.MetricSlice, destination pmetric.MetricSlice) {
+	// clear destination
+	destination.MoveAndAppendTo(pmetric.NewMetricSlice())
+	// move source to destination
+	source.MoveAndAppendTo(destination)
 }

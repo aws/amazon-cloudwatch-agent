@@ -74,8 +74,8 @@ func NewMetricModifier(logger *zap.Logger) *AwsNeuronMetricModifier {
 func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric) pmetric.MetricSlice {
 	// only decorate Aws Neuron metrics
 	// another option is to separate Aws Neuron in its own pipeline to minimize extra processing of metrics
-	newMetricSlice := pmetric.NewMetricSlice()
 	if _, isNeuronMetric := metricModificationsMap[originalMetric.Name()]; !isNeuronMetric {
+		newMetricSlice := pmetric.NewMetricSlice()
 		originalMetric.CopyTo(newMetricSlice.AppendEmpty())
 		return newMetricSlice
 	}
