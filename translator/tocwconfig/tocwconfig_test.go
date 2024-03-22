@@ -135,18 +135,6 @@ func TestEmfAndKubernetesWithGpuConfig(t *testing.T) {
 	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "darwin", nil, "")
 }
 
-func TestEmfAndKubernetesWithAwsNeuronConfig(t *testing.T) {
-	resetContext(t)
-	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
-	context.CurrentContext().SetRunInContainer(true)
-	context.CurrentContext().SetMode(config.ModeOnPremise)
-	t.Setenv(config.HOST_NAME, "host_name_from_env")
-	t.Setenv(config.HOST_IP, "127.0.0.1")
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "emf_and_kubernetes_with_aws_neuron_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "emf_and_kubernetes_with_aws_neuron_config", "darwin", nil, "")
-}
-
 func TestKubernetesModeOnPremiseConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)

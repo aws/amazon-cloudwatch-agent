@@ -413,6 +413,168 @@ exporters:
         metric_name_selectors:
           - cluster_gpu_request
           - cluster_gpu_total
+      - dimensions:
+          - - ClusterName
+          - - ClusterName
+            - ContainerName
+            - Namespace
+            - PodName
+          - - ClusterName
+            - ContainerName
+            - FullPodName
+            - Namespace
+            - PodName
+          - - ClusterName
+            - ContainerName
+            - FullPodName
+            - Namespace
+            - NeuronCore
+            - NeuronDevice
+            - PodName
+        label_matchers: []
+        metric_name_selectors:
+          - container_neuroncore_utilization
+          - container_neuroncore_memory_usage_total
+          - container_neuroncore_memory_usage_constants
+          - container_neuroncore_memory_usage_model_code
+          - container_neuroncore_memory_usage_model_shared_scratchpad
+          - container_neuroncore_memory_usage_runtime_memory
+          - container_neuroncore_memory_usage_tensors
+      - dimensions:
+          - - ClusterName
+          - - ClusterName
+            - ContainerName
+            - Namespace
+            - PodName
+          - - ClusterName
+            - ContainerName
+            - FullPodName
+            - Namespace
+            - PodName
+          - - ClusterName
+            - ContainerName
+            - FullPodName
+            - Namespace
+            - NeuronDevice
+            - PodName
+        label_matchers: []
+        metric_name_selectors:
+          - container_neurondevice_hw_ecc_events_total_mem_ecc_corrected
+          - container_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected
+          - container_neurondevice_hw_ecc_events_total_sram_ecc_corrected
+          - container_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected
+      - dimensions:
+          - - ClusterName
+          - - ClusterName
+            - Namespace
+          - - ClusterName
+            - Namespace
+            - Service
+          - - ClusterName
+            - Namespace
+            - PodName
+          - - ClusterName
+            - FullPodName
+            - Namespace
+            - PodName
+          - - ClusterName
+            - FullPodName
+            - Namespace
+            - NeuronCore
+            - NeuronDevice
+            - PodName
+        label_matchers: []
+        metric_name_selectors:
+          - pod_neuroncore_utilization
+          - pod_neuroncore_memory_usage_total
+          - pod_neuroncore_memory_usage_constants
+          - pod_neuroncore_memory_usage_model_code
+          - pod_neuroncore_memory_usage_model_shared_scratchpad
+          - pod_neuroncore_memory_usage_runtime_memory
+          - pod_neuroncore_memory_usage_tensors
+      - dimensions:
+          - - ClusterName
+          - - ClusterName
+            - Namespace
+          - - ClusterName
+            - Namespace
+            - Service
+          - - ClusterName
+            - Namespace
+            - PodName
+          - - ClusterName
+            - FullPodName
+            - Namespace
+            - PodName
+          - - ClusterName
+            - FullPodName
+            - Namespace
+            - NeuronDevice
+            - PodName
+        label_matchers: []
+        metric_name_selectors:
+          - pod_neurondevice_hw_ecc_events_total_mem_ecc_corrected
+          - pod_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected
+          - pod_neurondevice_hw_ecc_events_total_sram_ecc_corrected
+          - pod_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected
+      - dimensions:
+          - - ClusterName
+          - - ClusterName
+            - InstanceId
+            - NodeName
+          - - ClusterName
+            - InstanceId
+            - InstanceType
+            - NeuronCore
+            - NeuronDevice
+            - NodeName
+        label_matchers: []
+        metric_name_selectors:
+          - node_neuroncore_utilization
+          - node_neuroncore_memory_usage_total
+          - node_neuroncore_memory_usage_constants
+          - node_neuroncore_memory_usage_model_code
+          - node_neuroncore_memory_usage_model_shared_scratchpad
+          - node_neuroncore_memory_usage_runtime_memory
+          - node_neuroncore_memory_usage_tensors
+      - dimensions:
+          - - ClusterName
+          - - ClusterName
+            - InstanceId
+            - NodeName
+        label_matchers: []
+        metric_name_selectors:
+          - node_neuron_execution_errors_total
+          - node_neuron_execution_errors_generic
+          - node_neuron_execution_errors_numerical
+          - node_neuron_execution_errors_transient
+          - node_neuron_execution_errors_model
+          - node_neuron_execution_errors_runtime
+          - node_neuron_execution_errors_hardware
+          - node_neuron_execution_status_total
+          - node_neuron_execution_status_completed
+          - node_neuron_execution_status_timed_out
+          - node_neuron_execution_status_completed_with_err
+          - node_neuron_execution_status_completed_with_num_err
+          - node_neuron_execution_status_incorrect_input
+          - node_neuron_execution_status_failed_to_queue
+          - node_neurondevice_runtime_memory_used_bytes
+          - node_neuron_execution_latency
+      - dimensions:
+          - - ClusterName
+          - - ClusterName
+            - InstanceId
+            - NodeName
+          - - ClusterName
+            - InstanceId
+            - NeuronDevice
+            - NodeName
+        label_matchers: []
+        metric_name_selectors:
+          - node_neurondevice_hw_ecc_events_total_mem_ecc_corrected
+          - node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected
+          - node_neurondevice_hw_ecc_events_total_sram_ecc_corrected
+          - node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected
     metric_descriptors:
       - metric_name: apiserver_admission_controller_admission_duration_seconds
         overwrite: true
@@ -961,8 +1123,136 @@ processors:
             new_value: NodeGPU
             value_actions: []
         submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: neuroncore_memory_usage_constants
+        match_type: ""
+        new_name: neuroncore_memory_usage_constants
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: neuroncore_memory_usage_model_code
+        match_type: ""
+        new_name: neuroncore_memory_usage_model_code
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: neuroncore_memory_usage_model_shared_scratchpad
+        match_type: ""
+        new_name: neuroncore_memory_usage_model_shared_scratchpad
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: neuroncore_memory_usage_runtime_memory
+        match_type: ""
+        new_name: neuroncore_memory_usage_runtime_memory
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: neuroncore_memory_usage_tensors
+        match_type: ""
+        new_name: neuroncore_memory_usage_tensors
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: neuron_hardware
+        match_type: ""
+        new_name: neuron_hardware
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: execution_status_total
+        match_type: ""
+        new_name: neuron_execution_status
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: neuron_runtime_memory_used_bytes
+        match_type: ""
+        new_name: neurondevice_runtime_memory_used_bytes
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: instance_info
+        match_type: ""
+        new_name: instance_info
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: hardware_ecc_events_total
+        match_type: ""
+        new_name: neurondevice_hw_ecc_events_total
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: execution_latency_seconds
+        match_type: ""
+        new_name: neuron_execution_latency
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: execution_errors_total
+        match_type: ""
+        new_name: neuron_execution_errors
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: neuroncore_utilization_ratio
+        match_type: ""
+        new_name: neuroncore_utilization
+        operations:
+          - action: experimental_scale_value
+            aggregated_values: []
+            aggregation_type: ""
+            experimental_scale: 100
+            label: ""
+            label_set: []
+            label_value: ""
+            new_label: ""
+            new_value: ""
+            value_actions: []
+        submatch_case: ""
 receivers:
   awscontainerinsightreceiver:
+    accelerated_compute_metrics: true
     add_container_name_metric_label: true
     add_full_pod_name_metric_label: true
     add_service_as_attribute: true
@@ -972,7 +1262,6 @@ receivers:
     container_orchestrator: eks
     enable_control_plane_metrics: true
     endpoint: ""
-    accelerated_compute_metrics: true
     imds_retries: 2
     leader_lock_name: cwagent-clusterleader
     leader_lock_using_config_map_only: true
@@ -1040,8 +1329,8 @@ service:
         - awsemf/containerinsights
       processors:
         - metricstransform/containerinsights
-        - batch/containerinsights
         - gpuattributes/containerinsights
+        - batch/containerinsights
       receivers:
         - awscontainerinsightreceiver
   telemetry:

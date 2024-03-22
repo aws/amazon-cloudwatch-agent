@@ -83,12 +83,14 @@ func TestMemoryMetricAggregator_FlushAggregatedMemoryMetric(t *testing.T) {
 	for i := 0; i < aggregatedMetricDatapoints.Len(); i++ {
 		datapoint := aggregatedMetricDatapoints.At(i)
 		assert.Equal(t, staticTimestamp.String(), datapoint.Timestamp().String())
-		assert.Equal(t, 3, datapoint.Attributes().Len())
+		assert.Equal(t, 4, datapoint.Attributes().Len())
 
 		actualNeuronCoreIndex, _ := datapoint.Attributes().Get(NeuronCoreAttributeKey)
 		actualNeuronDeviceIndex, _ := datapoint.Attributes().Get(NeuronDeviceAttributeKey)
+		actualRuntimeTag, _ := datapoint.Attributes().Get(RuntimeTag)
 
 		assert.Equal(t, memoryUsageMetricValuesMap[actualNeuronCoreIndex.AsString()], datapoint.DoubleValue())
+		assert.Equal(t, "1", actualRuntimeTag.AsString())
 		assert.NotEqual(t, "9", actualNeuronCoreIndex.AsString())
 		assert.NotEqual(t, "9", actualNeuronDeviceIndex.AsString())
 	}
@@ -107,6 +109,7 @@ func createSampleMetric(metricName string) pmetric.Metric {
 		NeuronCoreAttributeKey:   "0",
 		NeuronDeviceAttributeKey: "0",
 		dummy:                    dummy,
+		RuntimeTag:               "1",
 	})
 
 	dataPoint2 := dataPoints.AppendEmpty()
@@ -116,6 +119,7 @@ func createSampleMetric(metricName string) pmetric.Metric {
 		NeuronCoreAttributeKey:   "2",
 		NeuronDeviceAttributeKey: "1",
 		dummy:                    dummy,
+		RuntimeTag:               "1",
 	})
 
 	return metric

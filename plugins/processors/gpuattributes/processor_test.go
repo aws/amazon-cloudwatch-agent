@@ -18,10 +18,7 @@ var normalizedNameRegex = regexp.MustCompile("^(container|pod|node)_gpu_[a-z_]+$
 
 func TestProcessMetrics(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	gp := &gpuAttributesProcessor{
-		logger: logger,
-		Config: createDefaultConfig().(*Config),
-	}
+	gp := newGpuAttributesProcessor(createDefaultConfig().(*Config), logger)
 	ctx := context.Background()
 
 	testcases := map[string]struct {
