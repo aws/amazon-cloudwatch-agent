@@ -429,11 +429,11 @@ func TestTranslator(t *testing.T) {
 							"cluster_gpu_request", "cluster_gpu_total",
 						},
 					},
-
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NeuronDevice", "NeuronCore"}},
 						MetricNameSelectors: []string{
 							"container_neuroncore_utilization",
+							"container_neuroncore_memory_usage_total",
 							"container_neuroncore_memory_usage_constants",
 							"container_neuroncore_memory_usage_model_code",
 							"container_neuroncore_memory_usage_model_shared_scratchpad",
@@ -454,6 +454,7 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NeuronDevice", "NeuronCore"}},
 						MetricNameSelectors: []string{
 							"pod_neuroncore_utilization",
+							"pod_neuroncore_memory_usage_total",
 							"pod_neuroncore_memory_usage_constants",
 							"pod_neuroncore_memory_usage_model_code",
 							"pod_neuroncore_memory_usage_model_shared_scratchpad",
@@ -474,6 +475,7 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
 						MetricNameSelectors: []string{
 							"node_neuroncore_utilization",
+							"node_neuroncore_memory_usage_total",
 							"node_neuroncore_memory_usage_constants",
 							"node_neuroncore_memory_usage_model_code",
 							"node_neuroncore_memory_usage_model_shared_scratchpad",
