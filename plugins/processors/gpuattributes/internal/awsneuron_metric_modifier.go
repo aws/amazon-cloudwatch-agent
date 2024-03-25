@@ -54,32 +54,30 @@ type AwsNeuronMetricModifier struct {
 }
 
 type MetricModifications struct {
-	DuplicationTypes        []string
-	AggregationAttributeKey string
-	LogTypeSuffix           string
-	Unit                    string
+	DuplicationTypes []string
+	UniqueAttribute  string
+	LogTypeSuffix    string
+	Unit             string
 }
 
 var (
 	metricModificationsMap = map[string]MetricModifications{
-		containerinsightscommon.NeuronExecutionErrors:                       {DuplicationTypes: []string{containerinsightscommon.TypeNode}, AggregationAttributeKey: ErrorType, LogTypeSuffix: "", Unit: Count},
-		containerinsightscommon.NeuronExecutionStatus:                       {DuplicationTypes: []string{containerinsightscommon.TypeNode}, AggregationAttributeKey: StatusType, LogTypeSuffix: "", Unit: Count},
-		containerinsightscommon.NeuronRuntimeMemoryUsage:                    {DuplicationTypes: []string{containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: "", Unit: Bytes},
-		containerinsightscommon.NeuronCoreMemoryUtilizationTotal:            {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: Core, Unit: Bytes},
-		containerinsightscommon.NeuronCoreMemoryUtilizationConstants:        {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: Core, Unit: Bytes},
-		containerinsightscommon.NeuronCoreMemoryUtilizationModelCode:        {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: Core, Unit: Bytes},
-		containerinsightscommon.NeuronCoreMemoryUtilizationSharedScratchpad: {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: Core, Unit: Bytes},
-		containerinsightscommon.NeuronCoreMemoryUtilizationRuntimeMemory:    {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: Core, Unit: Bytes},
-		containerinsightscommon.NeuronCoreMemoryUtilizationTensors:          {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: Core, Unit: Bytes},
-		containerinsightscommon.NeuronCoreUtilization:                       {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: Core, Unit: Percent},
-		containerinsightscommon.NeuronInstanceInfo:                          {DuplicationTypes: []string{}, AggregationAttributeKey: "", LogTypeSuffix: "", Unit: Count},
-		containerinsightscommon.NeuronHardware:                              {DuplicationTypes: []string{}, AggregationAttributeKey: "", LogTypeSuffix: "", Unit: Count},
-		containerinsightscommon.NeuronExecutionLatency:                      {DuplicationTypes: []string{containerinsightscommon.TypeNode}, AggregationAttributeKey: "", LogTypeSuffix: "", Unit: Seconds},
-		containerinsightscommon.NeuronDeviceHardwareEccEvents:               {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, AggregationAttributeKey: EventType, LogTypeSuffix: Device, Unit: Count},
+		containerinsightscommon.NeuronExecutionErrors:                       {DuplicationTypes: []string{containerinsightscommon.TypeNode}, UniqueAttribute: ErrorType, LogTypeSuffix: "", Unit: Count},
+		containerinsightscommon.NeuronExecutionStatus:                       {DuplicationTypes: []string{containerinsightscommon.TypeNode}, UniqueAttribute: StatusType, LogTypeSuffix: "", Unit: Count},
+		containerinsightscommon.NeuronRuntimeMemoryUsage:                    {DuplicationTypes: []string{containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: "", Unit: Bytes},
+		containerinsightscommon.NeuronCoreMemoryUtilizationTotal:            {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: Core, Unit: Bytes},
+		containerinsightscommon.NeuronCoreMemoryUtilizationConstants:        {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: Core, Unit: Bytes},
+		containerinsightscommon.NeuronCoreMemoryUtilizationModelCode:        {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: Core, Unit: Bytes},
+		containerinsightscommon.NeuronCoreMemoryUtilizationSharedScratchpad: {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: Core, Unit: Bytes},
+		containerinsightscommon.NeuronCoreMemoryUtilizationRuntimeMemory:    {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: Core, Unit: Bytes},
+		containerinsightscommon.NeuronCoreMemoryUtilizationTensors:          {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: Core, Unit: Bytes},
+		containerinsightscommon.NeuronCoreUtilization:                       {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: Core, Unit: Percent},
+		containerinsightscommon.NeuronInstanceInfo:                          {DuplicationTypes: []string{}, UniqueAttribute: "", LogTypeSuffix: "", Unit: Count},
+		containerinsightscommon.NeuronHardware:                              {DuplicationTypes: []string{}, UniqueAttribute: "", LogTypeSuffix: "", Unit: Count},
+		containerinsightscommon.NeuronExecutionLatency:                      {DuplicationTypes: []string{containerinsightscommon.TypeNode}, UniqueAttribute: "", LogTypeSuffix: "", Unit: Seconds},
+		containerinsightscommon.NeuronDeviceHardwareEccEvents:               {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: EventType, LogTypeSuffix: Device, Unit: Count},
 	}
 	attributeValuePrefixingMap = map[string]string{NeuronCoreAttributeKey: "core", NeuronDeviceAttributeKey: "device"}
-
-	NeuronCoreMetricsAttributesToKeep = map[string]struct{}{}
 
 	MetricAttributesToKeep = map[string]struct{}{
 		ClusterName:      {},
@@ -160,6 +158,10 @@ func addUnit(originalMetric pmetric.Metric) {
 // filtering out the rest based on value of the target attribute.
 // - For neuron_execution_latency metric we keep p50 percentile
 // - For neurondevice_runtime_memory we keep the neuron_device memory datapoint
+// example :
+//
+//	in : neurondevice_runtime_memory {datapoints: [ 0 : {Attributes : {..., percentile:p50, ....}, value 3}, 1: {Attributes : {..., percentile:p99, ....}, , value 4}]}
+//	out : neurondevice_runtime_memory {datapoints: [ 0 : {Attributes : {..., percentile:p50, ....}, value 3}]}
 func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attributeKey string, attributeValueToKeep string) {
 	originalMetric.Sum().DataPoints().RemoveIf(func(dp pmetric.NumberDataPoint) bool {
 		value, exists := dp.Attributes().Get(attributeKey)
@@ -168,11 +170,39 @@ func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attrib
 }
 
 // This method takes a metric and creates an aggregated metric from its datapoint values.
-// It also creates a new metric for each datapoint based on the target attribute.
+// It also creates a new metric for each datapoint based on the unique target attribute.
+// example :
+// in: unique_target_attribute = error_type
+//
+//	neuron_execution_errors {
+//	  datapoints : [
+//	      0 : { Attribute : {..., error_type : A, ....}, value = 1 },
+//	      1 : { Attribute : {..., error_type : B, ....}, value = 2 },
+//	      2 : { Attribute : {..., error_type : C, ....}, value = 3 }
+//	  ]
+//	}
+//
+// out: unique_target_attribute = error_type
+// [
+//
+//	neuron_execution_errors_total {
+//	    datapoints : [ 0 : { Attribute : {..., error_type : A, ....}, value = 6 }]
+//	},
+//	neuron_execution_errors_A {
+//	    datapoints : [ 0 : { Attribute : {..., error_type : A, ....}, value = 1 }]
+//	},
+//	neuron_execution_errors_B {
+//	    datapoints : [ 0 : { Attribute : {..., error_type : B, ....}, value = 2 }]
+//	},
+//	neuron_execution_errors_C {
+//	    datapoints : [ 0 : { Attribute : {..., error_type : C, ....}, value = 3 }]
+//	},
+//
+// ]
 func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(originalMetric pmetric.Metric) pmetric.MetricSlice {
 	newMetricSlice := pmetric.NewMetricSlice()
-	aggregationAttributeKey := metricModificationsMap[originalMetric.Name()].AggregationAttributeKey
-	if aggregationAttributeKey == "" {
+	uniqueAttribute := metricModificationsMap[originalMetric.Name()].UniqueAttribute
+	if uniqueAttribute == "" {
 		originalMetric.CopyTo(newMetricSlice.AppendEmpty())
 		return newMetricSlice
 	}
@@ -186,7 +216,7 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 		aggregatedValuesPerRuntimeTag[runtimeTag.AsString()] += originalDatapoint.DoubleValue()
 
 		// Creating a new metric from the current datapoint and adding it to the new newMetricSlice
-		subtypeValue, _ := originalDatapoint.Attributes().Get(aggregationAttributeKey)
+		subtypeValue, _ := originalDatapoint.Attributes().Get(uniqueAttribute)
 		newNameMetric := getMetricWithMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+"_"+subtypeValue.Str(), originalMetric.Unit())
 		originalDatapoint.CopyTo(newNameMetric.SetEmptySum().DataPoints().AppendEmpty())
 		// setting value of temporality to cumulative so that agent performs delta conversion on this metric
@@ -211,9 +241,7 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 	return newMetricSlice
 }
 
-// This method performs the following removal and update operations on a datapoint's attributes:
-// 1. It removes the attribute keys which are not required. The removal is necessary so that the metrics are grouped thogether
-// 2. It prefixes NeuronCore and NeuronDevice values with `core` and `device` respectively.
+// This method removes the attribute keys which are not required. The removal is necessary so that the metrics are grouped together
 func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
 	_, exists := metricModificationsMap[originalMetricName]
 	if !exists {
@@ -237,6 +265,8 @@ func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
 	}
 }
 
+// This method prefixes NeuronCore and NeuronDevice values with `core` and `device` respectively
+// to make the attribute values more verbose
 func prefixCoreAndDeviceLabels(originalMetric pmetric.Metric) {
 	dps := originalMetric.Sum().DataPoints()
 	for i := 0; i < dps.Len(); i++ {
@@ -249,8 +279,8 @@ func prefixCoreAndDeviceLabels(originalMetric pmetric.Metric) {
 	}
 }
 
-// This method duplicates metrics performs selective duplication of a metric based on the types for which duplication needs to be performed
-// and by checking that pod correlation has been performed before duplicating metrics for pod and container.
+// This method performs selective duplication of a metric based on the types for which duplication needs to be performed.
+// A metric is duplicated for pod and container only if pod correlation has been done successfully
 func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricSlice, originalMetricName string, originalMetricDatapoints pmetric.NumberDataPointSlice) pmetric.MetricSlice {
 	newMetricsSlice := pmetric.NewMetricSlice()
 	metricModifications := metricModificationsMap[originalMetricName]
@@ -276,8 +306,8 @@ func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricS
 	return newMetricsSlice
 }
 
-// This method creates new metrics by prefixing the metric name with each k8 concepts (pod, node and container)
-// and adding logTypes to the attributes
+// This method creates new metrics by prefixing the metric name with each k8 concepts (pod, node and container).
+// It also adds logTypes to all the metric datapoint attributes.
 func duplicateMetricForType(metric pmetric.Metric, duplicateType string, originalMetricName string) *pmetric.Metric {
 	metricCopy := pmetric.NewMetric()
 	metric.CopyTo(metricCopy)
