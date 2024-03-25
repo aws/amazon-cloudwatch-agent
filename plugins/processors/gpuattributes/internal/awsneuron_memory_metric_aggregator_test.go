@@ -4,11 +4,13 @@
 package internal
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-	"testing"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 const (

@@ -6,7 +6,6 @@ package gpuattributes
 import (
 	"context"
 	"encoding/json"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes/internal"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -14,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes/internal"
 )
 
 const (

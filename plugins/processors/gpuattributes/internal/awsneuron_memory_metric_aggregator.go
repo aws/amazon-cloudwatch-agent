@@ -4,9 +4,10 @@
 package internal
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 var memoryMetricsNames = map[string]struct{}{

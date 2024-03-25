@@ -4,11 +4,13 @@
 package internal
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"strings"
+
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
-	"strings"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 )
 
 const (

@@ -4,13 +4,14 @@
 package internal
 
 import (
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
-	"testing"
-	"time"
 )
 
 var staticAttributes = map[string]any{
