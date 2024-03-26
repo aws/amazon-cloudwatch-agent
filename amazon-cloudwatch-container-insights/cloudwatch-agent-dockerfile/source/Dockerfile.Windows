@@ -31,12 +31,12 @@ RUN choco install make
 RUN make build-for-docker-windows-${env:TARGETARCH}
 
 # Build target CW agent container image for Windows
-FROM mcr.microsoft.com/windows/servercore:$TAG
+FROM mcr.microsoft.com/windows/nanoserver:$TAG
 
 ARG CONTAINER_CLOUDWATCHAGENT_PATH
 ARG TARGETARCH
 
-RUN Powershell -Command New-Item -ItemType Directory -Path $env:CONTAINER_CLOUDWATCHAGENT_PATH -Force
+RUN mkdir %CONTAINER_CLOUDWATCHAGENT_PATH%
 WORKDIR $CONTAINER_CLOUDWATCHAGENT_PATH
 
 COPY --from=builder C:\\go\\src\\github.com\\aws\\amazon-cloudwatch-agent\\build\\bin\\windows_$TARGETARCH\\ $CONTAINER_CLOUDWATCHAGENT_PATH
