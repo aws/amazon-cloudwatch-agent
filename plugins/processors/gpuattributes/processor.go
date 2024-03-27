@@ -134,19 +134,18 @@ func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Me
 			ils := ilms.At(j)
 			metrics := ils.Metrics()
 
-			newMetrics := pmetric.NewMetricSlice()
-			for k := 0; k < metrics.Len(); k++ {
+			metricsLength := metrics.Len()
+			for k := 0; k < metricsLength; k++ {
 				m := metrics.At(k)
 				d.processGPUMetricAttributes(m)
 				d.awsNeuronMemoryMetricAggregator.AggregateMemoryMetric(m)
 				// non neuron metric is returned as a singleton list
-				d.awsNeuronMetricModifier.ModifyMetric(m).MoveAndAppendTo(newMetrics)
+				d.awsNeuronMetricModifier.ModifyMetric(m, metrics)
 			}
 			if d.awsNeuronMemoryMetricAggregator.MemoryMetricsFound {
 				aggregatedMemoryMetric := d.awsNeuronMemoryMetricAggregator.FlushAggregatedMemoryMetric()
-				d.awsNeuronMetricModifier.ModifyMetric(aggregatedMemoryMetric).MoveAndAppendTo(newMetrics)
+				d.awsNeuronMetricModifier.ModifyMetric(aggregatedMemoryMetric, metrics)
 			}
-			replaceMetricSlice(newMetrics, metrics)
 		}
 	}
 	return md, nil
@@ -223,11 +222,4 @@ func (d *gpuAttributesProcessor) filterAttributes(attributes pcommon.Map, labels
 			attributes.PutStr(lk, string(bytes))
 		}
 	}
-}
-
-func replaceMetricSlice(source pmetric.MetricSlice, destination pmetric.MetricSlice) {
-	// clear destination
-	destination.MoveAndAppendTo(pmetric.NewMetricSlice())
-	// move source to destination
-	source.MoveAndAppendTo(destination)
 }

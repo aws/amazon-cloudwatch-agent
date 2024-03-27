@@ -107,13 +107,11 @@ func NewMetricModifier(logger *zap.Logger) *AwsNeuronMetricModifier {
 	return d
 }
 
-func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric) pmetric.MetricSlice {
+func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, metrics pmetric.MetricSlice) {
 	// only decorate Aws Neuron metrics
 	// another option is to separate Aws Neuron in its own pipeline to minimize extra processing of metrics
 	if _, isNeuronMetric := metricModificationsMap[originalMetric.Name()]; !isNeuronMetric {
-		newMetricSlice := pmetric.NewMetricSlice()
-		originalMetric.CopyTo(newMetricSlice.AppendEmpty())
-		return newMetricSlice
+		return
 	}
 
 	// Since the otel to grouped metrics conversions takes type into account,
@@ -137,11 +135,11 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric) p
 
 	modifiedMetricSlice := md.extractDatapointsAsMetricsAndAggregate(originalMetric)
 	filterLabels(modifiedMetricSlice, originalMetricName)
-	return md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints())
+	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
 }
 
 func convertGaugeToSum(originalMetric pmetric.Metric) pmetric.Metric {
-	convertedMetric := getMetricWithMetadata(pmetric.NewMetric(), originalMetric.Name(), originalMetric.Unit())
+	convertedMetric := setMetricMetadata(pmetric.NewMetric(), originalMetric.Name(), originalMetric.Unit())
 	convertedMetric.SetEmptySum()
 	originalMetric.Gauge().DataPoints().CopyTo(convertedMetric.Sum().DataPoints())
 
@@ -217,7 +215,7 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 
 		// Creating a new metric from the current datapoint and adding it to the new newMetricSlice
 		subtypeValue, _ := originalDatapoint.Attributes().Get(uniqueAttribute)
-		newNameMetric := getMetricWithMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+"_"+subtypeValue.Str(), originalMetric.Unit())
+		newNameMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+"_"+subtypeValue.Str(), originalMetric.Unit())
 		originalDatapoint.CopyTo(newNameMetric.SetEmptySum().DataPoints().AppendEmpty())
 		// setting value of temporality to cumulative so that agent performs delta conversion on this metric
 		newNameMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
@@ -227,7 +225,7 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 		// Creating body for the aggregated metric and add it to the new newMetricSlice for each runtime
 		for runtimeTag, value := range aggregatedValuesPerRuntimeTag {
 			// Aggregated metric for neuron device ecc events is not required
-			aggregatedMetric := getMetricWithMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+aggregatedMetricSuffix, originalMetric.Unit())
+			aggregatedMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+aggregatedMetricSuffix, originalMetric.Unit())
 
 			originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
 			aggregatedMetric.Sum().DataPoints().At(0).SetDoubleValue(value)
@@ -281,8 +279,7 @@ func prefixCoreAndDeviceLabels(originalMetric pmetric.Metric) {
 
 // This method performs selective duplication of a metric based on the types for which duplication needs to be performed.
 // A metric is duplicated for pod and container only if pod correlation has been done successfully
-func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricSlice, originalMetricName string, originalMetricDatapoints pmetric.NumberDataPointSlice) pmetric.MetricSlice {
-	newMetricsSlice := pmetric.NewMetricSlice()
+func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricSlice, originalMetricName string, originalMetricDatapoints pmetric.NumberDataPointSlice, metrics pmetric.MetricSlice) {
 	metricModifications := metricModificationsMap[originalMetricName]
 
 	// check if pod correlation has been performed, if not then don't emit metric for container and pod
@@ -295,21 +292,19 @@ func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricS
 	for i := 0; i < metricsSlice.Len(); i++ {
 		metric := metricsSlice.At(i)
 		if duplicateForNodeOnly {
-			duplicateMetricForType(metric, containerinsightscommon.TypeNode, originalMetricName).CopyTo(newMetricsSlice.AppendEmpty())
+			duplicateMetricForType(metric, containerinsightscommon.TypeNode, originalMetricName, metrics)
 		} else {
 			for _, prefix := range metricModifications.DuplicationTypes {
-				duplicateMetricForType(metric, prefix, originalMetricName).CopyTo(newMetricsSlice.AppendEmpty())
+				duplicateMetricForType(metric, prefix, originalMetricName, metrics)
 			}
 		}
 	}
-
-	return newMetricsSlice
 }
 
 // This method creates new metrics by prefixing the metric name with each k8 concepts (pod, node and container).
 // It also adds logTypes to all the metric datapoint attributes.
-func duplicateMetricForType(metric pmetric.Metric, duplicateType string, originalMetricName string) *pmetric.Metric {
-	metricCopy := pmetric.NewMetric()
+func duplicateMetricForType(metric pmetric.Metric, duplicateType string, originalMetricName string, metrics pmetric.MetricSlice) {
+	metricCopy := metrics.AppendEmpty()
 	metric.CopyTo(metricCopy)
 	metricCopy.SetName(strings.ToLower(duplicateType) + "_" + metricCopy.Name())
 
@@ -317,11 +312,9 @@ func duplicateMetricForType(metric pmetric.Metric, duplicateType string, origina
 	for i := 0; i < datapoints.Len(); i++ {
 		datapoints.At(i).Attributes().PutStr(containerinsightscommon.MetricType, duplicateType+logTypeSuffix+metricModificationsMap[originalMetricName].LogTypeSuffix)
 	}
-
-	return &metricCopy
 }
 
-func getMetricWithMetadata(metric pmetric.Metric, name string, unit string) pmetric.Metric {
+func setMetricMetadata(metric pmetric.Metric, name string, unit string) pmetric.Metric {
 	metric.SetName(name)
 	metric.SetUnit(unit)
 	return metric
