@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes/internal"
 )
 
 const (
@@ -109,13 +110,17 @@ var nodeLabelFilter = map[string]map[string]interface{}{
 
 type gpuAttributesProcessor struct {
 	*Config
-	logger *zap.Logger
+	logger                          *zap.Logger
+	awsNeuronMetricModifier         *internal.AwsNeuronMetricModifier
+	awsNeuronMemoryMetricAggregator *internal.AwsNeuronMemoryMetricsAggregator
 }
 
 func newGpuAttributesProcessor(config *Config, logger *zap.Logger) *gpuAttributesProcessor {
 	d := &gpuAttributesProcessor{
-		Config: config,
-		logger: logger,
+		Config:                          config,
+		logger:                          logger,
+		awsNeuronMetricModifier:         internal.NewMetricModifier(logger),
+		awsNeuronMemoryMetricAggregator: internal.NewMemoryMemoryAggregator(),
 	}
 	return d
 }
@@ -128,16 +133,25 @@ func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Me
 		for j := 0; j < ilms.Len(); j++ {
 			ils := ilms.At(j)
 			metrics := ils.Metrics()
-			for k := 0; k < metrics.Len(); k++ {
+
+			metricsLength := metrics.Len()
+			for k := 0; k < metricsLength; k++ {
 				m := metrics.At(k)
-				d.processMetricAttributes(m)
+				d.processGPUMetricAttributes(m)
+				d.awsNeuronMemoryMetricAggregator.AggregateMemoryMetric(m)
+				// non neuron metric is returned as a singleton list
+				d.awsNeuronMetricModifier.ModifyMetric(m, metrics)
+			}
+			if d.awsNeuronMemoryMetricAggregator.MemoryMetricsFound {
+				aggregatedMemoryMetric := d.awsNeuronMemoryMetricAggregator.FlushAggregatedMemoryMetric()
+				d.awsNeuronMetricModifier.ModifyMetric(aggregatedMemoryMetric, metrics)
 			}
 		}
 	}
 	return md, nil
 }
 
-func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
+func (d *gpuAttributesProcessor) processGPUMetricAttributes(m pmetric.Metric) {
 	// only decorate GPU metrics
 	if !strings.Contains(m.Name(), gpuMetricIdentifier) {
 		return
