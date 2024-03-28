@@ -12,10 +12,15 @@ env:
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
 on:
-  schedule:
-    - cron: "0 15 * * *" # Run daily at 15:00 UTC
-  workflow_call:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main*
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 
 concurrency:
   group: ${{ github.workflow }}
