@@ -6,7 +6,7 @@ package jmxfilterprocessor
 import (
 	"fmt"
 	"strconv"
-	
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
