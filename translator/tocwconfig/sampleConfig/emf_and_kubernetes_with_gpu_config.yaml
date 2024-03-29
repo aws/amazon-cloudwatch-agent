@@ -1104,6 +1104,15 @@ processors:
         aggregation_type: ""
         experimental_match_labels: {}
         group_resource_labels: {}
+        include: execution_status_total
+        match_type: ""
+        new_name: neuron_execution_status
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
         include: neuron_runtime_memory_used_bytes
         match_type: ""
         new_name: neurondevice_runtime_memory_used_bytes
@@ -1122,9 +1131,27 @@ processors:
         aggregation_type: ""
         experimental_match_labels: {}
         group_resource_labels: {}
+        include: hardware_ecc_events_total
+        match_type: ""
+        new_name: neurondevice_hw_ecc_events_total
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
         include: execution_latency_seconds
         match_type: ""
         new_name: neuron_execution_latency
+        operations: []
+        submatch_case: ""
+      - action: update
+        aggregation_type: ""
+        experimental_match_labels: {}
+        group_resource_labels: {}
+        include: execution_errors_total
+        match_type: ""
+        new_name: neuron_execution_errors
         operations: []
         submatch_case: ""
       - action: update

@@ -34,6 +34,8 @@ var renameMapForDcgm = map[string]string{
 }
 
 var renameMapForNeuronMonitor = map[string]string{
+	"execution_errors_total":                          containerinsightscommon.NeuronExecutionErrors,
+	"execution_status_total":                          containerinsightscommon.NeuronExecutionStatus,
 	"neuron_runtime_memory_used_bytes":                containerinsightscommon.NeuronRuntimeMemoryUsage,
 	"neuroncore_memory_usage_constants":               containerinsightscommon.NeuronCoreMemoryUtilizationConstants,
 	"neuroncore_memory_usage_model_code":              containerinsightscommon.NeuronCoreMemoryUtilizationModelCode,
@@ -43,6 +45,7 @@ var renameMapForNeuronMonitor = map[string]string{
 	"neuroncore_utilization_ratio":                    containerinsightscommon.NeuronCoreUtilization,
 	"instance_info":                                   containerinsightscommon.NeuronInstanceInfo,
 	"neuron_hardware":                                 containerinsightscommon.NeuronHardware,
+	"hardware_ecc_events_total":                       containerinsightscommon.NeuronDeviceHardwareEccEvents,
 	"execution_latency_seconds":                       containerinsightscommon.NeuronExecutionLatency,
 }
 
