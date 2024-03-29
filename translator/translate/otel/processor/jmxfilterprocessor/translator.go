@@ -6,7 +6,7 @@ package jmxfilterprocessor
 import (
 	"fmt"
 	"strconv"
-
+	
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -123,11 +123,21 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func IsSet(conf *confmap.Conf, pipelineIndex int) bool {
-	jmxMetrics := conf.Get(jmxKey).([]interface{})
-	jmxMap, _ := jmxMetrics[pipelineIndex].(map[string]interface{})
-	for _, jmxTarget := range jmxTargets {
-		if _, ok := jmxMap[jmxTarget]; ok {
-			return true
+	if pipelineIndex > -1 {
+		jmxMetrics := conf.Get(jmxKey).([]interface{})
+		jmxMap, _ := jmxMetrics[pipelineIndex].(map[string]interface{})
+		for _, jmxTarget := range jmxTargets {
+			if _, ok := jmxMap[jmxTarget]; ok {
+				return true
+			}
+		}
+	} else {
+		jmxMetrics := conf.Get(jmxKey).(interface{})
+		jmxMap, _ := jmxMetrics.(map[string]interface{})
+		for _, jmxTarget := range jmxTargets {
+			if _, ok := jmxMap[jmxTarget]; ok {
+				return true
+			}
 		}
 	}
 	return false
