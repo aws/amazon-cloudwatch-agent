@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
-	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -227,13 +227,12 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
-	conf := confmap.New()
-	if err = conf.Marshal(cfg); err != nil {
+	var result map[string]any
+	if result, err = mapstructure.Marshal(cfg); err != nil {
 		return nil, err
 	}
-	strMap := conf.ToStringMap()
-	RemoveTLSRedacted(strMap)
-	return strMap, nil
+	RemoveTLSRedacted(result)
+	return result, nil
 }
 
 func RemoveTLSRedacted(stringMap map[string]interface{}) {
