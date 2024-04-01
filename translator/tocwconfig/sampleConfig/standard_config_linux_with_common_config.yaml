@@ -27,11 +27,9 @@ processors:
             metrics:
                 - iops_in_progress
                 - diskio_iops_in_progress
-            regexp: null
         include:
             match_type: ""
             metrics: []
-            regexp: null
         initial_value: 0
         max_staleness: 0s
     ec2tagger:
