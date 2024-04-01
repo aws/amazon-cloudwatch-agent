@@ -8,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
+	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/confmap"
 )
 
@@ -29,17 +30,22 @@ func Marshal(rawVal any) (map[string]any, error) {
 func encoderConfig(rawVal any) *EncoderConfig {
 	return &EncoderConfig{
 		EncodeHook: mapstructure.ComposeDecodeHookFunc(
+			NilHookFunc[configopaque.String](),
 			TextMarshalerHookFunc(),
-			marshalerHookFunc(rawVal),
+			MarshalerHookFunc(rawVal),
 		),
+		OmitAllNil: true,
 	}
 }
 
-// marshalerHookFunc returns a DecodeHookFuncValue that checks structs that aren't
+// MarshalerHookFunc returns a DecodeHookFuncValue that checks structs that aren't
 // the original to see if they implement the Marshaler interface.
-func marshalerHookFunc(orig any) mapstructure.DecodeHookFuncValue {
+func MarshalerHookFunc(orig any) mapstructure.DecodeHookFuncValue {
 	origType := reflect.TypeOf(orig)
 	return func(from reflect.Value, _ reflect.Value) (any, error) {
+		if !from.IsValid() {
+			return nil, nil
+		}
 		if from.Kind() != reflect.Struct {
 			return from.Interface(), nil
 		}

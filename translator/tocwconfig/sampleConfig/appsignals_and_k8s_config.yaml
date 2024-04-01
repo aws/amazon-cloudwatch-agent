@@ -334,7 +334,6 @@ processors:
           cloud.provider:
             enabled: true
       attributes: []
-      auth: null
       azure:
         resource_attributes:
           azure.resourcegroup.name:
@@ -384,7 +383,6 @@ processors:
             enabled: true
           host.name:
             enabled: true
-        token: '[REDACTED]'
         token_file: ""
       detectors:
         - eks
@@ -554,9 +552,7 @@ processors:
             enabled: true
           faas.version:
             enabled: true
-      max_conns_per_host: null
       max_idle_conns: 100
-      max_idle_conns_per_host: null
       openshift:
         address: ""
         resource_attributes:
@@ -638,26 +634,20 @@ receivers:
     otlp/app_signals:
         protocols:
             grpc:
-                auth: null
                 endpoint: 0.0.0.0:4315
                 include_metadata: false
-                keepalive: null
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
-                tls: null
                 transport: tcp
                 write_buffer_size: 0
             http:
-                auth: null
-                cors: null
                 endpoint: 0.0.0.0:4316
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
                 response_headers: {}
-                tls: null
                 traces_url_path: /v1/traces
 service:
     extensions:

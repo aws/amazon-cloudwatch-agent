@@ -58,26 +58,20 @@ receivers:
     otlp/traces:
         protocols:
             grpc:
-                auth: null
                 endpoint: 127.0.0.1:4317
                 include_metadata: false
-                keepalive: null
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
-                tls: null
                 transport: tcp
                 write_buffer_size: 0
             http:
-                auth: null
-                cors: null
                 endpoint: 127.0.0.1:4318
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
                 response_headers: {}
-                tls: null
                 traces_url_path: /v1/traces
 service:
     extensions:
