@@ -23,11 +23,9 @@ processors:
         exclude:
             match_type: ""
             metrics: []
-            regexp: null
         include:
             match_type: ""
             metrics: []
-            regexp: null
         initial_value: 0
         max_staleness: 0s
     ec2tagger:

@@ -48,7 +48,6 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
-            storage: null
         shared_credentials_file: []
     awsxray:
         aws_log_groups: []
@@ -158,26 +157,20 @@ receivers:
     otlp/traces:
         protocols:
             grpc:
-                auth: null
                 endpoint: 0.0.0.0:1111
                 include_metadata: false
-                keepalive: null
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
-                tls: null
                 transport: tcp
                 write_buffer_size: 0
             http:
-                auth: null
-                cors: null
                 endpoint: 0.0.0.0:2222
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
                 response_headers: {}
-                tls: null
                 traces_url_path: /v1/traces
     telegraf_nvidia_smi:
         collection_interval: 1m0s
@@ -239,7 +232,6 @@ receivers:
             initial_interval: 0s
             max_elapsed_time: 0s
             max_interval: 0s
-        storage: null
         type: udp_input
 service:
     extensions:

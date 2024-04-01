@@ -44,6 +44,8 @@ type EncoderConfig struct {
 	// EncodeHook, if set, is a way to provide custom encoding. It
 	// will be called before structs and primitive types.
 	EncodeHook mapstructure.DecodeHookFunc
+	// OmitAllNil, if set, is a way to omit all nil fields even if omitempty isn't present.
+	OmitAllNil bool
 }
 
 // New returns a new encoder for the configuration.
@@ -119,6 +121,9 @@ func (e *Encoder) encodeStruct(value reflect.Value) (any, error) {
 			encoded, err := e.encode(field)
 			if err != nil {
 				return nil, fmt.Errorf("error encoding field %q: %w", info.name, err)
+			}
+			if e.config.OmitAllNil && encoded == nil {
+				continue
 			}
 			if info.squash {
 				if m, ok := encoded.(map[string]any); ok {
@@ -210,6 +215,9 @@ func getTagInfo(field reflect.StructField) *tagInfo {
 // function if found.
 func TextMarshalerHookFunc() mapstructure.DecodeHookFuncValue {
 	return func(from reflect.Value, _ reflect.Value) (any, error) {
+		if !from.IsValid() {
+			return nil, nil
+		}
 		marshaler, ok := from.Interface().(encoding.TextMarshaler)
 		if !ok {
 			return from.Interface(), nil
@@ -219,5 +227,20 @@ func TextMarshalerHookFunc() mapstructure.DecodeHookFuncValue {
 			return nil, err
 		}
 		return string(out), nil
+	}
+}
+
+// NilHookFunc returns a DecodeHookFuncValue that checks if the value matches the type and nils it out. Allows specific
+// types to be omitted.
+func NilHookFunc[T any]() mapstructure.DecodeHookFuncValue {
+	return func(from reflect.Value, _ reflect.Value) (any, error) {
+		if !from.IsValid() {
+			return nil, nil
+		}
+		_, ok := from.Interface().(T)
+		if !ok {
+			return from.Interface(), nil
+		}
+		return nil, nil
 	}
 }

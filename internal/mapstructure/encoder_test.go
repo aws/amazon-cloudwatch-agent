@@ -12,6 +12,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/config/configopaque"
 )
 
 type TestComplexStruct struct {
@@ -248,6 +249,30 @@ func TestTextMarshalerError(t *testing.T) {
 	got, err := enc.Encode(testCase)
 	require.Error(t, err)
 	require.Nil(t, got)
+}
+
+func TestNilConfigOpaqueString(t *testing.T) {
+	cfg := &EncoderConfig{
+		EncodeHook: mapstructure.ComposeDecodeHookFunc(
+			NilHookFunc[configopaque.String](),
+			TextMarshalerHookFunc(),
+		),
+	}
+	enc := New(cfg)
+	testCase := struct {
+		Confidential configopaque.String
+	}{
+		Confidential: configopaque.String("skip"),
+	}
+	got, err := enc.Encode(testCase)
+	require.NoError(t, err)
+	require.Equal(t, map[string]any{
+		"confidential": nil,
+	}, got)
+	cfg.OmitAllNil = true
+	got, err = enc.Encode(testCase)
+	require.NoError(t, err)
+	require.Equal(t, map[string]any{}, got)
 }
 
 func TestEncodeStruct(t *testing.T) {
