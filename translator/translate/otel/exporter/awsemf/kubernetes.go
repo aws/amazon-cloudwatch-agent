@@ -659,7 +659,7 @@ func getEFAMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 				Dimensions: [][]string{
 					{"ClusterName"},
 					{"ClusterName", "NodeName", "InstanceId"},
-					{"ClusterName", "NodeName", "InstanceId", "EfaDevice"},
+					{"ClusterName", "NodeName", "InstanceId", "InstanceType", "EfaDevice"},
 				},
 				MetricNameSelectors: []string{
 					"node_efa_rx_bytes",
