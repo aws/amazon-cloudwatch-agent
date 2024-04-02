@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awscloudwatchlogs/emf_logs:
         certificate_file_path: ""
@@ -414,8 +413,8 @@ extensions:
             operations:
                 - PutLogEvents
             usage_flags:
-              mode: OP
-              region_type: ACJ
+                mode: OP
+                region_type: ACJ
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -435,7 +434,6 @@ processors:
               aggregation_type: ""
               experimental_match_labels:
                 code: ^5.*
-              group_resource_labels: {}
               include: apiserver_request_total
               match_type: regexp
               new_name: apiserver_request_total_5xx
@@ -443,6 +441,7 @@ processors:
               submatch_case: ""
 receivers:
     awscontainerinsightreceiver:
+        accelerated_compute_metrics: false
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
         add_service_as_attribute: true
@@ -468,15 +467,12 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - /root/.aws/credentials
-        accelerated_compute_metrics: false
     tcplog/emf_logs:
-        attributes: {}
         encoding: utf-8
         id: tcp_input
         listen_address: 0.0.0.0:25888
         operators: []
         output: []
-        resource: {}
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -484,7 +480,6 @@ receivers:
             max_interval: 0s
         type: tcp_input
     udplog/emf_logs:
-        attributes: {}
         encoding: utf-8
         id: udp_input
         listen_address: 0.0.0.0:25888
@@ -494,7 +489,6 @@ receivers:
             omit_pattern: false
         operators: []
         output: []
-        resource: {}
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -528,7 +522,6 @@ service:
             disable_stacktrace: false
             encoding: console
             error_output_paths: []
-            initial_fields: {}
             level: info
             output_paths: []
             sampling:
@@ -540,7 +533,6 @@ service:
             address: ""
             level: None
             readers: []
-        resource: {}
         traces:
             processors: []
             propagators: []

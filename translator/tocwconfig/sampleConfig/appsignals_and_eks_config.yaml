@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awsemf/app_signals:
         certificate_file_path: ""
@@ -287,16 +286,16 @@ extensions:
             operations:
                 - PutLogEvents
             usage_flags:
-              mode: EKS
-              region_type: ACJ
+                mode: EKS
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutTraceSegments
             usage_flags:
-              mode: EKS
-              region_type: ACJ
+                mode: EKS
+                region_type: ACJ
     awsproxy/app_signals:
         aws_endpoint: ""
         certificate_file_path: ""
@@ -310,16 +309,16 @@ extensions:
         shared_credentials_file: []
 processors:
     awsappsignals:
-        resolvers:
-          - platform: eks
-            name: TestCluster
-        rules: []
         limiter:
-          disabled: false
-          drop_threshold: 500
-          log_dropped_metrics: true
-          rotation_interval: 10m0s
-          garbage_collection_interval: 10m0s
+            disabled: false
+            drop_threshold: 500
+            garbage_collection_interval: 10m0s
+            log_dropped_metrics: true
+            rotation_interval: 10m0s
+        resolvers:
+            - name: TestCluster
+              platform: eks
+        rules: []
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         metadata_keys: []
@@ -360,7 +359,6 @@ processors:
         consul:
             address: ""
             datacenter: ""
-            meta: {}
             namespace: ""
             resource_attributes:
                 azure.resourcegroup.name:
@@ -503,7 +501,6 @@ processors:
                     enabled: true
                 k8s.cluster.name:
                     enabled: true
-        headers: {}
         heroku:
             resource_attributes:
                 cloud.provider:
@@ -564,16 +561,6 @@ processors:
                     enabled: true
                 k8s.cluster.name:
                     enabled: true
-            tls:
-                ca_file: ""
-                cert_file: ""
-                insecure: false
-                insecure_skip_verify: false
-                key_file: ""
-                max_version: ""
-                min_version: ""
-                reload_interval: 0s
-                server_name_override: ""
             token: ""
         override: true
         read_buffer_size: 0
@@ -606,6 +593,7 @@ processors:
         write_buffer_size: 0
 receivers:
     awscontainerinsightreceiver:
+        accelerated_compute_metrics: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true
@@ -630,7 +618,6 @@ receivers:
         resource_arn: ""
         role_arn: ""
         shared_credentials_file: []
-        accelerated_compute_metrics: false
     otlp/app_signals:
         protocols:
             grpc:
@@ -640,14 +627,14 @@ receivers:
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
                 tls:
-                  cert_file: path/to/cert.crt
-                  key_file: path/to/key.key
-                  ca_file: ""
-                  client_ca_file: ""
-                  client_ca_file_reload: false
-                  max_version: ""
-                  min_version: ""
-                  reload_interval: 0s
+                    ca_file: ""
+                    cert_file: path/to/cert.crt
+                    client_ca_file: ""
+                    client_ca_file_reload: false
+                    key_file: path/to/key.key
+                    max_version: ""
+                    min_version: ""
+                    reload_interval: 0s
                 transport: tcp
                 write_buffer_size: 0
             http:
@@ -656,16 +643,15 @@ receivers:
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
-                response_headers: {}
                 tls:
-                  cert_file: path/to/cert.crt
-                  key_file: path/to/key.key
-                  client_ca_file: ""
-                  client_ca_file_reload: false
-                  ca_file: ""
-                  max_version: ""
-                  min_version: ""
-                  reload_interval: 0s
+                    ca_file: ""
+                    cert_file: path/to/cert.crt
+                    client_ca_file: ""
+                    client_ca_file_reload: false
+                    key_file: path/to/key.key
+                    max_version: ""
+                    min_version: ""
+                    reload_interval: 0s
                 traces_url_path: /v1/traces
 service:
     extensions:
@@ -703,7 +689,6 @@ service:
             disable_stacktrace: false
             encoding: console
             error_output_paths: []
-            initial_fields: {}
             level: info
             output_paths: []
             sampling:
@@ -715,7 +700,6 @@ service:
             address: ""
             level: None
             readers: []
-        resource: {}
         traces:
             processors: []
             propagators: []

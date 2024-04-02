@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awsemf/app_signals:
         certificate_file_path: ""
@@ -287,16 +286,16 @@ extensions:
             operations:
                 - PutLogEvents
             usage_flags:
-              mode: K8E
-              region_type: ACJ
+                mode: K8E
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutTraceSegments
             usage_flags:
-              mode: K8E
-              region_type: ACJ
+                mode: K8E
+                region_type: ACJ
     awsproxy/app_signals:
         aws_endpoint: ""
         certificate_file_path: ""
@@ -310,16 +309,16 @@ extensions:
         shared_credentials_file: []
 processors:
     awsappsignals:
-        resolvers:
-          - platform: k8s
-            name: TestCluster
-        rules: []
         limiter:
-          disabled: false
-          drop_threshold: 500
-          log_dropped_metrics: true
-          rotation_interval: 10m0s
-          garbage_collection_interval: 10m0s
+            disabled: false
+            drop_threshold: 500
+            garbage_collection_interval: 10m0s
+            log_dropped_metrics: true
+            rotation_interval: 10m0s
+        resolvers:
+            - name: TestCluster
+              platform: k8s
+        rules: []
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         metadata_keys: []
@@ -327,285 +326,274 @@ processors:
         send_batch_size: 8192
         timeout: 5s
     resourcedetection:
-      aks:
-        resource_attributes:
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-      attributes: []
-      azure:
-        resource_attributes:
-          azure.resourcegroup.name:
-            enabled: true
-          azure.vm.name:
-            enabled: true
-          azure.vm.scaleset.name:
-            enabled: true
-          azure.vm.size:
-            enabled: true
-          cloud.account.id:
-            enabled: true
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-          cloud.region:
-            enabled: true
-          host.id:
-            enabled: true
-          host.name:
-            enabled: true
-      compression: ""
-      consul:
-        address: ""
-        datacenter: ""
-        meta: {}
-        namespace: ""
-        resource_attributes:
-          azure.resourcegroup.name:
-            enabled: true
-          azure.vm.name:
-            enabled: true
-          azure.vm.scaleset.name:
-            enabled: true
-          azure.vm.size:
-            enabled: true
-          cloud.account.id:
-            enabled: true
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-          cloud.region:
-            enabled: true
-          host.id:
-            enabled: true
-          host.name:
-            enabled: true
-        token_file: ""
-      detectors:
-        - eks
-        - env
-        - ec2
-      disable_keep_alives: false
-      docker:
-        resource_attributes:
-          host.name:
-            enabled: true
-          os.type:
-            enabled: true
-      ec2:
-        resource_attributes:
-          cloud.account.id:
-            enabled: true
-          cloud.availability_zone:
-            enabled: true
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-          cloud.region:
-            enabled: true
-          host.id:
-            enabled: true
-          host.image.id:
-            enabled: true
-          host.name:
-            enabled: true
-          host.type:
-            enabled: true
-        tags:
-          - ^kubernetes.io/cluster/.*$
-          - ^aws:autoscaling:groupName
-      ecs:
-        resource_attributes:
-          aws.ecs.cluster.arn:
-            enabled: true
-          aws.ecs.launchtype:
-            enabled: true
-          aws.ecs.task.arn:
-            enabled: true
-          aws.ecs.task.family:
-            enabled: true
-          aws.ecs.task.revision:
-            enabled: true
-          aws.log.group.arns:
-            enabled: true
-          aws.log.group.names:
-            enabled: true
-          aws.log.stream.arns:
-            enabled: true
-          aws.log.stream.names:
-            enabled: true
-          cloud.account.id:
-            enabled: true
-          cloud.availability_zone:
-            enabled: true
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-          cloud.region:
-            enabled: true
-      eks:
-        resource_attributes:
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-      elasticbeanstalk:
-        resource_attributes:
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-          deployment.environment:
-            enabled: true
-          service.instance.id:
-            enabled: true
-          service.version:
-            enabled: true
-      endpoint: ""
-      gcp:
-        resource_attributes:
-          cloud.account.id:
-            enabled: true
-          cloud.availability_zone:
-            enabled: true
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-          cloud.region:
-            enabled: true
-          faas.id:
-            enabled: true
-          faas.instance:
-            enabled: true
-          faas.name:
-            enabled: true
-          faas.version:
-            enabled: true
-          gcp.cloud_run.job.execution:
-            enabled: true
-          gcp.cloud_run.job.task_index:
-            enabled: true
-          gcp.gce.instance.hostname:
-            enabled: false
-          gcp.gce.instance.name:
-            enabled: false
-          host.id:
-            enabled: true
-          host.name:
-            enabled: true
-          host.type:
-            enabled: true
-          k8s.cluster.name:
-            enabled: true
-      headers: {}
-      heroku:
-        resource_attributes:
-          cloud.provider:
-            enabled: true
-          heroku.app.id:
-            enabled: true
-          heroku.dyno.id:
-            enabled: true
-          heroku.release.commit:
-            enabled: true
-          heroku.release.creation_timestamp:
-            enabled: true
-          service.instance.id:
-            enabled: true
-          service.name:
-            enabled: true
-          service.version:
-            enabled: true
-      idle_conn_timeout: 1m30s
-      k8snode:
-        auth_type: serviceAccount
-        context: ""
-        node_from_env_var: ""
-        resource_attributes:
-          k8s.node.name:
-            enabled: true
-          k8s.node.uid:
-            enabled: true
-      lambda:
-        resource_attributes:
-          aws.log.group.names:
-            enabled: true
-          aws.log.stream.names:
-            enabled: true
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-          cloud.region:
-            enabled: true
-          faas.instance:
-            enabled: true
-          faas.max_memory:
-            enabled: true
-          faas.name:
-            enabled: true
-          faas.version:
-            enabled: true
-      max_idle_conns: 100
-      openshift:
-        address: ""
-        resource_attributes:
-          cloud.platform:
-            enabled: true
-          cloud.provider:
-            enabled: true
-          cloud.region:
-            enabled: true
-          k8s.cluster.name:
-            enabled: true
-        tls:
-          ca_file: ""
-          cert_file: ""
-          insecure: false
-          insecure_skip_verify: false
-          key_file: ""
-          max_version: ""
-          min_version: ""
-          reload_interval: 0s
-          server_name_override: ""
-        token: ""
-      override: true
-      read_buffer_size: 0
-      system:
-        hostname_sources: []
-        resource_attributes:
-          host.arch:
-            enabled: false
-          host.cpu.cache.l2.size:
-            enabled: false
-          host.cpu.family:
-            enabled: false
-          host.cpu.model.id:
-            enabled: false
-          host.cpu.model.name:
-            enabled: false
-          host.cpu.stepping:
-            enabled: false
-          host.cpu.vendor.id:
-            enabled: false
-          host.id:
-            enabled: false
-          host.name:
-            enabled: true
-          os.description:
-            enabled: false
-          os.type:
-            enabled: true
-      timeout: 2s
-      write_buffer_size: 0
+        aks:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+        attributes: []
+        azure:
+            resource_attributes:
+                azure.resourcegroup.name:
+                    enabled: true
+                azure.vm.name:
+                    enabled: true
+                azure.vm.scaleset.name:
+                    enabled: true
+                azure.vm.size:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+        compression: ""
+        consul:
+            address: ""
+            datacenter: ""
+            namespace: ""
+            resource_attributes:
+                azure.resourcegroup.name:
+                    enabled: true
+                azure.vm.name:
+                    enabled: true
+                azure.vm.scaleset.name:
+                    enabled: true
+                azure.vm.size:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            token_file: ""
+        detectors:
+            - eks
+            - env
+            - ec2
+        disable_keep_alives: false
+        docker:
+            resource_attributes:
+                host.name:
+                    enabled: true
+                os.type:
+                    enabled: true
+        ec2:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+            tags:
+                - ^kubernetes.io/cluster/.*$
+                - ^aws:autoscaling:groupName
+        ecs:
+            resource_attributes:
+                aws.ecs.cluster.arn:
+                    enabled: true
+                aws.ecs.launchtype:
+                    enabled: true
+                aws.ecs.task.arn:
+                    enabled: true
+                aws.ecs.task.family:
+                    enabled: true
+                aws.ecs.task.revision:
+                    enabled: true
+                aws.log.group.arns:
+                    enabled: true
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.arns:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+        eks:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+        elasticbeanstalk:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                deployment.environment:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.version:
+                    enabled: true
+        endpoint: ""
+        gcp:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.id:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+                gcp.cloud_run.job.execution:
+                    enabled: true
+                gcp.cloud_run.job.task_index:
+                    enabled: true
+                gcp.gce.instance.hostname:
+                    enabled: false
+                gcp.gce.instance.name:
+                    enabled: false
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+        heroku:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                heroku.app.id:
+                    enabled: true
+                heroku.dyno.id:
+                    enabled: true
+                heroku.release.commit:
+                    enabled: true
+                heroku.release.creation_timestamp:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.name:
+                    enabled: true
+                service.version:
+                    enabled: true
+        idle_conn_timeout: 1m30s
+        k8snode:
+            auth_type: serviceAccount
+            context: ""
+            node_from_env_var: ""
+            resource_attributes:
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
+        lambda:
+            resource_attributes:
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.max_memory:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+        max_idle_conns: 100
+        openshift:
+            address: ""
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+            token: ""
+        override: true
+        read_buffer_size: 0
+        system:
+            hostname_sources: []
+            resource_attributes:
+                host.arch:
+                    enabled: false
+                host.cpu.cache.l2.size:
+                    enabled: false
+                host.cpu.family:
+                    enabled: false
+                host.cpu.model.id:
+                    enabled: false
+                host.cpu.model.name:
+                    enabled: false
+                host.cpu.stepping:
+                    enabled: false
+                host.cpu.vendor.id:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.name:
+                    enabled: true
+                os.description:
+                    enabled: false
+                os.type:
+                    enabled: true
+        timeout: 2s
+        write_buffer_size: 0
 receivers:
     awscontainerinsightreceiver:
+        accelerated_compute_metrics: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true
@@ -630,7 +618,6 @@ receivers:
         resource_arn: ""
         role_arn: ""
         shared_credentials_file: []
-        accelerated_compute_metrics: false
     otlp/app_signals:
         protocols:
             grpc:
@@ -647,7 +634,6 @@ receivers:
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
-                response_headers: {}
                 traces_url_path: /v1/traces
 service:
     extensions:
@@ -685,7 +671,6 @@ service:
             disable_stacktrace: false
             encoding: console
             error_output_paths: []
-            initial_fields: {}
             level: info
             output_paths: []
             sampling:
@@ -697,7 +682,6 @@ service:
             address: ""
             level: None
             readers: []
-        resource: {}
         traces:
             processors: []
             propagators: []
