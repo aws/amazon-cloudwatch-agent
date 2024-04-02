@@ -202,10 +202,10 @@ jobs:
       - name: Call all test APIs
         continue-on-error: true
         run: |
-          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/outgoing-http-call/
-          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/aws-sdk-call/
-          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_POD_IP }}/
-          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/client-call/
+          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/outgoing-http-call/; echo
+          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/aws-sdk-call/; echo
+          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_POD_IP }}/; echo
+          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/client-call/; echo
           
       - name: Build Gradle
         working-directory: ${{ env.TEST_RESOURCES_FOLDER }}

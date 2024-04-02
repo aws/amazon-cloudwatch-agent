@@ -42,17 +42,6 @@ jobs:
           role-to-assume: arn:aws:iam::${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}:role/${{ secrets.APP_SIGNALS_E2E_TEST_ROLE_NAME }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
-      - name: Update validation template with new changes
-        run: |
-          sed -i "s#HostedIn.Environment#HostedIn.EC2.Environment#g" ./validator/src/main/resources/expected-data-template/eks/aws-sdk-call-metric.mustache
-          sed -i "s#HostedIn.Environment#HostedIn.EC2.Environment#g" ./validator/src/main/resources/expected-data-template/eks/aws-sdk-call-trace.mustache
-          sed -i "s#HostedIn.Environment#HostedIn.EC2.Environment#g" ./validator/src/main/resources/expected-data-template/eks/outgoing-http-call-metric.mustache
-          sed -i "s#HostedIn.Environment#HostedIn.EC2.Environment#g" ./validator/src/main/resources/expected-data-template/eks/outgoing-http-call-trace.mustache
-          sed -i "s#HostedIn.Environment#HostedIn.EC2.Environment#g" ./validator/src/main/resources/expected-data-template/eks/client-call-metric.mustache
-          sed -i "s#HostedIn.Environment#HostedIn.EC2.Environment#g" ./validator/src/main/resources/expected-data-template/eks/client-call-trace.mustache
-          sed -i "s#HostedIn.Environment#HostedIn.EC2.Environment#g" ./validator/src/main/resources/expected-data-template/eks/remote-service-metric.mustache
-          sed -i "s#HostedIn.Environment#HostedIn.EC2.Environment#g" ./validator/src/main/resources/expected-data-template/eks/remote-service-trace.mustache
-
       - name: Set up terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -102,10 +91,10 @@ jobs:
       - name: Call all test APIs
         continue-on-error: true
         run: |
-          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/outgoing-http-call/
-          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/aws-sdk-call/
-          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_IP }}/
-          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/client-call/
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/outgoing-http-call/; echo
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/aws-sdk-call/; echo
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_IP }}/; echo
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/client-call/; echo
 
       - name: Build Gradle
         working-directory: ${{ env.TEST_RESOURCES_FOLDER }}
