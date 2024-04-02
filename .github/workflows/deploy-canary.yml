@@ -9,7 +9,7 @@ env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "add_canaries"
 
 on:
   workflow_dispatch:
