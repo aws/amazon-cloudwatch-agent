@@ -31,7 +31,6 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
-            storage: null
         shared_credentials_file:
             - /root/.aws/credentials
     awsemf/containerinsights:
@@ -483,7 +482,6 @@ receivers:
             initial_interval: 0s
             max_elapsed_time: 0s
             max_interval: 0s
-        storage: null
         type: tcp_input
     udplog/emf_logs:
         attributes: {}
@@ -502,7 +500,6 @@ receivers:
             initial_interval: 0s
             max_elapsed_time: 0s
             max_interval: 0s
-        storage: null
         type: udp_input
 service:
     extensions:
