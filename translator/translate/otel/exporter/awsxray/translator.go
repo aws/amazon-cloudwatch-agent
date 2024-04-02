@@ -15,6 +15,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -43,6 +45,16 @@ var (
 		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
 		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
 		"HostedIn.Environment", "HostedIn.K8s.Cluster",
+	}
+
+	indexedAttributesEC2 = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.EC2.Environment", "aws.remote.target",
+	}
+
+	indexedAttributesGeneric = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation", "aws.remote.target",
+		"HostedIn.Environment",
 	}
 )
 
@@ -76,7 +88,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				cfg.IndexedAttributes = indexedAttributesK8s
 			}
 		} else {
-			cfg.IndexedAttributes = indexedAttributesEKS
+			ctx := context.CurrentContext()
+			if ctx.Mode() == config.ModeEC2 {
+				cfg.IndexedAttributes = indexedAttributesEC2
+			} else {
+				cfg.IndexedAttributes = indexedAttributesGeneric
+			}
 		}
 	}
 
@@ -94,6 +111,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.AWSSessionSettings.Endpoint = endpointOverride
 	}
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+		cfg.AWSSessionSettings.LocalMode = true
+	}
 	if localMode, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.LocalModeKey)); ok {
 		cfg.AWSSessionSettings.LocalMode = localMode
 	}

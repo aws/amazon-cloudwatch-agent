@@ -16,6 +16,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -39,6 +41,9 @@ var appSignalsConfigK8s string
 
 //go:embed appsignals_config_generic.yaml
 var appSignalsConfigGeneric string
+
+//go:embed appsignals_config_ec2.yaml
+var appSignalsConfigEC2 string
 
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
@@ -73,18 +78,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsemfexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
 
-	if common.IsAppSignalsKubernetes() && t.name == common.AppSignals {
-		isEks := common.IsEKS()
-		if isEks.Value {
-			return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigEks)
-		}
-		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigK8s)
-	} else if t.name == common.AppSignals {
-		return common.GetYamlFileToYamlConfig(cfg, appSignalsConfigGeneric)
-	}
-
 	var defaultConfig string
-	if isEcs(c) {
+	if t.isAppSignals(c) {
+		defaultConfig = getAppSignalsConfig()
+	} else if isEcs(c) {
 		defaultConfig = defaultEcsConfig
 	} else if isKubernetes(c) {
 		defaultConfig = defaultKubernetesConfig
@@ -119,8 +116,15 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
+	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+		cfg.AWSSessionSettings.LocalMode = true
+	}
 
-	if isEcs(c) {
+	if t.isAppSignals(c) {
+		if err := setAppSignalsFields(c, cfg); err != nil {
+			return nil, err
+		}
+	} else if isEcs(c) {
 		if err := setEcsFields(c, cfg); err != nil {
 			return nil, err
 		}
@@ -136,6 +140,25 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
+func getAppSignalsConfig() string {
+	if common.IsAppSignalsKubernetes() {
+		isEks := common.IsEKS()
+		if isEks.Value {
+			return appSignalsConfigEks
+		}
+		return appSignalsConfigK8s
+	}
+	ctx := context.CurrentContext()
+	if ctx.Mode() == config.ModeEC2 {
+		return appSignalsConfigEC2
+	}
+	return appSignalsConfigGeneric
+}
+
+func (t *translator) isAppSignals(conf *confmap.Conf) bool {
+	return t.name == common.AppSignals && (conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces))
+}
+
 func isEcs(conf *confmap.Conf) bool {
 	return conf.IsSet(ecsBasePathKey)
 }
@@ -146,6 +169,10 @@ func isKubernetes(conf *confmap.Conf) bool {
 
 func isPrometheus(conf *confmap.Conf) bool {
 	return conf.IsSet(prometheusBasePathKey)
+}
+
+func setAppSignalsFields(_ *confmap.Conf, _ *awsemfexporter.Config) error {
+	return nil
 }
 
 func setEcsFields(conf *confmap.Conf, cfg *awsemfexporter.Config) error {

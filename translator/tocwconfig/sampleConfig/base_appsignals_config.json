@@ -3,6 +3,7 @@
     "region": "us-east-1"
   },
   "logs": {
+    "log_stream_name": "host_name_from_env",
     "metrics_collected": {
       "app_signals": {}
     },
