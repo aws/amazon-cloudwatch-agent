@@ -1,15 +1,12 @@
-connectors: {}
 exporters:
     awscloudwatch:
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 150
         middleware: agenthealth/metrics
-        mode: EC2
         namespace: CWAgent
         profile: AmazonCloudWatchAgent
         region: us-west-2
-        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
         shared_credential_file: fake-path
@@ -19,6 +16,9 @@ extensions:
         stats:
             operations:
                 - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     ec2tagger:
         ec2_instance_tag_keys:
@@ -67,19 +67,17 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_win_perf_counters/3446270237
-                - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
+                - telegraf_win_perf_counters/3446270237
+                - telegraf_win_perf_counters/3762679655
     telemetry:
         logs:
             development: false
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: info
             output_paths:
                 - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
@@ -91,8 +89,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

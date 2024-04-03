@@ -11,8 +11,9 @@ import (
 	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
-	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -23,7 +24,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	translatorUtil "github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -129,20 +129,25 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				fmt.Printf("Cannot access %v: %v \n", path, err)
 				return err
 			}
-			if info.Mode()&os.ModeSymlink != 0 {
-				log.Printf("Find symbolic link %s \n", path)
-				path, err := filepath.EvalSymlinks(path)
-				if err != nil {
-					log.Printf("Symbolic link %v will be ignored due to err: %v. \n", path, err)
+			if envconfig.IsWindowsHostProcessContainer() {
+				log.Printf("Skipping checking symbolic link for Windows host process containers %s. \n"+
+					"These symbolic links are skipped as valuating symlinks is common failures for Windows containers", path)
+			} else {
+				if info.Mode()&os.ModeSymlink != 0 {
+					log.Printf("Find symbolic link %s \n", path)
+					path, err := filepath.EvalSymlinks(path)
+					if err != nil {
+						log.Printf("Symbolic link %v will be ignored due to err: %v. \n", path, err)
+						return nil
+					}
+					info, err = os.Stat(path)
+					if err != nil {
+						log.Printf("Path %v will be ignored due to err: %v. \n", path, err)
+					}
+				}
+				if info.IsDir() {
 					return nil
 				}
-				info, err = os.Stat(path)
-				if err != nil {
-					log.Printf("Path %v will be ignored due to err: %v. \n", path, err)
-				}
-			}
-			if info.IsDir() {
-				return nil
 			}
 
 			if filepath.Ext(path) == context.TmpFileSuffix {
@@ -221,35 +226,11 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
-	conf := confmap.New()
-	if err = conf.Marshal(cfg); err != nil {
+	var result map[string]any
+	if result, err = mapstructure.Marshal(cfg); err != nil {
 		return nil, err
 	}
-	strMap := conf.ToStringMap()
-	RemoveTLSRedacted(strMap)
-	return strMap, nil
-}
-
-func RemoveTLSRedacted(stringMap map[string]interface{}) {
-	type Node struct {
-		isTLSParent bool
-		data        map[string]interface{}
-	}
-	root := Node{isTLSParent: false, data: stringMap}
-	queue := []Node{root}
-	// Using BFS search through string Map and find sub settings of TLS
-	// Then delete REDACTED settings under TLS
-	for len(queue) > 0 {
-		node := queue[0]
-		queue = queue[1:]
-		for key, child := range node.data {
-			if childMap, ok := child.(map[string]interface{}); ok {
-				queue = append(queue, Node{key == common.TlsKey, childMap})
-			} else if child == "[REDACTED]" && node.isTLSParent {
-				delete(node.data, key)
-			}
-		}
-	}
+	return result, nil
 }
 
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {

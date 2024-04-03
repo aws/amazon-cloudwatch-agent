@@ -1,0 +1,22 @@
+# This Dockerfile can be used for building Windows Server 2019, 2022 Container images.
+
+# Build Container image from binary in local
+ARG TAG=ltsc2022
+ARG TARGETARCH=amd64
+ARG CONTAINER_CLOUDWATCHAGENT_PATH=C:\\Program\ Files\\Amazon\\AmazonCloudWatchAgent\\
+ARG CONTAINER_CLOUDWATCHAGENT_DATA_PATH=C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\
+
+FROM mcr.microsoft.com/windows/servercore:$TAG as runtime
+
+ARG CONTAINER_CLOUDWATCHAGENT_PATH
+ARG CONTAINER_CLOUDWATCHAGENT_DATA_PATH
+ARG TARGETARCH
+
+RUN mkdir %CONTAINER_CLOUDWATCHAGENT_PATH%
+RUN mkdir %CONTAINER_CLOUDWATCHAGENT_DATA_PATH%
+WORKDIR $CONTAINER_CLOUDWATCHAGENT_PATH
+
+COPY "./tmp/windows_${TARGETARCH}" $CONTAINER_CLOUDWATCHAGENT_PATH
+
+ENV RUN_IN_CONTAINER="True"
+CMD ["start-amazon-cloudwatch-agent.exe"]

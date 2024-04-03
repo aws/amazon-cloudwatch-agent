@@ -1,12 +1,9 @@
-connectors: {}
 exporters:
     awsxray:
-        aws_log_groups: []
         certificate_file_path: ""
         endpoint: ""
         imds_retries: 2
         index_all_attributes: false
-        indexed_attributes: []
         local_mode: false
         max_retries: 2
         middleware: agenthealth/traces
@@ -29,10 +26,12 @@ extensions:
         stats:
             operations:
                 - PutTraceSegments
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     batch/xray:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -41,35 +40,33 @@ receivers:
         endpoint: 127.0.0.1:2000
         proxy_server:
             aws_endpoint: ""
+            certificate_file_path: ""
             endpoint: 127.0.0.1:2000
+            imds_retries: 2
             local_mode: false
+            profile: default
             proxy_address: ""
             region: us-west-2
             role_arn: ""
+            shared_credentials_file:
+                - /root/.aws/credentials
         transport: udp
     otlp/traces:
         protocols:
             grpc:
-                auth: null
                 endpoint: 127.0.0.1:4317
                 include_metadata: false
-                keepalive: null
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
-                tls: null
                 transport: tcp
                 write_buffer_size: 0
             http:
-                auth: null
-                cors: null
                 endpoint: 127.0.0.1:4318
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
-                response_headers: {}
-                tls: null
                 traces_url_path: /v1/traces
 service:
     extensions:
@@ -89,8 +86,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -102,8 +97,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

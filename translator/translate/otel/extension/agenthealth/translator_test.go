@@ -11,10 +11,19 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 )
 
 func TestTranslate(t *testing.T) {
+	context.CurrentContext().SetMode(config.ModeEC2)
+	translateagent.Global_Config.RegionType = config.RegionTypeNotFound
 	operations := []string{OperationPutLogEvents}
+	usageFlags := map[agent.Flag]any{
+		agent.FlagMode:       config.ShortModeEC2,
+		agent.FlagRegionType: config.RegionTypeNotFound,
+	}
 	testCases := map[string]struct {
 		input          map[string]interface{}
 		isEnvUsageData bool
@@ -27,6 +36,7 @@ func TestTranslate(t *testing.T) {
 				IsUsageDataEnabled: true,
 				Stats: agent.StatsConfig{
 					Operations: operations,
+					UsageFlags: usageFlags,
 				},
 			},
 		},
@@ -37,6 +47,7 @@ func TestTranslate(t *testing.T) {
 				IsUsageDataEnabled: false,
 				Stats: agent.StatsConfig{
 					Operations: operations,
+					UsageFlags: usageFlags,
 				},
 			},
 		},
@@ -47,6 +58,7 @@ func TestTranslate(t *testing.T) {
 				IsUsageDataEnabled: false,
 				Stats: agent.StatsConfig{
 					Operations: operations,
+					UsageFlags: usageFlags,
 				},
 			},
 		},
@@ -57,6 +69,7 @@ func TestTranslate(t *testing.T) {
 				IsUsageDataEnabled: true,
 				Stats: agent.StatsConfig{
 					Operations: operations,
+					UsageFlags: usageFlags,
 				},
 			},
 		},

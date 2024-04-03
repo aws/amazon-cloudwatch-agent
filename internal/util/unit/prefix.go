@@ -5,6 +5,11 @@ package unit
 
 import "fmt"
 
+type Prefix interface {
+	fmt.Stringer
+	Scale() float64
+}
+
 // MetricPrefix is a base 10 prefix used by the metric system.
 type MetricPrefix string
 
@@ -20,8 +25,10 @@ const (
 	MetricPrefixTera              = "T"
 )
 
-// Value returns the scale from the base unit or -1 if invalid.
-func (m MetricPrefix) Value() float64 {
+var MetricPrefixes = []MetricPrefix{MetricPrefixKilo, MetricPrefixMega, MetricPrefixGiga, MetricPrefixTera}
+
+// Scale returns the scale from the base unit or -1 if invalid.
+func (m MetricPrefix) Scale() float64 {
 	switch m {
 	case MetricPrefixKilo:
 		return kilo
@@ -33,6 +40,10 @@ func (m MetricPrefix) Value() float64 {
 		return tera
 	}
 	return -1
+}
+
+func (m MetricPrefix) String() string {
+	return string(m)
 }
 
 // BinaryPrefix is a base 2 prefix for data storage.
@@ -51,8 +62,10 @@ const (
 	BinaryPrefixTebi              = "Ti"
 )
 
-// Value returns the scale from the base unit or -1 if invalid.
-func (b BinaryPrefix) Value() float64 {
+var BinaryPrefixes = []BinaryPrefix{BinaryPrefixKibi, BinaryPrefixMebi, BinaryPrefixGibi, BinaryPrefixTebi}
+
+// Scale returns the scale from the base unit or -1 if invalid.
+func (b BinaryPrefix) Scale() float64 {
 	switch b {
 	case BinaryPrefixKibi:
 		return kibi
@@ -64,6 +77,10 @@ func (b BinaryPrefix) Value() float64 {
 		return tebi
 	}
 	return -1
+}
+
+func (b BinaryPrefix) String() string {
+	return string(b)
 }
 
 var binaryToMetricMapping = map[BinaryPrefix]MetricPrefix{
@@ -79,6 +96,6 @@ func ConvertToMetric(binaryPrefix BinaryPrefix) (MetricPrefix, float64, error) {
 	if !ok {
 		return "", -1, fmt.Errorf("no valid conversion for %v", binaryPrefix)
 	}
-	scale := binaryPrefix.Value() / metricPrefix.Value()
+	scale := binaryPrefix.Scale() / metricPrefix.Scale()
 	return metricPrefix, scale, nil
 }

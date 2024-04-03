@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
@@ -48,8 +48,11 @@ const (
 	jitterKubernetesAPISeconds = 10
 )
 
-var DefaultHostedInAttributeMap = map[string]string{
+var kubernetesHostedInAttributeMap = map[string]string{
 	semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
+	attr.ResourceDetectionHostId:      attr.EC2InstanceId,
+	attr.ResourceDetectionHostName:    attr.ResourceDetectionHostName,
+	attr.ResourceDetectionASG:         attr.EC2AutoScalingGroupName,
 }
 
 var (
@@ -666,10 +669,8 @@ type kubernetesHostedInAttributeResolver struct {
 
 func newKubernetesHostedInAttributeResolver(clusterName string) *kubernetesHostedInAttributeResolver {
 	return &kubernetesHostedInAttributeResolver{
-		clusterName: clusterName,
-		attributeMap: map[string]string{
-			semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
-		},
+		clusterName:  clusterName,
+		attributeMap: kubernetesHostedInAttributeMap,
 	}
 }
 func (h *kubernetesHostedInAttributeResolver) Process(attributes, resourceAttributes pcommon.Map) error {
@@ -679,7 +680,7 @@ func (h *kubernetesHostedInAttributeResolver) Process(attributes, resourceAttrib
 		}
 	}
 
-	if isEks := common.IsEKS(); isEks.Value {
+	if isEks := eksdetector.IsEKS(); isEks.Value {
 		attributes.PutStr(attr.HostedInClusterNameEKS, h.clusterName)
 	} else {
 		attributes.PutStr(attr.HostedInClusterNameK8s, h.clusterName)

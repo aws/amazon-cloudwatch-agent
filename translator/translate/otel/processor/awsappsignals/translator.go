@@ -69,28 +69,20 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if !hostedInConfigured {
 			hostedIn = util.GetClusterNameFromEc2Tagger()
 		}
+	}
 
-		isEks := common.IsEKS()
-		if isEks.Value {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewEKSResolver(hostedIn),
-			}
-		} else {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewK8sResolver(hostedIn),
-			}
+	kubernetesMode := context.CurrentContext().KubernetesMode()
+	if kubernetesMode == config.ModeEKS {
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewEKSResolver(hostedIn),
+		}
+	} else if kubernetesMode == config.ModeK8sEC2 || kubernetesMode == config.ModeK8sOnPrem {
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewK8sResolver(hostedIn),
 		}
 	} else {
-		// Non-kubernetes environment detected.
-		ctx := context.CurrentContext()
-		if ctx.Mode() == config.ModeEC2 {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewEC2Resolver(hostedIn),
-			}
-		} else {
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewGenericResolver(hostedIn),
-			}
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewGenericResolver(hostedIn),
 		}
 	}
 
@@ -131,6 +123,17 @@ func (t *translator) translateMetricLimiterConfig(conf *confmap.Conf, configKey 
 			return nil, errors.New("type conversion error: log_dropped_metrics is not a boolean")
 		} else {
 			limiterConfig.LogDroppedMetrics = val
+		}
+	}
+	if rawVal, exists := configJson["garbage_collection_interval"]; exists {
+		if val, ok := rawVal.(string); !ok {
+			return nil, errors.New("type conversion error: garbage_collection_interval is not a string")
+		} else {
+			if interval, err := time.ParseDuration(val); err != nil {
+				return nil, errors.New("type conversion error: garbage_collection_interval is not a time string")
+			} else {
+				limiterConfig.GarbageCollectionInterval = interval
+			}
 		}
 	}
 	if rawVal, exists := configJson["rotation_interval"]; exists {

@@ -1,14 +1,11 @@
-connectors: {}
 exporters:
     awscloudwatch:
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
         max_values_per_datum: 150
         middleware: agenthealth/metrics
-        mode: EC2
         namespace: CWAgent
         region: us-west-2
-        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
 extensions:
@@ -17,14 +14,17 @@ extensions:
         stats:
             operations:
                 - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:
@@ -56,8 +56,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: info
             output_paths:
                 - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
@@ -69,8 +67,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

@@ -12,7 +12,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/rollup_dimensions"
@@ -59,8 +58,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	_ = credentials.Unmarshal(cfg)
 	cfg.RoleARN = getRoleARN(conf)
 	cfg.Region = agent.Global_Config.Region
-	cfg.RegionType = agent.Global_Config.RegionType
-	cfg.Mode = context.CurrentContext().ShortMode()
 	if namespace, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, namespaceKey)); ok {
 		cfg.Namespace = namespace
 	}

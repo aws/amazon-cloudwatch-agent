@@ -28,7 +28,7 @@ var nodeMetricRules = []structuredlogscommon.MetricRule{
 			{Unit: Percent, Name: MetricName(TypeNode, MemReservedCapacity)},
 			{Unit: Count, Name: MetricName(TypeNode, RunningPodCount)},
 			{Unit: Count, Name: MetricName(TypeNode, RunningContainerCount)}},
-		DimensionSets: [][]string{{NodeNameKey, InstanceId, ClusterNameKey}},
+		DimensionSets: [][]string{{NodeNameKey, InstanceIdKey, ClusterNameKey}},
 		Namespace:     cloudwatchNamespace,
 	},
 	{
@@ -80,7 +80,7 @@ var nodeFSMetricRules = []structuredlogscommon.MetricRule{
 	{
 		Metrics: []structuredlogscommon.MetricAttr{
 			{Unit: Percent, Name: MetricName(TypeNodeFS, FSUtilization)}},
-		DimensionSets: [][]string{{NodeNameKey, InstanceId, ClusterNameKey}, {ClusterNameKey}},
+		DimensionSets: [][]string{{NodeNameKey, InstanceIdKey, ClusterNameKey}, {ClusterNameKey}},
 		Namespace:     cloudwatchNamespace,
 	},
 }

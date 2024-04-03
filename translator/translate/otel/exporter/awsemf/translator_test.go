@@ -399,6 +399,116 @@ func TestTranslator(t *testing.T) {
 						Dimensions:          [][]string{{"ClusterName", "priority_level"}, {"ClusterName"}},
 						MetricNameSelectors: []string{"apiserver_flowcontrol_request_concurrency_limit"},
 					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"container_gpu_utilization", "container_gpu_memory_utilization", "container_gpu_memory_total", "container_gpu_memory_used", "container_gpu_power_draw", "container_gpu_temperature",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"pod_gpu_utilization", "pod_gpu_memory_utilization", "pod_gpu_memory_total", "pod_gpu_memory_used", "pod_gpu_power_draw", "pod_gpu_temperature",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "GpuDevice"}},
+						MetricNameSelectors: []string{
+							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName", "NodeName", "InstanceId"}, {"ClusterName"}},
+						MetricNameSelectors: []string{
+							"node_gpu_total", "node_gpu_request", "node_gpu_limit",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}},
+						MetricNameSelectors: []string{
+							"cluster_gpu_request", "cluster_gpu_total",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NeuronDevice", "NeuronCore"}},
+						MetricNameSelectors: []string{
+							"container_neuroncore_utilization",
+							"container_neuroncore_memory_usage_total",
+							"container_neuroncore_memory_usage_constants",
+							"container_neuroncore_memory_usage_model_code",
+							"container_neuroncore_memory_usage_model_shared_scratchpad",
+							"container_neuroncore_memory_usage_runtime_memory",
+							"container_neuroncore_memory_usage_tensors",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NeuronDevice"}},
+						MetricNameSelectors: []string{
+							"container_neurondevice_hw_ecc_events_total",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NeuronDevice", "NeuronCore"}},
+						MetricNameSelectors: []string{
+							"pod_neuroncore_utilization",
+							"pod_neuroncore_memory_usage_total",
+							"pod_neuroncore_memory_usage_constants",
+							"pod_neuroncore_memory_usage_model_code",
+							"pod_neuroncore_memory_usage_model_shared_scratchpad",
+							"pod_neuroncore_memory_usage_runtime_memory",
+							"pod_neuroncore_memory_usage_tensors",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NeuronDevice"}},
+						MetricNameSelectors: []string{
+							"pod_neurondevice_hw_ecc_events_total",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceType", "InstanceId", "NodeName", "NeuronDevice", "NeuronCore"}},
+						MetricNameSelectors: []string{
+							"node_neuroncore_utilization",
+							"node_neuroncore_memory_usage_total",
+							"node_neuroncore_memory_usage_constants",
+							"node_neuroncore_memory_usage_model_code",
+							"node_neuroncore_memory_usage_model_shared_scratchpad",
+							"node_neuroncore_memory_usage_runtime_memory",
+							"node_neuroncore_memory_usage_tensors",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}},
+						MetricNameSelectors: []string{
+							"node_neuron_execution_errors_total",
+							"node_neurondevice_runtime_memory_used_bytes",
+							"node_neuron_execution_latency",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
+						MetricNameSelectors: []string{
+							"node_neurondevice_hw_ecc_events_total",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "EfaDevice"}},
+						MetricNameSelectors: []string{
+							"container_efa_rx_bytes", "container_efa_tx_bytes", "container_efa_rx_dropped", "container_efa_rdma_read_bytes", "container_efa_rdma_write_bytes", "container_efa_rdma_write_recv_bytes",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "EfaDevice"}},
+						MetricNameSelectors: []string{
+							"pod_efa_rx_bytes", "pod_efa_tx_bytes", "pod_efa_rx_dropped", "pod_efa_rdma_read_bytes", "pod_efa_rdma_write_bytes", "pod_efa_rdma_write_recv_bytes",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "EfaDevice"}},
+						MetricNameSelectors: []string{
+							"node_efa_rx_bytes", "node_efa_tx_bytes", "node_efa_rx_dropped", "node_efa_rdma_read_bytes", "node_efa_rdma_write_bytes", "node_efa_rdma_write_recv_bytes",
+						},
+					},
 				},
 				"metric_descriptors": []awsemfexporter.MetricDescriptor{
 					{
@@ -717,10 +827,8 @@ func TestTranslateAppSignals(t *testing.T) {
 		input          map[string]any
 		want           *confmap.Conf
 		wantErr        error
-		isKubernetes   bool
-		isEC2          bool
-		detector       func() (common.Detector, error)
-		isEKSDataStore func() common.IsEKSCache
+		kubernetesMode string
+		mode           string
 	}{
 		"WithAppSignalsEnabledEKS": {
 			input: map[string]any{
@@ -730,14 +838,13 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
-				"local_mode":            "true",
+				"local_mode":            "false",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
 			}),
-			isKubernetes:   true,
-			detector:       common.TestEKSDetector,
-			isEKSDataStore: common.TestIsEKSCacheEKS,
+			kubernetesMode: config.ModeEKS,
+			mode:           config.ModeEC2,
 		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]any{
@@ -752,9 +859,8 @@ func TestTranslateAppSignals(t *testing.T) {
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
 			}),
-			isKubernetes:   true,
-			detector:       common.TestK8sDetector,
-			isEKSDataStore: common.TestIsEKSCacheK8s,
+			kubernetesMode: config.ModeK8sOnPrem,
+			mode:           config.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledGeneric": {
 			input: map[string]any{
@@ -769,8 +875,8 @@ func TestTranslateAppSignals(t *testing.T) {
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
 			}),
-			isKubernetes: false,
-			isEC2:        false,
+			kubernetesMode: "",
+			mode:           config.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledEC2": {
 			input: map[string]any{
@@ -779,30 +885,21 @@ func TestTranslateAppSignals(t *testing.T) {
 						"app_signals": map[string]any{},
 					},
 				}},
-			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_ec2.yaml"), map[string]any{
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
 				"local_mode":            "false",
 				"region":                "us-east-1",
 				"role_arn":              "global_arn",
 				"certificate_file_path": "/ca/bundle",
 			}),
-			isEC2: true,
+			kubernetesMode: "",
+			mode:           config.ModeEC2,
 		},
 	}
 	factory := awsemfexporter.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			if testCase.isKubernetes {
-				t.Setenv(common.KubernetesEnvVar, "TEST")
-			}
-			if testCase.isEC2 {
-				ctx := context.CurrentContext()
-				ctx.SetMode(config.ModeEC2)
-			} else {
-				ctx := context.CurrentContext()
-				ctx.SetMode(config.ModeOnPrem)
-			}
-			common.NewDetector = testCase.detector
-			common.IsEKS = testCase.isEKSDataStore
+			context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			context.CurrentContext().SetMode(testCase.mode)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)

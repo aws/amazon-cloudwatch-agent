@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 // MockDeleter deletes a key immediately, useful for testing.
@@ -817,7 +817,8 @@ func TestEksResolver(t *testing.T) {
 }
 
 func TestHostedInEksResolver(t *testing.T) {
-	common.NewDetector = common.TestEKSDetector
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
 	// helper function to get string values from the attributes
 	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
 		if value, ok := attributes.Get(key); ok {
@@ -835,11 +836,85 @@ func TestHostedInEksResolver(t *testing.T) {
 	resourceAttributes := pcommon.NewMap()
 	resourceAttributes.PutStr("cloud.provider", "aws")
 	resourceAttributes.PutStr("k8s.namespace.name", "test-namespace-3")
+	resourceAttributes.PutStr("host.id", "instance-id")
+	resourceAttributes.PutStr("host.name", "hostname")
+	resourceAttributes.PutStr("ec2.tag.aws:autoscaling:groupName", "asg")
 	err := resolver.Process(attributes, resourceAttributes)
 	assert.NoError(t, err)
 	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, attr.HostedInK8SNamespace, t))
 	assert.Equal(t, "test-cluster", getStrAttr(attributes, attr.HostedInClusterNameEKS, t))
+	assert.Equal(t, "instance-id", getStrAttr(attributes, attr.EC2InstanceId, t))
+	assert.Equal(t, "hostname", getStrAttr(attributes, attr.ResourceDetectionHostName, t))
+	assert.Equal(t, "asg", getStrAttr(attributes, attr.EC2AutoScalingGroupName, t))
 	assert.Equal(t, "/aws/containerinsights/test-cluster/application", getStrAttr(resourceAttributes, semconv.AttributeAWSLogGroupNames, t))
+}
+
+func TestHostedInNativeK8sEC2Resolver(t *testing.T) {
+	eksdetector.NewDetector = eksdetector.TestK8sDetector
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheK8s
+	// helper function to get string values from the attributes
+	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
+		if value, ok := attributes.Get(key); ok {
+			return value.AsString()
+		} else {
+			t.Errorf("Failed to get value for key: %s", key)
+			return ""
+		}
+	}
+
+	resolver := newKubernetesHostedInAttributeResolver("test-cluster")
+
+	// Test case 1 and 2: resourceAttributes contains "k8s.namespace.name" and EKS cluster name
+	attributes := pcommon.NewMap()
+	resourceAttributes := pcommon.NewMap()
+	resourceAttributes.PutStr("cloud.provider", "aws")
+	resourceAttributes.PutStr("k8s.namespace.name", "test-namespace-3")
+	resourceAttributes.PutStr("host.id", "instance-id")
+	resourceAttributes.PutStr("host.name", "hostname")
+	resourceAttributes.PutStr("ec2.tag.aws:autoscaling:groupName", "asg")
+	err := resolver.Process(attributes, resourceAttributes)
+	assert.NoError(t, err)
+	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, attr.HostedInK8SNamespace, t))
+	assert.Equal(t, "test-cluster", getStrAttr(attributes, attr.HostedInClusterNameK8s, t))
+	assert.Equal(t, "instance-id", getStrAttr(attributes, attr.EC2InstanceId, t))
+	assert.Equal(t, "hostname", getStrAttr(attributes, attr.ResourceDetectionHostName, t))
+	assert.Equal(t, "asg", getStrAttr(attributes, attr.EC2AutoScalingGroupName, t))
+	assert.Equal(t, "/aws/containerinsights/test-cluster/application", getStrAttr(resourceAttributes, semconv.AttributeAWSLogGroupNames, t))
+}
+
+func TestHostedInNativeK8sOnPremResolver(t *testing.T) {
+	eksdetector.NewDetector = eksdetector.TestK8sDetector
+	// helper function to get string values from the attributes
+	getStrAttr := func(attributes pcommon.Map, key string, t *testing.T) string {
+		if value, ok := attributes.Get(key); ok {
+			return value.AsString()
+		} else {
+			t.Errorf("Failed to get value for key: %s", key)
+			return ""
+		}
+	}
+
+	resolver := newKubernetesHostedInAttributeResolver("test-cluster")
+
+	// Test case 1 and 2: resourceAttributes contains "k8s.namespace.name" and EKS cluster name
+	attributes := pcommon.NewMap()
+	resourceAttributes := pcommon.NewMap()
+	resourceAttributes.PutStr("cloud.provider", "aws")
+	resourceAttributes.PutStr("k8s.namespace.name", "test-namespace-3")
+	resourceAttributes.PutStr("host.name", "hostname")
+	err := resolver.Process(attributes, resourceAttributes)
+	assert.NoError(t, err)
+	assert.Equal(t, "test-namespace-3", getStrAttr(attributes, attr.HostedInK8SNamespace, t))
+	assert.Equal(t, "test-cluster", getStrAttr(attributes, attr.HostedInClusterNameK8s, t))
+	assert.Equal(t, "hostname", getStrAttr(attributes, attr.ResourceDetectionHostName, t))
+	assert.Equal(t, "/aws/containerinsights/test-cluster/application", getStrAttr(resourceAttributes, semconv.AttributeAWSLogGroupNames, t))
+
+	// EC2 related fields that should not exist for on-prem
+	_, exists := attributes.Get(attr.EC2AutoScalingGroupName)
+	assert.False(t, exists)
+
+	_, exists = attributes.Get(attr.EC2InstanceId)
+	assert.False(t, exists)
 }
 
 func TestExtractIPPort(t *testing.T) {

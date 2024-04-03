@@ -41,3 +41,4 @@ jobs:
     with:
       ContainerRepositoryNameAndTag: "nightly-build:latest"
       BucketKey: "nightly-build/latest"
+      PackageBucketKey: "nightly-build/latest"

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMetricPrefix(t *testing.T) {
@@ -18,12 +17,16 @@ func TestMetricPrefix(t *testing.T) {
 	}{
 		{"Ki", -1},
 		{"k", 1e3},
+		{"M", 1e6},
 		{"G", 1e9},
+		{"T", 1e12},
 	}
 	for _, testCase := range testCases {
 		got := MetricPrefix(testCase.prefix)
-		assert.Equal(t, testCase.value, got.Value())
+		assert.Equal(t, testCase.value, got.Scale())
+		assert.Equal(t, testCase.prefix, got.String())
 	}
+	assert.Len(t, MetricPrefixes, 4)
 }
 
 func TestBinaryPrefix(t *testing.T) {
@@ -32,13 +35,17 @@ func TestBinaryPrefix(t *testing.T) {
 		value  float64
 	}{
 		{"k", -1},
-		{"Ki", 1024},
-		{"Gi", 1073741824},
+		{"Ki", math.Pow(2, 10)},
+		{"Mi", math.Pow(2, 20)},
+		{"Gi", math.Pow(2, 30)},
+		{"Ti", math.Pow(2, 40)},
 	}
 	for _, testCase := range testCases {
 		got := BinaryPrefix(testCase.prefix)
-		assert.Equal(t, testCase.value, got.Value())
+		assert.Equal(t, testCase.value, got.Scale())
+		assert.Equal(t, testCase.prefix, got.String())
 	}
+	assert.Len(t, BinaryPrefixes, 4)
 }
 
 func TestConvertBinaryToMetric(t *testing.T) {
@@ -50,15 +57,14 @@ func TestConvertBinaryToMetric(t *testing.T) {
 		prefix       BinaryPrefix
 		metricPrefix MetricPrefix
 		scale        float64
-		epsilon      float64
 	}{
-		{BinaryPrefixKibi, MetricPrefixKilo, 1.024, 0},
-		{BinaryPrefixGibi, MetricPrefixGiga, 1.073, 0.001},
+		{BinaryPrefixKibi, MetricPrefixKilo, 1.024},
+		{BinaryPrefixGibi, MetricPrefixGiga, 1.073741824},
 	}
 	for _, testCase := range testCases {
 		got, scale, err = ConvertToMetric(testCase.prefix)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, testCase.metricPrefix, got)
-		assert.GreaterOrEqual(t, testCase.epsilon, math.Abs(testCase.scale-scale))
+		assert.Equal(t, testCase.scale, scale)
 	}
 }
