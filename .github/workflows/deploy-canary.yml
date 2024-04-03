@@ -11,16 +11,7 @@ env:
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
   CWA_GITHUB_TEST_REPO_BRANCH: "add_canaries"
 
-on:
-  workflow_dispatch:
-  pull_request:
-    branches:
-      - main*
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - ready_for_review
+on: [push]
 
 concurrency:
   group: ${{ github.workflow }}
