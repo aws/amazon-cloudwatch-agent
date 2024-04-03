@@ -26,16 +26,15 @@ processors:
                 - diskio_iops_in_progress
         include:
             match_type: ""
-            metrics: []
         initial_value: 0
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         refresh_interval_seconds: 0s
 receivers:
     telegraf_cpu:
@@ -68,10 +67,10 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_mem
                 - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -86,7 +85,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -98,7 +96,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        traces:
-            processors: []
-            propagators: []
+        traces: {}
