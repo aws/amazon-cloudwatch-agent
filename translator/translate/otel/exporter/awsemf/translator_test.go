@@ -430,7 +430,6 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 					{
-<<<<<<< HEAD
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NeuronDevice", "NeuronCore"}},
 						MetricNameSelectors: []string{
 							"container_neuroncore_utilization",
@@ -512,7 +511,9 @@ func TestTranslator(t *testing.T) {
 							"node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected",
 							"node_neurondevice_hw_ecc_events_total_sram_ecc_corrected",
 							"node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected",
-=======
+						},
+					},
+					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "EfaDevice"}},
 						MetricNameSelectors: []string{
 							"container_efa_rx_bytes", "container_efa_tx_bytes", "container_efa_rx_dropped", "container_efa_rdma_read_bytes", "container_efa_rdma_write_bytes", "container_efa_rdma_write_recv_bytes",
@@ -528,7 +529,6 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "EfaDevice"}},
 						MetricNameSelectors: []string{
 							"node_efa_rx_bytes", "node_efa_tx_bytes", "node_efa_rx_dropped", "node_efa_rdma_read_bytes", "node_efa_rdma_write_bytes", "node_efa_rdma_write_recv_bytes",
->>>>>>> b9a716f6 (add instancetype)
 						},
 					},
 				},
