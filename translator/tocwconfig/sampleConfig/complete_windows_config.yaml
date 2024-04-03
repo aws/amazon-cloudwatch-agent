@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awscloudwatch:
         endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
@@ -170,7 +169,6 @@ receivers:
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
-                response_headers: {}
                 traces_url_path: /v1/traces
     telegraf_nvidia_smi:
         collection_interval: 1m0s
@@ -216,7 +214,6 @@ receivers:
         initial_delay: "1s"
         timeout: 0s
     udplog/emf_logs:
-        attributes: {}
         encoding: utf-8
         id: udp_input
         listen_address: 127.0.0.1:25888
@@ -226,7 +223,6 @@ receivers:
             omit_pattern: false
         operators: []
         output: []
-        resource: {}
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -277,7 +273,6 @@ service:
             disable_stacktrace: false
             encoding: console
             error_output_paths: []
-            initial_fields: {}
             level: debug
             output_paths:
                 - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
@@ -290,7 +285,6 @@ service:
             address: ""
             level: None
             readers: []
-        resource: {}
         traces:
             processors: []
             propagators: []

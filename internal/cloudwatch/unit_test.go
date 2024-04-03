@@ -4,21 +4,21 @@
 package cloudwatch
 
 import (
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleUnit(t *testing.T) {
-	// Each element in the slice has the input and expectedOutput.
-	cases := [][2]string{
+	// Each element in the slice has the input and expected output.
+	testCases := [][2]string{
 		{"", "None"},
 		{"1", "None"},
 		{"B", "Bytes"},
+		{"By", "Bytes"},
+		{"by", "Bytes"},
 		{"B/s", "Bytes/Second"},
-		{"By/s", "Bytes/Second"},
+		{"BY/S", "Bytes/Second"},
 		{"Bi/s", "Bits/Second"},
 		{"Bi", "Bits"},
 		{"None", "None"},
@@ -26,15 +26,15 @@ func TestSimpleUnit(t *testing.T) {
 		{"%", "Percent"},
 	}
 
-	for _, c := range cases {
-		a, s, err := ToStandardUnit(c[0])
+	for _, testCase := range testCases {
+		unit, scale, err := ToStandardUnit(testCase[0])
 		assert.NoError(t, err)
-		assert.Equal(t, c[1], a)
-		assert.EqualValues(t, 1, s)
+		assert.Equal(t, testCase[1], unit)
+		assert.EqualValues(t, 1, scale)
 	}
 }
 
-// If the unit cannot be converted then use None.
+// If the unit cannot be converted then use None and return an error.
 func TestUnsupportedUnit(t *testing.T) {
 	testCases := []string{"banana", "ks"}
 	for _, testCase := range testCases {
@@ -47,20 +47,24 @@ func TestUnsupportedUnit(t *testing.T) {
 
 func TestScaledUnits(t *testing.T) {
 	testCases := []struct {
-		input   string
-		unit    string
-		scale   float64
-		epsilon float64
+		input string
+		unit  string
+		scale float64
 	}{
-		{"MiBy", "Megabytes", 1.049, 0.001},
-		{"kB", "Kilobytes", 1, 0},
-		{"min", "Seconds", 60, 0},
-		{"ns", "Microseconds", 0.001, 0},
+		{"MiBy", "Megabytes", 1.048576},
+		{"mby", "Megabytes", 1},
+		{"kB", "Kilobytes", 1},
+		{"kib/s", "Kilobytes/Second", 1.024},
+		{"ms", "Milliseconds", 1},
+		{"ns", "Microseconds", 0.001},
+		{"min", "Seconds", 60},
+		{"h", "Seconds", 60 * 60},
+		{"d", "Seconds", 24 * 60 * 60},
 	}
 	for _, testCase := range testCases {
 		unit, scale, err := ToStandardUnit(testCase.input)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, testCase.unit, unit)
-		assert.GreaterOrEqual(t, testCase.epsilon, math.Abs(testCase.scale-scale))
+		assert.Equal(t, testCase.scale, scale)
 	}
 }
