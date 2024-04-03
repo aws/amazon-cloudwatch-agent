@@ -9,6 +9,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/config/configopaque"
+	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
 )
 
@@ -31,10 +32,13 @@ func encoderConfig(rawVal any) *EncoderConfig {
 	return &EncoderConfig{
 		EncodeHook: mapstructure.ComposeDecodeHookFunc(
 			NilHookFunc[configopaque.String](),
+			NilZeroValueHookFunc[configtls.TLSClientSetting](),
 			TextMarshalerHookFunc(),
 			MarshalerHookFunc(rawVal),
+			UnsupportedKindHookFunc(),
 		),
-		OmitAllNil: true,
+		NilEmptyMap:   true,
+		OmitNilFields: true,
 	}
 }
 
