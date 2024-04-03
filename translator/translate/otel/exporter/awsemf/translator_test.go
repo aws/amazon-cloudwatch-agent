@@ -442,6 +442,12 @@ func TestTranslator(t *testing.T) {
 						},
 					},
 					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NeuronDevice"}},
+						MetricNameSelectors: []string{
+							"container_neurondevice_hw_ecc_events_total",
+						},
+					},
+					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NeuronDevice", "NeuronCore"}},
 						MetricNameSelectors: []string{
 							"pod_neuroncore_utilization",
@@ -451,6 +457,12 @@ func TestTranslator(t *testing.T) {
 							"pod_neuroncore_memory_usage_model_shared_scratchpad",
 							"pod_neuroncore_memory_usage_runtime_memory",
 							"pod_neuroncore_memory_usage_tensors",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NeuronDevice"}},
+						MetricNameSelectors: []string{
+							"pod_neurondevice_hw_ecc_events_total",
 						},
 					},
 					{
@@ -468,8 +480,15 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}},
 						MetricNameSelectors: []string{
+							"node_neuron_execution_errors_total",
 							"node_neurondevice_runtime_memory_used_bytes",
 							"node_neuron_execution_latency",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
+						MetricNameSelectors: []string{
+							"node_neurondevice_hw_ecc_events_total",
 						},
 					},
 				},
