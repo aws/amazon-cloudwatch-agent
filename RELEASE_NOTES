@@ -1,4 +1,11 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300036.0 (2024-04-03)
+========================================================================
+Features:
+* [ContainerInsights] Add AWS Trainium & Inferentia observability with Kubernetes
+* [ContainerInsights] Add EFA observability with Kubernetes
+
+========================================================================
 Amazon CloudWatch Agent 1.300035.0 (2024-03-18)
 ========================================================================
 Features:
