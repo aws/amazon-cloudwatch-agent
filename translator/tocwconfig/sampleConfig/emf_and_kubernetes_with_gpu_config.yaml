@@ -533,7 +533,6 @@ exporters:
                   - FullPodName
                   - Namespace
                   - PodName
-              label_matchers: []
               metric_name_selectors:
                 - container_efa_rx_bytes
                 - container_efa_tx_bytes
@@ -560,7 +559,6 @@ exporters:
                   - FullPodName
                   - Namespace
                   - PodName
-              label_matchers: []
               metric_name_selectors:
                 - pod_efa_rx_bytes
                 - pod_efa_tx_bytes
@@ -578,7 +576,6 @@ exporters:
                   - InstanceId
                   - InstanceType
                   - NodeName
-              label_matchers: []
               metric_name_selectors:
                 - node_efa_rx_bytes
                 - node_efa_tx_bytes
@@ -1015,9 +1012,16 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: instance_info
+              include: neuroncore_memory_usage_model_shared_scratchpad
               match_type: ""
-              new_name: instance_info
+              new_name: neuroncore_memory_usage_model_shared_scratchpad
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_tensors
+              match_type: ""
+              new_name: neuroncore_memory_usage_tensors
               operations: []
               submatch_case: ""
             - action: update
@@ -1036,58 +1040,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: execution_errors_total
-              match_type: ""
-              new_name: neuron_execution_errors
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: execution_status_total
               match_type: ""
               new_name: neuron_execution_status
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_constants
-              match_type: ""
-              new_name: neuroncore_memory_usage_constants
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_runtime_memory
-              match_type: ""
-              new_name: neuroncore_memory_usage_runtime_memory
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_tensors
-              match_type: ""
-              new_name: neuroncore_memory_usage_tensors
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_utilization_ratio
-              match_type: ""
-              new_name: neuroncore_utilization
-              operations:
-                - action: experimental_scale_value
-                  aggregation_type: ""
-                  experimental_scale: 100
-                  label: ""
-                  label_value: ""
-                  new_label: ""
-                  new_value: ""
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuron_hardware
-              match_type: ""
-              new_name: neuron_hardware
               operations: []
               submatch_case: ""
             - action: update
@@ -1106,9 +1061,51 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuroncore_memory_usage_model_shared_scratchpad
+              include: neuroncore_memory_usage_runtime_memory
               match_type: ""
-              new_name: neuroncore_memory_usage_model_shared_scratchpad
+              new_name: neuroncore_memory_usage_runtime_memory
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_utilization_ratio
+              match_type: ""
+              new_name: neuroncore_utilization
+              operations:
+                - action: experimental_scale_value
+                  aggregation_type: ""
+                  experimental_scale: 100
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: instance_info
+              match_type: ""
+              new_name: instance_info
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuron_hardware
+              match_type: ""
+              new_name: neuron_hardware
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: execution_errors_total
+              match_type: ""
+              new_name: neuron_execution_errors
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_constants
+              match_type: ""
+              new_name: neuroncore_memory_usage_constants
               operations: []
               submatch_case: ""
 receivers:
