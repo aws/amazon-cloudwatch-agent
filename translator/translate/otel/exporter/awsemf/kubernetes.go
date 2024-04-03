@@ -544,10 +544,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 			{
 				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NeuronDevice"}},
 				MetricNameSelectors: []string{
-					"container_neurondevice_hw_ecc_events_total_mem_ecc_corrected",
-					"container_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected",
-					"container_neurondevice_hw_ecc_events_total_sram_ecc_corrected",
-					"container_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected",
+					"container_neurondevice_hw_ecc_events_total",
 				},
 			},
 			{
@@ -565,10 +562,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 			{
 				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NeuronDevice"}},
 				MetricNameSelectors: []string{
-					"pod_neurondevice_hw_ecc_events_total_mem_ecc_corrected",
-					"pod_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected",
-					"pod_neurondevice_hw_ecc_events_total_sram_ecc_corrected",
-					"pod_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected",
+					"pod_neurondevice_hw_ecc_events_total",
 				},
 			},
 			{
@@ -587,19 +581,6 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}},
 				MetricNameSelectors: []string{
 					"node_neuron_execution_errors_total",
-					"node_neuron_execution_errors_generic",
-					"node_neuron_execution_errors_numerical",
-					"node_neuron_execution_errors_transient",
-					"node_neuron_execution_errors_model",
-					"node_neuron_execution_errors_runtime",
-					"node_neuron_execution_errors_hardware",
-					"node_neuron_execution_status_total",
-					"node_neuron_execution_status_completed",
-					"node_neuron_execution_status_timed_out",
-					"node_neuron_execution_status_completed_with_err",
-					"node_neuron_execution_status_completed_with_num_err",
-					"node_neuron_execution_status_incorrect_input",
-					"node_neuron_execution_status_failed_to_queue",
 					"node_neurondevice_runtime_memory_used_bytes",
 					"node_neuron_execution_latency",
 				},
@@ -607,10 +588,7 @@ func getAwsNeuronMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.Metric
 			{
 				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
 				MetricNameSelectors: []string{
-					"node_neurondevice_hw_ecc_events_total_mem_ecc_corrected",
-					"node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected",
-					"node_neurondevice_hw_ecc_events_total_sram_ecc_corrected",
-					"node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected",
+					"node_neurondevice_hw_ecc_events_total",
 				},
 			},
 		}...)
