@@ -656,7 +656,7 @@ processors:
         timeout: 5s
     gpuattributes/containerinsights: {}
     metricstransform/containerinsights:
-          transforms:
+        transforms:
             - action: insert
               aggregation_type: ""
               experimental_match_labels:
