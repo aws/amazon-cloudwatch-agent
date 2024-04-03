@@ -30,7 +30,6 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
-        shared_credentials_file: []
     awsemf/containerinsights:
         certificate_file_path: /etc/test/ca_bundle.pem
         detailed_metrics: false
@@ -56,7 +55,6 @@ exporters:
                   - Service
                 - - ClusterName
                   - Namespace
-              label_matchers: []
               metric_name_selectors:
                 - pod_cpu_utilization
                 - pod_memory_utilization
@@ -68,7 +66,6 @@ exporters:
                 - - ClusterName
                   - Namespace
                   - PodName
-              label_matchers: []
               metric_name_selectors:
                 - pod_number_of_container_restarts
             - dimensions:
@@ -76,7 +73,6 @@ exporters:
                   - Namespace
                   - PodName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - pod_cpu_reserved_capacity
                 - pod_memory_reserved_capacity
@@ -85,7 +81,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_cpu_utilization
                 - node_memory_utilization
@@ -96,7 +91,6 @@ exporters:
                 - node_number_of_running_containers
             - dimensions:
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_cpu_usage_total
                 - node_cpu_limit
@@ -107,7 +101,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_filesystem_utilization
             - dimensions:
@@ -115,23 +108,19 @@ exporters:
                   - Namespace
                   - Service
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - service_number_of_running_pods
             - dimensions:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - namespace_number_of_running_pods
             - dimensions:
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
-        metric_descriptors: []
         middleware: agenthealth/logs
         namespace: ContainerInsights
         no_verify_ssl: false
@@ -149,7 +138,6 @@ exporters:
             enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
-        shared_credentials_file: []
         version: "0"
 extensions:
     agenthealth/logs:
@@ -163,13 +151,11 @@ extensions:
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
     batch/emf_logs:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
@@ -199,13 +185,11 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-        shared_credentials_file: []
     tcplog/emf_logs:
         encoding: utf-8
         id: tcp_input
         listen_address: 0.0.0.0:25888
         operators: []
-        output: []
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -221,7 +205,6 @@ receivers:
             line_start_pattern: ""
             omit_pattern: false
         operators: []
-        output: []
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -253,9 +236,7 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
             level: info
-            output_paths: []
             sampling:
                 enabled: true
                 initial: 2
@@ -264,7 +245,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

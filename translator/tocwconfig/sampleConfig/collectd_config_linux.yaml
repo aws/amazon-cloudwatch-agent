@@ -38,7 +38,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -50,7 +49,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

@@ -1,11 +1,9 @@
 exporters:
     awsxray:
-        aws_log_groups: []
         certificate_file_path: ""
         endpoint: ""
         imds_retries: 2
         index_all_attributes: false
-        indexed_attributes: []
         local_mode: false
         max_retries: 2
         middleware: agenthealth/traces
@@ -34,7 +32,6 @@ extensions:
 processors:
     batch/xray:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -89,7 +86,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -101,7 +97,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

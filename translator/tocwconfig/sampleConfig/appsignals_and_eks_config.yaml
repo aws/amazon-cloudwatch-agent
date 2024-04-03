@@ -110,13 +110,11 @@ exporters:
                 - Latency
                 - Fault
                 - Error
-        metric_descriptors: []
         middleware: agenthealth/logs
         namespace: AppSignals
         no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
-        parse_json_encoded_attr_values: []
         profile: ""
         proxy_address: ""
         region: us-east-1
@@ -126,7 +124,6 @@ exporters:
             enabled: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
-        shared_credentials_file: []
         version: "1"
     awsemf/containerinsights:
         certificate_file_path: ""
@@ -153,7 +150,6 @@ exporters:
                   - Service
                 - - ClusterName
                   - Namespace
-              label_matchers: []
               metric_name_selectors:
                 - pod_cpu_utilization
                 - pod_memory_utilization
@@ -165,7 +161,6 @@ exporters:
                 - - ClusterName
                   - Namespace
                   - PodName
-              label_matchers: []
               metric_name_selectors:
                 - pod_number_of_container_restarts
             - dimensions:
@@ -173,7 +168,6 @@ exporters:
                   - Namespace
                   - PodName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - pod_cpu_reserved_capacity
                 - pod_memory_reserved_capacity
@@ -182,7 +176,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_cpu_utilization
                 - node_memory_utilization
@@ -193,7 +186,6 @@ exporters:
                 - node_number_of_running_containers
             - dimensions:
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_cpu_usage_total
                 - node_cpu_limit
@@ -204,7 +196,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_filesystem_utilization
             - dimensions:
@@ -212,23 +203,19 @@ exporters:
                   - Namespace
                   - Service
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - service_number_of_running_pods
             - dimensions:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - namespace_number_of_running_pods
             - dimensions:
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
-        metric_descriptors: []
         middleware: agenthealth/logs
         namespace: ContainerInsights
         no_verify_ssl: false
@@ -246,10 +233,8 @@ exporters:
             enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
-        shared_credentials_file: []
         version: "0"
     awsxray/app_signals:
-        aws_log_groups: []
         certificate_file_path: ""
         endpoint: ""
         imds_retries: 1
@@ -275,7 +260,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: ""
         role_arn: ""
-        shared_credentials_file: []
         telemetry:
             enabled: true
             include_metadata: true
@@ -306,7 +290,6 @@ extensions:
         proxy_address: ""
         region: us-east-1
         role_arn: ""
-        shared_credentials_file: []
 processors:
     awsappsignals:
         limiter:
@@ -318,10 +301,8 @@ processors:
         resolvers:
             - name: TestCluster
               platform: eks
-        rules: []
     batch/containerinsights:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
@@ -332,7 +313,6 @@ processors:
                     enabled: true
                 cloud.provider:
                     enabled: true
-        attributes: []
         azure:
             resource_attributes:
                 azure.resourcegroup.name:
@@ -565,7 +545,6 @@ processors:
         override: true
         read_buffer_size: 0
         system:
-            hostname_sources: []
             resource_attributes:
                 host.arch:
                     enabled: false
@@ -617,7 +596,6 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-        shared_credentials_file: []
     otlp/app_signals:
         protocols:
             grpc:
@@ -688,9 +666,7 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
             level: info
-            output_paths: []
             sampling:
                 enabled: true
                 initial: 2
@@ -699,7 +675,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        traces:
-            processors: []
-            propagators: []
+        traces: {}
