@@ -140,10 +140,24 @@ func TestEncode(t *testing.T) {
 }
 
 func TestEncodeNil(t *testing.T) {
-	enc := New(nil)
+	enc := New(&EncoderConfig{})
 	got, err := enc.Encode(nil)
 	assert.NoError(t, err)
 	assert.Nil(t, got)
+
+	testCase := struct {
+		NilMap   map[string]string
+		NilSlice []string
+	}{
+		NilMap:   nil,
+		NilSlice: nil,
+	}
+	got, err = enc.Encode(testCase)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]any{
+		"nilmap":   nil,
+		"nilslice": nil,
+	}, got)
 }
 
 func TestGetTagInfo(t *testing.T) {

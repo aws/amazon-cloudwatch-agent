@@ -58,7 +58,6 @@ exporters:
         no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
-        parse_json_encoded_attr_values: []
         profile: ""
         proxy_address: ""
         region: us-east-1
@@ -68,7 +67,6 @@ exporters:
             enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
-        shared_credentials_file: []
         version: "0"
 extensions:
     agenthealth/logs:
@@ -82,7 +80,6 @@ extensions:
 processors:
     batch/prometheus:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 30s
@@ -108,9 +105,7 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
             level: info
-            output_paths: []
             sampling:
                 enabled: true
                 initial: 2
@@ -119,7 +114,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

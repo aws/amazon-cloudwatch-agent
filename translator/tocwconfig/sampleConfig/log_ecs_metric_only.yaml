@@ -30,7 +30,6 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
-        shared_credentials_file: []
     awsemf/containerinsights:
         certificate_file_path: ""
         detailed_metrics: false
@@ -50,7 +49,6 @@ exporters:
                 - - ClusterName
                   - ContainerInstanceId
                   - InstanceId
-              label_matchers: []
               metric_name_selectors:
                 - instance_cpu_reserved_capacity
                 - instance_cpu_utilization
@@ -61,7 +59,6 @@ exporters:
                 - instance_number_of_running_tasks
             - dimensions:
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - instance_cpu_limit
                 - instance_cpu_reserved_capacity
@@ -74,7 +71,6 @@ exporters:
                 - instance_memory_working_set
                 - instance_network_total_bytes
                 - instance_number_of_running_tasks
-        metric_descriptors: []
         middleware: agenthealth/logs
         namespace: ECS/ContainerInsights
         no_verify_ssl: false
@@ -91,7 +87,6 @@ exporters:
             enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
-        shared_credentials_file: []
         version: "0"
 extensions:
     agenthealth/logs:
@@ -105,13 +100,11 @@ extensions:
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
     batch/emf_logs:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
@@ -141,13 +134,11 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-        shared_credentials_file: []
     tcplog/emf_logs:
         encoding: utf-8
         id: tcp_input
         listen_address: 0.0.0.0:25888
         operators: []
-        output: []
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -163,7 +154,6 @@ receivers:
             line_start_pattern: ""
             omit_pattern: false
         operators: []
-        output: []
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -195,9 +185,7 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
             level: info
-            output_paths: []
             sampling:
                 enabled: true
                 initial: 2
@@ -206,7 +194,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

@@ -47,14 +47,11 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
-        shared_credentials_file: []
     awsxray:
-        aws_log_groups: []
         certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
         imds_retries: 1
         index_all_attributes: false
-        indexed_attributes: []
         local_mode: true
         max_retries: 2
         middleware: agenthealth/traces
@@ -66,7 +63,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
-        shared_credentials_file: []
         telemetry:
             enabled: true
             include_metadata: true
@@ -98,13 +94,11 @@ extensions:
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
     batch/xray:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -141,7 +135,6 @@ receivers:
             proxy_address: https://proxy.proxy.com
             region: us-west-2
             role_arn: trace_role_arn_value_test
-            shared_credentials_file: []
             tls:
                 ca_file: ""
                 cert_file: ""
@@ -222,7 +215,6 @@ receivers:
             line_start_pattern: ""
             omit_pattern: false
         operators: []
-        output: []
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -272,7 +264,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
             level: debug
             output_paths:
                 - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
@@ -284,7 +275,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        traces:
-            processors: []
-            propagators: []
+        traces: {}
