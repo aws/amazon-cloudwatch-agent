@@ -5,9 +5,8 @@ name: Reusable EC2 Integration Test
 
 env:
   PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
-  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
-  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
 
 on:
   workflow_call:
@@ -35,6 +34,12 @@ on:
         type: string
       localstack_host:
         type: string
+      region:
+        type: string
+      terraform_assume_role:
+        type: string
+      s3_integration_bucket:
+        type: string
 
 jobs:
   EC2IntegrationTest:
@@ -56,8 +61,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{env.TERRAFORM_AWS_ASSUME_ROLE}}
-          aws-region: us-west-2
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: ${{inputs.region}}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Cache if success
         id: cache_if_success
@@ -67,8 +73,9 @@ jobs:
           key: cache_if_success-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
-        run: echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
-
+        run: |
+          echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+          echo localstack input ${{ inputs.localstack_host }}
       - name: Verify Terraform version
         run: terraform --version
 
@@ -100,14 +107,15 @@ jobs:
               -var="arc=${{ matrix.arrays.arc }}" \
               -var="binary_name=${{ matrix.arrays.binaryName }}" \
               -var="local_stack_host_name=${{ inputs.localstack_host }}" \
-              -var="s3_bucket=${{env.S3_INTEGRATION_BUCKET}}" \
+              -var="region=${{ inputs.region }}" \
+              -var="s3_bucket=${{ inputs.s3_integration_bucket }}" \
               -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
               -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -auto-approve
+              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
             else
-              terraform destroy -auto-approve && exit 1
+              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
@@ -117,4 +125,4 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd ${{ inputs.test_dir }} && terraform destroy --auto-approve
+          command: cd ${{ inputs.test_dir }} && terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve

@@ -11,7 +11,7 @@ import (
 
 const (
 	receiversCount  = 6
-	processorCount  = 8
+	processorCount  = 9
 	exportersCount  = 5
 	extensionsCount = 2
 )
@@ -37,6 +37,7 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, processors["filter"])
 	assert.NotNil(t, processors["metricstransform"])
 	assert.NotNil(t, processors["transform"])
+	assert.NotNil(t, processors["gpuattributes"])
 
 	exporters := factories.Exporters
 	assert.Len(t, exporters, exportersCount)

@@ -40,7 +40,7 @@ func TestTracesTranslator(t *testing.T) {
 			},
 		},
 		"WithDefault": {
-			input: map[string]interface{}{"traces": map[string]interface{}{"traces_collected": map[string]interface{}{"otlp": nil}}},
+			input: map[string]interface{}{"traces": map[string]interface{}{"traces_collected": map[string]interface{}{"otlp": map[string]interface{}{}}}},
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
@@ -51,6 +51,25 @@ func TestTracesTranslator(t *testing.T) {
 					},
 				},
 			}),
+		},
+		"WithTLS": {
+			input: map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:4317",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:4318",
+					},
+					"tls": map[string]interface{}{
+						"cert_file": "path/to/cert.crt",
+						"key_file":  "path/to/key.key",
+					},
+				}},
+			wantErr: &common.MissingKeyError{
+				ID:      tt.ID(),
+				JsonKey: common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
+			},
 		},
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "traces", "config.json")),
@@ -96,6 +115,37 @@ func TestTranslateAppSignals(t *testing.T) {
 					},
 					"http": map[string]interface{}{
 						"endpoint": "0.0.0.0:4316",
+					},
+				},
+			}),
+		},
+		"WithAppSignalsEnabledTracesWithTLS": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"tls": map[string]interface{}{
+								"cert_file": "path/to/cert.crt",
+								"key_file":  "path/to/key.key",
+							},
+						},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "0.0.0.0:4315",
+						"tls": map[string]interface{}{
+							"cert_file": "path/to/cert.crt",
+							"key_file":  "path/to/key.key",
+						},
+					},
+					"http": map[string]interface{}{
+						"endpoint": "0.0.0.0:4316",
+						"tls": map[string]interface{}{
+							"cert_file": "path/to/cert.crt",
+							"key_file":  "path/to/key.key",
+						},
 					},
 				},
 			}),

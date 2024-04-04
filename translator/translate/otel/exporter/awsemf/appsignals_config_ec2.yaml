@@ -1,0 +1,33 @@
+log_group_name: "/aws/appsignals/ec2"
+namespace: "AppSignals"
+middleware: agenthealth/logs
+dimension_rollup_option: "NoDimensionRollup"
+metric_declarations:
+  - dimensions:
+      - [HostedIn.EC2.Environment, Service, Operation]
+      - [HostedIn.EC2.Environment, Service]
+    label_matchers:
+      - label_names:
+          - aws.span.kind
+        regex: '^(SERVER|LOCAL_ROOT)$'
+    metric_name_selectors:
+      - Latency
+      - Fault
+      - Error
+  - dimensions:
+      - [HostedIn.EC2.Environment, Service, Operation, RemoteService, RemoteOperation, RemoteTarget]
+      - [HostedIn.EC2.Environment, Service, Operation, RemoteService, RemoteOperation]
+      - [HostedIn.EC2.Environment, Service, RemoteService]
+      - [HostedIn.EC2.Environment, Service, RemoteService, RemoteOperation, RemoteTarget]
+      - [HostedIn.EC2.Environment, Service, RemoteService, RemoteOperation]
+      - [HostedIn.EC2.Environment, Service, RemoteService, RemoteTarget]
+      - [RemoteService, RemoteTarget]
+      - [RemoteService]
+    label_matchers:
+      - label_names:
+          - aws.span.kind
+        regex: '^(CLIENT|PRODUCER|CONSUMER)$'
+    metric_name_selectors:
+      - Latency
+      - Fault
+      - Error

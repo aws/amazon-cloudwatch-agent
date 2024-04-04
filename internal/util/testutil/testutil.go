@@ -29,3 +29,12 @@ func GetConf(t *testing.T, path string) *confmap.Conf {
 	require.NoError(t, err)
 	return conf
 }
+
+func GetConfWithOverrides(t *testing.T, path string, overrides map[string]any) *confmap.Conf {
+	t.Helper()
+	conf, err := confmaptest.LoadConf(path)
+	require.NoError(t, err)
+	err = conf.Merge(confmap.NewFromStringMap(overrides))
+	require.NoError(t, err)
+	return conf
+}

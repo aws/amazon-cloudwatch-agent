@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package common
+package eksdetector
 
 import (
 	"fmt"
@@ -25,10 +25,25 @@ func TestNewDetector(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, testDetector1)
 
-	// Test singleton
-	testDetector2, err := NewDetector()
-	assert.NoError(t, err)
-	assert.True(t, testDetector1 == testDetector2)
+	getInClusterConfig = func() (*rest.Config, error) {
+		return nil, fmt.Errorf("error")
+	}
+	_, err = NewDetector()
+	assert.Error(t, err)
+}
+
+func TestIsEKSSingleton(t *testing.T) {
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{}, nil
+	}
+
+	NewDetector = TestEKSDetector
+	value1 := IsEKS()
+	assert.NoError(t, value1.Err)
+	value2 := IsEKS()
+	assert.NoError(t, value2.Err)
+
+	assert.True(t, value1 == value2)
 }
 
 // Tests EKS resource detector running in EKS environment
@@ -39,31 +54,9 @@ func TestEKS(t *testing.T) {
 	}
 
 	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{conventions.AttributeK8SClusterName: "my-cluster"}, nil)
-	isEks, err := IsEKS()
-	assert.True(t, isEks)
-	assert.NoError(t, err)
-}
-
-// Tests EKS resource detector not running in EKS environment by verifying resource is not running on k8s
-func TestNotEKS(t *testing.T) {
-	testDetector := new(MockDetector)
-
-	// Detector creation failure
-	NewDetector = func() (Detector, error) {
-		return nil, fmt.Errorf("test error")
-	}
-	isEks, err := IsEKS()
-	assert.False(t, isEks)
-	assert.Error(t, err)
-
-	//get configmap failure
-	NewDetector = func() (Detector, error) {
-		return testDetector, nil
-	}
-
-	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{}, fmt.Errorf("error"))
-	isEks, err = IsEKS()
-	assert.False(t, isEks)
+	isEks := IsEKS()
+	assert.True(t, isEks.Value)
+	assert.NoError(t, isEks.Err)
 }
 
 func Test_getConfigMap(t *testing.T) {

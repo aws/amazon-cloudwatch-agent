@@ -15,6 +15,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -44,6 +46,16 @@ var (
 		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
 		"HostedIn.Environment", "HostedIn.K8s.Cluster",
 	}
+
+	indexedAttributesEC2 = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
+		"HostedIn.EC2.Environment", "aws.remote.target",
+	}
+
+	indexedAttributesGeneric = []string{
+		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation", "aws.remote.target",
+		"HostedIn.Environment",
+	}
 )
 
 func NewTranslator() common.Translator[component.Config] {
@@ -68,15 +80,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
 
 	if isAppSignals(conf) {
-		isEks, err := common.IsEKS()
-		if err != nil {
-			return nil, err
-		}
-
-		if isEks {
+		ctx := context.CurrentContext()
+		if ctx.KubernetesMode() == config.ModeEKS {
 			cfg.IndexedAttributes = indexedAttributesEKS
-		} else {
+		} else if ctx.KubernetesMode() == config.ModeK8sEC2 || ctx.KubernetesMode() == config.ModeK8sOnPrem {
 			cfg.IndexedAttributes = indexedAttributesK8s
+		} else {
+			cfg.IndexedAttributes = indexedAttributesGeneric
 		}
 	}
 
@@ -94,6 +104,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.AWSSessionSettings.Endpoint = endpointOverride
 	}
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+		cfg.AWSSessionSettings.LocalMode = true
+	}
 	if localMode, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.LocalModeKey)); ok {
 		cfg.AWSSessionSettings.LocalMode = localMode
 	}
