@@ -22,18 +22,19 @@ import (
 )
 
 const (
-	jarPathKey        = "jar_path"
-	targetSystemKey   = "target_system"
-	usernameKey       = "username"
-	keystorePathKey   = "keystore_path"
-	keystoreTypeKey   = "keystore_type"
-	truststorePathKey = "truststore_path"
-	truststoreTypeKey = "truststore_type"
-	remoteProfileKey  = "remote_profile"
-	realmKey          = "realm"
-	passwordFileKey   = "password_file"
-	otlpTimeoutKey    = "timeout"
-	otlpHeadersKey    = "headers"
+	jarPathKey            = "jar_path"
+	targetSystemKey       = "target_system"
+	usernameKey           = "username"
+	keystorePathKey       = "keystore_path"
+	keystoreTypeKey       = "keystore_type"
+	truststorePathKey     = "truststore_path"
+	truststoreTypeKey     = "truststore_type"
+	jMXRegistrySSLEnabled = "jmx_registry_ssl_enabled"
+	remoteProfileKey      = "remote_profile"
+	realmKey              = "realm"
+	passwordFileKey       = "password_file"
+	otlpTimeoutKey        = "timeout"
+	otlpHeadersKey        = "headers"
 
 	defaultTargetSystem = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
 
@@ -157,6 +158,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	if truststorePath, ok := jmxKeyMap[truststorePathKey].(string); ok {
 		cfg.TruststorePath = truststorePath
+	}
+
+	if jMXRegistrySSLEnabled, ok := jmxKeyMap[jMXRegistrySSLEnabled].(bool); ok {
+		cfg.JMXRegistrySSLEnabled = jMXRegistrySSLEnabled
 	}
 
 	if truststoreType, ok := jmxKeyMap[truststoreTypeKey].(string); ok {
