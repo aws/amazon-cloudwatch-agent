@@ -59,6 +59,7 @@
           "keystore_type": "PKCS",
           "truststore_path": "/truststore",
           "truststore_type": "PKCS12",
+          "jmx_registry_ssl_enabled": true,
           "remote_profile": "SASL/PLAIN",
           "realm": "test_realm",
           "append_dimensions": {

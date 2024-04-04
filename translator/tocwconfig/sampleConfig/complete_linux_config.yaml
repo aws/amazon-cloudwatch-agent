@@ -210,6 +210,7 @@ receivers:
         target_system: activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly
         truststore_path: /truststore
         truststore_type: PKCS12
+        jmx_registry_ssl_enabled: true
         username: cwagent
     otlp/traces:
         protocols:
