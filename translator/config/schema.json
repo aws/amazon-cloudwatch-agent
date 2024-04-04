@@ -1236,6 +1236,10 @@
           "description": "The truststore type if required by SSL",
           "type": "string"
         },
+        "jmx_registry_ssl_enabled": {
+          "description": "Enable when JMX registry ssl is enabled",
+          "type": "boolean"
+        },
         "remote_profile": {
           "description": "Supported JMX remote profiles in combination with SASL profiles",
           "type": "string"
