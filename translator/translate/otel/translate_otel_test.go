@@ -15,6 +15,7 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 func TestTranslator(t *testing.T) {
@@ -22,7 +23,8 @@ func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input           interface{}
 		wantErrContains string
-		detector        func() (common.Detector, error)
+		detector        func() (eksdetector.Detector, error)
+		isEKSDataStore  func() eksdetector.IsEKSCache
 	}{
 		"WithInvalidConfig": {
 			input:           "",
@@ -55,7 +57,8 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector: common.TestEKSDetector,
+			detector:       eksdetector.TestEKSDetector,
+			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsTracesEnabled": {
 			input: map[string]interface{}{
@@ -65,7 +68,8 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector: common.TestEKSDetector,
+			detector:       eksdetector.TestEKSDetector,
+			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsMetricsAndTracesEnabled": {
 			input: map[string]interface{}{
@@ -80,12 +84,33 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			detector: common.TestEKSDetector,
+			detector:       eksdetector.TestEKSDetector,
+			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		},
+		"WithAppSignalsMultipleMetricsReceiversConfig": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+						"cpu":         map[string]interface{}{},
+					},
+				},
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+						"otlp":        map[string]interface{}{},
+						"otlp2":       map[string]interface{}{},
+					},
+				},
+			},
+			detector:       eksdetector.TestEKSDetector,
+			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			common.NewDetector = testCase.detector
+			eksdetector.NewDetector = testCase.detector
+			eksdetector.IsEKS = testCase.isEKSDataStore
 			translator.SetTargetPlatform("linux")
 			got, err := Translate(testCase.input, "linux")
 			if testCase.wantErrContains != "" {

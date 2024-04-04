@@ -11,6 +11,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -57,6 +59,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
-	cfg.Stats = agent.StatsConfig{Operations: t.operations}
+	cfg.Stats = agent.StatsConfig{
+		Operations: t.operations,
+		UsageFlags: map[agent.Flag]any{
+			agent.FlagMode:       context.CurrentContext().ShortMode(),
+			agent.FlagRegionType: translateagent.Global_Config.RegionType,
+		},
+	}
 	return cfg, nil
 }

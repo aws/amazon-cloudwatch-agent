@@ -22,7 +22,7 @@ type LimiterConfig struct {
 	Disabled                  bool            `mapstructure:"disabled"`
 	LogDroppedMetrics         bool            `mapstructure:"log_dropped_metrics"`
 	RotationInterval          time.Duration   `mapstructure:"rotation_interval"`
-	GarbageCollectionInterval time.Duration   `mapstructure:"-"`
+	GarbageCollectionInterval time.Duration   `mapstructure:"garbage_collection_interval"`
 	ParentContext             context.Context `mapstructure:"-"`
 }
 
@@ -34,10 +34,11 @@ const (
 
 func NewDefaultLimiterConfig() *LimiterConfig {
 	return &LimiterConfig{
-		Threshold:         DefaultThreshold,
-		Disabled:          true,
-		LogDroppedMetrics: false,
-		RotationInterval:  DefaultRotationInterval,
+		Threshold:                 DefaultThreshold,
+		Disabled:                  false,
+		LogDroppedMetrics:         false,
+		RotationInterval:          DefaultRotationInterval,
+		GarbageCollectionInterval: DefaultGCInterval,
 	}
 }
 
@@ -61,7 +62,7 @@ func (cfg *Config) Validate() error {
 			if resolver.Name == "" {
 				return errors.New("name must not be empty for k8s resolver")
 			}
-		case PlatformGeneric:
+		case PlatformEC2, PlatformGeneric:
 		default:
 			return errors.New("unknown resolver")
 		}

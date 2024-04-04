@@ -22,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/procstat"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 const (
@@ -65,6 +66,12 @@ var (
 	// different default interval.
 	defaultCollectionIntervalMap = map[string]time.Duration{
 		statsd.SectionKey: 10 * time.Second,
+	}
+
+	// OtelReceivers is used for receivers that need to be in the same pipeline that
+	// exports to Cloudwatch while not having to follow the adapter rules
+	OtelReceivers = map[string]common.Translator[component.Config]{
+		common.OtlpKey: otlp.NewTranslator(otlp.WithDataType(component.DataTypeMetrics)),
 	}
 )
 
@@ -115,6 +122,9 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 	translators := common.NewTranslatorMap[component.Config]()
 	if inputs, ok := conf.Get(metricKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
+			if _, ok := OtelReceivers[inputName]; ok {
+				continue
+			}
 			if windowsInputSet.Contains(inputName) {
 				cfgKey := common.ConfigKey(metricKey, inputName)
 				translators.Set(NewTranslator(toAlias(inputName), cfgKey, collections.GetOrDefault(

@@ -17,9 +17,11 @@ const (
 	MetricAttributeRemoteTarget    = "RemoteTarget"
 )
 const (
-	HostedInAttributeClusterName  = "HostedIn.EKS.Cluster"
-	HostedInAttributeK8SNamespace = "HostedIn.K8s.Namespace"
-	HostedInAttributeEnvironment  = "HostedIn.Environment"
+	HostedInAttributeClusterName    = "HostedIn.EKS.Cluster"
+	HostedInAttributeK8SNamespace   = "HostedIn.K8s.Namespace"
+	HostedInAttributeEnvironment    = "HostedIn.Environment"
+	HostedInAttributeK8SClusterName = "HostedIn.K8s.Cluster"
+	HostedInAttributeEC2Environment = "HostedIn.EC2.Environment"
 )
 
 const (

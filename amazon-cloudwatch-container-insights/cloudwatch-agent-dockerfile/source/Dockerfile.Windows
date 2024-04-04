@@ -1,0 +1,45 @@
+# This Dockerfile can be used for building Windows Server 2019, 2022 Container images.
+
+ARG TAG=ltsc2022
+ARG TARGETARCH=amd64
+ARG CONTAINER_CLOUDWATCHAGENT_PATH=C:\\Program\ Files\\Amazon\\AmazonCloudWatchAgent\\
+ARG GO_IMAGE=golang:latest
+
+# Build CW agent inside Windows golang container
+FROM $GO_IMAGE as builder
+
+ARG TARGETARCH
+
+RUN New-Item -ItemType Directory -Path "C:\go\src\github.com\aws\amazon-cloudwatch-agent" -Force
+WORKDIR "C:\go\src\github.com\aws\amazon-cloudwatch-agent"
+
+ENV GOPROXY=direct
+ARG GO111MODULE="on"
+ENV GO111MODULE=${GO111MODULE}
+
+COPY go.mod "C:\go\src\github.com\aws\amazon-cloudwatch-agent"
+COPY go.sum "C:\go\src\github.com\aws\amazon-cloudwatch-agent"
+RUN go mod download -x
+
+COPY . "C:\go\src\github.com\aws\amazon-cloudwatch-agent"
+
+# Install chocolatey and make
+RUN Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+RUN choco install make
+
+# Run make and build CW agent inside container
+RUN make build-for-docker-windows-${env:TARGETARCH}
+
+# Build target CW agent container image for Windows
+FROM mcr.microsoft.com/windows/nanoserver:$TAG
+
+ARG CONTAINER_CLOUDWATCHAGENT_PATH
+ARG TARGETARCH
+
+RUN mkdir %CONTAINER_CLOUDWATCHAGENT_PATH%
+WORKDIR $CONTAINER_CLOUDWATCHAGENT_PATH
+
+COPY --from=builder C:\\go\\src\\github.com\\aws\\amazon-cloudwatch-agent\\build\\bin\\windows_$TARGETARCH\\ $CONTAINER_CLOUDWATCHAGENT_PATH
+
+ENV RUN_IN_CONTAINER="True"
+CMD ["start-amazon-cloudwatch-agent.exe"]
