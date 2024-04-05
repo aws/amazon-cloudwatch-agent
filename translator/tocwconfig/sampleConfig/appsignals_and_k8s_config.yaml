@@ -1,5 +1,5 @@
 exporters:
-    awsemf/app_signals:
+    awsemf/application_signals:
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -234,7 +234,7 @@ exporters:
         retain_initial_value_of_delta_metric: false
         role_arn: ""
         version: "0"
-    awsxray/app_signals:
+    awsxray/application_signals:
         certificate_file_path: ""
         endpoint: ""
         imds_retries: 1
@@ -280,7 +280,7 @@ extensions:
             usage_flags:
                 mode: K8E
                 region_type: ACJ
-    awsproxy/app_signals:
+    awsproxy/application_signals:
         aws_endpoint: ""
         certificate_file_path: ""
         endpoint: 0.0.0.0:2000
@@ -291,7 +291,7 @@ extensions:
         region: us-east-1
         role_arn: ""
 processors:
-    awsappsignals:
+    awsapplicationsignals:
         limiter:
             disabled: false
             drop_threshold: 500
@@ -596,7 +596,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-    otlp/app_signals:
+    otlp/application_signals:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:4315
@@ -615,18 +615,18 @@ receivers:
                 traces_url_path: /v1/traces
 service:
     extensions:
-        - awsproxy/app_signals
+        - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
     pipelines:
-        metrics/app_signals:
+        metrics/application_signals:
             exporters:
-                - awsemf/app_signals
+                - awsemf/application_signals
             processors:
                 - resourcedetection
-                - awsappsignals
+                - awsapplicationsignals
             receivers:
-                - otlp/app_signals
+                - otlp/application_signals
         metrics/containerinsights:
             exporters:
                 - awsemf/containerinsights
@@ -634,14 +634,14 @@ service:
                 - batch/containerinsights
             receivers:
                 - awscontainerinsightreceiver
-        traces/app_signals:
+        traces/application_signals:
             exporters:
-                - awsxray/app_signals
+                - awsxray/application_signals
             processors:
                 - resourcedetection
-                - awsappsignals
+                - awsapplicationsignals
             receivers:
-                - otlp/app_signals
+                - otlp/application_signals
     telemetry:
         logs:
             development: false

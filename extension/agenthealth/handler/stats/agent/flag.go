@@ -27,7 +27,7 @@ const (
 
 	flagIMDSFallbackSuccessStr       = "imds_fallback_success"
 	flagSharedConfigFallbackStr      = "shared_config_fallback"
-	flagAppSignalsStr                = "app_signals"
+	flagAppSignalsStr                = "application_signals"
 	flagEnhancedContainerInsightsStr = "enhanced_container_insights"
 	flagRunningInContainerStr        = "running_in_container"
 	flagModeStr                      = "mode"

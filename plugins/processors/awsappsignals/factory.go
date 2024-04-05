@@ -17,7 +17,7 @@ import (
 
 const (
 	// The value of "type" key in configuration.
-	typeStr = "awsappsignals"
+	typeStr = "awsapplicationsignals"
 	// The stability level of the processor.
 	stability = component.StabilityLevelBeta
 )

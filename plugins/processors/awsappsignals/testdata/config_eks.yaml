@@ -1,4 +1,4 @@
-awsappsignals:
+awsapplicationsignals:
   resolvers:
     - platform: eks
       name: test

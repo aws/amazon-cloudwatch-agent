@@ -27,7 +27,7 @@ import (
 const (
 	flagRunAsUser                 = "run_as_user"
 	flagContainerInsights         = "container_insights"
-	flagAppSignals                = "app_signals"
+	flagAppSignals                = "application_signals"
 	flagEnhancedContainerInsights = "enhanced_container_insights"
 
 	separator = " "

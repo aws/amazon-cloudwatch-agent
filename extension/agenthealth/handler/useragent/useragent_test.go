@@ -126,7 +126,7 @@ func TestEmf(t *testing.T) {
 
 	assert.Equal(t, "inputs:(nop run_as_user)", ua.inputsStr.Load())
 	assert.Equal(t, "", ua.processorsStr.Load())
-	assert.Equal(t, "outputs:(app_signals awsemf)", ua.outputsStr.Load())
+	assert.Equal(t, "outputs:(application_signals awsemf)", ua.outputsStr.Load())
 }
 
 func TestSingleton(t *testing.T) {

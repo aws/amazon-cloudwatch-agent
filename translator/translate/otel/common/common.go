@@ -64,17 +64,20 @@ const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
 	PipelineNameEmfLogs          = "emf_logs"
-	AppSignals                   = "app_signals"
+	AppSignals                   = "application_signals"
+	AppSignalsFallback           = "app_signals"
 	AppSignalsRules              = "rules"
 )
 
 var (
-	AppSignalsTraces  = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
-	AppSignalsMetrics = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
+	AppSignalsTraces          = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
+	AppSignalsMetrics         = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
+	AppSignalsTracesFallback  = ConfigKey(TracesKey, TracesCollectedKey, AppSignalsFallback)
+	AppSignalsMetricsFallback = ConfigKey(LogsKey, MetricsCollectedKey, AppSignalsFallback)
 
-	AppSignalsConfigKeys = map[component.DataType]string{
-		component.DataTypeTraces:  AppSignalsTraces,
-		component.DataTypeMetrics: AppSignalsMetrics,
+	AppSignalsConfigKeys = map[component.DataType][]string{
+		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
+		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
 )
 

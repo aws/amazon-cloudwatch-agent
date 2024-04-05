@@ -97,6 +97,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.HTTP.Endpoint = defaultHttpEndpoint
 	if t.name == common.AppSignals {
 		configKey = common.ConfigKey(configKeys[t.dataType], common.AppSignals)
+		if conf == nil || !conf.IsSet(configKey) {
+			configKey = common.ConfigKey(configBase, common.AppSignalsFallback)
+		}
 		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
 		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
 	}

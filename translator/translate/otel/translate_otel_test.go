@@ -53,7 +53,7 @@ func TestTranslator(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
@@ -64,7 +64,7 @@ func TestTranslator(t *testing.T) {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
@@ -72,6 +72,63 @@ func TestTranslator(t *testing.T) {
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
 		"WithAppSignalsMetricsAndTracesEnabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"application_signals": map[string]interface{}{},
+					},
+				},
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"application_signals": map[string]interface{}{},
+					},
+				},
+			},
+			detector:       eksdetector.TestEKSDetector,
+			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		},
+		"WithAppSignalsMultipleMetricsReceiversConfig": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"application_signals": map[string]interface{}{},
+						"cpu":                 map[string]interface{}{},
+					},
+				},
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"application_signals": map[string]interface{}{},
+						"otlp":                map[string]interface{}{},
+						"otlp2":               map[string]interface{}{},
+					},
+				},
+			},
+			detector:       eksdetector.TestEKSDetector,
+			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		},
+		"WithAppSignalsFallbackMetricsEnabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+			},
+			detector:       eksdetector.TestEKSDetector,
+			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		},
+		"WithAppSignalsFallbackTracesEnabled": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				},
+			},
+			detector:       eksdetector.TestEKSDetector,
+			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
+		},
+		"WithAppSignalsFallbackMetricsAndTracesEnabled": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
@@ -87,7 +144,7 @@ func TestTranslator(t *testing.T) {
 			detector:       eksdetector.TestEKSDetector,
 			isEKSDataStore: eksdetector.TestIsEKSCacheEKS,
 		},
-		"WithAppSignalsMultipleMetricsReceiversConfig": {
+		"WithAppSignalsFallbackMultipleMetricsReceiversConfig": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
