@@ -40,8 +40,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if !ok {
 		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
 	}
-	if conf == nil || !conf.IsSet(configKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
+	if conf == nil || (!conf.IsSet(configKey[0]) && !conf.IsSet(configKey[1])) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
 	}
 
 	translators := &common.ComponentTranslators{

@@ -153,5 +153,5 @@ func getRegion(conf *confmap.Conf) string {
 }
 
 func isAppSignals(conf *confmap.Conf) bool {
-	return conf.IsSet(common.AppSignalsTraces)
+	return conf.IsSet(common.AppSignalsTraces) || conf.IsSet(common.AppSignalsTracesFallback)
 }

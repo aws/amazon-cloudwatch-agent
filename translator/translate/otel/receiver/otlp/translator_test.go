@@ -105,7 +105,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				}},
 			want: confmap.NewFromStringMap(map[string]interface{}{
@@ -120,6 +120,55 @@ func TestTranslateAppSignals(t *testing.T) {
 			}),
 		},
 		"WithAppSignalsEnabledTracesWithTLS": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"application_signals": map[string]interface{}{
+							"tls": map[string]interface{}{
+								"cert_file": "path/to/cert.crt",
+								"key_file":  "path/to/key.key",
+							},
+						},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "0.0.0.0:4315",
+						"tls": map[string]interface{}{
+							"cert_file": "path/to/cert.crt",
+							"key_file":  "path/to/key.key",
+						},
+					},
+					"http": map[string]interface{}{
+						"endpoint": "0.0.0.0:4316",
+						"tls": map[string]interface{}{
+							"cert_file": "path/to/cert.crt",
+							"key_file":  "path/to/key.key",
+						},
+					},
+				},
+			}),
+		},
+		"WithAppSignalsFallbackEnabledTraces": {
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "0.0.0.0:4315",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "0.0.0.0:4316",
+					},
+				},
+			}),
+		},
+		"WithAppSignalsFallbackEnabledTracesWithTLS": {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{

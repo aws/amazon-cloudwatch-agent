@@ -4,7 +4,7 @@
   },
   "logs": {
     "metrics_collected": {
-      "app_signals": {
+      "application_signals": {
         "tls": {
           "cert_file": "path/to/cert.crt",
           "key_file": "path/to/key.key"
@@ -28,7 +28,7 @@
   },
   "traces": {
     "traces_collected": {
-      "app_signals": {}
+      "application_signals": {}
     }
   }
 }

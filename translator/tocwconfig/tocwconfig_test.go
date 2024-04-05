@@ -81,6 +81,17 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
 
+func TestGenericAppSignalsFallbackConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "base_appsignals_fallback_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_appsignals_fallback_config", "windows", expectedEnvVars, "")
+}
+
 func TestAppSignalsAndEKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
