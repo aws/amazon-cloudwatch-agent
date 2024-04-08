@@ -134,6 +134,8 @@ func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Me
 			ils := ilms.At(j)
 			metrics := ils.Metrics()
 
+			d.filterGpuMetricsWithoutPodName(metrics)
+
 			metricsLength := metrics.Len()
 			for k := 0; k < metricsLength; k++ {
 				m := metrics.At(k)
@@ -222,4 +224,29 @@ func (d *gpuAttributesProcessor) filterAttributes(attributes pcommon.Map, labels
 			attributes.PutStr(lk, string(bytes))
 		}
 	}
+}
+
+// remove dcgm metrics that do not contain PodName attribute which means there is no workload associated to container/pod
+func (d *gpuAttributesProcessor) filterGpuMetricsWithoutPodName(metrics pmetric.MetricSlice) {
+	metrics.RemoveIf(func(m pmetric.Metric) bool {
+		isGpu := strings.Contains(m.Name(), gpuMetricIdentifier)
+		isContainerOrPod := strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) || strings.HasPrefix(m.Name(), gpuPodMetricPrefix)
+
+		if !isGpu || !isContainerOrPod {
+			return false
+		}
+
+		var dps pmetric.NumberDataPointSlice
+		switch m.Type() {
+		case pmetric.MetricTypeGauge:
+			dps = m.Gauge().DataPoints()
+		case pmetric.MetricTypeSum:
+			dps = m.Sum().DataPoints()
+		default:
+			d.logger.Debug("Ignore unknown metric type", zap.String(containerinsightscommon.MetricType, m.Type().String()))
+		}
+
+		_, hasPodInfo := dps.At(0).Attributes().Get(internal.PodName)
+		return !hasPodInfo
+	})
 }
