@@ -55,7 +55,6 @@ func TestTranslator(t *testing.T) {
 				},
 			}),
 		},
-
 		"ConfigWithJmxTargetWithMetricName": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
@@ -150,6 +149,25 @@ func TestTranslator(t *testing.T) {
 							"jvm.threads.count",
 							"tomcat.sessions",
 							"tomcat.errors"},
+					},
+				},
+			}),
+		},
+		"ConfigWithJmxTargetHyphenated": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"jmx": map[string]interface{}{
+							"kafka-producer": []interface{}{},
+						},
+					},
+				},
+			},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"include": map[string]interface{}{
+						"match_type":   "regexp",
+						"metric_names": []interface{}{"kafka.producer\\..*"},
 					},
 				},
 			}),

@@ -6,6 +6,7 @@ package jmxfilterprocessor
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -101,7 +102,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				}
 			} else {
 				// target name is set and wildcard for all metrics
-				includeMetricNames = append(includeMetricNames, jmxTarget+"\\..*")
+				includeMetricNames = append(includeMetricNames, strings.Replace(jmxTarget, "-", ".", -1)+"\\..*")
 			}
 		}
 	}
