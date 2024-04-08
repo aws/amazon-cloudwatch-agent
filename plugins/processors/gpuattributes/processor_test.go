@@ -8,13 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/grafana/regexp"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 )
-
-var normalizedNameRegex = regexp.MustCompile("^(container|pod|node)_gpu_[a-z_]+$")
 
 func TestProcessMetrics(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
