@@ -160,13 +160,12 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
 }
 
+// This method converts gauges to sum so that all metrics can be grouped in the same grouped metrics.
+// The default value of temporality is undefined so even after conversion from gauge to sum the agent won't take delta.
 func convertGaugeToSum(originalMetric pmetric.Metric) {
 	datapoints := originalMetric.Gauge().DataPoints()
 	originalMetric.SetEmptySum()
 	datapoints.MoveAndAppendTo(originalMetric.Sum().DataPoints())
-
-	// default value of temporality is undefined so even after conversion from gauge to sum
-	// the agent won't take delta.
 }
 
 func addUnit(originalMetric pmetric.Metric) {
