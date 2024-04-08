@@ -16,8 +16,8 @@ permissions:
 env:
   AWS_DEFAULT_REGION: us-east-1
   APP_SIGNALS_E2E_TEST_ACCOUNT_ID: ${{ secrets.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
-  SAMPLE_APP_FRONTEND_SERVICE_JAR: "s3://aws-appsignals-sample-app/main-service.jar"
-  SAMPLE_APP_REMOTE_SERVICE_JAR: "s3://aws-appsignals-sample-app/remote-service.jar"
+  SAMPLE_APP_FRONTEND_SERVICE_JAR: "s3://aws-appsignals-sample-app-prod-us-east-1/main-service.jar"
+  SAMPLE_APP_REMOTE_SERVICE_JAR: "s3://aws-appsignals-sample-app-prod-us-east-1/remote-service.jar"
   GET_ADOT_JAR_COMMAND: "wget -O adot.jar https://github.com/aws-observability/aws-otel-java-instrumentation/releases/latest/download/aws-opentelemetry-agent.jar"
   GET_CW_AGENT_RPM_COMMAND: "aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ github.sha }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm ./cw-agent.rpm"
   METRIC_NAMESPACE: AppSignals
@@ -27,27 +27,11 @@ jobs:
   e2e-ec2-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Get testing resources from ADOT
+      - name: Get testing resources from aws-application-signals-test-framework
         uses: actions/checkout@v4
         with:
-          repository: aws-observability/aws-otel-java-instrumentation
+          repository: aws-observability/aws-application-signals-test-framework
           ref: main
-          
-      - name: Download patch action script
-        uses: actions/checkout@v4
-        with:
-          path: patch-dependencies
-          sparse-checkout: |
-            .github/actions/patch-dependencies/action.yml
-
-      - name: Replace patch dependency action.yml
-        run: |
-          cp -f ./patch-dependencies/.github/actions/patch-dependencies/action.yml ./.github/actions/patch-dependencies/action.yml
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: temurin
 
       - name: Generate testing id
         run: echo TESTING_ID="${{ github.run_id }}-${{ github.run_number }}" >> $GITHUB_ENV
@@ -55,7 +39,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.APP_SIGNALS_E2E_IAM_ROLE }}
+          role-to-assume: arn:aws:iam::${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}:role/${{ secrets.APP_SIGNALS_E2E_TEST_ROLE_NAME }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
       - name: Set up terraform
@@ -64,7 +48,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Deploy sample app via terraform
-        working-directory: testing/terraform/ec2
+        working-directory: terraform/ec2
         run: |
           terraform init
           terraform validate
@@ -77,17 +61,16 @@ jobs:
             -var="get_adot_jar_command=${{ env.GET_ADOT_JAR_COMMAND }}"
 
       - name: Get the ec2 instance ami id
-        working-directory: testing/terraform/ec2
+        working-directory: terraform/ec2
         run: |
           echo "EC2_INSTANCE_AMI=$(terraform output ec2_instance_ami)" >> $GITHUB_ENV
 
       - name: Get the sample app endpoint
-        working-directory: testing/terraform/ec2
+        working-directory: terraform/ec2
         run: |
           echo "MAIN_SERVICE_ENDPOINT=$(terraform output sample_app_main_service_public_dns):8080" >> $GITHUB_ENV
           echo "REMOTE_SERVICE_IP=$(terraform output sample_app_remote_service_public_ip)" >> $GITHUB_ENV
-      
-        
+
       - name: Wait for app endpoint to come online
         id: endpoint-check
         run: |
@@ -108,28 +91,19 @@ jobs:
       - name: Call all test APIs
         continue-on-error: true
         run: |
-          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/outgoing-http-call/
-          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/aws-sdk-call/
-          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_IP }}/
-          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/client-call/
-          
-      # cache local patch outputs
-      - name: Cache local Maven repository
-        id: cache-local-maven-repo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.m2/repository/io/opentelemetry/
-          key: ${{ runner.os }}-maven-local-${{ hashFiles('.github/patches/opentelemetry-java*.patch') }}
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/outgoing-http-call/; echo
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/aws-sdk-call/; echo
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_IP }}/; echo
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/client-call/; echo
 
-      - name: Publish patched dependencies to maven local
-        uses: ./.github/actions/patch-dependencies
-        if: steps.cache-local-maven-repo.outputs.cache-hit != 'true'
+      - name: Build Gradle
+        working-directory: ${{ env.TEST_RESOURCES_FOLDER }}
+        run: ./gradlew
 
       # Validation for pulse telemetry data
       - name: Validate generated EMF logs
         id: log-validation
-        run: ./gradlew testing:validator:run --args='-c ec2/log-validation.yml
+        run: ./gradlew validator:run --args='-c ec2/log-validation.yml
           --testing-id ${{ env.TESTING_ID }}
           --endpoint http://${{ env.MAIN_SERVICE_ENDPOINT }}
           --remote-service-deployment-name ${{ env.REMOTE_SERVICE_IP }}:8080
@@ -146,7 +120,7 @@ jobs:
       - name: Validate generated metrics
         id: metric-validation
         if: (success() || steps.log-validation.outcome == 'failure') && !cancelled()
-        run: ./gradlew testing:validator:run --args='-c ec2/metric-validation.yml
+        run: ./gradlew validator:run --args='-c ec2/metric-validation.yml
           --testing-id ${{ env.TESTING_ID }}
           --endpoint http://${{ env.MAIN_SERVICE_ENDPOINT }}
           --remote-service-deployment-name ${{ env.REMOTE_SERVICE_IP }}:8080
@@ -163,7 +137,7 @@ jobs:
       - name: Validate generated traces
         id: trace-validation
         if: (success() || steps.log-validation.outcome == 'failure' || steps.metric-validation.outcome == 'failure') && !cancelled()
-        run: ./gradlew testing:validator:run --args='-c ec2/trace-validation.yml
+        run: ./gradlew validator:run --args='-c ec2/trace-validation.yml
           --testing-id ${{ env.TESTING_ID }}
           --endpoint http://${{ env.MAIN_SERVICE_ENDPOINT }}
           --remote-service-deployment-name ${{ env.REMOTE_SERVICE_IP }}:8080
@@ -178,11 +152,10 @@ jobs:
           --rollup'
 
       # Clean up Procedures
-
       - name: Terraform destroy
         if: always()
         continue-on-error: true
-        working-directory: testing/terraform/ec2
+        working-directory: terraform/ec2
         run: |
           terraform destroy -auto-approve \
             -var="test_id=${{ env.TESTING_ID }}"
