@@ -32,22 +32,11 @@ jobs:
   appsignals-e2e-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Get testing resources from ADOT
+      - name: Get testing resources from aws-application-signals-test-framework
         uses: actions/checkout@v4
         with:
-          repository: aws-observability/aws-otel-java-instrumentation
+          repository: aws-observability/aws-application-signals-test-framework
           ref: main
-
-      - name: Download patch action script
-        uses: actions/checkout@v4
-        with:
-          path: patch-dependencies
-          sparse-checkout: |
-            .github/actions/patch-dependencies/action.yml
-
-      - name: Replace patch dependency action.yml
-        run: |
-          cp -f ./patch-dependencies/.github/actions/patch-dependencies/action.yml ./.github/actions/patch-dependencies/action.yml
 
       - name: Download enablement script
         uses: actions/checkout@v4
@@ -60,10 +49,10 @@ jobs:
             scripts/eks/appsignals/clean-app-signals.sh
           sparse-checkout-cone-mode: false
 
-      - uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: temurin
+#      TODO: If there are any new changes to the staging image that will require updating the testing resources, first
+#      make the changes here using sed commands and submit a PR in the aws-application-signals-test-framework
+#      - name: Update validation template with new changes
+#        run: |
 
       - name: Generate testing id
         run: echo TESTING_ID="${{ env.AWS_DEFAULT_REGION }}-${{ github.run_id }}-${{ github.run_number }}" >> $GITHUB_ENV
@@ -71,7 +60,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.APP_SIGNALS_E2E_IAM_ROLE }}
+          role-to-assume: arn:aws:iam::${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}:role/${{ secrets.APP_SIGNALS_E2E_TEST_ROLE_NAME }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
       # local directory to store the kubernetes config
@@ -109,7 +98,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Deploy sample app via terraform
-        working-directory: testing/terraform/eks
+        working-directory: terraform/eks
         run: |
           terraform init
           terraform validate
@@ -191,7 +180,7 @@ jobs:
       - name: Get the sample app endpoint
         run: |
           echo "APP_ENDPOINT=$(terraform output sample_app_endpoint)" >> $GITHUB_ENV
-        working-directory: testing/terraform/eks
+        working-directory: terraform/eks
 
       - name: Wait for app endpoint to come online
         id: endpoint-check
@@ -213,29 +202,20 @@ jobs:
       - name: Call all test APIs
         continue-on-error: true
         run: |
-          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/outgoing-http-call/
-          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/aws-sdk-call/
-          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_POD_IP }}/
-          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/client-call/
-
-      # cache local patch outputs
-      - name: Cache local Maven repository
-        id: cache-local-maven-repo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.m2/repository/io/opentelemetry/
-          key: ${{ runner.os }}-maven-local-${{ hashFiles('.github/patches/opentelemetry-java*.patch') }}
-
-      - name: Publish patched dependencies to maven local
-        uses: ./.github/actions/patch-dependencies
-        if: steps.cache-local-maven-repo.outputs.cache-hit != 'true'
+          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/outgoing-http-call/; echo
+          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/aws-sdk-call/; echo
+          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_POD_IP }}/; echo
+          curl -S -s -o /dev/null http://${{ env.APP_ENDPOINT }}/client-call/; echo
+          
+      - name: Build Gradle
+        working-directory: ${{ env.TEST_RESOURCES_FOLDER }}
+        run: ./gradlew
 
       # Validation for app signals telemetry data
       - name: Call endpoint and validate generated EMF logs
         id: log-validation
         if: steps.endpoint-check.outcome == 'success' && !cancelled()
-        run: ./gradlew testing:validator:run --args='-c eks/log-validation.yml
+        run: ./gradlew validator:run --args='-c eks/log-validation.yml
           --testing-id ${{ env.TESTING_ID }}
           --endpoint http://${{ env.APP_ENDPOINT }}
           --region ${{ env.AWS_DEFAULT_REGION }}
@@ -252,7 +232,7 @@ jobs:
       - name: Call endpoints and validate generated metrics
         id: metric-validation
         if: (success() || steps.log-validation.outcome == 'failure') && !cancelled()
-        run: ./gradlew testing:validator:run --args='-c eks/metric-validation.yml
+        run: ./gradlew validator:run --args='-c eks/metric-validation.yml
           --testing-id ${{ env.TESTING_ID }}
           --endpoint http://${{ env.APP_ENDPOINT }}
           --region ${{ env.AWS_DEFAULT_REGION }}
@@ -270,7 +250,7 @@ jobs:
       - name: Call endpoints and validate generated traces
         id: trace-validation
         if: (success() || steps.log-validation.outcome == 'failure' || steps.metric-validation.outcome == 'failure') && !cancelled()
-        run: ./gradlew testing:validator:run --args='-c eks/trace-validation.yml
+        run: ./gradlew validator:run --args='-c eks/trace-validation.yml
           --testing-id ${{ env.TESTING_ID }}
           --endpoint http://${{ env.APP_ENDPOINT }}
           --region ${{ env.AWS_DEFAULT_REGION }}
@@ -313,7 +293,7 @@ jobs:
       - name: Terraform destroy
         if: always()
         continue-on-error: true
-        working-directory: testing/terraform/eks
+        working-directory: terraform/eks
         run: |
           terraform destroy -auto-approve \
             -var="test_id=${{ env.TESTING_ID }}" \
