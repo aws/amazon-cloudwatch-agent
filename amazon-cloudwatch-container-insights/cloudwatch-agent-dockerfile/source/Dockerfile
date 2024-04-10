@@ -33,10 +33,10 @@ RUN apt-get update &&  \
     rm -rf /var/lib/apt/lists/*
 COPY --from=builder /go/src/github.com/aws/amazon-cloudwatch-agent/build/bin/linux_${TARGETARCH}/ /opt/aws/amazon-cloudwatch-agent/bin
 
-FROM amazoncorretto:latest
+FROM scratch
 
 COPY --from=cert /tmp /tmp
-COPY --from=cert /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-bundle.crt
+COPY --from=cert /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=cert /opt/aws/amazon-cloudwatch-agent /opt/aws/amazon-cloudwatch-agent
 
 ENV RUN_IN_CONTAINER="True"
