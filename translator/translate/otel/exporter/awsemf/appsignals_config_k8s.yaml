@@ -1,5 +1,5 @@
 log_group_name: "/aws/application-signals/data"
-namespace: "AppSignals"
+namespace: "ApplicationSignals"
 middleware: agenthealth/logs
 dimension_rollup_option: "NoDimensionRollup"
 metric_declarations:
