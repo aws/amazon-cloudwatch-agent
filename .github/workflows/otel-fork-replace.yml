@@ -67,7 +67,7 @@ jobs:
             override/aws
           )
           for p in ${amazonContributingPackages[@]}; do
-            go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/$p=github.com/amazon-contributing/opentelemetry-collector-contrib/$p@${{ steps.get-latest-commit.outputs.sha }}
+            go mod edit -require github.com/amazon-contributing/opentelemetry-collector-contrib/$p@${{ steps.get-latest-commit.outputs.sha }}
             go mod tidy
           done
           
