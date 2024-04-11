@@ -74,7 +74,7 @@ exporters:
           - Fault
           - Error
     middleware: agenthealth/logs
-    namespace: AppSignals
+    namespace: ApplicationSignals
     no_verify_ssl: false
     num_workers: 8
     output_destination: cloudwatch
