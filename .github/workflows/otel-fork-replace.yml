@@ -71,7 +71,7 @@ jobs:
             go mod tidy
           done
           
-          git commit -am "Update OTel fork components to https://github.com/amazon-contributing/opentelemetry-collector-contrib/commit/${{ steps.get-latest-commit.outputs.sha }}"
+          git commit -am "Update amazon-contributing/opentelemetry-collector-contrib dependencies to @${{ steps.get-latest-commit.outputs.sha }}"
           git push -u origin HEAD
           git config --global --unset user.name
           git config --global --unset user.email
