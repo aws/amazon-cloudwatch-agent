@@ -42,7 +42,6 @@ jobs:
             exporter/awscloudwatchlogsexporter
             exporter/awsemfexporter
             exporter/awsxrayexporter
-            extension/awsmiddleware
             extension/awsproxy
             internal/aws/awsutil
             internal/aws/containerinsight
@@ -51,6 +50,7 @@ jobs:
             internal/aws/proxy
             internal/aws/xray
             internal/kubelet
+            pkg/stanza
             pkg/translator/prometheus
             processor/resourcedetectionprocessor
             receiver/awscontainerinsightreceiver
@@ -63,8 +63,8 @@ jobs:
           done
           
           amazonContributingPackages=(
+            extension/awsmiddleware
             override/aws
-            pkg/stanza  
           )
           for p in ${amazonContributingPackages[@]}; do
             go mod edit -replace github.com/amazon-contributing/opentelemetry-collector-contrib/$p=github.com/amazon-contributing/opentelemetry-collector-contrib/$p@${{ steps.get-latest-commit.outputs.sha }}
