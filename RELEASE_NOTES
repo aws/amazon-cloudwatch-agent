@@ -1,4 +1,17 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300037.0 (2024-04-11)
+========================================================================
+Features:
+* [ContainerInsights] Add EFA observability with Kubernetes
+
+Enhancements:
+* Set cloudwatch logs metadata in X-Ray segment attributes
+
+Bugfixes:
+* Clean up log pusher state file on startup
+* Drop container/pod level Nvidia GPU metrics when there is no active workload
+
+========================================================================
 Amazon CloudWatch Agent 1.300036.0 (2024-04-05)
 ========================================================================
 Features:
