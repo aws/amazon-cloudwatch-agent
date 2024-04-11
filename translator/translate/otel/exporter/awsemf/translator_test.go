@@ -834,7 +834,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
-						"app_signals": map[string]any{},
+						"application_signals": map[string]any{},
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
@@ -850,7 +850,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
-						"app_signals": map[string]any{},
+						"application_signals": map[string]any{},
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
@@ -866,7 +866,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
-						"app_signals": map[string]any{},
+						"application_signals": map[string]any{},
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
@@ -879,6 +879,70 @@ func TestTranslateAppSignals(t *testing.T) {
 			mode:           config.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledEC2": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"application_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+				"local_mode":            "false",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: "",
+			mode:           config.ModeEC2,
+		},
+		"WithAppSignalsFallbackEnabledEKS": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
+				"local_mode":            "false",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: config.ModeEKS,
+			mode:           config.ModeEC2,
+		},
+		"WithAppSignalsFallbackEnabledK8s": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: config.ModeK8sOnPrem,
+			mode:           config.ModeOnPrem,
+		},
+		"WithAppSignalsFallbackEnabledGeneric": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: "",
+			mode:           config.ModeOnPrem,
+		},
+		"WithAppSignalsFallbackEnabledEC2": {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{

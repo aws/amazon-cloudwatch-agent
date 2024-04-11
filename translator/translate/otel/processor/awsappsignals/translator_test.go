@@ -60,7 +60,7 @@ func TestTranslate(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{
+						"application_signals": map[string]interface{}{
 							"hosted_in": "test",
 						},
 					},
@@ -81,7 +81,7 @@ func TestTranslate(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{
+						"application_signals": map[string]interface{}{
 							"hosted_in": "test",
 						},
 					},
@@ -95,7 +95,7 @@ func TestTranslate(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				}},
 			want:         validAppSignalsYamlGeneric,
@@ -114,6 +114,57 @@ func TestTranslate(t *testing.T) {
 			mode:    translatorConfig.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledEC2": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"application_signals": map[string]interface{}{
+							"hosted_in": "",
+						},
+					},
+				}},
+			want: validAppSignalsYamlEC2,
+			mode: translatorConfig.ModeEC2,
+		},
+		"WithAppSignalsFallbackEnabledK8S": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"hosted_in": "test",
+						},
+					},
+				}},
+			want:           validAppSignalsYamlK8s,
+			isKubernetes:   true,
+			kubernetesMode: translatorConfig.ModeK8sEC2,
+			mode:           translatorConfig.ModeEC2,
+		},
+		"WithAppSignalsFallbackEnabledGeneric": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want:         validAppSignalsYamlGeneric,
+			isKubernetes: false,
+			mode:         translatorConfig.ModeOnPrem,
+		},
+		"WithAppSignalsFallbackEnabledEKS": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"hosted_in": "test",
+						},
+					},
+				}},
+			want:           validAppSignalsYamlEKS,
+			isKubernetes:   true,
+			kubernetesMode: translatorConfig.ModeEKS,
+			mode:           translatorConfig.ModeEC2,
+		},
+		"WithAppSignalsFallbackEnabledEC2": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{

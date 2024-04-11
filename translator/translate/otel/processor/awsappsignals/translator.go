@@ -65,6 +65,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	hostedInConfigKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in")
 	hostedIn, hostedInConfigured := common.GetString(conf, hostedInConfigKey)
+	if !hostedInConfigured {
+		hostedInConfigKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignalsFallback, "hosted_in")
+		hostedIn, hostedInConfigured = common.GetString(conf, hostedInConfigKey)
+	}
 	if common.IsAppSignalsKubernetes() {
 		if !hostedInConfigured {
 			hostedIn = util.GetClusterNameFromEc2Tagger()
@@ -92,10 +96,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	return t.translateCustomRules(conf, configKey, cfg)
 }
 
-func (t *translator) translateMetricLimiterConfig(conf *confmap.Conf, configKey string) (*appsignalsconfig.LimiterConfig, error) {
-	limiterConfigKey := common.ConfigKey(configKey, "limiter")
+func (t *translator) translateMetricLimiterConfig(conf *confmap.Conf, configKey []string) (*appsignalsconfig.LimiterConfig, error) {
+	limiterConfigKey := common.ConfigKey(configKey[0], "limiter")
 	if !conf.IsSet(limiterConfigKey) {
-		return nil, nil
+		limiterConfigKey = common.ConfigKey(configKey[1], "limiter")
+		if !conf.IsSet(limiterConfigKey) {
+			return nil, nil
+		}
 	}
 
 	configJson, ok := conf.Get(limiterConfigKey).(map[string]interface{})
@@ -151,9 +158,12 @@ func (t *translator) translateMetricLimiterConfig(conf *confmap.Conf, configKey 
 
 }
 
-func (t *translator) translateCustomRules(conf *confmap.Conf, configKey string, cfg *appsignalsconfig.Config) (component.Config, error) {
+func (t *translator) translateCustomRules(conf *confmap.Conf, configKey []string, cfg *appsignalsconfig.Config) (component.Config, error) {
 	var rulesList []rules.Rule
-	rulesConfigKey := common.ConfigKey(configKey, common.AppSignalsRules)
+	rulesConfigKey := common.ConfigKey(configKey[0], common.AppSignalsRules)
+	if !conf.IsSet(rulesConfigKey) {
+		rulesConfigKey = common.ConfigKey(configKey[1], common.AppSignalsRules)
+	}
 	if conf.IsSet(rulesConfigKey) {
 		for _, rule := range conf.Get(rulesConfigKey).([]interface{}) {
 			ruleConfig := rules.Rule{}

@@ -4,7 +4,7 @@
   },
   "logs": {
     "metrics_collected": {
-      "app_signals": {
+      "application_signals": {
         "hosted_in": "TestCluster",
         "limiter": {
           "log_dropped_metrics": true,
@@ -24,7 +24,7 @@
   },
   "traces": {
     "traces_collected": {
-      "app_signals": {}
+      "application_signals": {}
     }
   }
 }

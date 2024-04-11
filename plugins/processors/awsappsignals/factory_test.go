@@ -78,7 +78,7 @@ func TestLoadEKSConfig(t *testing.T) {
 		errorMessage string
 	}{
 		{
-			id: component.NewIDWithName("awsappsignals", ""),
+			id: component.NewIDWithName("awsapplicationsignals", ""),
 			expected: &config.Config{
 				Resolvers: []config.Resolver{config.NewEKSResolver("test")},
 				Rules:     expectedRules,
@@ -119,7 +119,7 @@ func TestLoadGenericConfig(t *testing.T) {
 		errorMessage string
 	}{
 		{
-			id: component.NewIDWithName("awsappsignals", ""),
+			id: component.NewIDWithName("awsapplicationsignals", ""),
 			expected: &config.Config{
 				Resolvers: []config.Resolver{config.NewGenericResolver("")},
 				Rules:     expectedRules,

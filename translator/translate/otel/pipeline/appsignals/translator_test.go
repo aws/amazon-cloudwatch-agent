@@ -27,7 +27,7 @@ func TestTranslatorTraces(t *testing.T) {
 		extensions []string
 	}
 	tt := NewTranslator(component.DataTypeTraces)
-	assert.EqualValues(t, "traces/app_signals", tt.ID().String())
+	assert.EqualValues(t, "traces/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
 		want       *want
@@ -48,10 +48,10 @@ func TestTranslatorTraces(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/app_signals"},
-				processors: []string{"resourcedetection", "awsappsignals"},
-				exporters:  []string{"awsxray/app_signals"},
-				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
+				receivers:  []string{"otlp/application_signals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
+				exporters:  []string{"awsxray/application_signals"},
+				extensions: []string{"awsproxy/application_signals", "agenthealth/traces"},
 			},
 			detector:   eksdetector.TestEKSDetector,
 			isEKSCache: eksdetector.TestIsEKSCacheEKS,
@@ -65,10 +65,10 @@ func TestTranslatorTraces(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/app_signals"},
-				processors: []string{"resourcedetection", "awsappsignals"},
-				exporters:  []string{"awsxray/app_signals"},
-				extensions: []string{"awsproxy/app_signals", "agenthealth/traces"},
+				receivers:  []string{"otlp/application_signals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
+				exporters:  []string{"awsxray/application_signals"},
+				extensions: []string{"awsproxy/application_signals", "agenthealth/traces"},
 			},
 			detector:   eksdetector.TestK8sDetector,
 			isEKSCache: eksdetector.TestIsEKSCacheK8s,
@@ -103,7 +103,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 		extensions []string
 	}
 	tt := NewTranslator(component.DataTypeMetrics)
-	assert.EqualValues(t, "metrics/app_signals", tt.ID().String())
+	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
 		want       *want
@@ -124,9 +124,9 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/app_signals"},
-				processors: []string{"resourcedetection", "awsappsignals"},
-				exporters:  []string{"awsemf/app_signals"},
+				receivers:  []string{"otlp/application_signals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
+				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
 			detector:   eksdetector.TestEKSDetector,
@@ -141,9 +141,9 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/app_signals"},
-				processors: []string{"resourcedetection", "awsappsignals"},
-				exporters:  []string{"awsemf/app_signals"},
+				receivers:  []string{"otlp/application_signals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
+				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
 			detector:   eksdetector.TestK8sDetector,
@@ -178,7 +178,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 		extensions []string
 	}
 	tt := NewTranslator(component.DataTypeMetrics)
-	assert.EqualValues(t, "metrics/app_signals", tt.ID().String())
+	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
 		want       *want
@@ -199,9 +199,9 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/app_signals"},
-				processors: []string{"resourcedetection", "awsappsignals"},
-				exporters:  []string{"awsemf/app_signals"},
+				receivers:  []string{"otlp/application_signals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
+				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
 			detector:   eksdetector.TestEKSDetector,

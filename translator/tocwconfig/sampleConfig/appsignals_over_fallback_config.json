@@ -15,6 +15,17 @@
           "rotation_interval": "10m"
         }
       },
+      "app_signals": {
+        "tls": {
+          "cert_file": "/other/path/to/cert.crt",
+          "key_file": "/other/path/to/key.key"
+        },
+        "hosted_in": "OtherTestCluster",
+        "limiter": {
+          "log_dropped_metrics": false,
+          "rotation_interval": "20m"
+        }
+      },
       "kubernetes": {
         "cluster_name": "TestCluster",
         "metrics_collection_interval": 30,
@@ -28,7 +39,8 @@
   },
   "traces": {
     "traces_collected": {
-      "application_signals": {}
+      "application_signals": {},
+      "app_signals": {}
     }
   }
 }

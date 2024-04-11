@@ -5,13 +5,13 @@
   "logs": {
     "log_stream_name": "host_name_from_env",
     "metrics_collected": {
-      "application_signals": {}
+      "app_signals": {}
     },
     "endpoint_override":"https://fake_endpoint"
   },
   "traces": {
     "traces_collected": {
-      "application_signals": {}
+      "app_signals": {}
     },
     "endpoint_override":"https://fake_endpoint"
   }

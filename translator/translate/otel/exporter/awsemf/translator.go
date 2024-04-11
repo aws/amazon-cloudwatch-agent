@@ -153,7 +153,7 @@ func getAppSignalsConfig() string {
 }
 
 func (t *translator) isAppSignals(conf *confmap.Conf) bool {
-	return t.name == common.AppSignals && (conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces))
+	return (t.name == common.AppSignals || t.name == common.AppSignalsFallback) && (conf.IsSet(common.AppSignalsMetrics) || conf.IsSet(common.AppSignalsTraces) || conf.IsSet(common.AppSignalsMetricsFallback) || conf.IsSet(common.AppSignalsTracesFallback))
 }
 
 func isEcs(conf *confmap.Conf) bool {
