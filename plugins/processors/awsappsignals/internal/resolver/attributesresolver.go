@@ -6,19 +6,40 @@ package resolver
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	semconv1 "go.opentelemetry.io/collector/semconv/v1.17.0"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/common"
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
-const AttributePlatformGeneric = "Generic"
+const (
+	AttributeEnvironmentDefault = "default"
+	AttributePlatformGeneric    = "Generic"
+	AttributePlatformEC2        = "AWS::EC2"
+	AttributePlatformEKS        = "AWS::EKS"
+	AttributePlatformLambda     = "AWS::Lambda"
+	AttributePlatformK8S        = "K8s"
+)
 
-var DefaultHostedInAttributes = map[string]string{
-	attr.AWSHostedInEnvironment:    attr.HostedInEnvironment,
-	attr.ResourceDetectionHostName: attr.ResourceDetectionHostName,
+var GenericInheritedAttributes = map[string]string{
+	attr.AWSHostedInEnvironment:             common.MetricAttributeEnvironment,
+	semconv1.AttributeDeploymentEnvironment: common.MetricAttributeEnvironment,
+	attr.ResourceDetectionHostName:          attr.ResourceDetectionHostName,
+}
+
+// DefaultInheritedAttributes is an allow-list that also renames attributes from the resource detection processor
+var DefaultInheritedAttributes = map[string]string{
+	attr.AWSHostedInEnvironment:             common.MetricAttributeEnvironment,
+	semconv1.AttributeDeploymentEnvironment: common.MetricAttributeEnvironment,
+	attr.ResourceDetectionASG:               common.AttributeEC2AutoScalingGroupName,
+	attr.ResourceDetectionHostId:            common.AttributeEC2InstanceId,
+	attr.ResourceDetectionHostName:          attr.ResourceDetectionHostName,
 }
 
 type subResolver interface {
@@ -37,11 +58,13 @@ func NewAttributesResolver(resolvers []appsignalsconfig.Resolver, logger *zap.Lo
 	for _, resolver := range resolvers {
 		switch resolver.Platform {
 		case appsignalsconfig.PlatformEKS, appsignalsconfig.PlatformK8s:
-			subResolvers = append(subResolvers, getKubernetesResolver(logger), newKubernetesHostedInAttributeResolver(resolver.Name))
+			subResolvers = append(subResolvers, getKubernetesResolver(resolver.Platform, resolver.Name, logger), newKubernetesResourceAttributesResolver(resolver.Platform, resolver.Name))
 		case appsignalsconfig.PlatformEC2:
-			subResolvers = append(subResolvers, newEC2HostedInAttributeResolver(resolver.Name))
+			subResolvers = append(subResolvers, newResourceAttributesResolver(resolver.Platform, AttributePlatformEC2, DefaultInheritedAttributes))
+		case appsignalsconfig.PlatformECS:
+			subResolvers = append(subResolvers, newResourceAttributesResolver(resolver.Platform, AttributePlatformGeneric, DefaultInheritedAttributes))
 		default:
-			subResolvers = append(subResolvers, newHostedInAttributeResolver(resolver.Name, DefaultHostedInAttributes))
+			subResolvers = append(subResolvers, newResourceAttributesResolver(resolver.Platform, AttributePlatformGeneric, GenericInheritedAttributes))
 		}
 	}
 	return &attributesResolver{
@@ -69,34 +92,67 @@ func (r *attributesResolver) Stop(ctx context.Context) error {
 	return errs
 }
 
-type hostedInAttributeResolver struct {
-	name         string
+type resourceAttributesResolver struct {
+	platformCode string
+	platformType string
 	attributeMap map[string]string
 }
 
-func newHostedInAttributeResolver(name string, attributeMap map[string]string) *hostedInAttributeResolver {
-	if name == "" {
-		name = AttributePlatformGeneric
-	}
-	return &hostedInAttributeResolver{
-		name:         name,
+func newResourceAttributesResolver(platformCode, platformType string, attributeMap map[string]string) *resourceAttributesResolver {
+	return &resourceAttributesResolver{
+		platformCode: platformCode,
+		platformType: platformType,
 		attributeMap: attributeMap,
 	}
 }
-func (h *hostedInAttributeResolver) Process(attributes, resourceAttributes pcommon.Map) error {
+func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcommon.Map) error {
 	for attrKey, mappingKey := range h.attributeMap {
 		if val, ok := resourceAttributes.Get(attrKey); ok {
 			attributes.PutStr(mappingKey, val.AsString())
 		}
 	}
-
-	if _, ok := resourceAttributes.Get(attr.AWSHostedInEnvironment); !ok {
-		attributes.PutStr(attr.HostedInEnvironment, h.name)
+	if _, ok := attributes.Get(common.MetricAttributeEnvironment); !ok {
+		if h.platformCode == appsignalsconfig.PlatformECS {
+			if clusterName, ok := getECSClusterName(resourceAttributes); ok {
+				attributes.PutStr(common.MetricAttributeEnvironment, GetDefaultEnvironment(h.platformCode, clusterName))
+			}
+		}
+		if h.platformCode == appsignalsconfig.PlatformEC2 {
+			if asgAttr, ok := resourceAttributes.Get(attr.ResourceDetectionASG); ok {
+				attributes.PutStr(common.MetricAttributeEnvironment, GetDefaultEnvironment(h.platformCode, asgAttr.Str()))
+			}
+		}
 	}
+	if _, ok := attributes.Get(common.MetricAttributeEnvironment); !ok {
+		attributes.PutStr(common.MetricAttributeEnvironment, GetDefaultEnvironment(h.platformCode, AttributeEnvironmentDefault))
+	}
+	attributes.PutStr(common.AttributePlatformType, h.platformType)
 
 	return nil
 }
 
-func (h *hostedInAttributeResolver) Stop(ctx context.Context) error {
+func getECSClusterName(resourceAttributes pcommon.Map) (string, bool) {
+	if clusterAttr, ok := resourceAttributes.Get(semconv1.AttributeAWSECSClusterARN); ok {
+		parts := strings.Split(clusterAttr.Str(), "/")
+		clusterName := parts[len(parts)-1]
+		return clusterName, true
+	} else if taskAttr, ok := resourceAttributes.Get(semconv1.AttributeAWSECSTaskARN); ok {
+		parts := strings.SplitAfterN(taskAttr.Str(), ":task/", 2)
+		if len(parts) == 2 {
+			taskParts := strings.Split(parts[1], "/")
+			// cluster name in ARN
+			if len(taskParts) == 2 {
+				return taskParts[0], true
+			}
+		}
+	}
+	return "", false
+}
+
+func GetDefaultEnvironment(platformCode, val string) string {
+	return fmt.Sprintf("%s:%s", platformCode, val)
+}
+
+func (h *resourceAttributesResolver) Stop(ctx context.Context) error {
 	return nil
 }

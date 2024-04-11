@@ -25,8 +25,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/common"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
@@ -48,13 +49,6 @@ const (
 	jitterKubernetesAPISeconds = 10
 )
 
-var kubernetesHostedInAttributeMap = map[string]string{
-	semconv.AttributeK8SNamespaceName: attr.HostedInK8SNamespace,
-	attr.ResourceDetectionHostId:      attr.EC2InstanceId,
-	attr.ResourceDetectionHostName:    attr.ResourceDetectionHostName,
-	attr.ResourceDetectionASG:         attr.EC2AutoScalingGroupName,
-}
-
 var (
 	// ReplicaSet name = Deployment name + "-" + up to 10 alphanumeric characters string, if the ReplicaSet was created through a deployment
 	// The suffix string of the ReplicaSet name is an int32 number (0 to 4,294,967,295) that is cast to a string and then
@@ -74,6 +68,8 @@ var (
 type kubernetesResolver struct {
 	logger                         *zap.Logger
 	clientset                      kubernetes.Interface
+	clusterName                    string
+	platformCode                   string
 	ipToPod                        *sync.Map
 	podToWorkloadAndNamespace      *sync.Map
 	ipToServiceAndNamespace        *sync.Map
@@ -512,7 +508,7 @@ func (m *ServiceToWorkloadMapper) Start(stopCh chan struct{}) {
 	}()
 }
 
-func getKubernetesResolver(logger *zap.Logger) subResolver {
+func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger) subResolver {
 	once.Do(func() {
 		config, err := clientcmd.BuildConfigFromFlags("", "")
 		if err != nil {
@@ -550,6 +546,8 @@ func getKubernetesResolver(logger *zap.Logger) subResolver {
 		instance = &kubernetesResolver{
 			logger:                         logger,
 			clientset:                      clientset,
+			clusterName:                    clusterName,
+			platformCode:                   platformCode,
 			ipToServiceAndNamespace:        serviceWatcher.ipToServiceAndNamespace,
 			serviceAndNamespaceToSelectors: serviceWatcher.serviceAndNamespaceToSelectors,
 			ipToPod:                        podWatcher.ipToPod,
@@ -592,13 +590,14 @@ func (e *kubernetesResolver) GetWorkloadAndNamespaceByIP(ip string) (string, str
 }
 
 func (e *kubernetesResolver) Process(attributes, resourceAttributes pcommon.Map) error {
+	var namespace string
 	if value, ok := attributes.Get(attr.AWSRemoteService); ok {
 		valueStr := value.AsString()
 		ipStr := ""
 		if ip, _, ok := extractIPPort(valueStr); ok {
-			if workload, namespace, err := e.GetWorkloadAndNamespaceByIP(valueStr); err == nil {
+			if workload, ns, err := e.GetWorkloadAndNamespaceByIP(valueStr); err == nil {
 				attributes.PutStr(attr.AWSRemoteService, workload)
-				attributes.PutStr(attr.K8SRemoteNamespace, namespace)
+				namespace = ns
 			} else {
 				ipStr = ip
 			}
@@ -607,13 +606,19 @@ func (e *kubernetesResolver) Process(attributes, resourceAttributes pcommon.Map)
 		}
 
 		if ipStr != "" {
-			if workload, namespace, err := e.GetWorkloadAndNamespaceByIP(ipStr); err == nil {
+			if workload, ns, err := e.GetWorkloadAndNamespaceByIP(ipStr); err == nil {
 				attributes.PutStr(attr.AWSRemoteService, workload)
-				attributes.PutStr(attr.K8SRemoteNamespace, namespace)
+				namespace = ns
 			} else {
 				e.logger.Debug("failed to Process ip", zap.String("ip", ipStr), zap.Error(err))
 				attributes.PutStr(attr.AWSRemoteService, "UnknownRemoteService")
 			}
+		}
+	}
+
+	if _, ok := attributes.Get(attr.AWSRemoteEnvironment); !ok {
+		if namespace != "" {
+			attributes.PutStr(attr.AWSRemoteEnvironment, fmt.Sprintf("%s:%s/%s", e.platformCode, e.clusterName, namespace))
 		}
 	}
 
@@ -662,30 +667,50 @@ func getHostNetworkPorts(pod *corev1.Pod) []string {
 	return ports
 }
 
-type kubernetesHostedInAttributeResolver struct {
+type kubernetesResourceAttributesResolver struct {
+	platformCode string
 	clusterName  string
 	attributeMap map[string]string
 }
 
-func newKubernetesHostedInAttributeResolver(clusterName string) *kubernetesHostedInAttributeResolver {
-	return &kubernetesHostedInAttributeResolver{
+func newKubernetesResourceAttributesResolver(platformCode, clusterName string) *kubernetesResourceAttributesResolver {
+	return &kubernetesResourceAttributesResolver{
+		platformCode: platformCode,
 		clusterName:  clusterName,
-		attributeMap: kubernetesHostedInAttributeMap,
+		attributeMap: DefaultInheritedAttributes,
 	}
 }
-func (h *kubernetesHostedInAttributeResolver) Process(attributes, resourceAttributes pcommon.Map) error {
+func (h *kubernetesResourceAttributesResolver) Process(attributes, resourceAttributes pcommon.Map) error {
 	for attrKey, mappingKey := range h.attributeMap {
 		if val, ok := resourceAttributes.Get(attrKey); ok {
 			attributes.PutStr(mappingKey, val.AsString())
 		}
 	}
-
-	if isEks := eksdetector.IsEKS(); isEks.Value {
-		attributes.PutStr(attr.HostedInClusterNameEKS, h.clusterName)
+	if h.platformCode == config.PlatformEKS {
+		attributes.PutStr(common.AttributePlatformType, AttributePlatformEKS)
+		attributes.PutStr(common.AttributeEKSClusterName, h.clusterName)
 	} else {
-		attributes.PutStr(attr.HostedInClusterNameK8s, h.clusterName)
+		attributes.PutStr(common.AttributePlatformType, AttributePlatformK8S)
+		attributes.PutStr(common.AttributeK8SClusterName, h.clusterName)
+	}
+	var namespace string
+	if nsAttr, ok := resourceAttributes.Get(semconv.AttributeK8SNamespaceName); ok {
+		namespace = nsAttr.Str()
+	} else {
+		namespace = "UnknownNamespace"
 	}
 
+	if val, ok := resourceAttributes.Get(semconv.AttributeDeploymentEnvironment); !ok {
+		env := GetDefaultEnvironment(h.platformCode, h.clusterName+"/"+namespace)
+		if len(env) > 255 {
+			env = env[:255]
+		}
+		attributes.PutStr(common.MetricAttributeEnvironment, env)
+	} else {
+		attributes.PutStr(common.MetricAttributeEnvironment, val.Str())
+	}
+
+	attributes.PutStr(common.AttributeK8SNamespace, namespace)
 	//The application log group in Container Insights is a fixed pattern:
 	// "/aws/containerinsights/{Cluster_Name}/application"
 	// See https://github.com/aws/amazon-cloudwatch-agent-operator/blob/fe144bb02d7b1930715aa3ea32e57a5ff13406aa/helm/templates/fluent-bit-configmap.yaml#L82
@@ -695,6 +720,6 @@ func (h *kubernetesHostedInAttributeResolver) Process(attributes, resourceAttrib
 	return nil
 }
 
-func (h *kubernetesHostedInAttributeResolver) Stop(ctx context.Context) error {
+func (h *kubernetesResourceAttributesResolver) Stop(ctx context.Context) error {
 	return nil
 }

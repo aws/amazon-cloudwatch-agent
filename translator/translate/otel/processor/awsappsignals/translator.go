@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 type translator struct {
@@ -75,8 +76,16 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	kubernetesMode := context.CurrentContext().KubernetesMode()
-	switch kubernetesMode {
+	mode := context.CurrentContext().KubernetesMode()
+	if mode == "" {
+		mode = context.CurrentContext().Mode()
+	}
+	if mode == config.ModeEC2 {
+		if ecsutil.GetECSUtilSingleton().IsECS() {
+			mode = config.ModeECS
+		}
+	}
+	switch mode {
 	case config.ModeEKS:
 		cfg.Resolvers = []appsignalsconfig.Resolver{
 			appsignalsconfig.NewEKSResolver(hostedIn),
@@ -85,18 +94,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.Resolvers = []appsignalsconfig.Resolver{
 			appsignalsconfig.NewK8sResolver(hostedIn),
 		}
-	}
-
-	if kubernetesMode == "" {
-		switch context.CurrentContext().Mode() {
-		case config.ModeEC2:
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewEC2Resolver(hostedIn),
-			}
-		default:
-			cfg.Resolvers = []appsignalsconfig.Resolver{
-				appsignalsconfig.NewGenericResolver(hostedIn),
-			}
+	case config.ModeEC2:
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewEC2Resolver(hostedIn),
+		}
+	case config.ModeECS:
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewECSResolver(hostedIn),
+		}
+	default:
+		cfg.Resolvers = []appsignalsconfig.Resolver{
+			appsignalsconfig.NewGenericResolver(hostedIn),
 		}
 	}
 

@@ -11,7 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+	semconv "go.opentelemetry.io/collector/semconv/v1.17.0"
+	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/common"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/config"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
@@ -29,45 +33,96 @@ func (m *MockSubResolver) Stop(ctx context.Context) error {
 	return args.Error(0)
 }
 
-func TestHostedInAttributeResolverWithNoConfiguredName(t *testing.T) {
-	resolver := newHostedInAttributeResolver("", DefaultHostedInAttributes)
+func TestResourceAttributesResolverWithNoConfiguredName(t *testing.T) {
+	tests := []struct {
+		name         string
+		platformCode string
+		platformType string
+		resolver     config.Resolver
+	}{
+		{
+			"testOnGeneric",
+			config.PlatformGeneric,
+			AttributePlatformGeneric,
+			config.NewGenericResolver(""),
+		},
+		{
+			"testOnEC2",
+			config.PlatformEC2,
+			AttributePlatformEC2,
+			config.NewEC2Resolver(""),
+		},
+		{
+			"testOnECS",
+			config.PlatformECS,
+			AttributePlatformGeneric,
+			config.NewECSResolver(""),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger, _ := zap.NewDevelopment()
+			attributesResolver := NewAttributesResolver([]config.Resolver{tt.resolver}, logger)
+			resolver := attributesResolver.subResolvers[0]
+
+			attributes := pcommon.NewMap()
+			resourceAttributes := pcommon.NewMap()
+
+			resolver.Process(attributes, resourceAttributes)
+
+			attr, ok := attributes.Get(common.AttributePlatformType)
+			assert.True(t, ok)
+			assert.Equal(t, tt.platformType, attr.Str())
+
+			attr, ok = attributes.Get(common.MetricAttributeEnvironment)
+			assert.True(t, ok)
+			assert.Equal(t, tt.platformCode+":default", attr.Str())
+		})
+	}
+}
+
+func TestResourceAttributesResolverWithECSClusterName(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	attributesResolver := NewAttributesResolver([]config.Resolver{config.NewECSResolver("")}, logger)
+	resolver := attributesResolver.subResolvers[0]
 
 	attributes := pcommon.NewMap()
 	resourceAttributes := pcommon.NewMap()
+	resourceAttributes.PutStr(semconv.AttributeAWSECSTaskARN, "arn:aws:ecs:us-west-1:123456789123:task/my-cluster/10838bed-421f-43ef-870a-f43feacbbb5b")
 
 	resolver.Process(attributes, resourceAttributes)
-	envAttr, ok := attributes.Get(attr.HostedInEnvironment)
+
+	attr, ok := attributes.Get(common.AttributePlatformType)
 	assert.True(t, ok)
-	assert.Equal(t, "Generic", envAttr.AsString())
+	assert.Equal(t, "Generic", attr.Str())
+
+	attr, ok = attributes.Get(common.MetricAttributeEnvironment)
+	assert.True(t, ok)
+	assert.Equal(t, "ecs:my-cluster", attr.Str())
 }
 
-func TestHostedInAttributeResolverWithConfiguredName(t *testing.T) {
-	resolver := newHostedInAttributeResolver("test", DefaultHostedInAttributes)
+func TestResourceAttributesResolverWithOnEC2WithASG(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	attributesResolver := NewAttributesResolver([]config.Resolver{config.NewEC2Resolver("")}, logger)
+	resolver := attributesResolver.subResolvers[0]
 
 	attributes := pcommon.NewMap()
 	resourceAttributes := pcommon.NewMap()
+	resourceAttributes.PutStr(attr.ResourceDetectionASG, "my-asg")
 
 	resolver.Process(attributes, resourceAttributes)
-	envAttr, ok := attributes.Get(attr.HostedInEnvironment)
+	platformAttr, ok := attributes.Get(common.AttributePlatformType)
 	assert.True(t, ok)
-	assert.Equal(t, "test", envAttr.AsString())
+	assert.Equal(t, "AWS::EC2", platformAttr.Str())
+	envAttr, ok := attributes.Get(common.MetricAttributeEnvironment)
+	assert.True(t, ok)
+	assert.Equal(t, "ec2:my-asg", envAttr.Str())
 }
 
-func TestHostedInAttributeResolverWithConflictedName(t *testing.T) {
-	resolver := newHostedInAttributeResolver("test", DefaultHostedInAttributes)
-
-	attributes := pcommon.NewMap()
-	resourceAttributes := pcommon.NewMap()
-	resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "self-defined")
-
-	resolver.Process(attributes, resourceAttributes)
-	envAttr, ok := attributes.Get(attr.HostedInEnvironment)
-	assert.True(t, ok)
-	assert.Equal(t, "self-defined", envAttr.AsString())
-}
-
-func TestHostedInAttributeResolverWithHostname(t *testing.T) {
-	resolver := newHostedInAttributeResolver("test", DefaultHostedInAttributes)
+func TestResourceAttributesResolverWithHostname(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	attributesResolver := NewAttributesResolver([]config.Resolver{config.NewGenericResolver("")}, logger)
+	resolver := attributesResolver.subResolvers[0]
 
 	attributes := pcommon.NewMap()
 	resourceAttributes := pcommon.NewMap()
@@ -77,6 +132,69 @@ func TestHostedInAttributeResolverWithHostname(t *testing.T) {
 	envAttr, ok := attributes.Get(attr.ResourceDetectionHostName)
 	assert.True(t, ok)
 	assert.Equal(t, "hostname", envAttr.AsString())
+}
+
+func TestResourceAttributesResolverWithCustomEnvironment(t *testing.T) {
+	tests := []struct {
+		name         string
+		platformCode string
+		resolver     config.Resolver
+	}{
+		{
+			"testOnGeneric",
+			config.PlatformGeneric,
+			config.NewGenericResolver(""),
+		},
+		{
+			"testOnEC2",
+			config.PlatformEC2,
+			config.NewEC2Resolver(""),
+		},
+		{
+			"testOnECS",
+			config.PlatformECS,
+			config.NewEC2Resolver(""),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger, _ := zap.NewDevelopment()
+			attributesResolver := NewAttributesResolver([]config.Resolver{tt.resolver}, logger)
+			resolver := attributesResolver.subResolvers[0]
+
+			attributes := pcommon.NewMap()
+			resourceAttributes := pcommon.NewMap()
+			// insert default env
+			resourceAttributes.PutStr(attr.ResourceDetectionASG, "my-asg")
+			resourceAttributes.PutStr(semconv.AttributeAWSECSTaskARN, "arn:aws:ecs:us-west-1:123456789123:task/my-cluster/10838bed-421f-43ef-870a-f43feacbbb5b")
+
+			// insert custom env
+			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "env1")
+			resolver.Process(attributes, resourceAttributes)
+			envAttr, ok := attributes.Get(common.MetricAttributeEnvironment)
+			assert.True(t, ok)
+			assert.Equal(t, "env1", envAttr.Str())
+
+			attributes = pcommon.NewMap()
+			resourceAttributes = pcommon.NewMap()
+
+			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "error")
+			resourceAttributes.PutStr(semconv.AttributeDeploymentEnvironment, "env2")
+			resolver.Process(attributes, resourceAttributes)
+			envAttr, ok = attributes.Get(common.MetricAttributeEnvironment)
+			assert.True(t, ok)
+			assert.Equal(t, "env2", envAttr.Str())
+
+			attributes = pcommon.NewMap()
+			resourceAttributes = pcommon.NewMap()
+
+			resourceAttributes.PutStr(semconv.AttributeDeploymentEnvironment, "env3")
+			resolver.Process(attributes, resourceAttributes)
+			envAttr, ok = attributes.Get(common.MetricAttributeEnvironment)
+			assert.True(t, ok)
+			assert.Equal(t, "env3", envAttr.Str())
+		})
+	}
 }
 
 func TestAttributesResolver_Process(t *testing.T) {
@@ -116,4 +234,23 @@ func TestAttributesResolver_Stop(t *testing.T) {
 	assert.Error(t, err)
 	mockSubResolver1.AssertExpectations(t)
 	mockSubResolver2.AssertExpectations(t)
+}
+
+func TestGetClusterName(t *testing.T) {
+	resourceAttributes := pcommon.NewMap()
+	resourceAttributes.PutStr(semconv.AttributeAWSECSClusterARN, "arn:aws:ecs:us-west-2:123456789123:cluster/my-cluster")
+	clusterName, ok := getECSClusterName(resourceAttributes)
+	assert.True(t, ok)
+	assert.Equal(t, "my-cluster", clusterName)
+
+	resourceAttributes = pcommon.NewMap()
+	resourceAttributes.PutStr(semconv.AttributeAWSECSTaskARN, "arn:aws:ecs:us-west-1:123456789123:task/10838bed-421f-43ef-870a-f43feacbbb5b")
+	_, ok = getECSClusterName(resourceAttributes)
+	assert.False(t, ok)
+
+	resourceAttributes = pcommon.NewMap()
+	resourceAttributes.PutStr(semconv.AttributeAWSECSTaskARN, "arn:aws:ecs:us-west-1:123456789123:task/my-cluster/10838bed-421f-43ef-870a-f43feacbbb5b")
+	clusterName, ok = getECSClusterName(resourceAttributes)
+	assert.True(t, ok)
+	assert.Equal(t, "my-cluster", clusterName)
 }

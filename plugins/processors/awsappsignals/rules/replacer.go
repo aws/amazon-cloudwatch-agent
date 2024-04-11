@@ -36,18 +36,13 @@ func (r *ReplaceActions) Process(attributes, _ pcommon.Map, isTrace bool) error 
 			continue
 		}
 		for _, replacement := range element.Replacements {
-			targetDimensionKey := getExactKey(replacement.TargetDimension, isTrace)
-			// don't allow customer add new dimension key
-			_, isExist := attributes.Get(targetDimensionKey)
-			if !isExist {
-				continue
-			}
+			targetDimension := replacement.TargetDimension
+
+			attr := convertToManagedAttributeKey(targetDimension, isTrace)
 			// every replacement in one specific dimension only will be performed once
-			_, ok := finalRules[targetDimensionKey]
-			if ok {
-				continue
+			if _, visited := finalRules[attr]; !visited {
+				finalRules[attr] = replacement.Value
 			}
-			finalRules[targetDimensionKey] = replacement.Value
 		}
 	}
 
