@@ -291,6 +291,24 @@ func TestListWithMultipleMetrics(t *testing.T) {
 	assertModifiedMetric(t, metricsList, expectedMetrics)
 }
 
+func TestMetricWithStaleDatapoint(t *testing.T) {
+	metricModifier := setupMetricModifier()
+	metricsList := pmetric.NewMetricSlice()
+	createActualMetricForKey(NeuronExecutionLatency).CopyTo(metricsList.AppendEmpty())
+
+	originalMetricDatapoint := metricsList.At(0).Gauge().DataPoints().At(0)
+	originalMetricDatapoint.SetFlags(originalMetricDatapoint.Flags().WithNoRecordedValue(true))
+
+	metricModifier.ModifyMetric(metricsList.At(0), metricsList)
+
+	expectedMetrics := map[string]pmetric.Metric{
+		NeuronExecutionLatency:          metricsList.At(0),
+		"node_neuron_execution_latency": createExpectedMetric("node_neuron_execution_latency", false, []map[string]string{{Type: NodeAWSNeuron}}, []float64{1}, pmetric.MetricTypeSum, Seconds),
+	}
+
+	assertModifiedMetric(t, metricsList, expectedMetrics)
+}
+
 func createActualMetricForKey(key string) pmetric.Metric {
 	metricDefinition := metricNameToMetricLayout[key]
 
@@ -356,6 +374,8 @@ func assertModifiedMetric(t *testing.T, actualSlice pmetric.MetricSlice, expecte
 			assert.Equal(t, expectedDatapoint.ValueType(), actualDatapoint.ValueType())
 			assert.Equal(t, expectedDatapoint.DoubleValue(), actualDatapoint.DoubleValue())
 			assert.Equal(t, expectedDatapoint.Timestamp(), actualDatapoint.Timestamp())
+			assert.False(t, actualDatapoint.Flags().NoRecordedValue())
+			assert.NotEqual(t, pmetric.NumberDataPointValueTypeEmpty, actualDatapoint.ValueType())
 		}
 	}
 }
