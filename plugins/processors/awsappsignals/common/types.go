@@ -4,24 +4,23 @@
 package common
 
 const (
-	AttributeRemoteService       = "aws.remote.service"
-	AttributeHostedInEnvironment = "aws.hostedin.environment"
-)
-
-const (
-	MetricAttributeRemoteNamespace = "K8s.RemoteNamespace"
-	MetricAttributeLocalService    = "Service"
-	MetricAttributeLocalOperation  = "Operation"
-	MetricAttributeRemoteService   = "RemoteService"
-	MetricAttributeRemoteOperation = "RemoteOperation"
-	MetricAttributeRemoteTarget    = "RemoteTarget"
+	MetricAttributeLocalService             = "Service"
+	MetricAttributeLocalOperation           = "Operation"
+	MetricAttributeEnvironment              = "Environment"
+	MetricAttributeRemoteService            = "RemoteService"
+	MetricAttributeRemoteEnvironment        = "RemoteEnvironment"
+	MetricAttributeRemoteOperation          = "RemoteOperation"
+	MetricAttributeRemoteResourceIdentifier = "RemoteResourceIdentifier"
+	MetricAttributeRemoteResourceType       = "RemoteResourceType"
 )
 const (
-	HostedInAttributeClusterName    = "HostedIn.EKS.Cluster"
-	HostedInAttributeK8SNamespace   = "HostedIn.K8s.Namespace"
-	HostedInAttributeEnvironment    = "HostedIn.Environment"
-	HostedInAttributeK8SClusterName = "HostedIn.K8s.Cluster"
-	HostedInAttributeEC2Environment = "HostedIn.EC2.Environment"
+	AttributeEKSClusterName          = "EKS.Cluster"
+	AttributeK8SClusterName          = "K8s.Cluster"
+	AttributeK8SNamespace            = "K8s.Namespace"
+	AttributeEC2AutoScalingGroupName = "EC2.AutoScalingGroupName"
+	AttributeEC2InstanceId           = "EC2.InstanceId"
+	AttributePlatformType            = "PlatformType"
+	AttributeSDK                     = "SDK"
 )
 
 const (

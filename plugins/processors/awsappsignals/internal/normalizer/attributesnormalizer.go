@@ -9,8 +9,10 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	conventions "go.opentelemetry.io/collector/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/collector/semconv/v1.18.0"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/common"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
@@ -18,25 +20,33 @@ type attributesNormalizer struct {
 	logger *zap.Logger
 }
 
-var renameMapForMetric = map[string]string{
-	attr.AWSLocalService:    "Service",
-	attr.AWSLocalOperation:  "Operation",
-	attr.AWSRemoteService:   "RemoteService",
-	attr.AWSRemoteOperation: "RemoteOperation",
-	attr.AWSRemoteTarget:    "RemoteTarget",
+var attributesRenamingForMetric = map[string]string{
+	attr.AWSLocalService:             common.MetricAttributeLocalService,
+	attr.AWSLocalOperation:           common.MetricAttributeLocalOperation,
+	attr.AWSRemoteService:            common.MetricAttributeRemoteService,
+	attr.AWSRemoteOperation:          common.MetricAttributeRemoteOperation,
+	attr.AWSRemoteEnvironment:        common.MetricAttributeRemoteEnvironment,
+	attr.AWSRemoteTarget:             common.MetricAttributeRemoteResourceIdentifier,
+	attr.AWSRemoteResourceIdentifier: common.MetricAttributeRemoteResourceIdentifier,
+	attr.AWSRemoteResourceType:       common.MetricAttributeRemoteResourceType,
 }
 
-var renameMapForTrace = map[string]string{
+var resourceAttributesRenamingForTrace = map[string]string{
 	// these kubernetes resource attributes are set by the openTelemetry operator
 	// see the code references from upstream:
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L245
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L305C43-L305C43
-	attr.K8SDeploymentName:  "K8s.Workload",
-	attr.K8SStatefulSetName: "K8s.Workload",
-	attr.K8SDaemonSetName:   "K8s.Workload",
-	attr.K8SJobName:         "K8s.Workload",
-	attr.K8SCronJobName:     "K8s.Workload",
-	attr.K8SPodName:         "K8s.Pod",
+	semconv.AttributeK8SDeploymentName:  "K8s.Workload",
+	semconv.AttributeK8SStatefulSetName: "K8s.Workload",
+	semconv.AttributeK8SDaemonSetName:   "K8s.Workload",
+	semconv.AttributeK8SJobName:         "K8s.Workload",
+	semconv.AttributeK8SCronJobName:     "K8s.Workload",
+	semconv.AttributeK8SPodName:         "K8s.Pod",
+}
+
+var attributesRenamingForTrace = map[string]string{
+	common.MetricAttributeEnvironment: attr.AWSLocalEnvironment,
+	attr.AWSRemoteTarget:              attr.AWSRemoteResourceIdentifier,
 }
 
 var copyMapForMetric = map[string]string{
@@ -44,12 +54,12 @@ var copyMapForMetric = map[string]string{
 	// see the code referecnes from upstream:
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L245
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L305C43-L305C43
-	attr.K8SDeploymentName:  "K8s.Workload",
-	attr.K8SStatefulSetName: "K8s.Workload",
-	attr.K8SDaemonSetName:   "K8s.Workload",
-	attr.K8SJobName:         "K8s.Workload",
-	attr.K8SCronJobName:     "K8s.Workload",
-	attr.K8SPodName:         "K8s.Pod",
+	semconv.AttributeK8SDeploymentName:  "K8s.Workload",
+	semconv.AttributeK8SStatefulSetName: "K8s.Workload",
+	semconv.AttributeK8SDaemonSetName:   "K8s.Workload",
+	semconv.AttributeK8SJobName:         "K8s.Workload",
+	semconv.AttributeK8SCronJobName:     "K8s.Workload",
+	semconv.AttributeK8SPodName:         "K8s.Pod",
 }
 
 const (
@@ -71,14 +81,12 @@ func (n *attributesNormalizer) Process(attributes, resourceAttributes pcommon.Ma
 }
 
 func (n *attributesNormalizer) renameAttributes(attributes, resourceAttributes pcommon.Map, isTrace bool) {
-	attrs := attributes
-	renameMap := renameMapForMetric
 	if isTrace {
-		attrs = resourceAttributes
-		renameMap = renameMapForTrace
+		rename(resourceAttributes, resourceAttributesRenamingForTrace)
+		rename(attributes, attributesRenamingForTrace)
+	} else {
+		rename(attributes, attributesRenamingForMetric)
 	}
-
-	rename(attrs, renameMap)
 }
 
 func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, resourceAttributes pcommon.Map, isTrace bool) {
@@ -92,7 +100,7 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 				n.logger.Debug("attribute value is overwritten", zap.String("attribute", k), zap.String("original", originalAttrValue.AsString()), zap.String("new", resourceAttrValue.AsString()))
 			}
 			attributes.PutStr(v, resourceAttrValue.AsString())
-			if k == attr.K8SPodName {
+			if k == semconv.AttributeK8SPodName {
 				// only copy "host.id" from resource attributes to "K8s.Node" in attributesif the pod name is set
 				if host, ok := resourceAttributes.Get("host.id"); ok {
 					attributes.PutStr("K8s.Node", host.AsString())
@@ -134,7 +142,7 @@ func (n *attributesNormalizer) appendNewAttributes(attributes, resourceAttribute
 		sdkVersion = sdkAutoVersion
 		mode = instrumentationModeAuto
 	}
-	attributes.PutStr(attr.MetricAttributeSDKMetadata, fmt.Sprintf("%s,%s,%s,%s", sdkName, sdkVersion, sdkLang, mode))
+	attributes.PutStr(common.AttributeSDK, fmt.Sprintf("%s,%s,%s,%s", sdkName, sdkVersion, sdkLang, mode))
 }
 
 func rename(attrs pcommon.Map, renameMap map[string]string) {
@@ -142,7 +150,7 @@ func rename(attrs pcommon.Map, renameMap map[string]string) {
 		if value, ok := attrs.Get(original); ok {
 			attrs.PutStr(replacement, value.AsString())
 			attrs.Remove(original)
-			if original == attr.K8SPodName {
+			if original == semconv.AttributeK8SPodName {
 				// only rename host.id if the pod name is set
 				if host, ok := attrs.Get("host.id"); ok {
 					attrs.PutStr("K8s.Node", host.AsString())

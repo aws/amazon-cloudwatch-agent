@@ -12,6 +12,10 @@ const (
 	PlatformK8s = "k8s"
 	// PlatformEC2 Amazon EC2 platform
 	PlatformEC2 = "ec2"
+	// PlatformECS Amazon ECS
+	PlatformECS = "ecs"
+	// PlatformLambda Amazon Lambda
+	PlatformLambda = "lambda"
 )
 
 type Resolver struct {
@@ -37,6 +41,13 @@ func NewEC2Resolver(name string) Resolver {
 	return Resolver{
 		Name:     name,
 		Platform: PlatformEC2,
+	}
+}
+
+func NewECSResolver(name string) Resolver {
+	return Resolver{
+		Name:     name,
+		Platform: PlatformECS,
 	}
 }
 

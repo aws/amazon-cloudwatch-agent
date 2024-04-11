@@ -25,7 +25,7 @@ env:
   SAMPLE_APP_FRONTEND_SERVICE_IMAGE: ${{ secrets.APP_SIGNALS_E2E_SAMPLE_APP_FRONTEND_SVC_IMG }}
   SAMPLE_APP_REMOTE_SERVICE_IMAGE: ${{ secrets.APP_SIGNALS_E2E_SAMPLE_APP_REMOTE_SVC_IMG }}
   METRIC_NAMESPACE: AppSignals
-  LOG_GROUP_NAME: /aws/appsignals/eks
+  LOG_GROUP_NAME: /aws/application-signals/data
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
 
 jobs:

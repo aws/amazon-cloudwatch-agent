@@ -35,26 +35,10 @@ type translator struct {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 var (
-	indexedAttributesEKS = []string{
-		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
-		"HostedIn.Environment", "HostedIn.EKS.Cluster",
-	}
-
-	indexedAttributesK8s = []string{
-		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
-		"HostedIn.Environment", "HostedIn.K8s.Cluster",
-	}
-
-	indexedAttributesEC2 = []string{
-		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-		"HostedIn.EC2.Environment", "aws.remote.target",
-	}
-
-	indexedAttributesGeneric = []string{
-		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation", "aws.remote.target",
-		"HostedIn.Environment",
+	indexedAttributes = []string{
+		"aws.local.service", "aws.local.operation", "aws.local.environment",
+		"aws.remote.service", "aws.remote.operation", "aws.remote.environment",
+		"aws.remote.resource.identifier", "aws.remote.resource.type",
 	}
 )
 
@@ -80,16 +64,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
 
 	if isAppSignals(conf) {
-		ctx := context.CurrentContext()
-		if ctx.KubernetesMode() == config.ModeEKS {
-			cfg.IndexedAttributes = indexedAttributesEKS
-		} else if ctx.KubernetesMode() == config.ModeK8sEC2 || ctx.KubernetesMode() == config.ModeK8sOnPrem {
-			cfg.IndexedAttributes = indexedAttributesK8s
-		} else if ctx.Mode() == config.ModeEC2 {
-			cfg.IndexedAttributes = indexedAttributesEC2
-		} else {
-			cfg.IndexedAttributes = indexedAttributesGeneric
-		}
+		cfg.IndexedAttributes = indexedAttributes
 	}
 
 	c := confmap.NewFromStringMap(map[string]interface{}{
