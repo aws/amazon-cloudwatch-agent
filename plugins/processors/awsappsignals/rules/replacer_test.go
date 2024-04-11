@@ -119,6 +119,77 @@ func TestReplacerProcess(t *testing.T) {
 	}
 }
 
+func TestAddManagedDimensionKey(t *testing.T) {
+	config := []Rule{
+		{
+			Selectors: []Selector{
+				{
+					Dimension: "Service",
+					Match:     "app",
+				},
+				{
+					Dimension: "RemoteService",
+					Match:     "remote-app",
+				},
+			},
+			Replacements: []Replacement{
+				{
+					TargetDimension: "RemoteEnvironment",
+					Value:           "test",
+				},
+			},
+			Action: "replace",
+		},
+	}
+
+	testReplacer := NewReplacer(config, false)
+	assert.Equal(t, 1, len(testReplacer.Actions))
+
+	testCases := []TestCaseForReplacer{
+		{
+			name: "testAddMissingRemoteEnvironmentInMetric",
+			input: generateAttributesWithEnv("app", "PUT /api/customer/owners/12345", "test",
+				"remote-app", "GET", "", false),
+			output: generateAttributesWithEnv("app", "PUT /api/customer/owners/12345", "test",
+				"remote-app", "GET", "test", false),
+			isTrace: false,
+		},
+		{
+			name: "testAddMissingRemoteEnvironmentInTrace",
+			input: generateAttributesWithEnv("app", "PUT /api/customer/owners/12345", "test",
+				"remote-app", "GET", "", true),
+			output: generateAttributesWithEnv("app", "PUT /api/customer/owners/12345", "test",
+				"remote-app", "GET", "test", true),
+			isTrace: true,
+		},
+		{
+			name: "testReplaceRemoteEnvironmentInMetric",
+			input: generateAttributesWithEnv("app", "PUT /api/customer/owners/12345", "test",
+				"remote-app", "GET", "error", false),
+			output: generateAttributesWithEnv("app", "PUT /api/customer/owners/12345", "test",
+				"remote-app", "GET", "test", false),
+			isTrace: false,
+		},
+		{
+			name: "testReplaceRemoteEnvironmentInTrace",
+			input: generateAttributesWithEnv("app", "PUT /api/customer/owners/12345", "test",
+				"remote-app", "GET", "error", true),
+			output: generateAttributesWithEnv("app", "PUT /api/customer/owners/12345", "test",
+				"remote-app", "GET", "test", true),
+			isTrace: true,
+		},
+	}
+
+	testMapPlaceHolder := pcommon.NewMap()
+	for i := range testCases {
+		tt := testCases[i]
+		t.Run(tt.name, func(t *testing.T) {
+			assert.NoError(t, testReplacer.Process(tt.input, testMapPlaceHolder, tt.isTrace))
+			assert.Equal(t, tt.output, tt.input)
+		})
+	}
+}
+
 func TestReplacerProcessWithPriority(t *testing.T) {
 
 	config := []Rule{

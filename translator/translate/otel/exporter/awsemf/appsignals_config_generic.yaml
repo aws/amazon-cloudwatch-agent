@@ -1,11 +1,11 @@
-log_group_name: "/aws/appsignals/generic"
+log_group_name: "/aws/application-signals/data"
 namespace: "AppSignals"
 middleware: agenthealth/logs
 dimension_rollup_option: "NoDimensionRollup"
 metric_declarations:
   - dimensions:
-      - [HostedIn.Environment, Service, Operation]
-      - [HostedIn.Environment, Service]
+      - [Environment, Service, Operation]
+      - [Environment, Service]
     label_matchers:
       - label_names:
           - aws.span.kind
@@ -15,13 +15,13 @@ metric_declarations:
       - Fault
       - Error
   - dimensions:
-      - [HostedIn.Environment, Service, Operation, RemoteService, RemoteOperation, RemoteTarget]
-      - [HostedIn.Environment, Service, Operation, RemoteService, RemoteOperation]
-      - [HostedIn.Environment, Service, RemoteService]
-      - [HostedIn.Environment, Service, RemoteService, RemoteOperation, RemoteTarget]
-      - [HostedIn.Environment, Service, RemoteService, RemoteOperation]
-      - [HostedIn.Environment, Service, RemoteService, RemoteTarget]
-      - [RemoteService, RemoteTarget]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation]
+      - [Environment, Service, RemoteService]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, RemoteService, RemoteOperation]
+      - [Environment, Service, RemoteService, RemoteResourceIdentifier, RemoteResourceType]
+      - [RemoteService, RemoteResourceIdentifier, RemoteResourceType]
       - [RemoteService]
     label_matchers:
       - label_names:

@@ -8,6 +8,9 @@ import (
 
 	"github.com/gobwas/glob"
 	"go.opentelemetry.io/collector/pdata/pcommon"
+
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/common"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals/internal/attributes"
 )
 
 type AllowListAction string
@@ -46,10 +49,14 @@ type ActionItem struct {
 }
 
 var traceKeyMap = map[string]string{
-	"Service":         "aws.local.service",
-	"Operation":       "aws.local.operation",
-	"RemoteService":   "aws.remote.service",
-	"RemoteOperation": "aws.remote.operation",
+	common.MetricAttributeLocalService:             attributes.AWSLocalService,
+	common.MetricAttributeEnvironment:              attributes.AWSLocalEnvironment,
+	common.MetricAttributeLocalOperation:           attributes.AWSLocalOperation,
+	common.MetricAttributeRemoteService:            attributes.AWSRemoteService,
+	common.MetricAttributeRemoteEnvironment:        attributes.AWSRemoteEnvironment,
+	common.MetricAttributeRemoteOperation:          attributes.AWSRemoteOperation,
+	common.MetricAttributeRemoteResourceIdentifier: attributes.AWSRemoteResourceIdentifier,
+	common.MetricAttributeRemoteResourceType:       attributes.AWSRemoteResourceType,
 }
 
 func GetAllowListAction(action string) (AllowListAction, error) {
@@ -64,21 +71,17 @@ func GetAllowListAction(action string) (AllowListAction, error) {
 	return "", errors.New("invalid action in rule")
 }
 
-func getExactKey(metricDimensionKey string, isTrace bool) string {
-	if !isTrace {
-		return metricDimensionKey
+func convertToManagedAttributeKey(attributeKey string, isTrace bool) string {
+	val, ok := traceKeyMap[attributeKey]
+	if ok && isTrace {
+		return val
 	}
-	traceDimensionKey, ok := traceKeyMap[metricDimensionKey]
-	if !ok {
-		// return original key if there is no matches
-		return metricDimensionKey
-	}
-	return traceDimensionKey
+	return attributeKey
 }
 
 func matchesSelectors(attributes pcommon.Map, selectorMatchers []SelectorMatcherItem, isTrace bool) bool {
 	for _, item := range selectorMatchers {
-		exactKey := getExactKey(item.Key, isTrace)
+		exactKey := convertToManagedAttributeKey(item.Key, isTrace)
 		value, ok := attributes.Get(exactKey)
 		if !ok {
 			return false

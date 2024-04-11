@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -29,17 +28,16 @@ const (
 )
 
 var awsDeclaredMetricAttributes = []string{
-	common.HostedInAttributeClusterName,
-	common.HostedInAttributeK8SNamespace,
-	common.HostedInAttributeEnvironment,
+	common.AttributeEKSClusterName,
+	common.AttributeK8SNamespace,
+	common.MetricAttributeEnvironment,
 	common.MetricAttributeLocalService,
 	common.MetricAttributeLocalOperation,
 	common.MetricAttributeRemoteService,
 	common.MetricAttributeRemoteOperation,
-	common.MetricAttributeRemoteTarget,
-	common.MetricAttributeRemoteNamespace,
-	common.HostedInAttributeK8SClusterName,
-	common.HostedInAttributeEC2Environment,
+	common.MetricAttributeRemoteResourceIdentifier,
+	common.MetricAttributeRemoteEnvironment,
+	common.AttributeK8SClusterName,
 }
 
 type Limiter interface {
@@ -338,7 +336,7 @@ func (s *service) admitMetricData(metric *MetricData) bool {
 
 func (s *service) rollupMetricData(attributes pcommon.Map) {
 	for _, indexAttr := range awsDeclaredMetricAttributes {
-		if strings.HasPrefix(indexAttr, "HostedIn.") || (indexAttr == common.MetricAttributeLocalService) || (indexAttr == common.MetricAttributeRemoteService) {
+		if (indexAttr == common.MetricAttributeEnvironment) || (indexAttr == common.MetricAttributeLocalService) || (indexAttr == common.MetricAttributeRemoteService) {
 			continue
 		}
 		if indexAttr == common.MetricAttributeLocalOperation {

@@ -21,7 +21,7 @@ env:
   GET_ADOT_JAR_COMMAND: "wget -O adot.jar https://github.com/aws-observability/aws-otel-java-instrumentation/releases/latest/download/aws-opentelemetry-agent.jar"
   GET_CW_AGENT_RPM_COMMAND: "aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ github.sha }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm ./cw-agent.rpm"
   METRIC_NAMESPACE: AppSignals
-  LOG_GROUP_NAME: /aws/appsignals/generic
+  LOG_GROUP_NAME: /aws/application-signals/data
 
 jobs:
   e2e-ec2-test:

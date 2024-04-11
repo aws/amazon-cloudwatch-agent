@@ -118,7 +118,7 @@ func TestTranslate(t *testing.T) {
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"application_signals": map[string]interface{}{
-							"hosted_in": "",
+							"hosted_in": "test",
 						},
 					},
 				}},

@@ -19,7 +19,7 @@ func TestRenameAttributes_for_metric(t *testing.T) {
 	// test for metric
 	// Create a pcommon.Map with some attributes
 	attributes := pcommon.NewMap()
-	for originalKey, replacementKey := range renameMapForMetric {
+	for originalKey, replacementKey := range attributesRenamingForMetric {
 		attributes.PutStr(originalKey, replacementKey+"-value")
 	}
 
@@ -28,14 +28,14 @@ func TestRenameAttributes_for_metric(t *testing.T) {
 	normalizer.renameAttributes(attributes, resourceAttributes, false)
 
 	// Check that the original key has been removed
-	for originalKey := range renameMapForMetric {
+	for originalKey := range attributesRenamingForMetric {
 		if _, ok := attributes.Get(originalKey); ok {
 			t.Errorf("originalKey was not removed")
 		}
 	}
 
 	// Check that the new key has the correct value
-	for _, replacementKey := range renameMapForMetric {
+	for _, replacementKey := range attributesRenamingForMetric {
 		if value, ok := attributes.Get(replacementKey); !ok || value.AsString() != replacementKey+"-value" {
 			t.Errorf("replacementKey has incorrect value: got %v, want %v", value.AsString(), replacementKey+"-value")
 		}
@@ -49,7 +49,7 @@ func TestRenameAttributes_for_trace(t *testing.T) {
 	// test for trace
 	// Create a pcommon.Map with some attributes
 	resourceAttributes := pcommon.NewMap()
-	for originalKey, replacementKey := range renameMapForTrace {
+	for originalKey, replacementKey := range resourceAttributesRenamingForTrace {
 		resourceAttributes.PutStr(originalKey, replacementKey+"-value")
 	}
 	resourceAttributes.PutStr("host.id", "i-01ef7d37f42caa168")
@@ -59,14 +59,14 @@ func TestRenameAttributes_for_trace(t *testing.T) {
 	normalizer.renameAttributes(attributes, resourceAttributes, true)
 
 	// Check that the original key has been removed
-	for originalKey := range renameMapForTrace {
+	for originalKey := range resourceAttributesRenamingForTrace {
 		if _, ok := resourceAttributes.Get(originalKey); ok {
 			t.Errorf("originalKey was not removed")
 		}
 	}
 
 	// Check that the new key has the correct value
-	for _, replacementKey := range renameMapForTrace {
+	for _, replacementKey := range resourceAttributesRenamingForTrace {
 		if value, ok := resourceAttributes.Get(replacementKey); !ok || value.AsString() != replacementKey+"-value" {
 			t.Errorf("replacementKey has incorrect value: got %v, want %v", value.AsString(), replacementKey+"-value")
 		}

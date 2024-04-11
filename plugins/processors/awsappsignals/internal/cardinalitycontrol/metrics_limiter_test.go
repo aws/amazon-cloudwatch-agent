@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -42,7 +41,7 @@ func TestAdmitAndRollup(t *testing.T) {
 			admittedAttributes[uniqKey.AsString()] = attr
 		} else {
 			for _, indexedAttrKey := range awsDeclaredMetricAttributes {
-				if strings.HasPrefix(indexedAttrKey, "HostedIn.") || indexedAttrKey == "Service" || indexedAttrKey == "RemoteService" {
+				if indexedAttrKey == "Environment" || indexedAttrKey == "Service" || indexedAttrKey == "RemoteService" {
 					continue
 				}
 				attrValue, _ := attr.Get(indexedAttrKey)
