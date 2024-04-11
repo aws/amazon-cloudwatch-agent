@@ -7,7 +7,7 @@ Features:
 Enhancements:
 * Set cloudwatch logs metadata in X-Ray segment attributes
 
-Bugfixes:
+Bug fixes:
 * Clean up log pusher state file on startup
 * Drop container/pod level Nvidia GPU metrics when there is no active workload
 
