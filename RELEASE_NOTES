@@ -5,7 +5,7 @@ Features:
 * [ContainerInsights] Add Elastic Fabric Adapter (EFA) observability with Kubernetes
 
 Enhancements:
-* Set cloudwatch logs metadata in X-Ray segment attributes
+* Retain CloudWatch Log Group when translating X-Ray segments
 
 Bug fixes:
 * Clean up log pusher state file on startup
