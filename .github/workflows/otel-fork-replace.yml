@@ -38,8 +38,6 @@ jobs:
           git config --global user.name 'Github Action'
           git config --global user.email 'action@github.com'
           git checkout -b otel-fork-replace-${{ steps.get-latest-commit.outputs.sha }}
-          go mod edit -replace go.opentelemetry.io/collector/config/confighttp=github.com/amazon-contributing/opentelemetry-collector-contrib/config/confighttp@${{ steps.get-latest-commit.outputs.sha }}
-          go mod tidy
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor=github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor@${{ steps.get-latest-commit.outputs.sha }}
           go mod tidy
           go mod edit -replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter=github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter@${{ steps.get-latest-commit.outputs.sha }}
