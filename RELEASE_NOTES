@@ -2,7 +2,7 @@
 Amazon CloudWatch Agent 1.300037.0 (2024-04-11)
 ========================================================================
 Features:
-* [ContainerInsights] Add EFA observability with Kubernetes
+* [ContainerInsights] Add Elastic Fabric Adapter (EFA) observability with Kubernetes
 
 Enhancements:
 * Set cloudwatch logs metadata in X-Ray segment attributes
