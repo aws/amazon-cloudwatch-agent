@@ -64,13 +64,13 @@ func TestResourceAttributesResolverWithNoConfiguredName(t *testing.T) {
 
 			resolver.Process(attributes, resourceAttributes)
 
-			attr, ok := attributes.Get(common.AttributePlatformType)
+			attribute, ok := attributes.Get(common.AttributePlatformType)
 			assert.True(t, ok)
-			assert.Equal(t, tt.platformType, attr.Str())
+			assert.Equal(t, tt.platformType, attribute.Str())
 
-			attr, ok = attributes.Get(common.MetricAttributeEnvironment)
+			attribute, ok = attributes.Get(attr.AWSLocalEnvironment)
 			assert.True(t, ok)
-			assert.Equal(t, tt.platformCode+":default", attr.Str())
+			assert.Equal(t, tt.platformCode+":default", attribute.Str())
 		})
 	}
 }
@@ -88,13 +88,13 @@ func TestResourceAttributesResolverWithECSClusterName(t *testing.T) {
 
 	resolver.Process(attributes, resourceAttributes)
 
-	attr, ok := attributes.Get(common.AttributePlatformType)
+	attribute, ok := attributes.Get(common.AttributePlatformType)
 	assert.True(t, ok)
-	assert.Equal(t, "Generic", attr.Str())
+	assert.Equal(t, "Generic", attribute.Str())
 
-	attr, ok = attributes.Get(common.MetricAttributeEnvironment)
+	attribute, ok = attributes.Get(attr.AWSLocalEnvironment)
 	assert.True(t, ok)
-	assert.Equal(t, "ecs:my-cluster", attr.Str())
+	assert.Equal(t, "ecs:my-cluster", attribute.Str())
 }
 
 func TestResourceAttributesResolverWithOnEC2WithASG(t *testing.T) {
@@ -110,7 +110,7 @@ func TestResourceAttributesResolverWithOnEC2WithASG(t *testing.T) {
 	platformAttr, ok := attributes.Get(common.AttributePlatformType)
 	assert.True(t, ok)
 	assert.Equal(t, "AWS::EC2", platformAttr.Str())
-	envAttr, ok := attributes.Get(common.MetricAttributeEnvironment)
+	envAttr, ok := attributes.Get(attr.AWSLocalEnvironment)
 	assert.True(t, ok)
 	assert.Equal(t, "ec2:my-asg", envAttr.Str())
 }
@@ -162,7 +162,7 @@ func TestResourceAttributesResolverWithCustomEnvironment(t *testing.T) {
 			// insert custom env
 			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "env1")
 			resolver.Process(attributes, resourceAttributes)
-			envAttr, ok := attributes.Get(common.MetricAttributeEnvironment)
+			envAttr, ok := attributes.Get(attr.AWSLocalEnvironment)
 			assert.True(t, ok)
 			assert.Equal(t, "env1", envAttr.Str())
 
@@ -172,7 +172,7 @@ func TestResourceAttributesResolverWithCustomEnvironment(t *testing.T) {
 			resourceAttributes.PutStr(attr.AWSHostedInEnvironment, "error")
 			resourceAttributes.PutStr(semconv.AttributeDeploymentEnvironment, "env2")
 			resolver.Process(attributes, resourceAttributes)
-			envAttr, ok = attributes.Get(common.MetricAttributeEnvironment)
+			envAttr, ok = attributes.Get(attr.AWSLocalEnvironment)
 			assert.True(t, ok)
 			assert.Equal(t, "env2", envAttr.Str())
 
@@ -181,7 +181,7 @@ func TestResourceAttributesResolverWithCustomEnvironment(t *testing.T) {
 
 			resourceAttributes.PutStr(semconv.AttributeDeploymentEnvironment, "env3")
 			resolver.Process(attributes, resourceAttributes)
-			envAttr, ok = attributes.Get(common.MetricAttributeEnvironment)
+			envAttr, ok = attributes.Get(attr.AWSLocalEnvironment)
 			assert.True(t, ok)
 			assert.Equal(t, "env3", envAttr.Str())
 		})
