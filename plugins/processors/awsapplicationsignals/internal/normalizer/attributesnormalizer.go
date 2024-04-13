@@ -16,6 +16,15 @@ import (
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
 )
 
+const (
+	// Length limits from Application Signals SLOs
+	MaxEnvironmentLength = 259
+	MaxServiceNameLength = 255
+
+	// Length limits from CloudWatch Metrics
+	DefaultMetricAttributeLength = 1024
+)
+
 type attributesNormalizer struct {
 	logger *zap.Logger
 }
@@ -23,6 +32,7 @@ type attributesNormalizer struct {
 var attributesRenamingForMetric = map[string]string{
 	attr.AWSLocalService:             common.MetricAttributeLocalService,
 	attr.AWSLocalOperation:           common.MetricAttributeLocalOperation,
+	attr.AWSLocalEnvironment:         common.MetricAttributeEnvironment,
 	attr.AWSRemoteService:            common.MetricAttributeRemoteService,
 	attr.AWSRemoteOperation:          common.MetricAttributeRemoteOperation,
 	attr.AWSRemoteEnvironment:        common.MetricAttributeRemoteEnvironment,
@@ -45,8 +55,7 @@ var resourceAttributesRenamingForTrace = map[string]string{
 }
 
 var attributesRenamingForTrace = map[string]string{
-	common.MetricAttributeEnvironment: attr.AWSLocalEnvironment,
-	attr.AWSRemoteTarget:              attr.AWSRemoteResourceIdentifier,
+	attr.AWSRemoteTarget: attr.AWSRemoteResourceIdentifier,
 }
 
 var copyMapForMetric = map[string]string{
@@ -75,6 +84,10 @@ func NewAttributesNormalizer(logger *zap.Logger) *attributesNormalizer {
 
 func (n *attributesNormalizer) Process(attributes, resourceAttributes pcommon.Map, isTrace bool) error {
 	n.copyResourceAttributesToAttributes(attributes, resourceAttributes, isTrace)
+	// It's assumed that all attributes are initially inserted as trace attribute, and attributesRenamingForMetric
+	// contains all attributes that will be used for CloudWatch metric dimension. Therefore, we iterate the keys
+	// for enforcing the limits on length.
+	truncateAttributesByLength(attributes)
 	n.renameAttributes(attributes, resourceAttributes, isTrace)
 	n.appendNewAttributes(attributes, resourceAttributes, isTrace)
 	return nil
@@ -159,4 +172,30 @@ func rename(attrs pcommon.Map, renameMap map[string]string) {
 			}
 		}
 	}
+}
+
+func truncateAttributesByLength(attributes pcommon.Map) {
+	for attrKey, _ := range attributesRenamingForMetric {
+		switch attrKey {
+		case attr.AWSLocalEnvironment, attr.AWSRemoteEnvironment:
+			if val, ok := attributes.Get(attrKey); ok {
+				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), MaxEnvironmentLength))
+			}
+		case attr.AWSLocalService, attr.AWSRemoteService:
+			if val, ok := attributes.Get(attrKey); ok {
+				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), MaxServiceNameLength))
+			}
+		default:
+			if val, ok := attributes.Get(attrKey); ok {
+				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), DefaultMetricAttributeLength))
+			}
+		}
+	}
+}
+
+func truncateStringByLength(val string, length int) string {
+	if len(val) > length {
+		return val[:length]
+	}
+	return val
 }

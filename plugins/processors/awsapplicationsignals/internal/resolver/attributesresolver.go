@@ -29,15 +29,15 @@ const (
 )
 
 var GenericInheritedAttributes = map[string]string{
-	attr.AWSHostedInEnvironment:             common.MetricAttributeEnvironment,
-	semconv1.AttributeDeploymentEnvironment: common.MetricAttributeEnvironment,
+	attr.AWSHostedInEnvironment:             attr.AWSLocalEnvironment,
+	semconv1.AttributeDeploymentEnvironment: attr.AWSLocalEnvironment,
 	attr.ResourceDetectionHostName:          attr.ResourceDetectionHostName,
 }
 
 // DefaultInheritedAttributes is an allow-list that also renames attributes from the resource detection processor
 var DefaultInheritedAttributes = map[string]string{
-	attr.AWSHostedInEnvironment:             common.MetricAttributeEnvironment,
-	semconv1.AttributeDeploymentEnvironment: common.MetricAttributeEnvironment,
+	attr.AWSHostedInEnvironment:             attr.AWSLocalEnvironment,
+	semconv1.AttributeDeploymentEnvironment: attr.AWSLocalEnvironment,
 	attr.ResourceDetectionASG:               common.AttributeEC2AutoScalingGroupName,
 	attr.ResourceDetectionHostId:            common.AttributeEC2InstanceId,
 	attr.ResourceDetectionHostName:          attr.ResourceDetectionHostName,
@@ -113,20 +113,20 @@ func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcom
 			attributes.PutStr(mappingKey, val.AsString())
 		}
 	}
-	if _, ok := attributes.Get(common.MetricAttributeEnvironment); !ok {
+	if _, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
 		if h.defaultEnvPrefix == appsignalsconfig.PlatformECS {
 			if clusterName, ok := getECSClusterName(resourceAttributes); ok {
-				attributes.PutStr(common.MetricAttributeEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, clusterName))
+				attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, clusterName))
 			}
 		}
 		if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
 			if asgAttr, ok := resourceAttributes.Get(attr.ResourceDetectionASG); ok {
-				attributes.PutStr(common.MetricAttributeEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, asgAttr.Str()))
+				attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, asgAttr.Str()))
 			}
 		}
 	}
-	if _, ok := attributes.Get(common.MetricAttributeEnvironment); !ok {
-		attributes.PutStr(common.MetricAttributeEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, AttributeEnvironmentDefault))
+	if _, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
+		attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, AttributeEnvironmentDefault))
 	}
 	attributes.PutStr(common.AttributePlatformType, h.platformType)
 

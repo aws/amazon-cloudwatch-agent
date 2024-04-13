@@ -10,6 +10,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
 	"go.uber.org/zap"
+
+	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
 )
 
 func TestRenameAttributes_for_metric(t *testing.T) {
@@ -104,6 +106,32 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 	if value, ok := attributes.Get("K8s.Node"); !ok || value.AsString() != "i-01ef7d37f42caa168" {
 		t.Errorf("Attribute was not copied correctly: got %v, want %v", value.AsString(), "i-01ef7d37f42caa168")
 	}
+}
+
+func TestTruncateAttributes(t *testing.T) {
+	attributes := pcommon.NewMap()
+
+	longValue := make([]byte, 300)
+	for i := 0; i < 300; i++ {
+		longValue[i] = 'a'
+	}
+	longStringValue := string(longValue)
+	for key, _ := range attributesRenamingForMetric {
+		attributes.PutStr(key, longStringValue)
+	}
+
+	truncateAttributesByLength(attributes)
+
+	val, _ := attributes.Get(attr.AWSLocalEnvironment)
+	assert.True(t, len(val.Str()) == MaxEnvironmentLength)
+	val, _ = attributes.Get(attr.AWSRemoteEnvironment)
+	assert.True(t, len(val.Str()) == MaxEnvironmentLength)
+	val, _ = attributes.Get(attr.AWSLocalService)
+	assert.True(t, len(val.Str()) == MaxServiceNameLength)
+	val, _ = attributes.Get(attr.AWSRemoteService)
+	assert.True(t, len(val.Str()) == MaxServiceNameLength)
+	val, _ = attributes.Get(attr.AWSRemoteResourceIdentifier)
+	assert.True(t, len(val.Str()) == 300)
 }
 
 func Test_attributesNormalizer_appendNewAttributes(t *testing.T) {
