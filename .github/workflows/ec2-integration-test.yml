@@ -84,7 +84,7 @@ jobs:
         if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
+          max_attempts: 1
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
@@ -113,16 +113,16 @@ jobs:
               -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
               -var="ssh_key_name=${{env.KEY_NAME}}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+              -var="agent_start=${{ matrix.arrays.agentStartCommand }}"; then echo done
             else
-              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
+              echo fail && exit 1
             fi
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
+          max_attempts: 1
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd ${{ inputs.test_dir }} && terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+          command: cd ${{ inputs.test_dir }}
