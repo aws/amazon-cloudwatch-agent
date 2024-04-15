@@ -84,7 +84,7 @@ jobs:
         if: steps.cache_if_success.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
+          max_attempts: 2
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
@@ -122,7 +122,7 @@ jobs:
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
+          max_attempts: 2
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd ${{ inputs.test_dir }} && terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
