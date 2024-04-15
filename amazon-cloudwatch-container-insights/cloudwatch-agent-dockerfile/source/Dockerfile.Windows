@@ -42,4 +42,4 @@ WORKDIR $CONTAINER_CLOUDWATCHAGENT_PATH
 COPY --from=builder C:\\go\\src\\github.com\\aws\\amazon-cloudwatch-agent\\build\\bin\\windows_$TARGETARCH\\ $CONTAINER_CLOUDWATCHAGENT_PATH
 
 ENV RUN_IN_CONTAINER="True"
-CMD ["start-amazon-cloudwatch-agent.exe"]
+CMD ["%CONTAINER_SANDBOX_MOUNT_POINT%/start-amazon-cloudwatch-agent.exe"]
