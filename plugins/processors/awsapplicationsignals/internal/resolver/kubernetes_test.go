@@ -855,7 +855,7 @@ func TestK8sResourceAttributesResolverOnEKS(t *testing.T) {
 			map[string]string{},
 
 			map[string]string{
-				common.MetricAttributeEnvironment:       "eks:test-cluster/test-namespace-3",
+				attr.AWSLocalEnvironment:                "eks:test-cluster/test-namespace-3",
 				common.AttributeK8SNamespace:            "test-namespace-3",
 				common.AttributeEKSClusterName:          "test-cluster",
 				common.AttributeEC2InstanceId:           "instance-id",
@@ -869,7 +869,7 @@ func TestK8sResourceAttributesResolverOnEKS(t *testing.T) {
 				semconv.AttributeDeploymentEnvironment: "custom-env",
 			},
 			map[string]string{
-				common.MetricAttributeEnvironment:       "custom-env",
+				attr.AWSLocalEnvironment:                "custom-env",
 				common.AttributeK8SNamespace:            "test-namespace-3",
 				common.AttributeEKSClusterName:          "test-cluster",
 				common.AttributeEC2InstanceId:           "instance-id",
@@ -932,7 +932,7 @@ func TestK8sResourceAttributesResolverOnK8S(t *testing.T) {
 			map[string]string{},
 
 			map[string]string{
-				common.MetricAttributeEnvironment:       "k8s:test-cluster/test-namespace-3",
+				attr.AWSLocalEnvironment:                "k8s:test-cluster/test-namespace-3",
 				common.AttributeK8SNamespace:            "test-namespace-3",
 				common.AttributeK8SClusterName:          "test-cluster",
 				common.AttributeEC2InstanceId:           "instance-id",
@@ -946,7 +946,7 @@ func TestK8sResourceAttributesResolverOnK8S(t *testing.T) {
 				semconv.AttributeDeploymentEnvironment: "custom-env",
 			},
 			map[string]string{
-				common.MetricAttributeEnvironment:       "custom-env",
+				attr.AWSLocalEnvironment:                "custom-env",
 				common.AttributeK8SNamespace:            "test-namespace-3",
 				common.AttributeK8SClusterName:          "test-cluster",
 				common.AttributeEC2InstanceId:           "instance-id",
@@ -1006,10 +1006,10 @@ func TestK8sResourceAttributesResolverOnK8SOnPrem(t *testing.T) {
 			map[string]string{},
 
 			map[string]string{
-				common.MetricAttributeEnvironment: "k8s:test-cluster/test-namespace-3",
-				common.AttributeK8SNamespace:      "test-namespace-3",
-				common.AttributeK8SClusterName:    "test-cluster",
-				attr.ResourceDetectionHostName:    "hostname",
+				attr.AWSLocalEnvironment:       "k8s:test-cluster/test-namespace-3",
+				common.AttributeK8SNamespace:   "test-namespace-3",
+				common.AttributeK8SClusterName: "test-cluster",
+				attr.ResourceDetectionHostName: "hostname",
 			},
 		},
 		{
@@ -1018,10 +1018,10 @@ func TestK8sResourceAttributesResolverOnK8SOnPrem(t *testing.T) {
 				semconv.AttributeDeploymentEnvironment: "custom-env",
 			},
 			map[string]string{
-				common.MetricAttributeEnvironment: "custom-env",
-				common.AttributeK8SNamespace:      "test-namespace-3",
-				common.AttributeK8SClusterName:    "test-cluster",
-				attr.ResourceDetectionHostName:    "hostname",
+				attr.AWSLocalEnvironment:       "custom-env",
+				common.AttributeK8SNamespace:   "test-namespace-3",
+				common.AttributeK8SClusterName: "test-cluster",
+				attr.ResourceDetectionHostName: "hostname",
 			},
 		},
 	}

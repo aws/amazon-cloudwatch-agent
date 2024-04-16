@@ -700,14 +700,11 @@ func (h *kubernetesResourceAttributesResolver) Process(attributes, resourceAttri
 		namespace = "UnknownNamespace"
 	}
 
-	if val, ok := resourceAttributes.Get(semconv.AttributeDeploymentEnvironment); !ok {
+	if val, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
 		env := GetDefaultEnvironment(h.platformCode, h.clusterName+"/"+namespace)
-		if len(env) > 255 {
-			env = env[:255]
-		}
-		attributes.PutStr(common.MetricAttributeEnvironment, env)
+		attributes.PutStr(attr.AWSLocalEnvironment, env)
 	} else {
-		attributes.PutStr(common.MetricAttributeEnvironment, val.Str())
+		attributes.PutStr(attr.AWSLocalEnvironment, val.Str())
 	}
 
 	attributes.PutStr(common.AttributeK8SNamespace, namespace)
