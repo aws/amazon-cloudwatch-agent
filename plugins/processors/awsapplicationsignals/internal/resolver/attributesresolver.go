@@ -29,14 +29,12 @@ const (
 )
 
 var GenericInheritedAttributes = map[string]string{
-	attr.AWSHostedInEnvironment:             attr.AWSLocalEnvironment,
 	semconv1.AttributeDeploymentEnvironment: attr.AWSLocalEnvironment,
 	attr.ResourceDetectionHostName:          attr.ResourceDetectionHostName,
 }
 
 // DefaultInheritedAttributes is an allow-list that also renames attributes from the resource detection processor
 var DefaultInheritedAttributes = map[string]string{
-	attr.AWSHostedInEnvironment:             attr.AWSLocalEnvironment,
 	semconv1.AttributeDeploymentEnvironment: attr.AWSLocalEnvironment,
 	attr.ResourceDetectionASG:               common.AttributeEC2AutoScalingGroupName,
 	attr.ResourceDetectionHostId:            common.AttributeEC2InstanceId,
@@ -110,18 +108,22 @@ func newResourceAttributesResolver(defaultEnvPrefix, platformType string, attrib
 func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcommon.Map) error {
 	for attrKey, mappingKey := range h.attributeMap {
 		if val, ok := resourceAttributes.Get(attrKey); ok {
-			attributes.PutStr(mappingKey, val.AsString())
+			attributes.PutStr(mappingKey, val.Str())
 		}
 	}
 	if _, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
-		if h.defaultEnvPrefix == appsignalsconfig.PlatformECS {
-			if clusterName, ok := getECSClusterName(resourceAttributes); ok {
-				attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, clusterName))
+		if val, found := resourceAttributes.Get(attr.AWSHostedInEnvironment); found {
+			attributes.PutStr(attr.AWSLocalEnvironment, val.Str())
+		} else {
+			if h.defaultEnvPrefix == appsignalsconfig.PlatformECS {
+				if clusterName, ok := getECSClusterName(resourceAttributes); ok {
+					attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, clusterName))
+				}
 			}
-		}
-		if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
-			if asgAttr, ok := resourceAttributes.Get(attr.ResourceDetectionASG); ok {
-				attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, asgAttr.Str()))
+			if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
+				if asgAttr, ok := resourceAttributes.Get(attr.ResourceDetectionASG); ok {
+					attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, asgAttr.Str()))
+				}
 			}
 		}
 	}

@@ -20,7 +20,7 @@ const (
 	AttributeEC2AutoScalingGroupName = "EC2.AutoScalingGroupName"
 	AttributeEC2InstanceId           = "EC2.InstanceId"
 	AttributePlatformType            = "PlatformType"
-	AttributeSDK                     = "SDK"
+	AttributeSDK                     = "Telemetry.SDK"
 )
 
 const (

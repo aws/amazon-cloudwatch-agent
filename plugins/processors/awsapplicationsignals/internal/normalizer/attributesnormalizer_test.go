@@ -190,7 +190,7 @@ func Test_attributesNormalizer_appendNewAttributes(t *testing.T) {
 			}
 			n.appendNewAttributes(tt.attributes, tt.resourceAttributes, tt.isTrace)
 
-			if value, ok := tt.attributes.Get("SDK"); !ok {
+			if value, ok := tt.attributes.Get("Telemetry.SDK"); !ok {
 				if !tt.isTrace {
 					t.Errorf("attribute is not found.")
 				}
