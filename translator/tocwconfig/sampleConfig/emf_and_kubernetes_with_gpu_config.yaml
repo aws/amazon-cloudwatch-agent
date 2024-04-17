@@ -503,6 +503,18 @@ exporters:
                   - NodeName
               metric_name_selectors:
                 - node_neuron_execution_errors_total
+                - node_neuron_execution_errors_generic
+                - node_neuron_execution_errors_numerical
+                - node_neuron_execution_errors_transient
+                - node_neuron_execution_errors_model
+                - node_neuron_execution_errors_runtime
+                - node_neuron_execution_errors_hardware
+                - node_neuron_execution_status_completed
+                - node_neuron_execution_status_timed_out
+                - node_neuron_execution_status_completed_with_err
+                - node_neuron_execution_status_completed_with_num_err
+                - node_neuron_execution_status_incorrect_input
+                - node_neuron_execution_status_failed_to_queue
                 - node_neurondevice_runtime_memory_used_bytes
                 - node_neuron_execution_latency
             - dimensions:
@@ -668,6 +680,32 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
+    cumulativetodelta/containerinsights:
+        exclude:
+            match_type: ""
+        include:
+            match_type: regexp
+            metrics:
+              - node_neuron_execution_*
+              - container_neurondevice_hw_ecc_events_*
+              - pod_neurondevice_hw_ecc_events_*
+              - node_neurondevice_hw_ecc_events_*
+        initial_value: 0
+        max_staleness: 0s
+    deltatosparse/containerinsights:
+        include:
+            - node_neuron_execution_errors_generic
+            - node_neuron_execution_errors_numerical
+            - node_neuron_execution_errors_transient
+            - node_neuron_execution_errors_model
+            - node_neuron_execution_errors_runtime
+            - node_neuron_execution_errors_hardware
+            - node_neuron_execution_status_completed
+            - node_neuron_execution_status_timed_out
+            - node_neuron_execution_status_completed_with_err
+            - node_neuron_execution_status_completed_with_num_err
+            - node_neuron_execution_status_incorrect_input
+            - node_neuron_execution_status_failed_to_queue
     gpuattributes/containerinsights: {}
     metricstransform/containerinsights:
         transforms:
@@ -1164,6 +1202,8 @@ service:
             processors:
                 - metricstransform/containerinsights
                 - gpuattributes/containerinsights
+                - cumulativetodelta/containerinsights
+                - deltatosparse/containerinsights
                 - batch/containerinsights
             receivers:
                 - awscontainerinsightreceiver

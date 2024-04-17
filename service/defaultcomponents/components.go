@@ -28,6 +28,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/deltatosparseprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 )
@@ -55,6 +56,7 @@ func Factories() (otelcol.Factories, error) {
 		resourcedetectionprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
 		gpuattributes.NewFactory(),
+		deltatosparseprocessor.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
