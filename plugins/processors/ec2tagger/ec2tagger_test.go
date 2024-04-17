@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +19,7 @@ import (
 	"go.opentelemetry.io/collector/processor/processortest"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	ec2metadata "github.com/aws/amazon-cloudwatch-agent/internal/metadata/ec2"
 )
 
 type mockEC2Client struct {
@@ -96,7 +96,7 @@ func (m *mockEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsO
 	//when tags are not ready or customer doesn't have permission to call the api
 	if m.tagsCallCount <= m.tagsFailLimit {
 		m.tagsCallCount++
-		return nil, errors.New("No tags available now")
+		return nil, errors.New("no tags available now")
 	}
 
 	//return partial tags to simulate the case
@@ -177,7 +177,7 @@ func (m *mockEC2Client) DescribeVolumes(*ec2.DescribeVolumesInput) (*ec2.Describ
 	//when the volumes are not ready or customer doesn't have permission to call the api
 	if m.volumesCallCount <= m.volumesFailLimit {
 		m.volumesCallCount++
-		return nil, errors.New("No volumes available now")
+		return nil, errors.New("no volumes available now")
 	}
 
 	//return partial volumes to simulate the case
@@ -200,26 +200,28 @@ func (m *mockEC2Client) DescribeVolumes(*ec2.DescribeVolumesInput) (*ec2.Describ
 	return nil, nil
 }
 
+var _ ec2metadata.MetadataProvider = (*mockMetadataProvider)(nil)
+
 type mockMetadataProvider struct {
-	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
+	Metadata *ec2metadata.Metadata
 }
 
-func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
-	if m.InstanceIdentityDocument != nil {
-		return *m.InstanceIdentityDocument, nil
+func (m *mockMetadataProvider) ID() string {
+	return "mock"
+}
+
+func (m *mockMetadataProvider) Get(context.Context) (*ec2metadata.Metadata, error) {
+	if m.Metadata != nil {
+		return m.Metadata, nil
 	}
-	return ec2metadata.EC2InstanceIdentityDocument{}, errors.New("No instance identity document")
+	return nil, errors.New("no metadata")
 }
 
-func (m *mockMetadataProvider) Hostname(ctx context.Context) (string, error) {
+func (m *mockMetadataProvider) Hostname(context.Context) (string, error) {
 	return "MockHostName", nil
 }
 
-func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
-	return "MockInstanceID", nil
-}
-
-var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
+var mockedMetadata = &ec2metadata.Metadata{
 	InstanceID:   "i-01d2417c27a396e44",
 	Region:       "us-east-1",
 	InstanceType: "m5ad.large",
@@ -232,7 +234,7 @@ var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 //	pm.ResourceMetrics().At(0).ScopeMetrics().Len() == 1
 //	pm.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().Len() == len(metrics)
 //
-// and for each metric from metrics it create one single datapoint that appy all tags/attributes from metric
+// and for each metric from metrics it creates one single datapoint that applies all tags/attributes from metric
 func createTestMetrics(metrics []map[string]string) pmetric.Metrics {
 	pm := pmetric.NewMetrics()
 	rm := pm.ResourceMetrics().AppendEmpty()
@@ -297,12 +299,12 @@ func TestStartFailWithNoMetadata(t *testing.T) {
 		Config:           cfg,
 		logger:           processortest.NewNopCreateSettings().Logger,
 		cancelFunc:       cancel,
-		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: nil},
+		metadataProvider: &mockMetadataProvider{Metadata: nil},
 	}
 
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "No instance identity document")
+	assert.Contains(t, err.Error(), "no metadata")
 }
 
 // run Start() and check all tags/volumes are retrieved and saved
@@ -333,7 +335,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 		Config:           cfg,
 		logger:           processortest.NewNopCreateSettings().Logger,
 		cancelFunc:       cancel,
-		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		metadataProvider: &mockMetadataProvider{Metadata: mockedMetadata},
 		ec2Provider:      ec2Provider,
 	}
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
@@ -378,7 +380,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 		Config:           cfg,
 		logger:           processortest.NewNopCreateSettings().Logger,
 		cancelFunc:       cancel,
-		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		metadataProvider: &mockMetadataProvider{Metadata: mockedMetadata},
 		ec2Provider:      ec2Provider,
 	}
 
@@ -433,7 +435,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 		Config:           cfg,
 		logger:           processortest.NewNopCreateSettings().Logger,
 		cancelFunc:       cancel,
-		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		metadataProvider: &mockMetadataProvider{Metadata: mockedMetadata},
 		ec2Provider:      ec2Provider,
 	}
 
@@ -480,7 +482,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 		Config:           cfg,
 		logger:           processortest.NewNopCreateSettings().Logger,
 		cancelFunc:       cancel,
-		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		metadataProvider: &mockMetadataProvider{Metadata: mockedMetadata},
 		ec2Provider:      ec2Provider,
 	}
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
@@ -490,24 +492,20 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	//so that all tags/volumes are retrieved
 	time.Sleep(time.Second)
 	md := createTestMetrics([]map[string]string{
-		map[string]string{
-			"host": "example.org",
-		},
-		map[string]string{
-			"device": device2,
-		},
+		{"host": "example.org"},
+		{"device": device2},
 	})
 	output, err := tagger.processMetrics(context.Background(), md)
 	assert.Nil(t, err)
 	expectedOutput := createTestMetrics([]map[string]string{
-		map[string]string{
+		{
 			"AutoScalingGroupName": tagVal3,
 			"InstanceId":           "i-01d2417c27a396e44",
 			"InstanceType":         "m5ad.large",
 			tagKey1:                tagVal1,
 			tagKey2:                tagVal2,
 		},
-		map[string]string{
+		{
 			"AutoScalingGroupName": tagVal3,
 			"EBSVolumeId":          volumeAttachmentId2,
 			"InstanceId":           "i-01d2417c27a396e44",
@@ -528,14 +526,14 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 	updatedOutput, err := tagger.processMetrics(context.Background(), md)
 	assert.Nil(t, err)
 	expectedUpdatedOutput := createTestMetrics([]map[string]string{
-		map[string]string{
+		{
 			"AutoScalingGroupName": tagVal3,
 			"InstanceId":           "i-01d2417c27a396e44",
 			"InstanceType":         "m5ad.large",
 			tagKey1:                tagVal1,
 			tagKey2:                updatedTagVal2,
 		},
-		map[string]string{
+		{
 			"AutoScalingGroupName": tagVal3,
 			"EBSVolumeId":          volumeAttachmentUpdatedId2,
 			"InstanceId":           "i-01d2417c27a396e44",
@@ -575,20 +573,14 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 		Config:           cfg,
 		logger:           processortest.NewNopCreateSettings().Logger,
 		cancelFunc:       cancel,
-		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		metadataProvider: &mockMetadataProvider{Metadata: mockedMetadata},
 		ec2Provider:      ec2Provider,
 	}
 
 	md := createTestMetrics([]map[string]string{
-		map[string]string{
-			"host": "example.org",
-		},
-		map[string]string{
-			"device": device1,
-		},
-		map[string]string{
-			"device": device2,
-		},
+		{"host": "example.org"},
+		{"device": device1},
+		{"device": device2},
 	})
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
@@ -643,7 +635,7 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 		Config:           cfg,
 		logger:           processortest.NewNopCreateSettings().Logger,
 		cancelFunc:       cancel,
-		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		metadataProvider: &mockMetadataProvider{Metadata: mockedMetadata},
 		ec2Provider:      ec2Provider,
 	}
 
@@ -673,7 +665,7 @@ func TestTaggerStartsWithoutTagOrVolume(t *testing.T) {
 		Config:           cfg,
 		logger:           processortest.NewNopCreateSettings().Logger,
 		cancelFunc:       cancel,
-		metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc},
+		metadataProvider: &mockMetadataProvider{Metadata: mockedMetadata},
 	}
 
 	deadline := time.NewTimer(1 * time.Second)

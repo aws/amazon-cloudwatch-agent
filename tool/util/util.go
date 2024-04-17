@@ -4,10 +4,10 @@
 package util
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,12 +16,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	ec2metadata "github.com/aws/amazon-cloudwatch-agent/internal/metadata/ec2"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
@@ -209,32 +207,22 @@ func SDKCredentials() (accessKey, secretKey string, creds *credentials.Credentia
 }
 
 func DefaultEC2Region() (region string) {
-	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
+	fmt.Println("Trying to fetch the default region from EC2...")
 	// imds should by the time user can run the wizard
-	sesFallBackDisabled, err := session.NewSession(&aws.Config{
-		LogLevel:                  configaws.SDKLogLevel(),
-		Logger:                    configaws.SDKLogger{},
-		EC2MetadataEnableFallback: aws.Bool(false),
-		Retryer:                   retryer.NewIMDSRetryer(retryer.GetDefaultRetryNumber()),
-	})
-	sesFallBackEnabled, err := session.NewSession(&aws.Config{
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
-	})
+	ses, err := session.NewSession()
 	if err != nil {
 		return
 	}
-	md := ec2metadata.New(sesFallBackDisabled)
-	if info, errOuter := md.Region(); errOuter == nil {
-		region = info
+	metadataProvider := ec2metadata.NewMetadataProvider(
+		ses,
+		ec2metadata.MetadataProviderConfig{
+			IMDSv2Retries: retryer.GetDefaultRetryNumber(),
+		},
+	)
+	if metadata, err := metadataProvider.Get(context.Background()); err != nil {
+		fmt.Printf("W! could not get region from EC2... %v", err)
 	} else {
-		log.Printf("D! could not get region from imds v2 thus enable fallback")
-		mdInner := ec2metadata.New(sesFallBackEnabled)
-		if infoInner, errInner := mdInner.Region(); errInner == nil {
-			region = infoInner
-		} else {
-			fmt.Printf("W! could not get region from ec2 metadata... %v", errInner)
-		}
+		region = metadata.Region
 	}
 	return
 }

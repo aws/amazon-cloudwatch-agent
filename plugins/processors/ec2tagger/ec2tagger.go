@@ -19,7 +19,8 @@ import (
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	ec2metadata "github.com/aws/amazon-cloudwatch-agent/internal/metadata/ec2"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 type ec2MetadataLookupType struct {
@@ -42,7 +43,7 @@ type Tagger struct {
 
 	logger           *zap.Logger
 	cancelFunc       context.CancelFunc
-	metadataProvider MetadataProvider
+	metadataProvider ec2metadata.MetadataProvider
 	ec2Provider      ec2ProviderType
 
 	shutdownC          chan bool
@@ -59,15 +60,26 @@ type Tagger struct {
 
 // newTagger returns a new EC2 Tagger processor.
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
-
 	_, cancel := context.WithCancel(context.Background())
-	mdCredentialConfig := &configaws.CredentialConfig{}
+	mdCredentialConfig := &configaws.CredentialConfig{
+		AccessKey: config.AccessKey,
+		SecretKey: config.SecretKey,
+		RoleARN:   config.RoleARN,
+		Profile:   config.Profile,
+		Filename:  config.Filename,
+		Token:     config.Token,
+	}
 
 	p := &Tagger{
-		Config:           config,
-		logger:           logger,
-		cancelFunc:       cancel,
-		metadataProvider: NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
+		Config:     config,
+		logger:     logger,
+		cancelFunc: cancel,
+		metadataProvider: ec2metadata.NewMetadataProvider(
+			mdCredentialConfig.Credentials(),
+			ec2metadata.MetadataProviderConfig{
+				IMDSv2Retries: config.IMDSRetries,
+			},
+		),
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),
@@ -436,7 +448,7 @@ func (t *Tagger) deriveEC2MetadataFromIMDS(ctx context.Context) error {
 	doc, err := t.metadataProvider.Get(ctx)
 	if err != nil {
 		t.logger.Error("ec2tagger: Unable to retrieve EC2 Metadata. This plugin must only be used on an EC2 instance.")
-		if translatorCtx.CurrentContext().RunInContainer() {
+		if translatorcontext.CurrentContext().RunInContainer() {
 			t.logger.Warn("ec2tagger: Timeout may have occurred because hop limit is too small. Please increase hop limit to 2 by following this document https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html#configuring-IMDS-existing-instances.")
 		}
 		return err
