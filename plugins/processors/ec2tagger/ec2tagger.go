@@ -425,7 +425,7 @@ func (t *Tagger) setStarted() {
 
 /*
 Retrieve metadata from IMDS and use these metadata to:
-* Extract InstanceID, imageID, InstanceType to create custom dimension for collected metrics
+* Extract InstanceID, ImageID, InstanceType to create custom dimension for collected metrics
 * Extract InstanceID to retrieve Instance's Volume and Tags
 * Extract Region to create aws session with custom configuration
 For more information on IMDS, please follow this document https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
