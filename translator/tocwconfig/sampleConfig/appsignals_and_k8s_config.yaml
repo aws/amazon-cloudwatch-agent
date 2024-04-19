@@ -22,8 +22,8 @@ exporters:
                   - Service
               label_matchers:
                 - label_names:
-                    - aws.span.kind
-                  regex: ^(SERVER|LOCAL_ROOT)$
+                    - Telemetry.Source
+                  regex: ^(ServerSpan|LocalRootSpan)$
                   separator: ;
               metric_name_selectors:
                 - Latency
@@ -96,8 +96,8 @@ exporters:
                 - - RemoteService
               label_matchers:
                 - label_names:
-                    - aws.span.kind
-                  regex: ^(CLIENT|PRODUCER|CONSUMER)$
+                    - Telemetry.Source
+                  regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
                   separator: ;
               metric_name_selectors:
                 - Latency

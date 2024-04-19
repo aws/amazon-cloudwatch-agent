@@ -855,12 +855,12 @@ func TestK8sResourceAttributesResolverOnEKS(t *testing.T) {
 			map[string]string{},
 
 			map[string]string{
-				attr.AWSLocalEnvironment:                "eks:test-cluster/test-namespace-3",
-				common.AttributeK8SNamespace:            "test-namespace-3",
-				common.AttributeEKSClusterName:          "test-cluster",
-				common.AttributeEC2InstanceId:           "instance-id",
-				attr.ResourceDetectionHostName:          "hostname",
-				common.AttributeEC2AutoScalingGroupName: "asg",
+				attr.AWSLocalEnvironment:            "eks:test-cluster/test-namespace-3",
+				common.AttributeK8SNamespace:        "test-namespace-3",
+				common.AttributeEKSClusterName:      "test-cluster",
+				common.AttributeEC2InstanceId:       "instance-id",
+				common.AttributeHost:                "hostname",
+				common.AttributeEC2AutoScalingGroup: "asg",
 			},
 		},
 		{
@@ -869,12 +869,12 @@ func TestK8sResourceAttributesResolverOnEKS(t *testing.T) {
 				semconv.AttributeDeploymentEnvironment: "custom-env",
 			},
 			map[string]string{
-				attr.AWSLocalEnvironment:                "custom-env",
-				common.AttributeK8SNamespace:            "test-namespace-3",
-				common.AttributeEKSClusterName:          "test-cluster",
-				common.AttributeEC2InstanceId:           "instance-id",
-				attr.ResourceDetectionHostName:          "hostname",
-				common.AttributeEC2AutoScalingGroupName: "asg",
+				attr.AWSLocalEnvironment:            "custom-env",
+				common.AttributeK8SNamespace:        "test-namespace-3",
+				common.AttributeEKSClusterName:      "test-cluster",
+				common.AttributeEC2InstanceId:       "instance-id",
+				common.AttributeHost:                "hostname",
+				common.AttributeEC2AutoScalingGroup: "asg",
 			},
 		},
 	}
@@ -932,12 +932,12 @@ func TestK8sResourceAttributesResolverOnK8S(t *testing.T) {
 			map[string]string{},
 
 			map[string]string{
-				attr.AWSLocalEnvironment:                "k8s:test-cluster/test-namespace-3",
-				common.AttributeK8SNamespace:            "test-namespace-3",
-				common.AttributeK8SClusterName:          "test-cluster",
-				common.AttributeEC2InstanceId:           "instance-id",
-				attr.ResourceDetectionHostName:          "hostname",
-				common.AttributeEC2AutoScalingGroupName: "asg",
+				attr.AWSLocalEnvironment:            "k8s:test-cluster/test-namespace-3",
+				common.AttributeK8SNamespace:        "test-namespace-3",
+				common.AttributeK8SClusterName:      "test-cluster",
+				common.AttributeEC2InstanceId:       "instance-id",
+				common.AttributeHost:                "hostname",
+				common.AttributeEC2AutoScalingGroup: "asg",
 			},
 		},
 		{
@@ -946,12 +946,12 @@ func TestK8sResourceAttributesResolverOnK8S(t *testing.T) {
 				semconv.AttributeDeploymentEnvironment: "custom-env",
 			},
 			map[string]string{
-				attr.AWSLocalEnvironment:                "custom-env",
-				common.AttributeK8SNamespace:            "test-namespace-3",
-				common.AttributeK8SClusterName:          "test-cluster",
-				common.AttributeEC2InstanceId:           "instance-id",
-				attr.ResourceDetectionHostName:          "hostname",
-				common.AttributeEC2AutoScalingGroupName: "asg",
+				attr.AWSLocalEnvironment:            "custom-env",
+				common.AttributeK8SNamespace:        "test-namespace-3",
+				common.AttributeK8SClusterName:      "test-cluster",
+				common.AttributeEC2InstanceId:       "instance-id",
+				common.AttributeHost:                "hostname",
+				common.AttributeEC2AutoScalingGroup: "asg",
 			},
 		},
 	}
@@ -1009,7 +1009,7 @@ func TestK8sResourceAttributesResolverOnK8SOnPrem(t *testing.T) {
 				attr.AWSLocalEnvironment:       "k8s:test-cluster/test-namespace-3",
 				common.AttributeK8SNamespace:   "test-namespace-3",
 				common.AttributeK8SClusterName: "test-cluster",
-				attr.ResourceDetectionHostName: "hostname",
+				common.AttributeHost:           "hostname",
 			},
 		},
 		{
@@ -1021,7 +1021,7 @@ func TestK8sResourceAttributesResolverOnK8SOnPrem(t *testing.T) {
 				attr.AWSLocalEnvironment:       "custom-env",
 				common.AttributeK8SNamespace:   "test-namespace-3",
 				common.AttributeK8SClusterName: "test-cluster",
-				attr.ResourceDetectionHostName: "hostname",
+				common.AttributeHost:           "hostname",
 			},
 		},
 	}
@@ -1044,7 +1044,7 @@ func TestK8sResourceAttributesResolverOnK8SOnPrem(t *testing.T) {
 			assert.Equal(t, "/aws/containerinsights/test-cluster/application", getStrAttr(resourceAttributes, semconv.AttributeAWSLogGroupNames, t))
 
 			// EC2 related fields that should not exist for on-prem
-			_, exists := attributes.Get(common.AttributeEC2AutoScalingGroupName)
+			_, exists := attributes.Get(common.AttributeEC2AutoScalingGroup)
 			assert.False(t, exists)
 
 			_, exists = attributes.Get(common.AttributeEC2InstanceId)

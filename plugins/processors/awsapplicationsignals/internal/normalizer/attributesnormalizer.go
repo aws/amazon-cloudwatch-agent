@@ -8,21 +8,21 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	conventions "go.opentelemetry.io/collector/semconv/v1.18.0"
 	semconv "go.opentelemetry.io/collector/semconv/v1.18.0"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
 )
 
 const (
 	// Length limits from Application Signals SLOs
-	MaxEnvironmentLength = 259
-	MaxServiceNameLength = 255
+	maxEnvironmentLength = 259
+	maxServiceNameLength = 255
 
 	// Length limits from CloudWatch Metrics
-	DefaultMetricAttributeLength = 1024
+	defaultMetricAttributeLength = 1024
 )
 
 type attributesNormalizer struct {
@@ -89,7 +89,7 @@ func (n *attributesNormalizer) Process(attributes, resourceAttributes pcommon.Ma
 	// for enforcing the limits on length.
 	truncateAttributesByLength(attributes)
 	n.renameAttributes(attributes, resourceAttributes, isTrace)
-	n.appendNewAttributes(attributes, resourceAttributes, isTrace)
+	n.normalizeTelemetryAttributes(attributes, resourceAttributes, isTrace)
 	return nil
 }
 
@@ -123,7 +123,7 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 	}
 }
 
-func (n *attributesNormalizer) appendNewAttributes(attributes, resourceAttributes pcommon.Map, isTrace bool) {
+func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resourceAttributes pcommon.Map, isTrace bool) {
 	if isTrace {
 		return
 	}
@@ -140,13 +140,13 @@ func (n *attributesNormalizer) appendNewAttributes(attributes, resourceAttribute
 	// TODO read telemetry.auto.version from telemetry.distro.* from v1.22
 	resourceAttributes.Range(func(k string, v pcommon.Value) bool {
 		switch k {
-		case conventions.AttributeTelemetrySDKName:
+		case semconv.AttributeTelemetrySDKName:
 			sdkName = strings.ReplaceAll(v.Str(), " ", "")
-		case conventions.AttributeTelemetrySDKLanguage:
+		case semconv.AttributeTelemetrySDKLanguage:
 			sdkLang = strings.ReplaceAll(v.Str(), " ", "")
-		case conventions.AttributeTelemetrySDKVersion:
+		case semconv.AttributeTelemetrySDKVersion:
 			sdkVersion = strings.ReplaceAll(v.Str(), " ", "")
-		case conventions.AttributeTelemetryAutoVersion:
+		case semconv.AttributeTelemetryAutoVersion:
 			sdkAutoVersion = strings.ReplaceAll(v.Str(), " ", "")
 		}
 		return true
@@ -155,7 +155,26 @@ func (n *attributesNormalizer) appendNewAttributes(attributes, resourceAttribute
 		sdkVersion = sdkAutoVersion
 		mode = instrumentationModeAuto
 	}
-	attributes.PutStr(common.AttributeSDK, fmt.Sprintf("%s,%s,%s,%s", sdkName, sdkVersion, sdkLang, mode))
+	attributes.PutStr(common.AttributeTelemetrySDK, fmt.Sprintf("%s,%s,%s,%s", sdkName, sdkVersion, sdkLang, mode))
+	attributes.PutStr(common.AttributeTelemetryAgent, fmt.Sprintf("CWAgent/%s", version.Number()))
+
+	var telemetrySource string
+	if val, ok := attributes.Get(attr.AWSSpanKind); ok {
+		switch val.Str() {
+		case "CLIENT":
+			telemetrySource = "ClientSpan"
+		case "SERVER":
+			telemetrySource = "ServerSpan"
+		case "PRODUCER":
+			telemetrySource = "ProducerSpan"
+		case "CONSUMER":
+			telemetrySource = "ConsumerSpan"
+		case "LOCAL_ROOT":
+			telemetrySource = "LocalRootSpan"
+		}
+		attributes.PutStr(common.AttributeTelemetrySource, telemetrySource)
+		attributes.Remove(attr.AWSSpanKind)
+	}
 }
 
 func rename(attrs pcommon.Map, renameMap map[string]string) {
@@ -175,19 +194,19 @@ func rename(attrs pcommon.Map, renameMap map[string]string) {
 }
 
 func truncateAttributesByLength(attributes pcommon.Map) {
-	for attrKey, _ := range attributesRenamingForMetric {
+	for attrKey := range attributesRenamingForMetric {
 		switch attrKey {
 		case attr.AWSLocalEnvironment, attr.AWSRemoteEnvironment:
 			if val, ok := attributes.Get(attrKey); ok {
-				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), MaxEnvironmentLength))
+				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), maxEnvironmentLength))
 			}
 		case attr.AWSLocalService, attr.AWSRemoteService:
 			if val, ok := attributes.Get(attrKey); ok {
-				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), MaxServiceNameLength))
+				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), maxServiceNameLength))
 			}
 		default:
 			if val, ok := attributes.Get(attrKey); ok {
-				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), DefaultMetricAttributeLength))
+				attributes.PutStr(attrKey, truncateStringByLength(val.Str(), defaultMetricAttributeLength))
 			}
 		}
 	}

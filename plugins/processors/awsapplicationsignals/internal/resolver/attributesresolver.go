@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	semconv1 "go.opentelemetry.io/collector/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/collector/semconv/v1.18.0"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
@@ -29,16 +29,16 @@ const (
 )
 
 var GenericInheritedAttributes = map[string]string{
-	semconv1.AttributeDeploymentEnvironment: attr.AWSLocalEnvironment,
-	attr.ResourceDetectionHostName:          attr.ResourceDetectionHostName,
+	semconv.AttributeDeploymentEnvironment: attr.AWSLocalEnvironment,
+	attr.ResourceDetectionHostName:         common.AttributeHost,
 }
 
 // DefaultInheritedAttributes is an allow-list that also renames attributes from the resource detection processor
 var DefaultInheritedAttributes = map[string]string{
-	semconv1.AttributeDeploymentEnvironment: attr.AWSLocalEnvironment,
-	attr.ResourceDetectionASG:               common.AttributeEC2AutoScalingGroupName,
-	attr.ResourceDetectionHostId:            common.AttributeEC2InstanceId,
-	attr.ResourceDetectionHostName:          attr.ResourceDetectionHostName,
+	semconv.AttributeDeploymentEnvironment: attr.AWSLocalEnvironment,
+	attr.ResourceDetectionASG:              common.AttributeEC2AutoScalingGroup,
+	attr.ResourceDetectionHostId:           common.AttributeEC2InstanceId,
+	attr.ResourceDetectionHostName:         common.AttributeHost,
 }
 
 type subResolver interface {
@@ -85,9 +85,7 @@ func (r *attributesResolver) Process(attributes, resourceAttributes pcommon.Map,
 func (r *attributesResolver) Stop(ctx context.Context) error {
 	var errs error
 	for _, subResolver := range r.subResolvers {
-		if err := subResolver.Stop(ctx); err != nil {
-			errs = errors.Join(errs, err)
-		}
+		errs = errors.Join(errs, subResolver.Stop(ctx))
 	}
 	return errs
 }
@@ -117,18 +115,17 @@ func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcom
 		} else {
 			if h.defaultEnvPrefix == appsignalsconfig.PlatformECS {
 				if clusterName, ok := getECSClusterName(resourceAttributes); ok {
-					attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, clusterName))
+					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, clusterName))
 				}
-			}
-			if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
+			} else if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
 				if asgAttr, ok := resourceAttributes.Get(attr.ResourceDetectionASG); ok {
-					attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, asgAttr.Str()))
+					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, asgAttr.Str()))
 				}
 			}
 		}
 	}
 	if _, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
-		attributes.PutStr(attr.AWSLocalEnvironment, GetDefaultEnvironment(h.defaultEnvPrefix, AttributeEnvironmentDefault))
+		attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, AttributeEnvironmentDefault))
 	}
 	attributes.PutStr(common.AttributePlatformType, h.platformType)
 
@@ -136,11 +133,11 @@ func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcom
 }
 
 func getECSClusterName(resourceAttributes pcommon.Map) (string, bool) {
-	if clusterAttr, ok := resourceAttributes.Get(semconv1.AttributeAWSECSClusterARN); ok {
+	if clusterAttr, ok := resourceAttributes.Get(semconv.AttributeAWSECSClusterARN); ok {
 		parts := strings.Split(clusterAttr.Str(), "/")
 		clusterName := parts[len(parts)-1]
 		return clusterName, true
-	} else if taskAttr, ok := resourceAttributes.Get(semconv1.AttributeAWSECSTaskARN); ok {
+	} else if taskAttr, ok := resourceAttributes.Get(semconv.AttributeAWSECSTaskARN); ok {
 		parts := strings.SplitAfterN(taskAttr.Str(), ":task/", 2)
 		if len(parts) == 2 {
 			taskParts := strings.Split(parts[1], "/")
@@ -153,7 +150,7 @@ func getECSClusterName(resourceAttributes pcommon.Map) (string, bool) {
 	return "", false
 }
 
-func GetDefaultEnvironment(platformCode, val string) string {
+func getDefaultEnvironment(platformCode, val string) string {
 	return fmt.Sprintf("%s:%s", platformCode, val)
 }
 
