@@ -41,7 +41,9 @@ func TestAdmitAndRollup(t *testing.T) {
 			admittedAttributes[uniqKey.AsString()] = attr
 		} else {
 			for _, indexedAttrKey := range awsDeclaredMetricAttributes {
-				if indexedAttrKey == "Environment" || indexedAttrKey == "Service" || indexedAttrKey == "RemoteService" {
+				if indexedAttrKey == common.MetricAttributeEnvironment ||
+					indexedAttrKey == common.MetricAttributeLocalService ||
+					indexedAttrKey == common.MetricAttributeRemoteService {
 					continue
 				}
 				attrValue, _ := attr.Get(indexedAttrKey)

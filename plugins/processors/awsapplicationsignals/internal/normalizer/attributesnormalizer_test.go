@@ -123,13 +123,13 @@ func TestTruncateAttributes(t *testing.T) {
 	truncateAttributesByLength(attributes)
 
 	val, _ := attributes.Get(attr.AWSLocalEnvironment)
-	assert.True(t, len(val.Str()) == MaxEnvironmentLength)
+	assert.True(t, len(val.Str()) == maxEnvironmentLength)
 	val, _ = attributes.Get(attr.AWSRemoteEnvironment)
-	assert.True(t, len(val.Str()) == MaxEnvironmentLength)
+	assert.True(t, len(val.Str()) == maxEnvironmentLength)
 	val, _ = attributes.Get(attr.AWSLocalService)
-	assert.True(t, len(val.Str()) == MaxServiceNameLength)
+	assert.True(t, len(val.Str()) == maxServiceNameLength)
 	val, _ = attributes.Get(attr.AWSRemoteService)
-	assert.True(t, len(val.Str()) == MaxServiceNameLength)
+	assert.True(t, len(val.Str()) == maxServiceNameLength)
 	val, _ = attributes.Get(attr.AWSRemoteResourceIdentifier)
 	assert.True(t, len(val.Str()) == 300)
 }
@@ -188,7 +188,7 @@ func Test_attributesNormalizer_appendNewAttributes(t *testing.T) {
 			n := &attributesNormalizer{
 				logger: logger,
 			}
-			n.appendNewAttributes(tt.attributes, tt.resourceAttributes, tt.isTrace)
+			n.normalizeTelemetryAttributes(tt.attributes, tt.resourceAttributes, tt.isTrace)
 
 			if value, ok := tt.attributes.Get("Telemetry.SDK"); !ok {
 				if !tt.isTrace {

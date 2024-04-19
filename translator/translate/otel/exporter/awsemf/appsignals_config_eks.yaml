@@ -8,8 +8,8 @@ metric_declarations:
       - [Environment, Service]
     label_matchers:
       - label_names:
-          - aws.span.kind
-        regex: '^(SERVER|LOCAL_ROOT)$'
+          - Telemetry.Source
+        regex: '^(ServerSpan|LocalRootSpan)$'
     metric_name_selectors:
       - Latency
       - Fault
@@ -30,8 +30,8 @@ metric_declarations:
       - [RemoteService]
     label_matchers:
       - label_names:
-          - aws.span.kind
-        regex: '^(CLIENT|PRODUCER|CONSUMER)$'
+          - Telemetry.Source
+        regex: '^(ClientSpan|ProducerSpan|ConsumerSpan)$'
     metric_name_selectors:
       - Latency
       - Fault
