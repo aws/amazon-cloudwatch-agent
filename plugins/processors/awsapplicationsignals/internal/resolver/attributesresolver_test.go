@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	semconv "go.opentelemetry.io/collector/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/collector/semconv/v1.18.0"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
@@ -125,7 +125,7 @@ func TestResourceAttributesResolverWithHostname(t *testing.T) {
 	resourceAttributes.PutStr(attr.ResourceDetectionHostName, "hostname")
 
 	resolver.Process(attributes, resourceAttributes)
-	envAttr, ok := attributes.Get(attr.ResourceDetectionHostName)
+	envAttr, ok := attributes.Get(common.AttributeHost)
 	assert.True(t, ok)
 	assert.Equal(t, "hostname", envAttr.AsString())
 }

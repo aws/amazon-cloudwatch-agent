@@ -5,6 +5,7 @@ package attributes
 
 const (
 	// aws attributes
+	AWSSpanKind                 = "aws.span.kind"
 	AWSLocalService             = "aws.local.service"
 	AWSLocalEnvironment         = "aws.local.environment"
 	AWSLocalOperation           = "aws.local.operation"
