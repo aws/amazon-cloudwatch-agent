@@ -32,6 +32,7 @@ import (
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	v "github.com/prometheus/client_golang/prometheus/collectors/version"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/version"
@@ -75,7 +76,7 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(version.NewCollector("prometheus"))
+	prometheus.MustRegister(v.NewCollector("prometheus"))
 }
 
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
@@ -113,8 +114,9 @@ func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan
 
 	var (
 		ctxScrape, cancelScrape = context.WithCancel(context.Background())
-		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), discovery.Name("scrape"))
-		scrapeManager           = scrape.NewManager(&scrape.Options{}, log.With(logger, "component", "scrape manager"), receiver)
+		sdMetrics, _            = discovery.CreateAndRegisterSDMetrics(prometheus.DefaultRegisterer)
+		discoveryManagerScrape  = discovery.NewManager(ctxScrape, log.With(logger, "component", "discovery manager scrape"), prometheus.DefaultRegisterer, sdMetrics, discovery.Name("scrape"))
+		scrapeManager, _        = scrape.NewManager(&scrape.Options{}, log.With(logger, "component", "scrape manager"), receiver, prometheus.DefaultRegisterer)
 	)
 	mth.SetScrapeManager(scrapeManager)
 

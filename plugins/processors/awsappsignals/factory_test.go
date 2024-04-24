@@ -73,12 +73,12 @@ func TestLoadEKSConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		id           component.ID
+		name         string
 		expected     component.Config
 		errorMessage string
 	}{
 		{
-			id: component.NewIDWithName("awsapplicationsignals", ""),
+			name: "awsapplicationsignals",
 			expected: &config.Config{
 				Resolvers: []config.Resolver{config.NewEKSResolver("test")},
 				Rules:     expectedRules,
@@ -86,14 +86,16 @@ func TestLoadEKSConfig(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.id.String(), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
+			newType, _ := component.NewType(tt.name)
+			id := component.NewIDWithName(newType, "")
 			cm, err := confmaptest.LoadConf(filepath.Join("testdata", "config_eks.yaml"))
 			require.NoError(t, err)
 
 			factory := NewFactory()
 			cfg := factory.CreateDefaultConfig().(*config.Config)
 
-			sub, err := cm.Sub(tt.id.String())
+			sub, err := cm.Sub(id.String())
 			require.NoError(t, err)
 			require.NoError(t, component.UnmarshalConfig(sub, cfg))
 
@@ -114,12 +116,12 @@ func TestLoadGenericConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		id           component.ID
+		name         string
 		expected     component.Config
 		errorMessage string
 	}{
 		{
-			id: component.NewIDWithName("awsapplicationsignals", ""),
+			name: "awsapplicationsignals",
 			expected: &config.Config{
 				Resolvers: []config.Resolver{config.NewGenericResolver("")},
 				Rules:     expectedRules,
@@ -127,14 +129,16 @@ func TestLoadGenericConfig(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.id.String(), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
+			newType, _ := component.NewType(tt.name)
+			id := component.NewIDWithName(newType, "")
 			cm, err := confmaptest.LoadConf(filepath.Join("testdata", "config_generic.yaml"))
 			require.NoError(t, err)
 
 			factory := NewFactory()
 			cfg := factory.CreateDefaultConfig().(*config.Config)
 
-			sub, err := cm.Sub(tt.id.String())
+			sub, err := cm.Sub(id.String())
 			require.NoError(t, err)
 			require.NoError(t, component.UnmarshalConfig(sub, cfg))
 

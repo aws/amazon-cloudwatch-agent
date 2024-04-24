@@ -16,13 +16,15 @@ import (
 )
 
 const (
-	// The value of "type" key in configuration.
-	typeStr = "awsapplicationsignals"
 	// The stability level of the processor.
 	stability = component.StabilityLevelBeta
 )
 
-var consumerCapabilities = consumer.Capabilities{MutatesData: true}
+var (
+	// The value of "type" key in configuration.
+	typeStr, _           = component.NewType("awsapplicationsignals")
+	consumerCapabilities = consumer.Capabilities{MutatesData: true}
+)
 
 // NewFactory returns a new factory for the aws attributes processor.
 func NewFactory() processor.Factory {
