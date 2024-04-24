@@ -81,6 +81,17 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
 
+func TestGenericAppSignalsFallbackConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "base_appsignals_fallback_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_appsignals_fallback_config", "windows", expectedEnvVars, "")
+}
+
 func TestAppSignalsAndEKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
@@ -94,6 +105,36 @@ func TestAppSignalsAndEKSConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "appsignals_and_eks_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_fallback_and_eks_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_fallback_and_eks_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_over_fallback_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_over_fallback_config", "windows", expectedEnvVars, "")
 }
 
 func TestAppSignalsAndNativeKubernetesConfig(t *testing.T) {

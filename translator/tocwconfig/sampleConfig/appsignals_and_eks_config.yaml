@@ -1,6 +1,5 @@
-connectors: {}
 exporters:
-    awsemf/app_signals:
+    awsemf/application_signals:
         certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
@@ -111,13 +110,11 @@ exporters:
                 - Latency
                 - Fault
                 - Error
-        metric_descriptors: []
         middleware: agenthealth/logs
         namespace: AppSignals
         no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
-        parse_json_encoded_attr_values: []
         profile: ""
         proxy_address: ""
         region: us-east-1
@@ -127,7 +124,6 @@ exporters:
             enabled: false
         retain_initial_value_of_delta_metric: false
         role_arn: ""
-        shared_credentials_file: []
         version: "1"
     awsemf/containerinsights:
         certificate_file_path: ""
@@ -154,7 +150,6 @@ exporters:
                   - Service
                 - - ClusterName
                   - Namespace
-              label_matchers: []
               metric_name_selectors:
                 - pod_cpu_utilization
                 - pod_memory_utilization
@@ -166,7 +161,6 @@ exporters:
                 - - ClusterName
                   - Namespace
                   - PodName
-              label_matchers: []
               metric_name_selectors:
                 - pod_number_of_container_restarts
             - dimensions:
@@ -174,7 +168,6 @@ exporters:
                   - Namespace
                   - PodName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - pod_cpu_reserved_capacity
                 - pod_memory_reserved_capacity
@@ -183,7 +176,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_cpu_utilization
                 - node_memory_utilization
@@ -194,7 +186,6 @@ exporters:
                 - node_number_of_running_containers
             - dimensions:
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_cpu_usage_total
                 - node_cpu_limit
@@ -205,7 +196,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_filesystem_utilization
             - dimensions:
@@ -213,23 +203,19 @@ exporters:
                   - Namespace
                   - Service
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - service_number_of_running_pods
             - dimensions:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - namespace_number_of_running_pods
             - dimensions:
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
-        metric_descriptors: []
         middleware: agenthealth/logs
         namespace: ContainerInsights
         no_verify_ssl: false
@@ -247,10 +233,8 @@ exporters:
             enabled: true
         retain_initial_value_of_delta_metric: false
         role_arn: ""
-        shared_credentials_file: []
         version: "0"
-    awsxray/app_signals:
-        aws_log_groups: []
+    awsxray/application_signals:
         certificate_file_path: ""
         endpoint: ""
         imds_retries: 1
@@ -276,7 +260,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: ""
         role_arn: ""
-        shared_credentials_file: []
         telemetry:
             enabled: true
             include_metadata: true
@@ -287,17 +270,17 @@ extensions:
             operations:
                 - PutLogEvents
             usage_flags:
-              mode: EKS
-              region_type: ACJ
+                mode: EKS
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutTraceSegments
             usage_flags:
-              mode: EKS
-              region_type: ACJ
-    awsproxy/app_signals:
+                mode: EKS
+                region_type: ACJ
+    awsproxy/application_signals:
         aws_endpoint: ""
         certificate_file_path: ""
         endpoint: 0.0.0.0:2000
@@ -307,22 +290,19 @@ extensions:
         proxy_address: ""
         region: us-east-1
         role_arn: ""
-        shared_credentials_file: []
 processors:
-    awsappsignals:
-        resolvers:
-          - platform: eks
-            name: TestCluster
-        rules: []
+    awsapplicationsignals:
         limiter:
-          disabled: false
-          drop_threshold: 500
-          log_dropped_metrics: true
-          rotation_interval: 10m0s
-          garbage_collection_interval: 10m0s
+            disabled: false
+            drop_threshold: 500
+            garbage_collection_interval: 10m0s
+            log_dropped_metrics: true
+            rotation_interval: 10m0s
+        resolvers:
+            - name: TestCluster
+              platform: eks
     batch/containerinsights:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
@@ -333,7 +313,6 @@ processors:
                     enabled: true
                 cloud.provider:
                     enabled: true
-        attributes: []
         azure:
             resource_attributes:
                 azure.resourcegroup.name:
@@ -360,7 +339,6 @@ processors:
         consul:
             address: ""
             datacenter: ""
-            meta: {}
             namespace: ""
             resource_attributes:
                 azure.resourcegroup.name:
@@ -503,7 +481,6 @@ processors:
                     enabled: true
                 k8s.cluster.name:
                     enabled: true
-        headers: {}
         heroku:
             resource_attributes:
                 cloud.provider:
@@ -564,21 +541,10 @@ processors:
                     enabled: true
                 k8s.cluster.name:
                     enabled: true
-            tls:
-                ca_file: ""
-                cert_file: ""
-                insecure: false
-                insecure_skip_verify: false
-                key_file: ""
-                max_version: ""
-                min_version: ""
-                reload_interval: 0s
-                server_name_override: ""
             token: ""
         override: true
         read_buffer_size: 0
         system:
-            hostname_sources: []
             resource_attributes:
                 host.arch:
                     enabled: false
@@ -606,6 +572,7 @@ processors:
         write_buffer_size: 0
 receivers:
     awscontainerinsightreceiver:
+        accelerated_compute_metrics: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true
@@ -629,9 +596,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
-        shared_credentials_file: []
-        accelerated_compute_metrics: false
-    otlp/app_signals:
+    otlp/application_signals:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:4315
@@ -640,14 +605,14 @@ receivers:
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
                 tls:
-                  cert_file: path/to/cert.crt
-                  key_file: path/to/key.key
-                  ca_file: ""
-                  client_ca_file: ""
-                  client_ca_file_reload: false
-                  max_version: ""
-                  min_version: ""
-                  reload_interval: 0s
+                    ca_file: ""
+                    cert_file: path/to/cert.crt
+                    client_ca_file: ""
+                    client_ca_file_reload: false
+                    key_file: path/to/key.key
+                    max_version: ""
+                    min_version: ""
+                    reload_interval: 0s
                 transport: tcp
                 write_buffer_size: 0
             http:
@@ -656,31 +621,30 @@ receivers:
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
-                response_headers: {}
                 tls:
-                  cert_file: path/to/cert.crt
-                  key_file: path/to/key.key
-                  client_ca_file: ""
-                  client_ca_file_reload: false
-                  ca_file: ""
-                  max_version: ""
-                  min_version: ""
-                  reload_interval: 0s
+                    ca_file: ""
+                    cert_file: path/to/cert.crt
+                    client_ca_file: ""
+                    client_ca_file_reload: false
+                    key_file: path/to/key.key
+                    max_version: ""
+                    min_version: ""
+                    reload_interval: 0s
                 traces_url_path: /v1/traces
 service:
     extensions:
-        - awsproxy/app_signals
+        - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
     pipelines:
-        metrics/app_signals:
+        metrics/application_signals:
             exporters:
-                - awsemf/app_signals
+                - awsemf/application_signals
             processors:
                 - resourcedetection
-                - awsappsignals
+                - awsapplicationsignals
             receivers:
-                - otlp/app_signals
+                - otlp/application_signals
         metrics/containerinsights:
             exporters:
                 - awsemf/containerinsights
@@ -688,24 +652,21 @@ service:
                 - batch/containerinsights
             receivers:
                 - awscontainerinsightreceiver
-        traces/app_signals:
+        traces/application_signals:
             exporters:
-                - awsxray/app_signals
+                - awsxray/application_signals
             processors:
                 - resourcedetection
-                - awsappsignals
+                - awsapplicationsignals
             receivers:
-                - otlp/app_signals
+                - otlp/application_signals
     telemetry:
         logs:
             development: false
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: info
-            output_paths: []
             sampling:
                 enabled: true
                 initial: 2
@@ -714,8 +675,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

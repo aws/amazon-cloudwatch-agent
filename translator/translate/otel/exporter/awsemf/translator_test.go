@@ -444,10 +444,7 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName", "NeuronDevice"}},
 						MetricNameSelectors: []string{
-							"container_neurondevice_hw_ecc_events_total_mem_ecc_corrected",
-							"container_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected",
-							"container_neurondevice_hw_ecc_events_total_sram_ecc_corrected",
-							"container_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected",
+							"container_neurondevice_hw_ecc_events_total",
 						},
 					},
 					{
@@ -465,10 +462,7 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "NeuronDevice"}},
 						MetricNameSelectors: []string{
-							"pod_neurondevice_hw_ecc_events_total_mem_ecc_corrected",
-							"pod_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected",
-							"pod_neurondevice_hw_ecc_events_total_sram_ecc_corrected",
-							"pod_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected",
+							"pod_neurondevice_hw_ecc_events_total",
 						},
 					},
 					{
@@ -487,19 +481,6 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}},
 						MetricNameSelectors: []string{
 							"node_neuron_execution_errors_total",
-							"node_neuron_execution_errors_generic",
-							"node_neuron_execution_errors_numerical",
-							"node_neuron_execution_errors_transient",
-							"node_neuron_execution_errors_model",
-							"node_neuron_execution_errors_runtime",
-							"node_neuron_execution_errors_hardware",
-							"node_neuron_execution_status_total",
-							"node_neuron_execution_status_completed",
-							"node_neuron_execution_status_timed_out",
-							"node_neuron_execution_status_completed_with_err",
-							"node_neuron_execution_status_completed_with_num_err",
-							"node_neuron_execution_status_incorrect_input",
-							"node_neuron_execution_status_failed_to_queue",
 							"node_neurondevice_runtime_memory_used_bytes",
 							"node_neuron_execution_latency",
 						},
@@ -507,10 +488,25 @@ func TestTranslator(t *testing.T) {
 					{
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "InstanceId", "NodeName"}, {"ClusterName", "InstanceId", "NodeName", "NeuronDevice"}},
 						MetricNameSelectors: []string{
-							"node_neurondevice_hw_ecc_events_total_mem_ecc_corrected",
-							"node_neurondevice_hw_ecc_events_total_mem_ecc_uncorrected",
-							"node_neurondevice_hw_ecc_events_total_sram_ecc_corrected",
-							"node_neurondevice_hw_ecc_events_total_sram_ecc_uncorrected",
+							"node_neurondevice_hw_ecc_events_total",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "PodName", "ContainerName"}, {"ClusterName", "Namespace", "PodName", "FullPodName", "ContainerName"}},
+						MetricNameSelectors: []string{
+							"container_efa_rx_bytes", "container_efa_tx_bytes", "container_efa_rx_dropped", "container_efa_rdma_read_bytes", "container_efa_rdma_write_bytes", "container_efa_rdma_write_recv_bytes",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}},
+						MetricNameSelectors: []string{
+							"pod_efa_rx_bytes", "pod_efa_tx_bytes", "pod_efa_rx_dropped", "pod_efa_rdma_read_bytes", "pod_efa_rdma_write_bytes", "pod_efa_rdma_write_recv_bytes",
+						},
+					},
+					{
+						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}},
+						MetricNameSelectors: []string{
+							"node_efa_rx_bytes", "node_efa_tx_bytes", "node_efa_rx_dropped", "node_efa_rdma_read_bytes", "node_efa_rdma_write_bytes", "node_efa_rdma_write_recv_bytes",
 						},
 					},
 				},
@@ -838,7 +834,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
-						"app_signals": map[string]any{},
+						"application_signals": map[string]any{},
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
@@ -854,7 +850,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
-						"app_signals": map[string]any{},
+						"application_signals": map[string]any{},
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
@@ -870,7 +866,7 @@ func TestTranslateAppSignals(t *testing.T) {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{
-						"app_signals": map[string]any{},
+						"application_signals": map[string]any{},
 					},
 				}},
 			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
@@ -883,6 +879,70 @@ func TestTranslateAppSignals(t *testing.T) {
 			mode:           config.ModeOnPrem,
 		},
 		"WithAppSignalsEnabledEC2": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"application_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+				"local_mode":            "false",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: "",
+			mode:           config.ModeEC2,
+		},
+		"WithAppSignalsFallbackEnabledEKS": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_eks.yaml"), map[string]any{
+				"local_mode":            "false",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: config.ModeEKS,
+			mode:           config.ModeEC2,
+		},
+		"WithAppSignalsFallbackEnabledK8s": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_k8s.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: config.ModeK8sOnPrem,
+			mode:           config.ModeOnPrem,
+		},
+		"WithAppSignalsFallbackEnabledGeneric": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"app_signals": map[string]any{},
+					},
+				}},
+			want: testutil.GetConfWithOverrides(t, filepath.Join("appsignals_config_generic.yaml"), map[string]any{
+				"local_mode":            "true",
+				"region":                "us-east-1",
+				"role_arn":              "global_arn",
+				"certificate_file_path": "/ca/bundle",
+			}),
+			kubernetesMode: "",
+			mode:           config.ModeOnPrem,
+		},
+		"WithAppSignalsFallbackEnabledEC2": {
 			input: map[string]any{
 				"logs": map[string]any{
 					"metrics_collected": map[string]any{

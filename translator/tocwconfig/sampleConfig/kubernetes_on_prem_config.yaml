@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awsemf/containerinsights:
         certificate_file_path: ""
@@ -26,7 +25,6 @@ exporters:
                   - ContainerName
                   - Namespace
                   - PodName
-              label_matchers: []
               metric_name_selectors:
                 - container_cpu_utilization
                 - container_cpu_utilization_over_container_limit
@@ -54,7 +52,6 @@ exporters:
                   - FullPodName
                   - Namespace
                   - PodName
-              label_matchers: []
               metric_name_selectors:
                 - pod_cpu_utilization
                 - pod_memory_utilization
@@ -73,7 +70,6 @@ exporters:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - pod_interface_network_rx_dropped
                 - pod_interface_network_tx_dropped
@@ -89,7 +85,6 @@ exporters:
                 - - ClusterName
                   - Namespace
                   - Service
-              label_matchers: []
               metric_name_selectors:
                 - pod_cpu_reserved_capacity
                 - pod_memory_reserved_capacity
@@ -121,7 +116,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_cpu_utilization
                 - node_memory_utilization
@@ -147,7 +141,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_interface_network_rx_dropped
                 - node_interface_network_tx_dropped
@@ -158,7 +151,6 @@ exporters:
                   - InstanceId
                   - NodeName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - node_filesystem_utilization
                 - node_filesystem_inodes
@@ -168,7 +160,6 @@ exporters:
                   - Namespace
                   - Service
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - service_number_of_running_pods
             - dimensions:
@@ -176,7 +167,6 @@ exporters:
                   - Namespace
                   - PodName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - replicas_desired
                 - replicas_ready
@@ -187,7 +177,6 @@ exporters:
                   - Namespace
                   - PodName
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - daemonset_status_number_available
                 - daemonset_status_number_unavailable
@@ -195,12 +184,10 @@ exporters:
                 - - ClusterName
                   - Namespace
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - namespace_number_of_running_pods
             - dimensions:
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - cluster_node_count
                 - cluster_failed_node_count
@@ -209,7 +196,6 @@ exporters:
                 - - ClusterName
                   - endpoint
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_storage_size_bytes
                 - apiserver_storage_db_total_size_in_bytes
@@ -218,7 +204,6 @@ exporters:
                 - - ClusterName
                   - resource
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_storage_list_duration_seconds
                 - apiserver_longrunning_requests
@@ -227,7 +212,6 @@ exporters:
                 - - ClusterName
                   - verb
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_request_duration_seconds
                 - rest_client_request_duration_seconds
@@ -236,7 +220,6 @@ exporters:
                   - code
                   - verb
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_request_total
                 - apiserver_request_total_5xx
@@ -244,7 +227,6 @@ exporters:
                 - - ClusterName
                   - operation
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_admission_controller_admission_duration_seconds
                 - apiserver_admission_step_admission_duration_seconds
@@ -254,14 +236,12 @@ exporters:
                   - code
                   - method
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - rest_client_requests_total
             - dimensions:
                 - - ClusterName
                   - request_kind
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_current_inflight_requests
                 - apiserver_current_inqueue_requests
@@ -269,28 +249,24 @@ exporters:
                 - - ClusterName
                   - name
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_admission_webhook_admission_duration_seconds
             - dimensions:
                 - - ClusterName
                   - group
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_requested_deprecated_apis
             - dimensions:
                 - - ClusterName
                   - reason
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_flowcontrol_rejected_requests_total
             - dimensions:
                 - - ClusterName
                   - priority_level
                 - - ClusterName
-              label_matchers: []
               metric_name_selectors:
                 - apiserver_flowcontrol_request_concurrency_limit
         metric_descriptors:
@@ -381,12 +357,11 @@ extensions:
             operations:
                 - PutLogEvents
             usage_flags:
-              mode: OP
-              region_type: ACJ
+                mode: OP
+                region_type: ACJ
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
@@ -396,14 +371,13 @@ processors:
               aggregation_type: ""
               experimental_match_labels:
                 code: ^5.*
-              group_resource_labels: {}
               include: apiserver_request_total
               match_type: regexp
               new_name: apiserver_request_total_5xx
-              operations: []
               submatch_case: ""
 receivers:
     awscontainerinsightreceiver:
+        accelerated_compute_metrics: false
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
         add_service_as_attribute: true
@@ -429,7 +403,6 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - fake-path
-        accelerated_compute_metrics: false
 service:
     extensions:
         - agenthealth/logs
@@ -448,10 +421,7 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: info
-            output_paths: []
             sampling:
                 enabled: true
                 initial: 2
@@ -460,8 +430,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

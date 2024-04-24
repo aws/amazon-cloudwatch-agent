@@ -1,0 +1,88 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Deploy Canary
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+  S3_INTEGRATION_BUCKET: ${{ secrets.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+
+on:
+  schedule:
+    - cron: "0 15 * * *" # Run daily at 15:00 UTC
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  DeployCanary:
+    name: "DeployCanary"
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Terminate Last Canary
+        run: |
+          if aws s3api wait object-exists --bucket ${S3_INTEGRATION_BUCKET} --key canary/al2/terraform.tfstate ;
+          then
+            cd terraform/ec2/linux
+            aws s3 cp s3://${S3_INTEGRATION_BUCKET}/canary/al2/terraform.tfstate .
+            terraform --version
+            terraform init
+            terraform destroy -auto-approve
+            aws s3api delete-object --bucket ${S3_INTEGRATION_BUCKET} --key canary/al2/terraform.tfstate
+          fi
+      # @TODO we can add a matrix in the future but for alpha we will only deploy to al2
+      - name: Terraform apply
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/ec2/linux
+            terraform init
+            if terraform apply --auto-approve \
+              -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
+              -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
+              -var="user=ec2-user" \
+              -var="ami=cloudwatch-agent-integration-test-al2*" \
+              -var="arc=amd64" \
+              -var="binary_name=amazon-cloudwatch-agent.rpm" \
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+              -var="ssh_key_name=${KEY_NAME}" \
+              -var="ssh_key_value=${PRIVATE_KEY}" \
+              -var="test_name=canary" \
+              -var="is_canary=true" \
+              -var="test_dir=./test/canary" ; then aws s3 cp terraform.tfstate s3://${S3_INTEGRATION_BUCKET}/canary/al2/terraform.tfstate
+            else
+              terraform destroy -auto-approve && exit 1
+            fi
+      #This is here just in case workflow cancel
+      - name: Terraform destroy
+        if: ${{ cancelled() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/ec2/linux && terraform destroy --auto-approve

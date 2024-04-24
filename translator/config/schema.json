@@ -618,6 +618,90 @@
               },
               "additionalProperties": true
             },
+            "application_signals": {
+              "type": "object",
+              "properties": {
+                "hosted_in": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "rules": {
+                  "description": "Custom rules defined by customer",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "selectors": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "dimension": {
+                              "description": "dimension used for matching",
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "match": {
+                              "description": "regex used for match",
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": [
+                            "dimension",
+                            "match"
+                          ]
+                        }
+                      },
+                      "replacements": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "target_dimension": {
+                              "description": "dimension to be replaced",
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "value": {
+                              "description": "replacement value",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "target_dimension",
+                            "value"
+                          ]
+                        }
+                      },
+                      "action": {
+                        "description": "action to be done, either keep, drop or replace",
+                        "type": "string",
+                        "enum": [
+                          "drop",
+                          "keep",
+                          "replace"
+                        ]
+                      },
+                      "rule_name": {
+                        "description": "name of rule",
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "selectors",
+                      "action"
+                    ]
+                  }
+                }
+              },
+              "tls": {
+                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
+              },
+              "additionalProperties": true
+            },
             "ecs": {
               "type": "object",
               "properties": {
@@ -931,6 +1015,11 @@
           "type": "object",
           "properties": {
             "app_signals": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": true
+            },
+            "application_signals": {
               "type": "object",
               "properties": {},
               "additionalProperties": true

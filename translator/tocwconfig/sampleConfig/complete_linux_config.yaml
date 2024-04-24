@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awscloudwatch:
         drop_original_metrics:
@@ -51,14 +50,11 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
-        shared_credentials_file: []
     awsxray:
-        aws_log_groups: []
         certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
         imds_retries: 1
         index_all_attributes: false
-        indexed_attributes: []
         local_mode: true
         max_retries: 2
         middleware: agenthealth/traces
@@ -70,7 +66,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
-        shared_credentials_file: []
         telemetry:
             enabled: true
             include_metadata: true
@@ -102,13 +97,11 @@ extensions:
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
     batch/xray:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -120,7 +113,6 @@ processors:
                 - diskio_iops_in_progress
         include:
             match_type: ""
-            metrics: []
         initial_value: 0
         max_staleness: 0s
     ec2tagger:
@@ -138,11 +130,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
 receivers:
     awsxray:
@@ -157,7 +149,6 @@ receivers:
             proxy_address: https://proxy.proxy.com
             region: us-west-2
             role_arn: trace_role_arn_value_test
-            shared_credentials_file: []
             tls:
                 ca_file: ""
                 cert_file: ""
@@ -185,7 +176,6 @@ receivers:
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
-                response_headers: {}
                 traces_url_path: /v1/traces
     telegraf_cpu:
         collection_interval: 10s
@@ -233,7 +223,6 @@ receivers:
         initial_delay: 1s
         timeout: 0s
     udplog/emf_logs:
-        attributes: {}
         encoding: utf-8
         id: udp_input
         listen_address: 127.0.0.1:25888
@@ -242,8 +231,6 @@ receivers:
             line_start_pattern: ""
             omit_pattern: false
         operators: []
-        output: []
-        resource: {}
         retry_on_failure:
             enabled: false
             initial_interval: 0s
@@ -270,15 +257,15 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_mem
-                - telegraf_socket_listener
-                - telegraf_processes
+                - telegraf_cpu
                 - telegraf_procstat/1917393364
+                - telegraf_mem
+                - telegraf_statsd
+                - telegraf_socket_listener
                 - telegraf_disk
                 - telegraf_swap
+                - telegraf_processes
                 - telegraf_netstat
-                - telegraf_cpu
-                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -287,8 +274,8 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         traces/xray:
             exporters:
                 - awsxray
@@ -303,8 +290,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: error
             output_paths:
                 - /tmp/fake/log/hotdog.log
@@ -316,8 +301,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

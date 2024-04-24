@@ -5,12 +5,11 @@ package cloudwatch
 
 import (
 	"fmt"
+	"strings"
 	"time"
-	"unicode"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/unit"
 )
 
@@ -26,18 +25,18 @@ var baseUnits = map[string]types.StandardUnit{
 	"us": types.StandardUnitMicroseconds,
 	"ms": types.StandardUnitMilliseconds,
 	// bytes
-	"B":  types.StandardUnitBytes,
-	"By": types.StandardUnitBytes,
-	"Bi": types.StandardUnitBits,
+	"b":  types.StandardUnitBytes,
+	"by": types.StandardUnitBytes,
+	"bi": types.StandardUnitBits,
 	// rates
-	"B/s":  types.StandardUnitBytesSecond,
-	"By/s": types.StandardUnitBytesSecond,
-	"Bi/s": types.StandardUnitBitsSecond,
+	"b/s":  types.StandardUnitBytesSecond,
+	"by/s": types.StandardUnitBytesSecond,
+	"bi/s": types.StandardUnitBitsSecond,
 }
 
 var uniqueConversions = map[string]struct {
-	unit  types.StandardUnit
-	scale float64
+	standardUnit types.StandardUnit
+	scale        float64
 }{
 	// time
 	"ns":  {types.StandardUnitMicroseconds, 1 / float64(time.Microsecond.Nanoseconds())},
@@ -76,72 +75,81 @@ var scaledBaseUnits = map[types.StandardUnit]map[unit.MetricPrefix]types.Standar
 // ToStandardUnit converts from the OTEL unit names to the corresponding names
 // supported by AWS CloudWatch. Some OTEL unit types are unsupported.
 func ToStandardUnit(unit string) (string, float64, error) {
-	if IsStandardUnit(unit) {
-		return unit, 1, nil
-	}
-	if baseUnit, ok := baseUnits[unit]; ok {
-		return string(baseUnit), 1, nil
-	}
-	if conversion, ok := uniqueConversions[unit]; ok {
-		return string(conversion.unit), conversion.scale, nil
-	}
-	prefix, base := splitUnit(unit)
-	if baseUnit, ok := baseUnits[base]; ok {
-		return scaleBaseUnit(prefix, baseUnit)
-	}
-	return string(types.StandardUnitNone), 1, fmt.Errorf("non-convertible unit: %q", unit)
+	standardUnit, scale, err := toStandardUnit(unit)
+	return string(standardUnit), scale, err
 }
 
-// splitUnit splits a unit and its prefix based on the second capital letter found.
+func toStandardUnit(unit string) (types.StandardUnit, float64, error) {
+	u := strings.ToLower(unit)
+	if standardUnit, ok := standardUnits[u]; ok {
+		return standardUnit, 1, nil
+	}
+	if standardUnit, ok := baseUnits[u]; ok {
+		return standardUnit, 1, nil
+	}
+	if conversion, ok := uniqueConversions[u]; ok {
+		return conversion.standardUnit, conversion.scale, nil
+	}
+	prefix, baseUnit := splitUnit(u)
+	if standardUnit, ok := baseUnits[baseUnit]; ok && prefix != nil {
+		return scaleBaseUnit(prefix, standardUnit)
+	}
+	return types.StandardUnitNone, 1, fmt.Errorf("non-convertible unit: %q", unit)
+}
+
+// splitUnit splits a unit and its prefix based on available prefixes.
 // e.g. MiBy will split into prefix "Mi" and base "By".
-func splitUnit(unit string) (string, string) {
-	var index int
-	if len(unit) > 1 {
-		for i, r := range unit[1:] {
-			if unicode.IsUpper(r) {
-				index = i + 1
-				break
-			}
+func splitUnit(unit string) (unit.Prefix, string) {
+	for _, prefix := range supportedPrefixes {
+		p := strings.ToLower(prefix.String())
+		baseUnit, ok := strings.CutPrefix(unit, p)
+		if ok {
+			return prefix, baseUnit
 		}
 	}
-	return unit[:index], unit[index:]
+	return nil, unit
 }
 
-// scaleBaseUnit takes a prefix and the CloudWatch base unit and finds the scaled CloudWatch unit and
+// scaleBaseUnit takes a prefix and the CloudWatch standard unit and finds the scaled CloudWatch unit and
 // the scale factor if value adjustments are necessary.
-func scaleBaseUnit(prefix string, baseUnit types.StandardUnit) (string, float64, error) {
-	scaledUnits, ok := scaledBaseUnits[baseUnit]
+func scaleBaseUnit(prefix unit.Prefix, standardUnit types.StandardUnit) (types.StandardUnit, float64, error) {
+	scaledUnits, ok := scaledBaseUnits[standardUnit]
 	if !ok {
-		return string(types.StandardUnitNone), 1, fmt.Errorf("non-scalable unit: %v", baseUnit)
+		return types.StandardUnitNone, 1, fmt.Errorf("non-scalable unit: %v", standardUnit)
 	}
+	var metricPrefix unit.MetricPrefix
 	scale := float64(1)
-	metricPrefix := unit.MetricPrefix(prefix)
-	if metricPrefix.Value() == -1 {
+	switch p := prefix.(type) {
+	case unit.MetricPrefix:
+		metricPrefix = p
+	case unit.BinaryPrefix:
 		var err error
-		metricPrefix, scale, err = unit.ConvertToMetric(unit.BinaryPrefix(prefix))
+		metricPrefix, scale, err = unit.ConvertToMetric(p)
 		if err != nil {
-			return string(types.StandardUnitNone), 1, fmt.Errorf("unsupported prefix: %v", prefix)
+			return types.StandardUnitNone, 1, err
 		}
+	default:
+		return types.StandardUnitNone, 1, fmt.Errorf("unsupported prefix: %v", prefix)
 	}
 	if scaledUnit, ok := scaledUnits[metricPrefix]; ok {
-		return string(scaledUnit), scale, nil
+		return scaledUnit, scale, nil
 	}
-	return string(types.StandardUnitNone), 1, fmt.Errorf("unsupported prefix %v for %v", prefix, baseUnit)
+	return types.StandardUnitNone, 1, fmt.Errorf("unsupported prefix %v for %v", prefix, standardUnit)
 }
 
-var standardUnits = collections.NewSet[string]()
-
-// IsStandardUnit determines if the unit is acceptable by CloudWatch.
-func IsStandardUnit(unit string) bool {
-	if unit == "" {
-		return false
-	}
-	_, ok := standardUnits[unit]
-	return ok
-}
+var (
+	standardUnits     = make(map[string]types.StandardUnit)
+	supportedPrefixes []unit.Prefix
+)
 
 func init() {
 	for _, standardUnit := range types.StandardUnitNone.Values() {
-		standardUnits.Add(string(standardUnit))
+		standardUnits[strings.ToLower(string(standardUnit))] = standardUnit
+	}
+	for _, binaryPrefix := range unit.BinaryPrefixes {
+		supportedPrefixes = append(supportedPrefixes, binaryPrefix)
+	}
+	for _, metricPrefix := range unit.MetricPrefixes {
+		supportedPrefixes = append(supportedPrefixes, metricPrefix)
 	}
 }

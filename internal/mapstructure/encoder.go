@@ -24,6 +24,7 @@ const (
 
 var (
 	errNonStringEncodedKey = errors.New("non string-encoded key")
+	errUnsupportedKind     = errors.New("unsupported kind")
 )
 
 // tagInfo stores the mapstructure tag details.
@@ -44,8 +45,10 @@ type EncoderConfig struct {
 	// EncodeHook, if set, is a way to provide custom encoding. It
 	// will be called before structs and primitive types.
 	EncodeHook mapstructure.DecodeHookFunc
-	// OmitAllNil, if set, is a way to omit all nil fields even if omitempty isn't present.
-	OmitAllNil bool
+	// NilEmptyMap, if set, is a way to nil out empty maps.
+	NilEmptyMap bool
+	// OmitNilFields, if set, is a way to omit all nil struct fields even if omitempty isn't present.
+	OmitNilFields bool
 }
 
 // New returns a new encoder for the configuration.
@@ -63,11 +66,11 @@ func (e *Encoder) Encode(input any) (any, error) {
 func (e *Encoder) encode(value reflect.Value) (any, error) {
 	if value.IsValid() {
 		switch value.Kind() {
-		case reflect.Interface, reflect.Ptr:
+		case reflect.Interface, reflect.Pointer:
 			return e.encode(value.Elem())
 		case reflect.Map:
 			return e.encodeMap(value)
-		case reflect.Slice:
+		case reflect.Slice, reflect.Array:
 			return e.encodeSlice(value)
 		case reflect.Struct:
 			return e.encodeStruct(value)
@@ -120,9 +123,12 @@ func (e *Encoder) encodeStruct(value reflect.Value) (any, error) {
 			}
 			encoded, err := e.encode(field)
 			if err != nil {
+				if errors.Is(err, errUnsupportedKind) {
+					continue
+				}
 				return nil, fmt.Errorf("error encoding field %q: %w", info.name, err)
 			}
-			if e.config.OmitAllNil && encoded == nil {
+			if e.config.OmitNilFields && encoded == nil {
 				continue
 			}
 			if info.squash {
@@ -141,11 +147,14 @@ func (e *Encoder) encodeStruct(value reflect.Value) (any, error) {
 
 // encodeSlice iterates over the slice and encodes each of the elements.
 func (e *Encoder) encodeSlice(value reflect.Value) (any, error) {
-	if value.Kind() != reflect.Slice {
+	if value.Kind() != reflect.Slice && value.Kind() != reflect.Array {
 		return nil, &reflect.ValueError{
 			Method: "encodeSlice",
 			Kind:   value.Kind(),
 		}
+	}
+	if value.Kind() == reflect.Slice && value.IsNil() {
+		return nil, nil
 	}
 	result := make([]any, value.Len())
 	for i := 0; i < value.Len(); i++ {
@@ -166,6 +175,9 @@ func (e *Encoder) encodeMap(value reflect.Value) (any, error) {
 			Kind:   value.Kind(),
 		}
 	}
+	if value.IsNil() {
+		return nil, nil
+	}
 	result := make(map[string]any)
 	iterator := value.MapRange()
 	for iterator.Next() {
@@ -183,6 +195,9 @@ func (e *Encoder) encodeMap(value reflect.Value) (any, error) {
 		if result[key], err = e.encode(iterator.Value()); err != nil {
 			return nil, fmt.Errorf("error encoding map value for key %q: %w", key, err)
 		}
+	}
+	if e.config.NilEmptyMap && len(result) == 0 {
+		return nil, nil
 	}
 	return result, nil
 }
@@ -233,14 +248,39 @@ func TextMarshalerHookFunc() mapstructure.DecodeHookFuncValue {
 // NilHookFunc returns a DecodeHookFuncValue that checks if the value matches the type and nils it out. Allows specific
 // types to be omitted.
 func NilHookFunc[T any]() mapstructure.DecodeHookFuncValue {
+	return nilHookFunc[T](false)
+}
+
+// NilZeroValueHookFunc returns a DecodeHookFuncValue that only nils the field if it's a zero value.
+func NilZeroValueHookFunc[T any]() mapstructure.DecodeHookFuncValue {
+	return nilHookFunc[T](true)
+}
+
+func nilHookFunc[T any](onlyIfZero bool) mapstructure.DecodeHookFuncValue {
 	return func(from reflect.Value, _ reflect.Value) (any, error) {
 		if !from.IsValid() {
 			return nil, nil
 		}
 		_, ok := from.Interface().(T)
-		if !ok {
+		if ok && (!onlyIfZero || from.IsZero()) {
+			return nil, nil
+		}
+		return from.Interface(), nil
+	}
+}
+
+// UnsupportedKindHookFunc returns a DecodeHookFuncValue that checks that the kind isn't one unsupported by the YAML
+// encoder.
+func UnsupportedKindHookFunc() mapstructure.DecodeHookFuncValue {
+	return func(from reflect.Value, _ reflect.Value) (any, error) {
+		if !from.IsValid() {
+			return nil, nil
+		}
+		switch from.Kind() {
+		case reflect.Chan, reflect.Func:
+			return nil, fmt.Errorf("%w: %s", errUnsupportedKind, from.Kind())
+		default:
 			return from.Interface(), nil
 		}
-		return nil, nil
 	}
 }

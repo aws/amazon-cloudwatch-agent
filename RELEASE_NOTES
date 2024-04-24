@@ -1,4 +1,23 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300037.0 (2024-04-11)
+========================================================================
+Features:
+* [ContainerInsights] Add Elastic Fabric Adapter (EFA) observability with Kubernetes
+
+Enhancements:
+* Retain CloudWatch Log Group when translating X-Ray segments
+
+Bug fixes:
+* Clean up log pusher state file on startup
+* Drop container/pod level Nvidia GPU metrics when there is no active workload
+
+========================================================================
+Amazon CloudWatch Agent 1.300036.0 (2024-04-05)
+========================================================================
+Features:
+* [ContainerInsights] Add AWS Trainium & Inferentia observability with Kubernetes
+
+========================================================================
 Amazon CloudWatch Agent 1.300035.0 (2024-03-18)
 ========================================================================
 Features:

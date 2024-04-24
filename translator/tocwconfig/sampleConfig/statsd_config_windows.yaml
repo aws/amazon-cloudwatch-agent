@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awscloudwatch:
         force_flush_interval: 1m0s
@@ -18,7 +17,6 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-processors: {}
 receivers:
     telegraf_statsd:
         collection_interval: 10s
@@ -40,8 +38,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: info
             output_paths:
                 - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
@@ -53,8 +49,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

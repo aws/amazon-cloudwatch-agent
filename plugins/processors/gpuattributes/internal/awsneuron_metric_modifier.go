@@ -14,39 +14,40 @@ import (
 )
 
 const (
-	aggregatedMetricSuffix = "_total"
-	ErrorType              = "error_type"
-	StatusType             = "status_type"
-	EventType              = "event_type"
-	logTypeSuffix          = "AWSNeuron"
-	MemoryLocation         = "memory_location"
+	ErrorType      = "error_type"
+	StatusType     = "status_type"
+	EventType      = "event_type"
+	logTypeSuffix  = "AWSNeuron"
+	MemoryLocation = "memory_location"
 
-	Core                     = "Core"
-	Device                   = "Device"
-	Percentile               = "percentile"
-	PodName                  = "PodName"
-	Count                    = "Count"
-	Bytes                    = "Bytes"
-	Seconds                  = "Seconds"
-	Percent                  = "Percent"
-	NeuronCoreAttributeKey   = "NeuronCore"
-	NeuronDeviceAttributeKey = "NeuronDevice"
-	RuntimeTag               = "runtime_tag"
-	ClusterName              = "ClusterName"
-	ContainerName            = "ContainerName"
-	FullPodName              = "FullPodName"
-	InstanceId               = "InstanceId"
-	InstanceType             = "InstanceType"
-	K8sPodName               = "K8sPodName"
-	Namespace                = "Namespace"
-	NeuronCore               = "NeuronCore"
-	NeuronDevice             = "NeuronDevice"
-	NodeName                 = "NodeName"
-	Service                  = "Service"
-	AvailabilityZone         = "availability_zone"
-	Kubernetes               = "kubernetes"
-	Region                   = "region"
-	SubnetId                 = "subnet_id"
+	Core                                          = "Core"
+	Device                                        = "Device"
+	Percentile                                    = "percentile"
+	PodName                                       = "PodName"
+	Count                                         = "Count"
+	Bytes                                         = "Bytes"
+	Seconds                                       = "Seconds"
+	Percent                                       = "Percent"
+	NeuronCoreAttributeKey                        = "NeuronCore"
+	NeuronDeviceAttributeKey                      = "NeuronDevice"
+	RuntimeTag                                    = "runtime_tag"
+	ClusterName                                   = "ClusterName"
+	ContainerName                                 = "ContainerName"
+	FullPodName                                   = "FullPodName"
+	InstanceId                                    = "InstanceId"
+	InstanceType                                  = "InstanceType"
+	K8sPodName                                    = "K8sPodName"
+	Namespace                                     = "Namespace"
+	NeuronCore                                    = "NeuronCore"
+	NeuronDevice                                  = "NeuronDevice"
+	NodeName                                      = "NodeName"
+	Service                                       = "Service"
+	AvailabilityZone                              = "availability_zone"
+	Kubernetes                                    = "kubernetes"
+	Region                                        = "region"
+	SubnetId                                      = "subnet_id"
+	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
+	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
 )
 
 type AwsNeuronMetricModifier struct {
@@ -58,6 +59,12 @@ type MetricModifications struct {
 	UniqueAttribute  string
 	LogTypeSuffix    string
 	Unit             string
+}
+
+type MetricDatapointAggregationKey struct {
+	runtimeTag           string
+	aggregatedMetricName string
+	deviceId             string
 }
 
 var (
@@ -78,6 +85,20 @@ var (
 		containerinsightscommon.NeuronDeviceHardwareEccEvents:               {DuplicationTypes: []string{containerinsightscommon.TypeContainer, containerinsightscommon.TypePod, containerinsightscommon.TypeNode}, UniqueAttribute: EventType, LogTypeSuffix: Device, Unit: Count},
 	}
 	attributeValuePrefixingMap = map[string]string{NeuronCoreAttributeKey: "core", NeuronDeviceAttributeKey: "device"}
+
+	uniquesDatapointsToAggregatedMetricMappings = map[string]map[string]string{
+		containerinsightscommon.NeuronExecutionErrors: {"generic": NeuronExecutionErrorsAggregatedMetric,
+			"numerical": NeuronExecutionErrorsAggregatedMetric,
+			"transient": NeuronExecutionErrorsAggregatedMetric,
+			"model":     NeuronExecutionErrorsAggregatedMetric,
+			"runtime":   NeuronExecutionErrorsAggregatedMetric,
+			"hardware":  NeuronExecutionErrorsAggregatedMetric},
+		// execution_status metric will be added here incrementally
+		containerinsightscommon.NeuronDeviceHardwareEccEvents: {"mem_ecc_corrected": NeuronDeviceHardwareEccEventsAggregatedMetric,
+			"mem_ecc_uncorrected":  NeuronDeviceHardwareEccEventsAggregatedMetric,
+			"sram_ecc_corrected":   NeuronDeviceHardwareEccEventsAggregatedMetric,
+			"sram_ecc_uncorrected": NeuronDeviceHardwareEccEventsAggregatedMetric},
+	}
 
 	MetricAttributesToKeep = map[string]struct{}{
 		ClusterName:      {},
@@ -117,11 +138,12 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 	// Since the otel to grouped metrics conversions takes type into account,
 	// thus we need to convert all metrics to the same type so that they are grouped together.
 	if originalMetric.Type() == pmetric.MetricTypeGauge {
-		originalMetric = convertGaugeToSum(originalMetric)
+		convertGaugeToSum(originalMetric)
 	}
 	// Neuron metrics sent by the neuron monitor don't have any units so we add them in the agent.
 	addUnit(originalMetric)
 	prefixCoreAndDeviceLabels(originalMetric)
+	resetStaleDatapoints(originalMetric)
 
 	originalMetricName := originalMetric.Name()
 	// The neuron metrics sent by the neuron monitor are not homogeneous
@@ -138,14 +160,12 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
 }
 
-func convertGaugeToSum(originalMetric pmetric.Metric) pmetric.Metric {
-	convertedMetric := setMetricMetadata(pmetric.NewMetric(), originalMetric.Name(), originalMetric.Unit())
-	convertedMetric.SetEmptySum()
-	originalMetric.Gauge().DataPoints().CopyTo(convertedMetric.Sum().DataPoints())
-
-	// default value of temporality is undefined so even after conversion from gauge to sum
-	// the agent won't take delta.
-	return convertedMetric
+// This method converts gauges to sum so that all metrics can be grouped in the same grouped metrics.
+// The default value of temporality is undefined so even after conversion from gauge to sum the agent won't take delta.
+func convertGaugeToSum(originalMetric pmetric.Metric) {
+	datapoints := originalMetric.Gauge().DataPoints()
+	originalMetric.SetEmptySum()
+	datapoints.MoveAndAppendTo(originalMetric.Sum().DataPoints())
 }
 
 func addUnit(originalMetric pmetric.Metric) {
@@ -171,6 +191,7 @@ func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attrib
 // It also creates a new metric for each datapoint based on the unique target attribute.
 // example :
 // in: unique_target_attribute = error_type
+// and error_type: A,B,C need to be aggregated in neuron_execution_errors_total metric then
 //
 //	neuron_execution_errors {
 //	  datapoints : [
@@ -206,34 +227,43 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 	}
 
 	originalMetricDatapoints := originalMetric.Sum().DataPoints()
-	aggregatedValuesPerRuntimeTag := map[string]float64{}
+
+	aggregatedValuesPerRuntimeTag := map[MetricDatapointAggregationKey]float64{}
+	uniqueAttributeToAggregatedMetricMappings, needsAggregation := uniquesDatapointsToAggregatedMetricMappings[originalMetric.Name()]
 	for i := 0; i < originalMetricDatapoints.Len(); i++ {
 		originalDatapoint := originalMetricDatapoints.At(i)
-
 		runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
-		aggregatedValuesPerRuntimeTag[runtimeTag.AsString()] += originalDatapoint.DoubleValue()
+		deviceId, _ := originalDatapoint.Attributes().Get(NeuronDeviceAttributeKey)
+		uniqueAttributeValue, _ := originalDatapoint.Attributes().Get(uniqueAttribute)
+
+		// only add to the aggregation map if the datapoint to aggregated metric mappings are defined for the original metric
+		if needsAggregation {
+			aggregatedMetricName := uniqueAttributeToAggregatedMetricMappings[uniqueAttributeValue.Str()]
+			aggregatedValuesPerRuntimeTag[MetricDatapointAggregationKey{runtimeTag: runtimeTag.Str(), aggregatedMetricName: aggregatedMetricName, deviceId: deviceId.Str()}] += originalDatapoint.DoubleValue()
+		}
 
 		// Creating a new metric from the current datapoint and adding it to the new newMetricSlice
-		subtypeValue, _ := originalDatapoint.Attributes().Get(uniqueAttribute)
-		newNameMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+"_"+subtypeValue.Str(), originalMetric.Unit())
+		newNameMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+"_"+uniqueAttributeValue.Str(), originalMetric.Unit())
 		originalDatapoint.CopyTo(newNameMetric.SetEmptySum().DataPoints().AppendEmpty())
 		// setting value of temporality to cumulative so that agent performs delta conversion on this metric
 		newNameMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 	}
 
-	if originalMetric.Name() != containerinsightscommon.NeuronDeviceHardwareEccEvents {
-		// Creating body for the aggregated metric and add it to the new newMetricSlice for each runtime
-		for runtimeTag, value := range aggregatedValuesPerRuntimeTag {
-			// Aggregated metric for neuron device ecc events is not required
-			aggregatedMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name()+aggregatedMetricSuffix, originalMetric.Unit())
+	// Creating body for the aggregated metric and add it to the new newMetricSlice for each runtime
+	for aggregatedMetricMetadata, value := range aggregatedValuesPerRuntimeTag {
+		// Aggregated metric for neuron device ecc events is not required
+		aggregatedMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), aggregatedMetricMetadata.aggregatedMetricName, originalMetric.Unit())
 
-			originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
-			aggregatedMetric.Sum().DataPoints().At(0).SetDoubleValue(value)
-			aggregatedMetric.Sum().DataPoints().At(0).Attributes().PutStr(RuntimeTag, runtimeTag)
+		originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
+		aggregatedMetric.Sum().DataPoints().At(0).SetDoubleValue(value)
+		aggregatedMetric.Sum().DataPoints().At(0).Attributes().PutStr(RuntimeTag, aggregatedMetricMetadata.runtimeTag)
 
-			// setting value of temporality to cumulative so that agent performs delta conversion on this metric
-			aggregatedMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+		if aggregatedMetricMetadata.deviceId != "" {
+			aggregatedMetric.Sum().DataPoints().At(0).Attributes().PutStr(NeuronDeviceAttributeKey, aggregatedMetricMetadata.deviceId)
 		}
+
+		// setting value of temporality to cumulative so that agent performs delta conversion on this metric
+		aggregatedMetric.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 	}
 
 	return newMetricSlice
@@ -271,7 +301,7 @@ func prefixCoreAndDeviceLabels(originalMetric pmetric.Metric) {
 		dp := dps.At(i)
 		for attributeKey, attributeValuePrefix := range attributeValuePrefixingMap {
 			if value, exists := dp.Attributes().Get(attributeKey); exists {
-				dp.Attributes().PutStr(attributeKey, attributeValuePrefix+value.AsString())
+				dp.Attributes().PutStr(attributeKey, attributeValuePrefix+value.Str())
 			}
 		}
 	}
@@ -318,4 +348,20 @@ func setMetricMetadata(metric pmetric.Metric, name string, unit string) pmetric.
 	metric.SetName(name)
 	metric.SetUnit(unit)
 	return metric
+}
+
+// This method updates the stale or nan datapoints so that they report the default value of 0 instead. This is needed so that we can see the default values instead of a gap.
+// - return the assigned value converted to a double if possible, else 0
+// - set the runtime tag to default since the runtime associated no longer exists
+// - reset the NoRecordedValue flag so that the metric is not dropped
+func resetStaleDatapoints(originalMetric pmetric.Metric) {
+	dps := originalMetric.Sum().DataPoints()
+	for i := 0; i < dps.Len(); i++ {
+		dp := dps.At(i)
+		if dp.ValueType() == pmetric.NumberDataPointValueTypeEmpty || dp.Flags().NoRecordedValue() {
+			dp.SetDoubleValue(dp.DoubleValue())
+			dp.Attributes().PutStr(RuntimeTag, "default")
+			dp.SetFlags(dp.Flags().WithNoRecordedValue(false))
+		}
+	}
 }
