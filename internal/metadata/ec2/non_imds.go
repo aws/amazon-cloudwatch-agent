@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,11 +15,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/metadata/host"
 )
 
 const (
-	filterKeyInstanceID       = "instance-id"
+	// The ID of the instance.
+	filterKeyInstanceID = "instance-id"
+	// The private IPv4 address of the instance.
 	filterKeyPrivateIpAddress = "private-ip-address"
 	prefixInstanceID          = "i-"
 	prefixPrivateIpAddress    = "ip-"
@@ -38,20 +39,20 @@ var (
 type ec2ClientProvider func(client.ConfigProvider, ...*aws.Config) ec2iface.EC2API
 
 type describeInstancesMetadataProvider struct {
-	configProvider client.ConfigProvider
-	newEC2Client   ec2ClientProvider
-	osHostname     func() (string, error)
+	configProvider       client.ConfigProvider
+	hostMetadataProvider host.MetadataProvider
+	newEC2Client         ec2ClientProvider
 }
 
 var _ MetadataProvider = (*describeInstancesMetadataProvider)(nil)
 
 func newDescribeInstancesMetadataProvider(configProvider client.ConfigProvider) *describeInstancesMetadataProvider {
 	return &describeInstancesMetadataProvider{
-		configProvider: configProvider,
+		configProvider:       configProvider,
+		hostMetadataProvider: host.NewMetadataProvider(),
 		newEC2Client: func(provider client.ConfigProvider, configs ...*aws.Config) ec2iface.EC2API {
 			return ec2.New(provider, configs...)
 		},
-		osHostname: os.Hostname,
 	}
 }
 
@@ -60,9 +61,16 @@ func (p *describeInstancesMetadataProvider) ID() string {
 }
 
 func (p *describeInstancesMetadataProvider) Get(ctx context.Context) (*Metadata, error) {
-	filter, region, err := p.getEC2FilterAndRegion(ctx)
-	if err != nil {
-		return nil, err
+	filter, region, hostnameErr := p.filterFromHostname(ctx)
+	if hostnameErr != nil {
+		var ipErr error
+		filter, ipErr = p.filterFromHostIP()
+		if ipErr != nil {
+			return nil, errors.Join(
+				fmt.Errorf("%w from hostname: %w", errUnsupportedFilter, hostnameErr),
+				fmt.Errorf("%w from host IP: %w", errUnsupportedFilter, ipErr),
+			)
+		}
 	}
 	input := &ec2.DescribeInstancesInput{Filters: []*ec2.Filter{filter}}
 	cfg := &aws.Config{
@@ -87,18 +95,17 @@ func (p *describeInstancesMetadataProvider) Get(ctx context.Context) (*Metadata,
 		return nil, err
 	}
 	metadata.Region = region
+	if metadata.Region == "" {
+		metadata.Region = getRegionFromAZ(metadata.AvailabilityZone)
+	}
 	return metadata, nil
 }
 
 func (p *describeInstancesMetadataProvider) Hostname(context.Context) (string, error) {
-	hostname := os.Getenv(envconfig.HostName)
-	if hostname == "" {
-		return p.osHostname()
-	}
-	return hostname, nil
+	return p.hostMetadataProvider.Hostname()
 }
 
-func (p *describeInstancesMetadataProvider) getEC2FilterAndRegion(ctx context.Context) (*ec2.Filter, string, error) {
+func (p *describeInstancesMetadataProvider) filterFromHostname(ctx context.Context) (*ec2.Filter, string, error) {
 	hostname, err := p.Hostname(ctx)
 	if err != nil {
 		return nil, "", err
@@ -114,18 +121,14 @@ func (p *describeInstancesMetadataProvider) getEC2FilterAndRegion(ctx context.Co
 	return filter, region, nil
 }
 
-func fromReservation(reservation ec2.Reservation) (*Metadata, error) {
-	instanceCount := len(reservation.Instances)
-	if instanceCount == 0 || instanceCount > 1 {
-		return nil, fmt.Errorf("%w: %v", errInstanceCount, instanceCount)
+func (p *describeInstancesMetadataProvider) filterFromHostIP() (*ec2.Filter, error) {
+	hostIP, err := p.hostMetadataProvider.HostIP()
+	if err != nil {
+		return nil, err
 	}
-	instance := reservation.Instances[0]
-	return &Metadata{
-		AccountID:    aws.StringValue(reservation.OwnerId),
-		ImageID:      aws.StringValue(instance.ImageId),
-		InstanceID:   aws.StringValue(instance.InstanceId),
-		InstanceType: aws.StringValue(instance.InstanceType),
-		PrivateIP:    aws.StringValue(instance.PrivateIpAddress),
+	return &ec2.Filter{
+		Name:   aws.String(filterKeyPrivateIpAddress),
+		Values: aws.StringSlice([]string{hostIP}),
 	}, nil
 }
 
@@ -161,4 +164,30 @@ func splitHostname(hostname string) (prefix string, region string, err error) {
 		return before, "us-east-1", nil
 	}
 	return hostname, "", fmt.Errorf("%w: %s", errUnsupportedHostname, hostname)
+}
+
+func fromReservation(reservation ec2.Reservation) (*Metadata, error) {
+	instanceCount := len(reservation.Instances)
+	if instanceCount == 0 || instanceCount > 1 {
+		return nil, fmt.Errorf("%w: %v", errInstanceCount, instanceCount)
+	}
+	instance := reservation.Instances[0]
+	metadata := &Metadata{
+		AccountID:    aws.StringValue(reservation.OwnerId),
+		ImageID:      aws.StringValue(instance.ImageId),
+		InstanceID:   aws.StringValue(instance.InstanceId),
+		InstanceType: aws.StringValue(instance.InstanceType),
+		PrivateIP:    aws.StringValue(instance.PrivateIpAddress),
+	}
+	if instance.Placement != nil {
+		metadata.AvailabilityZone = aws.StringValue(instance.Placement.AvailabilityZone)
+	}
+	return metadata, nil
+}
+
+func getRegionFromAZ(az string) string {
+	if az == "" {
+		return ""
+	}
+	return az[:len(az)-1]
 }

@@ -11,18 +11,14 @@ import (
 
 // Metadata is a set of information about the EC2 instance.
 type Metadata struct {
-	AccountID    string
-	Hostname     string
-	ImageID      string
-	InstanceID   string
-	InstanceType string
-	PrivateIP    string
-	Region       string
-}
-
-type MetadataProviderConfig struct {
-	// IMDSv2Retries is the number of retries the IMDSv2 MetadataProvider will make before it errors out.
-	IMDSv2Retries int
+	AccountID        string
+	AvailabilityZone string
+	Hostname         string
+	ImageID          string
+	InstanceID       string
+	InstanceType     string
+	PrivateIP        string
+	Region           string
 }
 
 // MetadataProvider provides functions to get EC2 Metadata and the hostname.
@@ -32,10 +28,11 @@ type MetadataProvider interface {
 	ID() string
 }
 
-func NewMetadataProvider(configProvider client.ConfigProvider, config MetadataProviderConfig) MetadataProvider {
+func NewMetadataProvider(configProvider client.ConfigProvider, options ...Option) MetadataProvider {
+	cfg := DefaultConfig().WithOptions(options...)
 	return newChainMetadataProvider(
 		[]MetadataProvider{
-			newIMDSv2MetadataProvider(configProvider, config.IMDSv2Retries),
+			newIMDSv2MetadataProvider(configProvider, cfg.IMDSv2Retries),
 			newIMDSv1MetadataProvider(configProvider),
 			newDescribeInstancesMetadataProvider(configProvider),
 		},

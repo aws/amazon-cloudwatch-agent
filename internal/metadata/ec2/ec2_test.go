@@ -13,7 +13,7 @@ import (
 func TestNewMetadataProvider(t *testing.T) {
 	mp := NewMetadataProvider(
 		awsmock.Session,
-		MetadataProviderConfig{IMDSv2Retries: 0},
+		WithIMDSv2Retries(0),
 	)
 	cmp, ok := mp.(*chainMetadataProvider)
 	assert.True(t, ok)

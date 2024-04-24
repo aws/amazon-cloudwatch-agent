@@ -89,11 +89,12 @@ func (p *imdsMetadataProvider) Get(ctx context.Context) (*Metadata, error) {
 
 func fromInstanceIdentityDocument(document ec2metadata.EC2InstanceIdentityDocument) *Metadata {
 	return &Metadata{
-		AccountID:    document.AccountID,
-		ImageID:      document.ImageID,
-		InstanceID:   document.InstanceID,
-		InstanceType: document.InstanceType,
-		PrivateIP:    document.PrivateIP,
-		Region:       document.Region,
+		AccountID:        document.AccountID,
+		AvailabilityZone: document.AvailabilityZone,
+		ImageID:          document.ImageID,
+		InstanceID:       document.InstanceID,
+		InstanceType:     document.InstanceType,
+		PrivateIP:        document.PrivateIP,
+		Region:           document.Region,
 	}
 }
