@@ -5,7 +5,6 @@ package provider
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -76,8 +75,7 @@ func TestProcessStats(t *testing.T) {
 	mock.err = testErr
 	mock.mu.Unlock()
 	provider.refresh()
-	fmt.Println(provider.getStats())
-	fmt.Println(agent.Stats{})
+	assert.Equal(t, provider.getStats(), agent.Stats{})
 	assert.Eventually(t, func() bool {
 		return provider.getStats() == agent.Stats{}
 	}, 5*time.Millisecond, time.Millisecond)
