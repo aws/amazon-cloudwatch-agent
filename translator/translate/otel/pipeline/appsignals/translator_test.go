@@ -124,9 +124,9 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"resourcedetection", "awsapplicationsignals"},
-				exporters:  []string{"awsemf/application_signals"},
+				receivers:  []string{"otlp/app_signals"},
+				processors: []string{"resourcedetection", "awsappsignals"},
+				exporters:  []string{"awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
 			detector:   eksdetector.TestEKSDetector,
