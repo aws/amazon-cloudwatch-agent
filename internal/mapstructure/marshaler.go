@@ -32,7 +32,7 @@ func encoderConfig(rawVal any) *EncoderConfig {
 	return &EncoderConfig{
 		EncodeHook: mapstructure.ComposeDecodeHookFunc(
 			NilHookFunc[configopaque.String](),
-			NilZeroValueHookFunc[configtls.TLSClientSetting](),
+			NilZeroValueHookFunc[configtls.ServerConfig](),
 			TextMarshalerHookFunc(),
 			MarshalerHookFunc(rawVal),
 			UnsupportedKindHookFunc(),

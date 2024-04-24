@@ -48,6 +48,11 @@ type metricAppender struct {
 	batch    PrometheusMetricBatch
 }
 
+func (m *metricAppender) AppendCTZeroSample(storage.SeriesRef, labels.Labels, int64, int64) (storage.SeriesRef, error) {
+	// TODO: implement this func
+	return 0, nil
+}
+
 func (mr *metricsReceiver) Appender(ctx context.Context) storage.Appender {
 	return &metricAppender{receiver: mr, batch: PrometheusMetricBatch{}}
 }

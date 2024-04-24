@@ -14,11 +14,13 @@ import (
 )
 
 const (
-	TypeStr   = "ec2tagger"
 	stability = component.StabilityLevelStable
 )
 
-var processorCapabilities = consumer.Capabilities{MutatesData: true}
+var (
+	TypeStr, _            = component.NewType("ec2tagger")
+	processorCapabilities = consumer.Capabilities{MutatesData: true}
+)
 
 func createDefaultConfig() component.Config {
 	return &Config{}
