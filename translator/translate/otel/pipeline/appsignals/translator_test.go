@@ -207,6 +207,26 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 			detector:   eksdetector.TestEKSDetector,
 			isEKSCache: eksdetector.TestIsEKSCacheEKS,
 		},
+		"WithAppSignalsAndLoggingEnabled": {
+			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"debug": true,
+				},
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"enabled": true,
+						},
+					},
+				},
+			},
+			want: &want{
+				receivers:  []string{"otlp/app_signals"},
+				processors: []string{"resourcedetection", "awsappsignals"},
+				exporters:  []string{"logging", "awsemf/app_signals"},
+				extensions: []string{"agenthealth/logs"},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
