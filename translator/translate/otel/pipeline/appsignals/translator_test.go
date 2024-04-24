@@ -132,6 +132,28 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			detector:   eksdetector.TestEKSDetector,
 			isEKSCache: eksdetector.TestIsEKSCacheEKS,
 		},
+		"WithAppSignalsAndLoggingEnabled": {
+			input: map[string]interface{}{
+				"agent": map[string]interface{}{
+					"debug": true,
+				},
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{
+							"enabled": true,
+						},
+					},
+				},
+			},
+			want: &want{
+				receivers:  []string{"otlp/app_signals"},
+				processors: []string{"resourcedetection", "awsappsignals"},
+				exporters:  []string{"logging", "awsemf/app_signals"},
+				extensions: []string{"agenthealth/logs"},
+			},
+			detector:   eksdetector.TestEKSDetector,
+			isEKSCache: eksdetector.TestIsEKSCacheEKS,
+		},
 		"WithAppSignalsEnabledK8s": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
@@ -226,6 +248,8 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				exporters:  []string{"logging", "awsemf/app_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
+			detector:   eksdetector.TestEKSDetector,
+			isEKSCache: eksdetector.TestIsEKSCacheEKS,
 		},
 	}
 	for name, testCase := range testCases {
