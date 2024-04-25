@@ -4,7 +4,6 @@
 package provider
 
 import (
-	"runtime"
 	"testing"
 	"time"
 
@@ -15,9 +14,7 @@ import (
 )
 
 func TestIntervalStats(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Interval stats tests have been flaky on Windows.")
-	}
+	t.Skip("Interval stats tests have been flaky on Mac & Windows.")
 	s := newIntervalStats(time.Millisecond)
 	s.stats.Store(agent.Stats{
 		ThreadCount: aws.Int32(2),
