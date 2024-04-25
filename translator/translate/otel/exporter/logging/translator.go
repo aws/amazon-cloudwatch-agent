@@ -35,8 +35,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*loggingexporter.Config)
-
 	cfg.Verbosity = configtelemetry.LevelDetailed
-
 	return cfg, nil
 }
