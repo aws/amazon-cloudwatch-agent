@@ -18,7 +18,7 @@ import (
 
 const (
 	AgentKey                           = "agent"
-	Debug                              = "debug"
+	DebugKey                              = "debug"
 	MetricsKey                         = "metrics"
 	LogsKey                            = "logs"
 	TracesKey                          = "traces"
