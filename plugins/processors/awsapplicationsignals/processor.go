@@ -17,14 +17,14 @@ import (
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/cardinalitycontrol"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/normalizer"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/prune"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/resolver"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/rules"
 )
 
 const (
-	failedToProcessAttribute               = "failed to process attributes"
-	failedToProcessAttributeWithCustomRule = "failed to process attributes with custom rule, will drop the metric"
-	failedToProcessAttributeWithLimiter    = "failed to process attributes with limiter, keep the data"
+	failedToProcessAttribute            = "failed to process attributes"
+	failedToProcessAttributeWithLimiter = "failed to process attributes with limiter, keep the data"
 )
 
 var metricCaser = cases.Title(language.English)
@@ -75,9 +75,10 @@ func (ap *awsapplicationsignalsprocessor) StartMetrics(ctx context.Context, _ co
 
 	ap.replaceActions = rules.NewReplacer(ap.config.Rules, !limiterConfig.Disabled)
 
+	pruner := prune.NewPruner()
 	keeper := rules.NewKeeper(ap.config.Rules, !limiterConfig.Disabled)
 	dropper := rules.NewDropper(ap.config.Rules)
-	ap.allowlistMutators = []allowListMutator{keeper, dropper}
+	ap.allowlistMutators = []allowListMutator{pruner, keeper, dropper}
 
 	return nil
 }
@@ -164,7 +165,7 @@ func (ap *awsapplicationsignalsprocessor) processMetricAttributes(_ context.Cont
 			for _, mutator := range ap.allowlistMutators {
 				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
-					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
+					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 				if shouldBeDropped {
 					return true
@@ -199,7 +200,7 @@ func (ap *awsapplicationsignalsprocessor) processMetricAttributes(_ context.Cont
 			for _, mutator := range ap.allowlistMutators {
 				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
-					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
+					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 				if shouldBeDropped {
 					return true
@@ -234,7 +235,7 @@ func (ap *awsapplicationsignalsprocessor) processMetricAttributes(_ context.Cont
 			for _, mutator := range ap.allowlistMutators {
 				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
-					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
+					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 				if shouldBeDropped {
 					return true
@@ -269,7 +270,7 @@ func (ap *awsapplicationsignalsprocessor) processMetricAttributes(_ context.Cont
 			for _, mutator := range ap.allowlistMutators {
 				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
-					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
+					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 				if shouldBeDropped {
 					return true
@@ -304,7 +305,7 @@ func (ap *awsapplicationsignalsprocessor) processMetricAttributes(_ context.Cont
 			for _, mutator := range ap.allowlistMutators {
 				shouldBeDropped, err := mutator.ShouldBeDropped(d.Attributes())
 				if err != nil {
-					ap.logger.Debug(failedToProcessAttributeWithCustomRule, zap.Error(err))
+					ap.logger.Debug(failedToProcessAttribute, zap.Error(err))
 				}
 				if shouldBeDropped {
 					return true

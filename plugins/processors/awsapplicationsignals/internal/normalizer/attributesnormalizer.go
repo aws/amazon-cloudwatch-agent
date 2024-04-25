@@ -84,9 +84,6 @@ func NewAttributesNormalizer(logger *zap.Logger) *attributesNormalizer {
 
 func (n *attributesNormalizer) Process(attributes, resourceAttributes pcommon.Map, isTrace bool) error {
 	n.copyResourceAttributesToAttributes(attributes, resourceAttributes, isTrace)
-	// It's assumed that all attributes are initially inserted as trace attribute, and attributesRenamingForMetric
-	// contains all attributes that will be used for CloudWatch metric dimension. Therefore, we iterate the keys
-	// for enforcing the limits on length.
 	truncateAttributesByLength(attributes)
 	n.renameAttributes(attributes, resourceAttributes, isTrace)
 	n.normalizeTelemetryAttributes(attributes, resourceAttributes, isTrace)
@@ -194,6 +191,9 @@ func rename(attrs pcommon.Map, renameMap map[string]string) {
 }
 
 func truncateAttributesByLength(attributes pcommon.Map) {
+	// It's assumed that all attributes are initially inserted as trace attribute, and attributesRenamingForMetric
+	// contains all attributes that will be used for CloudWatch metric dimension. Therefore, we iterate the keys
+	// for enforcing the limits on length.
 	for attrKey := range attributesRenamingForMetric {
 		switch attrKey {
 		case attr.AWSLocalEnvironment, attr.AWSRemoteEnvironment:

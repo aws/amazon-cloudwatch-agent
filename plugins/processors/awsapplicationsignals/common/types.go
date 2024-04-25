@@ -13,6 +13,7 @@ const (
 	MetricAttributeRemoteResourceIdentifier = "RemoteResourceIdentifier"
 	MetricAttributeRemoteResourceType       = "RemoteResourceType"
 )
+
 const (
 	AttributeEKSClusterName      = "EKS.Cluster"
 	AttributeK8SClusterName      = "K8s.Cluster"
@@ -29,3 +30,14 @@ const (
 const (
 	AttributeTmpReserved = "aws.tmp.reserved"
 )
+
+var IndexableMetricAttributes = []string{
+	MetricAttributeLocalService,
+	MetricAttributeLocalOperation,
+	MetricAttributeEnvironment,
+	MetricAttributeRemoteService,
+	MetricAttributeRemoteEnvironment,
+	MetricAttributeRemoteOperation,
+	MetricAttributeRemoteResourceIdentifier,
+	MetricAttributeRemoteResourceType,
+}
