@@ -100,7 +100,6 @@ func TestHostIP(t *testing.T) {
 				return testCase.netInterfaces, testCase.netErr
 			}
 			got, err := p.HostIP()
-			t.Log(err)
 			assert.ErrorIs(t, err, testCase.wantErr)
 			assert.Equal(t, testCase.wantHostIP, got)
 		})
