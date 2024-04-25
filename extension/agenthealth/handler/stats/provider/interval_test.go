@@ -14,7 +14,6 @@ import (
 )
 
 func TestIntervalStats(t *testing.T) {
-	t.Skip()
 	s := newIntervalStats(time.Millisecond)
 	s.stats.Store(agent.Stats{
 		ThreadCount: aws.Int32(2),
