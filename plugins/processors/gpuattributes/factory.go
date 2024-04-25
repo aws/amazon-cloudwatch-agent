@@ -14,13 +14,11 @@ import (
 )
 
 const (
+	TypeStr   = "gpuattributes"
 	stability = component.StabilityLevelBeta
 )
 
-var (
-	TypeStr, _            = component.NewType("gpuattributes")
-	processorCapabilities = consumer.Capabilities{MutatesData: true}
-)
+var processorCapabilities = consumer.Capabilities{MutatesData: true}
 
 func NewFactory() processor.Factory {
 	return processor.NewFactory(

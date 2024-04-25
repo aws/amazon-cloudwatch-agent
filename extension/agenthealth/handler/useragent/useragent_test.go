@@ -22,26 +22,20 @@ import (
 )
 
 func TestSetComponents(t *testing.T) {
-	metricsType, _ := component.NewType("metrics")
-	telegrafCPUType, _ := component.NewType(adapter.TelegrafPrefix + "cpu")
-	prometheusType, _ := component.NewType("prometheus")
-	batchType, _ := component.NewType("batch")
-	filterType, _ := component.NewType("filter")
-	cloudwatchType, _ := component.NewType("cloudwatch")
 	otelCfg := &otelcol.Config{
 		Service: service.Config{
 			Pipelines: map[component.ID]*pipelines.PipelineConfig{
-				component.NewID(metricsType): {
+				component.NewID("metrics"): {
 					Receivers: []component.ID{
-						component.NewID(telegrafCPUType),
-						component.NewID(prometheusType),
+						component.NewID(adapter.TelegrafPrefix + "cpu"),
+						component.NewID("prometheus"),
 					},
 					Processors: []component.ID{
-						component.NewID(batchType),
-						component.NewID(filterType),
+						component.NewID("batch"),
+						component.NewID("filter"),
 					},
 					Exporters: []component.ID{
-						component.NewID(cloudwatchType),
+						component.NewID("cloudwatch"),
 					},
 				},
 			},
@@ -107,24 +101,21 @@ func TestAlternateUserAgent(t *testing.T) {
 }
 
 func TestEmf(t *testing.T) {
-	metricsType, _ := component.NewType("metrics")
-	nopType, _ := component.NewType("nop")
-	awsEMFType, _ := component.NewType("awsemf")
 	otelCfg := &otelcol.Config{
 		Service: service.Config{
 			Pipelines: map[component.ID]*pipelines.PipelineConfig{
-				component.NewID(metricsType): {
+				component.NewID("metrics"): {
 					Receivers: []component.ID{
-						component.NewID(nopType),
+						component.NewID("nop"),
 					},
 					Exporters: []component.ID{
-						component.NewID(awsEMFType),
+						component.NewID("awsemf"),
 					},
 				},
 			},
 		},
 		Exporters: map[component.ID]component.Config{
-			component.NewID(awsEMFType): &awsemfexporter.Config{Namespace: "AppSignals", LogGroupName: "/aws/appsignals/log/group"},
+			component.NewID("awsemf"): &awsemfexporter.Config{Namespace: "AppSignals", LogGroupName: "/aws/appsignals/log/group"},
 		},
 	}
 	ua := newUserAgent()

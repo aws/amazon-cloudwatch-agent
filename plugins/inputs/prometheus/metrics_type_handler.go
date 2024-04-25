@@ -9,7 +9,7 @@ import (
 	"log"
 	"strings"
 
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/prometheus/model/textparse"
 	"github.com/prometheus/prometheus/scrape"
 )
 
@@ -40,19 +40,19 @@ func normalizeMetricName(name string, suffixes []string) string {
 }
 
 func (pm *PrometheusMetric) isCounter() bool {
-	return pm.metricType == string(v1.MetricTypeCounter)
+	return pm.metricType == string(textparse.MetricTypeCounter)
 }
 
 func (pm *PrometheusMetric) isGauge() bool {
-	return pm.metricType == string(v1.MetricTypeGauge)
+	return pm.metricType == string(textparse.MetricTypeGauge)
 }
 
 func (pm *PrometheusMetric) isHistogram() bool {
-	return pm.metricType == string(v1.MetricTypeHistogram)
+	return pm.metricType == string(textparse.MetricTypeHistogram)
 }
 
 func (pm *PrometheusMetric) isSummary() bool {
-	return pm.metricType == string(v1.MetricTypeSummary)
+	return pm.metricType == string(textparse.MetricTypeSummary)
 }
 
 // Adapter to prometheus scrape.Target
@@ -66,7 +66,7 @@ type mCache struct {
 }
 
 func (m *mCache) Metadata(metricName string) (scrape.MetricMetadata, bool) {
-	return m.t.GetMetadata(metricName)
+	return m.t.Metadata(metricName)
 }
 
 // Adapter to ScrapeManager to retrieve the cache by job and instance
@@ -89,7 +89,7 @@ func (t *metadataServiceImpl) Get(job, instance string) (metadataCache, error) {
 
 	// from the same targetGroup, instance is not going to be duplicated
 	for _, target := range targetGroup {
-		if target.DiscoveredLabels().Get(savedScrapeInstanceLabel) == instance {
+		if target.Labels().Get(savedScrapeInstanceLabel) == instance {
 			return &mCache{target}, nil
 		}
 	}

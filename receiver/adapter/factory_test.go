@@ -29,8 +29,7 @@ func Test_Type(t *testing.T) {
 	adapter := NewAdapter(c)
 	factory := adapter.NewReceiverFactory("cpu")
 	ft := factory.Type()
-	telegrafCPUType, _ := component.NewType("telegraf_cpu")
-	as.Equal(telegrafCPUType, ft)
+	as.Equal(component.Type("telegraf_cpu"), ft)
 }
 
 func Test_ValidConfig(t *testing.T) {
@@ -62,13 +61,13 @@ func Test_CreateMetricsReceiver(t *testing.T) {
 	factory := adapter.NewReceiverFactory("cpu")
 
 	set := receivertest.NewNopCreateSettings()
-	set.ID = component.NewIDWithName(factory.Type(), "cpu")
+	set.ID = component.NewIDWithName(factory.Type(), "")
 
 	metricsReceiver, err := factory.CreateMetricsReceiver(
 		context.Background(),
 		set,
 		&Config{
-			ControllerConfig: scraperhelper.ControllerConfig{
+			ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
 				CollectionInterval: time.Minute,
 			},
 		},
@@ -94,7 +93,7 @@ func Test_CreateInvalidMetricsReceiver(t *testing.T) {
 		context.Background(),
 		receivertest.NewNopCreateSettings(),
 		&Config{
-			ControllerConfig: scraperhelper.ControllerConfig{
+			ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
 				CollectionInterval: time.Minute,
 			},
 		},

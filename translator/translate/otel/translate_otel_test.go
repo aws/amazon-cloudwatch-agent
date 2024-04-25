@@ -199,16 +199,15 @@ func (t testTranslator) ID() component.ID {
 var _ common.Translator[*common.ComponentTranslators] = (*testTranslator)(nil)
 
 func TestRegisterPipeline(t *testing.T) {
-	testType, _ := component.NewType("test")
-	original := &testTranslator{id: component.NewID(testType), version: 1}
+	original := &testTranslator{id: component.NewID("test"), version: 1}
 	tm := common.NewTranslatorMap[*common.ComponentTranslators](original)
 	assert.Equal(t, 0, registry.Len())
-	first := &testTranslator{id: component.NewID(testType), version: 2}
-	second := &testTranslator{id: component.NewID(testType), version: 3}
+	first := &testTranslator{id: component.NewID("test"), version: 2}
+	second := &testTranslator{id: component.NewID("test"), version: 3}
 	RegisterPipeline(first, second)
 	assert.Equal(t, 1, registry.Len())
 	tm.Merge(registry)
-	got, ok := tm.Get(component.NewID(testType))
+	got, ok := tm.Get(component.NewID("test"))
 	assert.True(t, ok)
 	assert.Equal(t, second.version, got.(*testTranslator).version)
 	assert.NotEqual(t, first.version, got.(*testTranslator).version)

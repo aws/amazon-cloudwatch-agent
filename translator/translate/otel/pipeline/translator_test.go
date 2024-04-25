@@ -24,8 +24,7 @@ func (t testTranslator) Translate(_ *confmap.Conf) (*common.ComponentTranslators
 }
 
 func (t testTranslator) ID() component.ID {
-	newType, _ := component.NewType("")
-	return component.NewID(newType)
+	return component.NewID("")
 }
 
 func TestTranslator(t *testing.T) {

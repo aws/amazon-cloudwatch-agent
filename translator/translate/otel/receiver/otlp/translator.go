@@ -72,8 +72,8 @@ func NewTranslatorWithName(name string, opts ...Option) common.Translator[compon
 	for _, opt := range opts {
 		opt.apply(t)
 	}
-	if name == "" && t.dataType.String() != "" {
-		t.name = t.dataType.String()
+	if name == "" && t.dataType != "" {
+		t.name = string(t.dataType)
 		if t.instanceNum != -1 {
 			t.name += strconv.Itoa(t.instanceNum)
 		}
@@ -113,9 +113,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	} else {
 		otlpKeyMap = conf.Get(configKey).(map[string]interface{})
 	}
-	var tlsSettings *configtls.ServerConfig
+	var tlsSettings *configtls.TLSServerSetting
 	if tls, ok := otlpKeyMap["tls"].(map[string]interface{}); ok {
-		tlsSettings = &configtls.ServerConfig{}
+		tlsSettings = &configtls.TLSServerSetting{}
 		tlsSettings.CertFile = tls["cert_file"].(string)
 		tlsSettings.KeyFile = tls["key_file"].(string)
 	}

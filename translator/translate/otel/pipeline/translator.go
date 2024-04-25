@@ -36,8 +36,7 @@ func NewTranslator(translators common.TranslatorMap[*common.ComponentTranslators
 }
 
 func (t *translator) ID() component.ID {
-	newType, _ := component.NewType("")
-	return component.NewID(newType)
+	return component.NewID("")
 }
 
 // Translate creates the pipeline configuration.

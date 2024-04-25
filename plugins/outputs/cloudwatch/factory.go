@@ -14,11 +14,8 @@ import (
 )
 
 const (
-	stability = component.StabilityLevelAlpha
-)
-
-var (
-	TypeStr, _ = component.NewType("awscloudwatch")
+	TypeStr   component.Type = "awscloudwatch"
+	stability                = component.StabilityLevelAlpha
 )
 
 func NewFactory() exporter.Factory {

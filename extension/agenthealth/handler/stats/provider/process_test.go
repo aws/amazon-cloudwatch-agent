@@ -59,7 +59,6 @@ func (m *mockProcessMetrics) NumThreads() (int32, error) {
 }
 
 func TestProcessStats(t *testing.T) {
-	t.Skip()
 	testErr := errors.New("test error")
 	mock := &mockProcessMetrics{}
 	provider := newProcessStats(mock, time.Millisecond)

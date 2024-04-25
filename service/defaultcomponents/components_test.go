@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/collector/component"
 )
 
 const (
@@ -22,50 +21,32 @@ func TestComponents(t *testing.T) {
 	assert.NoError(t, err)
 	receivers := factories.Receivers
 	assert.Len(t, receivers, receiversCount)
-	awscontainerinsightreceiverType, _ := component.NewType("awscontainerinsightreceiver")
-	awsxrayType, _ := component.NewType("awsxray")
-	otlpType, _ := component.NewType("otlp")
-	tcplogType, _ := component.NewType("tcplog")
-	udplogType, _ := component.NewType("udplog")
-	assert.NotNil(t, receivers[awscontainerinsightreceiverType])
-	assert.NotNil(t, receivers[awsxrayType])
-	assert.NotNil(t, receivers[otlpType])
-	assert.NotNil(t, receivers[tcplogType])
-	assert.NotNil(t, receivers[udplogType])
+	assert.NotNil(t, receivers["awscontainerinsightreceiver"])
+	assert.NotNil(t, receivers["awsxray"])
+	assert.NotNil(t, receivers["otlp"])
+	assert.NotNil(t, receivers["tcplog"])
+	assert.NotNil(t, receivers["udplog"])
 
 	processors := factories.Processors
 	assert.Len(t, processors, processorCount)
-	awsapplicationsignalsType, _ := component.NewType("awsapplicationsignals")
-	batchType, _ := component.NewType("batch")
-	cumulativetodeltaType, _ := component.NewType("cumulativetodelta")
-	ec2taggerType, _ := component.NewType("ec2tagger")
-	metricstransformType, _ := component.NewType("metricstransform")
-	transformType, _ := component.NewType("transform")
-	gpuattributesType, _ := component.NewType("gpuattributes")
-	assert.NotNil(t, processors[awsapplicationsignalsType])
-	assert.NotNil(t, processors[batchType])
-	assert.NotNil(t, processors[cumulativetodeltaType])
-	assert.NotNil(t, processors[ec2taggerType])
-	assert.NotNil(t, processors[metricstransformType])
-	assert.NotNil(t, processors[transformType])
-	assert.NotNil(t, processors[gpuattributesType])
+	assert.NotNil(t, processors["awsapplicationsignals"])
+	assert.NotNil(t, processors["batch"])
+	assert.NotNil(t, processors["cumulativetodelta"])
+	assert.NotNil(t, processors["ec2tagger"])
+	assert.NotNil(t, processors["metricstransform"])
+	assert.NotNil(t, processors["transform"])
+	assert.NotNil(t, processors["gpuattributes"])
 
 	exporters := factories.Exporters
 	assert.Len(t, exporters, exportersCount)
-	awscloudwatchlogsType, _ := component.NewType("awscloudwatchlogs")
-	awsemfType, _ := component.NewType("awsemf")
-	awscloudwatchType, _ := component.NewType("awscloudwatch")
-	loggingType, _ := component.NewType("logging")
-	assert.NotNil(t, exporters[awscloudwatchlogsType])
-	assert.NotNil(t, exporters[awsemfType])
-	assert.NotNil(t, exporters[awsemfType])
-	assert.NotNil(t, exporters[awscloudwatchType])
-	assert.NotNil(t, exporters[loggingType])
+	assert.NotNil(t, exporters["awscloudwatchlogs"])
+	assert.NotNil(t, exporters["awsemf"])
+	assert.NotNil(t, exporters["awsxray"])
+	assert.NotNil(t, exporters["awscloudwatch"])
+	assert.NotNil(t, exporters["logging"])
 
 	extensions := factories.Extensions
 	assert.Len(t, extensions, extensionsCount)
-	agenthealthType, _ := component.NewType("agenthealth")
-	awsproxyType, _ := component.NewType("awsproxy")
-	assert.NotNil(t, extensions[agenthealthType])
-	assert.NotNil(t, extensions[awsproxyType])
+	assert.NotNil(t, extensions["agenthealth"])
+	assert.NotNil(t, extensions["awsproxy"])
 }

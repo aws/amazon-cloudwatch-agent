@@ -32,14 +32,13 @@ func NewAdapter(telegrafConfig *telegrafconfig.Config) Adapter {
 
 // Type joins the TelegrafPrefix to the input.
 func Type(input string) component.Type {
-	newType, _ := component.NewType(TelegrafPrefix + input)
-	return newType
+	return component.Type(TelegrafPrefix + input)
 }
 
 func createDefaultConfig() func() component.Config {
 	return func() component.Config {
 		return &Config{
-			ControllerConfig: scraperhelper.ControllerConfig{
+			ScraperControllerSettings: scraperhelper.ScraperControllerSettings{
 				CollectionInterval: time.Minute,
 			},
 		}
@@ -54,7 +53,7 @@ func (a Adapter) NewReceiverFactory(telegrafInputName string) receiver.Factory {
 
 func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.CreateSettings, config component.Config, consumer consumer.Metrics) (receiver.Metrics, error) {
 	cfg := config.(*Config)
-	input, err := a.initializeInput(settings.ID.Type().String(), settings.ID.Name())
+	input, err := a.initializeInput(string(settings.ID.Type()), settings.ID.Name())
 
 	if err != nil {
 		return nil, err
@@ -74,7 +73,7 @@ func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.Cr
 	}
 
 	return scraperhelper.NewScraperControllerReceiver(
-		&cfg.ControllerConfig, settings, consumer,
+		&cfg.ScraperControllerSettings, settings, consumer,
 		scraperhelper.AddScraper(scraper),
 	)
 }

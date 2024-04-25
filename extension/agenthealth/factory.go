@@ -12,8 +12,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
-var (
-	TypeStr, _ = component.NewType("agenthealth")
+const (
+	TypeStr = "agenthealth"
 )
 
 func NewFactory() extension.Factory {
