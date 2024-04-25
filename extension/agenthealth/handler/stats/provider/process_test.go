@@ -5,6 +5,7 @@ package provider
 
 import (
 	"errors"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -59,7 +60,9 @@ func (m *mockProcessMetrics) NumThreads() (int32, error) {
 }
 
 func TestProcessStats(t *testing.T) {
-	t.Skip()
+	if runtime.GOOS == "windows" {
+		t.Skip("Process stats tests have been flaky on Windows.")
+	}
 	testErr := errors.New("test error")
 	mock := &mockProcessMetrics{}
 	provider := newProcessStats(mock, time.Millisecond)

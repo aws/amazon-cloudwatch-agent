@@ -55,10 +55,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
 	translators.Processors.Set(awsappsignals.NewTranslator(awsappsignals.WithDataType(t.dataType)))
 
-	if conf.IsSet(common.DebugLogging) {
-		if enabled, _ := common.GetBool(conf, common.DebugLogging); enabled {
-			translators.Exporters.Set(logging.NewTranslator())
-		}
+	if enabled, _ := common.GetBool(conf, common.DebugLogging); enabled {
+		translators.Exporters.Set(logging.NewTranslator())
 	}
 
 	if t.dataType == component.DataTypeTraces {

@@ -18,7 +18,7 @@ import (
 
 const (
 	AgentKey                           = "agent"
-	DebugKey                              = "debug"
+	DebugKey                           = "debug"
 	MetricsKey                         = "metrics"
 	LogsKey                            = "logs"
 	TracesKey                          = "traces"
@@ -81,7 +81,7 @@ var (
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
 
-	DebugLogging = ConfigKey(AgentKey, Debug)
+	DebugLogging = ConfigKey(AgentKey, DebugKey)
 )
 
 // Translator is used to translate the JSON config into an
@@ -175,17 +175,6 @@ type MissingKeyError struct {
 
 func (e *MissingKeyError) Error() string {
 	return fmt.Sprintf("%q missing key in JSON: %q", e.ID, e.JsonKey)
-}
-
-// A DebugLoggingEnabledError occurs when app signals monitoring is not enabled for
-// an app signals translator.
-type DebugLoggingEnabledError struct {
-	ID      component.ID
-	JsonKey string
-}
-
-func (e *DebugLoggingEnabledError) Error() string {
-	return fmt.Sprintf("%q debug logging not enabled: %q", e.ID, e.JsonKey)
 }
 
 // ComponentTranslators is a component ID and respective service pipeline.

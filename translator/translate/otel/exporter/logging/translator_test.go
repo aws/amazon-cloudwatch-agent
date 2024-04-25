@@ -36,18 +36,7 @@ func TestTranslate(t *testing.T) {
 			input: map[string]interface{}{"logs": map[string]interface{}{}},
 			wantErr: &common.MissingKeyError{
 				ID:      tt.ID(),
-				JsonKey: common.ConfigKey(common.AgentKey, common.Debug),
-			},
-		},
-		"WithDebugLoggingNotEnabled": {
-			input: map[string]interface{}{
-				"agent": map[string]interface{}{
-					"debug": false,
-				},
-			},
-			wantErr: &common.DebugLoggingEnabledError{
-				ID:      tt.ID(),
-				JsonKey: common.ConfigKey(common.AgentKey, common.Debug),
+				JsonKey: common.ConfigKey(common.AgentKey, common.DebugKey),
 			},
 		},
 		"WithDebugLoggingEnabled": {
