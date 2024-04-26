@@ -26,7 +26,7 @@ func NewTranslator() common.Translator[component.Config] {
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), "")
+	return component.NewIDWithName(t.factory.Type(), "application_signals")
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
