@@ -183,7 +183,6 @@ func rename(attrs pcommon.Map, renameMap map[string]string) {
 				// only rename host.id if the pod name is set
 				if host, ok := attrs.Get("host.id"); ok {
 					attrs.PutStr("K8s.Node", host.AsString())
-					attrs.Remove("host.id")
 				}
 			}
 		}
