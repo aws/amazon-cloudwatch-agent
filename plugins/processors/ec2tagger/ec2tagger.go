@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -393,7 +395,7 @@ func (t *Tagger) updateVolumes() error {
 		}
 		for _, volume := range result.Volumes {
 			for _, attachment := range volume.Attachments {
-				t.ebsVolume.addEbsVolumeMapping(volume.AvailabilityZone, attachment)
+				t.ebsVolume.addEbsVolumeMapping(attachment)
 			}
 		}
 		if result.NextToken == nil {
@@ -401,6 +403,9 @@ func (t *Tagger) updateVolumes() error {
 		}
 		input.SetNextToken(*result.NextToken)
 	}
+	t.ebsVolume.RLock()
+	defer t.ebsVolume.RUnlock()
+	t.logger.Debug("EBS Volume Cache", zap.Strings("devices", maps.Keys(t.ebsVolume.dev2Vol)))
 	return nil
 }
 

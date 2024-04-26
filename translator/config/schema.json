@@ -280,6 +280,15 @@
                 },
                 "drop_device": {
                   "type": "boolean"
+                },
+                "append_volume_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "maxItems": 256
                 }
               }
             }

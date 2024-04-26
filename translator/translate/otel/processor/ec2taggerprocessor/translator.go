@@ -61,7 +61,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			}
 		}
 	}
-	cfg.RefreshIntervalSeconds = 0 * time.Second
+	cfg.EBSDeviceKeys = common.GetArray[string](conf, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskKey, "append_volume_ids"))
+	if len(cfg.EBSDeviceKeys) > 0 {
+		cfg.DiskDeviceTagKey = "device"
+	}
+	cfg.RefreshIntervalSeconds = time.Duration(0)
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	return cfg, nil

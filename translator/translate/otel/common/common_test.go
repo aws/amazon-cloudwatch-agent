@@ -48,7 +48,10 @@ func TestGetString(t *testing.T) {
 }
 
 func TestGetArray(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{"int": []int{5, 8, 10}, "string": []string{"bool", "empty"}})
+	conf := confmap.NewFromStringMap(map[string]any{
+		"int":    []any{5, 8, 10},
+		"string": []any{"bool", "empty"},
+	})
 	gotInt := GetArray[int](conf, "int")
 	require.Equal(t, []int{5, 8, 10}, gotInt)
 

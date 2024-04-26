@@ -4,7 +4,6 @@
 package ec2tagger
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,16 +22,19 @@ func NewEbsVolume() *EbsVolume {
 	return &EbsVolume{dev2Vol: make(map[string]string)}
 }
 
-func (e *EbsVolume) addEbsVolumeMapping(zone *string, attachement *ec2.VolumeAttachment) {
-	// *attachement.Device is sth like: /dev/xvda
-	devPath := findNvmeBlockNameIfPresent(*attachement.Device)
+func (e *EbsVolume) addEbsVolumeMapping(attachment *ec2.VolumeAttachment) {
+	// *attachment.Device is sth like: /dev/xvda
+	devPath := findNvmeBlockNameIfPresent(*attachment.Device)
 	if devPath == "" {
-		devPath = *attachement.Device
+		devPath = *attachment.Device
 	}
+
+	// to match the disk device tag
+	devPath = strings.ReplaceAll(devPath, "/dev/", "")
 
 	e.Lock()
 	defer e.Unlock()
-	e.dev2Vol[devPath] = fmt.Sprintf("aws://%s/%s", *zone, *attachement.VolumeId)
+	e.dev2Vol[devPath] = *attachment.VolumeId
 }
 
 // find nvme block name by symlink, if symlink doesn't exist, return ""
