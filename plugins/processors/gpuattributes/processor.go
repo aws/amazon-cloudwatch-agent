@@ -6,6 +6,7 @@ package gpuattributes
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -127,6 +128,7 @@ func newGpuAttributesProcessor(config *Config, logger *zap.Logger) *gpuAttribute
 
 func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	rms := md.ResourceMetrics()
+	d.logMd(md, "before gpu processor")
 	for i := 0; i < rms.Len(); i++ {
 		rs := rms.At(i)
 		ilms := rs.ScopeMetrics()
@@ -249,4 +251,58 @@ func (d *gpuAttributesProcessor) filterGpuMetricsWithoutPodName(metrics pmetric.
 		_, hasPodInfo := dps.At(0).Attributes().Get(internal.PodName)
 		return !hasPodInfo
 	})
+}
+
+func (d *gpuAttributesProcessor) logMd(md pmetric.Metrics, name string) {
+	var logMessage strings.Builder
+
+	logMessage.WriteString(fmt.Sprintf("\"%s_METRICS_MD\" : {\n", name))
+	rms := md.ResourceMetrics()
+	for i := 0; i < rms.Len(); i++ {
+		rs := rms.At(i)
+		ilms := rs.ScopeMetrics()
+		logMessage.WriteString(fmt.Sprintf("\t\"ResourceMetric_%d\": {\n", i))
+		for j := 0; j < ilms.Len(); j++ {
+			ils := ilms.At(j)
+			metrics := ils.Metrics()
+			logMessage.WriteString(fmt.Sprintf("\t\t\"ScopeMetric_%d\": {\n", j))
+			logMessage.WriteString(fmt.Sprintf("\t\t\"Metrics_%d\": [\n", j))
+
+			for k := 0; k < metrics.Len(); k++ {
+				m := metrics.At(k)
+				logMessage.WriteString(fmt.Sprintf("\t\t\t\"Metric_%d\": {\n", k))
+				logMessage.WriteString(fmt.Sprintf("\t\t\t\t\"name\": \"%s\",\n", m.Name()))
+				logMessage.WriteString(fmt.Sprintf("\t\t\t\t\"type\": \"%s\",\n", m.Type()))
+
+				var datapoints pmetric.NumberDataPointSlice
+				switch m.Type() {
+				case pmetric.MetricTypeGauge:
+					datapoints = m.Gauge().DataPoints()
+				case pmetric.MetricTypeSum:
+					datapoints = m.Sum().DataPoints()
+				default:
+					datapoints = pmetric.NewNumberDataPointSlice()
+				}
+
+				logMessage.WriteString("\t\t\t\t\"datapoints\": [\n")
+				for yu := 0; yu < datapoints.Len(); yu++ {
+					logMessage.WriteString("\t\t\t\t\t{\n")
+					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"attributes\": \"%v\",\n", datapoints.At(yu).Attributes().AsRaw()))
+					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"value\": %v,\n", datapoints.At(yu).DoubleValue()))
+					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"timestamp\": %v,\n", datapoints.At(yu).Timestamp()))
+					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"flags\": %v,\n", datapoints.At(yu).Flags()))
+					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"value type\": %v,\n", datapoints.At(yu).ValueType()))
+					logMessage.WriteString("\t\t\t\t\t},\n")
+				}
+				logMessage.WriteString("\t\t\t\t],\n")
+				logMessage.WriteString("\t\t\t},\n")
+			}
+			logMessage.WriteString("\t\t],\n")
+			logMessage.WriteString("\t\t},\n")
+		}
+		logMessage.WriteString("\t},\n")
+	}
+	logMessage.WriteString("},\n")
+
+	d.logger.Info(logMessage.String())
 }
