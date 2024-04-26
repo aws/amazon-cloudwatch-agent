@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	ec2metadata "github.com/aws/amazon-cloudwatch-agent/internal/metadata/ec2"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
@@ -83,12 +82,7 @@ func populateEC2Metadata(metadata *ec2metadata.Metadata) error {
 	}
 
 	ctx := context.Background()
-	metadataProvider := ec2metadata.NewMetadataProvider(
-		ses,
-		ec2metadata.MetadataProviderConfig{
-			IMDSv2Retries: retryer.GetDefaultRetryNumber(),
-		},
-	)
+	metadataProvider := ec2metadata.NewMetadataProvider(ses)
 
 	if hostname, err := metadataProvider.Hostname(ctx); err != nil {
 		fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)

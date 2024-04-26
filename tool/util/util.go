@@ -20,7 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	ec2metadata "github.com/aws/amazon-cloudwatch-agent/internal/metadata/ec2"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
@@ -213,12 +212,7 @@ func DefaultEC2Region() (region string) {
 	if err != nil {
 		return
 	}
-	metadataProvider := ec2metadata.NewMetadataProvider(
-		ses,
-		ec2metadata.MetadataProviderConfig{
-			IMDSv2Retries: retryer.GetDefaultRetryNumber(),
-		},
-	)
+	metadataProvider := ec2metadata.NewMetadataProvider(ses)
 	if metadata, err := metadataProvider.Get(context.Background()); err != nil {
 		fmt.Printf("W! could not get region from EC2... %v", err)
 	} else {
