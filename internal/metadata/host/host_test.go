@@ -62,20 +62,37 @@ func TestHostIP(t *testing.T) {
 			netInterfaces: []netInterface{
 				&mockNetInterface{
 					addrs: []net.Addr{
-						&net.IPAddr{IP: net.IPv4(127, 0, 0, 1)},
-						&net.IPNet{IP: net.IPv4(224, 0, 0, 0)},
+						// loopback IPv4
+						&net.IPAddr{IP: net.ParseIP("127.0.0.1")},
+						// unspecified IPv4
+						&net.IPAddr{IP: net.ParseIP("0.0.0.0")},
+						// link local multicast IPv4
+						&net.IPNet{IP: net.ParseIP("224.0.0.0")},
+						// link-local unicast IPv4
+						&net.IPNet{IP: net.ParseIP("169.254.0.0")},
+						// public IPv4
+						&net.IPAddr{IP: net.ParseIP("11.0.0.0")},
 					},
 				},
 				&mockNetInterface{
+					// private IPv4 with error
 					addrs: []net.Addr{
-						&net.IPAddr{IP: net.IPv4(10, 24, 34, 0)},
+						&net.IPAddr{IP: net.ParseIP("10.255.0.0")},
 					},
 					err: testErr,
 				},
 				&mockNetInterface{
 					addrs: []net.Addr{
-						&net.IPAddr{IP: net.IPv4(0, 0, 0, 0)},
-						&net.IPNet{IP: net.IPv4(169, 254, 0, 0)},
+						&net.IPAddr{IP: net.IPv6loopback},
+						&net.IPNet{IP: net.IPv6zero},
+						// link local multicast IPv6
+						&net.IPNet{IP: net.ParseIP("ff02::2")},
+						// link local unicast IPv6
+						&net.IPNet{IP: net.ParseIP("fe80::")},
+						// private IPv6
+						&net.IPAddr{IP: net.ParseIP("fc00::")},
+						// public IPv6
+						&net.IPAddr{IP: net.ParseIP("fe00::")},
 					},
 				},
 			},
@@ -85,7 +102,7 @@ func TestHostIP(t *testing.T) {
 			netInterfaces: []netInterface{
 				&mockNetInterface{
 					addrs: []net.Addr{
-						&net.IPAddr{IP: net.IPv4(10, 24, 34, 0)},
+						&net.IPAddr{IP: net.ParseIP("10.24.34.0")},
 					},
 				},
 			},
