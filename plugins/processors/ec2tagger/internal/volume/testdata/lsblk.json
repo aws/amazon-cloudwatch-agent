@@ -1,0 +1,20 @@
+{
+  "blockdevices": [
+    {
+      "name": "/dev/nvme0n1",
+      "serial": "vol0f0f8ae10fe42d848",
+      "children": [
+        {
+          "name": "/dev/nvme0n1p1",
+          "serial": null
+        },{
+          "name": "/dev/nvme0n1p127",
+          "serial": null
+        },{
+          "name": "/dev/nvme0n1p128",
+          "serial": null
+        }
+      ]
+    }
+  ]
+}

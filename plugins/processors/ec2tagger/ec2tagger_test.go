@@ -346,7 +346,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	expectedTags := map[string]string{tagKey1: tagVal1, tagKey2: tagVal2, "AutoScalingGroupName": tagVal3}
 	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes := map[string]string{device1: volumeAttachmentId1, device2: volumeAttachmentId2}
-	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.volumeSerialCache.Map())
 }
 
 // run Start() and check all tags/volumes are retrieved and saved and then updated
@@ -391,7 +391,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 	expectedTags := map[string]string{tagKey1: tagVal1, tagKey2: tagVal2, "AutoScalingGroupName": tagVal3}
 	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes := map[string]string{device1: volumeAttachmentId1, device2: volumeAttachmentId2}
-	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.volumeSerialCache.Map())
 
 	//update the tags and volumes
 	ec2Client.UseUpdatedTags = true
@@ -402,7 +402,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 	expectedTags = map[string]string{tagKey1: tagVal1, tagKey2: updatedTagVal2, "AutoScalingGroupName": tagVal3}
 	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes = map[string]string{device1: volumeAttachmentId1, device2: volumeAttachmentUpdatedId2}
-	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.volumeSerialCache.Map())
 }
 
 // run Start() with ec2_instance_tag_keys = ["*"] and ebs_device_keys = ["*"]
@@ -448,7 +448,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 	expectedTags := map[string]string{tagKey1: tagVal1}
 	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes := map[string]string{device1: volumeAttachmentId1}
-	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.volumeSerialCache.Map())
 }
 
 // run Start() and then processMetrics and check the output metrics contain expected tags
@@ -608,7 +608,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 	expectedTags := map[string]string{tagKey1: tagVal1}
 	assert.Equal(t, expectedTags, tagger.ec2TagCache)
 	expectedVolumes := map[string]string{device1: volumeAttachmentId1}
-	assert.Equal(t, expectedVolumes, tagger.ebsVolume.dev2Vol)
+	assert.Equal(t, expectedVolumes, tagger.volumeSerialCache.Map())
 
 	assert.Equal(t, tagger.started, true)
 	output, err = tagger.processMetrics(context.Background(), md)

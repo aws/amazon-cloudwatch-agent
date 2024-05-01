@@ -3,15 +3,17 @@
 
 package util
 
-import "github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+import (
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+)
 
 const (
 	High_Resolution_Tag_Key      = "aws:StorageResolution"
 	Aggregation_Interval_Tag_Key = "aws:AggregationInterval"
-	VolumeIdTagKey               = "EBSVolumeId"
 )
 
-var ReservedTagKeySet = collections.NewSet(High_Resolution_Tag_Key, Aggregation_Interval_Tag_Key, VolumeIdTagKey)
+var ReservedTagKeySet = collections.NewSet[string](High_Resolution_Tag_Key, Aggregation_Interval_Tag_Key, ec2tagger.AttributeVolumeId)
 
 func AddHighResolutionTag(tags interface{}) {
 	tagMap := tags.(map[string]interface{})

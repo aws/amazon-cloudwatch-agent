@@ -17,8 +17,8 @@ var SupportedAppendDimensions = map[string]string{
 }
 
 const (
-	VolumeAppendDimensionKey   = "EBSVolumeId"
-	VolumeAppendDimensionValue = "${aws:EBSVolumeId}"
+	AttributeVolumeId            = "VolumeId"
+	ValueAppendDimensionVolumeId = "${aws:VolumeId}"
 )
 
 type Config struct {

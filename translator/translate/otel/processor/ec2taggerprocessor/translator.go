@@ -62,7 +62,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	if value, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskKey, AppendDimensionsKey, ec2tagger.VolumeAppendDimensionKey)); ok && value == ec2tagger.VolumeAppendDimensionValue {
+	if value, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskKey, AppendDimensionsKey, ec2tagger.AttributeVolumeId)); ok && value == ec2tagger.ValueAppendDimensionVolumeId {
 		cfg.EBSDeviceKeys = []string{"*"}
 		cfg.DiskDeviceTagKey = "device"
 	}
