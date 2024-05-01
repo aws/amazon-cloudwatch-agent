@@ -1,0 +1,71 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package jmxresourceattributeprocessor
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+)
+
+func TestTranslator(t *testing.T) {
+	jmxTranslator := NewTranslator()
+
+	require.EqualValues(t, "resource/jmx", jmxTranslator.ID().String())
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		want    *confmap.Conf
+		wantErr error
+	}{
+		"ConfigWithNoJmxSet": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{},
+					},
+				},
+			},
+			wantErr: &common.MissingKeyError{ID: jmxTranslator.ID(), JsonKey: fmt.Sprint(jmxKey)},
+		},
+		"ConfigWithJmx": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"jmx": map[string]interface{}{},
+					},
+				},
+			},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"attributes": []interface{}{
+					map[string]interface{}{
+						"action":  "delete",
+						"pattern": "telemetry.sdk.*",
+					},
+				},
+			}),
+		},
+	}
+	factory := resourceprocessor.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := jmxTranslator.Translate(conf)
+			require.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*resourceprocessor.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.Equal(t, wantCfg, gotCfg)
+			}
+		})
+	}
+}

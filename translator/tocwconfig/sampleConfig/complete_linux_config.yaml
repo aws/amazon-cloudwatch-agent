@@ -137,6 +137,14 @@ processors:
                     - tomcat\..*
         spans: {}
         traces: {}
+    resource/jmx:
+        attributes:
+            - action: delete
+              key: ""
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              pattern: "telemetry.sdk.*"
     transform:
         error_mode: propagate
         log_statements: []
@@ -332,6 +340,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - resource/jmx
                 - filter/jmx/0
                 - ec2tagger
             receivers:
@@ -340,6 +349,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - resource/jmx
                 - ec2tagger
             receivers:
                 - jmx/1

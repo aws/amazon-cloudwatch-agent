@@ -954,6 +954,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterproces
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.89.0/go.mod h1:rv4vyVGE+UheFtYDPrCfQd7LakG6SkGFvINfOkSRVrI=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.89.0 h1:JimsaOmtYrYOAA35JzkqnkDFGZi9D50GfaHVG5W7iUQ=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.89.0/go.mod h1:dMuzeobFNwvW7TgxHVVF1UH2HMK4jcU1JxzGdv+WZVk=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.89.0 h1:i5U2YimHGoSP2QtNiqyuKi1mJkWUy4DVVOKcyt8MPHo=
+github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.89.0/go.mod h1:aXDTHdr5yPHRoEh9lbGrPSngOEHQCUnyaTtsdvuIsHg=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.89.0 h1:aX/JOO9uRSuu1QXOw6pgKoofobxkFqz0nkevwctbkFU=
 github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.89.0/go.mod h1:AUxeyAuaT9fxbjMmCzZkbEJsxmdKo1Fe7BhWwfbzRq8=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.89.0 h1:D6kSn1hw5DMfQVspWSYmofWks1RP0wci9VJbLTckwdQ=

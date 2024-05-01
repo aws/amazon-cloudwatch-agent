@@ -121,6 +121,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor v0.89.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor v0.89.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.89.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.89.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor v0.89.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.89.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.89.0
