@@ -109,22 +109,22 @@ func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcom
 			attributes.PutStr(mappingKey, val.Str())
 		}
 	}
-	if _, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
-		if val, found := resourceAttributes.Get(attr.AWSHostedInEnvironment); found {
-			attributes.PutStr(attr.AWSLocalEnvironment, val.Str())
+	if val, ok := attributes.Get(attr.AWSLocalEnvironment); !ok || val.Str() == "" {
+		if hostedInAttr, found := resourceAttributes.Get(attr.AWSHostedInEnvironment); found && hostedInAttr.Str() != "" {
+			attributes.PutStr(attr.AWSLocalEnvironment, hostedInAttr.Str())
 		} else {
 			if h.defaultEnvPrefix == appsignalsconfig.PlatformECS {
-				if clusterName, ok := getECSClusterName(resourceAttributes); ok {
+				if clusterName, found := getECSClusterName(resourceAttributes); found {
 					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, clusterName))
 				}
 			} else if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
-				if asgAttr, ok := resourceAttributes.Get(attr.ResourceDetectionASG); ok {
+				if asgAttr, found := resourceAttributes.Get(attr.ResourceDetectionASG); found {
 					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, asgAttr.Str()))
 				}
 			}
 		}
 	}
-	if _, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
+	if val, ok := attributes.Get(attr.AWSLocalEnvironment); !ok || val.Str() == "" {
 		attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, AttributeEnvironmentDefault))
 	}
 	attributes.PutStr(common.AttributePlatformType, h.platformType)
