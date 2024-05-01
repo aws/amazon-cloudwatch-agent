@@ -5,7 +5,6 @@ package volume
 
 import (
 	"errors"
-	"log"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
@@ -23,10 +22,8 @@ func (p *mergeProvider) DeviceToSerialMap() (map[string]string, error) {
 	results := make([]map[string]string, 0, len(p.providers))
 	for _, provider := range p.providers {
 		if result, err := provider.DeviceToSerialMap(); err != nil {
-			log.Printf("D! %T: error %v", provider, err)
 			errs = errors.Join(errs, err)
 		} else {
-			log.Printf("D! %T: got %v", provider, result)
 			results = append(results, result)
 		}
 	}

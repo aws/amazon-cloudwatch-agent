@@ -26,47 +26,48 @@ type Provider interface {
 
 func NewProvider(ec2Client ec2iface.EC2API, instanceID string) Provider {
 	return newMergeProvider([]Provider{
-		NewHostProvider(),
-		NewDescribeVolumesProvider(ec2Client, instanceID),
+		newHostProvider(),
+		newDescribeVolumesProvider(ec2Client, instanceID),
 	})
 }
 
-type Cache struct {
+type Cache interface {
+	Refresh() error
+	Serial(devName string) string
+	Devices() []string
+}
+
+type cache struct {
 	sync.RWMutex
-	// device name to volumeId mapping
-	cache    map[string]string
-	provider Provider
+	// device name to serial mapping
+	cache          map[string]string
+	provider       Provider
+	fetchBlockName func(string) string
 }
 
-func NewCache(provider Provider) *Cache {
-	return &Cache{
-		cache:    make(map[string]string),
-		provider: provider,
+func NewCache(provider Provider) Cache {
+	return &cache{
+		cache:          make(map[string]string),
+		provider:       provider,
+		fetchBlockName: findNvmeBlockNameIfPresent,
 	}
 }
 
-func (c *Cache) Add(devName, serial string) {
-	// *attachment.Device is sth like: /dev/xvda
-	devPath := findNvmeBlockNameIfPresent(devName)
-	if devPath == "" {
-		devPath = devName
-	}
-
-	// to match the disk device tag
-	devPath = strings.ReplaceAll(devPath, "/dev/", "")
+func (c *cache) add(devName, serial string) {
+	normalizedName := c.normalizeName(devName)
 
 	c.Lock()
 	defer c.Unlock()
-	c.cache[devPath] = serial
+	c.cache[normalizedName] = serial
 }
 
-func (c *Cache) Reset() {
+func (c *cache) reset() {
 	c.Lock()
 	defer c.Unlock()
 	maps.Clear(c.cache)
 }
 
-func (c *Cache) Refresh() error {
+func (c *cache) Refresh() error {
 	if c.provider == nil {
 		return errNoProviders
 	}
@@ -74,19 +75,19 @@ func (c *Cache) Refresh() error {
 	if err != nil {
 		return fmt.Errorf("unable to refresh volume cache: %w", err)
 	}
-	c.Reset()
+	c.reset()
 	for deviceName, serial := range result {
-		c.Add(deviceName, serial)
+		c.add(deviceName, serial)
 	}
 	return nil
 }
 
-func (c *Cache) Serial(devName string) string {
+func (c *cache) Serial(devName string) string {
 	c.RLock()
 	defer c.RUnlock()
 
 	// check exact match first
-	if v, ok := c.cache[devName]; ok {
+	if v, ok := c.cache[devName]; ok && v != "" {
 		return v
 	}
 
@@ -99,14 +100,20 @@ func (c *Cache) Serial(devName string) string {
 	return ""
 }
 
-func (c *Cache) Devices() []string {
+func (c *cache) Devices() []string {
 	c.RLock()
 	defer c.RUnlock()
 	return maps.Keys(c.cache)
 }
 
-func (c *Cache) Map() map[string]string {
-	return c.cache
+func (c *cache) normalizeName(devName string) string {
+	normalized := c.fetchBlockName(devName)
+	if normalized == "" {
+		normalized = devName
+	}
+
+	// to match the disk device tag
+	return strings.ReplaceAll(normalized, "/dev/", "")
 }
 
 // find nvme block name by symlink, if symlink doesn't exist, return ""

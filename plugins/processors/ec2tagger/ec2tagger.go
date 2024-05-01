@@ -48,7 +48,6 @@ type Tagger struct {
 	logger           *zap.Logger
 	cancelFunc       context.CancelFunc
 	metadataProvider MetadataProvider
-	volumeProvider   volume.Provider
 	ec2Provider      ec2ProviderType
 
 	shutdownC          chan bool
@@ -58,14 +57,13 @@ type Tagger struct {
 	ec2MetadataRespond ec2MetadataRespondType
 	tagFilters         []*ec2.Filter
 	ec2API             ec2iface.EC2API
-	volumeSerialCache  *volume.Cache
+	volumeSerialCache  volume.Cache
 
 	sync.RWMutex //to protect ec2TagCache
 }
 
 // newTagger returns a new EC2 Tagger processor.
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
-
 	_, cancel := context.WithCancel(context.Background())
 	mdCredentialConfig := &configaws.CredentialConfig{}
 

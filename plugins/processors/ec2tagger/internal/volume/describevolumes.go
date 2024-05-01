@@ -11,16 +11,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
 
-type ebsProvider struct {
+type describeVolumesProvider struct {
 	ec2Client  ec2iface.EC2API
 	instanceID string
 }
 
-func NewDescribeVolumesProvider(ec2Client ec2iface.EC2API, instanceID string) Provider {
-	return &ebsProvider{ec2Client: ec2Client, instanceID: instanceID}
+func newDescribeVolumesProvider(ec2Client ec2iface.EC2API, instanceID string) Provider {
+	return &describeVolumesProvider{ec2Client: ec2Client, instanceID: instanceID}
 }
 
-func (p *ebsProvider) DeviceToSerialMap() (map[string]string, error) {
+func (p *describeVolumesProvider) DeviceToSerialMap() (map[string]string, error) {
 	result := map[string]string{}
 	input := &ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
@@ -33,7 +33,7 @@ func (p *ebsProvider) DeviceToSerialMap() (map[string]string, error) {
 	for {
 		output, err := p.ec2Client.DescribeVolumes(input)
 		if err != nil {
-			return nil, fmt.Errorf("unable to get : %w", err)
+			return nil, fmt.Errorf("unable to describe volumes: %w", err)
 		}
 		for _, volume := range output.Volumes {
 			for _, attachment := range volume.Attachments {
