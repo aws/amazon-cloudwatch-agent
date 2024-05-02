@@ -36,10 +36,6 @@ type ec2MetadataRespondType struct {
 	region       string
 }
 
-func (t *ec2MetadataRespondType) InstanceID() string {
-	return t.instanceId
-}
-
 type ec2ProviderType func(*configaws.CredentialConfig) ec2iface.EC2API
 
 type Tagger struct {
