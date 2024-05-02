@@ -922,7 +922,7 @@ jobs:
               -var="instance_type=${{ matrix.arrays.instanceType }}" \
               -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
               terraform destroy -auto-approve
-            elif if [ "${{ matrix.arrays.test_dir }}" == "./test/awsneuron" ]; then
+            elif [ "${{ matrix.arrays.test_dir }}" == "./test/awsneuron" ]; then
               echo "NOT DELETING CLUSTER, DELETE MANUALLY"
             else
               terraform destroy -auto-approve && exit 1
