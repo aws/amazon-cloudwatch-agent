@@ -152,6 +152,7 @@ func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Me
 			}
 		}
 	}
+	d.logMd(md, "after gpu processor")
 	return md, nil
 }
 
