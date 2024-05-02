@@ -58,7 +58,7 @@ func TestTranslator(t *testing.T) {
 					"metrics_collected": map[string]interface{}{
 						"disk": map[string]interface{}{
 							"append_dimensions": map[string]interface{}{
-								"EBSVolumeId": "${aws:EBSVolumeId}",
+								"VolumeId": "${aws:VolumeId}",
 							},
 						},
 					},
@@ -86,6 +86,8 @@ func TestTranslator(t *testing.T) {
 				sort.Strings(gotCfg.EC2MetadataTags)
 				require.Equal(t, tc.want.EC2MetadataTags, gotCfg.EC2MetadataTags)
 				require.Equal(t, tc.want.EC2InstanceTagKeys, gotCfg.EC2InstanceTagKeys)
+				require.Equal(t, tc.want.DiskDeviceTagKey, gotCfg.DiskDeviceTagKey)
+				require.Equal(t, tc.want.EBSDeviceKeys, gotCfg.EBSDeviceKeys)
 			}
 		})
 	}
