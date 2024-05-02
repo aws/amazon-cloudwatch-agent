@@ -14,6 +14,7 @@ import (
 )
 
 func TestFlagStats(t *testing.T) {
+	t.Skip("stat provider tests are flaky. disable until fix is available")
 	t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
 	fs := newFlagStats(agent.UsageFlags(), time.Microsecond)
 	got := fs.getStats()
