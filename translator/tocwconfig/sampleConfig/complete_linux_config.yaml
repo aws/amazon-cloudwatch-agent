@@ -119,9 +119,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         refresh_interval_seconds: 0s
     transform:
@@ -130,18 +130,22 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
 receivers:
     awsxray:
+        dialer:
+            timeout: "0s"
         endpoint: 0.0.0.0:2001
         proxy_server:
             aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
             certificate_file_path: ""
+            dialer:
+                timeout: "0s"
             endpoint: 0.0.0.0:1234
             imds_retries: 1
             local_mode: true
@@ -149,9 +153,11 @@ receivers:
             proxy_address: https://proxy.proxy.com
             region: us-west-2
             role_arn: trace_role_arn_value_test
+            service_name: "xray"
             tls:
                 ca_file: ""
                 cert_file: ""
+                include_system_ca_certs_pool: false
                 insecure: true
                 insecure_skip_verify: false
                 key_file: ""
@@ -163,6 +169,8 @@ receivers:
     otlp/traces:
         protocols:
             grpc:
+                dialer:
+                    timeout: "0s"
                 endpoint: 0.0.0.0:1111
                 include_metadata: false
                 max_concurrent_streams: 0
@@ -257,15 +265,15 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_cpu
-                - telegraf_procstat/1917393364
-                - telegraf_mem
-                - telegraf_statsd
-                - telegraf_socket_listener
-                - telegraf_disk
                 - telegraf_swap
                 - telegraf_processes
+                - telegraf_mem
                 - telegraf_netstat
+                - telegraf_cpu
+                - telegraf_statsd
+                - telegraf_procstat/1917393364
+                - telegraf_socket_listener
+                - telegraf_disk
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -274,8 +282,8 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_diskio
                 - telegraf_net
+                - telegraf_diskio
         traces/xray:
             exporters:
                 - awsxray

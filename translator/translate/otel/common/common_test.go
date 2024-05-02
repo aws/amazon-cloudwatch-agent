@@ -168,26 +168,30 @@ func TestParseDuration(t *testing.T) {
 }
 
 func TestTranslatorMap(t *testing.T) {
-	got := NewTranslatorMap[int](&testTranslator{"first", 0}, &testTranslator{"middle", 1})
+	firstType, _ := component.NewType("first")
+	middleType, _ := component.NewType("middle")
+	lastType, _ := component.NewType("last")
+	got := NewTranslatorMap[int](&testTranslator{firstType, 0}, &testTranslator{middleType, 1})
 	require.Equal(t, 2, got.Len())
-	translator, ok := got.Get(component.NewID("first"))
+	translator, ok := got.Get(component.NewID(firstType))
 	require.True(t, ok)
 	result, err := translator.Translate(nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, result)
-	other := NewTranslatorMap[int](&testTranslator{"first", 2}, &testTranslator{"last", 3})
+	other := NewTranslatorMap[int](&testTranslator{firstType, 2}, &testTranslator{lastType, 3})
 	got.Merge(other)
 	require.Equal(t, 3, got.Len())
-	translator, ok = got.Get(component.NewID("first"))
+	translator, ok = got.Get(component.NewID(firstType))
 	require.True(t, ok)
 	result, err = translator.Translate(nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, result)
-	require.Equal(t, []component.ID{component.NewID("first"), component.NewID("middle"), component.NewID("last")}, got.Keys())
+	require.Equal(t, []component.ID{component.NewID(firstType), component.NewID(middleType), component.NewID(lastType)}, got.Keys())
 }
 
 func TestMissingKeyError(t *testing.T) {
-	err := &MissingKeyError{ID: component.NewID("type"), JsonKey: "key"}
+	newType, _ := component.NewType("type")
+	err := &MissingKeyError{ID: component.NewID(newType), JsonKey: "key"}
 	require.Equal(t, "\"type\" missing key in JSON: \"key\"", err.Error())
 }
 

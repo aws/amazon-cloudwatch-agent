@@ -125,8 +125,12 @@ processors:
 receivers:
     awsxray:
         endpoint: 0.0.0.0:2001
+        dialer:
+            timeout: "0s"
         proxy_server:
             aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+            dialer:
+                timeout: "0s"
             certificate_file_path: ""
             endpoint: 0.0.0.0:1234
             imds_retries: 1
@@ -134,10 +138,12 @@ receivers:
             profile: ""
             proxy_address: https://proxy.proxy.com
             region: us-west-2
+            service_name: "xray"
             role_arn: trace_role_arn_value_test
             tls:
                 ca_file: ""
                 cert_file: ""
+                include_system_ca_certs_pool: false
                 insecure: true
                 insecure_skip_verify: false
                 key_file: ""
@@ -150,6 +156,8 @@ receivers:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:1111
+                dialer:
+                    timeout: "0s"
                 include_metadata: false
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0

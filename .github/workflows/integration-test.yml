@@ -135,7 +135,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
 
       - name: Generate matrix
         id: set-matrix
@@ -192,7 +192,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -398,7 +398,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
 
       - name: SetOutputs
         id: set-outputs
@@ -888,7 +888,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: go.mod
-          key: eks-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
+          key: ${{ matrix.arrays.terraform_dir }}-${{ matrix.arrays.k8s_version }}-${{ matrix.arrays.instanceType }}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
 
       - name: Login ECR
         id: login-ecr
@@ -903,8 +903,8 @@ jobs:
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
-          timeout_minutes: 60 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
+          max_attempts: 2
+          timeout_minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
           retry_wait_seconds: 5
           command: |
             if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then

@@ -70,7 +70,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: go.mod
-          key: cache_if_success-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
+          key: ${{inputs.region}}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
 
       - name: Echo Test Info
         run: |
