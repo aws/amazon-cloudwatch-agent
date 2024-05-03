@@ -4,14 +4,11 @@
 package cumulativetodeltaprocessor
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
@@ -24,16 +21,39 @@ func TestTranslator(t *testing.T) {
 	}{
 		"GenerateDeltaProcessorConfigWithCPU": {
 			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"accelerated_compute_metrics": true,
+							"enhanced_container_insights": true,
+						},
+					},
+				},
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"cpu": map[string]interface{}{},
 					},
 				},
 			},
-			wantErr: &common.MissingKeyError{ID: cdpTranslator.ID(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey)},
+			want: &cumulativetodeltaprocessor.Config{
+				Include: cumulativetodeltaprocessor.MatchMetrics{Metrics: []string{
+					"node_neuron_execution_*",
+					"container_neurondevice_hw_ecc_events_*",
+					"pod_neurondevice_hw_ecc_events_*",
+					"node_neurondevice_hw_ecc_events_*"}},
+				Exclude: cumulativetodeltaprocessor.MatchMetrics{},
+			},
 		},
 		"GenerateDeltaProcessorConfigWithNet": {
 			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"accelerated_compute_metrics": true,
+							"enhanced_container_insights": true,
+						},
+					},
+				},
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"net": map[string]interface{}{},
@@ -41,12 +61,48 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			want: &cumulativetodeltaprocessor.Config{
-				Include: cumulativetodeltaprocessor.MatchMetrics{},
+				Include: cumulativetodeltaprocessor.MatchMetrics{Metrics: []string{
+					"node_neuron_execution_*",
+					"container_neurondevice_hw_ecc_events_*",
+					"pod_neurondevice_hw_ecc_events_*",
+					"node_neurondevice_hw_ecc_events_*"}},
 				Exclude: cumulativetodeltaprocessor.MatchMetrics{},
 			},
 		},
 		"GenerateDeltaProcessorConfigWithDiskIO": {
 			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"accelerated_compute_metrics": true,
+							"enhanced_container_insights": true,
+						},
+					},
+				},
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{},
+					},
+				},
+			},
+			want: &cumulativetodeltaprocessor.Config{
+				Include: cumulativetodeltaprocessor.MatchMetrics{Metrics: []string{
+					"node_neuron_execution_*",
+					"container_neurondevice_hw_ecc_events_*",
+					"pod_neurondevice_hw_ecc_events_*",
+					"node_neurondevice_hw_ecc_events_*"}},
+				Exclude: cumulativetodeltaprocessor.MatchMetrics{Metrics: []string{"iops_in_progress", "diskio_iops_in_progress"}},
+			},
+		},
+		"GenerateWithoutEnhancedContainerInsights": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"accelerated_compute_metrics": true,
+						},
+					},
+				},
 				"metrics": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"diskio": map[string]interface{}{},
@@ -55,6 +111,51 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &cumulativetodeltaprocessor.Config{
 				Include: cumulativetodeltaprocessor.MatchMetrics{},
+				Exclude: cumulativetodeltaprocessor.MatchMetrics{Metrics: []string{"iops_in_progress", "diskio_iops_in_progress"}},
+			},
+		},
+		"GenerateWithAcceleratedComputeFalse": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"enhanced_container_insights": true,
+							"accelerated_compute_metrics": false,
+						},
+					},
+				},
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{},
+					},
+				},
+			},
+			want: &cumulativetodeltaprocessor.Config{
+				Include: cumulativetodeltaprocessor.MatchMetrics{},
+				Exclude: cumulativetodeltaprocessor.MatchMetrics{Metrics: []string{"iops_in_progress", "diskio_iops_in_progress"}},
+			},
+		},
+		"GenerateWithoutAcceleratedComputeFlag": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"enhanced_container_insights": true,
+						},
+					},
+				},
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"diskio": map[string]interface{}{},
+					},
+				},
+			},
+			want: &cumulativetodeltaprocessor.Config{
+				Include: cumulativetodeltaprocessor.MatchMetrics{Metrics: []string{
+					"node_neuron_execution_*",
+					"container_neurondevice_hw_ecc_events_*",
+					"pod_neurondevice_hw_ecc_events_*",
+					"node_neurondevice_hw_ecc_events_*"}},
 				Exclude: cumulativetodeltaprocessor.MatchMetrics{Metrics: []string{"iops_in_progress", "diskio_iops_in_progress"}},
 			},
 		},

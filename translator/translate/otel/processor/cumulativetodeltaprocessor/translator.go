@@ -4,20 +4,20 @@
 package cumulativetodeltaprocessor
 
 import (
-	"fmt"
-
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
 const (
 	// Match types are in internal package from contrib
 	// Strict is the FilterType for filtering by exact string matches.
 	strict = "strict"
+	regexp = "regexp"
 )
 
 var (
@@ -47,11 +47,17 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || (!conf.IsSet(diskioKey) && !conf.IsSet(netKey)) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(diskioKey, " or ", netKey)}
-	}
-
 	cfg := t.factory.CreateDefaultConfig().(*cumulativetodeltaprocessor.Config)
+	if awscontainerinsight.EnhancedContainerInsightsEnabled(conf) && awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
+		includeMetrics := []string{
+			"node_neuron_execution_*",
+			"container_neurondevice_hw_ecc_events_*",
+			"pod_neurondevice_hw_ecc_events_*",
+			"node_neurondevice_hw_ecc_events_*",
+		}
+		cfg.Include.Metrics = includeMetrics
+		cfg.Include.MatchType = regexp
+	}
 
 	excludeMetrics := t.getExcludeNetAndDiskIOMetrics(conf)
 
