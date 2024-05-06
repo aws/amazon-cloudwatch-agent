@@ -114,7 +114,9 @@ func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcom
 			attributes.PutStr(attr.AWSLocalEnvironment, val.Str())
 		} else {
 			if h.defaultEnvPrefix == appsignalsconfig.PlatformECS {
-				if clusterName, ok := getECSClusterName(resourceAttributes); ok {
+				if clusterName, _ := getECSClusterName(resourceAttributes); clusterName != "" {
+					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, clusterName))
+				} else if clusterName = ecsutil.GetECSUtilSingleton().Cluster; clusterName != "" {
 					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, clusterName))
 				}
 			} else if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
