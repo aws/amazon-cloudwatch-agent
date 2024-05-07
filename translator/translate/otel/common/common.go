@@ -47,7 +47,6 @@ const (
 	PreferFullPodName                  = "prefer_full_pod_name"
 	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
 	Console                            = "console"
-	DiskKey                            = "disk"
 	DiskIOKey                          = "diskio"
 	NetKey                             = "net"
 	Emf                                = "emf"
@@ -236,14 +235,8 @@ func GetString(conf *confmap.Conf, key string) (string, bool) {
 // the return value will be nil
 func GetArray[C any](conf *confmap.Conf, key string) []C {
 	if value := conf.Get(key); value != nil {
-		var arr []C
-		got, _ := value.([]any)
-		for _, entry := range got {
-			if t, ok := entry.(C); ok {
-				arr = append(arr, t)
-			}
-		}
-		return arr
+		got, _ := value.([]C)
+		return got
 	}
 	return nil
 }

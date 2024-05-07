@@ -52,7 +52,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	credentials := confmap.NewFromStringMap(agent.Global_Config.Credentials)
 	_ = credentials.Unmarshal(cfg)
 	for k, v := range ec2tagger.SupportedAppendDimensions {
-		value, ok := common.GetString(conf, common.ConfigKey(ec2taggerKey, k))
+		value, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, AppendDimensionsKey, k))
 		if ok && v == value {
 			if k == "AutoScalingGroupName" {
 				cfg.EC2InstanceTagKeys = append(cfg.EC2InstanceTagKeys, k)
@@ -61,13 +61,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			}
 		}
 	}
-
-	if value, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskKey, AppendDimensionsKey, ec2tagger.AttributeVolumeId)); ok && value == ec2tagger.ValueAppendDimensionVolumeId {
-		cfg.EBSDeviceKeys = []string{"*"}
-		cfg.DiskDeviceTagKey = "device"
-	}
-
-	cfg.RefreshIntervalSeconds = time.Duration(0)
+	cfg.RefreshIntervalSeconds = 0 * time.Second
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 
 	return cfg, nil

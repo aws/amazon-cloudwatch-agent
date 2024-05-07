@@ -19,7 +19,6 @@ import (
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger/internal/volume"
 	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
@@ -53,13 +52,14 @@ type Tagger struct {
 	ec2MetadataRespond ec2MetadataRespondType
 	tagFilters         []*ec2.Filter
 	ec2API             ec2iface.EC2API
-	volumeSerialCache  volume.Cache
+	ebsVolume          *EbsVolume
 
 	sync.RWMutex //to protect ec2TagCache
 }
 
 // newTagger returns a new EC2 Tagger processor.
 func newTagger(config *Config, logger *zap.Logger) *Tagger {
+
 	_, cancel := context.WithCancel(context.Background())
 	mdCredentialConfig := &configaws.CredentialConfig{}
 
@@ -77,6 +77,7 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 				})
 		},
 	}
+
 	return p
 }
 
@@ -145,11 +146,11 @@ func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 		if t.ec2MetadataLookup.instanceType {
 			attr.PutStr(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
 		}
-		if t.volumeSerialCache != nil {
+		if t.ebsVolume != nil {
 			if devName, found := attr.Get(t.DiskDeviceTagKey); found {
-				serial := t.volumeSerialCache.Serial(devName.Str())
-				if serial != "" {
-					attr.PutStr(AttributeVolumeId, serial)
+				ebsVolId := t.ebsVolume.getEbsVolumeId(devName.Str())
+				if ebsVolId != "" {
+					attr.PutStr(ebsVolumeId, ebsVolId)
 				}
 			}
 		}
@@ -269,7 +270,7 @@ func (t *Tagger) ebsVolumesRetrieved() bool {
 		if key == "*" {
 			continue
 		}
-		if volId := t.volumeSerialCache.Serial(key); volId == "" {
+		if volId := t.ebsVolume.getEbsVolumeId(key); volId == "" {
 			allVolumesRetrieved = false
 			break
 		}
@@ -279,7 +280,7 @@ func (t *Tagger) ebsVolumesRetrieved() bool {
 
 // Start acts as input validation and serves the purpose of updating ec2 tags and ebs volumes if necessary.
 // It will be called when OTel is enabling each processor
-func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
+func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 	t.shutdownC = make(chan bool)
 	t.ec2TagCache = map[string]string{}
 
@@ -372,15 +373,34 @@ func (t *Tagger) refreshLoopToUpdateTagsAndVolumes() {
 
 // updateVolumes calls EC2 describe volume
 func (t *Tagger) updateVolumes() error {
-	if t.volumeSerialCache == nil {
-		t.volumeSerialCache = volume.NewCache(volume.NewProvider(t.ec2API, t.ec2MetadataRespond.instanceId))
+	if t.ebsVolume == nil {
+		t.ebsVolume = NewEbsVolume()
 	}
 
-	if err := t.volumeSerialCache.Refresh(); err != nil {
-		return err
+	input := &ec2.DescribeVolumesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("attachment.instance-id"),
+				Values: aws.StringSlice([]string{t.ec2MetadataRespond.instanceId}),
+			},
+		},
 	}
 
-	t.logger.Debug("Volume Serial Cache", zap.Strings("devices", t.volumeSerialCache.Devices()))
+	for {
+		result, err := t.ec2API.DescribeVolumes(input)
+		if err != nil {
+			return err
+		}
+		for _, volume := range result.Volumes {
+			for _, attachment := range volume.Attachments {
+				t.ebsVolume.addEbsVolumeMapping(volume.AvailabilityZone, attachment)
+			}
+		}
+		if result.NextToken == nil {
+			break
+		}
+		input.SetNextToken(*result.NextToken)
+	}
 	return nil
 }
 

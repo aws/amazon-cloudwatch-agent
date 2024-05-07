@@ -54,7 +54,8 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 
 	// Set append_dimensions as tags
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
-		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
+		result[Append_Dimensions_Mapped_Key] = val
+		util.Cleanup(val)
 	}
 
 	// Apply any specific rules for the plugin

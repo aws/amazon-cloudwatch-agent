@@ -65,6 +65,7 @@ const (
 	mdKeyInstanceId      = "InstanceId"
 	mdKeyImageId         = "ImageId"
 	mdKeyInstanceType    = "InstanceType"
+	ebsVolumeId          = "EBSVolumeId"
 )
 
 var (
