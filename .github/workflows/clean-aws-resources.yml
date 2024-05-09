@@ -136,9 +136,28 @@ jobs:
           role-to-assume: ${{ secrets[matrix.role_secret] }}
           aws-region: ${{ matrix.region }}
 
-      - name: Clean old dedicated host
+      - name: Clean old host
         working-directory: tool/clean
-        run: go run ./clean_host/clean_host.go --tags=clean
+        run: go run ./clean_host/clean_host.go ${{ matrix.region }}
+
+  clean-hosts-china:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+          aws-region: "cn-north-1"
+
+      - name: Clean old hosts
+        working-directory: tool/clean
+        run: go run ./clean_host/clean_host.go cn-north-1
 
   clean-ecs-clusters:
     runs-on: ubuntu-latest
