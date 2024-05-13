@@ -4,6 +4,7 @@
 package jmxpipeline
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxresourceattributeprocessor"
 	"log"
 	"strconv"
 
@@ -46,14 +47,14 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	translators := common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap(jmx.NewTranslator(jmx.WithIndex(t.index))),
-		Processors: common.NewTranslatorMap[component.Config](),
+		Processors: common.NewTranslatorMap(jmxresourceattributeprocessor.NewTranslator()),
 		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
 	}
 
 	if jmxfilterprocessor.IsSet(conf, t.index) {
 		log.Printf("D! jmx filter processor required for pipeline %s because target names are set", t.ID())
-		translators.Processors.Set(jmxfilterprocessor.NewTranslator(jmxfilterprocessor.WithIndex(t.index)))
+		translators.Processors.Merge(common.NewTranslatorMap(jmxfilterprocessor.NewTranslator(jmxfilterprocessor.WithIndex(t.index))))
 	}
 
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
