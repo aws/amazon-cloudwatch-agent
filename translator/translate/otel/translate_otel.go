@@ -6,7 +6,7 @@ package otel
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxpipeline"
 	"log"
 	"time"
 
@@ -19,6 +19,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
+	receiverAdapter "github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
@@ -26,9 +27,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxpipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 )
 
 var registry = common.NewTranslatorMap[*common.ComponentTranslators]()
@@ -51,13 +52,9 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		log.Printf("W! CSM has already been deprecated")
 	}
 
-	translators, err := host.NewTranslators(conf, os)
+	adapterReceivers, err := adapter.FindReceiversInConfig(conf, os)
 	if err != nil {
-		return nil, err
-	}
-	jmxTranslators, err := jmxpipeline.NewTranslators(conf)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to find receivers in config: %w", err)
 	}
 
 	// split out delta receiver types
@@ -79,8 +76,12 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		prometheus.NewTranslator(),
 		emf_logs.NewTranslator(),
 		xray.NewTranslator(),
-		jmx.NewTranslator(),
 	)
+	jmxTranslators, err := jmxpipeline.NewTranslators(conf)
+	if err != nil {
+		return nil, err
+	}
+	translators.Merge(jmxTranslators)
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)
 	if err != nil {
