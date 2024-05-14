@@ -10,7 +10,7 @@ const (
 	YAML           = "amazon-cloudwatch-agent.yaml"
 	ENV            = "env-config.json"
 	AGENT_LOG_FILE = "amazon-cloudwatch-agent.log"
-	JMXJarName              = "opentelemetry-jmx-metrics.jar"
+	JMXJarName     = "opentelemetry-jmx-metrics.jar"
 )
 
 var (

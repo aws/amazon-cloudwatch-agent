@@ -55,6 +55,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				"action":  "delete",
 				"pattern": "telemetry.sdk.*",
 			},
+			map[string]interface{}{
+				"action": "delete",
+				"key":    "service.name",
+				"value":  "unknown_service:java",
+			},
 		},
 	})
 
