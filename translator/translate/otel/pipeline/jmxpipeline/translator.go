@@ -4,7 +4,6 @@
 package jmxpipeline
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxresourceattributeprocessor"
 	"log"
 	"strconv"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxresourceattributeprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/jmxfilterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"

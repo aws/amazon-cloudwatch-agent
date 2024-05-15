@@ -6,7 +6,6 @@ package otel
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxpipeline"
 	"log"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxpipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
