@@ -32,7 +32,10 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20240503173519-cc2b921759f4
 )
 
-replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20240503173519-cc2b921759f4
+replace (
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/coreinternal v0.0.0-20240515141134-67df9103c7af
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20240503173519-cc2b921759f4
+)
 
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20240503173519-cc2b921759f4
