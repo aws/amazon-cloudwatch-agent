@@ -8,7 +8,8 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	semconv "go.opentelemetry.io/collector/semconv/v1.18.0"
+	deprecatedsemconv "go.opentelemetry.io/collector/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
@@ -126,28 +127,38 @@ func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resource
 	}
 
 	var (
-		sdkName        string
-		sdkVersion     string
+		sdkName    string
+		sdkVersion string
+		sdkLang    string
+	)
+	var (
+		sdkAutoName    string
 		sdkAutoVersion string
-		sdkLang        string
 	)
 	sdkName, sdkVersion, sdkLang = "-", "-", "-"
 	mode := instrumentationModeManual
 
-	// TODO read telemetry.auto.version from telemetry.distro.* from v1.22
 	resourceAttributes.Range(func(k string, v pcommon.Value) bool {
 		switch k {
 		case semconv.AttributeTelemetrySDKName:
-			sdkName = strings.ReplaceAll(v.Str(), " ", "")
+			sdkName = removeWhitespaces(v.Str())
 		case semconv.AttributeTelemetrySDKLanguage:
-			sdkLang = strings.ReplaceAll(v.Str(), " ", "")
+			sdkLang = removeWhitespaces(v.Str())
 		case semconv.AttributeTelemetrySDKVersion:
-			sdkVersion = strings.ReplaceAll(v.Str(), " ", "")
-		case semconv.AttributeTelemetryAutoVersion:
-			sdkAutoVersion = strings.ReplaceAll(v.Str(), " ", "")
+			sdkVersion = removeWhitespaces(v.Str())
+		}
+		switch k {
+		case semconv.AttributeTelemetryDistroName:
+			sdkAutoName = removeWhitespaces(v.Str())
+		case deprecatedsemconv.AttributeTelemetryAutoVersion, semconv.AttributeTelemetryDistroVersion:
+			sdkAutoVersion = removeWhitespaces(v.Str())
 		}
 		return true
 	})
+	if sdkAutoName != "" {
+		sdkName = sdkAutoName
+		mode = instrumentationModeAuto
+	}
 	if sdkAutoVersion != "" {
 		sdkVersion = sdkAutoVersion
 		mode = instrumentationModeAuto
@@ -216,4 +227,8 @@ func truncateStringByLength(val string, length int) string {
 		return val[:length]
 	}
 	return val
+}
+
+func removeWhitespaces(val string) string {
+	return strings.ReplaceAll(val, " ", "")
 }

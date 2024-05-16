@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	semconv "go.opentelemetry.io/collector/semconv/v1.18.0"
+	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
@@ -114,7 +114,9 @@ func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcom
 			attributes.PutStr(attr.AWSLocalEnvironment, val.Str())
 		} else {
 			if h.defaultEnvPrefix == appsignalsconfig.PlatformECS {
-				if clusterName, ok := getECSClusterName(resourceAttributes); ok {
+				if clusterName, _ := getECSClusterName(resourceAttributes); clusterName != "" {
+					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, clusterName))
+				} else if clusterName = ecsutil.GetECSUtilSingleton().Cluster; clusterName != "" {
 					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, clusterName))
 				}
 			} else if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
