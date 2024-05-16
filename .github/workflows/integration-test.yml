@@ -1298,10 +1298,10 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
 
-  EKSEndToEndTest:
+  JavaEKSEndToEndTest:
     name: "AppSignals E2E EKS Test"
     needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/appsignals-e2e-eks-test.yml
+    uses: ./.github/workflows/application-signals-java-e2e-eks-test.yml
     permissions:
       id-token: write
       contents: read
@@ -1309,10 +1309,30 @@ jobs:
     with:
       test-cluster-name: 'e2e-cw-agent-test'
 
-  EC2EndToEndTest:
+  JavaEC2EndToEndTest:
     name: "AppSignals E2E EC2 Test"
     needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/appsignals-e2e-ec2-test.yml
+    uses: ./.github/workflows/application-signals-java-e2e-ec2-test.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
+
+  PythonEKSEndToEndTest:
+    name: "AppSignals E2E EKS Test"
+    needs: [ BuildAndUpload, BuildDocker, JavaEKSEndToEndTest ]
+    uses: ./.github/workflows/application-signals-python-e2e-eks-test.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
+    with:
+      test-cluster-name: 'e2e-cw-agent-test'
+
+  PythonEC2EndToEndTest:
+    name: "AppSignals E2E EC2 Test"
+    needs: [ BuildAndUpload, BuildDocker, JavaEC2EndToEndTest ]
+    uses: ./.github/workflows/application-signals-python-e2e-ec2-test.yml
     permissions:
       id-token: write
       contents: read
