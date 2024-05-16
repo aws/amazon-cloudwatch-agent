@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
+	semconv "go.opentelemetry.io/collector/semconv/v1.6.1"
 	"go.uber.org/zap"
 
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
@@ -138,14 +138,14 @@ func Test_attributesNormalizer_appendNewAttributes(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 
 	completeResourceAttributes := pcommon.NewMap()
-	completeResourceAttributes.PutStr(conventions.AttributeTelemetrySDKName, "opentelemetry")
-	completeResourceAttributes.PutStr(conventions.AttributeTelemetryAutoVersion, "0.0.1 auto")
-	completeResourceAttributes.PutStr(conventions.AttributeTelemetrySDKVersion, "0.0.1 test")
-	completeResourceAttributes.PutStr(conventions.AttributeTelemetrySDKLanguage, "go")
+	completeResourceAttributes.PutStr(semconv.AttributeTelemetrySDKName, "opentelemetry")
+	completeResourceAttributes.PutStr(semconv.AttributeTelemetryAutoVersion, "0.0.1 auto")
+	completeResourceAttributes.PutStr(semconv.AttributeTelemetrySDKVersion, "0.0.1 test")
+	completeResourceAttributes.PutStr(semconv.AttributeTelemetrySDKLanguage, "go")
 
 	incompleteResourceAttributes := pcommon.NewMap()
-	incompleteResourceAttributes.PutStr(conventions.AttributeTelemetrySDKName, "opentelemetry")
-	incompleteResourceAttributes.PutStr(conventions.AttributeTelemetrySDKVersion, "0.0.1 test")
+	incompleteResourceAttributes.PutStr(semconv.AttributeTelemetrySDKName, "opentelemetry")
+	incompleteResourceAttributes.PutStr(semconv.AttributeTelemetrySDKVersion, "0.0.1 test")
 
 	tests := []struct {
 		name                   string
