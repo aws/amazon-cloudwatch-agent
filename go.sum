@@ -179,10 +179,10 @@ github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483 h1:J8HaD+Zpfi1gcel3HCKpoHHEsrc
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483/go.mod h1:RcDobYh8k5VP6TNybz9m++gL3ijVI5wueVr0EM10VsU=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20240503173519-cc2b921759f4 h1:AM/j39i5nQ1z09KC7GynVvTtC31y/Qi5N6VCOEhN0v8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20240503173519-cc2b921759f4/go.mod h1:P9k2FWA6wiRTWRnUfknsMfHkN8XuQQ1lBYA3txjPf98=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20240503173519-cc2b921759f4 h1:r2Fhy1NwLKa+WhtheCeZak4/Z6t2NP9yDcWF+IE31yI=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20240503173519-cc2b921759f4/go.mod h1:shTWN1DIuzxMlxFAePpC5ssPno7InKYz67kS7p+zTTM=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20240503173519-cc2b921759f4 h1:OxYlJW9TYd0AkCcquzg/+wAhIepUqU6oZjkuykLpM3k=
-github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20240503173519-cc2b921759f4/go.mod h1:o9NV6CjnL89FLwpxhDYD+/p+6hCh5vlxE6fZPFIuV8g=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20240517183704-e0e66ca9e79c h1:LiwSPScsEdXIZunXyBoMzB+URrPW4PacLVvnT8kqulE=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20240517183704-e0e66ca9e79c/go.mod h1:shTWN1DIuzxMlxFAePpC5ssPno7InKYz67kS7p+zTTM=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20240517183704-e0e66ca9e79c h1:mhjSDvLcsHrhT2YdZ73ZHhmYAsFpYa4U8ihJ4zoMzYk=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20240517183704-e0e66ca9e79c/go.mod h1:o9NV6CjnL89FLwpxhDYD+/p+6hCh5vlxE6fZPFIuV8g=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20240503173519-cc2b921759f4 h1:HyPipXg155rx1KSuYmjc/oDGEr2SR6d6Q34xKUc9PVk=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20240503173519-cc2b921759f4/go.mod h1:cDpFSR8i0bjVLkxLxOFABagktk5wd7LdMzU4xX7unPo=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20240503173519-cc2b921759f4 h1:Jror5XL3GsJlDF4eoLblAq/YDVPFz3qePtUqWN2wGFQ=
