@@ -124,7 +124,7 @@ func TestEmf(t *testing.T) {
 			},
 		},
 		Exporters: map[component.ID]component.Config{
-			component.NewID(awsEMFType): &awsemfexporter.Config{Namespace: "AppSignals", LogGroupName: "/aws/appsignals/log/group"},
+			component.NewID(awsEMFType): &awsemfexporter.Config{Namespace: "ApplicationSignals", LogGroupName: "/aws/application-signals/log/group"},
 		},
 	}
 	ua := newUserAgent()
