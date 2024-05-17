@@ -109,29 +109,31 @@ func (h *resourceAttributesResolver) Process(attributes, resourceAttributes pcom
 			attributes.PutStr(mappingKey, val.Str())
 		}
 	}
-	if _, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
-		if val, found := resourceAttributes.Get(attr.AWSHostedInEnvironment); found {
-			attributes.PutStr(attr.AWSLocalEnvironment, val.Str())
-		} else {
-			if h.defaultEnvPrefix == appsignalsconfig.PlatformECS {
-				if clusterName, _ := getECSClusterName(resourceAttributes); clusterName != "" {
-					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, clusterName))
-				} else if clusterName = ecsutil.GetECSUtilSingleton().Cluster; clusterName != "" {
-					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, clusterName))
-				}
-			} else if h.defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
-				if asgAttr, ok := resourceAttributes.Get(attr.ResourceDetectionASG); ok {
-					attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, asgAttr.Str()))
-				}
-			}
+	attributes.PutStr(attr.AWSLocalEnvironment, getLocalEnvironment(attributes, resourceAttributes, h.defaultEnvPrefix))
+	attributes.PutStr(common.AttributePlatformType, h.platformType)
+	return nil
+}
+
+func getLocalEnvironment(attributes, resourceAttributes pcommon.Map, defaultEnvPrefix string) string {
+	if val, ok := attributes.Get(attr.AWSLocalEnvironment); ok {
+		return val.Str()
+	}
+	if val, found := resourceAttributes.Get(attr.AWSHostedInEnvironment); found {
+		return val.Str()
+	}
+	if defaultEnvPrefix == appsignalsconfig.PlatformECS {
+		if clusterName, _ := getECSClusterName(resourceAttributes); clusterName != "" {
+			return getDefaultEnvironment(defaultEnvPrefix, clusterName)
+		}
+		if clusterName := ecsutil.GetECSUtilSingleton().Cluster; clusterName != "" {
+			return getDefaultEnvironment(defaultEnvPrefix, clusterName)
+		}
+	} else if defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
+		if asgAttr, found := resourceAttributes.Get(attr.ResourceDetectionASG); found {
+			return getDefaultEnvironment(defaultEnvPrefix, asgAttr.Str())
 		}
 	}
-	if _, ok := attributes.Get(attr.AWSLocalEnvironment); !ok {
-		attributes.PutStr(attr.AWSLocalEnvironment, getDefaultEnvironment(h.defaultEnvPrefix, AttributeEnvironmentDefault))
-	}
-	attributes.PutStr(common.AttributePlatformType, h.platformType)
-
-	return nil
+	return getDefaultEnvironment(defaultEnvPrefix, AttributeEnvironmentDefault)
 }
 
 func getECSClusterName(resourceAttributes pcommon.Map) (string, bool) {
