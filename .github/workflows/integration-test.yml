@@ -1337,3 +1337,21 @@ jobs:
       id-token: write
       contents: read
     secrets: inherit
+
+  JavaEC2ASGEndToEndTest:
+    name: "AppSignals E2E EC2 Test"
+    needs: [ BuildAndUpload, BuildDocker ]
+    uses: ./.github/workflows/application-signals-java-e2e-ec2-asg-test.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
+
+  PythonEC2ASGEndToEndTest:
+    name: "AppSignals E2E EC2 Test"
+    needs: [ BuildAndUpload, BuildDocker ]
+    uses: ./.github/workflows/application-signals-python-e2e-ec2-asg-test.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
