@@ -16,8 +16,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
-const gpuLogSuffix = "GPU"
-
 var metricDuplicateTypes = []string{
 	containerinsightscommon.TypeGpuContainer,
 	containerinsightscommon.TypeGpuPod,
@@ -119,6 +117,36 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 					}, operations...),
 				})
 			}
+		}
+
+		// replicate pod level nvidia gpu count metrics _limit, _request and _total for node and cluster
+		for _, m := range []string{containerinsightscommon.GpuLimit, containerinsightscommon.GpuRequest, containerinsightscommon.GpuTotal} {
+			transformRules = append(transformRules, []map[string]interface{}{
+				{
+					"include":  containerinsightscommon.MetricName(containerinsightscommon.TypePod, m),
+					"action":   "insert",
+					"new_name": containerinsightscommon.MetricName(containerinsightscommon.TypeNode, m),
+					"operations": append([]map[string]interface{}{
+						{
+							"action":    "add_label",
+							"new_label": containerinsightscommon.MetricType,
+							"new_value": containerinsightscommon.TypeGpuNode,
+						},
+					}),
+				},
+				{
+					"include":  containerinsightscommon.MetricName(containerinsightscommon.TypePod, m),
+					"action":   "insert",
+					"new_name": containerinsightscommon.MetricName(containerinsightscommon.TypeCluster, m),
+					"operations": append([]map[string]interface{}{
+						{
+							"action":    "add_label",
+							"new_label": containerinsightscommon.MetricType,
+							"new_value": containerinsightscommon.TypeGpuCluster,
+						},
+					}),
+				},
+			}...)
 		}
 
 		for oldName, newName := range renameMapForNeuronMonitor {
