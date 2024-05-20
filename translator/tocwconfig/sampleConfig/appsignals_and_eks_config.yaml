@@ -9,109 +9,102 @@ exporters:
         enhanced_container_insights: false
         imds_retries: 1
         local_mode: false
-        log_group_name: /aws/appsignals/eks
+        log_group_name: /aws/application-signals/data
         log_retention: 0
         log_stream_name: ""
         max_retries: 2
         metric_declarations:
             - dimensions:
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
+                - - Environment
                   - Operation
                   - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
+                - - Environment
                   - Service
               label_matchers:
                 - label_names:
-                    - aws.span.kind
-                  regex: ^(SERVER|LOCAL_ROOT)$
+                    - Telemetry.Source
+                  regex: ^(ServerSpan|LocalRootSpan)$
                   separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
             - dimensions:
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - K8s.RemoteNamespace
+                - - Environment
+                  - Operation
+                  - RemoteEnvironment
+                  - RemoteOperation
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - Operation
+                  - RemoteEnvironment
+                  - RemoteOperation
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - Operation
+                  - RemoteOperation
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                  - Service
+                - - Environment
                   - Operation
                   - RemoteOperation
                   - RemoteService
-                  - RemoteTarget
                   - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - K8s.RemoteNamespace
-                  - Operation
+                - - Environment
+                  - RemoteEnvironment
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - RemoteEnvironment
+                  - RemoteOperation
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - RemoteEnvironment
                   - RemoteOperation
                   - RemoteService
                   - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - Operation
+                - - Environment
                   - RemoteOperation
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
                   - RemoteService
-                  - RemoteTarget
                   - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - Operation
+                - - Environment
                   - RemoteOperation
                   - RemoteService
                   - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - K8s.RemoteNamespace
+                - - Environment
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
                   - RemoteService
                   - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
+                - - RemoteResourceIdentifier
+                  - RemoteResourceType
                   - RemoteService
-                  - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - K8s.RemoteNamespace
-                  - RemoteOperation
-                  - RemoteService
-                  - RemoteTarget
-                  - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - K8s.RemoteNamespace
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - RemoteOperation
-                  - RemoteService
-                  - RemoteTarget
-                  - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
-                - - HostedIn.EKS.Cluster
-                  - HostedIn.K8s.Namespace
-                  - RemoteService
-                  - RemoteTarget
-                  - Service
-                - - RemoteService
-                  - RemoteTarget
                 - - RemoteService
               label_matchers:
                 - label_names:
-                    - aws.span.kind
-                  regex: ^(CLIENT|PRODUCER|CONSUMER)$
+                    - Telemetry.Source
+                  regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
                   separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
         middleware: agenthealth/logs
-        namespace: AppSignals
+        namespace: ApplicationSignals
         no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
@@ -242,13 +235,12 @@ exporters:
         indexed_attributes:
             - aws.local.service
             - aws.local.operation
+            - aws.local.environment
             - aws.remote.service
             - aws.remote.operation
-            - HostedIn.K8s.Namespace
-            - K8s.RemoteNamespace
-            - aws.remote.target
-            - HostedIn.Environment
-            - HostedIn.EKS.Cluster
+            - aws.remote.environment
+            - aws.remote.resource.identifier
+            - aws.remote.resource.type
         local_mode: false
         max_retries: 2
         middleware: agenthealth/traces
