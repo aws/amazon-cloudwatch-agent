@@ -1194,18 +1194,9 @@ jobs:
           command: |
             cd terraform/gpu
             terraform init
-            terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version=v1.6.0-eksbuild.1" -var="k8s_version=1.29" --auto-approve || { terraform destroy -var="beta=true" -auto-approve && exit 1; }
+            terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version=v1.6.0-eksbuild.1" -var="k8s_version=1.29" --auto-approve 
 
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            cd terraform/gpu
-            terraform destroy -var="beta=true" --auto-approve
+
 
   StressTrackingTest:
     name: "StressTrackingTest"
