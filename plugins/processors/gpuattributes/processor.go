@@ -231,7 +231,6 @@ func (d *gpuAttributesProcessor) filterGpuMetricsWithoutPodName(metrics pmetric.
 	metrics.RemoveIf(func(m pmetric.Metric) bool {
 		isGpu := strings.Contains(m.Name(), gpuMetricIdentifier)
 		isContainerOrPod := strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) || strings.HasPrefix(m.Name(), gpuPodMetricPrefix)
-
 		if !isGpu || !isContainerOrPod {
 			return false
 		}
@@ -246,7 +245,10 @@ func (d *gpuAttributesProcessor) filterGpuMetricsWithoutPodName(metrics pmetric.
 			d.logger.Debug("Ignore unknown metric type", zap.String(containerinsightscommon.MetricType, m.Type().String()))
 		}
 
-		_, hasPodInfo := dps.At(0).Attributes().Get(internal.PodName)
-		return !hasPodInfo
+		dps.RemoveIf(func(dp pmetric.NumberDataPoint) bool {
+			_, hasPodInfo := dp.Attributes().Get(internal.PodName)
+			return !hasPodInfo
+		})
+		return dps.Len() == 0
 	})
 }
