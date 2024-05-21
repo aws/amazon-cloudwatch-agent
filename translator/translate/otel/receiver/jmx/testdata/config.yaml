@@ -17,3 +17,4 @@ remote_profile: SASL/PLAIN
 realm: test_realm
 resource_attributes: 
   service.name: jmx_app
+  host: host
