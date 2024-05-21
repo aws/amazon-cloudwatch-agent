@@ -27,7 +27,7 @@ env:
   METRIC_NAMESPACE: ApplicationSignals
   LOG_GROUP_NAME: /aws/application-signals/data
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  APPLICATION_SIGNALS_ADOT_IMAGE: 611364707713.dkr.ecr.us-west-2.amazonaws.com/adot-autoinstrumentation-java-operator-staging@sha256:04f4342dcb7081e12c093dc98aa5eb1791d7dcfdc04bb655bfb0e127ede2ab39
+  APPLICATION_SIGNALS_ADOT_IMAGE: 611364707713.dkr.ecr.us-west-2.amazonaws.com/adot-autoinstrumentation-java-operator-staging:1.33.0-SNAPSHOT-c417486
 
 jobs:
   appsignals-e2e-test:
