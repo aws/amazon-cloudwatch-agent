@@ -27,7 +27,7 @@ env:
   METRIC_NAMESPACE: ApplicationSignals
   LOG_GROUP_NAME: /aws/application-signals/data
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
-  APPLICATION_SIGNALS_ADOT_IMAGE: 611364707713.dkr.ecr.us-west-2.amazonaws.com/adot-autoinstrumentation-java-operator-staging:1.33.0-SNAPSHOT-91cbba8
+  APPLICATION_SIGNALS_ADOT_IMAGE: 611364707713.dkr.ecr.us-west-2.amazonaws.com/adot-autoinstrumentation-java-operator-staging@sha256:04f4342dcb7081e12c093dc98aa5eb1791d7dcfdc04bb655bfb0e127ede2ab39
 
 jobs:
   appsignals-e2e-test:
@@ -130,7 +130,7 @@ jobs:
 
       - name: Patch the CloudWatch Agent image and restart CloudWatch pods
         run: |
-          kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
+          kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:4193fa17b3759581753480cd378f0c6ef47043bb}]'
           kubectl delete pods --all -n amazon-cloudwatch
           sleep 10
           kubectl wait --for=condition=Ready pod --all -n amazon-cloudwatch

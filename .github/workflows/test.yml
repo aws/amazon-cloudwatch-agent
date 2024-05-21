@@ -1,0 +1,80 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Run Integration Tests
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
+  CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+  S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
+  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+  S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+
+on:
+  push:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  JavaEKSEndToEndTest:
+    name: "AppSignals E2E EKS Test"
+    uses: ./.github/workflows/application-signals-java-e2e-eks-test.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets: inherit
+    with:
+      test-cluster-name: 'e2e-cw-agent-test'
+
+#  JavaEC2EndToEndTest:
+#    name: "AppSignals E2E EC2 Test"
+#    uses: ./.github/workflows/application-signals-java-e2e-ec2-test.yml
+#    permissions:
+#      id-token: write
+#      contents: read
+#    secrets: inherit
+#
+#  PythonEKSEndToEndTest:
+#    name: "AppSignals E2E EKS Test"
+#    uses: ./.github/workflows/application-signals-python-e2e-eks-test.yml
+#    permissions:
+#      id-token: write
+#      contents: read
+#    secrets: inherit
+#    with:
+#      test-cluster-name: 'e2e-cw-agent-test'
+#
+#  PythonEC2EndToEndTest:
+#    name: "AppSignals E2E EC2 Test"
+#    uses: ./.github/workflows/application-signals-python-e2e-ec2-test.yml
+#    permissions:
+#      id-token: write
+#      contents: read
+#    secrets: inherit
+#
+#  JavaEC2ASGEndToEndTest:
+#    name: "AppSignals E2E EC2 Test"
+#    uses: ./.github/workflows/application-signals-java-e2e-ec2-asg-test.yml
+#    permissions:
+#      id-token: write
+#      contents: read
+#    secrets: inherit
+#
+#  PythonEC2ASGEndToEndTest:
+#    name: "AppSignals E2E EC2 Test"
+#    uses: ./.github/workflows/application-signals-python-e2e-ec2-asg-test.yml
+#    permissions:
+#      id-token: write
+#      contents: read
+#    secrets: inherit
