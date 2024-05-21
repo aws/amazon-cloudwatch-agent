@@ -5,6 +5,7 @@ package jmx
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -18,12 +19,13 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 )
 
 const (
 	jarPathKey            = "jar_path"
-	targetSystemKey       = "target_system"
 	usernameKey           = "username"
 	keystorePathKey       = "keystore_path"
 	keystoreTypeKey       = "keystore_type"
@@ -39,6 +41,7 @@ const (
 	defaultTargetSystem = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
 
 	envJmxJarPath = "JMX_JAR_PATH"
+	hostnameTag   = "host"
 )
 
 var (
@@ -95,6 +98,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*jmxreceiver.Config)
+	cfg.ResourceAttributes = make(map[string]string)
 
 	var jmxKeyMap map[string]any
 	if jmxSlice := common.GetArray[any](conf, configKey); t.index != -1 && len(jmxSlice) > t.index {
@@ -180,6 +184,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		c := confmap.NewFromStringMap(appendDimensions)
 		if err = c.Unmarshal(&cfg.ResourceAttributes); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal %s::%s: %w", configKey, common.AppendDimensionsKey, err)
+		}
+	}
+
+	if !context.CurrentContext().GetOmitHostname() && !conf.IsSet(ec2taggerprocessor.Ec2taggerKey) {
+		hostname, err := os.Hostname()
+		if err != nil {
+			log.Printf("E! error finding hostname for jmx metrics %v", err)
+		} else {
+			cfg.ResourceAttributes[hostnameTag] = hostname
 		}
 	}
 

@@ -4,6 +4,7 @@
 package jmx
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -21,6 +22,7 @@ import (
 func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
 	assert.EqualValues(t, "jmx", tt.ID().String())
+	hostname, _ := os.Hostname()
 	testCases := map[string]struct {
 		input   map[string]any
 		want    *confmap.Conf
@@ -43,6 +45,9 @@ func TestTranslator(t *testing.T) {
 					"endpoint": "0.0.0.0:0",
 					"timeout":  "5s",
 				},
+				"resource_attributes": map[string]string{
+					hostnameTag: hostname,
+				},
 			}),
 		},
 		"WithCompleteConfig": {
@@ -60,8 +65,11 @@ func TestTranslator(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*jmxreceiver.Config)
 				require.True(t, ok)
-				wantCfg := factory.CreateDefaultConfig()
+				wantCfg := factory.CreateDefaultConfig().(*jmxreceiver.Config)
 				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				if wantCfg.ResourceAttributes != nil && wantCfg.ResourceAttributes[hostnameTag] == hostnameTag {
+					wantCfg.ResourceAttributes[hostnameTag] = hostname
+				}
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

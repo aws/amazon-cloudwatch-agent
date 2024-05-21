@@ -16,7 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-var ec2taggerKey = common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)
+var Ec2taggerKey = common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)
 
 type translator struct {
 	name    string
@@ -40,15 +40,15 @@ func (t *translator) ID() component.ID {
 // Translate creates an processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(ec2taggerKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: ec2taggerKey}
+	if conf == nil || !conf.IsSet(Ec2taggerKey) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: Ec2taggerKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*ec2tagger.Config)
 	credentials := confmap.NewFromStringMap(agent.Global_Config.Credentials)
 	_ = credentials.Unmarshal(cfg)
 	for k, v := range ec2tagger.SupportedAppendDimensions {
-		value, ok := common.GetString(conf, common.ConfigKey(ec2taggerKey, k))
+		value, ok := common.GetString(conf, common.ConfigKey(Ec2taggerKey, k))
 		if ok && v == value {
 			if k == "AutoScalingGroupName" {
 				cfg.EC2InstanceTagKeys = append(cfg.EC2InstanceTagKeys, k)

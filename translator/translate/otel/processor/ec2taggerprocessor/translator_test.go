@@ -26,7 +26,7 @@ func TestTranslator(t *testing.T) {
 		"MissingAppendDimensionsConfig": {
 			wantErr: &common.MissingKeyError{
 				ID:      etpTranslator.ID(),
-				JsonKey: ec2taggerKey,
+				JsonKey: Ec2taggerKey,
 			},
 		},
 		"FullEc2TaggerProcessorConfig": {
