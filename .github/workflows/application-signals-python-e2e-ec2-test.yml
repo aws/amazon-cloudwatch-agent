@@ -19,7 +19,7 @@ env:
   METRIC_NAMESPACE: ApplicationSignals
   LOG_GROUP_NAME: /aws/application-signals/data
   TEST_RESOURCES_FOLDER: ${GITHUB_WORKSPACE}
-  GET_CW_AGENT_RPM_COMMAND: "aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ github.sha }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm ./cw-agent.rpm"
+  GET_CW_AGENT_RPM_COMMAND: "aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/integration-test/binary/4193fa17b3759581753480cd378f0c6ef47043bb/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm ./cw-agent.rpm"
   GET_ADOT_WHEEL_COMMAND: "aws s3 cp s3://metric-schema-changes/aws_opentelemetry_distro-0.2.0-py3-none-any.whl ./aws_opentelemetry_distro-0.2.0-py3-none-any.whl && python3.9 -m pip install aws_opentelemetry_distro-0.2.0-py3-none-any.whl"
 
 jobs:
