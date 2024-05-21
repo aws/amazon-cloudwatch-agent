@@ -19,11 +19,10 @@ func TestProcessMetrics(t *testing.T) {
 	ctx := context.Background()
 
 	testcases := map[string]struct {
-		resource          string
-		metrics           pmetric.Metrics
-		wantCnt           int
-		wantDatapointsCnt int
-		want              []map[string]string
+		resource      string
+		metrics       pmetric.Metrics
+		wantMetricCnt int
+		want          []map[string]string
 	}{
 		"nonNode": {
 			metrics: generateMetrics("prefix", []map[string]string{
@@ -31,7 +30,7 @@ func TestProcessMetrics(t *testing.T) {
 					"ClusterName": "cluster",
 				},
 			}),
-			wantCnt: 1,
+			wantMetricCnt: 1,
 			want: []map[string]string{
 				{
 					"ClusterName": "cluster",
@@ -45,7 +44,7 @@ func TestProcessMetrics(t *testing.T) {
 					"Drop":        "val",
 				},
 			}),
-			wantCnt: 1,
+			wantMetricCnt: 1,
 			want: []map[string]string{
 				{
 					"ClusterName": "cluster",
@@ -59,7 +58,7 @@ func TestProcessMetrics(t *testing.T) {
 					"kubernetes":  "{\"host\":\"test\"}",
 				},
 			}),
-			wantCnt: 1,
+			wantMetricCnt: 1,
 			want: []map[string]string{
 				{
 					"ClusterName": "cluster",
@@ -75,7 +74,7 @@ func TestProcessMetrics(t *testing.T) {
 					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
 				},
 			}),
-			wantCnt: 1,
+			wantMetricCnt: 1,
 			want: []map[string]string{
 				{
 					"ClusterName": "cluster",
@@ -90,8 +89,8 @@ func TestProcessMetrics(t *testing.T) {
 					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
 				},
 			}),
-			wantCnt: 0,
-			want:    []map[string]string{},
+			wantMetricCnt: 0,
+			want:          []map[string]string{},
 		},
 		"keepPodWithPodName": {
 			metrics: generateMetrics("pod", []map[string]string{
@@ -101,7 +100,7 @@ func TestProcessMetrics(t *testing.T) {
 					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
 				},
 			}),
-			wantCnt: 1,
+			wantMetricCnt: 1,
 			want: []map[string]string{
 				{
 					"ClusterName": "cluster",
@@ -117,8 +116,8 @@ func TestProcessMetrics(t *testing.T) {
 					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
 				},
 			}),
-			wantCnt: 0,
-			want:    []map[string]string{},
+			wantMetricCnt: 0,
+			want:          []map[string]string{},
 		},
 		"keepContainerWithPodName": {
 			metrics: generateMetrics("container", []map[string]string{
@@ -128,7 +127,7 @@ func TestProcessMetrics(t *testing.T) {
 					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
 				},
 			}),
-			wantCnt: 1,
+			wantMetricCnt: 1,
 			want: []map[string]string{
 				{
 					"ClusterName": "cluster",
@@ -149,7 +148,7 @@ func TestProcessMetrics(t *testing.T) {
 					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
 				},
 			}),
-			wantCnt: 1,
+			wantMetricCnt: 1,
 			want: []map[string]string{
 				{
 					"ClusterName": "cluster",
@@ -171,7 +170,7 @@ func TestProcessMetrics(t *testing.T) {
 					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
 				},
 			}),
-			wantCnt: 1,
+			wantMetricCnt: 1,
 			want: []map[string]string{
 				{
 					"ClusterName": "cluster",
@@ -190,8 +189,8 @@ func TestProcessMetrics(t *testing.T) {
 	for tname, tc := range testcases {
 		fmt.Printf("running %s\n", tname)
 		ms, _ := gp.processMetrics(ctx, tc.metrics)
-		assert.Equal(t, tc.wantCnt, ms.MetricCount())
-		if tc.wantCnt > 0 {
+		assert.Equal(t, tc.wantMetricCnt, ms.MetricCount())
+		if tc.wantMetricCnt > 0 {
 			dps := ms.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints()
 			assert.Equal(t, len(tc.want), dps.Len())
 			for i, dim := range tc.want {
