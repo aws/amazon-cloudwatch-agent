@@ -145,6 +145,13 @@ processors:
               from_attribute: ""
               from_context: ""
               pattern: "telemetry.sdk.*"
+            - action: delete
+              key: "service.name"
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              pattern: ""
+              value: "unknown_service:java"
     transform:
         error_mode: propagate
         log_statements: []
