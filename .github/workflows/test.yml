@@ -47,6 +47,7 @@ jobs:
 
   PythonEKSEndToEndTest:
     name: "AppSignals E2E EKS Test"
+    needs: [ JavaEKSEndToEndTest ]
     uses: ./.github/workflows/application-signals-python-e2e-eks-test.yml
     permissions:
       id-token: write
@@ -57,6 +58,7 @@ jobs:
 
   PythonEC2EndToEndTest:
     name: "AppSignals E2E EC2 Test"
+    needs: [ JavaEC2EndToEndTest ]
     uses: ./.github/workflows/application-signals-python-e2e-ec2-test.yml
     permissions:
       id-token: write
