@@ -1195,7 +1195,13 @@ jobs:
             cd terraform/gpu
             terraform init
             terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version=v1.6.0-eksbuild.1" -var="k8s_version=1.29" --auto-approve 
-
+      - name: Cleanup on cancel or success
+        if: ${{ always() }}
+        run: |
+          if [[ "${{ job.status }}" == "cancelled" || "${{ steps.terraform_apply.outcome }}" == "success" ]]; then
+            cd terraform/gpu
+            terraform destroy -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version=v1.6.0-eksbuild.1" -var="k8s_version=1.29" --auto-approve
+          fi
 #  GPUE2E2:
 #    name: "GPUE2E2"
 #    needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
