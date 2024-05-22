@@ -1180,10 +1180,8 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-
       - name: Verify Terraform version
         run: terraform --version
-
 
       - name: Terraform apply
         uses: nick-fields/retry@v2
@@ -1194,10 +1192,12 @@ jobs:
           command: |
             cd terraform/gpu
             terraform init
-            if terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version=v1.6.0-eksbuild.1" -var="k8s_version=1.29" --auto-approve 
+            if terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version=v1.6.0-eksbuild.1" -var="k8s_version=1.29" --auto-approve; then
+              echo "Terraform apply successful."
             else
               terraform destroy -auto-approve && exit 1
             fi
+
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -1206,7 +1206,6 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/gpu && terraform destroy --auto-approve
-
 
 
   StressTrackingTest:
