@@ -17,22 +17,15 @@
     "metrics_collected": {
       "jmx": [
         {
-          "jar_path": "../../opentelemetry-jmx-metrics.jar",
           "endpoint": "localhost:12345",
-          "jvm" : [
-            "jvm.memory.heap.init",
-            "jvm.memory.heap.used",
-            "jvm.memory.nonheap.init"
-            ],
-          "tomcat" : [],
-          "metrics_collection_interval": 60,
-          "otlp": {
-            "endpoint": "mycollectorotlpreceiver:4317",
-            "timeout": "60s",
-            "headers": {
-              "header_test": "test"
-            }
+          "jvm": {
+            "measurement": [
+              "jvm.memory.heap.init",
+              "jvm.memory.heap.used",
+              "jvm.memory.nonheap.init"
+            ]
           },
+          "metrics_collection_interval": 60,
           "username": "cwagent",
           "keystore_path": "/keystore",
           "keystore_type": "PKCS",
@@ -45,22 +38,20 @@
           }
         },
         {
-          "jar_path": "../../opentelemetry-jmx-metrics.jar",
           "endpoint": "localhost:4567",
-          "metrics_collection_interval": 60,
-          "otlp": {
-            "endpoint": "mycollectorotlpreceiver:4317",
-            "timeout": "60s",
-            "headers": {
-              "header_test": "test"
-            }
+          "tomcat": {
+            "measurement": [
+              "tomcat.sessions",
+              "tomcat.errors"
+            ]
           },
+          "metrics_collection_interval": 60,
           "username": "cwagent",
           "keystore_path": "/keystore",
           "keystore_type": "PKCS",
           "truststore_path": "/truststore",
           "truststore_type": "PKCS12",
-          "jmx_registry_ssl_enabled": true,
+          "registry_ssl_enabled": true,
           "remote_profile": "SASL/PLAIN",
           "realm": "test_realm",
           "append_dimensions": {

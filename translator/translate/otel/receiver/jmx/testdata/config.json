@@ -2,20 +2,18 @@
   "metrics": {
     "metrics_collected": {
       "jmx": {
-        "jar_path": "/jmxtest/opentelemetry-java-contrib-jmx-metrics.jar",
         "endpoint": "my_jmx_host:12345",
-        "jvm":
-                ["jvm.memory.heap.init"],
-        "tomcat":
-                [],
-        "metrics_collection_interval": 60,
-        "otlp": {
-          "endpoint": "mycollectorotlpreceiver:4317",
-          "timeout": "60s",
-          "headers": {
-            "header_test": "test"
-          }
+        "jvm": {
+          "measurements": [
+            "jvm.memory.heap.init"
+          ]
         },
+        "tomcat": {
+          "measurements": [
+            "tomcat.threads"
+          ]
+        },
+        "metrics_collection_interval": 60,
         "username": "cwagent",
         "password_file": "/path/to/password/file",
         "keystore_path": "/keystore",

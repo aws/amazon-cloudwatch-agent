@@ -20,44 +20,93 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
-	tt := NewTranslator()
-	assert.EqualValues(t, "jmx", tt.ID().String())
+	factory := jmxreceiver.NewFactory()
 	hostname, _ := os.Hostname()
 	testCases := map[string]struct {
 		input   map[string]any
+		index   int
+		wantID  string
 		want    *confmap.Conf
 		wantErr error
 	}{
 		"WithMissingKey": {
-			input: map[string]any{"logs": map[string]any{}},
+			input:  map[string]any{"logs": map[string]any{}},
+			index:  -1,
+			wantID: "jmx",
 			wantErr: &common.MissingKeyError{
-				ID:      tt.ID(),
+				ID:      component.NewID(factory.Type()),
 				JsonKey: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey),
 			},
 		},
-		"WithDefault": {
-			input: map[string]any{"metrics": map[string]any{"metrics_collected": map[string]any{"jmx": nil}}},
+		"WithMissingEndpoint": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"jmx": map[string]any{},
+					},
+				},
+			},
+			index:   -1,
+			wantID:  "jmx",
+			wantErr: errNoEndpoint,
+		},
+		"WithMissingTargetSystems": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"jmx": map[string]any{
+							"endpoint": "localhost:8080",
+						},
+					},
+				},
+			},
+			index:   -1,
+			wantID:  "jmx",
+			wantErr: errNoTargetSystems,
+		},
+		"WithValid": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"jmx": []any{
+							map[string]any{
+								"endpoint": "localhost:8080",
+								"tomcat": map[string]any{
+									"measurement": []any{
+										"tomcat.sessions",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			index:  0,
+			wantID: "jmx/0",
 			want: confmap.NewFromStringMap(map[string]any{
-				"jar_path":            paths.JMXJarPath,
-				"target_system":       defaultTargetSystem,
+				"endpoint":            "localhost:8080",
+				"target_system":       "tomcat",
 				"collection_interval": "10s",
 				"otlp": map[string]any{
 					"endpoint": "0.0.0.0:0",
 					"timeout":  "5s",
 				},
 				"resource_attributes": map[string]string{
-					hostnameTag: hostname,
+					attributeHost: hostname,
 				},
 			}),
 		},
 		"WithCompleteConfig": {
-			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
-			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
+			input:  testutil.GetJson(t, filepath.Join("testdata", "config.json")),
+			index:  -1,
+			wantID: "jmx",
+			want:   testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
 		},
 	}
-	factory := jmxreceiver.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			tt := NewTranslator(WithIndex(testCase.index))
+			assert.EqualValues(t, testCase.wantID, tt.ID().String())
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
@@ -67,8 +116,9 @@ func TestTranslator(t *testing.T) {
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig().(*jmxreceiver.Config)
 				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
-				if wantCfg.ResourceAttributes != nil && wantCfg.ResourceAttributes[hostnameTag] == hostnameTag {
-					wantCfg.ResourceAttributes[hostnameTag] = hostname
+				wantCfg.JARPath = paths.JMXJarPath
+				if wantCfg.ResourceAttributes != nil && wantCfg.ResourceAttributes[attributeHost] == attributeHost {
+					wantCfg.ResourceAttributes[attributeHost] = hostname
 				}
 				assert.Equal(t, wantCfg, gotCfg)
 			}
@@ -84,34 +134,50 @@ func TestValidateAuth(t *testing.T) {
 	}{
 		"WithMissingFields": {
 			jmxSectionInput: map[string]any{
-				"endpoint":      "my_jmx_host:12345",
+				"endpoint": "my_jmx_host:12345",
+				"jvm": map[string]any{
+					"measurement": []any{
+						"jvm.memory.heap.init",
+					},
+				},
 				"password_file": "/path/to/password_file",
 			},
 			wantErr: &missingFieldsError{
 				fields: []string{
-					usernameKey,
 					keystorePathKey,
 					keystoreTypeKey,
 					truststorePathKey,
 					truststoreTypeKey,
+					usernameKey,
 				},
 			},
 		},
 		"WithOptOut": {
 			jmxSectionInput: map[string]any{
 				"endpoint": "my_jmx_host:12345",
+				"jvm": map[string]any{
+					"measurement": []any{
+						"jvm.memory.heap.init",
+					},
+				},
 				"insecure": true,
 			},
 		},
 		"WithAllSet": {
 			jmxSectionInput: map[string]any{
-				"endpoint":        "my_jmx_host:12345",
-				"username":        "myusername",
-				"password_file":   "/path/to/password_file",
-				"keystore_path":   "/path/to/keystore",
-				"keystore_type":   "PKCS",
-				"truststore_path": "/path/to/truststore",
-				"truststore_type": "PKCS12",
+				"endpoint": "my_jmx_host:12345",
+				"jvm": map[string]any{
+					"measurement": []any{
+						"jvm.memory.heap.init",
+					},
+				},
+				"username":             "myusername",
+				"password_file":        "/path/to/password_file",
+				"keystore_path":        "/path/to/keystore",
+				"keystore_type":        "PKCS",
+				"truststore_path":      "/path/to/truststore",
+				"truststore_type":      "PKCS12",
+				"registry_ssl_enabled": true,
 			},
 		},
 	}

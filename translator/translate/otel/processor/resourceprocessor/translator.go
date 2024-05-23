@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package jmxresourceattributeprocessor
+package resourceprocessor
 
 import (
 	"fmt"
@@ -14,23 +14,28 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-var (
-	jmxKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
-)
-
 type translator struct {
 	name    string
 	factory processor.Factory
 }
 
-var _ common.Translator[component.Config] = (*translator)(nil)
+type Option func(any)
 
-func NewTranslator() common.Translator[component.Config] {
-	return NewTranslatorWithName(common.PipelineNameJmx)
+func WithName(name string) Option {
+	return func(a any) {
+		if t, ok := a.(*translator); ok {
+			t.name = name
+		}
+	}
 }
 
-func NewTranslatorWithName(name string) common.Translator[component.Config] {
-	t := &translator{name: name, factory: resourceprocessor.NewFactory()}
+var _ common.Translator[component.Config] = (*translator)(nil)
+
+func NewTranslator(opts ...Option) common.Translator[component.Config] {
+	t := &translator{factory: resourceprocessor.NewFactory()}
+	for _, opt := range opts {
+		opt(t)
+	}
 	return t
 }
 
@@ -43,19 +48,19 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(jmxKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: jmxKey}
+	if conf == nil || !conf.IsSet(common.JmxConfigKey) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
 
-	c := confmap.NewFromStringMap(map[string]interface{}{
-		"attributes": []interface{}{
-			map[string]interface{}{
+	c := confmap.NewFromStringMap(map[string]any{
+		"attributes": []any{
+			map[string]any{
 				"action":  "delete",
 				"pattern": "telemetry.sdk.*",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"action": "delete",
 				"key":    "service.name",
 				"value":  "unknown_service:java",
@@ -64,7 +69,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	})
 
 	if err := c.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal jmx processor: %w", err)
+		return nil, fmt.Errorf("unable to unmarshal resource processor: %w", err)
 	}
 
 	return cfg, nil
