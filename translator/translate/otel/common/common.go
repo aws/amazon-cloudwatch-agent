@@ -82,7 +82,7 @@ var (
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
 
-	DebugLogging = ConfigKey(AgentKey, DebugKey)
+	AgentDebugConfigKey = ConfigKey(AgentKey, DebugKey)
 )
 
 // Translator is used to translate the JSON config into an

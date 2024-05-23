@@ -4,7 +4,6 @@
 package logging
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +12,6 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -36,7 +34,7 @@ func TestTranslate(t *testing.T) {
 			input: map[string]interface{}{"logs": map[string]interface{}{}},
 			wantErr: &common.MissingKeyError{
 				ID:      tt.ID(),
-				JsonKey: common.ConfigKey(common.AgentKey, common.DebugKey),
+				JsonKey: common.AgentDebugConfigKey,
 			},
 		},
 		"WithDebugLoggingEnabled": {
@@ -45,7 +43,9 @@ func TestTranslate(t *testing.T) {
 					"debug": true,
 				},
 			},
-			want: testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
+			want: confmap.NewFromStringMap(map[string]any{
+				"verbosity": "detailed",
+			}),
 		},
 	}
 	factory := loggingexporter.NewFactory()
