@@ -1242,21 +1242,6 @@
           "description": "The realm, as required by remote profile SASL/DIGEST-MD5.",
           "type": "string"
         },
-        "activemq": {
-          "$ref": "#/definitions/jmxTargetDefinition"
-        },
-        "cassandra": {
-          "$ref": "#/definitions/jmxTargetDefinition"
-        },
-        "hbase": {
-          "$ref": "#/definitions/jmxTargetDefinition"
-        },
-        "hadoop": {
-          "$ref": "#/definitions/jmxTargetDefinition"
-        },
-        "jetty": {
-          "$ref": "#/definitions/jmxTargetDefinition"
-        },
         "jvm": {
           "$ref": "#/definitions/jmxTargetDefinition"
         },
@@ -1269,13 +1254,7 @@
         "kafka-producer": {
           "$ref": "#/definitions/jmxTargetDefinition"
         },
-        "solr": {
-          "$ref": "#/definitions/jmxTargetDefinition"
-        },
         "tomcat": {
-          "$ref": "#/definitions/jmxTargetDefinition"
-        },
-        "wildfly": {
           "$ref": "#/definitions/jmxTargetDefinition"
         },
         "insecure": {
@@ -1291,31 +1270,6 @@
         "endpoint"
       ],
       "anyOf": [
-        {
-          "required": [
-            "activemq"
-          ]
-        },
-        {
-          "required": [
-            "cassandra"
-          ]
-        },
-        {
-          "required": [
-            "hbase"
-          ]
-        },
-        {
-          "required": [
-            "hadoop"
-          ]
-        },
-        {
-          "required": [
-            "jetty"
-          ]
-        },
         {
           "required": [
             "jvm"
@@ -1338,17 +1292,7 @@
         },
         {
           "required": [
-            "solr"
-          ]
-        },
-        {
-          "required": [
             "tomcat"
-          ]
-        },
-        {
-          "required": [
-            "wildfly"
           ]
         }
       ]

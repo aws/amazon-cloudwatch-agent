@@ -48,24 +48,26 @@ func TestTranslator(t *testing.T) {
 			index: -1,
 			wantErr: &common.MissingKeyError{
 				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx"),
-				JsonKey: "metrics::metrics_collected::jmx::<type>::measurement",
+				JsonKey: "metrics::metrics_collected::jmx::<target-system>::measurement",
 			},
 		},
-		"WithInvalidIndex": {
+		"WithEmpty/Target": {
 			input: map[string]any{
 				"metrics": map[string]any{
 					"metrics_collected": map[string]any{
-						"jmx": []any{},
+						"jmx": map[string]any{
+							"jvm": map[string]any{},
+						},
 					},
 				},
 			},
-			index: 1,
+			index: -1,
 			wantErr: &common.MissingKeyError{
-				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx/1"),
-				JsonKey: "metrics::metrics_collected::jmx[1]::<type>::measurement",
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx"),
+				JsonKey: "metrics::metrics_collected::jmx::<target-system>::measurement",
 			},
 		},
-		"WithEmptyMeasurement": {
+		"WithEmpty/Measurement": {
 			input: map[string]any{
 				"metrics": map[string]any{
 					"metrics_collected": map[string]any{
@@ -85,7 +87,21 @@ func TestTranslator(t *testing.T) {
 			index: -1,
 			wantErr: &common.MissingKeyError{
 				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx"),
-				JsonKey: "metrics::metrics_collected::jmx::<type>::measurement",
+				JsonKey: "metrics::metrics_collected::jmx::<target-system>::measurement",
+			},
+		},
+		"WithInvalidIndex": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"jmx": []any{},
+					},
+				},
+			},
+			index: 1,
+			wantErr: &common.MissingKeyError{
+				ID:      component.NewIDWithName(component.DataTypeMetrics, "jmx/1"),
+				JsonKey: "metrics::metrics_collected::jmx[1]::<target-system>::measurement",
 			},
 		},
 		"WithValidJMX/Object": {

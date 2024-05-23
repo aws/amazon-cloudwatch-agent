@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	placeholderTarget = "<type>"
+	placeholderTarget = "<target-system>"
 )
 
 type translator struct {
