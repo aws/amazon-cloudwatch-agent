@@ -43,7 +43,7 @@ func TestTranslatorTraces(t *testing.T) {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
@@ -60,7 +60,7 @@ func TestTranslatorTraces(t *testing.T) {
 			input: map[string]interface{}{
 				"traces": map[string]interface{}{
 					"traces_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
@@ -119,7 +119,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
@@ -139,7 +139,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{
+						"application_signals": map[string]interface{}{
 							"enabled": true,
 						},
 					},
@@ -158,7 +158,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
@@ -216,7 +216,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
@@ -236,7 +236,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				},
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"app_signals": map[string]interface{}{
+						"application_signals": map[string]interface{}{
 							"enabled": true,
 						},
 					},

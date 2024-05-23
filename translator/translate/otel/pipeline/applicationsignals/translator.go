@@ -55,7 +55,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithDataType(t.dataType)))
 	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithDataType(t.dataType)))
 
-	if enabled, _ := common.GetBool(conf, common.DebugLogging); enabled {
+	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
 		translators.Exporters.Set(logging.NewTranslator())
 	}
 
