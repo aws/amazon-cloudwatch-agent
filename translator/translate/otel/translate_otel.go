@@ -18,7 +18,6 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
-	receiverAdapter "github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
@@ -26,10 +25,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmxpipeline"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
 )
 
 var registry = common.NewTranslatorMap[*common.ComponentTranslators]()
@@ -52,36 +50,17 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		log.Printf("W! CSM has already been deprecated")
 	}
 
-	adapterReceivers, err := adapter.FindReceiversInConfig(conf, os)
-	if err != nil {
-		return nil, fmt.Errorf("unable to find receivers in config: %w", err)
-	}
-
-	// split out delta receiver types
-	deltaMetricsReceivers := common.NewTranslatorMap[component.Config]()
-	hostReceivers := common.NewTranslatorMap[component.Config]()
-	adapterReceivers.Range(func(translator common.Translator[component.Config]) {
-		if translator.ID().Type() == receiverAdapter.Type(common.DiskIOKey) || translator.ID().Type() == receiverAdapter.Type(common.NetKey) {
-			deltaMetricsReceivers.Set(translator)
-		} else {
-			hostReceivers.Set(translator)
-		}
-	})
-	translators := common.NewTranslatorMap(
-		applicationsignals.NewTranslator(component.DataTypeTraces),
-		applicationsignals.NewTranslator(component.DataTypeMetrics),
-		host.NewTranslator(common.PipelineNameHost, hostReceivers),
-		host.NewTranslator(common.PipelineNameHostDeltaMetrics, deltaMetricsReceivers),
-		containerinsights.NewTranslator(),
-		prometheus.NewTranslator(),
-		emf_logs.NewTranslator(),
-		xray.NewTranslator(),
-	)
-	jmxTranslators, err := jmxpipeline.NewTranslators(conf)
+	translators, err := host.NewTranslators(conf, os)
 	if err != nil {
 		return nil, err
 	}
-	translators.Merge(jmxTranslators)
+	translators.Set(applicationsignals.NewTranslator(component.DataTypeTraces))
+	translators.Set(applicationsignals.NewTranslator(component.DataTypeMetrics))
+	translators.Set(containerinsights.NewTranslator())
+	translators.Set(prometheus.NewTranslator())
+	translators.Set(emf_logs.NewTranslator())
+	translators.Set(xray.NewTranslator())
+	translators.Merge(jmx.NewTranslators(conf))
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)
 	if err != nil {

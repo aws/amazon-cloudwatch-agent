@@ -15,6 +15,7 @@ import (
 
 func TestCompleteConfigUnix(t *testing.T) {
 	resetContext(t)
+	t.Setenv("JMX_JAR_PATH", "../../opentelemetry-jmx-metrics.jar")
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{
 		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",

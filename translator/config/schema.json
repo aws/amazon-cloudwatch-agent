@@ -1203,12 +1203,6 @@
           "description": "The endpoint to listen for JMX",
           "$ref": "#/definitions/endpointOverrideDefinition"
         },
-        "jar_path": {
-          "description": "The path to the JMX metric gatherer jar file",
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 2048
-        },
         "metrics_collection_interval": {
           "$ref": "#/definitions/timeIntervalDefinition"
         },
@@ -1236,8 +1230,8 @@
           "description": "The truststore type if required by SSL",
           "type": "string"
         },
-        "jmx_registry_ssl_enabled": {
-          "description": "Enable when JMX registry ssl is enabled",
+        "registry_ssl_enabled": {
+          "description": "If SSL is enabled for RMI registry",
           "type": "boolean"
         },
         "remote_profile": {
@@ -1249,105 +1243,126 @@
           "type": "string"
         },
         "activemq": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "cassandra": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "hbase": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "hadoop": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "jetty": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "jvm": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "kafka": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "kafka-consumer": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "kafka-producer": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "solr": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "tomcat": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "wildfly": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "#/definitions/jmxTargetDefinition"
         },
         "insecure": {
           "description": "Disable JMX remote TLS/password authentication requirements",
           "type": "boolean"
         },
-        "otlp": {
-          "type": "object",
-          "properties": {
-            "endpoint": {
-              "$ref": "#/definitions/endpointOverrideDefinition"
-            },
-            "timeout": {
-              "description": "The otlp exporter request timeout",
-              "type": "string"
-            },
-            "headers": {
-              "description": "The otlp exporter request header",
-              "type": "object",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
-        },
         "append_dimensions": {
           "$ref": "#/definitions/generalAppendDimensionsDefinition"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "required": [
+        "endpoint"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "activemq"
+          ]
+        },
+        {
+          "required": [
+            "cassandra"
+          ]
+        },
+        {
+          "required": [
+            "hbase"
+          ]
+        },
+        {
+          "required": [
+            "hadoop"
+          ]
+        },
+        {
+          "required": [
+            "jetty"
+          ]
+        },
+        {
+          "required": [
+            "jvm"
+          ]
+        },
+        {
+          "required": [
+            "kafka"
+          ]
+        },
+        {
+          "required": [
+            "kafka-consumer"
+          ]
+        },
+        {
+          "required": [
+            "kafka-producer"
+          ]
+        },
+        {
+          "required": [
+            "solr"
+          ]
+        },
+        {
+          "required": [
+            "tomcat"
+          ]
+        },
+        {
+          "required": [
+            "wildfly"
+          ]
+        }
+      ]
+    },
+    "jmxTargetDefinition": {
+      "type": "object",
+      "properties": {
+        "measurement": {
+          "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementWithoutDecorationDefinition"
+        }
+      },
+      "required": [
+        "measurement"
+      ]
     },
     "ecsServiceDiscoveryDefinition": {
       "type": "object",

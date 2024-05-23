@@ -1,0 +1,29 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "jmx": [
+        {
+          "endpoint": "localhost:8080",
+          "jvm": {
+            "measurement": [
+              "jvm.classes.loaded"
+            ]
+          },
+          "tomcat": {
+            "measurement": [
+              "tomcat.sessions"
+            ]
+          }
+        },
+        {
+          "endpoint": "localhost:8081",
+          "kafka": {
+            "measurement": [
+              "kafka.message.count"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
