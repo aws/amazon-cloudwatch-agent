@@ -92,14 +92,14 @@ func hasMeasurements(conf *confmap.Conf, index int) bool {
 	if len(jmxMap) == 0 {
 		return false
 	}
-	var validTargets []string
+	var result bool
 	for _, target := range common.JmxTargets {
 		if targetMap, ok := jmxMap[target].(map[string]any); ok {
 			if measurements, ok := targetMap[common.MeasurementKey].([]any); !ok || len(measurements) == 0 {
 				return false
 			}
-			validTargets = append(validTargets, target)
+			result = true
 		}
 	}
-	return len(validTargets) > 0
+	return result
 }
