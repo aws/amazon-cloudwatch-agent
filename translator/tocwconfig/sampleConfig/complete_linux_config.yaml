@@ -129,12 +129,22 @@ processors:
         logs: { }
         metrics:
             include:
-                match_type: regexp
+                match_type: strict
                 metric_names:
                     - jvm.memory.heap.init
                     - jvm.memory.heap.used
                     - jvm.memory.nonheap.init
-                    - tomcat\..*
+        spans: { }
+        traces: { }
+    filter/jmx/1:
+        error_mode: propagate
+        logs: { }
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - tomcat.sessions
+                    - tomcat.errors
         spans: { }
         traces: { }
     resource/jmx:
@@ -201,15 +211,13 @@ receivers:
         keystore_path: /keystore
         keystore_type: PKCS
         otlp:
-            endpoint: mycollectorotlpreceiver:4317
-            headers:
-                header_test: test
-            timeout: 1m0s
+            endpoint: 0.0.0.0:0
+            timeout: 5s
         realm: test_realm
         remote_profile: SASL/PLAIN
         resource_attributes:
             service.name: jmx_app
-        target_system: jvm,tomcat
+        target_system: jvm
         truststore_path: /truststore
         truststore_type: PKCS12
         username: cwagent
@@ -220,15 +228,13 @@ receivers:
         keystore_path: /keystore
         keystore_type: PKCS
         otlp:
-            endpoint: mycollectorotlpreceiver:4317
-            headers:
-                header_test: test
-            timeout: 1m0s
+            endpoint: 0.0.0.0:0
+            timeout: 5s
         realm: test_realm
         remote_profile: SASL/PLAIN
         resource_attributes:
             service.name: jmx_app
-        target_system: activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly
+        target_system: tomcat
         truststore_path: /truststore
         truststore_type: PKCS12
         jmx_registry_ssl_enabled: true
@@ -355,8 +361,8 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - resource/jmx
                 - filter/jmx/0
+                - resource/jmx
                 - ec2tagger
             receivers:
                 - jmx/0
@@ -364,6 +370,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - filter/jmx/1
                 - resource/jmx
                 - ec2tagger
             receivers:

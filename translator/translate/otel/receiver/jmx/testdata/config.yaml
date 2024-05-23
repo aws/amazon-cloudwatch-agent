@@ -1,12 +1,9 @@
-jar_path: /jmxtest/opentelemetry-java-contrib-jmx-metrics.jar
 endpoint: my_jmx_host:12345
 target_system: jvm,tomcat
 collection_interval: 60s
 otlp:
-  endpoint: mycollectorotlpreceiver:4317
-  timeout: 60s
-  headers:
-    header_test: test
+  endpoint: 0.0.0.0:0
+  timeout: 5s
 username: cwagent
 password_file: /path/to/password/file
 keystore_path: /keystore

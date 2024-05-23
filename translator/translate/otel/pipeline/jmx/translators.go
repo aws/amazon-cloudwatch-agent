@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package jmxpipeline
+package jmx
 
 import (
 	"go.opentelemetry.io/collector/confmap"
@@ -10,17 +10,15 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 )
 
-func NewTranslators(conf *confmap.Conf) (pipeline.TranslatorMap, error) {
-
+func NewTranslators(conf *confmap.Conf) pipeline.TranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators]()
-	switch v := conf.Get(common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)).(type) {
-	case []interface{}:
+	switch v := conf.Get(common.JmxConfigKey).(type) {
+	case []any:
 		for index := range v {
-			translators.Set(NewTranslator(index))
+			translators.Set(NewTranslator(WithIndex(index)))
 		}
-	case map[string]interface{}:
-		translators.Set(NewTranslator(-1))
+	case map[string]any:
+		translators.Set(NewTranslator())
 	}
-
-	return translators, nil
+	return translators
 }

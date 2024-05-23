@@ -85,7 +85,8 @@ var (
 		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
-	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
+	JmxTargets   = []string{"jvm", "kafka", "kafka-consumer", "kafka-producer", "tomcat"}
+	JmxConfigKey = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
 )
 
 // Translator is used to translate the JSON config into an

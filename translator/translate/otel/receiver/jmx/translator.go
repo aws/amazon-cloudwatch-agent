@@ -4,6 +4,7 @@
 package jmx
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -16,6 +17,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
+	"golang.org/x/exp/slices"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
@@ -25,29 +27,25 @@ import (
 )
 
 const (
-	jarPathKey            = "jar_path"
 	usernameKey           = "username"
 	keystorePathKey       = "keystore_path"
 	keystoreTypeKey       = "keystore_type"
 	truststorePathKey     = "truststore_path"
 	truststoreTypeKey     = "truststore_type"
-	jMXRegistrySSLEnabled = "jmx_registry_ssl_enabled"
+	registrySSLEnabledKey = "registry_ssl_enabled"
 	remoteProfileKey      = "remote_profile"
 	realmKey              = "realm"
 	passwordFileKey       = "password_file"
-	otlpTimeoutKey        = "timeout"
-	otlpHeadersKey        = "headers"
-
-	defaultTargetSystem = "activemq,cassandra,hbase,hadoop,jetty,jvm,kafka,kafka-consumer,kafka-producer,solr,tomcat,wildfly"
 
 	envJmxJarPath = "JMX_JAR_PATH"
-	hostnameTag   = "host"
+	attributeHost = "host"
 )
 
 var (
-	configKey  = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.JmxKey)
-	localhost  = collections.NewSet("localhost", "127.0.0.1")
-	jmxTargets = common.JmxTargets
+	errNoEndpoint      = errors.New("no endpoint configured")
+	errNoTargetSystems = errors.New("no target systems configured")
+
+	localhost = collections.NewSet("localhost", "127.0.0.1")
 )
 
 type translator struct {
@@ -56,34 +54,24 @@ type translator struct {
 	index   int
 }
 
-type Option interface {
-	apply(t *translator)
-}
-
-type optionFunc func(t *translator)
-
-func (o optionFunc) apply(t *translator) {
-	o(t)
-}
+type Option func(any)
 
 func WithIndex(index int) Option {
-	return optionFunc(func(t *translator) {
-		t.index = index
-	})
+	return func(a any) {
+		if t, ok := a.(*translator); ok {
+			t.index = index
+		}
+	}
 }
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.Translator[component.Config] {
-	return NewTranslatorWithName("", opts...)
-}
-
-func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
-	t := &translator{name: name, index: -1, factory: jmxreceiver.NewFactory()}
+	t := &translator{index: -1, factory: jmxreceiver.NewFactory()}
 	for _, opt := range opts {
-		opt.apply(t)
+		opt(t)
 	}
-	if name == "" && t.index != -1 {
+	if t.index != -1 {
 		t.name = strconv.Itoa(t.index)
 	}
 	return t
@@ -94,44 +82,34 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	if conf == nil || !conf.IsSet(configKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
+	if conf == nil || !conf.IsSet(common.JmxConfigKey) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*jmxreceiver.Config)
-	cfg.ResourceAttributes = make(map[string]string)
 
-	var jmxKeyMap map[string]any
-	if jmxSlice := common.GetArray[any](conf, configKey); t.index != -1 && len(jmxSlice) > t.index {
-		jmxKeyMap = jmxSlice[t.index].(map[string]any)
-	} else if m, ok := conf.Get(configKey).(map[string]any); ok {
-		jmxKeyMap = m
-	}
+	jmxKeyMap := common.GetJmxMap(conf, t.index)
 
 	cfg.JARPath = paths.JMXJarPath
-	if jarPath, ok := jmxKeyMap[jarPathKey].(string); ok {
+	if jarPath := os.Getenv(envJmxJarPath); jarPath != "" {
 		cfg.JARPath = jarPath
-	} else if os.Getenv(envJmxJarPath) != "" {
-		cfg.JARPath = os.Getenv(envJmxJarPath)
 	}
 
 	if endpoint, ok := jmxKeyMap[common.Endpoint].(string); ok {
 		cfg.Endpoint = endpoint
+	} else {
+		return nil, errNoEndpoint
 	}
 
-	cfg.TargetSystem = defaultTargetSystem
-	targetSystems := ""
-	for _, jmxTarget := range jmxTargets {
+	var targetSystems []string
+	for _, jmxTarget := range common.JmxTargets {
 		if _, ok := jmxKeyMap[jmxTarget]; ok {
-			if targetSystems == "" {
-				targetSystems = jmxTarget
-			} else {
-				targetSystems = targetSystems + "," + jmxTarget
-			}
+			targetSystems = append(targetSystems, jmxTarget)
 		}
 	}
-	if targetSystems != "" {
-		cfg.TargetSystem = targetSystems
+	if len(targetSystems) == 0 {
+		return nil, errNoTargetSystems
 	}
+	cfg.TargetSystem = strings.Join(targetSystems, ",")
 
 	// Prioritize metric collection internal in JMX section, then agent section
 	// Setting default to 10 seconds which is used by OTEL as well
@@ -164,8 +142,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.TruststorePath = truststorePath
 	}
 
-	if jMXRegistrySSLEnabled, ok := jmxKeyMap[jMXRegistrySSLEnabled].(bool); ok {
-		cfg.JMXRegistrySSLEnabled = jMXRegistrySSLEnabled
+	if registrySSLEnabled, ok := jmxKeyMap[registrySSLEnabledKey].(bool); ok {
+		cfg.JMXRegistrySSLEnabled = registrySSLEnabled
 	}
 
 	if truststoreType, ok := jmxKeyMap[truststoreTypeKey].(string); ok {
@@ -180,10 +158,11 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.Realm = realm
 	}
 
+	cfg.ResourceAttributes = make(map[string]string)
 	if appendDimensions, ok := jmxKeyMap[common.AppendDimensionsKey].(map[string]any); ok {
 		c := confmap.NewFromStringMap(appendDimensions)
 		if err = c.Unmarshal(&cfg.ResourceAttributes); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal %s::%s: %w", configKey, common.AppendDimensionsKey, err)
+			return nil, fmt.Errorf("unable to unmarshal %s: %w", common.ConfigKey(common.JmxConfigKey, common.AppendDimensionsKey), err)
 		}
 	}
 
@@ -192,24 +171,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if err != nil {
 			log.Printf("E! error finding hostname for jmx metrics %v", err)
 		} else {
-			cfg.ResourceAttributes[hostnameTag] = hostname
-		}
-	}
-
-	// set OTLP settings
-	if otlpMap, ok := jmxKeyMap[common.OtlpKey].(map[string]any); ok {
-		if endpoint, ok := otlpMap[common.Endpoint].(string); ok {
-			cfg.OTLPExporterConfig.Endpoint = endpoint
-		}
-		timeout, err := common.ParseDuration(otlpMap[otlpTimeoutKey])
-		if err == nil {
-			cfg.OTLPExporterConfig.Timeout = timeout
-		}
-		if headers, ok := otlpMap[otlpHeadersKey].(map[string]any); ok {
-			c := confmap.NewFromStringMap(headers)
-			if err = c.Unmarshal(&cfg.OTLPExporterConfig.Headers); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal %s::%s::%s: %w", configKey, common.OtlpKey, otlpHeadersKey, err)
-			}
+			cfg.ResourceAttributes[attributeHost] = hostname
 		}
 	}
 
@@ -246,21 +208,21 @@ func (e *missingFieldsError) Error() string {
 
 func validateAuth(cfg *jmxreceiver.Config) error {
 	var missingFields []string
-	for _, fields := range [][2]string{
-		{cfg.Username, usernameKey},
-		{cfg.PasswordFile, passwordFileKey},
-		{cfg.KeystorePath, keystorePathKey},
-		{cfg.KeystoreType, keystoreTypeKey},
-		{cfg.TruststorePath, truststorePathKey},
-		{cfg.TruststoreType, truststoreTypeKey},
+	for key, value := range map[string]string{
+		usernameKey:       cfg.Username,
+		passwordFileKey:   cfg.PasswordFile,
+		keystorePathKey:   cfg.KeystorePath,
+		keystoreTypeKey:   cfg.KeystoreType,
+		truststorePathKey: cfg.TruststorePath,
+		truststoreTypeKey: cfg.TruststoreType,
 	} {
-		field, key := fields[0], fields[1]
-		if field == "" {
+		if value == "" {
 			missingFields = append(missingFields, key)
 		}
 	}
 	if missingFields != nil {
-		return &missingFieldsError{fields: missingFields}
+		slices.Sort(missingFields)
+		return &missingFieldsError{missingFields}
 	}
 	return nil
 }
