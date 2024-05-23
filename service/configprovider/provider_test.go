@@ -31,7 +31,8 @@ func TestConfigProvider(t *testing.T) {
 	assert.NoError(t, err)
 	actualCfg, err := actualProvider.Get(context.Background(), factories)
 	assert.NoError(t, err)
-	got, ok := actualCfg.Exporters[component.NewIDWithName("awscloudwatchlogs", "emf_logs")]
+	cloudwatchType, _ := component.NewType("awscloudwatchlogs")
+	got, ok := actualCfg.Exporters[component.NewIDWithName(cloudwatchType, "emf_logs")]
 	require.True(t, ok)
 	gotCfg, ok := got.(*awscloudwatchlogsexporter.Config)
 	require.True(t, ok)

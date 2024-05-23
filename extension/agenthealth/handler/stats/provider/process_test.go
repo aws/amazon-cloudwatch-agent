@@ -59,7 +59,7 @@ func (m *mockProcessMetrics) NumThreads() (int32, error) {
 }
 
 func TestProcessStats(t *testing.T) {
-	t.Skip("Process stats tests have been flaky on Mac & Windows.")
+	t.Skip("stat provider tests are flaky. disable until fix is available")
 	testErr := errors.New("test error")
 	mock := &mockProcessMetrics{}
 	provider := newProcessStats(mock, time.Millisecond)

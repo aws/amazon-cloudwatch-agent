@@ -19,6 +19,13 @@ import (
 // TestFindReceiversInConfig confirms whether the given the agent json configuration
 // will give the appropriate receivers in the agent yaml
 func TestFindReceiversInConfig(t *testing.T) {
+	telegrafSocketListenerType, _ := component.NewType("telegraf_socket_listener")
+	telegrafCPUType, _ := component.NewType("telegraf_cpu")
+	telegrafEthtoolType, _ := component.NewType("telegraf_ethtool")
+	telegrafNvidiaSmiType, _ := component.NewType("telegraf_nvidia_smi")
+	telegrafStatsdType, _ := component.NewType("telegraf_statsd")
+	telegrafProcstatType, _ := component.NewType("telegraf_procstat")
+	telegrafWinPerfCountersType, _ := component.NewType("telegraf_win_perf_counters")
 	type wantResult struct {
 		cfgKey   string
 		interval time.Duration
@@ -56,13 +63,13 @@ func TestFindReceiversInConfig(t *testing.T) {
 			},
 			os: translatorconfig.OS_TYPE_LINUX,
 			want: map[component.ID]wantResult{
-				component.NewID("telegraf_socket_listener"):                {"metrics::metrics_collected::collectd", time.Minute},
-				component.NewID("telegraf_cpu"):                            {"metrics::metrics_collected::cpu", time.Minute},
-				component.NewID("telegraf_ethtool"):                        {"metrics::metrics_collected::ethtool", time.Minute},
-				component.NewID("telegraf_nvidia_smi"):                     {"metrics::metrics_collected::nvidia_gpu", time.Minute},
-				component.NewID("telegraf_statsd"):                         {"metrics::metrics_collected::statsd", 10 * time.Second},
-				component.NewIDWithName("telegraf_procstat", "793254176"):  {"metrics::metrics_collected::procstat", time.Minute},
-				component.NewIDWithName("telegraf_procstat", "3599690165"): {"metrics::metrics_collected::procstat", time.Minute},
+				component.NewID(telegrafSocketListenerType):                 {"metrics::metrics_collected::collectd", time.Minute},
+				component.NewID(telegrafCPUType):                            {"metrics::metrics_collected::cpu", time.Minute},
+				component.NewID(telegrafEthtoolType):                        {"metrics::metrics_collected::ethtool", time.Minute},
+				component.NewID(telegrafNvidiaSmiType):                      {"metrics::metrics_collected::nvidia_gpu", time.Minute},
+				component.NewID(telegrafStatsdType):                         {"metrics::metrics_collected::statsd", 10 * time.Second},
+				component.NewIDWithName(telegrafProcstatType, "793254176"):  {"metrics::metrics_collected::procstat", time.Minute},
+				component.NewIDWithName(telegrafProcstatType, "3599690165"): {"metrics::metrics_collected::procstat", time.Minute},
 			},
 		},
 		"WithWindowsMetrics": {
@@ -92,13 +99,13 @@ func TestFindReceiversInConfig(t *testing.T) {
 			},
 			os: translatorconfig.OS_TYPE_WINDOWS,
 			want: map[component.ID]wantResult{
-				component.NewID("telegraf_nvidia_smi"):                              {"metrics::metrics_collected::nvidia_gpu", time.Minute},
-				component.NewIDWithName("telegraf_procstat", "793254176"):           {"metrics::metrics_collected::procstat", time.Minute},
-				component.NewIDWithName("telegraf_procstat", "3599690165"):          {"metrics::metrics_collected::procstat", time.Minute},
-				component.NewIDWithName("telegraf_win_perf_counters", "4283769065"): {"metrics::metrics_collected::LogicalDisk", time.Minute},
-				component.NewIDWithName("telegraf_win_perf_counters", "1492679118"): {"metrics::metrics_collected::Memory", time.Minute},
-				component.NewIDWithName("telegraf_win_perf_counters", "3610923661"): {"metrics::metrics_collected::Paging File", time.Minute},
-				component.NewIDWithName("telegraf_win_perf_counters", "3446270237"): {"metrics::metrics_collected::PhysicalDisk", time.Minute},
+				component.NewID(telegrafNvidiaSmiType):                             {"metrics::metrics_collected::nvidia_gpu", time.Minute},
+				component.NewIDWithName(telegrafProcstatType, "793254176"):         {"metrics::metrics_collected::procstat", time.Minute},
+				component.NewIDWithName(telegrafProcstatType, "3599690165"):        {"metrics::metrics_collected::procstat", time.Minute},
+				component.NewIDWithName(telegrafWinPerfCountersType, "4283769065"): {"metrics::metrics_collected::LogicalDisk", time.Minute},
+				component.NewIDWithName(telegrafWinPerfCountersType, "1492679118"): {"metrics::metrics_collected::Memory", time.Minute},
+				component.NewIDWithName(telegrafWinPerfCountersType, "3610923661"): {"metrics::metrics_collected::Paging File", time.Minute},
+				component.NewIDWithName(telegrafWinPerfCountersType, "3446270237"): {"metrics::metrics_collected::PhysicalDisk", time.Minute},
 			},
 		},
 		"WithLogs": {
@@ -145,7 +152,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 			},
 			os: translatorconfig.OS_TYPE_LINUX,
 			want: map[component.ID]wantResult{
-				component.NewID("telegraf_socket_listener"): {"metrics::metrics_collected::collectd", time.Minute},
+				component.NewID(telegrafSocketListenerType): {"metrics::metrics_collected::collectd", time.Minute},
 			},
 		},
 		"WithInvalidOS": {

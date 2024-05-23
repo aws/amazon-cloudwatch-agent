@@ -11,11 +11,11 @@ import (
 )
 
 func Get(configPath string) (otelcol.ConfigProvider, error) {
-	fprovider := fileprovider.New()
+	fprovider := fileprovider.NewWithSettings(confmap.ProviderSettings{})
 	settings := otelcol.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
 			URIs:       []string{configPath},
-			Converters: []confmap.Converter{expandconverter.New()},
+			Converters: []confmap.Converter{expandconverter.New(confmap.ConverterSettings{})},
 			Providers: map[string]confmap.Provider{
 				fprovider.Scheme(): fprovider,
 			},
