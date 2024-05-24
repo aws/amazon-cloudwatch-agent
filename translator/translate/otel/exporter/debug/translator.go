@@ -1,14 +1,14 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package logging
+package debug
 
 import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
-	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/exporter/debugexporter"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -21,7 +21,7 @@ type translator struct {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator() common.Translator[component.Config] {
-	t := &translator{factory: loggingexporter.NewFactory()}
+	t := &translator{factory: debugexporter.NewFactory()}
 	return t
 }
 
@@ -34,7 +34,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.AgentDebugConfigKey}
 	}
 
-	cfg := t.factory.CreateDefaultConfig().(*loggingexporter.Config)
+	cfg := t.factory.CreateDefaultConfig().(*debugexporter.Config)
 	cfg.Verbosity = configtelemetry.LevelDetailed
 	return cfg, nil
 }
