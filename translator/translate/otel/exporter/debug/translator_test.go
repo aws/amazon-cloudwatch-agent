@@ -4,11 +4,11 @@
 package debug
 
 import (
+	"go.opentelemetry.io/collector/config/configtelemetry"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 
@@ -27,7 +27,7 @@ func TestTranslate(t *testing.T) {
 	tt := NewTranslator()
 	testCases := map[string]struct {
 		input   map[string]interface{}
-		want    *confmap.Conf
+		want    *debugexporter.Config
 		wantErr error
 	}{
 		"WithMissingKey": {
@@ -43,12 +43,9 @@ func TestTranslate(t *testing.T) {
 					"debug": true,
 				},
 			},
-			want: confmap.NewFromStringMap(map[string]any{
-				"verbosity": "detailed",
-			}),
+			want: &debugexporter.Config{Verbosity: configtelemetry.LevelDetailed, SamplingInitial: 2, SamplingThereafter: 500},
 		},
 	}
-	factory := debugexporter.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
@@ -58,9 +55,7 @@ func TestTranslate(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*debugexporter.Config)
 				require.True(t, ok)
-				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
-				assert.Equal(t, wantCfg, gotCfg)
+				assert.Equal(t, testCase.want, gotCfg)
 			}
 		})
 	}
