@@ -76,7 +76,7 @@ func TestGenericAppSignalsConfig(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeOnPremise)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
-	expectedEnvVars := map[string]string{}
+	expectedEnvVars := map[string]string{"CWAGENT_LOG_LEVEL": "DEBUG"}
 	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
