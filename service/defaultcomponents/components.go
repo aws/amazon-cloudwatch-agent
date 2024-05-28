@@ -17,7 +17,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"go.opentelemetry.io/collector/exporter"
-	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor"
@@ -64,7 +64,7 @@ func Factories() (otelcol.Factories, error) {
 		awsemfexporter.NewFactory(),
 		awsxrayexporter.NewFactory(),
 		cloudwatch.NewFactory(),
-		loggingexporter.NewFactory(),
+		debugexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}

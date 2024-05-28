@@ -18,6 +18,7 @@ import (
 
 const (
 	AgentKey                           = "agent"
+	DebugKey                           = "debug"
 	MetricsKey                         = "metrics"
 	LogsKey                            = "logs"
 	TracesKey                          = "traces"
@@ -80,6 +81,8 @@ var (
 		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
+
+	AgentDebugConfigKey = ConfigKey(AgentKey, DebugKey)
 )
 
 // Translator is used to translate the JSON config into an
