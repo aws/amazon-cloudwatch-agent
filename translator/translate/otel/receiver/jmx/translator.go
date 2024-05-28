@@ -27,18 +27,18 @@ import (
 )
 
 const (
-	usernameKey           = "username"
-	keystorePathKey       = "keystore_path"
-	keystoreTypeKey       = "keystore_type"
-	truststorePathKey     = "truststore_path"
-	truststoreTypeKey     = "truststore_type"
-	registrySSLEnabledKey = "registry_ssl_enabled"
-	remoteProfileKey      = "remote_profile"
-	realmKey              = "realm"
-	passwordFileKey       = "password_file"
-
-	envJmxJarPath = "JMX_JAR_PATH"
-	attributeHost = "host"
+	usernameKey               = "username"
+	keystorePathKey           = "keystore_path"
+	keystoreTypeKey           = "keystore_type"
+	truststorePathKey         = "truststore_path"
+	truststoreTypeKey         = "truststore_type"
+	registrySSLEnabledKey     = "registry_ssl_enabled"
+	remoteProfileKey          = "remote_profile"
+	realmKey                  = "realm"
+	passwordFileKey           = "password_file"
+	defaultCollectionInterval = 10 * time.Second
+	envJmxJarPath             = "JMX_JAR_PATH"
+	attributeHost             = "host"
 )
 
 var (
@@ -87,14 +87,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	cfg := t.factory.CreateDefaultConfig().(*jmxreceiver.Config)
 
-	jmxKeyMap := common.GetJmxMap(conf, t.index)
+	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.index)
 
 	cfg.JARPath = paths.JMXJarPath
 	if jarPath := os.Getenv(envJmxJarPath); jarPath != "" {
 		cfg.JARPath = jarPath
 	}
 
-	if endpoint, ok := jmxKeyMap[common.Endpoint].(string); ok {
+	if endpoint, ok := jmxMap[common.Endpoint].(string); ok {
 		cfg.Endpoint = endpoint
 	} else {
 		return nil, errNoEndpoint
@@ -102,7 +102,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	var targetSystems []string
 	for _, jmxTarget := range common.JmxTargets {
-		if _, ok := jmxKeyMap[jmxTarget]; ok {
+		if _, ok := jmxMap[jmxTarget]; ok {
 			targetSystems = append(targetSystems, jmxTarget)
 		}
 	}
@@ -116,50 +116,50 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	intervalKeyChain := []string{
 		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
-	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, 10*time.Second)
-	collectionInterval, err := common.ParseDuration(jmxKeyMap[common.MetricsCollectionIntervalKey])
+	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultCollectionInterval)
+	collectionInterval, err := common.ParseDuration(jmxMap[common.MetricsCollectionIntervalKey])
 	if err == nil {
 		cfg.CollectionInterval = collectionInterval
 	}
 
-	if username, ok := jmxKeyMap[usernameKey].(string); ok {
+	if username, ok := jmxMap[usernameKey].(string); ok {
 		cfg.Username = username
 	}
 
-	if passwordFile, ok := jmxKeyMap[passwordFileKey].(string); ok {
+	if passwordFile, ok := jmxMap[passwordFileKey].(string); ok {
 		cfg.PasswordFile = passwordFile
 	}
 
-	if keystorePath, ok := jmxKeyMap[keystorePathKey].(string); ok {
+	if keystorePath, ok := jmxMap[keystorePathKey].(string); ok {
 		cfg.KeystorePath = keystorePath
 	}
 
-	if keystoreType, ok := jmxKeyMap[keystoreTypeKey].(string); ok {
+	if keystoreType, ok := jmxMap[keystoreTypeKey].(string); ok {
 		cfg.KeystoreType = keystoreType
 	}
 
-	if truststorePath, ok := jmxKeyMap[truststorePathKey].(string); ok {
+	if truststorePath, ok := jmxMap[truststorePathKey].(string); ok {
 		cfg.TruststorePath = truststorePath
 	}
 
-	if registrySSLEnabled, ok := jmxKeyMap[registrySSLEnabledKey].(bool); ok {
+	if registrySSLEnabled, ok := jmxMap[registrySSLEnabledKey].(bool); ok {
 		cfg.JMXRegistrySSLEnabled = registrySSLEnabled
 	}
 
-	if truststoreType, ok := jmxKeyMap[truststoreTypeKey].(string); ok {
+	if truststoreType, ok := jmxMap[truststoreTypeKey].(string); ok {
 		cfg.TruststoreType = truststoreType
 	}
 
-	if remoteProfile, ok := jmxKeyMap[remoteProfileKey].(string); ok {
+	if remoteProfile, ok := jmxMap[remoteProfileKey].(string); ok {
 		cfg.RemoteProfile = remoteProfile
 	}
 
-	if realm, ok := jmxKeyMap[realmKey].(string); ok {
+	if realm, ok := jmxMap[realmKey].(string); ok {
 		cfg.Realm = realm
 	}
 
 	cfg.ResourceAttributes = make(map[string]string)
-	if appendDimensions, ok := jmxKeyMap[common.AppendDimensionsKey].(map[string]any); ok {
+	if appendDimensions, ok := jmxMap[common.AppendDimensionsKey].(map[string]any); ok {
 		c := confmap.NewFromStringMap(appendDimensions)
 		if err = c.Unmarshal(&cfg.ResourceAttributes); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal %s: %w", common.ConfigKey(common.JmxConfigKey, common.AppendDimensionsKey), err)
@@ -176,7 +176,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	var skipAuthValidation bool
-	if insecure, ok := jmxKeyMap[common.InsecureKey].(bool); ok {
+	if insecure, ok := jmxMap[common.InsecureKey].(bool); ok {
 		skipAuthValidation = insecure
 	}
 

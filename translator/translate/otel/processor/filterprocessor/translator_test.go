@@ -75,6 +75,11 @@ func TestTranslator(t *testing.T) {
 							"jvm": map[string]any{
 								"measurement": []any{
 									"jvm.memory.heap.init",
+									map[string]any{
+										"name":   "jvm.classes.loaded",
+										"rename": "JVM.CLASSES.LOADED",
+										"unit":   "Count",
+									},
 									"jvm.threads.count",
 								},
 							},
@@ -96,6 +101,7 @@ func TestTranslator(t *testing.T) {
 						"match_type": "strict",
 						"metric_names": []any{
 							"jvm.memory.heap.init",
+							"jvm.classes.loaded",
 							"jvm.threads.count",
 							"tomcat.sessions",
 							"tomcat.errors",

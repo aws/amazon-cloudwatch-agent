@@ -21,8 +21,20 @@
           "jvm": {
             "measurement": [
               "jvm.memory.heap.init",
-              "jvm.memory.heap.used",
+              {
+                "name": "jvm.memory.heap.used",
+                "rename": "JVM_MEM_HEAP_USED",
+                "unit": "unit"
+              },
               "jvm.memory.nonheap.init"
+            ]
+          },
+          "kafka-consumer": {
+            "measurement": [
+              {
+                "name": "kafka.consumer.fetch-rate",
+                "rename": "kafka.fetch-rate"
+              }
             ]
           },
           "metrics_collection_interval": 60,
@@ -42,7 +54,10 @@
           "tomcat": {
             "measurement": [
               "tomcat.sessions",
-              "tomcat.errors"
+              {
+                "name": "tomcat.errors",
+                "rename": "TC_ERR"
+              }
             ]
           },
           "metrics_collection_interval": 60,

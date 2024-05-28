@@ -128,6 +128,34 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics"},
 			},
 		},
+		"WithValidJMX/Object/Decoration": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"jmx": map[string]any{
+							"endpoint": "localhost:8080",
+							"jvm": map[string]any{
+								"measurement": []any{
+									map[string]any{
+										"name":   "jvm.classes.loaded",
+										"rename": "JVM.CLASSES.LOADED",
+										"unit":   "Count",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			index: -1,
+			want: &want{
+				pipelineID: "metrics/jmx",
+				receivers:  []string{"jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "transform/jmx"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
 		"WithValidJMX/Array": {
 			input: map[string]any{
 				"metrics": map[string]any{
@@ -141,6 +169,11 @@ func TestTranslator(t *testing.T) {
 								"jvm": map[string]any{
 									"measurement": []any{
 										"jvm.memory.heap.init",
+										map[string]any{
+											"name":   "jvm.classes.loaded",
+											"rename": "JVM.CLASSES.LOADED",
+											"unit":   "Count",
+										},
 									},
 								},
 							},
@@ -152,7 +185,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/0",
 				receivers:  []string{"jmx/0"},
-				processors: []string{"filter/jmx/0", "resource/jmx", "ec2tagger"},
+				processors: []string{"filter/jmx/0", "resource/jmx", "transform/jmx/0", "ec2tagger"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
