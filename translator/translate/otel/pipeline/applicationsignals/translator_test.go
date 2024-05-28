@@ -139,9 +139,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{
-							"enabled": true,
-						},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
@@ -236,9 +234,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				},
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
-						"application_signals": map[string]interface{}{
-							"enabled": true,
-						},
+						"application_signals": map[string]interface{}{},
 					},
 				},
 			},
