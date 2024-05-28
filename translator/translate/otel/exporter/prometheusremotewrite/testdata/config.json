@@ -1,0 +1,12 @@
+{
+  "agent": {
+    "debug": true
+  },
+  "metrics": {
+    "metrics_destinations": {
+      "amp": {
+        "workspace_id": "ws-12345"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "resources": [
+          "*"
+        ],
+        "measurement": [
+          "cpu_usage_guest"
+        ]
+      }
+    },
+    "metrics_destinations": {
+      "amp": {
+      }
+    }
+  }
+}

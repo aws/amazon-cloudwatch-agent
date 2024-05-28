@@ -14,6 +14,10 @@
     "omit_hostname": true
   },
   "metrics": {
+    "metrics_destinations": {
+      "cloudwatch": {
+      }
+    },
     "metrics_collected": {
       "jmx": [
         {

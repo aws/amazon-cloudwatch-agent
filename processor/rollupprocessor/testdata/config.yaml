@@ -1,0 +1,20 @@
+rollup:
+rollup/1:
+  drop_original:
+    - MetricName
+rollup/2:
+  attribute_groups:
+    - - Attr1
+    - - Attr1
+      - Attr2
+    - - Attr3
+    - []
+rollup/3:
+  attribute_groups:
+    - - Attr1
+      - Attr2
+  drop_original:
+    - MetricName
+  cache_size: 10
+rollup/4:
+  cache_size: -1
