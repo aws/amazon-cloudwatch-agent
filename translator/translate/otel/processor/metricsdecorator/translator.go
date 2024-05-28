@@ -42,7 +42,13 @@ type translator struct {
 	ignorePlugins collections.Set[string]
 }
 
+type transformFn = func(string) string
+
 type Option func(any)
+
+var (
+	defaultConfigKey = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
+)
 
 func WithName(name string) Option {
 	return func(a any) {
@@ -79,7 +85,7 @@ func WithIgnorePlugins(ignorePlugins ...string) Option {
 func NewTranslator(opts ...Option) Translator {
 	t := &translator{
 		factory:   transformprocessor.NewFactory(),
-		configKey: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey),
+		configKey: defaultConfigKey,
 		index:     -1,
 	}
 	for _, opt := range opts {
@@ -141,10 +147,14 @@ func (t *translator) getContextStatement(conf *confmap.Conf) (ContextStatement, 
 	measurementMaps := t.getMeasurementsByPlugin(conf)
 	for plugin, measurementMap := range measurementMaps {
 		plugin = metricsconfig.GetRealPluginName(plugin)
+		var standardizeNameFn transformFn
+		if t.configKey == defaultConfigKey {
+			standardizeNameFn = decorateMetricNameFn(translatorcontext.CurrentContext().Os(), plugin)
+		}
 		for _, entry := range measurementMap {
 			switch val := entry.(type) {
 			case map[string]any:
-				ms, err := getMetricStatements(val, plugin)
+				ms, err := getMetricStatements(val, standardizeNameFn)
 				if err != nil {
 					return ContextStatement{}, err
 				}
@@ -179,7 +189,7 @@ func (t *translator) getMeasurementsByPlugin(conf *confmap.Conf) map[string][]an
 	return measurementMap
 }
 
-func getMetricStatements(m map[string]any, plugin string) ([]string, error) {
+func getMetricStatements(m map[string]any, standardizeNameFn transformFn) ([]string, error) {
 	var statements []string
 	name, ok := m[common.NameKey]
 	if !ok {
@@ -187,9 +197,8 @@ func getMetricStatements(m map[string]any, plugin string) ([]string, error) {
 	}
 
 	metricName := name.(string)
-	if !strings.HasPrefix(metricName, plugin) {
-		metricName = util.GetValidMetric(translatorcontext.CurrentContext().Os(), plugin, metricName)
-		metricName = metric.DecorateMetricName(plugin, metricName)
+	if standardizeNameFn != nil {
+		metricName = standardizeNameFn(metricName)
 	}
 	if metricName == "" {
 		return statements, fmt.Errorf("metric name (%q) is invalid for decoration", metricName)
@@ -204,4 +213,10 @@ func getMetricStatements(m map[string]any, plugin string) ([]string, error) {
 		statements = append(statements, statement)
 	}
 	return statements, nil
+}
+
+func decorateMetricNameFn(os, plugin string) transformFn {
+	return func(name string) string {
+		return metric.DecorateMetricName(plugin, util.GetValidMetric(os, plugin, name))
+	}
 }

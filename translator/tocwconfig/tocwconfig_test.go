@@ -209,14 +209,6 @@ func TestWindowsEventOnlyConfig(t *testing.T) {
 	checkTranslation(t, "windows_eventlog_only_config", "windows", expectedEnvVars, "")
 }
 
-func TestJMXConfig(t *testing.T) {
-	resetContext(t)
-	t.Setenv("JMX_JAR_PATH", "../../opentelemetry-jmx-metrics.jar")
-	context.CurrentContext().SetMode(config.ModeEC2)
-	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "jmx_config_linux", "linux", expectedEnvVars, "")
-}
-
 func TestStatsDConfig(t *testing.T) {
 	testCases := map[string]testCase{
 		"linux": {

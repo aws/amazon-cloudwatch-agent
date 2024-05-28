@@ -29,6 +29,14 @@ func TestCompleteConfigUnix(t *testing.T) {
 	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
 }
 
+func TestJMXConfigLinux(t *testing.T) {
+	resetContext(t)
+	t.Setenv("JMX_JAR_PATH", "../../opentelemetry-jmx-metrics.jar")
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "jmx_config_linux", "linux", expectedEnvVars, "")
+}
+
 func TestDeltaConfigLinux(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
