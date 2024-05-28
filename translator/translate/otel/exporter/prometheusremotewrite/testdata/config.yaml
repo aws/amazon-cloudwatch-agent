@@ -1,0 +1,27 @@
+auth:
+  authenticator: sigv4auth
+resource_to_telemetry_conversion:
+  clear_after_copy: true
+  enabled: true
+timeout: 5000000000
+retry_on_failure:
+  enabled: true
+  initial_interval: 50000000
+  randomization_factor: 0.5
+  multiplier: 1.5
+  max_interval: 30000000000
+  max_elapsed_time: 300000000000
+remote_write_queue:
+  enabled: true
+  queue_size: 10000
+  num_consumers: 5
+external_labels: []
+write_buffer_size: 524288
+endpoint: "https://aps-workspaces..amazonaws.com/workspaces/ws-12345/api/v1/remote_write"
+headers: []
+target_info:
+  enabled: true
+export_created_metric:
+  enabled: false
+add_metric_suffixes: true
+max_batch_size_bytes: 3000000

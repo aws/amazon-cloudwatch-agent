@@ -171,6 +171,13 @@ func TestInvalidLogFilterConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogFilesWithFilters.json", false, expectedErrorMap)
 }
 
+func TestMetricsDestinationsConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validMetricsDestinations.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsDestinations.json", false, expectedErrorMap)
+}
+
 // Validate all sampleConfig files schema
 func TestSampleConfigSchema(t *testing.T) {
 	if files, err := os.ReadDir("../../translator/tocwconfig/sampleConfig/"); err == nil {

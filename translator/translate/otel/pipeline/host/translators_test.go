@@ -20,6 +20,7 @@ import (
 func TestTranslators(t *testing.T) {
 	type want struct {
 		receivers []string
+		exporters []string
 	}
 	testCases := map[string]struct {
 		input map[string]interface{}
@@ -40,12 +41,64 @@ func TestTranslators(t *testing.T) {
 			want: map[string]want{
 				"metrics/host": {
 					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"awscloudwatch"},
+				},
+			},
+		},
+		"WithAMPDestination": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_destinations": map[string]interface{}{
+						"amp": map[string]interface{}{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{},
+					},
+				},
+			},
+			want: map[string]want{
+				"metrics/host_other": {
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"prometheusremotewrite/amp"},
+				},
+			},
+		},
+		"WithAMPAndCloudWatchDestinations": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_destinations": map[string]interface{}{
+						"amp": map[string]interface{}{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]interface{}{},
+					},
+					"metrics_collected": map[string]interface{}{
+						"cpu": map[string]interface{}{},
+					},
+				},
+			},
+			want: map[string]want{
+				"metrics/host": {
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host_other": {
+					receivers: []string{"telegraf_cpu"},
+					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
 		"WithDeltaMetrics": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
+					"metrics_destinations": map[string]interface{}{
+						"amp": map[string]interface{}{
+							"workspace_id": "ws-12345",
+						},
+						"cloudwatch": map[string]interface{}{},
+					},
 					"metrics_collected": map[string]interface{}{
 						"net": map[string]interface{}{},
 					},
@@ -54,6 +107,11 @@ func TestTranslators(t *testing.T) {
 			want: map[string]want{
 				"metrics/hostDeltaMetrics": {
 					receivers: []string{"telegraf_net"},
+					exporters: []string{"awscloudwatch"},
+				},
+				"metrics/host_other": {
+					receivers: []string{"telegraf_net"},
+					exporters: []string{"prometheusremotewrite/amp"},
 				},
 			},
 		},
@@ -73,6 +131,7 @@ func TestTranslators(t *testing.T) {
 					w, ok := testCase.want[tr.ID().String()]
 					require.True(t, ok)
 					assert.Equal(t, w.receivers, collections.MapSlice(tr.(*translator).receivers.Keys(), component.ID.String))
+					assert.Equal(t, w.exporters, collections.MapSlice(tr.(*translator).exporters.Keys(), component.ID.String))
 				})
 			}
 		})

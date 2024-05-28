@@ -69,9 +69,9 @@ var (
 		statsd.SectionKey: 10 * time.Second,
 	}
 
-	// OtelReceivers is used for receivers that need to be in the same pipeline that
+	// otelReceivers is used for receivers that need to be in the same pipeline that
 	// exports to Cloudwatch while not having to follow the adapter rules
-	OtelReceivers = map[string]common.Translator[component.Config]{
+	otelReceivers = map[string]common.Translator[component.Config]{
 		common.OtlpKey: otlp.NewTranslator(otlp.WithDataType(component.DataTypeMetrics)),
 		common.JmxKey:  jmx.NewTranslator(),
 	}
@@ -124,7 +124,7 @@ func fromWindowsMetrics(conf *confmap.Conf) common.TranslatorMap[component.Confi
 	translators := common.NewTranslatorMap[component.Config]()
 	if inputs, ok := conf.Get(metricKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
-			if _, ok := OtelReceivers[inputName]; ok {
+			if _, ok := otelReceivers[inputName]; ok {
 				continue
 			}
 			if windowsInputSet.Contains(inputName) {
@@ -159,7 +159,9 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 				continue
 			}
 			if validInputs != nil {
-				if _, ok := validInputs[inputName]; !ok {
+				if _, ok := otelReceivers[inputName]; ok {
+					continue
+				} else if _, ok := validInputs[inputName]; !ok {
 					log.Printf("W! Ignoring unrecognized input %s", inputName)
 					continue
 				}
