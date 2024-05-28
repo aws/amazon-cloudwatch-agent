@@ -134,6 +134,7 @@ processors:
                     - jvm.memory.heap.init
                     - jvm.memory.heap.used
                     - jvm.memory.nonheap.init
+                    - kafka.consumer.fetch-rate
         spans: { }
         traces: { }
     filter/jmx/1:
@@ -173,6 +174,24 @@ processors:
                 - set(unit, "unit") where name == "cpu_usage_nice"
                 - set(unit, "unit") where name == "disk_free"
                 - set(name, "DISK_FREE") where name == "disk_free"
+        trace_statements: []
+    transform/jmx/0:
+        error_mode: propagate
+        log_statements: []
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(unit, "unit") where name == "jvm.memory.heap.used"
+                  - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                  - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+        trace_statements: []
+    transform/jmx/1:
+        error_mode: propagate
+        log_statements: []
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(name, "TC_ERR") where name == "tomcat.errors"
         trace_statements: []
 receivers:
     awsxray:
@@ -217,7 +236,7 @@ receivers:
         remote_profile: SASL/PLAIN
         resource_attributes:
             service.name: jmx_app
-        target_system: jvm
+        target_system: jvm,kafka-consumer
         truststore_path: /truststore
         truststore_type: PKCS12
         username: cwagent
@@ -363,6 +382,7 @@ service:
             processors:
                 - filter/jmx/0
                 - resource/jmx
+                - transform/jmx/0
                 - ec2tagger
             receivers:
                 - jmx/0
@@ -372,6 +392,7 @@ service:
             processors:
                 - filter/jmx/1
                 - resource/jmx
+                - transform/jmx/1
                 - ec2tagger
             receivers:
                 - jmx/1

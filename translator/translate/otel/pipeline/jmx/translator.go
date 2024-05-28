@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 )
@@ -80,6 +81,15 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
 	}
 
+	mdt := metricsdecorator.NewTranslator(
+		metricsdecorator.WithName(common.PipelineNameJmx),
+		metricsdecorator.WithIndex(t.index),
+		metricsdecorator.WithConfigKey(common.JmxConfigKey),
+	)
+	if mdt.IsSet(conf) {
+		translators.Processors.Set(mdt)
+	}
+
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
@@ -88,7 +98,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 }
 
 func hasMeasurements(conf *confmap.Conf, index int) bool {
-	jmxMap := common.GetJmxMap(conf, index)
+	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, index)
 	if len(jmxMap) == 0 {
 		return false
 	}

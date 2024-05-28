@@ -11,7 +11,10 @@
           },
           "tomcat": {
             "measurement": [
-              "tomcat.sessions"
+              {
+                "name": "tomcat.sessions",
+                "rename": "TOMCAT_SESSIONS"
+              }
             ]
           }
         },

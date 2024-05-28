@@ -82,9 +82,10 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
 	}
 
-	if metricsdecorator.IsSet(conf) {
+	mdt := metricsdecorator.NewTranslator(metricsdecorator.WithIgnorePlugins(common.JmxKey))
+	if mdt.IsSet(conf) {
 		log.Printf("D! metric decorator required because measurement fields are set")
-		translators.Processors.Set(metricsdecorator.NewTranslator())
+		translators.Processors.Set(mdt)
 	}
 	return &translators, nil
 }

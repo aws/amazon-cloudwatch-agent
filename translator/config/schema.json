@@ -1301,7 +1301,7 @@
       "type": "object",
       "properties": {
         "measurement": {
-          "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementWithoutDecorationDefinition"
+          "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementDefinition"
         }
       },
       "required": [

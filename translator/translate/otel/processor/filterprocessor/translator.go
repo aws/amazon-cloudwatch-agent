@@ -71,7 +71,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
-	jmxMap := common.GetJmxMap(conf, t.index)
+	jmxMap := common.GetIndexedMap(conf, common.JmxConfigKey, t.index)
 
 	var includeMetricNames []string
 	for _, jmxTarget := range common.JmxTargets {
