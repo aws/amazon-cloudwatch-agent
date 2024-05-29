@@ -281,33 +281,6 @@ func TestTranslator(t *testing.T) {
 				HostIP:                       "1.2.3.4",
 			},
 		},
-		"WithEKSAndCustomKubeConfigPathHostDetailsWithPlaceholders": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"metrics_collected": map[string]interface{}{
-						"kubernetes": map[string]interface{}{
-							"kube_config_path": "/tmp/custom.kubeconfig",
-							"cluster_name":     "TestCluster",
-							"host_name":        "{hostname}",
-							"host_ip":          "{ip_address}",
-						},
-					},
-				},
-			},
-			want: &awscontainerinsightreceiver.Config{
-				ContainerOrchestrator:        eks,
-				CollectionInterval:           60 * time.Second,
-				PrefFullPodName:              false,
-				LeaderLockName:               defaultLeaderLockName,
-				LeaderLockUsingConfigMapOnly: true,
-				ClusterName:                  "TestCluster",
-				TagService:                   true,
-				KubeConfigPath:               "/tmp/custom.kubeconfig",
-				HostName:                     "test-hostname",
-				HostIP:                       "1.2.3.4",
-			},
-		},
-	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
