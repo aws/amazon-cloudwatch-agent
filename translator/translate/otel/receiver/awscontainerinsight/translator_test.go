@@ -255,13 +255,15 @@ func TestTranslator(t *testing.T) {
 				TagService:                   true,
 			},
 		},
-		"WithEKSAndCustomKubeConfigPath": {
+		"WithEKSAndCustomKubeConfigPathHostDetails": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
 					"metrics_collected": map[string]interface{}{
 						"kubernetes": map[string]interface{}{
 							"kube_config_path": "/tmp/custom.kubeconfig",
 							"cluster_name":     "TestCluster",
+							"host_name":        "test-hostname",
+							"host_ip":          "1.2.3.4",
 						},
 					},
 				},
@@ -275,6 +277,8 @@ func TestTranslator(t *testing.T) {
 				ClusterName:                  "TestCluster",
 				TagService:                   true,
 				KubeConfigPath:               "/tmp/custom.kubeconfig",
+				HostName:                     "test-hostname",
+				HostIP:                       "1.2.3.4",
 			},
 		},
 	}
@@ -298,6 +302,8 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.LeaderLockUsingConfigMapOnly, gotCfg.LeaderLockUsingConfigMapOnly)
 				require.Equal(t, testCase.want.EnableControlPlaneMetrics, gotCfg.EnableControlPlaneMetrics)
 				require.Equal(t, testCase.want.KubeConfigPath, gotCfg.KubeConfigPath)
+				require.Equal(t, testCase.want.HostName, gotCfg.HostName)
+				require.Equal(t, testCase.want.HostIP, gotCfg.HostIP)
 			}
 		})
 	}

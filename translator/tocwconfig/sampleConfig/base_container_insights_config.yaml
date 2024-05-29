@@ -172,6 +172,7 @@ receivers:
         enable_control_plane_metrics: false
         endpoint: ""
         host_ip: ""
+        host_name: ""
         imds_retries: 1
         kube_config_path: ""
         leader_lock_name: cwagent-clusterleader
