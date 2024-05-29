@@ -116,6 +116,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if hostIP, ok := common.GetString(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "host_ip")); ok {
 			cfg.HostIP = hostIP
 		}
+
+		if hostName, ok := common.GetString(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "host_name")); ok {
+			cfg.HostName = hostName
+		}
 	}
 
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)

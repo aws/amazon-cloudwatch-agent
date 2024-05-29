@@ -7,8 +7,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 )
@@ -19,17 +17,12 @@ type NodeCapacity struct {
 }
 
 func NewNodeCapacity() *NodeCapacity {
-	rootFileSystemProcDir := "/proc"
-	if context.CurrentContext().RunInContainer() {
-		rootFileSystemProcDir = "/rootfs/proc"
-		if _, err := os.Lstat("/rootfs/proc"); os.IsNotExist(err) {
-			log.Panic("E! /rootfs/proc does not exist")
-		}
+	if _, err := os.Lstat("/rootfs/proc"); os.IsNotExist(err) {
+		log.Panic("E! /rootfs/proc does not exist")
 	}
-	if err := os.Setenv(GoPSUtilProcDirEnv, rootFileSystemProcDir); err != nil {
-		log.Printf("E! NodeCapacity cannot set goPSUtilProcDirEnv to %s: %v", rootFileSystemProcDir, err)
+	if err := os.Setenv(GoPSUtilProcDirEnv, "/rootfs/proc"); err != nil {
+		log.Printf("E! NodeCapacity cannot set goPSUtilProcDirEnv to /rootfs/proc %v", err)
 	}
-
 	nc := &NodeCapacity{}
 	nc.parseCpu()
 	nc.parseMemory()
