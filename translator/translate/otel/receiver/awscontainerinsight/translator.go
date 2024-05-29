@@ -109,6 +109,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.EnableControlPlaneMetrics = true
 		}
 
+		if kubeConfigPath, ok := common.GetString(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "kube_config_path")); ok {
+			cfg.KubeConfigPath = kubeConfigPath
+		}
+
+		if hostIP, ok := common.GetString(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "host_ip")); ok {
+			cfg.HostIP = hostIP
+		}
 	}
 
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)

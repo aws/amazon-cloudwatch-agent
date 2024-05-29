@@ -13,6 +13,7 @@ After=network.target
 
 [Service]
 Type=simple
+Environment="RUN_ON_SYSTEMD=true"
 ExecStart=/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
 KillMode=process
 Restart=on-failure

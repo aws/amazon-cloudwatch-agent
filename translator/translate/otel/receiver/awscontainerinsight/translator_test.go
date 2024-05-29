@@ -101,6 +101,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockName:               "cwagent-clusterleader",
 				LeaderLockUsingConfigMapOnly: true,
 				TagService:                   true,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithoutClusterName": {
@@ -131,6 +132,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithEnhancedContainerInsights": {
@@ -155,6 +157,7 @@ func TestTranslator(t *testing.T) {
 				EnableControlPlaneMetrics:    true,
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithLevel1Granularity": {
@@ -178,6 +181,7 @@ func TestTranslator(t *testing.T) {
 				EnableControlPlaneMetrics:    false,
 				AddFullPodNameMetricLabel:    false,
 				AddContainerNameMetricLabel:  false,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithLevel2Granularity": {
@@ -202,6 +206,7 @@ func TestTranslator(t *testing.T) {
 				EnableControlPlaneMetrics:    true,
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithLevel3Granularity": {
@@ -226,6 +231,7 @@ func TestTranslator(t *testing.T) {
 				EnableControlPlaneMetrics:    true,
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithECSAndKubernetes": {
@@ -249,6 +255,28 @@ func TestTranslator(t *testing.T) {
 				TagService:                   true,
 			},
 		},
+		"WithEKSAndCustomKubeConfigPath": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"kube_config_path": "/tmp/custom.kubeconfig",
+							"cluster_name":     "TestCluster",
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				PrefFullPodName:              false,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				TagService:                   true,
+				KubeConfigPath:               "/tmp/custom.kubeconfig",
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -269,6 +297,7 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.LeaderLockName, gotCfg.LeaderLockName)
 				require.Equal(t, testCase.want.LeaderLockUsingConfigMapOnly, gotCfg.LeaderLockUsingConfigMapOnly)
 				require.Equal(t, testCase.want.EnableControlPlaneMetrics, gotCfg.EnableControlPlaneMetrics)
+				require.Equal(t, testCase.want.KubeConfigPath, gotCfg.KubeConfigPath)
 			}
 		})
 	}
