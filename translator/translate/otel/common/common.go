@@ -32,6 +32,9 @@ const (
 	DisableMetricExtraction            = "disable_metric_extraction"
 	XrayKey                            = "xray"
 	OtlpKey                            = "otlp"
+	JmxKey                             = "jmx"
+	TLSKey                             = "tls"
+	Endpoint                           = "endpoint"
 	EndpointOverrideKey                = "endpoint_override"
 	RegionOverrideKey                  = "region_override"
 	ProxyOverrideKey                   = "proxy_override"
@@ -47,6 +50,7 @@ const (
 	EnhancedContainerInsights          = "enhanced_container_insights"
 	PreferFullPodName                  = "prefer_full_pod_name"
 	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
+	AppendDimensionsKey                = "append_dimensions"
 	Console                            = "console"
 	DiskKey                            = "disk"
 	DiskIOKey                          = "diskio"
@@ -56,15 +60,18 @@ const (
 	ServiceAddress                     = "service_address"
 	Udp                                = "udp"
 	Tcp                                = "tcp"
-	TlsKey                             = "tls"
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"
+	NameKey                            = "name"
+	RenameKey                          = "rename"
+	UnitKey                            = "unit"
 )
 
 const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
+	PipelineNameJmx              = "jmx"
 	PipelineNameEmfLogs          = "emf_logs"
 	AppSignals                   = "application_signals"
 	AppSignalsFallback           = "app_signals"
@@ -81,6 +88,8 @@ var (
 		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
+	JmxConfigKey = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
+	JmxTargets   = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 
 	AgentDebugConfigKey = ConfigKey(AgentKey, DebugKey)
 )
@@ -346,4 +355,40 @@ func GetYamlFileToYamlConfig(cfg interface{}, yamlFile string) (interface{}, err
 		return nil, fmt.Errorf("unable to unmarshal config: %w", err)
 	}
 	return cfg, nil
+}
+
+// GetIndexedMap gets the sub map based on the config key and index. If the config value is an array, then the value
+// at the index is returned. If it is a map, then the index is ignored and the map is returned directly.
+func GetIndexedMap(conf *confmap.Conf, configKey string, index int) map[string]any {
+	var got map[string]any
+	switch v := conf.Get(configKey).(type) {
+	case []any:
+		if index != -1 && len(v) > index {
+			got = v[index].(map[string]any)
+		}
+	case map[string]any:
+		got = v
+	}
+	return got
+}
+
+// GetMeasurements gets the string values in the measurements section of the provided map. If there are metric
+// decoration elements, includes the value associated with the "name" key.
+func GetMeasurements(m map[string]any) []string {
+	var results []string
+	if measurements, ok := m[MeasurementKey].([]any); ok {
+		for _, measurement := range measurements {
+			switch v := measurement.(type) {
+			case string:
+				results = append(results, v)
+			case map[string]any:
+				if n, ok := v[NameKey]; ok {
+					if s, ok := n.(string); ok {
+						results = append(results, s)
+					}
+				}
+			}
+		}
+	}
+	return results
 }
