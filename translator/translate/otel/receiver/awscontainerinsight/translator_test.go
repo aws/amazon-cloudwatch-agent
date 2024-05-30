@@ -279,8 +279,10 @@ func TestTranslator(t *testing.T) {
 				KubeConfigPath:               "/tmp/custom.kubeconfig",
 				HostName:                     "test-hostname",
 				HostIP:                       "1.2.3.4",
+				RunOnSystemd:                 true,
 			},
 		},
+	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
@@ -303,6 +305,7 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.KubeConfigPath, gotCfg.KubeConfigPath)
 				require.Equal(t, testCase.want.HostName, gotCfg.HostName)
 				require.Equal(t, testCase.want.HostIP, gotCfg.HostIP)
+				require.Equal(t, testCase.want.RunOnSystemd, gotCfg.RunOnSystemd)
 			}
 		})
 	}
