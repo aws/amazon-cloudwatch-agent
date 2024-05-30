@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awscloudwatchlogs/emf_logs:
         certificate_file_path: ""
@@ -31,39 +30,34 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
-            storage: null
-        shared_credentials_file: []
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
 receivers:
     tcplog/emf_logs:
-        attributes: {}
         encoding: utf-8
         id: tcp_input
         listen_address: 0.0.0.0:25888
         operators: []
-        output: []
-        resource: {}
         retry_on_failure:
             enabled: false
             initial_interval: 0s
             max_elapsed_time: 0s
             max_interval: 0s
-        storage: null
         type: tcp_input
     udplog/emf_logs:
-        attributes: {}
         encoding: utf-8
         id: udp_input
         listen_address: 0.0.0.0:25888
@@ -72,14 +66,11 @@ receivers:
             line_start_pattern: ""
             omit_pattern: false
         operators: []
-        output: []
-        resource: {}
         retry_on_failure:
             enabled: false
             initial_interval: 0s
             max_elapsed_time: 0s
             max_interval: 0s
-        storage: null
         type: udp_input
 service:
     extensions:
@@ -99,8 +90,6 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -112,8 +101,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

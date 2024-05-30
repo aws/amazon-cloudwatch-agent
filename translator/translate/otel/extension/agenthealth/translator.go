@@ -11,6 +11,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -23,9 +25,9 @@ const (
 )
 
 var (
-	MetricsID = component.NewIDWithName(agenthealth.TypeStr, string(component.DataTypeMetrics))
-	LogsID    = component.NewIDWithName(agenthealth.TypeStr, string(component.DataTypeLogs))
-	TracesID  = component.NewIDWithName(agenthealth.TypeStr, string(component.DataTypeTraces))
+	MetricsID = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
+	LogsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
+	TracesID  = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
 )
 
 type translator struct {
@@ -39,7 +41,7 @@ var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(name component.DataType, operations []string) common.Translator[component.Config] {
 	return &translator{
-		name:               string(name),
+		name:               name.String(),
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
@@ -57,6 +59,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
-	cfg.Stats = agent.StatsConfig{Operations: t.operations}
+	cfg.Stats = agent.StatsConfig{
+		Operations: t.operations,
+		UsageFlags: map[agent.Flag]any{
+			agent.FlagMode:       context.CurrentContext().ShortMode(),
+			agent.FlagRegionType: translateagent.Global_Config.RegionType,
+		},
+	}
 	return cfg, nil
 }

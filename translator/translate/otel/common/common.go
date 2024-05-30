@@ -45,7 +45,9 @@ const (
 	ContainerInsightsMetricGranularity = "metric_granularity" // replaced with enhanced_container_insights
 	EnhancedContainerInsights          = "enhanced_container_insights"
 	PreferFullPodName                  = "prefer_full_pod_name"
+	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
 	Console                            = "console"
+	DiskKey                            = "disk"
 	DiskIOKey                          = "diskio"
 	NetKey                             = "net"
 	Emf                                = "emf"
@@ -53,6 +55,7 @@ const (
 	ServiceAddress                     = "service_address"
 	Udp                                = "udp"
 	Tcp                                = "tcp"
+	TlsKey                             = "tls"
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"
@@ -62,17 +65,20 @@ const (
 	PipelineNameHost             = "host"
 	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
 	PipelineNameEmfLogs          = "emf_logs"
-	AppSignals                   = "app_signals"
+	AppSignals                   = "application_signals"
+	AppSignalsFallback           = "app_signals"
 	AppSignalsRules              = "rules"
 )
 
 var (
-	AppSignalsTraces  = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
-	AppSignalsMetrics = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
+	AppSignalsTraces          = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
+	AppSignalsMetrics         = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
+	AppSignalsTracesFallback  = ConfigKey(TracesKey, TracesCollectedKey, AppSignalsFallback)
+	AppSignalsMetricsFallback = ConfigKey(LogsKey, MetricsCollectedKey, AppSignalsFallback)
 
-	AppSignalsConfigKeys = map[component.DataType]string{
-		component.DataTypeTraces:  AppSignalsTraces,
-		component.DataTypeMetrics: AppSignalsMetrics,
+	AppSignalsConfigKeys = map[component.DataType][]string{
+		component.DataTypeTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
+		component.DataTypeMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
 	}
 )
 
@@ -230,8 +236,14 @@ func GetString(conf *confmap.Conf, key string) (string, bool) {
 // the return value will be nil
 func GetArray[C any](conf *confmap.Conf, key string) []C {
 	if value := conf.Get(key); value != nil {
-		got, _ := value.([]C)
-		return got
+		var arr []C
+		got, _ := value.([]any)
+		for _, entry := range got {
+			if t, ok := entry.(C); ok {
+				arr = append(arr, t)
+			}
+		}
+		return arr
 	}
 	return nil
 }

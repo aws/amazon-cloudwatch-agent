@@ -1,37 +1,37 @@
-log_group_name: "/aws/appsignals/eks"
-namespace: "AppSignals"
+log_group_name: "/aws/application-signals/data"
+namespace: "ApplicationSignals"
 middleware: agenthealth/logs
 dimension_rollup_option: "NoDimensionRollup"
 metric_declarations:
   - dimensions:
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, Operation]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service]
+      - [Environment, Service, Operation]
+      - [Environment, Service]
     label_matchers:
       - label_names:
-          - aws.span.kind
-        regex: '^(SERVER|LOCAL_ROOT)$'
+          - Telemetry.Source
+        regex: '^(ServerSpan|LocalRootSpan)$'
     metric_name_selectors:
       - Latency
       - Fault
       - Error
   - dimensions:
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, Operation, RemoteService, RemoteOperation, K8s.RemoteNamespace, RemoteTarget]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, Operation, RemoteService, RemoteOperation, K8s.RemoteNamespace]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, Operation, RemoteService, RemoteOperation, RemoteTarget]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, Operation, RemoteService, RemoteOperation]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, K8s.RemoteNamespace]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation, K8s.RemoteNamespace, RemoteTarget]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation, K8s.RemoteNamespace]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation, RemoteTarget]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteOperation]
-      - [HostedIn.EKS.Cluster, HostedIn.K8s.Namespace, Service, RemoteService, RemoteTarget]
-      - [RemoteService, RemoteTarget]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteEnvironment, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteEnvironment]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation]
+      - [Environment, Service, RemoteService, RemoteEnvironment]
+      - [Environment, Service, RemoteService]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteEnvironment, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteEnvironment]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, RemoteService, RemoteOperation]
+      - [Environment, Service, RemoteService, RemoteResourceIdentifier, RemoteResourceType]
+      - [RemoteService, RemoteResourceIdentifier, RemoteResourceType]
       - [RemoteService]
     label_matchers:
       - label_names:
-          - aws.span.kind
-        regex: '^(CLIENT|PRODUCER|CONSUMER)$'
+          - Telemetry.Source
+        regex: '^(ClientSpan|ProducerSpan|ConsumerSpan)$'
     metric_name_selectors:
       - Latency
       - Fault

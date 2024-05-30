@@ -1,0 +1,438 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Build And Upload Docker Image
+env:
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+
+on:
+  workflow_dispatch:
+    inputs:
+      ContainerRepositoryNameAndTag:
+        # e.g. "cwagent-integration-test:SHA"
+        # e.g. "cwa-release:latest"
+        # e.g. "cwa_nonprod:latest"
+        description: "ECR repo name and tag"
+        required: true
+        type: string
+      BucketKey:
+        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
+        # e.g. s3://<bucket>/nonprod
+        # e.g. s3://<bucket>/release
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+      PackageBucketKey:
+        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      ContainerRepositoryNameAndTag:
+        # e.g. "cwagent-integration-test:SHA"
+        # e.g. "cwa-release:latest"
+        # e.g. "cwa_nonprod:latest"
+        description: "ECR repo name and tag"
+        required: true
+        type: string
+      BucketKey:
+        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
+        # e.g. s3://<bucket>/nonprod
+        # e.g. s3://<bucket>/release
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+      PackageBucketKey:
+        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+
+jobs:
+  MakeBinary:
+    name: 'MakeBinary'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache container
+        id: cached_container
+        uses: actions/cache@v3
+        with:
+          key: "cached_container_${{ github.sha }}"
+          path: go.mod
+
+      - name: Login ECR
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set up QEMU
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        uses: docker/setup-qemu-action@v1
+
+      # Build dir is ignored in our .dockerignore thus need to copy to another dir.
+      - name: Copy Binary For Agent Image Build
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        run: |
+          mkdir amd64
+          mkdir arm64
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/amd64/amazon-cloudwatch-agent.deb amd64/amazon-cloudwatch-agent.deb
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/arm64/amazon-cloudwatch-agent.deb arm64/amazon-cloudwatch-agent.deb
+
+      - name: Get ECR Repo name
+        id: repo_name
+        env:
+          ContainerRepositoryNameAndTag: ${{ inputs.ContainerRepositoryNameAndTag }}
+        run: |
+          RepoName=`echo $ContainerRepositoryNameAndTag | awk -F: '{print $1}'`
+          echo "::set-output name=ContainerRepositoryName::$RepoName"
+
+      - name: Build Cloudwatch Agent Image amd64
+        uses: docker/build-push-action@v4
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        with:
+          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localdeb/Dockerfile
+          context: .
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
+          platforms: linux/amd64
+
+      - name: Build Cloudwatch Agent Image arm64
+        uses: docker/build-push-action@v4
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        with:
+          file: amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localdeb/Dockerfile
+          context: .
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
+          platforms: linux/arm64
+
+  MakeMSIZip:
+    name: 'MakeMSIZip'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache win zip
+        id: cached_win_zip
+        uses: actions/cache@v3
+        with:
+          key: "cached_win_zip_${{ github.sha }}_${{ inputs.PackageBucketKey }}_${{ inputs.Bucket }}_${{ inputs.BucketKey }}"
+          path: go.mod
+
+      - name: Copy binary
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
+        run: |
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} . --recursive
+      - name: Unzip
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
+        run: |
+          sudo apt install unzip
+          unzip windows/amd64/amazon-cloudwatch-agent.zip -d windows-agent
+      - name: Create msi dep folder and copy deps
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
+        run: |
+          export version=$(cat CWAGENT_VERSION)
+          echo cw agent version $version
+          mkdir msi_dep
+          cp -r msi/tools/. msi_dep/
+          cp -r windows-agent/amazon-cloudwatch-agent/. msi_dep/
+          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/amazon-cloudwatch-agent.wxs '<version>'
+          go run msi/tools/msiversion/msiversionconverter.go $version msi_dep/manifest.json __VERSION__
+
+      - name: Zip
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
+        run: |
+          sudo apt install zip
+          zip buildMSI.zip msi_dep/*
+
+      - name: Upload zip
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
+        run: aws s3 cp buildMSI.zip s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip
+
+  BuildMSI-2022:
+    name: 'BuildMSI-2022'
+    runs-on: windows-latest
+    needs: [ MakeMSIZip ]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache msi
+        id: cached_msi
+        uses: actions/cache@v3
+        with:
+          key: "cached_msi_${{ github.sha }}"
+          path: go.mod
+
+      # Using the env variable returns "" for bucket name thus use the secret
+      - name: Copy msi
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip .
+
+      - name: Create msi
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run: |
+          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314.exe
+          .\wix314.exe /install /quiet /norestart
+          $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.14\bin;"
+          $env:PATH = $env:PATH + $wixToolsetBinPath
+          Expand-Archive buildMSI.zip -Force
+          cd buildMSI/msi_dep
+          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
+
+      - name: clean ecr login credential cache
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run : |
+          echo '{"auths": {"https://index.docker.io/v1/": {}}, "HttpHeaders": { "User-Agent": "Docker-Client/19.03.12 (windows)"}}' > ~/.docker/config.json
+
+      - name: Login ECR
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Build dir is ignored in our .dockerignore thus need to copy to another dir.
+      - name: Copy Binary For Agent Image Build
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run: |
+          pwd
+          mkdir amd64
+          cp -r buildMSI/msi_dep/amazon-cloudwatch-agent.msi amd64/
+
+      - name: Get ECR Repo name
+        id: repo_name
+        env:
+          ContainerRepositoryNameAndTag: ${{ inputs.ContainerRepositoryNameAndTag }}
+        run: |
+          $splitArray = $env:ContainerRepositoryNameAndTag.Split(":")[0]
+          Write-Output "::set-output name=ContainerRepositoryName::$splitArray"
+
+      - name: Build Windows Cloudwatch Agent Image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2022
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run: |
+          Write-Output "$env:REGISTRY/$env:REPOSITORY"
+          docker build --platform windows/amd64 -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localmsi/Dockerfile.Windows . -t $env:REGISTRY/$env:REPOSITORY
+          docker push $env:REGISTRY/$env:REPOSITORY
+
+  BuildMSI-2019:
+    name: 'BuildMSI-2019'
+    runs-on: windows-2019
+    needs: [MakeMSIZip]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache msi
+        id: cached_msi
+        uses: actions/cache@v3
+        with:
+          key: "cached_msi_${{ github.sha }}"
+          path: go.mod
+
+      # Using the env variable returns "" for bucket name thus use the secret
+      - name: Copy msi
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run: aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip .
+
+      - name: Create msi
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run : |
+          curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314.exe
+          .\wix314.exe /install /quiet /norestart
+          $wixToolsetBinPath = ";C:\Program Files (x86)\WiX Toolset v3.14\bin;"
+          $env:PATH = $env:PATH + $wixToolsetBinPath
+          Expand-Archive buildMSI.zip -Force
+          cd buildMSI/msi_dep
+          .\create_msi.ps1 "nosha" ${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
+
+      - name: clean ecr login credential cache
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run : |
+          echo '{"auths": {"https://index.docker.io/v1/": {}}, "HttpHeaders": { "User-Agent": "Docker-Client/19.03.12 (windows)"}}' > ~/.docker/config.json
+
+      - name: Login ECR
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Build dir is ignored in our .dockerignore thus need to copy to another dir.
+      - name: Copy Binary For Agent Image Build
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run: |
+          pwd
+          mkdir amd64
+          cp -r buildMSI/msi_dep/amazon-cloudwatch-agent.msi amd64/
+
+      - name: Get ECR Repo name
+        id: repo_name
+        env:
+          ContainerRepositoryNameAndTag: ${{ inputs.ContainerRepositoryNameAndTag }}
+        run: |
+          $splitArray = $env:ContainerRepositoryNameAndTag.Split(":")[0]
+          Write-Output "::set-output name=ContainerRepositoryName::$splitArray"
+
+      - name: Build Windows Cloudwatch Agent Image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2019
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        run: |
+          Write-Output "$env:REGISTRY/$env:REPOSITORY"
+          docker build --platform windows/amd64 -f ./amazon-cloudwatch-container-insights/cloudwatch-agent-dockerfile/localmsi/Dockerfile.Windows --build-arg IMAGE_TAG=ltsc2019 . -t $env:REGISTRY/$env:REPOSITORY
+          docker push $env:REGISTRY/$env:REPOSITORY
+
+  CreateContainerManifest:
+    name: 'CreateManifest'
+    needs: ['BuildMSI-2019', 'BuildMSI-2022', 'MakeBinary']
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install rpm
+        run: sudo apt install rpm
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Login ECR
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Set up Docker Buildx
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        uses: docker/setup-buildx-action@v1
+
+      - name: Get ECR Repo name
+        id: repo_name
+        env:
+          ContainerRepositoryNameAndTag: ${{ inputs.ContainerRepositoryNameAndTag }}
+        run: |
+          RepoName=`echo $ContainerRepositoryNameAndTag | awk -F: '{print $1}'`
+          echo "::set-output name=ContainerRepositoryName::$RepoName"
+
+      - name: Create manifest and push
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          OrigREPOSITORY: ${{ inputs.ContainerRepositoryNameAndTag }}
+          REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}
+          REPOSITORYWindows: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:windows
+          REPO2022: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2022
+          REPO2019: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2019
+          REPOLinuxAmd: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
+          REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        run: |
+          docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
+          docker manifest push $REGISTRY/$REPOSITORYWindows
+
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxAmd | jq '.manifests[0]' > linux-amd.json
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOLinuxArm | jq '.manifests[0]' > linux-arm.json
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[0]' > 2019.json
+          docker buildx imagetools inspect --raw $REGISTRY/$REPOSITORYWindows | jq '.manifests[1]' > 2022.json
+
+          docker buildx imagetools create -f linux-amd.json -f linux-arm.json -f 2019.json -f 2022.json --tag $REGISTRY/$OrigREPOSITORY
+
+  #GH actions set up gpg only works on ubuntu as of this commit date
+  GPGSignWindowsPackage:
+    name: 'GPGSignWindowsPackage'
+    runs-on: ubuntu-latest
+    needs: [ BuildMSI-2022 ]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Cache sig
+        id: cached_sig
+        uses: actions/cache@v3
+        with:
+          key: "cached_sig_${{ github.sha }}"
+          path: go.mod
+
+      - name: Download from s3
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
+        run: |
+          mkdir -p packages/amd64
+          mkdir packages/arm64
+          aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
+      - name: Import GPG Key
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+
+      - name: Sign Build Files
+        run: for f in $(find packages/); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
+
+      - name: Upload to s3
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
+        run: |
+          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${{ secrets.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi.sig

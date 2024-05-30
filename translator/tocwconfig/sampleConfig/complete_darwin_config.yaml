@@ -1,4 +1,3 @@
-connectors: {}
 exporters:
     awscloudwatch:
         endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
@@ -6,10 +5,8 @@ exporters:
         max_datums_per_call: 1000
         max_values_per_datum: 5000
         middleware: agenthealth/metrics
-        mode: EC2
         namespace: CWAgent
         region: us-west-2
-        region_type: ACJ
         resource_to_telemetry_conversion:
             enabled: true
         role_arn: metrics_role_arn_value_test
@@ -50,15 +47,11 @@ exporters:
             enabled: true
             num_consumers: 1
             queue_size: 1000
-            storage: null
-        shared_credentials_file: []
     awsxray:
-        aws_log_groups: []
         certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
         imds_retries: 1
         index_all_attributes: false
-        indexed_attributes: []
         local_mode: true
         max_retries: 2
         middleware: agenthealth/traces
@@ -70,7 +63,6 @@ exporters:
         request_timeout_seconds: 30
         resource_arn: arn:aws:iam::account:resource
         role_arn: trace_role_arn_value_test
-        shared_credentials_file: []
         telemetry:
             enabled: true
             include_metadata: true
@@ -80,26 +72,33 @@ extensions:
         stats:
             operations:
                 - PutLogEvents
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/metrics:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     agenthealth/traces:
         is_usage_data_enabled: true
         stats:
             operations:
                 - PutTraceSegments
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
     batch/xray:
         metadata_cardinality_limit: 1000
-        metadata_keys: []
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
@@ -109,20 +108,17 @@ processors:
             metrics:
                 - iops_in_progress
                 - diskio_iops_in_progress
-            regexp: null
         include:
             match_type: ""
-            metrics: []
-            regexp: null
         initial_value: 0
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         refresh_interval_seconds: 0s
     transform:
@@ -131,59 +127,60 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
-                - set(unit, "unit") where name == "cpu_usage_idle"
-                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                - set(unit, "unit") where name == "cpu_usage_nice"
+                  - set(unit, "unit") where name == "cpu_usage_idle"
+                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                  - set(unit, "unit") where name == "cpu_usage_nice"
+                  - set(unit, "unit") where name == "disk_free"
+                  - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
 receivers:
     awsxray:
+        dialer:
+            timeout: "0s"
         endpoint: 0.0.0.0:2001
         proxy_server:
             aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+            certificate_file_path: ""
+            dialer:
+                timeout: "0s"
             endpoint: 0.0.0.0:1234
+            imds_retries: 1
             local_mode: true
+            profile: ""
             proxy_address: https://proxy.proxy.com
             region: us-west-2
             role_arn: trace_role_arn_value_test
+            service_name: "xray"
             tls:
                 ca_file: ""
-                ca_pem: '[REDACTED]'
                 cert_file: ""
-                cert_pem: '[REDACTED]'
+                include_system_ca_certs_pool: false
                 insecure: true
                 insecure_skip_verify: false
                 key_file: ""
-                key_pem: '[REDACTED]'
                 max_version: ""
                 min_version: ""
                 reload_interval: 0s
                 server_name_override: ""
         transport: udp
-    otlp:
+    otlp/traces:
         protocols:
             grpc:
-                auth: null
+                dialer:
+                    timeout: "0s"
                 endpoint: 0.0.0.0:1111
                 include_metadata: false
-                keepalive: null
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
                 read_buffer_size: 524288
-                tls: null
                 transport: tcp
                 write_buffer_size: 0
             http:
-                auth: null
-                cors: null
                 endpoint: 0.0.0.0:2222
                 include_metadata: false
                 logs_url_path: /v1/logs
                 max_request_body_size: 0
                 metrics_url_path: /v1/metrics
-                response_headers: {}
-                tls: null
                 traces_url_path: /v1/traces
     telegraf_cpu:
         collection_interval: 10s
@@ -231,7 +228,6 @@ receivers:
         initial_delay: 1s
         timeout: 0s
     udplog/emf_logs:
-        attributes: {}
         encoding: utf-8
         id: udp_input
         listen_address: 127.0.0.1:25888
@@ -240,14 +236,11 @@ receivers:
             line_start_pattern: ""
             omit_pattern: false
         operators: []
-        output: []
-        resource: {}
         retry_on_failure:
             enabled: false
             initial_interval: 0s
             max_elapsed_time: 0s
             max_interval: 0s
-        storage: null
         type: udp_input
 service:
     extensions:
@@ -269,15 +262,15 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_mem
-                - telegraf_cpu
-                - telegraf_processes
                 - telegraf_swap
+                - telegraf_processes
+                - telegraf_mem
+                - telegraf_netstat
+                - telegraf_cpu
                 - telegraf_statsd
-                - telegraf_disk
                 - telegraf_procstat/1917393364
                 - telegraf_socket_listener
-                - telegraf_netstat
+                - telegraf_disk
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -286,8 +279,8 @@ service:
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_diskio
                 - telegraf_net
+                - telegraf_diskio
         traces/xray:
             exporters:
                 - awsxray
@@ -295,15 +288,13 @@ service:
                 - batch/xray
             receivers:
                 - awsxray
-                - otlp
+                - otlp/traces
     telemetry:
         logs:
             development: false
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            error_output_paths: []
-            initial_fields: {}
             level: debug
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -315,8 +306,4 @@ service:
         metrics:
             address: ""
             level: None
-            readers: []
-        resource: {}
-        traces:
-            processors: []
-            propagators: []
+        traces: {}

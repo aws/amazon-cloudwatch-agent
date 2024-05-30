@@ -4,15 +4,19 @@
 package containerinsightscommon
 
 const (
-	InstanceId         = "InstanceId"
 	GoPSUtilProcDirEnv = "HOST_PROC"
 
-	MinTimeDiff    = 50 * 1000 // We assume 50 micro-seconds is the minimal gap between two collected data sample to be valid to calculate delta
-	ClusterNameKey = "ClusterName"
-	NodeNameKey    = "NodeName"
+	MinTimeDiff = 50 * 1000 // We assume 50 micro-seconds is the minimal gap between two collected data sample to be valid to calculate delta
 
-	MetricType = "Type"
-	SourcesKey = "Sources"
+	ClusterNameKey          = "ClusterName"
+	NodeNameKey             = "NodeName" // Attribute names
+	InstanceIdKey           = "InstanceId"
+	InstanceTypeKey         = "InstanceType"
+	AutoScalingGroupNameKey = "AutoScalingGroupName"
+	VersionKey              = "Version"
+	MetricType              = "Type"
+	SourcesKey              = "Sources"
+	GpuDeviceKey            = "GpuDevice"
 
 	// metric collected
 	CpuTotal                   = "cpu_usage_total"
@@ -72,6 +76,32 @@ const (
 	DiskIOWrite              = "Write"
 	DiskIOTotal              = "Total"
 
+	GpuUtilization    = "gpu_utilization"
+	GpuMemUtilization = "gpu_memory_utilization"
+	GpuMemUsed        = "gpu_memory_used"
+	GpuMemTotal       = "gpu_memory_total"
+	GpuTemperature    = "gpu_temperature"
+	GpuPowerDraw      = "gpu_power_draw"
+	GpuRequest        = "gpu_request"
+	GpuLimit          = "gpu_limit"
+	GpuTotal          = "gpu_total"
+	GpuUniqueId       = "UUID"
+
+	NeuronCoreUtilization                       = "neuroncore_utilization"
+	NeuronCoreMemoryUtilizationTotal            = "neuroncore_memory_usage_total"
+	NeuronCoreMemoryUtilizationConstants        = "neuroncore_memory_usage_constants"
+	NeuronCoreMemoryUtilizationModelCode        = "neuroncore_memory_usage_model_code"
+	NeuronCoreMemoryUtilizationSharedScratchpad = "neuroncore_memory_usage_model_shared_scratchpad"
+	NeuronCoreMemoryUtilizationRuntimeMemory    = "neuroncore_memory_usage_runtime_memory"
+	NeuronCoreMemoryUtilizationTensors          = "neuroncore_memory_usage_tensors"
+	NeuronDeviceHardwareEccEvents               = "neurondevice_hw_ecc_events"
+	NeuronExecutionStatus                       = "neuron_execution_status"
+	NeuronExecutionErrors                       = "neuron_execution_errors"
+	NeuronRuntimeMemoryUsage                    = "neurondevice_runtime_memory_used_bytes"
+	NeuronInstanceInfo                          = "instance_info"
+	NeuronHardware                              = "neuron_hardware"
+	NeuronExecutionLatency                      = "neuron_execution_latency"
+
 	TypeCluster          = "Cluster"
 	TypeClusterService   = "ClusterService"
 	TypeClusterNamespace = "ClusterNamespace"
@@ -86,6 +116,10 @@ const (
 	TypeNodeNet        = "NodeNet"
 	TypeInstanceDiskIO = "InstanceDiskIO"
 	TypeNodeDiskIO     = "NodeDiskIO"
+	TypeGpuContainer   = "ContainerGPU"
+	TypeGpuPod         = "PodGPU"
+	TypeGpuNode        = "NodeGPU"
+	TypeGpuCluster     = "ClusterGPU"
 
 	TypePod             = "Pod"
 	TypePodNet          = "PodNet"

@@ -1,0 +1,27 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "app_signals": {
+        "hosted_in": "test",
+        "limiter": {
+          "drop_threshold": 20,
+          "log_dropped_metrics": true,
+          "rotation_interval": "10m",
+          "garbage_collection_interval": "10m"
+        },
+        "rules": [
+          {
+            "selectors": [
+              {
+                "dimension": "dimension1",
+                "match": "match1"
+              }
+            ],
+            "action": "replace",
+            "rule_name": "replace01"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -3,14 +3,15 @@
     "region": "us-east-1"
   },
   "logs": {
+    "log_stream_name": "host_name_from_env",
     "metrics_collected": {
-      "app_signals": {}
+      "application_signals": {}
     },
     "endpoint_override":"https://fake_endpoint"
   },
   "traces": {
     "traces_collected": {
-      "app_signals": {}
+      "application_signals": {}
     },
     "endpoint_override":"https://fake_endpoint"
   }

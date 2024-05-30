@@ -18,7 +18,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
@@ -27,7 +27,7 @@ import (
 const (
 	flagRunAsUser                 = "run_as_user"
 	flagContainerInsights         = "container_insights"
-	flagAppSignals                = "app_signals"
+	flagAppSignals                = "application_signals"
 	flagEnhancedContainerInsights = "enhanced_container_insights"
 
 	separator = " "
@@ -79,23 +79,23 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 	for _, pipeline := range otelCfg.Service.Pipelines {
 		for _, receiver := range pipeline.Receivers {
 			// trim the adapter prefix from adapted Telegraf plugins
-			name := strings.TrimPrefix(string(receiver.Type()), adapter.TelegrafPrefix)
+			name := strings.TrimPrefix(receiver.Type().String(), adapter.TelegrafPrefix)
 			ua.inputs.Add(name)
 		}
 		for _, processor := range pipeline.Processors {
-			ua.processors.Add(string(processor.Type()))
+			ua.processors.Add(processor.Type().String())
 		}
 		for _, exporter := range pipeline.Exporters {
-			ua.outputs.Add(string(exporter.Type()))
-			if exporter.Type() == "awsemf" {
+			ua.outputs.Add(exporter.Type().String())
+			if exporter.Type().String() == "awsemf" {
 				cfg := otelCfg.Exporters[exporter].(*awsemfexporter.Config)
 				if cfg.IsAppSignalsEnabled() {
 					ua.outputs.Add(flagAppSignals)
-					provider.GetFlagsStats().SetFlag(provider.FlagAppSignal)
+					agent.UsageFlags().Set(agent.FlagAppSignal)
 				}
 				if cfg.IsEnhancedContainerInsights() {
 					ua.outputs.Add(flagEnhancedContainerInsights)
-					provider.GetFlagsStats().SetFlag(provider.FlagEnhancedContainerInsights)
+					agent.UsageFlags().Set(agent.FlagEnhancedContainerInsights)
 				}
 			}
 		}

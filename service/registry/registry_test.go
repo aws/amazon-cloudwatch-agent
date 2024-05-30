@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/extension/extensiontest"
 	"go.opentelemetry.io/collector/otelcol"
@@ -22,17 +23,18 @@ func TestRegistry(t *testing.T) {
 	for _, apply := range Options() {
 		apply(&got)
 	}
-	assert.NotNil(t, got.Receivers["nop"])
-	assert.NotNil(t, got.Processors["nop"])
-	assert.NotNil(t, got.Exporters["nop"])
-	assert.NotNil(t, got.Extensions["nop"])
+	nop, _ := component.NewType("nop")
+	assert.NotNil(t, got.Receivers[nop])
+	assert.NotNil(t, got.Processors[nop])
+	assert.NotNil(t, got.Exporters[nop])
+	assert.NotNil(t, got.Extensions[nop])
 	assert.Len(t, got.Receivers, 1)
-	origReceiver := got.Receivers["nop"]
+	origReceiver := got.Receivers[nop]
 	Register(WithReceiver(receivertest.NewNopFactory()))
 	for _, apply := range Options() {
 		apply(&got)
 	}
-	newReceiver := got.Receivers["nop"]
+	newReceiver := got.Receivers[nop]
 	assert.NotEqual(t, origReceiver, newReceiver)
 	assert.Len(t, got.Receivers, 1)
 	Reset()

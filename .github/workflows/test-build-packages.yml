@@ -1,0 +1,182 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Build And Upload Packages
+env:
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+
+on:
+  workflow_dispatch:
+    inputs:
+      BucketKey:
+        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
+        # e.g. s3://<bucket>/nonprod
+        # e.g. s3://<bucket>/release
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+      PackageBucketKey:
+        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+      Region:
+        description: "Region to upload binaries"
+        required: false
+        type: string
+        default: "us-west-2"
+      TerraformAWSAssumeRole:
+        description: "Role to assume to upload artifacts"
+        required: true
+        type: string
+      Bucket:
+        description: "Bucket to upload the artifacts to"
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      BucketKey:
+        # e.g. s3://<bucket>/integration-test/binary/<SHA>"
+        # e.g. s3://<bucket>/nonprod
+        # e.g. s3://<bucket>/release
+        description: "S3 URI to upload artifacts into."
+        required: true
+        type: string
+      PackageBucketKey:
+        description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
+        required: true
+        type: string
+      Region:
+        description: "Region to upload binaries"
+        required: false
+        type: string
+        default: "us-west-2"
+      TerraformAWSAssumeRole:
+        description: "Role to assume to upload artifacts"
+        required: true
+        type: string
+      Bucket:
+        description: "Bucket to upload the artifacts to"
+        required: true
+        type: string
+
+jobs:
+  MakeMacPkg:
+    name: 'MakeMacPkg'
+    runs-on: macos-11
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: cwa
+          fetch-depth: 0
+
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          path: test
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
+
+      - name: Cache binaries
+        id: cached_binaries
+        uses: actions/cache@v3
+        with:
+          key: "cached-binaries-${{ runner.os }}-${{ inputs.BucketKey }}"
+          path: go.mod
+
+      - name: Cache pkg
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/Library/Caches/go-build
+            ~/go/pkg/mod
+          key: v1-go-pkg-mod-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+
+      - name: Build Binaries
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        working-directory: cwa
+        run: make amazon-cloudwatch-agent-darwin package-darwin
+
+      - name: Copy binary
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        working-directory: cwa
+        run: |
+          echo cw agent version $(cat CWAGENT_VERSION)
+          cp -r build/bin/darwin/amd64/. /tmp/
+          cp -r build/bin/darwin/arm64/. /tmp/arm64/
+          cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION
+
+      - name: Create pkg dep folder and copy deps
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        working-directory: test
+        run: |
+          cp -r pkg/tools/. /tmp/
+          cp -r pkg/tools/. /tmp/arm64/
+
+      - name: Build And Upload PKG
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
+        working-directory: /tmp/
+        run: |
+          chmod +x create_pkg.sh
+          chmod +x arm64/create_pkg.sh
+          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" amd64
+          cd arm64
+          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" arm64
+
+  #GH actions set up gpg only works on ubuntu as of this commit date
+  GPGSignMacPackage:
+    name: 'GPGSignMacPackage'
+    runs-on: ubuntu-latest
+    needs: [  MakeMacPkg ]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.TerraformAWSAssumeRole }}
+          aws-region: ${{ inputs.Region }}
+
+      - name: Cache sig
+        id: cached_sig
+        uses: actions/cache@v3
+        with:
+          key: "cached_sig_${{ github.sha }}"
+          path: go.mod
+
+      - name: Download from s3
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
+        run: |
+          mkdir -p packages/amd64
+          mkdir packages/arm64
+          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
+          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
+      - name: Import GPG Key
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+
+      - name: Sign Build Files
+        run: for f in $(find packages/); do if [ ! -d $f ]; then echo "Signing file $f" && gpg --detach-sign $f ; fi ; done
+
+      - name: Upload to s3
+        if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
+        run: |
+          aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg.sig
+          aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg.sig

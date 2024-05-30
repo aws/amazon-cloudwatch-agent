@@ -1,0 +1,36 @@
+resolvers:
+  - platform: generic
+    name: test
+limiter:
+  disabled: false
+  drop_threshold: 20
+  log_dropped_metrics: true
+  rotation_interval: 10m
+  garbage_collection_interval: 10m
+rules:
+  - selectors:
+      - dimension: Operation
+        match: "POST *"
+      - dimension: RemoteService
+        match: "*"
+    action: keep
+  - selectors:
+      - dimension: Operation
+        match: "GET *"
+      - dimension: RemoteService
+        match: "*"
+    action: keep
+    rule_name: "keep02"
+  - selectors:
+      - dimension: Operation
+        match: "POST *"
+    action: drop
+    rule_name: "drop01"
+  - selectors:
+      - dimension: Operation
+        match: "*"
+    replacements:
+      - target_dimension: RemoteOperation
+        value: "This is a test string"
+    action: replace
+    rule_name: "replace01"

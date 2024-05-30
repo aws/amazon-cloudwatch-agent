@@ -30,6 +30,7 @@ import (
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -90,6 +91,7 @@ var fServiceName = flag.String("service-name", "telegraf", "service name (window
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in the format of KEY=VALUE")
+var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
 
 var stop chan struct{}
 
@@ -175,6 +177,14 @@ func reloadLoop(
 
 		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
+			if *fStartUpErrorFile != "" {
+				f, err := os.OpenFile(*fStartUpErrorFile, os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					log.Printf("E! Unable to create errorFile: %s", err)
+				} else {
+					_ = f.Close()
+				}
+			}
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
@@ -336,12 +346,13 @@ func runAgent(ctx context.Context,
 
 	params := getCollectorParams(factories, provider, writer)
 
+	_ = featuregate.GlobalRegistry().Set("exporter.xray.allowDot", true)
 	cmd := otelcol.NewCommand(params)
 
 	// Noticed that args of parent process get passed here to otel collector which causes failures complaining about
 	// unrecognized args. So below change overwrites the args. Need to investigate this further as I dont think the config
 	// path below here is actually used and it still respects what was set in the settings above.
-	e := []string{"--config=" + yamlConfigPath}
+	e := []string{"--config=" + yamlConfigPath + " --feature-gates=exporter.xray.allowDot"}
 	cmd.SetArgs(e)
 
 	return cmd.Execute()

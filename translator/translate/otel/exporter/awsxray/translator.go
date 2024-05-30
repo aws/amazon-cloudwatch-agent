@@ -15,6 +15,8 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -33,16 +35,10 @@ type translator struct {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 var (
-	indexedAttributesEKS = []string{
-		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
-		"HostedIn.Environment", "HostedIn.EKS.Cluster",
-	}
-
-	indexedAttributesK8s = []string{
-		"aws.local.service", "aws.local.operation", "aws.remote.service", "aws.remote.operation",
-		"HostedIn.K8s.Namespace", "K8s.RemoteNamespace", "aws.remote.target",
-		"HostedIn.Environment", "HostedIn.K8s.Cluster",
+	indexedAttributes = []string{
+		"aws.local.service", "aws.local.operation", "aws.local.environment",
+		"aws.remote.service", "aws.remote.operation", "aws.remote.environment",
+		"aws.remote.resource.identifier", "aws.remote.resource.type",
 	}
 )
 
@@ -68,16 +64,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayexporter.Config)
 
 	if isAppSignals(conf) {
-		isEks, err := common.IsEKS()
-		if err != nil {
-			return nil, err
-		}
-
-		if isEks {
-			cfg.IndexedAttributes = indexedAttributesEKS
-		} else {
-			cfg.IndexedAttributes = indexedAttributesK8s
-		}
+		cfg.IndexedAttributes = indexedAttributes
 	}
 
 	c := confmap.NewFromStringMap(map[string]interface{}{
@@ -94,6 +81,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.AWSSessionSettings.Endpoint = endpointOverride
 	}
 	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+		cfg.AWSSessionSettings.LocalMode = true
+	}
 	if localMode, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.LocalModeKey)); ok {
 		cfg.AWSSessionSettings.LocalMode = localMode
 	}
@@ -140,5 +130,5 @@ func getRegion(conf *confmap.Conf) string {
 }
 
 func isAppSignals(conf *confmap.Conf) bool {
-	return conf.IsSet(common.AppSignalsTraces)
+	return conf.IsSet(common.AppSignalsTraces) || conf.IsSet(common.AppSignalsTracesFallback)
 }

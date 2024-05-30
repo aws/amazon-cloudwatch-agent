@@ -1,0 +1,31 @@
+awsapplicationsignals:
+  resolvers:
+    - platform: eks
+      name: test
+  rules:
+    - selectors:
+        - dimension: Operation
+          match: "* /api/visits/*"
+        - dimension: RemoteOperation
+          match: "*"
+      action: keep
+      rule_name: "keep01"
+
+    - selectors:
+        - dimension: RemoteService
+          match: "UnknownRemoteService"
+        - dimension: RemoteOperation
+          match: "GetShardIterator"
+      action: drop
+
+    - selectors:
+        - dimension: Operation
+          match: "* /api/visits/*"
+        - dimension: RemoteOperation
+          match: "*"
+      replacements:
+        - target_dimension: RemoteOperation
+          value: ListPetsByCustomer
+        - target_dimension: ResourceTarget
+          value: ' '
+      action: replace

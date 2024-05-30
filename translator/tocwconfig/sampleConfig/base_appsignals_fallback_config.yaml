@@ -1,0 +1,504 @@
+exporters:
+  awsemf/application_signals:
+    certificate_file_path: ""
+    detailed_metrics: false
+    dimension_rollup_option: NoDimensionRollup
+    disable_metric_extraction: false
+    eks_fargate_container_insights_enabled: false
+    endpoint: https://fake_endpoint
+    enhanced_container_insights: false
+    imds_retries: 1
+    local_mode: true
+    log_group_name: /aws/application-signals/data
+    log_retention: 0
+    log_stream_name: ""
+    max_retries: 2
+    metric_declarations:
+      - dimensions:
+          - - Environment
+            - Operation
+            - Service
+          - - Environment
+            - Service
+        label_matchers:
+          - label_names:
+              - Telemetry.Source
+            regex: ^(ServerSpan|LocalRootSpan)$
+            separator: ;
+        metric_name_selectors:
+          - Latency
+          - Fault
+          - Error
+      - dimensions:
+          - - Environment
+            - Operation
+            - RemoteOperation
+            - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+            - Service
+          - - Environment
+            - Operation
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteOperation
+            - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteOperation
+            - RemoteService
+            - Service
+          - - Environment
+            - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+            - Service
+          - - RemoteResourceIdentifier
+            - RemoteResourceType
+            - RemoteService
+          - - RemoteService
+        label_matchers:
+          - label_names:
+              - Telemetry.Source
+            regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
+            separator: ;
+        metric_name_selectors:
+          - Latency
+          - Fault
+          - Error
+    middleware: agenthealth/logs
+    namespace: ApplicationSignals
+    no_verify_ssl: false
+    num_workers: 8
+    output_destination: cloudwatch
+    profile: AmazonCloudWatchAgent
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    resource_to_telemetry_conversion:
+      enabled: false
+    retain_initial_value_of_delta_metric: false
+    role_arn: ""
+    shared_credentials_file:
+      - fake-path
+    version: "1"
+  awsxray/application_signals:
+    certificate_file_path: ""
+    endpoint: https://fake_endpoint
+    imds_retries: 1
+    index_all_attributes: false
+    indexed_attributes:
+      - aws.local.service
+      - aws.local.operation
+      - aws.local.environment
+      - aws.remote.service
+      - aws.remote.operation
+      - aws.remote.environment
+      - aws.remote.resource.identifier
+      - aws.remote.resource.type
+    local_mode: true
+    max_retries: 2
+    middleware: agenthealth/traces
+    no_verify_ssl: false
+    num_workers: 8
+    profile: AmazonCloudWatchAgent
+    proxy_address: ""
+    region: us-east-1
+    request_timeout_seconds: 30
+    resource_arn: ""
+    role_arn: ""
+    shared_credentials_file:
+      - fake-path
+    telemetry:
+      enabled: true
+      include_metadata: true
+extensions:
+  agenthealth/logs:
+    is_usage_data_enabled: true
+    stats:
+      operations:
+        - PutLogEvents
+      usage_flags:
+        mode: OP
+        region_type: ACJ
+  agenthealth/traces:
+    is_usage_data_enabled: true
+    stats:
+      operations:
+        - PutTraceSegments
+      usage_flags:
+        mode: OP
+        region_type: ACJ
+  awsproxy/application_signals:
+    aws_endpoint: https://fake_endpoint
+    dialer:
+      timeout: "0s"
+    certificate_file_path: ""
+    endpoint: 0.0.0.0:2000
+    imds_retries: 1
+    local_mode: true
+    profile: AmazonCloudWatchAgent
+    proxy_address: ""
+    region: us-east-1
+    role_arn: ""
+    service_name: ""
+    shared_credentials_file:
+      - fake-path
+processors:
+  awsapplicationsignals:
+    resolvers:
+      - name: ""
+        platform: generic
+  resourcedetection:
+    aks:
+      resource_attributes:
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        k8s.cluster.name:
+          enabled: false
+    azure:
+      resource_attributes:
+        azure.resourcegroup.name:
+          enabled: true
+        azure.vm.name:
+          enabled: true
+        azure.vm.scaleset.name:
+          enabled: true
+        azure.vm.size:
+          enabled: true
+        cloud.account.id:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        host.id:
+          enabled: true
+        host.name:
+          enabled: true
+    compression: ""
+    consul:
+      address: ""
+      datacenter: ""
+      namespace: ""
+      resource_attributes:
+        cloud.region:
+          enabled: true
+        host.id:
+          enabled: true
+        host.name:
+          enabled: true
+      token_file: ""
+    detectors:
+      - eks
+      - env
+      - ec2
+    disable_keep_alives: false
+    docker:
+      resource_attributes:
+        host.name:
+          enabled: true
+        os.type:
+          enabled: true
+    ec2:
+      resource_attributes:
+        cloud.account.id:
+          enabled: true
+        cloud.availability_zone:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        host.id:
+          enabled: true
+        host.image.id:
+          enabled: true
+        host.name:
+          enabled: true
+        host.type:
+          enabled: true
+      tags:
+        - ^kubernetes.io/cluster/.*$
+        - ^aws:autoscaling:groupName
+    ecs:
+      resource_attributes:
+        aws.ecs.cluster.arn:
+          enabled: true
+        aws.ecs.launchtype:
+          enabled: true
+        aws.ecs.task.arn:
+          enabled: true
+        aws.ecs.task.family:
+          enabled: true
+        aws.ecs.task.id:
+          enabled: true
+        aws.ecs.task.revision:
+          enabled: true
+        aws.log.group.arns:
+          enabled: true
+        aws.log.group.names:
+          enabled: true
+        aws.log.stream.arns:
+          enabled: true
+        aws.log.stream.names:
+          enabled: true
+        cloud.account.id:
+          enabled: true
+        cloud.availability_zone:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+    eks:
+      resource_attributes:
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        k8s.cluster.name:
+          enabled: false
+    elasticbeanstalk:
+      resource_attributes:
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        deployment.environment:
+          enabled: true
+        service.instance.id:
+          enabled: true
+        service.version:
+          enabled: true
+    endpoint: ""
+    gcp:
+      resource_attributes:
+        cloud.account.id:
+          enabled: true
+        cloud.availability_zone:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        faas.id:
+          enabled: true
+        faas.instance:
+          enabled: true
+        faas.name:
+          enabled: true
+        faas.version:
+          enabled: true
+        gcp.cloud_run.job.execution:
+          enabled: true
+        gcp.cloud_run.job.task_index:
+          enabled: true
+        gcp.gce.instance.hostname:
+          enabled: false
+        gcp.gce.instance.name:
+          enabled: false
+        host.id:
+          enabled: true
+        host.name:
+          enabled: true
+        host.type:
+          enabled: true
+        k8s.cluster.name:
+          enabled: true
+    heroku:
+      resource_attributes:
+        cloud.provider:
+          enabled: true
+        heroku.app.id:
+          enabled: true
+        heroku.dyno.id:
+          enabled: true
+        heroku.release.commit:
+          enabled: true
+        heroku.release.creation_timestamp:
+          enabled: true
+        service.instance.id:
+          enabled: true
+        service.name:
+          enabled: true
+        service.version:
+          enabled: true
+    http2_ping_timeout: "0s"
+    http2_read_idle_timeout: "0s"
+    idle_conn_timeout: 1m30s
+    k8snode:
+      auth_type: serviceAccount
+      context: ""
+      node_from_env_var: ""
+      resource_attributes:
+        k8s.node.name:
+          enabled: true
+        k8s.node.uid:
+          enabled: true
+    lambda:
+      resource_attributes:
+        aws.log.group.names:
+          enabled: true
+        aws.log.stream.names:
+          enabled: true
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        faas.instance:
+          enabled: true
+        faas.max_memory:
+          enabled: true
+        faas.name:
+          enabled: true
+        faas.version:
+          enabled: true
+    max_idle_conns: 100
+    openshift:
+      address: ""
+      resource_attributes:
+        cloud.platform:
+          enabled: true
+        cloud.provider:
+          enabled: true
+        cloud.region:
+          enabled: true
+        k8s.cluster.name:
+          enabled: true
+      tls:
+        ca_file: ""
+        cert_file: ""
+        include_system_ca_certs_pool: false
+        insecure: false
+        insecure_skip_verify: false
+        key_file: ""
+        max_version: ""
+        min_version: ""
+        reload_interval: "0s"
+        server_name_override: ""
+      token: ""
+    override: true
+    proxy_url: ""
+    read_buffer_size: 0
+    system:
+      resource_attributes:
+        host.arch:
+          enabled: false
+        host.cpu.cache.l2.size:
+          enabled: false
+        host.cpu.family:
+          enabled: false
+        host.cpu.model.id:
+          enabled: false
+        host.cpu.model.name:
+          enabled: false
+        host.cpu.stepping:
+          enabled: false
+        host.cpu.vendor.id:
+          enabled: false
+        host.id:
+          enabled: false
+        host.ip:
+          enabled: false
+        host.mac:
+          enabled: false
+        host.name:
+          enabled: true
+        os.description:
+          enabled: false
+        os.type:
+          enabled: true
+    timeout: 2s
+    tls:
+      ca_file: ""
+      cert_file: ""
+      include_system_ca_certs_pool: false
+      insecure: false
+      insecure_skip_verify: false
+      key_file: ""
+      max_version: ""
+      min_version: ""
+      reload_interval: "0s"
+      server_name_override: ""
+    write_buffer_size: 0
+receivers:
+  otlp/application_signals:
+    protocols:
+      grpc:
+        dialer:
+          timeout: "0s"
+        endpoint: 0.0.0.0:4315
+        include_metadata: false
+        max_concurrent_streams: 0
+        max_recv_msg_size_mib: 0
+        read_buffer_size: 524288
+        transport: tcp
+        write_buffer_size: 0
+      http:
+        endpoint: 0.0.0.0:4316
+        include_metadata: false
+        logs_url_path: /v1/logs
+        max_request_body_size: 0
+        metrics_url_path: /v1/metrics
+        traces_url_path: /v1/traces
+service:
+  extensions:
+    - awsproxy/application_signals
+    - agenthealth/traces
+    - agenthealth/logs
+  pipelines:
+    metrics/application_signals:
+      exporters:
+        - awsemf/application_signals
+      processors:
+        - resourcedetection
+        - awsapplicationsignals
+      receivers:
+        - otlp/application_signals
+    traces/application_signals:
+      exporters:
+        - awsxray/application_signals
+      processors:
+        - resourcedetection
+        - awsapplicationsignals
+      receivers:
+        - otlp/application_signals
+  telemetry:
+    logs:
+      development: false
+      disable_caller: false
+      disable_stacktrace: false
+      encoding: console
+      level: info
+      output_paths:
+        - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+      sampling:
+        enabled: true
+        initial: 2
+        thereafter: 500
+        tick: 10s
+    metrics:
+      address: ""
+      level: None
+    traces: {}

@@ -107,8 +107,9 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to create state file directory %s: %v", t.FileStateFolder, err)
 	}
 
-	// Clean state file regularly
+	// Clean state file on init and regularly
 	go func() {
+		t.cleanupStateFolder()
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 		for {

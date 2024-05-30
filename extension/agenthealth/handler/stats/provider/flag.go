@@ -17,99 +17,61 @@ const (
 	flagGetInterval = 5 * time.Minute
 )
 
-type Flag int
-
-const (
-	FlagIMDSFallbackSucceed Flag = iota
-	FlagSharedConfigFallback
-	FlagAppSignal
-	FlagEnhancedContainerInsights
-	FlagRunningInContainer
-	FlagMode
-	FlagRegionType
-)
-
 var (
-	flagSingleton FlagStats
+	flagSingleton *flagStats
 	flagOnce      sync.Once
 )
-
-type FlagStats interface {
-	agent.StatsProvider
-	SetFlag(flag Flag)
-	SetFlagWithValue(flag Flag, value string)
-}
 
 type flagStats struct {
 	*intervalStats
 
-	flags sync.Map
+	flagSet agent.FlagSet
 }
-
-var _ FlagStats = (*flagStats)(nil)
 
 func (p *flagStats) update() {
 	p.stats.Store(agent.Stats{
-		ImdsFallbackSucceed:       p.getIntFlag(FlagIMDSFallbackSucceed, false),
-		SharedConfigFallback:      p.getIntFlag(FlagSharedConfigFallback, false),
-		AppSignals:                p.getIntFlag(FlagAppSignal, false),
-		EnhancedContainerInsights: p.getIntFlag(FlagEnhancedContainerInsights, false),
-		RunningInContainer:        p.getIntFlag(FlagRunningInContainer, true),
-		Mode:                      p.getStringFlag(FlagMode),
-		RegionType:                p.getStringFlag(FlagRegionType),
+		ImdsFallbackSucceed:       boolToSparseInt(p.flagSet.IsSet(agent.FlagIMDSFallbackSuccess)),
+		SharedConfigFallback:      boolToSparseInt(p.flagSet.IsSet(agent.FlagSharedConfigFallback)),
+		AppSignals:                boolToSparseInt(p.flagSet.IsSet(agent.FlagAppSignal)),
+		EnhancedContainerInsights: boolToSparseInt(p.flagSet.IsSet(agent.FlagEnhancedContainerInsights)),
+		RunningInContainer:        boolToInt(p.flagSet.IsSet(agent.FlagRunningInContainer)),
+		Mode:                      p.flagSet.GetString(agent.FlagMode),
+		RegionType:                p.flagSet.GetString(agent.FlagRegionType),
 	})
 }
 
-func (p *flagStats) getIntFlag(flag Flag, missingAsZero bool) *int {
-	if _, ok := p.flags.Load(flag); ok {
-		return aws.Int(1)
+func boolToInt(value bool) *int {
+	result := boolToSparseInt(value)
+	if result != nil {
+		return result
 	}
-	if missingAsZero {
-		return aws.Int(0)
+	return aws.Int(0)
+}
+
+func boolToSparseInt(value bool) *int {
+	if value {
+		return aws.Int(1)
 	}
 	return nil
 }
 
-func (p *flagStats) getStringFlag(flag Flag) *string {
-	value, ok := p.flags.Load(flag)
-	if !ok {
-		return nil
-	}
-	var str string
-	str, ok = value.(string)
-	if !ok {
-		return nil
-	}
-	return aws.String(str)
-}
-
-func (p *flagStats) SetFlag(flag Flag) {
-	if _, ok := p.flags.Load(flag); !ok {
-		p.flags.Store(flag, true)
-		p.update()
-	}
-}
-
-func (p *flagStats) SetFlagWithValue(flag Flag, value string) {
-	if _, ok := p.flags.Load(flag); !ok {
-		p.flags.Store(flag, value)
-		p.update()
-	}
-}
-
-func newFlagStats(interval time.Duration) *flagStats {
+func newFlagStats(flagSet agent.FlagSet, interval time.Duration) *flagStats {
 	stats := &flagStats{
+		flagSet:       flagSet,
 		intervalStats: newIntervalStats(interval),
 	}
+	stats.flagSet.OnChange(stats.update)
 	if envconfig.IsRunningInContainer() {
-		stats.SetFlag(FlagRunningInContainer)
+		stats.flagSet.Set(agent.FlagRunningInContainer)
+	} else {
+		stats.update()
 	}
 	return stats
 }
 
-func GetFlagsStats() FlagStats {
+func GetFlagsStats() agent.StatsProvider {
 	flagOnce.Do(func() {
-		flagSingleton = newFlagStats(flagGetInterval)
+		flagSingleton = newFlagStats(agent.UsageFlags(), flagGetInterval)
 	})
 	return flagSingleton
 }

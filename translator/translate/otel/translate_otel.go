@@ -22,7 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/appsignals"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
@@ -66,10 +66,9 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			hostReceivers.Set(translator)
 		}
 	})
-
 	translators := common.NewTranslatorMap(
-		appsignals.NewTranslator(component.DataTypeTraces),
-		appsignals.NewTranslator(component.DataTypeMetrics),
+		applicationsignals.NewTranslator(component.DataTypeTraces),
+		applicationsignals.NewTranslator(component.DataTypeMetrics),
 		host.NewTranslator(common.PipelineNameHost, hostReceivers),
 		host.NewTranslator(common.PipelineNameHostDeltaMetrics, deltaMetricsReceivers),
 		containerinsights.NewTranslator(),
