@@ -72,6 +72,11 @@ func NewLogAgent(c *config.Config) *LogAgent {
 	}
 }
 
+type ResourceID struct {
+	KeyAttributes map[string]string
+	AttributeMap  map[string]string
+}
+
 // Run LogAgent will scan all input and output plugins for LogCollection and LogBackend.
 // And connect all the LogSrc from the LogCollection found to the respective LogDest
 // based on the configured "destination", and "name"
