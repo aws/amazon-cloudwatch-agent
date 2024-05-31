@@ -4,12 +4,12 @@
 package common
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 	"strings"
 
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 )
 
 const (
