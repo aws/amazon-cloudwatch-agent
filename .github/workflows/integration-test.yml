@@ -1159,7 +1159,7 @@ jobs:
 
   GPUE2E:
     name: "GPUE2E"
-    needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
+    needs: [ BuildAndUpload,BuildDocker, GenerateTestMatrix ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1192,7 +1192,7 @@ jobs:
           command: |
             cd terraform/gpu
             terraform init
-            if terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version=v1.6.0-eksbuild.1" -var="k8s_version=1.29" --auto-approve; then
+            if terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="k8s_version=1.29" --auto-approve; then
               echo "Terraform apply successful."
             else
               terraform destroy -auto-approve && exit 1
