@@ -17,7 +17,7 @@ remote_write_queue:
   num_consumers: 5
 external_labels: []
 write_buffer_size: 524288
-endpoint: "https://aps-workspaces..amazonaws.com/workspaces/ws-12345/api/v1/remote_write"
+endpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345/api/v1/remote_write"
 headers: []
 target_info:
   enabled: true
