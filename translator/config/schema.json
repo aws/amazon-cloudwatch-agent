@@ -93,6 +93,18 @@
             "maxLength": 1024
           }
         },
+        "metrics_destinations": {
+          "type": "object",
+          "properties": {
+            "cloudwatch": {
+            },
+            "amp": {
+              "$ref": "#/definitions/metricsDefinition/definitions/ampDefinition"
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
         "metrics_collected": {
           "type": "object",
           "properties": {
@@ -339,6 +351,20 @@
               "maxLength": 255
             }
           },
+          "additionalProperties": false
+        },
+        "ampDefinition": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          },
+          "required": [
+            "workspace_id"
+          ],
           "additionalProperties": false
         },
         "tlsDefinitions": {
@@ -751,7 +777,7 @@
               },
               "additionalProperties": true
             },
-            "prometheus":{
+            "prometheus": {
               "type": "object",
               "properties": {
                 "cluster_name": {
@@ -1410,7 +1436,7 @@
               "description": "Prometheus metrics port list of the exporters",
               "type": "string"
             },
-            "sd_service_name_pattern":{
+            "sd_service_name_pattern": {
               "description": "ECS service name pattern responsible for tasks which expose the Prometheus metrics",
               "type": "string"
             }

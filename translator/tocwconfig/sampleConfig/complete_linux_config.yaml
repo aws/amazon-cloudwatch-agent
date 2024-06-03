@@ -14,11 +14,11 @@ exporters:
             enabled: true
         role_arn: metrics_role_arn_value_test
         rollup_dimensions:
-            - - ImageId
-            - - InstanceId
-              - InstanceType
-            - - d1
-            - []
+        - - ImageId
+        - - InstanceId
+          - InstanceType
+        - - d1
+        - []
     awscloudwatchlogs/emf_logs:
         certificate_file_path: ""
         emf_only: true
@@ -74,7 +74,7 @@ extensions:
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutLogEvents
+            - PutLogEvents
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -82,7 +82,7 @@ extensions:
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutMetricData
+            - PutMetricData
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -90,7 +90,7 @@ extensions:
         is_usage_data_enabled: true
         stats:
             operations:
-                - PutTraceSegments
+            - PutTraceSegments
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -109,19 +109,19 @@ processors:
         exclude:
             match_type: strict
             metrics:
-                - iops_in_progress
-                - diskio_iops_in_progress
+            - iops_in_progress
+            - diskio_iops_in_progress
         include:
             match_type: ""
         initial_value: 0
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
-            - AutoScalingGroupName
+        - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
-            - ImageId
-            - InstanceId
+        - InstanceType
+        - ImageId
+        - InstanceId
         imds_retries: 1
         refresh_interval_seconds: 0s
     filter/jmx/0:
@@ -339,40 +339,40 @@ receivers:
         type: udp_input
 service:
     extensions:
-        - agenthealth/metrics
-        - agenthealth/logs
-        - agenthealth/traces
+    - agenthealth/metrics
+    - agenthealth/logs
+    - agenthealth/traces
     pipelines:
         logs/emf_logs:
             exporters:
-                - awscloudwatchlogs/emf_logs
+            - awscloudwatchlogs/emf_logs
             processors:
-                - batch/emf_logs
+            - batch/emf_logs
             receivers:
-                - udplog/emf_logs
+            - udplog/emf_logs
         metrics/host:
             exporters:
-                - awscloudwatch
+            - awscloudwatch
             processors:
-                - ec2tagger
-                - transform
+            - ec2tagger
+            - transform
             receivers:
-                - telegraf_swap
-                - telegraf_processes
-                - telegraf_mem
-                - telegraf_netstat
-                - telegraf_cpu
-                - telegraf_statsd
-                - telegraf_procstat/1917393364
-                - telegraf_socket_listener
-                - telegraf_disk
+            - telegraf_swap
+            - telegraf_processes
+            - telegraf_mem
+            - telegraf_netstat
+            - telegraf_cpu
+            - telegraf_statsd
+            - telegraf_procstat/1917393364
+            - telegraf_socket_listener
+            - telegraf_disk
         metrics/hostDeltaMetrics:
             exporters:
-                - awscloudwatch
+            - awscloudwatch
             processors:
-                - cumulativetodelta/hostDeltaMetrics
-                - ec2tagger
-                - transform
+            - cumulativetodelta/hostDeltaMetrics
+            - ec2tagger
+            - transform
             receivers:
                 - telegraf_net
                 - telegraf_diskio
@@ -398,12 +398,12 @@ service:
                 - jmx/1
         traces/xray:
             exporters:
-                - awsxray
+            - awsxray
             processors:
-                - batch/xray
+            - batch/xray
             receivers:
-                - awsxray
-                - otlp/traces
+            - awsxray
+            - otlp/traces
     telemetry:
         logs:
             development: false
@@ -412,7 +412,7 @@ service:
             encoding: console
             level: error
             output_paths:
-                - /tmp/fake/log/hotdog.log
+            - /tmp/fake/log/hotdog.log
             sampling:
                 enabled: true
                 initial: 2

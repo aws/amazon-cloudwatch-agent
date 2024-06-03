@@ -3,8 +3,6 @@
 
 package config
 
-import "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-
 // This served as the allowlisted metric name, which is registered under the plugin name
 // Note: the registered metric name don't have plugin name as prefix
 var Registered_Metrics_Linux = map[string][]string{
@@ -54,8 +52,8 @@ var Registered_Metrics_Windows = map[string][]string{
 }
 
 var DisableWinPerfCounters = map[string]bool{
-	"statsd":      true,
-	"procstat":    true,
-	"nvidia_smi":  true,
-	common.JmxKey: true,
+	"statsd":     true,
+	"procstat":   true,
+	"nvidia_smi": true,
+	"jmx":        true,
 }

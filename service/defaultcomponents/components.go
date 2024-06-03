@@ -7,7 +7,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
@@ -33,6 +35,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
+	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -59,6 +62,7 @@ func Factories() (otelcol.Factories, error) {
 		metricstransformprocessor.NewFactory(),
 		resourceprocessor.NewFactory(),
 		resourcedetectionprocessor.NewFactory(),
+		rollupprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
 		gpuattributes.NewFactory(),
 	); err != nil {
@@ -71,6 +75,7 @@ func Factories() (otelcol.Factories, error) {
 		awsxrayexporter.NewFactory(),
 		cloudwatch.NewFactory(),
 		debugexporter.NewFactory(),
+		prometheusremotewriteexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
@@ -78,6 +83,7 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Extensions, err = extension.MakeFactoryMap(
 		agenthealth.NewFactory(),
 		awsproxy.NewFactory(),
+		sigv4authextension.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}

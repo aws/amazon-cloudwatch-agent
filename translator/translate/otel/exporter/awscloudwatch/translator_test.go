@@ -4,8 +4,6 @@
 package awscloudwatch
 
 import (
-	"encoding/json"
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -15,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -106,7 +105,7 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"WithInternal": {
-			input:    getJson(t, filepath.Join("testdata", "config.json")),
+			input:    testutil.GetJson(t, filepath.Join("..", "..", "common", "testdata", "config.json")),
 			internal: true,
 			want: &cloudwatch.Config{
 				Namespace:          "namespace",
@@ -169,14 +168,4 @@ func TestTranslator(t *testing.T) {
 			}
 		})
 	}
-}
-
-func getJson(t *testing.T, path string) map[string]interface{} {
-	t.Helper()
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err)
-	var result map[string]interface{}
-	require.NoError(t, json.Unmarshal(content, &result))
-	return result
 }

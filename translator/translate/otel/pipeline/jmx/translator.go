@@ -12,16 +12,24 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 )
 
 const (
 	placeholderTarget = "<target-system>"
+)
+
+var (
+	metricsDestinationsKey = common.ConfigKey(common.MetricsKey, common.MetricsDestinationsKey)
 )
 
 type translator struct {
@@ -77,8 +85,21 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			filterprocessor.NewTranslator(filterprocessor.WithName(common.PipelineNameJmx), filterprocessor.WithIndex(t.index)),
 			resourceprocessor.NewTranslator(resourceprocessor.WithName(common.PipelineNameJmx)),
 		),
-		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
-		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
+		Exporters:  common.NewTranslatorMap[component.Config](),
+		Extensions: common.NewTranslatorMap[component.Config](),
+	}
+
+	if !conf.IsSet(metricsDestinationsKey) || conf.IsSet(common.ConfigKey(metricsDestinationsKey, "cloudwatch")) {
+		translators.Exporters.Set(awscloudwatch.NewTranslator())
+		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
+	}
+	if conf.IsSet(metricsDestinationsKey) && conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.AMPKey)) {
+		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
+		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
+			translators.Processors.Set(rollupprocessor.NewTranslator())
+		}
+		translators.Extensions.Set(sigv4auth.NewTranslator())
 	}
 
 	mdt := metricsdecorator.NewTranslator(

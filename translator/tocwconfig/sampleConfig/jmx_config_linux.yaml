@@ -11,6 +11,51 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+    prometheusremotewrite/amp:
+        add_metric_suffixes: true
+        auth:
+            authenticator: sigv4auth
+        compression: ""
+        disable_keep_alives: false
+        endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
+        export_created_metric:
+            enabled: false
+        http2_ping_timeout: 0s
+        http2_read_idle_timeout: 0s
+        max_batch_size_bytes: 3000000
+        namespace: ""
+        proxy_url: ""
+        read_buffer_size: 0
+        remote_write_queue:
+            enabled: true
+            num_consumers: 5
+            queue_size: 10000
+        resource_to_telemetry_conversion:
+            clear_after_copy: true
+            enabled: true
+        retry_on_failure:
+            enabled: true
+            initial_interval: 50ms
+            randomization_factor: 0.5
+            multiplier: 1.5
+            max_interval: 30s
+            max_elapsed_time: 5m0s
+        send_metadata: false
+        target_info:
+            enabled: true
+        timeout: 5s
+        tls:
+            ca_file: ""
+            cert_file: ""
+            include_system_ca_certs_pool: false
+            insecure: false
+            insecure_skip_verify: false
+            key_file: ""
+            max_version: ""
+            min_version: ""
+            reload_interval: 0s
+            server_name_override: ""
+        write_buffer_size: 524288
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -20,7 +65,21 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    sigv4auth:
+        assume_role:
+            sts_region: us-west-2
+        region: us-west-2
 processors:
+    batch/host_other:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    batch/jmx:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
     filter/jmx:
         error_mode: propagate
         logs: {}
@@ -91,6 +150,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - sigv4auth
     pipelines:
         metrics/host:
             exporters:
@@ -100,12 +160,23 @@ service:
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
+        metrics/host_other:
+            exporters:
+            - prometheusremotewrite/amp
+            processors:
+            - transform
+            - batch/host_other
+            receivers:
+            - telegraf_cpu
+            - telegraf_disk
         metrics/jmx:
             exporters:
                 - awscloudwatch
+                - prometheusremotewrite/amp
             processors:
                 - filter/jmx
                 - resource/jmx
+                - batch/jmx
                 - transform/jmx
             receivers:
                 - jmx

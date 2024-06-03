@@ -103,6 +103,9 @@
         "allowed_pending_messages": 10000
       }
     },
+    "metrics_destinations": {
+      "cloudwatch": {}
+    },
     "append_dimensions": {
       "ImageId": "${aws:ImageId}",
       "InstanceId": "${aws:InstanceId}",

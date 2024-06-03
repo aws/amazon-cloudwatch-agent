@@ -138,6 +138,27 @@ func TestSet(t *testing.T) {
 	set.Remove(1)
 	require.False(t, set.Contains(1))
 	require.Equal(t, []int{2}, maps.Keys(set))
+
+	other := NewSet(1, 2, 3)
+	// different sizes
+	assert.False(t, set.Equal(other))
+	set.Add(1, 4)
+	// same size, different keys
+	assert.False(t, set.Equal(other))
+	set.Remove(4)
+	// set {1,2}, other {1,2,3}
+	assert.True(t, other.ContainsAll(set))
+	assert.False(t, set.ContainsAll(other))
+	set.Add(3)
+	assert.True(t, set.Equal(other))
+}
+
+func TestRange(t *testing.T) {
+	fn := func(key int) bool {
+		return key > 0
+	}
+	assert.True(t, Range([]int{1, 2, 3}, fn))
+	assert.False(t, Range([]int{1, 0, -1}, fn))
 }
 
 func assertMapsEqual(t *testing.T, m1, m2 map[string]interface{}) {
