@@ -42,6 +42,8 @@ func TestAMPConfig(t *testing.T) {
 
 func TestJMXConfigLinux(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
