@@ -43,7 +43,7 @@ func NewTranslators(conf *confmap.Conf, os string) (pipeline.TranslatorMap, erro
 	hasDeltaPipeline := deltaReceivers.Len() != 0
 
 	otherExporters := map[string]common.Translator[component.Config]{
-		common.AMPKey: prometheusremotewrite.NewTranslatorWithName("amp"),
+		common.AMPKey: prometheusremotewrite.NewTranslatorWithName(common.AMPKey),
 	}
 
 	if !conf.IsSet(metricsDestinationsKey) || conf.IsSet(common.ConfigKey(metricsDestinationsKey, "cloudwatch")) {
