@@ -1,6 +1,7 @@
 {
   "agent": {
-    "debug": true
+    "debug": true,
+    "region": "us-east-1"
   },
   "metrics": {
     "metrics_destinations": {

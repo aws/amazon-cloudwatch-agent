@@ -14,10 +14,12 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslator(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
 	tt := NewTranslatorWithName("test")
 	require.EqualValues(t, "prometheusremotewrite/test", tt.ID().String())
 

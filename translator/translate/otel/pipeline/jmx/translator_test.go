@@ -128,6 +128,35 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics"},
 			},
 		},
+		"WithValidJMX/Object/AMP": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"jmx": map[string]any{
+							"endpoint": "localhost:8080",
+							"jvm": map[string]any{
+								"measurement": []any{
+									"jvm.memory.heap.init",
+								},
+							},
+						},
+					},
+				},
+			},
+			index: -1,
+			want: &want{
+				pipelineID: "metrics/jmx",
+				receivers:  []string{"jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx"},
+				exporters:  []string{"prometheusremotewrite/amp"},
+				extensions: []string{"sigv4auth"},
+			},
+		},
 		"WithValidJMX/Object/Decoration": {
 			input: map[string]any{
 				"metrics": map[string]any{
