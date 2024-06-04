@@ -475,7 +475,7 @@
               "maxProperties": 30
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "nvidiaGpuDefinitions": {
           "type": "object",
