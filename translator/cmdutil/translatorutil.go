@@ -107,6 +107,7 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 		}
 		fmt.Println("baleeey")
 		log.Println("baleeey")
+		log.Println("light workkkkkkkk")
 		log.Panic("E! Invalid Json input schemasdfjaisodjfsadjflaksjkfl jsdlkfjalksjfklasjdlfjasdlkfjlksdjfkljsdlfkjsdlkfjlsdjflka.")
 	}
 }
