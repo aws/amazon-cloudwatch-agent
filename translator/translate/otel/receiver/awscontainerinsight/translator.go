@@ -117,11 +117,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 		t.setHostName(conf, cfg)
 		t.setHostIP(conf, cfg)
-
-		if cfg.KubeConfigPath != "" && cfg.HostName != "" && cfg.HostIP != "" {
-			cfg.RunOnSystemd = true
-		}
-
+		cfg.RunOnSystemd = !context.CurrentContext().RunInContainer()
 	}
 
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
