@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -19,9 +20,10 @@ func TestTranslator(t *testing.T) {
 	acit := NewTranslator()
 	require.EqualValues(t, "awscontainerinsightreceiver", acit.ID().String())
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *awscontainerinsightreceiver.Config
-		wantErr error
+		input     map[string]interface{}
+		isSystemd bool
+		want      *awscontainerinsightreceiver.Config
+		wantErr   error
 	}{
 		"WithoutECSOrKubernetesKeys": {
 			input: map[string]interface{}{},
@@ -268,6 +270,7 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
+			isSystemd: true,
 			want: &awscontainerinsightreceiver.Config{
 				ContainerOrchestrator:        eks,
 				CollectionInterval:           60 * time.Second,
@@ -285,6 +288,7 @@ func TestTranslator(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			context.CurrentContext().SetRunInContainer(!testCase.isSystemd)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := acit.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
