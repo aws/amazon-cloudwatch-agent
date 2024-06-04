@@ -85,11 +85,7 @@ func GetTomlConfigPath(tomlFilePath string) string {
 
 func RunSchemaValidation(inputJsonMap map[string]interface{}) (*gojsonschema.Result, error) {
 	schemaLoader := gojsonschema.NewStringLoader(config.GetJsonSchema())
-	log.Println("Below is what the schema is getting")
-	log.Println(config.GetJsonSchema())
 	jsonInputLoader := gojsonschema.NewGoLoader(inputJsonMap)
-	log.Println("Below is what the actual json is: ")
-	log.Println(inputJsonMap)
 	return gojsonschema.Validate(schemaLoader, jsonInputLoader)
 }
 
@@ -105,10 +101,7 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 		for _, errorDetail := range errorDetails {
 			translator.AddErrorMessages(config.GetFormattedPath(errorDetail.Context().String()), errorDetail.Description())
 		}
-		fmt.Println("baleeey")
-		log.Println("baleeey")
-		log.Println("light workkkkkkkk")
-		log.Panic("E! Invalid Json input schemasdfjaisodjfsadjflaksjkfl jsdlkfjalksjfklasjdlfjasdlkfjlksdjfkljsdlfkjsdlkfjlsdjflka.")
+		log.Panic("E! Invalid Json input schema.")
 	}
 }
 
