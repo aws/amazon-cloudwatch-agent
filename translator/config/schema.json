@@ -470,6 +470,16 @@
               }
             }
           },
+          "append_dimensions": {
+            "type": "object",
+            "description": "Adds Amazon EC2 metric dimensions to all metrics collected by the agent, we only support fixed key value pair now: ImageId:{aws:ImageId},InstanceId:{aws:InstanceId},InstanceType:{aws:InstanceType},AutoScalingGroupName:{aws:AutoScalingGroupName}. ",
+            "maxProperties": 30,
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
           "additionalProperties": false
         },
         "nvidiaGpuDefinitions": {
