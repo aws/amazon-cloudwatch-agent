@@ -2,6 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 name: PR Build
+env:
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+
 on:
   workflow_dispatch:
   pull_request:
@@ -72,6 +76,9 @@ jobs:
     needs: [lint, changes]
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      id-token: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -98,6 +105,13 @@ jobs:
               ~\AppData\Local\go-build
               ~\go\pkg\mod
     steps:
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-east-1
+
       - name: Set up Go 1.x
         if: needs.changes.outputs.build == 'true'
         uses: actions/setup-go@v4
@@ -127,6 +141,30 @@ jobs:
       - name: Install make
         if: matrix.family == 'windows' && steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: choco install make
+
+#      TODO: remove "Replace AWS SDK" once changes are available publicly
+      - name: Replace AWS SDK (Windows)
+        if: matrix.family == 'windows'
+        run: |
+           mkdir C:/Users/runneradmin/gosdk
+           aws s3 cp s3://compass-pre-release/staging.zip $env:SYSTEMROOT
+           tar -xf $env:SYSTEMROOT/staging.zip -C C:/Users/runneradmin/gosdk
+           $env:sdkPath=(Get-ChildItem "C:/Users/runneradmin/gosdk/apollo/env/AWSGoSDK-Release/var/tmp/release-automation/staging-*/sdk/src/github.com/aws/aws-sdk-go")
+           echo $env:sdkPath
+           cd D:\a\private-amazon-cloudwatch-agent-staging\private-amazon-cloudwatch-agent-staging
+           ls
+           go mod edit -replace github.com/aws/aws-sdk-go=$env:sdkPath
+
+      - name: Replace AWS SDK (Linux)
+        if: matrix.family != 'windows'
+        run: |
+           mkdir ~/gosdk
+           aws s3 cp s3://compass-pre-release/staging.zip ~
+           unzip -q -d ~/gosdk ~/staging.zip || true
+           sdkPath=$(echo ~/gosdk/apollo/env/AWSGoSDK-Release/var/tmp/release-automation/staging-*/sdk/src/github.com/aws/aws-sdk-go)
+           echo $sdkPath
+           ls
+           go mod edit -replace github.com/aws/aws-sdk-go=$sdkPath
 
       - name: Unit Test
         if:  steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
