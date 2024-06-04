@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -19,9 +20,10 @@ func TestTranslator(t *testing.T) {
 	acit := NewTranslator()
 	require.EqualValues(t, "awscontainerinsightreceiver", acit.ID().String())
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *awscontainerinsightreceiver.Config
-		wantErr error
+		input     map[string]interface{}
+		isSystemd bool
+		want      *awscontainerinsightreceiver.Config
+		wantErr   error
 	}{
 		"WithoutECSOrKubernetesKeys": {
 			input: map[string]interface{}{},
@@ -101,6 +103,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockName:               "cwagent-clusterleader",
 				LeaderLockUsingConfigMapOnly: true,
 				TagService:                   true,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithoutClusterName": {
@@ -131,6 +134,7 @@ func TestTranslator(t *testing.T) {
 				LeaderLockName:               defaultLeaderLockName,
 				LeaderLockUsingConfigMapOnly: true,
 				ClusterName:                  "TestCluster",
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithEnhancedContainerInsights": {
@@ -155,6 +159,7 @@ func TestTranslator(t *testing.T) {
 				EnableControlPlaneMetrics:    true,
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithLevel1Granularity": {
@@ -178,6 +183,7 @@ func TestTranslator(t *testing.T) {
 				EnableControlPlaneMetrics:    false,
 				AddFullPodNameMetricLabel:    false,
 				AddContainerNameMetricLabel:  false,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithLevel2Granularity": {
@@ -202,6 +208,7 @@ func TestTranslator(t *testing.T) {
 				EnableControlPlaneMetrics:    true,
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithKubernetes/WithLevel3Granularity": {
@@ -226,6 +233,7 @@ func TestTranslator(t *testing.T) {
 				EnableControlPlaneMetrics:    true,
 				AddFullPodNameMetricLabel:    true,
 				AddContainerNameMetricLabel:  true,
+				KubeConfigPath:               "",
 			},
 		},
 		"WithECSAndKubernetes": {
@@ -249,9 +257,38 @@ func TestTranslator(t *testing.T) {
 				TagService:                   true,
 			},
 		},
+		"WithEKSAndCustomKubeConfigPathHostDetails": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"kube_config_path": "/tmp/custom.kubeconfig",
+							"cluster_name":     "TestCluster",
+							"host_name":        "test-hostname",
+							"host_ip":          "1.2.3.4",
+						},
+					},
+				},
+			},
+			isSystemd: true,
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				PrefFullPodName:              false,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				TagService:                   true,
+				KubeConfigPath:               "/tmp/custom.kubeconfig",
+				HostName:                     "test-hostname",
+				HostIP:                       "1.2.3.4",
+				RunOnSystemd:                 true,
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			context.CurrentContext().SetRunInContainer(!testCase.isSystemd)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := acit.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)
@@ -269,6 +306,10 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.LeaderLockName, gotCfg.LeaderLockName)
 				require.Equal(t, testCase.want.LeaderLockUsingConfigMapOnly, gotCfg.LeaderLockUsingConfigMapOnly)
 				require.Equal(t, testCase.want.EnableControlPlaneMetrics, gotCfg.EnableControlPlaneMetrics)
+				require.Equal(t, testCase.want.KubeConfigPath, gotCfg.KubeConfigPath)
+				require.Equal(t, testCase.want.HostName, gotCfg.HostName)
+				require.Equal(t, testCase.want.HostIP, gotCfg.HostIP)
+				require.Equal(t, testCase.want.RunOnSystemd, gotCfg.RunOnSystemd)
 			}
 		})
 	}
