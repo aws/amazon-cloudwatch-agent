@@ -1,0 +1,24 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "jmx": {
+        "jvm": {
+          "measurement": [
+            "jvm.memory.heap.init",
+            "jvm.memory.heap.used",
+            "jvm.memory.nonheap.init",
+            "jvm.memory.nonheap.used",
+            "jvm.threads.count"
+          ]
+        },
+        "tomcat": {
+          "measurement": [
+            "tomcat.sessions"
+          ]
+        }
+      }
+    }
+  }
+}
+
+

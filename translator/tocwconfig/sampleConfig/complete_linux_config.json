@@ -10,10 +10,70 @@
     "credentials": {
       "role_arn": "global_role_arn_value"
     },
-    "region": "us-west-2"
+    "region": "us-west-2",
+    "omit_hostname": true
   },
   "metrics": {
     "metrics_collected": {
+      "jmx": [
+        {
+          "endpoint": "localhost:12345",
+          "jvm": {
+            "measurement": [
+              "jvm.memory.heap.init",
+              {
+                "name": "jvm.memory.heap.used",
+                "rename": "JVM_MEM_HEAP_USED",
+                "unit": "unit"
+              },
+              "jvm.memory.nonheap.init"
+            ]
+          },
+          "kafka-consumer": {
+            "measurement": [
+              {
+                "name": "kafka.consumer.fetch-rate",
+                "rename": "kafka.fetch-rate"
+              }
+            ]
+          },
+          "metrics_collection_interval": 60,
+          "username": "cwagent",
+          "keystore_path": "/keystore",
+          "keystore_type": "PKCS",
+          "truststore_path": "/truststore",
+          "truststore_type": "PKCS12",
+          "remote_profile": "SASL/PLAIN",
+          "realm": "test_realm",
+          "append_dimensions": {
+            "service.name": "jmx_app"
+          }
+        },
+        {
+          "endpoint": "localhost:4567",
+          "tomcat": {
+            "measurement": [
+              "tomcat.sessions",
+              {
+                "name": "tomcat.errors",
+                "rename": "TC_ERR"
+              }
+            ]
+          },
+          "metrics_collection_interval": 60,
+          "username": "cwagent",
+          "keystore_path": "/keystore",
+          "keystore_type": "PKCS",
+          "truststore_path": "/truststore",
+          "truststore_type": "PKCS12",
+          "registry_ssl_enabled": true,
+          "remote_profile": "SASL/PLAIN",
+          "realm": "test_realm",
+          "append_dimensions": {
+            "service.name": "jmx_app"
+          }
+        }
+      ],
       "collectd": {
         "service_address": "udp://127.0.0.1:25826",
         "name_prefix": "collectd_",
@@ -28,7 +88,10 @@
         "resources": [
           "*"
         ],
-        "drop_original_metrics": ["cpu_usage_idle", "time_active"],
+        "drop_original_metrics": [
+          "cpu_usage_idle",
+          "time_active"
+        ],
         "measurement": [
           {
             "name": "cpu_usage_idle",
