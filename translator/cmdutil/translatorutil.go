@@ -96,6 +96,8 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 	}
 	if result.Valid() {
 		log.Print("I! Valid Json input schema.")
+		log.Print("This is an update log that should be removed")
+
 	} else {
 		errorDetails := result.Errors()
 		for _, errorDetail := range errorDetails {
