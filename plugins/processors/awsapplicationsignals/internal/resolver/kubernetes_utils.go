@@ -136,18 +136,6 @@ func getHostNetworkPorts(pod *corev1.Pod) []string {
 	return ports
 }
 
-func copyHostNetworkPorts(newPod, oldPod *corev1.Pod) {
-	newPod.Spec.HostNetwork = oldPod.Spec.HostNetwork
-	containers := oldPod.Spec.Containers
-	for i := 0; i < len(containers); i++ {
-		c := containers[i]
-		newPod.Spec.Containers = append(newPod.Spec.Containers, corev1.Container{
-			Name:  c.Name,
-			Ports: c.Ports,
-		})
-	}
-}
-
 func isIP(ipString string) bool {
 	ip := net.ParseIP(ipString)
 	return ip != nil

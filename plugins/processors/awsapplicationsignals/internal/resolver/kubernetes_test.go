@@ -554,14 +554,24 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 				PodIP:  "1.2.3.4",
 				HostIP: "5.6.7.8",
 			},
+			Spec: corev1.PodSpec{
+				HostNetwork: true,
+				Containers: []corev1.Container{
+					{
+						Ports: []corev1.ContainerPort{
+							{HostPort: 8080},
+						},
+					},
+				},
+			},
 		}
 
 		// add the pod
 		poWatcher.onAddOrUpdatePod(pod2, pod, false)
 
 		// Test the mappings in ipToPod
-		if _, ok := ipToPod.Load("5.6.7.8:8080"); ok {
-			t.Errorf("ipToPod[%s] should be deleted", "5.6.7.8:8080")
+		if podName, ok := ipToPod.Load("5.6.7.8:8080"); !ok && podName != "testPod" {
+			t.Errorf("ipToPod[%s] was incorrect, got: %s, want: %s.", "5.6.7.8:8080", podName, "testPod")
 		}
 
 		if podName, ok := ipToPod.Load("1.2.3.4"); !ok && podName != "testPod" {
@@ -1173,136 +1183,6 @@ func TestHandlePodUpdate(t *testing.T) {
 		initialIPToPod  map[string]string
 		expectedIPToPod map[string]string
 	}{
-		{
-			name: "Old and New Pod Use Host Network, Different Ports",
-			oldPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					HostIP: "192.168.1.1",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: true,
-					Containers: []corev1.Container{
-						{
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort: 8000,
-								},
-							},
-						},
-					},
-				},
-			},
-			newPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					HostIP: "192.168.1.1",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: true,
-					Containers: []corev1.Container{
-						{
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort: 8080,
-								},
-							},
-						},
-					},
-				},
-			},
-			initialIPToPod: map[string]string{
-				"192.168.1.1:8000": "mypod",
-			},
-			expectedIPToPod: map[string]string{
-				"192.168.1.1:8080": "mypod",
-			},
-		},
-		// ...other test cases...
-		{
-			name: "Old Pod Uses Host Network, New Pod Does Not",
-			oldPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					HostIP: "192.168.1.2",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: true,
-					Containers: []corev1.Container{
-						{
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort: 8001,
-								},
-							},
-						},
-					},
-				},
-			},
-			newPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					PodIP: "10.0.0.1",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: false,
-				},
-			},
-			initialIPToPod: map[string]string{
-				"192.168.1.2:8001": "mypod",
-			},
-			expectedIPToPod: map[string]string{
-				"10.0.0.1": "mypod",
-			},
-		},
-		{
-			name: "Old Pod Does Not Use Host Network, New Pod Does",
-			oldPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					PodIP: "10.0.0.2",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: false,
-				},
-			},
-			newPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					HostIP: "192.168.1.3",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: true,
-					Containers: []corev1.Container{
-						{
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort: 8002,
-								},
-							},
-						},
-					},
-				},
-			},
-			initialIPToPod: map[string]string{
-				"10.0.0.2": "mypod",
-			},
-			expectedIPToPod: map[string]string{
-				"192.168.1.3:8002": "mypod",
-			},
-		},
 		{
 			name: "Old and New Pod Do Not Use Host Network, Different Pod IPs",
 			oldPod: &corev1.Pod{
