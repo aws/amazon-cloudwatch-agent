@@ -1159,7 +1159,7 @@ jobs:
 
   GPUE2E:
     name: "GPUE2E"
-    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
