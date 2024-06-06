@@ -444,6 +444,11 @@
         },
         "ethtoolDefinitions": {
           "type": "object",
+          "allOf": [
+              {
+                "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
+              }
+          ],
           "properties": {
             "interface_include": {
               "type": "array",
