@@ -443,37 +443,46 @@
           }
         },
         "ethtoolDefinitions": {
-          "type": "object",
-          "properties": {
-            "interface_include": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 255
+          "allOf": [
+            {
+              "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
+            },
+            {
+              "$ref": "#/definitions/metricsDefinition/definitions/basicResourcesDefinition"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "interface_include": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                },
+                "interface_exclude": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                },
+                "metrics_include": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
+                }
               }
             },
-            "interface_exclude": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 255
-              }
-            },
-            "metrics_include": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 255
-              }
-            },
-            "append_dimensions": {
-              "$ref": "#/definitions/generalAppendDimensionsDefinition"
+            {
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ]
         },
         "nvidiaGpuDefinitions": {
           "type": "object",
