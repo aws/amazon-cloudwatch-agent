@@ -447,8 +447,8 @@
           "allOf": [
               {
                 "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
-              }
-          ],
+              },
+
           "properties": {
             "interface_include": {
               "type": "array",
@@ -477,7 +477,8 @@
             "append_dimensions": {
               "$ref": "#/definitions/generalAppendDimensionsDefinition"
             }
-          },
+          }
+          ],
           "additionalProperties": false
         },
         "nvidiaGpuDefinitions": {
