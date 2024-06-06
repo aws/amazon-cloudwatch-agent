@@ -1190,7 +1190,7 @@ jobs:
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
-            cd terraform/eks/daemon/eks_addon_on_gpu
+            cd terraform/eks/addon/gpu
             terraform init
             if terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version=v1.6.0-eksbuild.1" -var="k8s_version=1.29" --auto-approve; then
               echo "Terraform apply successful."
