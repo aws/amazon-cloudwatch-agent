@@ -444,13 +444,7 @@
         },
         "ethtoolDefinitions": {
           "type": "object",
-          "allOf": [
-              {
-                "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
-              },
-            {
-              "type": "object",
-              "properties": {
+          "properties": {
             "interface_include": {
               "type": "array",
               "items": {
@@ -478,9 +472,7 @@
             "append_dimensions": {
               "$ref": "#/definitions/generalAppendDimensionsDefinition"
             }
-          }
-            }
-          ],
+          },
           "additionalProperties": false
         },
         "nvidiaGpuDefinitions": {
