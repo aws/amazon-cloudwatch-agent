@@ -229,7 +229,7 @@
               "$ref": "#/definitions/timeIntervalWithZeroDefinition"
             }
           },
-          "additionalProperties": false
+          "additionalProperties": true
         },
         "cpuDefinitions": {
           "type": "object",
@@ -321,7 +321,7 @@
               "maxLength": 255
             }
           },
-          "additionalProperties": false
+          "additionalProperties": true
         },
         "tlsDefinitions": {
           "type": "object",
@@ -452,7 +452,7 @@
               }
             }
           },
-          "additionalProperties": false
+          "additionalProperties": true
         },
         "nvidiaGpuDefinitions": {
           "type": "object",
