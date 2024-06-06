@@ -448,8 +448,9 @@
               {
                 "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
               },
-
-          "properties": {
+            {
+              "type": "object",
+              "properties": {
             "interface_include": {
               "type": "array",
               "items": {
@@ -478,6 +479,7 @@
               "$ref": "#/definitions/generalAppendDimensionsDefinition"
             }
           }
+            }
           ],
           "additionalProperties": false
         },
