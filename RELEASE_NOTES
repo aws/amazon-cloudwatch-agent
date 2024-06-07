@@ -1,11 +1,28 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300041.0 (2024-06-07)
+========================================================================
+
+Features:
+* Support JMX metric collection for JVM, Tomcat, and Kafka on EC2
+
+Enhancements:
+* [ContainerInsights] Add NVIDIA GPU count metrics
+* [Application Signals] Enable detailed logging for metrics/traces when debug is enabled
+* [Metrics/Ethtool] Support append dimensions
+
+Bug fixes:
+* [Logs/Windows Event] Fix load state offset parsing to support unsigned int
+* [ContainerInsights] Prevent non-active workload GPU pod metrics from being emitted
+
+========================================================================
 Amazon CloudWatch Agent 1.300040.0 (2024-05-21)
 ========================================================================
-Enhancements
-* [Application Signals] Export emf logs to /aws/application-signals/data
+
+Enhancements:
+* [Application Signals] Export EMF logs to /aws/application-signals/data
 * [Application Signals] Rename metric namespace to Application Signals
 * [Application Signals] Change metric schema from HostedIn to Environment
-* Trim AWS prefix for spans in xray exporter
+* Trim AWS prefix for spans in X-Ray exporter
 
 Bug fixes:
 * Fix panic when using amazon-cloudwatch-agent-ctl -a cond-restart
@@ -13,21 +30,24 @@ Bug fixes:
 ========================================================================
 Amazon CloudWatch Agent 1.300039.0 (2024-05-03)
 ========================================================================
+
 Features:
 * [Metrics] Append Dimension Volume Id For Metrics
 
-Enhancements
+Enhancements:
 * Upgrade OTEL Contrib To v0.98.0
 
 ========================================================================
 Amazon CloudWatch Agent 1.300037.1 (2024-04-26)
 ========================================================================
+
 Bug fixes:
 * Fix nil referencing issue while decorating container insights metrics
 
 ========================================================================
 Amazon CloudWatch Agent 1.300037.0 (2024-04-11)
 ========================================================================
+
 Features:
 * [ContainerInsights] Add Elastic Fabric Adapter (EFA) observability with Kubernetes
 
@@ -41,18 +61,21 @@ Bug fixes:
 ========================================================================
 Amazon CloudWatch Agent 1.300036.0 (2024-04-05)
 ========================================================================
+
 Features:
 * [ContainerInsights] Add AWS Trainium & Inferentia observability with Kubernetes
 
 ========================================================================
 Amazon CloudWatch Agent 1.300035.0 (2024-03-18)
 ========================================================================
+
 Features:
 * [ContainerInsights] Add Container Insights for Windows in kubernetes.
 
 ========================================================================
 Amazon CloudWatch Agent 1.300034.1 (2024-03-14)
 ========================================================================
+
 Bug fixes:
 * [AppSignals] Explicitly set the default GC interval for metrics limiter
 
@@ -62,6 +85,7 @@ Enhancements:
 ========================================================================
 Amazon CloudWatch Agent 1.300034.0 (2024-03-04)
 ========================================================================
+
 Features:
 * [ContainerInsights] Add NVIDIA GPU observability with Kubernetes
 
