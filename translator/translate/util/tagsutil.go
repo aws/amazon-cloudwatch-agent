@@ -4,7 +4,6 @@
 package util
 
 import (
-	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
@@ -29,7 +28,5 @@ func FilterReservedKeys(input any) any {
 			result[k] = v
 		}
 	}
-	fmt.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-	fmt.Println(result)
 	return result
 }

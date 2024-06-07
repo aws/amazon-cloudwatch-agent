@@ -64,8 +64,6 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 }
 func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string, result map[string]interface{}) {
 	// Set append_dimensions as tags
-	fmt.Println(pluginName)
-	fmt.Println(result)
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
 		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
 	}
@@ -76,9 +74,6 @@ func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string,
 			result[key] = val
 		}
 	}
-
-	fmt.Println(result)
-
 }
 
 // Windows common config returnVal would be three parts:
