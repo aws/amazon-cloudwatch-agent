@@ -1201,7 +1201,6 @@ jobs:
             fi
 
             terraform init
-
             if terraform apply --auto-approve \
               -var="aws_ecr_private_registry=${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}" \
               -var="ecr_integration_test_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" \
