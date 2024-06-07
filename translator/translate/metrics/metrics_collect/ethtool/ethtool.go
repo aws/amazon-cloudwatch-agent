@@ -5,6 +5,7 @@ package ethtool
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
 )
@@ -17,17 +18,12 @@ var ChildRule = map[string]translator.Rule{}
 //	    "metrics_include": [
 //	        "bw_in_allowance_exceeded",
 //	        "bw_out_allowance_exceeded"
-//	    ]
+//	    ],
 //		"append_dimensions":{
 //			key:value
 //		}
 //	}
 const SectionKey_Ethtool = "ethtool"
-
-func GetCurPath() string {
-	curPath := parent.GetCurPath() + SectionKey_Ethtool + "/"
-	return curPath
-}
 
 func RegisterRule(fieldname string, r translator.Rule) {
 	ChildRule[fieldname] = r
@@ -54,7 +50,8 @@ func (n *Ethtool) ApplyRule(input interface{}) (returnKey string, returnVal inte
 		returnKey = SectionKey_Ethtool
 		returnVal = resArr
 		//Process tags
-		util.ProcessAppendDimension(m[SectionKey_Ethtool].(map[string]interface{}), SectionKey_Ethtool, GetCurPath(), result)
+		isHighResolution := util.IsHighResolution(agent.Global_Config.Interval)
+		util.ProcessAppendDimensions(m, SectionKey_Ethtool, isHighResolution, result)
 	}
 	return
 }

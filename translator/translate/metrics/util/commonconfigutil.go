@@ -47,14 +47,13 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 	} else {
 		return false
 	}
-	ProcessAppendDimension(inputMap, pluginName, path, result)
-	return true
-}
-func ProcessAppendDimension(inputMap map[string]interface{}, pluginName string, path string, result map[string]interface{}) {
 	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
 	// Set input plugin specific interval
+	ProcessAppendDimensions(inputMap, pluginName, isHighResolution, result)
+	return true
+}
+func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string, isHighResolution bool, result map[string]interface{}) {
 	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
-
 	// Set append_dimensions as tags
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
 		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)

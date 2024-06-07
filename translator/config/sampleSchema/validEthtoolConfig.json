@@ -12,7 +12,10 @@
                "pps_allowance_exceeded",
                "conntrack_allowance_exceeded",
                "linklocal_allowance_exceeded"
-           ]
+           ],
+         "append_dimensions": {
+           "name":"sampleName"
+           }
         }
       },
       "append_dimensions": {
