@@ -1227,7 +1227,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/gpu && terraform destroy --auto-approve
+          command: cd terraform/eks/addon/gpu && terraform destroy --auto-approve
 
 
   StressTrackingTest:
