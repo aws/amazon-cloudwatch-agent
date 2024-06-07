@@ -38,6 +38,8 @@ func (n *Ethtool) ApplyRule(input interface{}) (returnKey string, returnVal inte
 	fmt.Println("In Ethtool, this is the input before key val")
 	fmt.Println(input)
 	m := input.(map[string]interface{})
+	fmt.Println("------ Below is the map -------")
+	fmt.Println(m)
 	//Generate the config file for monitoring system metrics on non-windows
 	resArr := []interface{}{}
 	result := map[string]interface{}{}
