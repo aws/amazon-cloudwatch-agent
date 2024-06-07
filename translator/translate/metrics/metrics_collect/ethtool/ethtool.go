@@ -50,8 +50,8 @@ func (n *Ethtool) ApplyRule(input interface{}) (returnKey string, returnVal inte
 		returnKey = SectionKey_Ethtool
 		returnVal = resArr
 		//Process tags
+		util.ProcessAppendDimensions(m, SectionKey_Ethtool, result)
 	}
-	util.ProcessAppendDimensions(m, SectionKey_Ethtool, result)
 
 	return
 }
