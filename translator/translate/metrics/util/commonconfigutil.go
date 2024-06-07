@@ -76,6 +76,16 @@ func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string,
 			result[key] = val
 		}
 	}
+	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
+	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
+	// Add HighResolution tags
+	if isHighResolution {
+		if result[Append_Dimensions_Mapped_Key] != nil {
+			util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
+		} else {
+			result[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
+		}
+	}
 	fmt.Println(result)
 
 }
