@@ -44,7 +44,6 @@ func (n *Ethtool) ApplyRule(input interface{}) (returnKey string, returnVal inte
 	m := input.(map[string]interface{})
 	fmt.Println("------ Below is the map -------")
 	fmt.Println(m)
-	res := []interface{}{}
 	//Generate the config file for monitoring system metrics on non-windows
 	resArr := []interface{}{}
 	result := map[string]interface{}{}
@@ -60,16 +59,8 @@ func (n *Ethtool) ApplyRule(input interface{}) (returnKey string, returnVal inte
 		resArr = append(resArr, result)
 		returnKey = SectionKey_Ethtool
 		returnVal = resArr
-
 		//Process tags
-		hasValidMetric := util.ProcessLinuxCommonConfig(m[SectionKey_Ethtool], SectionKey_Ethtool, GetCurPath(), result)
-		if hasValidMetric {
-			res = append(res, result)
-			returnKey = SectionKey_Ethtool
-			returnVal = res
-		} else {
-			returnKey = ""
-		}
+		util.ProcessAppendDimension(m[SectionKey_Ethtool].(map[string]interface{}), SectionKey_Ethtool, GetCurPath(), result)
 	}
 	return
 }

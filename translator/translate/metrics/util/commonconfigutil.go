@@ -29,7 +29,6 @@ const (
 
 // ProcessLinuxCommonConfig is used by both Linux and Darwin.
 func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string, result map[string]interface{}) bool {
-	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
 	inputMap := input.(map[string]interface{})
 	// Generate allowlisted metric list, process only if Measurement_Key exist or if ethtool plugin in order to
 	if translator.IsValid(inputMap, Measurement_Key, path) {
@@ -45,37 +44,37 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 			// No valid metric get generated, stop processing
 			return false
 		}
-	}
-
-	if translator.IsValid(inputMap, Measurement_Key, path) || pluginName == SectionKey_Ethtool {
-		// Set input plugin specific interval
-		isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
-
-		// Set append_dimensions as tags
-		if val, ok := inputMap[Append_Dimensions_Key]; ok {
-			result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
-		}
-
-		// Apply any specific rules for the plugin
-		if m, ok := ApplyPluginSpecificRules(pluginName); ok {
-			for key, val := range m {
-				result[key] = val
-			}
-		}
-
-		// Add HighResolution tags
-		if isHighResolution {
-			if result[Append_Dimensions_Mapped_Key] != nil {
-				util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
-			} else {
-				result[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
-			}
-		}
-		return true
 	} else {
 		return false
 	}
+	ProcessAppendDimension(inputMap, pluginName, path, result)
+	return true
+}
+func ProcessAppendDimension(inputMap map[string]interface{}, pluginName string, path string, result map[string]interface{}) {
+	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
+	// Set input plugin specific interval
+	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
 
+	// Set append_dimensions as tags
+	if val, ok := inputMap[Append_Dimensions_Key]; ok {
+		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
+	}
+
+	// Apply any specific rules for the plugin
+	if m, ok := ApplyPluginSpecificRules(pluginName); ok {
+		for key, val := range m {
+			result[key] = val
+		}
+	}
+
+	// Add HighResolution tags
+	if isHighResolution {
+		if result[Append_Dimensions_Mapped_Key] != nil {
+			util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
+		} else {
+			result[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
+		}
+	}
 }
 
 // Windows common config returnVal would be three parts:
