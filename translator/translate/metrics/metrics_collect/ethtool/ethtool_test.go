@@ -39,7 +39,7 @@ func TestFullConfig(t *testing.T) {
 						"bw_in_allowance_exceeded"
 					],
 					"append_dimensions":{
-						"key":"value"
+						"name":"sampleName"
 					}
 					}}`), &input)
 	assert.NoError(t, err)
@@ -49,7 +49,7 @@ func TestFullConfig(t *testing.T) {
 		"interface_include": []string{"eth0"},
 		"interface_exclude": []string{"eth1"},
 		"fieldpass":         []string{"bw_in_allowance_exceeded"},
-		"tags":              map[string]interface{}{"key": "value"},
+		"tags":              map[string]interface{}{"name": "sampleName"},
 	},
 	}
 

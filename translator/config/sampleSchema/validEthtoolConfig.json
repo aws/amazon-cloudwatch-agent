@@ -24,19 +24,7 @@
       "InstanceType": "${aws:InstanceType}",
       "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
     },
-    "aggregation_dimensions": [
-      [
-        "ImageId"
-      ],
-      [
-        "InstanceId",
-        "InstanceType"
-      ],
-      [
-        "d1"
-      ],
-      []
-    ],
+    "aggregation_dimensions" : [["ImageId"], ["InstanceId", "InstanceType"], ["d1"],[]],
     "force_flush_interval": 60
   }
 }
