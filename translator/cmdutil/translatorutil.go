@@ -289,7 +289,6 @@ func ConvertOtelNullToEmpty(stringMap map[string]interface{}) {
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
 	res := totomlconfig.ToTomlConfig(config)
 	return os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
-
 }
 
 func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
