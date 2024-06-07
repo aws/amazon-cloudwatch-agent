@@ -64,7 +64,6 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 }
 func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string, result map[string]interface{}) {
 	// Set append_dimensions as tags
-	fmt.Println(inputMap)
 	fmt.Println(pluginName)
 	fmt.Println(result)
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
