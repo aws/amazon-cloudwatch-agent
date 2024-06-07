@@ -4,6 +4,7 @@
 package translate
 
 import (
+	"fmt"
 	"log"
 	"sort"
 
@@ -73,6 +74,7 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 	for _, key = range sortedRuleKey {
 		rule := targetRuleMap[key]
 		key, val = rule.ApplyRule(m)
+		fmt.Printf("This is the key %v and this is the value: %v\n", key, val)
 		//Only output the result that the class instance is processed
 		//If it is not processed, it key will return ""
 		if key != "" {
