@@ -61,6 +61,9 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 		log.Panicf("E! Unknown target platform %s", translator.GetTargetPlatform())
 	}
 
+	fmt.Println("_+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+_")
+	fmt.Println("Below is the input before key val")
+	fmt.Println(input)
 	//We need to apply agent rule first, since global setting lies there, which will impact the override logic
 	key, val := agent.Global_Config.ApplyRule(input)
 	result[key] = val
