@@ -5,7 +5,6 @@ package ethtool
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
 )
@@ -51,8 +50,7 @@ func (n *Ethtool) ApplyRule(input interface{}) (returnKey string, returnVal inte
 		returnKey = SectionKey_Ethtool
 		returnVal = resArr
 		//Process tags
-		isHighResolution := util.IsHighResolution(agent.Global_Config.Interval)
-		util.ProcessAppendDimensions(m, SectionKey_Ethtool, isHighResolution, result)
+		util.ProcessAppendDimensions(m, SectionKey_Ethtool, result)
 	}
 	return
 }

@@ -47,13 +47,22 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 	} else {
 		return false
 	}
+
+	ProcessAppendDimensions(inputMap, pluginName, result)
+
 	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
-	// Set input plugin specific interval
-	ProcessAppendDimensions(inputMap, pluginName, isHighResolution, result)
+	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
+	// Add HighResolution tags
+	if isHighResolution {
+		if result[Append_Dimensions_Mapped_Key] != nil {
+			util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
+		} else {
+			result[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
+		}
+	}
 	return true
 }
-func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string, isHighResolution bool, result map[string]interface{}) {
-	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
+func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string, result map[string]interface{}) {
 	// Set append_dimensions as tags
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
 		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
@@ -66,14 +75,6 @@ func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string,
 		}
 	}
 
-	// Add HighResolution tags
-	if isHighResolution {
-		if result[Append_Dimensions_Mapped_Key] != nil {
-			util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
-		} else {
-			result[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
-		}
-	}
 }
 
 // Windows common config returnVal would be three parts:
