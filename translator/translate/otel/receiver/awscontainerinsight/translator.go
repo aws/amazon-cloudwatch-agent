@@ -19,8 +19,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	logsutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
 // container orchestrator keys
@@ -109,6 +111,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfg.EnableControlPlaneMetrics = true
 		}
 
+		if kubeConfigPath, ok := common.GetString(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "kube_config_path")); ok {
+			cfg.KubeConfigPath = kubeConfigPath
+		}
+
+		t.setHostName(conf, cfg)
+		t.setHostIP(conf, cfg)
+		cfg.RunOnSystemd = !context.CurrentContext().RunInContainer()
 	}
 
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
@@ -129,6 +138,20 @@ func (t *translator) setClusterName(conf *confmap.Conf, cfg *awscontainerinsight
 		return errors.New("cluster name is not provided and was not auto-detected from EC2 tags")
 	}
 	return nil
+}
+
+func (t *translator) setHostIP(conf *confmap.Conf, cfg *awscontainerinsightreceiver.Config) {
+	hostIPKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "host_ip")
+	if hostIP, ok := common.GetString(conf, hostIPKey); ok {
+		cfg.HostIP = logsutil.ResolvePlaceholder(hostIP, globallogs.GlobalLogConfig.MetadataInfo)
+	}
+}
+
+func (t *translator) setHostName(conf *confmap.Conf, cfg *awscontainerinsightreceiver.Config) {
+	hostNameKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "host_name")
+	if hostName, ok := common.GetString(conf, hostNameKey); ok {
+		cfg.HostName = logsutil.ResolvePlaceholder(hostName, globallogs.GlobalLogConfig.MetadataInfo)
+	}
 }
 
 // getConfiguredContainerService gets the first found container service
