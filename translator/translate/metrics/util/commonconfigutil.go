@@ -9,7 +9,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/ethtool"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
@@ -25,6 +24,7 @@ const (
 	Windows_Measurement_Key      = "Measurement"
 	Windows_WarnOnMissing_Key    = "WarnOnMissing"
 	Windows_Disable_Replacer_Key = "DisableReplacer"
+	SectionKey_Ethtool           = "ethtool"
 )
 
 // ProcessLinuxCommonConfig is used by both Linux and Darwin.
@@ -47,7 +47,7 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 		}
 	}
 
-	if translator.IsValid(inputMap, Measurement_Key, path) || pluginName == ethtool.SectionKey_Ethtool {
+	if translator.IsValid(inputMap, Measurement_Key, path) || pluginName == SectionKey_Ethtool {
 		// Set input plugin specific interval
 		isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
 
