@@ -1201,7 +1201,7 @@ jobs:
             fi
 
             terraform init
-            if terraform apply -var="beta=${{ matrix.arrays.beta }}" -var="addon_name=${{ matrix.arrays.addon_name }}" -var="addon_version={{ matrix.arrays.addon_version }}" -var="k8s_version={{ matrix.arrays.k8s_version }}" --auto-approve; then
+            if terraform apply -var="beta=true" -var="addon_name=amazon-cloudwatch-observability" -var="addon_version={{ matrix.arrays.addon_version }}" -var="k8s_version={{ matrix.arrays.k8s_version }}" --auto-approve; then
               echo "Terraform apply successful."
             else
               terraform destroy -auto-approve && exit 1
