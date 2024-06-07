@@ -29,7 +29,7 @@ const (
 // ProcessLinuxCommonConfig is used by both Linux and Darwin.
 func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string, result map[string]interface{}) bool {
 	inputMap := input.(map[string]interface{})
-	// Generate allowlisted metric list, process only if Measurement_Key exist or if ethtool plugin in order to
+	// Generate allowlisted metric list, process only if Measurement_Key exist
 	if translator.IsValid(inputMap, Measurement_Key, path) {
 		// NOTE: the logic here is a bit tricky, even windows uses linux config for metric like procstat, NvidiaGPU.
 		os := config.OS_TYPE_LINUX

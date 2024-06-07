@@ -86,7 +86,6 @@ func GetTomlConfigPath(tomlFilePath string) string {
 func RunSchemaValidation(inputJsonMap map[string]interface{}) (*gojsonschema.Result, error) {
 	schemaLoader := gojsonschema.NewStringLoader(config.GetJsonSchema())
 	jsonInputLoader := gojsonschema.NewGoLoader(inputJsonMap)
-	log.Print(schemaLoader)
 	return gojsonschema.Validate(schemaLoader, jsonInputLoader)
 }
 
@@ -97,8 +96,6 @@ func checkSchema(inputJsonMap map[string]interface{}) {
 	}
 	if result.Valid() {
 		log.Print("I! Valid Json input schema.")
-		log.Print("This is an update log that should be removed")
-
 	} else {
 		errorDetails := result.Errors()
 		for _, errorDetail := range errorDetails {
@@ -290,10 +287,7 @@ func ConvertOtelNullToEmpty(stringMap map[string]interface{}) {
 	return
 }
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
-	log.Println("This is the config file ----------------------  ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ----------------------")
-	log.Println(config)
 	res := totomlconfig.ToTomlConfig(config)
-	fmt.Println(config)
 	return os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
 
 }

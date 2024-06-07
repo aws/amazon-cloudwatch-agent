@@ -262,25 +262,31 @@
         },
         "diskDefinitions": {
           "type": "object",
-          "properties": {
-            "ignore_file_system_types": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 4096
-              },
-              "maxItems": 256
+          "allOf": [
+            {
+              "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
             },
-            "drop_device": {
-              "type": "boolean"
+            {
+              "$ref": "#/definitions/metricsDefinition/definitions/basicResourcesDefinition"
             },
-            "append_dimensions": {
-              "$ref": "#/definitions/generalAppendDimensionsDefinition"
+            {
+              "type": "object",
+              "properties": {
+                "ignore_file_system_types": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "maxItems": 256
+                },
+                "drop_device": {
+                  "type": "boolean"
+                }
+              }
             }
-          }
-
-
+          ]
         },
         "diskioDefinitions": {
           "type": "object",
