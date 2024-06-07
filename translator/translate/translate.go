@@ -82,17 +82,28 @@ func (t *Translator) ApplyRule(input interface{}) (returnKey string, returnVal i
 				result[key] = val
 			} else {
 				valMap := val.(map[string]interface{})
+				fmt.Println("This is the valMap Inputs", valMap["inputs"])
+				fmt.Println("This is the valMap outputs", valMap["outputs"])
+				fmt.Println("This is the valMap processors", valMap["processors"])
+				fmt.Println("This is the valMap aggregators", valMap["aggregators"])
+
 				if inputs, ok := valMap["inputs"]; ok {
 					allInputPlugin = translator.MergePlugins(allInputPlugin, inputs.(map[string]interface{}))
+					fmt.Println("This is the allinput plugin: ", allInputPlugin)
 				}
 				if outputs, ok := valMap["outputs"]; ok {
 					allOutputPlugin = translator.MergePlugins(allOutputPlugin, outputs.(map[string]interface{}))
+					fmt.Println("This is the all output plugin: ", allOutputPlugin)
+
 				}
 				if processors, ok := valMap["processors"]; ok {
 					allProcessorPlugin = translator.MergePlugins(allProcessorPlugin, processors.(map[string]interface{}))
+					fmt.Println("This is the all output plugin: ", allProcessorPlugin)
+
 				}
 				if aggregators, ok := valMap["aggregators"]; ok {
 					allAggregatorPlugin = translator.MergeTwoUniqueMaps(allAggregatorPlugin, aggregators.(map[string]interface{}))
+					fmt.Println("This is the all output plugin: ", allAggregatorPlugin)
 				}
 			}
 		}
