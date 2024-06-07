@@ -5,11 +5,11 @@ package util
 
 import (
 	"fmt"
-
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/ethtool"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
@@ -31,7 +31,7 @@ const (
 func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string, result map[string]interface{}) bool {
 	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
 	inputMap := input.(map[string]interface{})
-	// Generate allowlisted metric list, process only if Measurement_Key exist
+	// Generate allowlisted metric list, process only if Measurement_Key exist or if ethtool plugin in order to
 	if translator.IsValid(inputMap, Measurement_Key, path) {
 		// NOTE: the logic here is a bit tricky, even windows uses linux config for metric like procstat, NvidiaGPU.
 		os := config.OS_TYPE_LINUX
@@ -45,34 +45,37 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 			// No valid metric get generated, stop processing
 			return false
 		}
+	}
+
+	if translator.IsValid(inputMap, Measurement_Key, path) || pluginName == ethtool.SectionKey_Ethtool {
+		// Set input plugin specific interval
+		isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
+
+		// Set append_dimensions as tags
+		if val, ok := inputMap[Append_Dimensions_Key]; ok {
+			result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
+		}
+
+		// Apply any specific rules for the plugin
+		if m, ok := ApplyPluginSpecificRules(pluginName); ok {
+			for key, val := range m {
+				result[key] = val
+			}
+		}
+
+		// Add HighResolution tags
+		if isHighResolution {
+			if result[Append_Dimensions_Mapped_Key] != nil {
+				util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
+			} else {
+				result[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
+			}
+		}
+		return true
 	} else {
 		return false
 	}
 
-	// Set input plugin specific interval
-	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
-
-	// Set append_dimensions as tags
-	if val, ok := inputMap[Append_Dimensions_Key]; ok {
-		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
-	}
-
-	// Apply any specific rules for the plugin
-	if m, ok := ApplyPluginSpecificRules(pluginName); ok {
-		for key, val := range m {
-			result[key] = val
-		}
-	}
-
-	// Add HighResolution tags
-	if isHighResolution {
-		if result[Append_Dimensions_Mapped_Key] != nil {
-			util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
-		} else {
-			result[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
-		}
-	}
-	return true
 }
 
 // Windows common config returnVal would be three parts:
