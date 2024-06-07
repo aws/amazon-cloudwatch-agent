@@ -1,0 +1,31 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "jmx": {
+        "endpoint": "my_jmx_host:12345",
+        "jvm": {
+          "measurements": [
+            "jvm.memory.heap.init"
+          ]
+        },
+        "tomcat": {
+          "measurements": [
+            "tomcat.threads"
+          ]
+        },
+        "metrics_collection_interval": 60,
+        "username": "cwagent",
+        "password_file": "/path/to/password/file",
+        "keystore_path": "/keystore",
+        "keystore_type": "PKCS",
+        "truststore_path": "/truststore",
+        "truststore_type": "PKCS12",
+        "remote_profile": "SASL/PLAIN",
+        "realm": "test_realm",
+        "append_dimensions": {
+          "service.name": "jmx_app"
+        }
+      }
+    }
+  }
+}

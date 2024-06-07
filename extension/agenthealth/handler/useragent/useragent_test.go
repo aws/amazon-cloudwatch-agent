@@ -10,6 +10,7 @@ import (
 	telegraf "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/otelcol"
@@ -124,7 +125,7 @@ func TestEmf(t *testing.T) {
 			},
 		},
 		Exporters: map[component.ID]component.Config{
-			component.NewID(awsEMFType): &awsemfexporter.Config{Namespace: "AppSignals", LogGroupName: "/aws/appsignals/log/group"},
+			component.NewID(awsEMFType): &awsemfexporter.Config{Namespace: "ApplicationSignals", LogGroupName: "/aws/application-signals/log/group"},
 		},
 	}
 	ua := newUserAgent()
@@ -136,6 +137,50 @@ func TestEmf(t *testing.T) {
 	assert.Equal(t, "inputs:(nop run_as_user)", ua.inputsStr.Load())
 	assert.Equal(t, "", ua.processorsStr.Load())
 	assert.Equal(t, "outputs:(application_signals awsemf)", ua.outputsStr.Load())
+}
+
+func TestJmx(t *testing.T) {
+	jmx := "jmx"
+	jmxOther := "jmxOther"
+	nopType, _ := component.NewType("nop")
+	jmxType, _ := component.NewType(jmx)
+	pipelineType, _ := component.NewType("pipeline")
+	pipelineTypeOther, _ := component.NewType("pipelineOther")
+	pls := make(pipelines.Config)
+	pls[component.NewID(pipelineType)] = &pipelines.PipelineConfig{
+		Receivers: []component.ID{
+			component.NewIDWithName(jmxType, jmx),
+		},
+		Exporters: []component.ID{
+			component.NewID(nopType),
+		},
+	}
+	pls[component.NewID(pipelineTypeOther)] = &pipelines.PipelineConfig{
+		Receivers: []component.ID{
+			component.NewIDWithName(jmxType, jmxOther),
+		},
+		Exporters: []component.ID{
+			component.NewID(nopType),
+		},
+	}
+	otelCfg := &otelcol.Config{
+		Service: service.Config{
+			Pipelines: pls,
+		},
+		Receivers: map[component.ID]component.Config{
+			component.NewIDWithName(jmxType, jmx):      &jmxreceiver.Config{TargetSystem: "jvm,tomcat"},
+			component.NewIDWithName(jmxType, jmxOther): &jmxreceiver.Config{TargetSystem: "jvm,kafka"},
+		},
+	}
+	ua := newUserAgent()
+	ua.SetComponents(otelCfg, &telegraf.Config{})
+	assert.Len(t, ua.inputs, 5)
+	assert.Len(t, ua.processors, 0)
+	assert.Len(t, ua.outputs, 1)
+
+	assert.Equal(t, "inputs:(jmx jmx-jvm jmx-kafka jmx-tomcat run_as_user)", ua.inputsStr.Load())
+	assert.Equal(t, "", ua.processorsStr.Load())
+	assert.Equal(t, "outputs:(nop)", ua.outputsStr.Load())
 }
 
 func TestSingleton(t *testing.T) {

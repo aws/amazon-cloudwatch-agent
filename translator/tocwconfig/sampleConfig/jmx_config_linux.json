@@ -1,0 +1,70 @@
+{
+  "agent": {
+    "omit_hostname": true
+  },
+  "metrics": {
+    "metrics_collected": {
+      "jmx": {
+        "endpoint": "localhost:8080",
+        "jvm": {
+          "measurement": [
+            "jvm.memory.heap.init",
+            {
+              "name": "jvm.memory.heap.used",
+              "rename": "JVM_MEM_HEAP_USED",
+              "unit": "unit"
+            },
+            "jvm.memory.nonheap.init"
+          ]
+        },
+        "kafka-consumer": {
+          "measurement": [
+            {
+              "name": "kafka.consumer.fetch-rate",
+              "rename": "kafka.fetch-rate"
+            }
+          ]
+        }
+      },
+      "cpu": {
+        "resources": [
+          "*"
+        ],
+        "drop_original_metrics": [
+          "cpu_usage_idle",
+          "time_active"
+        ],
+        "measurement": [
+          {
+            "name": "cpu_usage_idle",
+            "rename": "CPU_USAGE_IDLE",
+            "unit": "unit"
+          },
+          {
+            "name": "cpu_usage_nice",
+            "unit": "unit"
+          },
+          "cpu_usage_guest",
+          "time_active",
+          "usage_active"
+        ]
+      },
+      "disk": {
+        "resources": [
+          "/",
+          "/dev",
+          "/sys"
+        ],
+        "measurement": [
+          {
+            "name": "free",
+            "rename": "DISK_FREE",
+            "unit": "unit"
+          },
+          "total",
+          "used"
+        ]
+      }
+    }
+  }
+}

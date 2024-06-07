@@ -1,4 +1,16 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300040.0 (2024-05-21)
+========================================================================
+Enhancements
+* [Application Signals] Export emf logs to /aws/application-signals/data
+* [Application Signals] Rename metric namespace to Application Signals
+* [Application Signals] Change metric schema from HostedIn to Environment
+* Trim AWS prefix for spans in xray exporter
+
+Bug fixes:
+* Fix panic when using amazon-cloudwatch-agent-ctl -a cond-restart
+
+========================================================================
 Amazon CloudWatch Agent 1.300039.0 (2024-05-03)
 ========================================================================
 Features:

@@ -9,68 +9,72 @@ exporters:
         enhanced_container_insights: false
         imds_retries: 1
         local_mode: true
-        log_group_name: /aws/appsignals/generic
+        log_group_name: /aws/application-signals/data
         log_retention: 0
         log_stream_name: ""
         max_retries: 2
         metric_declarations:
             - dimensions:
-                - - HostedIn.Environment
+                - - Environment
                   - Operation
                   - Service
-                - - HostedIn.Environment
+                - - Environment
                   - Service
               label_matchers:
                 - label_names:
-                    - aws.span.kind
-                  regex: ^(SERVER|LOCAL_ROOT)$
+                    - Telemetry.Source
+                  regex: ^(ServerSpan|LocalRootSpan)$
                   separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
             - dimensions:
-                - - HostedIn.Environment
+                - - Environment
+                  - Operation
+                  - RemoteOperation
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                  - Service
+                - - Environment
                   - Operation
                   - RemoteOperation
                   - RemoteService
-                  - RemoteTarget
                   - Service
-                - - HostedIn.Environment
-                  - Operation
+                - - Environment
+                  - RemoteService
+                  - Service
+                - - Environment
+                  - RemoteOperation
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
+                  - RemoteService
+                  - Service
+                - - Environment
                   - RemoteOperation
                   - RemoteService
                   - Service
-                - - HostedIn.Environment
+                - - Environment
+                  - RemoteResourceIdentifier
+                  - RemoteResourceType
                   - RemoteService
                   - Service
-                - - HostedIn.Environment
-                  - RemoteOperation
+                - - RemoteResourceIdentifier
+                  - RemoteResourceType
                   - RemoteService
-                  - RemoteTarget
-                  - Service
-                - - HostedIn.Environment
-                  - RemoteOperation
-                  - RemoteService
-                  - Service
-                - - HostedIn.Environment
-                  - RemoteService
-                  - RemoteTarget
-                  - Service
-                - - RemoteService
-                  - RemoteTarget
                 - - RemoteService
               label_matchers:
                 - label_names:
-                    - aws.span.kind
-                  regex: ^(CLIENT|PRODUCER|CONSUMER)$
+                    - Telemetry.Source
+                  regex: ^(ClientSpan|ProducerSpan|ConsumerSpan)$
                   separator: ;
               metric_name_selectors:
                 - Latency
                 - Fault
                 - Error
         middleware: agenthealth/logs
-        namespace: AppSignals
+        namespace: ApplicationSignals
         no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
@@ -94,10 +98,12 @@ exporters:
         indexed_attributes:
             - aws.local.service
             - aws.local.operation
+            - aws.local.environment
             - aws.remote.service
             - aws.remote.operation
-            - aws.remote.target
-            - HostedIn.Environment
+            - aws.remote.environment
+            - aws.remote.resource.identifier
+            - aws.remote.resource.type
         local_mode: true
         max_retries: 2
         middleware: agenthealth/traces
@@ -114,6 +120,10 @@ exporters:
         telemetry:
             enabled: true
             include_metadata: true
+    debug/application_signals:
+        sampling_initial: 2
+        sampling_thereafter: 500
+        verbosity: Detailed
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -342,6 +352,7 @@ processors:
         k8snode:
             auth_type: serviceAccount
             context: ""
+            kube_config_path: ""
             node_from_env_var: ""
             resource_attributes:
                 k8s.node.name:
@@ -464,6 +475,7 @@ service:
     pipelines:
         metrics/application_signals:
             exporters:
+                - debug/application_signals
                 - awsemf/application_signals
             processors:
                 - resourcedetection
@@ -472,6 +484,7 @@ service:
                 - otlp/application_signals
         traces/application_signals:
             exporters:
+                - debug/application_signals
                 - awsxray/application_signals
             processors:
                 - resourcedetection
@@ -484,7 +497,7 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            level: info
+            level: debug
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:

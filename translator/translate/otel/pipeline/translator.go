@@ -17,7 +17,9 @@ var (
 	ErrNoPipelines = errors.New("no valid pipelines")
 )
 
-type Translator common.Translator[*common.ComponentTranslators]
+type Translator = common.Translator[*common.ComponentTranslators]
+
+type TranslatorMap = common.TranslatorMap[*common.ComponentTranslators]
 
 type Translation struct {
 	// Pipelines is a map of component IDs to service pipelines.

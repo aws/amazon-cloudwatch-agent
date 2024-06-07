@@ -19,93 +19,169 @@ func TestProcessMetrics(t *testing.T) {
 	ctx := context.Background()
 
 	testcases := map[string]struct {
-		resource string
-		metrics  pmetric.Metrics
-		wantCnt  int
-		want     map[string]string
+		resource      string
+		metrics       pmetric.Metrics
+		wantMetricCnt int
+		want          []map[string]string
 	}{
 		"nonNode": {
-			metrics: generateMetrics("prefix", map[string]string{
-				"ClusterName": "cluster",
+			metrics: generateMetrics("prefix", []map[string]string{
+				{
+					"ClusterName": "cluster",
+				},
 			}),
-			wantCnt: 1,
-			want: map[string]string{
-				"ClusterName": "cluster",
+			wantMetricCnt: 1,
+			want: []map[string]string{
+				{
+					"ClusterName": "cluster",
+				},
 			},
 		},
 		"nodeDropSimple": {
-			metrics: generateMetrics("node", map[string]string{
-				"ClusterName": "cluster",
-				"Drop":        "val",
+			metrics: generateMetrics("node", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"Drop":        "val",
+				},
 			}),
-			wantCnt: 1,
-			want: map[string]string{
-				"ClusterName": "cluster",
+			wantMetricCnt: 1,
+			want: []map[string]string{
+				{
+					"ClusterName": "cluster",
+				},
 			},
 		},
 		"nodeDropJson": {
-			metrics: generateMetrics("node", map[string]string{
-				"ClusterName": "cluster",
-				"kubernetes":  "{\"host\":\"test\"}",
+			metrics: generateMetrics("node", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"kubernetes":  "{\"host\":\"test\"}",
+				},
 			}),
-			wantCnt: 1,
-			want: map[string]string{
-				"ClusterName": "cluster",
-				"kubernetes":  "{\"host\":\"test\"}",
+			wantMetricCnt: 1,
+			want: []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"kubernetes":  "{\"host\":\"test\"}",
+				},
 			},
 		},
 		"nodeDropMixed": {
-			metrics: generateMetrics("node", map[string]string{
-				"ClusterName": "cluster",
-				"Drop":        "val",
-				"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+			metrics: generateMetrics("node", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"Drop":        "val",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
 			}),
-			wantCnt: 1,
-			want: map[string]string{
-				"ClusterName": "cluster",
-				"kubernetes":  "{\"host\":\"test\"}",
+			wantMetricCnt: 1,
+			want: []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"kubernetes":  "{\"host\":\"test\"}",
+				},
 			},
 		},
 		"dropPodWithoutPodName": {
-			metrics: generateMetrics("pod", map[string]string{
-				"ClusterName": "cluster",
-				"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+			metrics: generateMetrics("pod", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
 			}),
-			wantCnt: 0,
-			want:    map[string]string{},
+			wantMetricCnt: 0,
+			want:          []map[string]string{},
 		},
-		"keepPodWithoutPodName": {
-			metrics: generateMetrics("pod", map[string]string{
-				"ClusterName": "cluster",
-				"PodName":     "pod",
-				"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+		"keepPodWithPodName": {
+			metrics: generateMetrics("pod", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
 			}),
-			wantCnt: 1,
-			want: map[string]string{
-				"ClusterName": "cluster",
-				"PodName":     "pod",
-				"kubernetes":  "{\"host\":\"test\"}",
+			wantMetricCnt: 1,
+			want: []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod",
+					"kubernetes":  "{\"host\":\"test\"}",
+				},
 			},
 		},
 		"dropContainerWithoutPodName": {
-			metrics: generateMetrics("container", map[string]string{
-				"ClusterName": "cluster",
-				"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+			metrics: generateMetrics("container", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
 			}),
-			wantCnt: 0,
-			want:    map[string]string{},
+			wantMetricCnt: 0,
+			want:          []map[string]string{},
 		},
-		"keepContainerWithoutPodName": {
-			metrics: generateMetrics("container", map[string]string{
-				"ClusterName": "cluster",
-				"PodName":     "pod",
-				"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+		"keepContainerWithPodName": {
+			metrics: generateMetrics("container", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
 			}),
-			wantCnt: 1,
-			want: map[string]string{
-				"ClusterName": "cluster",
-				"PodName":     "pod",
-				"kubernetes":  "{\"host\":\"test\"}",
+			wantMetricCnt: 1,
+			want: []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod",
+					"kubernetes":  "{\"host\":\"test\"}",
+				},
+			},
+		},
+		"dropSingleDatapointWithoutPodName": {
+			metrics: generateMetrics("container", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
+			}),
+			wantMetricCnt: 1,
+			want: []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod",
+					"kubernetes":  "{\"host\":\"test\"}",
+				},
+			},
+		},
+		"keepAllDatapoints": {
+			metrics: generateMetrics("container", []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod1",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod2",
+					"kubernetes":  "{\"host\":\"test\",\"b\":\"2\"}",
+				},
+			}),
+			wantMetricCnt: 1,
+			want: []map[string]string{
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod1",
+					"kubernetes":  "{\"host\":\"test\"}",
+				},
+				{
+					"ClusterName": "cluster",
+					"PodName":     "pod2",
+					"kubernetes":  "{\"host\":\"test\"}",
+				},
 			},
 		},
 	}
@@ -113,30 +189,34 @@ func TestProcessMetrics(t *testing.T) {
 	for tname, tc := range testcases {
 		fmt.Printf("running %s\n", tname)
 		ms, _ := gp.processMetrics(ctx, tc.metrics)
-		assert.Equal(t, tc.wantCnt, ms.MetricCount())
-		if tc.wantCnt > 0 {
-			attrs := ms.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes()
-			assert.Equal(t, len(tc.want), attrs.Len())
-			for k, v := range tc.want {
-				got, ok := attrs.Get(k)
-				assert.True(t, ok)
-				assert.Equal(t, v, got.Str())
+		assert.Equal(t, tc.wantMetricCnt, ms.MetricCount())
+		if tc.wantMetricCnt > 0 {
+			dps := ms.ResourceMetrics().At(0).ScopeMetrics().At(0).Metrics().At(0).Gauge().DataPoints()
+			assert.Equal(t, len(tc.want), dps.Len())
+			for i, dim := range tc.want {
+				attrs := dps.At(i).Attributes()
+				assert.Equal(t, len(dim), attrs.Len())
+				for k, v := range dim {
+					got, ok := attrs.Get(k)
+					assert.True(t, ok)
+					assert.Equal(t, v, got.Str())
+				}
 			}
 		}
 	}
 }
 
-func generateMetrics(prefix string, dimensions map[string]string) pmetric.Metrics {
+func generateMetrics(prefix string, dimensions []map[string]string) pmetric.Metrics {
 	md := pmetric.NewMetrics()
-
-	m := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
-	m.SetName(prefix + gpuMetricIdentifier)
-	gauge := m.SetEmptyGauge().DataPoints().AppendEmpty()
-	gauge.SetIntValue(10)
-
-	for k, v := range dimensions {
-		gauge.Attributes().PutStr(k, v)
+	ms := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty()
+	ms.SetName(prefix + gpuMetricIdentifier)
+	dps := ms.SetEmptyGauge().DataPoints()
+	for _, dim := range dimensions {
+		dp := dps.AppendEmpty()
+		dp.SetIntValue(10)
+		for k, v := range dim {
+			dp.Attributes().PutStr(k, v)
+		}
 	}
-
 	return md
 }
