@@ -213,6 +213,9 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 }
 
 func TranslateJsonMapToTomlConfig(jsonConfigValue interface{}) (interface{}, error) {
+	fmt.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	fmt.Println("Below is the json config value")
+	fmt.Println(jsonConfigValue)
 	r := new(translate.Translator)
 	_, val := r.ApplyRule(jsonConfigValue)
 	if !translator.IsTranslateSuccess() {
@@ -291,10 +294,8 @@ func ConvertOtelNullToEmpty(stringMap map[string]interface{}) {
 }
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
 	log.Println("This is the config file ----------------------  ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ----------------------")
-	fmt.Println("This is the config file ----------------------  ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ---------------------- ----------------------")
 	log.Println(config)
 	res := totomlconfig.ToTomlConfig(config)
-	fmt.Println("This is the config file ----------------------  ---------------------- ---------------------- ---------------------- ----------")
 	fmt.Println(config)
 	return os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)
 
