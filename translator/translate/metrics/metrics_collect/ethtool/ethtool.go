@@ -19,10 +19,9 @@ var ChildRule = map[string]translator.Rule{}
 //	        "bw_in_allowance_exceeded",
 //	        "bw_out_allowance_exceeded"
 //	    ],
-//
-//	"append_dimensions":{
-//		key:value
-//	}
+//		"append_dimensions":{
+//			key:value
+//		}
 //
 // }
 const SectionKey_Ethtool = "ethtool"
