@@ -125,6 +125,7 @@ jobs:
       eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
+      eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
 
     steps:
       - uses: actions/checkout@v3
