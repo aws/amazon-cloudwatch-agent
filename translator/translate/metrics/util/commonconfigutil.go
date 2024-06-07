@@ -24,7 +24,6 @@ const (
 	Windows_Measurement_Key      = "Measurement"
 	Windows_WarnOnMissing_Key    = "WarnOnMissing"
 	Windows_Disable_Replacer_Key = "DisableReplacer"
-	SectionKey_Ethtool           = "ethtool"
 )
 
 // ProcessLinuxCommonConfig is used by both Linux and Darwin.

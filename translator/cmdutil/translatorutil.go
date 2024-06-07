@@ -213,9 +213,6 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 }
 
 func TranslateJsonMapToTomlConfig(jsonConfigValue interface{}) (interface{}, error) {
-	fmt.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-	fmt.Println("Below is the json config value")
-	fmt.Println(jsonConfigValue)
 	r := new(translate.Translator)
 	_, val := r.ApplyRule(jsonConfigValue)
 	if !translator.IsTranslateSuccess() {

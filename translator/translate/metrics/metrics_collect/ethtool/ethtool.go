@@ -4,7 +4,6 @@
 package ethtool
 
 import (
-	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	parent "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/util"
@@ -38,12 +37,7 @@ type Ethtool struct {
 }
 
 func (n *Ethtool) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
-	fmt.Println("_+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+_+_+__+_+_+_+__+_+_+_+__+_+_+_+_")
-	fmt.Println("In Ethtool, this is the input before key val")
-	fmt.Println(input)
 	m := input.(map[string]interface{})
-	fmt.Println("------ Below is the map -------")
-	fmt.Println(m)
 	//Generate the config file for monitoring system metrics on non-windows
 	resArr := []interface{}{}
 	result := map[string]interface{}{}
