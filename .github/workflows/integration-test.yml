@@ -922,8 +922,8 @@ jobs:
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="cwagent_image_tag=${{ github.sha }}" \
               -var="ami_type=${{ matrix.arrays.ami }}" \
-              -var="instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="k8s_version=${{ matrix.arrays.k8s_version }}"; then
+              -var="instance_type=v1.6.0-eksbuild.1" \
+              -var="k8s_version=1.29"; then
               terraform destroy -auto-approve
             else
               terraform destroy -auto-approve && exit 1
