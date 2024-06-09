@@ -1208,8 +1208,6 @@ jobs:
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="cwagent_image_tag=${{ github.sha }}" \
-              -var="ami_type=${{ matrix.arrays.ami_type }}" \
-              -var="instance_type=${{ matrix.arrays.instanceType }}"
               -var="beta=true" \
               -var="addon_name=amazon-cloudwatch-observability" \
               -var="addon_version={{ matrix.arrays.addon_version }}" \
