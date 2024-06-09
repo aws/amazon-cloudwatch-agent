@@ -1184,6 +1184,7 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+
       - name: Verify Terraform version
         run: terraform --version
 
@@ -1199,10 +1200,15 @@ jobs:
             else
               cd terraform/eks/addon/gpu
             fi
-            
+
             terraform init
             if terraform apply --auto-approve \
+              -var="aws_ecr_private_registry=${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}" \
+              -var="ecr_integration_test_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+              -var="github_sha=${{ github.sha }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
+              -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+              -var="cwagent_image_tag=${{ github.sha }}" \
               -var="beta=true" \
               -var="addon_name=amazon-cloudwatch-observability" \
               -var="addon_version=v1.6.0-eksbuild.1" \
@@ -1212,30 +1218,6 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Patch the CloudWatch Agent image and restart CloudWatch pods
-        run: |
-          kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
-          kubectl delete pods --all -n amazon-cloudwatch
-          sleep 15
-      - name: Get EKS Cluster Name
-        id: get-eks-cluster-name
-        run: |
-          cd terraform/eks/addon/gpu
-          CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
-          echo "::set-output name=eks_cluster_name::$CLUSTER_NAME"
-          
-
-      - name: Run tests
-        run: |
-          CLUSTER_NAME=${{ steps.get-eks-cluster-name.outputs.eks_cluster_name }}
-          if go test test/gpu -eksClusterName $CLUSTER_NAME -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
-            echo "Tests passed"
-          else
-            echo "Tests failed"
-            exit 1
-          fi
-          
-          
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
@@ -1244,11 +1226,6 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/eks/addon/gpu && terraform destroy --auto-approve
-
-      - name: Final Terraform destroy
-        if: ${{ always() }}
-        run: cd terraform/eks/addon/gpu && terraform destroy --auto-approve
-
   StressTrackingTest:
     name: "StressTrackingTest"
     needs: [BuildAndUpload, GenerateTestMatrix]
