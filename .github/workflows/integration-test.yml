@@ -1202,12 +1202,7 @@ jobs:
             
             terraform init
             if terraform apply --auto-approve \
-              -var="aws_ecr_private_registry=${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}" \
-              -var="ecr_integration_test_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-              -var="github_sha=${{ github.sha }}" \
               -var="test_dir=${{ matrix.arrays.test_dir }}"\
-              -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-              -var="cwagent_image_tag=${{ github.sha }}" \
               -var="beta=true" \
               -var="addon_name=amazon-cloudwatch-observability" \
               -var="addon_version=v1.6.0-eksbuild.1" \
