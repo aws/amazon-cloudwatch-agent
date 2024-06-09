@@ -1212,28 +1212,31 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
-      - name: Apply GPU burner YAML
-        run: kubectl apply -f ./gpuBurner.yaml
-
-      - name: Create NVIDIA device plugin
-        run: kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
-
       - name: Patch the CloudWatch Agent image and restart CloudWatch pods
         run: |
           kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
           kubectl delete pods --all -n amazon-cloudwatch
           sleep 10
           kubectl wait --for=condition=Ready pod --all -n amazon-cloudwatch
+      - name: Get EKS Cluster Name
+        id: get-eks-cluster-name
+        run: |
+          cd terraform/eks/addon/gpu
+          CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+          echo "::set-output name=eks_cluster_name::$CLUSTER_NAME"
+          
 
       - name: Run tests
         run: |
-          if go test ${var.test_dir} -eksClusterName ${aws_eks_cluster.this.name} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
+          CLUSTER_NAME=${{ steps.get-eks-cluster-name.outputs.eks_cluster_name }}
+          if go test test/gpu -eksClusterName $CLUSTER_NAME -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
             echo "Tests passed"
           else
             echo "Tests failed"
             exit 1
           fi
-
+          
+          
       - name: Terraform destroy
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
