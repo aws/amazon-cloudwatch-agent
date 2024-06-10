@@ -227,9 +227,12 @@
             },
             "metrics_aggregation_interval": {
               "$ref": "#/definitions/timeIntervalWithZeroDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "boolean"
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "cpuDefinitions": {
           "type": "object",
@@ -319,9 +322,12 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 255
+            },
+            "drop_original_metrics": {
+              "type": "boolean"
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "tlsDefinitions": {
           "type": "object",
@@ -450,9 +456,12 @@
                 "minLength": 1,
                 "maxLength": 255
               }
+            },
+            "drop_original_metrics": {
+              "type": "boolean"
             }
           },
-          "additionalProperties": true
+          "additionalProperties": false
         },
         "nvidiaGpuDefinitions": {
           "type": "object",
