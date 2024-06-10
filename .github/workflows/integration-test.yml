@@ -536,7 +536,7 @@ jobs:
               kubectl get pods -A
               sleep 20
               kubectl get pods -A
-              if go test ../../../../test/gpu -eksClusterName $ ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
+              if go test ../../../../test/gpu -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
                 echo "Tests passed"
               else
                 echo "Tests failed"
