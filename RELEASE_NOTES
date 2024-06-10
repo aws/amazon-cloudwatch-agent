@@ -8,7 +8,6 @@ Features:
 Enhancements:
 * [ContainerInsights] Add NVIDIA GPU count metrics
 * [Application Signals] Enable detailed logging for metrics/traces when debug is enabled
-* [Metrics/Ethtool] Support append dimensions
 
 Bug fixes:
 * [Logs/Windows Event] Fix load state offset parsing to support unsigned int
