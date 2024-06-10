@@ -1191,7 +1191,7 @@ jobs:
       - name: Terraform apply
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
+          max_attempts: 1
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
@@ -1200,21 +1200,24 @@ jobs:
             else
               cd terraform/eks/addon/gpu
             fi
-
+            
             terraform init
             if terraform apply --auto-approve \
               -var="aws_ecr_private_registry=${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}" \
               -var="ecr_integration_test_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="github_sha=${{ github.sha }}" \
-              -var="test_dir=${{ matrix.arrays.test_dir }}"\
+              -var="test_dir=${{ matrix.arrays.test_dir }}" \
               -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
               -var="cwagent_image_tag=${{ github.sha }}" \
               -var="beta=true" \
               -var="addon_name=amazon-cloudwatch-observability" \
               -var="addon_version=v1.6.0-eksbuild.1" \
-              -var="k8s_version=1.29" ; then
+              -var="k8s_version=1.29"; then
               echo "Terraform apply successful."
-         
+            else
+              exit 1
+            fi
+
 
 
   StressTrackingTest:
