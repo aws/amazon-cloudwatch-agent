@@ -1191,7 +1191,7 @@ jobs:
       - name: Terraform apply
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 1
+          max_attempts: 3
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
