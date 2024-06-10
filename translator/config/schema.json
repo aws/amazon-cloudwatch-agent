@@ -468,6 +468,9 @@
                 "minLength": 1,
                 "maxLength": 255
               }
+            },
+            "append_dimensions": {
+              "$ref": "#/definitions/generalAppendDimensionsDefinition"
             }
           },
           "additionalProperties": false
