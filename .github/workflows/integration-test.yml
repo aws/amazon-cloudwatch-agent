@@ -525,8 +525,25 @@ jobs:
               -var="addon_version=v1.6.0-eksbuild.1" \
               -var="k8s_version=1.29" ; then
               echo "Terraform apply successful."
+            
+              # Capture the output
+              echo "Getting EKS cluster name"
+              EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+              echo "Cluster name is ${EKS_CLUSTER_NAME}"
+
+              kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
+              kubectl delete pods --all -n amazon-cloudwatch
+              kubectl get pods -A
+              sleep 20
+              kubectl get pods -A
+              if go test ../../../../test/gpu -eksClusterName $ ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
+                echo "Tests passed"
+              else
+                echo "Tests failed"
+                exit 1
+              fi
             else
-              terraform destroy -auto-approve && exit 1
+              terraform destroy -var="beta=${{ github.event.inputs.run_in_beta }}" -auto-approve && exit 1
             fi
 
       - name: Terraform destroy
