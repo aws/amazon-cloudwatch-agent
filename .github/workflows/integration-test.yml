@@ -502,7 +502,7 @@ jobs:
       - name: Terraform apply
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 4
+          max_attempts: 3
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
@@ -530,12 +530,8 @@ jobs:
               echo "Getting EKS cluster name"
               EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
               echo "Cluster name is ${EKS_CLUSTER_NAME}"
-
+              kubectl get pods -A
               kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
-              kubectl delete pods --all -n amazon-cloudwatch
-              kubectl get pods -A
-              sleep 20
-              kubectl get pods -A
               if go test ../../../../test/gpu -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
                 echo "Tests passed"
               else
@@ -550,7 +546,7 @@ jobs:
         if: ${{ cancelled() || failure() }}
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 4
+          max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/eks/addon/gpu && terraform destroy --auto-approve
