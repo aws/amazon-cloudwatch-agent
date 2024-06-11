@@ -514,12 +514,6 @@ jobs:
             
             terraform init
             if terraform apply --auto-approve \
-              -var="aws_ecr_private_registry=${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}" \
-              -var="ecr_integration_test_repo=${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-              -var="github_sha=${{ github.sha }}" \
-              -var="test_dir=${{ matrix.arrays.test_dir }}"\
-              -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-              -var="cwagent_image_tag=${{ github.sha }}" \
               -var="beta=true" \
               -var="addon_name=amazon-cloudwatch-observability" \
               -var="addon_version=v1.6.0-eksbuild.1" \
@@ -536,7 +530,7 @@ jobs:
               kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
               #sleep 3 minutes to make sure all metrics are begin generated
               sleep 180 
-              if go test ../../../../test/gpu -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
+              if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
                 echo "Tests passed"
               else
                 echo "Tests failed"
