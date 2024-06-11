@@ -37,6 +37,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
+	"github.com/aws/amazon-cloudwatch-agent/internal/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -354,6 +355,8 @@ func runAgent(ctx context.Context,
 	// path below here is actually used and it still respects what was set in the settings above.
 	e := []string{"--config=" + yamlConfigPath + " --feature-gates=exporter.xray.allowDot"}
 	cmd.SetArgs(e)
+
+	resourcestore.GetResourceStore()
 
 	return cmd.Execute()
 }

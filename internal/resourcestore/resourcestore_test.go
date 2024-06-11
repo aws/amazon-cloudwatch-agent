@@ -4,9 +4,36 @@
 package resourcestore
 
 import (
+	"context"
+	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 )
+
+type mockMetadataProvider struct {
+	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
+}
+
+func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
+	if m.InstanceIdentityDocument != nil {
+		return *m.InstanceIdentityDocument, nil
+	}
+	return ec2metadata.EC2InstanceIdentityDocument{}, errors.New("No instance identity document")
+}
+
+func (m *mockMetadataProvider) Hostname(ctx context.Context) (string, error) {
+	return "MockHostName", nil
+}
+
+func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
+	return "MockInstanceID", nil
+}
+
+func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
+	return "arn:aws:iam::123456789:instance-profile/TestRole", nil
+}
 
 func TestInitResourceStore(t *testing.T) {
 	tests := []struct {

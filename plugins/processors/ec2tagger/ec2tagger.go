@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger/internal/volume"
 	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
@@ -43,7 +44,7 @@ type Tagger struct {
 
 	logger           *zap.Logger
 	cancelFunc       context.CancelFunc
-	metadataProvider MetadataProvider
+	metadataProvider ec2metadataprovider.MetadataProvider
 	ec2Provider      ec2ProviderType
 
 	shutdownC          chan bool
@@ -67,7 +68,7 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 		Config:           config,
 		logger:           logger,
 		cancelFunc:       cancel,
-		metadataProvider: NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
+		metadataProvider: ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),

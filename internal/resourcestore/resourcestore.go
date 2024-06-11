@@ -3,12 +3,24 @@
 
 package resourcestore
 
-import "sync"
+import (
+	"sync"
+
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+)
 
 var (
 	resourceStore *ResourceStore
 	once          sync.Once
 )
+
+type ServiceNameProvider interface {
+	startServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider)
+	ServiceName()
+	getIAMRole(metadataProvider ec2metadataprovider.MetadataProvider)
+}
 
 type ec2Info struct {
 	InstanceID       string
@@ -28,8 +40,11 @@ type ResourceStore struct {
 	ec2Info ec2Info
 
 	// ekeInfo stores information about EKS such as cluster
-	// TODO: This struct may need to be expanded to include namespace, pod, node, etc
 	eksInfo eksInfo
+
+	// serviceprovider stores information about possible service names
+	// that we can attach to the resource ID
+	serviceprovider serviceprovider
 
 	// logFiles is a variable reserved for communication between OTEL components and LogAgent
 	// in order to achieve process correlations where the key is the log file path and the value
@@ -48,7 +63,12 @@ func GetResourceStore() *ResourceStore {
 
 func initResourceStore() *ResourceStore {
 	// Add logic to store attributes such as instance ID, cluster name, etc here
-	return &ResourceStore{}
+	metadataProvider := getMetaDataProvider()
+	serviceInfo := newServiceProvider()
+	go serviceInfo.startServiceProvider(metadataProvider)
+	return &ResourceStore{
+		serviceprovider: *serviceInfo,
+	}
 }
 
 func (r *ResourceStore) Mode() string {
@@ -65,4 +85,9 @@ func (r *ResourceStore) EKSInfo() eksInfo {
 
 func (r *ResourceStore) LogFiles() map[string]string {
 	return r.logFiles
+}
+
+func getMetaDataProvider() ec2metadataprovider.MetadataProvider {
+	mdCredentialConfig := &configaws.CredentialConfig{}
+	return ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), retryer.GetDefaultRetryNumber())
 }

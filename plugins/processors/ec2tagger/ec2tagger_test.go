@@ -144,6 +144,10 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
+func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
+	return "MockIAM", nil
+}
+
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 	InstanceID:   "i-01d2417c27a396e44",
 	Region:       "us-east-1",

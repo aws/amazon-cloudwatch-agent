@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package ec2tagger
+package ec2metadataprovider
 
 import (
 	"context"
@@ -20,6 +20,7 @@ type MetadataProvider interface {
 	Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error)
 	Hostname(ctx context.Context) (string, error)
 	InstanceID(ctx context.Context) (string, error)
+	InstanceProfileIAMRole() (string, error)
 }
 
 type metadataClient struct {
@@ -47,40 +48,41 @@ func NewMetadataProvider(p client.ConfigProvider, retries int) MetadataProvider 
 }
 
 func (c *metadataClient) InstanceID(ctx context.Context) (string, error) {
-	instanceId, err := c.metadataFallbackDisabled.GetMetadataWithContext(ctx, "instance-id")
-	if err != nil {
-		log.Printf("D! could not get instance id without imds v1 fallback enable thus enable fallback")
-		instanceInner, errorInner := c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "instance-id")
-		if errorInner == nil {
-			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
-		}
-		return instanceInner, errorInner
-	}
-	return instanceId, err
+	return withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
+		return metadataClient.GetMetadataWithContext(ctx, "instance-id")
+	})
 }
 
 func (c *metadataClient) Hostname(ctx context.Context) (string, error) {
-	hostname, err := c.metadataFallbackDisabled.GetMetadataWithContext(ctx, "hostname")
-	if err != nil {
-		log.Printf("D! could not get hostname without imds v1 fallback enable thus enable fallback")
-		hostnameInner, errorInner := c.metadataFallbackEnabled.GetMetadataWithContext(ctx, "hostname")
-		if errorInner == nil {
-			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
+	return withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
+		return metadataClient.GetMetadataWithContext(ctx, "hostname")
+	})
+}
+
+func (c *metadataClient) InstanceProfileIAMRole() (string, error) {
+	return withMetadataFallbackRetry(context.Background(), c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
+		iamInfo, err := metadataClient.IAMInfo()
+		if err != nil {
+			return "", err
 		}
-		return hostnameInner, errorInner
-	}
-	return hostname, err
+		return iamInfo.InstanceProfileArn, nil
+	})
 }
 
 func (c *metadataClient) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
-	instanceDocument, err := c.metadataFallbackDisabled.GetInstanceIdentityDocumentWithContext(ctx)
+	return withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (ec2metadata.EC2InstanceIdentityDocument, error) {
+		return metadataClient.GetInstanceIdentityDocumentWithContext(ctx)
+	})
+}
+
+func withMetadataFallbackRetry[T any](ctx context.Context, c *metadataClient, operation func(*ec2metadata.EC2Metadata) (T, error)) (T, error) {
+	result, err := operation(c.metadataFallbackDisabled)
 	if err != nil {
-		log.Printf("D! could not get instance document without imds v1 fallback enable thus enable fallback")
-		instanceDocumentInner, errorInner := c.metadataFallbackEnabled.GetInstanceIdentityDocumentWithContext(ctx)
-		if errorInner == nil {
+		log.Printf("D! could not perform operation without imds v1 fallback enable thus enable fallback")
+		result, err = operation(c.metadataFallbackEnabled)
+		if err == nil {
 			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
 		}
-		return instanceDocumentInner, errorInner
 	}
-	return instanceDocument, err
+	return result, err
 }
