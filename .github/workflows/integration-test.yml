@@ -860,7 +860,7 @@ jobs:
             terraform destroy --auto-approve
   GPUE2E:
     name: "GPUE2E"
-    needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
