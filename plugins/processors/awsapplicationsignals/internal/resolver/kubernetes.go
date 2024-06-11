@@ -397,6 +397,11 @@ func (m *serviceToWorkloadMapper) Start(stopCh chan struct{}) {
 	}()
 }
 
+// filterPodIPFields removes fields that could contain large objects, and retain essential
+// fields needed for IP/name translation. The following fields must be kept:
+// - ObjectMeta: Namespace, Name, Labels, OwnerReference
+// - Spec: HostNetwork, ContainerPorts
+// - Status: PodIP/s, HostIP/s
 func filterPodIPFields(obj interface{}) (interface{}, error) {
 	if pod, ok := obj.(*corev1.Pod); ok {
 		pod.Annotations = nil
@@ -433,6 +438,10 @@ func filterPodIPFields(obj interface{}) (interface{}, error) {
 	return obj, nil
 }
 
+// filterServiceIPFields removes fields that could contain large objects, and retain essential
+// fields needed for IP/name translation. The following fields must be kept:
+// - ObjectMeta: Namespace, Name
+// - Spec: Selectors, ClusterIP
 func filterServiceIPFields(obj interface{}) (interface{}, error) {
 	if svc, ok := obj.(*corev1.Service); ok {
 		svc.Annotations = nil
