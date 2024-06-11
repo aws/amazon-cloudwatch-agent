@@ -1,0 +1,32 @@
+{
+  "logs": {
+    "metrics_collected": {
+      "application_signals": {
+        "jmx": {
+          "jvm": {
+            "measurement": [
+              "jvm.classes.loaded"
+            ]
+          }
+        }
+      },
+      "kubernetes": {
+        "jmx": {
+          "jvm": {
+            "measurement": [
+              "jvm.classes.loaded"
+            ]
+          },
+          "tomcat": {
+            "measurement": [
+              {
+                "name": "tomcat.sessions",
+                "rename": "TOMCAT_SESSIONS"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

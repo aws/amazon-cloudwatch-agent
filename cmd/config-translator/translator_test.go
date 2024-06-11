@@ -66,11 +66,20 @@ func TestTracesConfig(t *testing.T) {
 }
 
 func TestJMXConfig(t *testing.T) {
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validJMX.json", true, map[string]int{})
-	expectedErrorMap := map[string]int{}
-	expectedErrorMap["number_one_of"] = 1
-	expectedErrorMap["required"] = 1
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidJMX.json", false, expectedErrorMap)
+	t.Run("WithMetrics", func(t *testing.T) {
+		checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validMetricsWithJMX.json", true, map[string]int{})
+		expectedErrorMap := map[string]int{}
+		expectedErrorMap["number_all_of"] = 1
+		expectedErrorMap["number_one_of"] = 1
+		expectedErrorMap["required"] = 1
+		checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithJMX.json", false, expectedErrorMap)
+	})
+	t.Run("WithLogs", func(t *testing.T) {
+		checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogsWithJMX.json", true, map[string]int{})
+		expectedErrorMap := map[string]int{}
+		expectedErrorMap["array_min_items"] = 1
+		checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogsWithJMX.json", false, expectedErrorMap)
+	})
 }
 
 func TestLogFilesConfig(t *testing.T) {
