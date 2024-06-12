@@ -173,7 +173,7 @@ func (t *Tagger) updateTags() error {
 		}
 		for _, tag := range result.Tags {
 			key := *tag.Key
-			if ec2InstanceTagKeyASG == key {
+			if Ec2InstanceTagKeyASG == key {
 				// rename to match CW dimension as applied by AutoScaling service, not the EC2 tag
 				key = cwDimensionASG
 			}
@@ -247,7 +247,7 @@ func (t *Tagger) ec2TagsRetrieved() bool {
 	defer t.RUnlock()
 	if t.ec2TagCache != nil {
 		for _, key := range t.EC2InstanceTagKeys {
-			if key == ec2InstanceTagKeyASG {
+			if key == Ec2InstanceTagKeyASG {
 				key = cwDimensionASG
 			}
 			if key == "*" {
@@ -306,7 +306,7 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 		// and filter for the EC2 tag name called 'aws:autoscaling:groupName'
 		for i, key := range t.EC2InstanceTagKeys {
 			if cwDimensionASG == key {
-				t.EC2InstanceTagKeys[i] = ec2InstanceTagKeyASG
+				t.EC2InstanceTagKeys[i] = Ec2InstanceTagKeyASG
 			}
 		}
 
@@ -443,10 +443,10 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 	retry := 0
 	for {
 		var waitDuration time.Duration
-		if retry < len(backoffSleepArray) {
-			waitDuration = backoffSleepArray[retry]
+		if retry < len(BackoffSleepArray) {
+			waitDuration = BackoffSleepArray[retry]
 		} else {
-			waitDuration = backoffSleepArray[len(backoffSleepArray)-1]
+			waitDuration = BackoffSleepArray[len(BackoffSleepArray)-1]
 		}
 
 		wait := time.NewTimer(waitDuration)

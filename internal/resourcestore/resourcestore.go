@@ -4,11 +4,18 @@
 package resourcestore
 
 import (
+	"log"
 	"sync"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 var (
@@ -20,11 +27,6 @@ type ServiceNameProvider interface {
 	startServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider)
 	ServiceName()
 	getIAMRole(metadataProvider ec2metadataprovider.MetadataProvider)
-}
-
-type ec2Info struct {
-	InstanceID       string
-	AutoScalingGroup string
 }
 
 type eksInfo struct {
@@ -63,12 +65,29 @@ func GetResourceStore() *ResourceStore {
 
 func initResourceStore() *ResourceStore {
 	// Add logic to store attributes such as instance ID, cluster name, etc here
+	rs := &ResourceStore{}
 	metadataProvider := getMetaDataProvider()
-	serviceInfo := newServiceProvider()
-	go serviceInfo.startServiceProvider(metadataProvider)
-	return &ResourceStore{
-		serviceprovider: *serviceInfo,
+	if translatorCtx.CurrentContext().Mode() != "" {
+		rs.mode = translatorCtx.CurrentContext().Mode()
+		log.Printf("I! resourcestore: ResourceStore mode is %s ", rs.mode)
 	}
+	switch rs.mode {
+	case config.ModeEC2:
+		rs.ec2Info = ec2Info{
+			metadataProvider: metadataProvider,
+			credentialCfg:    &configaws.CredentialConfig{},
+		}
+		go rs.ec2Info.initEc2Info()
+	}
+	serviceInfo := newServiceProvider()
+	go func() {
+		err := serviceInfo.startServiceProvider(metadataProvider)
+		if err != nil {
+			log.Printf("E! resourcestore: Failed to start service provider: %v", err)
+		}
+	}()
+	rs.serviceprovider = *serviceInfo
+	return rs
 }
 
 func (r *ResourceStore) Mode() string {
@@ -90,4 +109,13 @@ func (r *ResourceStore) LogFiles() map[string]string {
 func getMetaDataProvider() ec2metadataprovider.MetadataProvider {
 	mdCredentialConfig := &configaws.CredentialConfig{}
 	return ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), retryer.GetDefaultRetryNumber())
+}
+
+func ec2Provider(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
+	return ec2.New(
+		ec2CredentialConfig.Credentials(),
+		&aws.Config{
+			LogLevel: configaws.SDKLogLevel(),
+			Logger:   configaws.SDKLogger{},
+		})
 }
