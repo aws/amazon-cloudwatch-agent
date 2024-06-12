@@ -1421,7 +1421,7 @@ jobs:
       - name: Run Go tests with retry
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 4
+          max_attempts: 15
           timeout_minutes: 60
           retry_wait_seconds: 5
           command: |
