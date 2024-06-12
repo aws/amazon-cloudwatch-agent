@@ -418,7 +418,7 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
 
   EC2LinuxIntegrationTest:
-    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ BuildAndUpload, StartLocalStack, BuildAndUploadPackages, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2Linux'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -1363,7 +1363,7 @@ jobs:
 
   GPUE2E:
     name: "GPUE2E"
-    needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
+    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1418,11 +1418,21 @@ jobs:
               kubectl apply -f ./gpuBurner.yaml
               kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
               kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
-              sleep 300
               if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
                 echo "Tests passed"
               else
                 echo "Tests failed"
                 exit 1
               fi
+            else
+              terraform destroy -var="beta=${{ github.event.inputs.run_in_beta }}" -auto-approve && exit 1
             fi
+
+      - name: Terraform destroy
+        if: ${{ cancelled() || failure() }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: cd terraform/eks/addon/gpu && terraform destroy --auto-approve
