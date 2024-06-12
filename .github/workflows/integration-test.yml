@@ -1430,8 +1430,9 @@ jobs:
             else
               cd terraform/eks/addon/gpu
             fi
-            pwd
-            EKS_CLUSTER_NAME=${{ env.EKS_CLUSTER_NAME }}
+            echo "Getting EKS cluster name"
+            EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+            echo "Cluster name is ${EKS_CLUSTER_NAME}"
 
             if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
               echo "Tests passed"
