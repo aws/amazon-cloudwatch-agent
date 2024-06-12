@@ -9,6 +9,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 
@@ -39,13 +40,14 @@ type LogSrc interface {
 	Description() string
 	Retention() int
 	Class() string
+	ResourceID() *cloudwatchlogs.Resource
 	Stop()
 }
 
 // A LogBackend is able to return a LogDest of a given name.
 // The same name should always return the same LogDest.
 type LogBackend interface {
-	CreateDest(string, string, int, string) LogDest
+	CreateDest(string, string, int, string, LogSrc) LogDest
 }
 
 // A LogDest represents a final endpoint where log events are published to.
@@ -127,7 +129,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 						continue
 					}
 					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
-					dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass)
+					dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass, src)
 					l.destNames[dest] = dname
 					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
 					go l.runSrcToDest(src, dest)

@@ -11,8 +11,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"golang.org/x/text/encoding"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
@@ -60,6 +62,7 @@ type tailerSrc struct {
 	group           string
 	stream          string
 	class           string
+	fileGlobPath    string
 	destination     string
 	stateFilePath   string
 	tailer          *tail.Tail
@@ -83,7 +86,7 @@ type tailerSrc struct {
 var _ logs.LogSrc = (*tailerSrc)(nil)
 
 func NewTailerSrc(
-	group, stream, destination, stateFilePath, logClass string,
+	group, stream, destination, stateFilePath, logClass, fileGlobPath string,
 	tailer *tail.Tail,
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
@@ -100,6 +103,7 @@ func NewTailerSrc(
 		destination:     destination,
 		stateFilePath:   stateFilePath,
 		class:           logClass,
+		fileGlobPath:    fileGlobPath,
 		tailer:          tailer,
 		autoRemoval:     autoRemoval,
 		isMLStart:       isMultilineStartFn,
@@ -164,6 +168,10 @@ func (ts *tailerSrc) Stop() {
 
 func (ts *tailerSrc) AddCleanUpFn(f func()) {
 	ts.cleanUpFns = append(ts.cleanUpFns, f)
+}
+
+func (ts *tailerSrc) ResourceID() *cloudwatchlogs.Resource {
+	return resourcestore.GetResourceStore().CreateLogFileRID(ts.fileGlobPath, ts.tailer.Filename)
 }
 
 func (ts *tailerSrc) runTail() {

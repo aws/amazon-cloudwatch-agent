@@ -62,6 +62,7 @@ func TestTailerSrc(t *testing.T) {
 		"groupName", "streamName",
 		"destination", statefile.Name(),
 		util.InfrequentAccessLogGroupClass,
+		"tailsrctest-*.log",
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
@@ -173,6 +174,7 @@ func TestOffsetDoneCallBack(t *testing.T) {
 		"destination",
 		statefile.Name(),
 		util.InfrequentAccessLogGroupClass,
+		"tailsrctest-*.log",
 		tailer,
 		false, // AutoRemoval
 		regexp.MustCompile("^[\\S]").MatchString,
@@ -391,6 +393,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int) 
 		t.Name(),
 		"destination",
 		util.InfrequentAccessLogGroupClass,
+		"tailsrctest-*.log",
 		statefile.Name(),
 		tailer,
 		false, // AutoRemoval

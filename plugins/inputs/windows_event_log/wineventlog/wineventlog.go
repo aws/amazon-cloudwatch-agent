@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"golang.org/x/sys/windows"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -108,6 +109,10 @@ func (w *windowsEventLog) Class() string {
 
 func (w *windowsEventLog) Stop() {
 	close(w.done)
+}
+
+func (w *windowsEventLog) ResourceID() *cloudwatchlogs.Resource {
+	return nil
 }
 
 func (w *windowsEventLog) run() {

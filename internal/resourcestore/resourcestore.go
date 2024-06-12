@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
@@ -104,6 +105,22 @@ func (r *ResourceStore) EKSInfo() eksInfo {
 
 func (r *ResourceStore) LogFiles() map[string]string {
 	return r.logFiles
+}
+
+func (r *ResourceStore) CreateLogFileRID(fileGlobPath string, filePath string) *cloudwatchlogs.Resource {
+	return &cloudwatchlogs.Resource{
+		AttributeMaps: []map[string]*string{
+			{
+				"PlatformType":         aws.String("AWS::EC2"),
+				"EC2.InstanceId":       aws.String("i-123456789"),
+				"EC2.AutoScalingGroup": aws.String("test-group"),
+			},
+		},
+		KeyAttributes: &cloudwatchlogs.KeyAttributes{
+			Name:        aws.String("myService"),
+			Environment: aws.String("myEnvironment"),
+		},
+	}
 }
 
 func getMetaDataProvider() ec2metadataprovider.MetadataProvider {
