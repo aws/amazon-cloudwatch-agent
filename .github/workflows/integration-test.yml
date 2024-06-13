@@ -1434,7 +1434,7 @@ jobs:
             EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
             echo "Cluster name is ${EKS_CLUSTER_NAME}"
 
-            if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia; then
+            if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia -useE2EMetrics; then
               echo "Tests passed"
             else
               echo "Tests failed"
