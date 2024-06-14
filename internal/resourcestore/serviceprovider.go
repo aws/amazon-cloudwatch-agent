@@ -22,6 +22,8 @@ const (
 	SERVICE          = "service"
 	APPLICATION      = "application"
 	APP              = "app"
+	ClientIamRole    = "ClientIamRole"
+	ResourceTags     = "ResourceTags"
 )
 
 var (
@@ -31,6 +33,12 @@ var (
 		APP:         0,
 	}
 )
+
+type ServiceAttribute struct {
+	serviceName       string
+	serviceNameSource string
+	environment       string
+}
 
 type serviceprovider struct {
 	metadataProvider  ec2metadataprovider.MetadataProvider
@@ -60,18 +68,26 @@ func (s *serviceprovider) startServiceProvider() {
 	}()
 }
 
-// ServiceName function gets the relevant service name based
-// on the following priority chain
+// ServiceAttribute function gets the relevant service attributes
+// service name is retrieved based on the following priority chain
 //  1. Incoming telemetry attributes
 //  2. CWA config
 //  3. Process correlation
 //  4. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
 //  5. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
-func (s *serviceprovider) ServiceName() string {
+func (s *serviceprovider) ServiceAttribute() ServiceAttribute {
+	serviceAttr := ServiceAttribute{}
 	if s.ec2TagServiceName != "" {
-		return s.ec2TagServiceName
+		serviceAttr.serviceName = s.ec2TagServiceName
+		serviceAttr.serviceNameSource = ResourceTags
+		return serviceAttr
 	}
-	return s.iamRole
+	if s.iamRole != "" {
+		serviceAttr.serviceName = s.iamRole
+		serviceAttr.serviceNameSource = ClientIamRole
+		return serviceAttr
+	}
+	return serviceAttr
 }
 
 func (s *serviceprovider) getIAMRole() error {

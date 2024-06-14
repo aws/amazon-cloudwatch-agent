@@ -68,36 +68,51 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 				},
 			}
 			s.startServiceProvider()
-			time.Sleep(1 * time.Second)
+			time.Sleep(time.Second)
 			assert.Equal(t, tt.wantIAM, s.iamRole)
 			assert.Equal(t, tt.wantTag, s.ec2TagServiceName)
 		})
 	}
 }
 
-func Test_serviceprovider_ServiceName(t *testing.T) {
+func Test_serviceprovider_ServiceAttribute(t *testing.T) {
 	type fields struct {
-		iamRole string
+		iamRole           string
+		ec2TagServiceName string
 	}
 	tests := []struct {
 		name   string
 		fields fields
-		want   string
+		want   ServiceAttribute
 	}{
 		{
-			name: "HappyPath_IAMServiceName",
+			name: "HappyPath_IAMRole",
 			fields: fields{
-				iamRole: "MockIAM",
+				iamRole: "TestRole",
 			},
-			want: "MockIAM",
+			want: ServiceAttribute{
+				serviceName:       "TestRole",
+				serviceNameSource: ClientIamRole,
+			},
+		},
+		{
+			name: "HappyPath_EC2TagServiceName",
+			fields: fields{
+				ec2TagServiceName: "tag-service",
+			},
+			want: ServiceAttribute{
+				serviceName:       "tag-service",
+				serviceNameSource: ResourceTags,
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &serviceprovider{
-				iamRole: tt.fields.iamRole,
+				iamRole:           tt.fields.iamRole,
+				ec2TagServiceName: tt.fields.ec2TagServiceName,
 			}
-			assert.Equal(t, tt.want, s.ServiceName())
+			assert.Equalf(t, tt.want, s.ServiceAttribute(), "ServiceAttribute()")
 		})
 	}
 }

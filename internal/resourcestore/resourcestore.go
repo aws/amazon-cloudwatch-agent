@@ -83,9 +83,8 @@ func initResourceStore() *ResourceStore {
 		rs.ec2Info = *newEC2Info(metadataProvider, getEC2Provider)
 		go rs.ec2Info.initEc2Info()
 	}
-	serviceInfo := newServiceProvider(metadataProvider, getEC2Provider)
-	go serviceInfo.startServiceProvider()
-	rs.serviceprovider = *serviceInfo
+	rs.serviceprovider = *newServiceProvider(metadataProvider, getEC2Provider)
+	go rs.serviceprovider.startServiceProvider()
 	return rs
 }
 
@@ -106,17 +105,20 @@ func (r *ResourceStore) LogFiles() map[string]string {
 }
 
 func (r *ResourceStore) CreateLogFileRID(fileGlobPath string, filePath string) *cloudwatchlogs.Resource {
+	serviceAttr := r.serviceprovider.ServiceAttribute()
 	return &cloudwatchlogs.Resource{
 		AttributeMaps: []map[string]*string{
 			{
-				"PlatformType":         aws.String("AWS::EC2"),
-				"EC2.InstanceId":       aws.String("i-123456789"),
-				"EC2.AutoScalingGroup": aws.String("test-group"),
+				"PlatformType":                   aws.String("AWS::EC2"),
+				"EC2.InstanceId":                 aws.String(r.ec2Info.InstanceID),
+				"EC2.AutoScalingGroup":           aws.String(r.ec2Info.AutoScalingGroup),
+				"AWS.Internal.ServiceNameSource": aws.String(serviceAttr.serviceNameSource),
 			},
 		},
 		KeyAttributes: &cloudwatchlogs.KeyAttributes{
-			Name:        aws.String("myService"),
-			Environment: aws.String("myEnvironment"),
+			Type:        aws.String("Service"),
+			Name:        aws.String(serviceAttr.serviceName),
+			Environment: aws.String(serviceAttr.environment),
 		},
 	}
 }
