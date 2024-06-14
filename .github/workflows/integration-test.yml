@@ -1421,9 +1421,9 @@ jobs:
       - name: Run Go tests with retry
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 15
+          max_attempts: 10
           timeout_minutes: 60
-          retry_wait_seconds: 5
+          retry_wait_seconds: 60
           command: |
             if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
               cd "${{ matrix.arrays.terraform_dir }}"
