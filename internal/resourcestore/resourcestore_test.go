@@ -17,6 +17,8 @@ import (
 
 type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
+	Tags                     string
+	TagValue                 string
 }
 
 func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
@@ -36,6 +38,14 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 
 func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
 	return "arn:aws:iam::123456789:instance-profile/TestRole", nil
+}
+
+func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
+	return m.Tags, nil
+}
+
+func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
+	return m.TagValue, nil
 }
 
 func TestInitResourceStore(t *testing.T) {

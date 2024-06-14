@@ -21,6 +21,8 @@ type MetadataProvider interface {
 	Hostname(ctx context.Context) (string, error)
 	InstanceID(ctx context.Context) (string, error)
 	InstanceProfileIAMRole() (string, error)
+	InstanceTags(ctx context.Context) (string, error)
+	InstanceTagValue(ctx context.Context, tagKey string) (string, error)
 }
 
 type metadataClient struct {
@@ -66,6 +68,19 @@ func (c *metadataClient) InstanceProfileIAMRole() (string, error) {
 			return "", err
 		}
 		return iamInfo.InstanceProfileArn, nil
+	})
+}
+
+func (c *metadataClient) InstanceTags(ctx context.Context) (string, error) {
+	return withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
+		return metadataClient.GetMetadataWithContext(ctx, "tags/instance")
+	})
+}
+
+func (c *metadataClient) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
+	path := "tags/instance/" + tagKey
+	return withMetadataFallbackRetry(ctx, c, func(metadataClient *ec2metadata.EC2Metadata) (string, error) {
+		return metadataClient.GetMetadataWithContext(ctx, path)
 	})
 }
 

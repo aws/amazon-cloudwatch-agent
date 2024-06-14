@@ -23,6 +23,7 @@ var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 
 type mockEC2Client struct {
 	ec2iface.EC2API
+	withASG bool
 }
 
 // construct the return results for the mocked DescribeTags api
@@ -46,9 +47,17 @@ var (
 
 func (m *mockEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
 	//all tags are returned when the ec2 metadata service knows about all tags
-	allTags := ec2.DescribeTagsOutput{
-		NextToken: nil,
-		Tags:      []*ec2.TagDescription{&tagDes1, &tagDes2, &tagDes3},
+	var allTags ec2.DescribeTagsOutput
+	if m.withASG {
+		allTags = ec2.DescribeTagsOutput{
+			NextToken: nil,
+			Tags:      []*ec2.TagDescription{&tagDes1, &tagDes2, &tagDes3},
+		}
+	} else {
+		allTags = ec2.DescribeTagsOutput{
+			NextToken: nil,
+			Tags:      []*ec2.TagDescription{&tagDes1, &tagDes2},
+		}
 	}
 
 	return &allTags, nil
@@ -92,6 +101,62 @@ func TestSetInstanceIdAndRegion(t *testing.T) {
 
 func TestRetrieveASGName(t *testing.T) {
 	type args struct {
+		ec2Client        ec2iface.EC2API
+		metadataProvider ec2metadataprovider.MetadataProvider
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+		want    ec2Info
+	}{
+		{
+			name: "happy path",
+			args: args{
+				ec2Client:        &mockEC2Client{},
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: "aws:autoscaling:groupName", TagValue: tagVal3},
+			},
+			wantErr: false,
+			want: ec2Info{
+				AutoScalingGroup: tagVal3,
+			},
+		},
+		{
+			name: "happy path with multiple tags",
+			args: args{
+				ec2Client:        &mockEC2Client{},
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: "aws:autoscaling:groupName\nenv\nname", TagValue: tagVal3},
+			},
+			wantErr: false,
+			want: ec2Info{
+				AutoScalingGroup: tagVal3,
+			},
+		},
+		{
+			name: "Success IMDS tags call but no ASG",
+			args: args{
+				ec2Client:        &mockEC2Client{},
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: "name", TagValue: tagVal3},
+			},
+			wantErr: false,
+			want: ec2Info{
+				AutoScalingGroup: "",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ei := &ec2Info{metadataProvider: tt.args.metadataProvider}
+			if err := ei.retrieveAsgName(tt.args.ec2Client); (err != nil) != tt.wantErr {
+				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			assert.Equal(t, tt.want.AutoScalingGroup, ei.AutoScalingGroup)
+		})
+	}
+}
+
+func TestRetrieveASGNameWithDescribeTags(t *testing.T) {
+	type args struct {
 		ec2Client ec2iface.EC2API
 	}
 	tests := []struct {
@@ -103,18 +168,28 @@ func TestRetrieveASGName(t *testing.T) {
 		{
 			name: "happy path",
 			args: args{
-				ec2Client: &mockEC2Client{},
+				ec2Client: &mockEC2Client{withASG: true},
 			},
 			wantErr: false,
 			want: ec2Info{
 				AutoScalingGroup: tagVal3,
 			},
 		},
+		{
+			name: "Success Describe tags call but no ASG",
+			args: args{
+				ec2Client: &mockEC2Client{withASG: false},
+			},
+			wantErr: false,
+			want: ec2Info{
+				AutoScalingGroup: "",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ei := &ec2Info{}
-			if err := ei.retrieveAsgName(tt.args.ec2Client); (err != nil) != tt.wantErr {
+			if err := ei.retrieveAsgNameWithDescribeTags(tt.args.ec2Client); (err != nil) != tt.wantErr {
 				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.want.AutoScalingGroup, ei.AutoScalingGroup)

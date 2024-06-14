@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -40,7 +41,7 @@ func (ei *ec2Info) initEc2Info() {
 	if err := ei.setAutoScalingGroup(); err != nil {
 		return
 	}
-	log.Printf("I! ec2Info: Finished initializing ec2Info: InstanceId %s, AutoScalingGroup %s", ei.InstanceID, ei.AutoScalingGroup)
+	log.Printf("D! ec2Info: Finished initializing ec2Info: InstanceId %s, AutoScalingGroup %s", ei.InstanceID, ei.AutoScalingGroup)
 	ei.Shutdown()
 }
 
@@ -59,7 +60,7 @@ func (ei *ec2Info) setInstanceIdAndRegion() error {
 		} else {
 			ei.InstanceID = metadataDoc.InstanceID
 			ei.Region = metadataDoc.Region
-			log.Printf("I! ec2Info: Successfully retrieved Instance Id %s, Region %s", ei.InstanceID, ei.Region)
+			log.Printf("D! ec2Info: Successfully retrieved Instance Id %s, Region %s", ei.InstanceID, ei.Region)
 			return nil
 		}
 	}
@@ -99,7 +100,28 @@ func (ei *ec2Info) setAutoScalingGroup() error {
 
 }
 
+/*
+This can also be implemented by just calling the InstanceTagValue and then DescribeTags on failure. But preferred the current implementation
+as we need to distinguish the tags not being fetchable at all, from the ASG tag in particular not existing.
+*/
 func (ei *ec2Info) retrieveAsgName(ec2API ec2iface.EC2API) error {
+	tags, err := ei.metadataProvider.InstanceTags(context.Background())
+	if err != nil {
+		log.Printf("E! ec2Info: Failed to get tags through metadata provider: %v", err.Error())
+		return ei.retrieveAsgNameWithDescribeTags(ec2API)
+	} else if strings.Contains(tags, ec2tagger.Ec2InstanceTagKeyASG) {
+		asg, err := ei.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
+		if err != nil {
+			log.Printf("E! ec2Info: Failed to get AutoScalingGroup through metadata provider: %v", err.Error())
+		} else {
+			log.Printf("D! ec2Info: AutoScalingGroup retrieved through IMDS: %s", asg)
+			ei.AutoScalingGroup = asg
+		}
+	}
+	return nil
+}
+
+func (ei *ec2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error {
 	tagFilters := []*ec2.Filter{
 		{
 			Name:   aws.String("resource-type"),

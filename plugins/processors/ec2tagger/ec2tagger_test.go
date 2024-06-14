@@ -144,8 +144,16 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
+func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
+	return "MockInstanceTag", nil
+}
+
 func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
 	return "MockIAM", nil
+}
+
+func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
+	return "MockInstanceValue", nil
 }
 
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
