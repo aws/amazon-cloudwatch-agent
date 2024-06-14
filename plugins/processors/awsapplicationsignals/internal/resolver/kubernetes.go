@@ -713,6 +713,7 @@ func (h *kubernetesResourceAttributesResolver) Process(attributes, resourceAttri
 	// See https://github.com/aws/amazon-cloudwatch-agent-operator/blob/fe144bb02d7b1930715aa3ea32e57a5ff13406aa/helm/templates/fluent-bit-configmap.yaml#L82
 	logGroupName := "/aws/containerinsights/" + h.clusterName + "/application"
 	resourceAttributes.PutStr(semconv.AttributeAWSLogGroupNames, logGroupName)
+
 	return nil
 }
 
