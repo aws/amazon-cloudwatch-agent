@@ -1362,7 +1362,7 @@ jobs:
 
 
   GPUEndToEndTest:
-    name: "GPUE2E"
+    name: "GPU E2E Test"
     needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
