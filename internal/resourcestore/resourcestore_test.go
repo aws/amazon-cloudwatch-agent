@@ -10,6 +10,9 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 )
 
 type mockMetadataProvider struct {
@@ -140,6 +143,30 @@ func TestResourceStore_Mode(t *testing.T) {
 			if got := r.Mode(); got != tt.want {
 				t.Errorf("Mode() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func Test_getRegion(t *testing.T) {
+	tests := []struct {
+		name             string
+		metadataProvider ec2metadataprovider.MetadataProvider
+		want             string
+	}{
+		{
+			name: "HappyPath",
+			metadataProvider: &mockMetadataProvider{
+				InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+					Region: "us-west-2"},
+			},
+			want: "us-west-2",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getRegion(tt.metadataProvider)
+			assert.NoError(t, err)
+			assert.Equalf(t, tt.want, got, "getRegion(%v)", tt.metadataProvider)
 		})
 	}
 }

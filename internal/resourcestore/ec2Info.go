@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
@@ -26,7 +25,8 @@ type ec2Info struct {
 	Region string
 
 	metadataProvider ec2metadataprovider.MetadataProvider
-	credentialCfg    *configaws.CredentialConfig
+	ec2API           ec2iface.EC2API
+	ec2Provider      ec2ProviderType
 	shutdownC        chan bool
 }
 
@@ -36,9 +36,8 @@ func (ei *ec2Info) initEc2Info() {
 	if err := ei.setInstanceIdAndRegion(); err != nil {
 		return
 	}
-	ec2CredentialConfig := ei.credentialCfg
-	ec2CredentialConfig.Region = ei.Region
-	if err := ei.setAutoScalingGroup(ec2Provider(ec2CredentialConfig)); err != nil {
+	ei.ec2API = ei.ec2Provider(ei.Region)
+	if err := ei.setAutoScalingGroup(); err != nil {
 		return
 	}
 	log.Printf("I! ec2Info: Finished initializing ec2Info: InstanceId %s, AutoScalingGroup %s", ei.InstanceID, ei.AutoScalingGroup)
@@ -66,7 +65,7 @@ func (ei *ec2Info) setInstanceIdAndRegion() error {
 	}
 }
 
-func (ei *ec2Info) setAutoScalingGroup(ec2API ec2iface.EC2API) error {
+func (ei *ec2Info) setAutoScalingGroup() error {
 	retry := 0
 	for {
 		var waitDuration time.Duration
@@ -88,7 +87,7 @@ func (ei *ec2Info) setAutoScalingGroup(ec2API ec2iface.EC2API) error {
 			log.Printf("D! ec2Info: initial retrieval of tags and volumes with retry: %d", retry)
 		}
 
-		if err := ei.retrieveAsgName(ec2API); err != nil {
+		if err := ei.retrieveAsgName(ei.ec2API); err != nil {
 			log.Printf("E! ec2Info: Unable to describe ec2 tags for retry %d with error %v", retry, err)
 		} else {
 			log.Println("I! ec2Info: Retrieval of tags succeeded")
@@ -141,4 +140,11 @@ func (ei *ec2Info) retrieveAsgName(ec2API ec2iface.EC2API) error {
 
 func (ei *ec2Info) Shutdown() {
 	close(ei.shutdownC)
+}
+
+func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType) *ec2Info {
+	return &ec2Info{
+		metadataProvider: metadataProvider,
+		ec2Provider:      providerType,
+	}
 }

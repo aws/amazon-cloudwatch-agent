@@ -4,29 +4,60 @@
 package resourcestore
 
 import (
+	"context"
+	"errors"
 	"log"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 )
 
 const (
 	INSTANCE_PROFILE = "instance-profile/"
+	SERVICE          = "service"
+	APPLICATION      = "application"
+	APP              = "app"
+)
+
+var (
+	priorityMap = map[string]int{
+		SERVICE:     2,
+		APPLICATION: 1,
+		APP:         0,
+	}
 )
 
 type serviceprovider struct {
-	iamRole string
+	metadataProvider  ec2metadataprovider.MetadataProvider
+	ec2API            ec2iface.EC2API
+	ec2Provider       ec2ProviderType
+	iamRole           string
+	ec2TagServiceName string
 }
 
-func (s *serviceprovider) startServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider) error {
-	err := s.getIAMRole(metadataProvider)
+func (s *serviceprovider) startServiceProvider() {
+	go func() {
+		err := s.getIAMRole()
+		if err != nil {
+			log.Println("D! serviceprovider failed to get service name through IAM role in service provider: ", err)
+		}
+	}()
+	region, err := getRegion(s.metadataProvider)
 	if err != nil {
-		log.Println("D! Failed to get IAM role through service provider")
-		return err
+		log.Println("D! serviceprovider failed to get region: ", err)
 	}
-	return nil
+	go func() {
+		s.ec2API = s.ec2Provider(region)
+		err := s.getEC2TagServiceName()
+		if err != nil {
+			log.Println("D! serviceprovider failed to get service name through EC2 tags in service provider: ", err)
+		}
+	}()
 }
 
 // ServiceName function gets the relevant service name based
@@ -34,14 +65,17 @@ func (s *serviceprovider) startServiceProvider(metadataProvider ec2metadataprovi
 //  1. Incoming telemetry attributes
 //  2. CWA config
 //  3. Process correlation
-//  4. instance tags
+//  4. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
 //  5. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
 func (s *serviceprovider) ServiceName() string {
+	if s.ec2TagServiceName != "" {
+		return s.ec2TagServiceName
+	}
 	return s.iamRole
 }
 
-func (s *serviceprovider) getIAMRole(metadataProvider ec2metadataprovider.MetadataProvider) error {
-	iamRole, err := metadataProvider.InstanceProfileIAMRole()
+func (s *serviceprovider) getIAMRole() error {
+	iamRole, err := s.metadataProvider.InstanceProfileIAMRole()
 	if err != nil {
 		log.Println("D! resourceMap: Unable to retrieve EC2 Metadata. This feature must only be used on an EC2 instance.")
 		return err
@@ -60,6 +94,64 @@ func (s *serviceprovider) getIAMRole(metadataProvider ec2metadataprovider.Metada
 	return nil
 }
 
-func newServiceProvider() *serviceprovider {
-	return &serviceprovider{}
+func (s *serviceprovider) getEC2TagServiceName() error {
+	serviceTagFilters, err := s.getEC2TagFilters()
+	if err != nil {
+		return err
+	}
+	currentTagPriority := -1
+	for {
+		input := &ec2.DescribeTagsInput{
+			Filters: serviceTagFilters,
+		}
+		result, err := s.ec2API.DescribeTags(input)
+		if err != nil {
+			continue
+		}
+		for _, tag := range result.Tags {
+			key := *tag.Key
+			value := *tag.Value
+			if priority, found := priorityMap[key]; found {
+				if priority > currentTagPriority {
+					s.ec2TagServiceName = value
+					currentTagPriority = priority
+				}
+			}
+		}
+		if result.NextToken == nil {
+			break
+		}
+		input.SetNextToken(*result.NextToken)
+	}
+	return nil
+}
+
+func (s *serviceprovider) getEC2TagFilters() ([]*ec2.Filter, error) {
+	instanceDocument, err := s.metadataProvider.Get(context.Background())
+	if err != nil {
+		return nil, errors.New("failed to get instance document")
+	}
+	instanceID := instanceDocument.InstanceID
+	tagFilters := []*ec2.Filter{
+		{
+			Name:   aws.String("resource-type"),
+			Values: aws.StringSlice([]string{"instance"}),
+		},
+		{
+			Name:   aws.String("resource-id"),
+			Values: aws.StringSlice([]string{instanceID}),
+		},
+		{
+			Name:   aws.String("key"),
+			Values: aws.StringSlice([]string{SERVICE, APPLICATION, APP}),
+		},
+	}
+	return tagFilters, nil
+}
+
+func newServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType) *serviceprovider {
+	return &serviceprovider{
+		metadataProvider: metadataProvider,
+		ec2Provider:      providerType,
+	}
 }

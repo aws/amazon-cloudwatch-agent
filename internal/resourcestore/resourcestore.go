@@ -4,6 +4,7 @@
 package resourcestore
 
 import (
+	"context"
 	"log"
 	"sync"
 
@@ -24,10 +25,13 @@ var (
 	once          sync.Once
 )
 
+type ec2ProviderType func(string) ec2iface.EC2API
+
 type ServiceNameProvider interface {
-	startServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider)
 	ServiceName()
+	startServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider)
 	getIAMRole(metadataProvider ec2metadataprovider.MetadataProvider)
+	getEC2Tags(ec2API ec2iface.EC2API)
 }
 
 type eksInfo struct {
@@ -65,7 +69,9 @@ func GetResourceStore() *ResourceStore {
 }
 
 func initResourceStore() *ResourceStore {
-	// Add logic to store attributes such as instance ID, cluster name, etc here
+	// Get IMDS client and EC2 API client which requires region for authentication
+	// These will be passed down to any object that requires access to IMDS or EC2
+	// API client so we have single source of truth for credential
 	rs := &ResourceStore{}
 	metadataProvider := getMetaDataProvider()
 	if translatorCtx.CurrentContext().Mode() != "" {
@@ -74,19 +80,11 @@ func initResourceStore() *ResourceStore {
 	}
 	switch rs.mode {
 	case config.ModeEC2:
-		rs.ec2Info = ec2Info{
-			metadataProvider: metadataProvider,
-			credentialCfg:    &configaws.CredentialConfig{},
-		}
+		rs.ec2Info = *newEC2Info(metadataProvider, getEC2Provider)
 		go rs.ec2Info.initEc2Info()
 	}
-	serviceInfo := newServiceProvider()
-	go func() {
-		err := serviceInfo.startServiceProvider(metadataProvider)
-		if err != nil {
-			log.Printf("E! resourcestore: Failed to start service provider: %v", err)
-		}
-	}()
+	serviceInfo := newServiceProvider(metadataProvider, getEC2Provider)
+	go serviceInfo.startServiceProvider()
 	rs.serviceprovider = *serviceInfo
 	return rs
 }
@@ -128,11 +126,21 @@ func getMetaDataProvider() ec2metadataprovider.MetadataProvider {
 	return ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), retryer.GetDefaultRetryNumber())
 }
 
-func ec2Provider(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
+func getEC2Provider(region string) ec2iface.EC2API {
+	ec2CredentialConfig := &configaws.CredentialConfig{}
+	ec2CredentialConfig.Region = region
 	return ec2.New(
 		ec2CredentialConfig.Credentials(),
 		&aws.Config{
 			LogLevel: configaws.SDKLogLevel(),
 			Logger:   configaws.SDKLogger{},
 		})
+}
+
+func getRegion(metadataProvider ec2metadataprovider.MetadataProvider) (string, error) {
+	instanceDocument, err := metadataProvider.Get(context.Background())
+	if err != nil {
+		return "", err
+	}
+	return instanceDocument.Region, nil
 }
