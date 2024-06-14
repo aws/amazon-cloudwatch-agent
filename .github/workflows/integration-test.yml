@@ -1361,7 +1361,7 @@ jobs:
     secrets: inherit
 
 
-  GPUE2E:
+  GPUEndToEndTest:
     name: "GPUE2E"
     needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
@@ -1410,7 +1410,6 @@ jobs:
             echo "Getting EKS cluster name"
             EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
             echo "Cluster name is ${EKS_CLUSTER_NAME}"
-            kubectl get pods -A
             kubectl apply -f ./gpuBurner.yaml
             kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
             kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
