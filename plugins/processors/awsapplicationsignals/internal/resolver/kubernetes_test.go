@@ -410,7 +410,7 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 		}
 
 		poWatcher := newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount)
-		poWatcher.onAddOrUpdatePod(pod, nil, true)
+		poWatcher.onAddOrUpdatePod(pod, nil)
 
 		// Test the mappings in ipToPod
 		if podName, _ := ipToPod.Load("1.2.3.4"); podName != "testPod" {
@@ -463,7 +463,7 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 		}
 
 		poWatcher := newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount)
-		poWatcher.onAddOrUpdatePod(pod, nil, true)
+		poWatcher.onAddOrUpdatePod(pod, nil)
 
 		// Test the mappings in ipToPod
 		if podName, _ := ipToPod.Load("5.6.7.8:8080"); podName != "testPod" {
@@ -518,7 +518,7 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 
 		// add the pod
 		poWatcher := newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, map[string]int{})
-		poWatcher.onAddOrUpdatePod(pod, nil, true)
+		poWatcher.onAddOrUpdatePod(pod, nil)
 
 		// Test the mappings in ipToPod
 		if podName, ok := ipToPod.Load("5.6.7.8:8080"); !ok && podName != "testPod" {
@@ -567,7 +567,7 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 		}
 
 		// add the pod
-		poWatcher.onAddOrUpdatePod(pod2, pod, false)
+		poWatcher.onAddOrUpdatePod(pod2, pod)
 
 		// Test the mappings in ipToPod
 		if podName, ok := ipToPod.Load("5.6.7.8:8080"); !ok && podName != "testPod" {
@@ -1103,7 +1103,7 @@ func TestFilterPodIPFields(t *testing.T) {
 		},
 		Status: corev1.PodStatus{},
 	}
-	newPod, err := filterPodIPFields(pod)
+	newPod, err := minimizePod(pod)
 	assert.Nil(t, err)
 	assert.Empty(t, getHostNetworkPorts(newPod.(*corev1.Pod)))
 
@@ -1129,7 +1129,7 @@ func TestFilterPodIPFields(t *testing.T) {
 		},
 		Status: podStatus,
 	}
-	newPod, err = filterPodIPFields(pod)
+	newPod, err = minimizePod(pod)
 	assert.Nil(t, err)
 	assert.Equal(t, "app", newPod.(*corev1.Pod).Labels["name"])
 	assert.Equal(t, []string{"8080"}, getHostNetworkPorts(newPod.(*corev1.Pod)))
@@ -1149,7 +1149,7 @@ func TestFilterPodIPFields(t *testing.T) {
 		},
 		Status: podStatus,
 	}
-	newPod, err = filterPodIPFields(pod)
+	newPod, err = minimizePod(pod)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"8080", "8081"}, getHostNetworkPorts(newPod.(*corev1.Pod)))
 	assert.Equal(t, podStatus, newPod.(*corev1.Pod).Status)
@@ -1169,7 +1169,7 @@ func TestFilterServiceIPFields(t *testing.T) {
 			ClusterIP: "10.0.12.4",
 		},
 	}
-	newSvc, err := filterServiceIPFields(svc)
+	newSvc, err := minimizeService(svc)
 	assert.Nil(t, err)
 	assert.Equal(t, "10.0.12.4", newSvc.(*corev1.Service).Spec.ClusterIP)
 	assert.Equal(t, "app", newSvc.(*corev1.Service).Spec.Selector["name"])

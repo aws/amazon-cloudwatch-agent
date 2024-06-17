@@ -155,9 +155,7 @@ func (p *podWatcher) handlePodUpdate(newPod *corev1.Pod, oldPod *corev1.Pod) {
 	if newPod.Spec.HostNetwork && oldPod.Status.HostIP != newPod.Status.HostIP {
 		if oldPod.Status.HostIP != "" {
 			p.logger.Debug("deleting host ip from cache", zap.String("hostNetwork", oldPod.Status.HostIP))
-			for _, port := range getHostNetworkPorts(oldPod) {
-				p.deleter.DeleteWithDelay(p.ipToPod, oldPod.Status.HostIP+":"+port)
-			}
+			p.removeHostNetworkRecords(oldPod)
 		}
 		if newPod.Status.HostIP != "" {
 			for _, port := range getHostNetworkPorts(newPod) {
@@ -176,8 +174,8 @@ func (p *podWatcher) handlePodUpdate(newPod *corev1.Pod, oldPod *corev1.Pod) {
 	}
 }
 
-func (p *podWatcher) onAddOrUpdatePod(pod, oldPod *corev1.Pod, isAdd bool) {
-	if isAdd {
+func (p *podWatcher) onAddOrUpdatePod(pod, oldPod *corev1.Pod) {
+	if oldPod == nil {
 		p.handlePodAdd(pod)
 	} else {
 		p.handlePodUpdate(pod, oldPod)
@@ -194,7 +192,7 @@ func (p *podWatcher) onAddOrUpdatePod(pod, oldPod *corev1.Pod, isAdd bool) {
 		if podLabels.Cardinality() > 0 {
 			p.workloadAndNamespaceToLabels.Store(workloadAndNamespace, podLabels)
 		}
-		if isAdd {
+		if oldPod == nil {
 			p.workloadPodCount[workloadAndNamespace]++
 			p.logger.Debug("Added pod", zap.String("pod", pod.Name), zap.String("workload", workloadAndNamespace), zap.Int("count", p.workloadPodCount[workloadAndNamespace]))
 		}
@@ -205,9 +203,7 @@ func (p *podWatcher) onDeletePod(obj interface{}) {
 	pod := obj.(*corev1.Pod)
 	if pod.Spec.HostNetwork && pod.Status.HostIP != "" {
 		p.logger.Debug("deleting host ip from cache", zap.String("hostNetwork", pod.Status.HostIP))
-		for _, port := range getHostNetworkPorts(pod) {
-			p.deleter.DeleteWithDelay(p.ipToPod, pod.Status.HostIP+":"+port)
-		}
+		p.removeHostNetworkRecords(pod)
 	}
 	if pod.Status.PodIP != "" {
 		p.logger.Debug("deleting pod ip from cache", zap.String("podNetwork", pod.Status.PodIP))
@@ -254,13 +250,13 @@ func (p *podWatcher) run(stopCh chan struct{}) {
 		AddFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
 			p.logger.Debug("list and watch for pod: ADD " + pod.Name)
-			p.onAddOrUpdatePod(pod, nil, true)
+			p.onAddOrUpdatePod(pod, nil)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			pod := newObj.(*corev1.Pod)
 			oldPod := oldObj.(*corev1.Pod)
 			p.logger.Debug("list and watch for pods: UPDATE " + pod.Name)
-			p.onAddOrUpdatePod(pod, oldPod, false)
+			p.onAddOrUpdatePod(pod, oldPod)
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
@@ -397,12 +393,12 @@ func (m *serviceToWorkloadMapper) Start(stopCh chan struct{}) {
 	}()
 }
 
-// filterPodIPFields removes fields that could contain large objects, and retain essential
+// minimizePod removes fields that could contain large objects, and retain essential
 // fields needed for IP/name translation. The following fields must be kept:
 // - ObjectMeta: Namespace, Name, Labels, OwnerReference
 // - Spec: HostNetwork, ContainerPorts
 // - Status: PodIP/s, HostIP/s
-func filterPodIPFields(obj interface{}) (interface{}, error) {
+func minimizePod(obj interface{}) (interface{}, error) {
 	if pod, ok := obj.(*corev1.Pod); ok {
 		pod.Annotations = nil
 		pod.Finalizers = nil
@@ -438,11 +434,11 @@ func filterPodIPFields(obj interface{}) (interface{}, error) {
 	return obj, nil
 }
 
-// filterServiceIPFields removes fields that could contain large objects, and retain essential
+// minimizeService removes fields that could contain large objects, and retain essential
 // fields needed for IP/name translation. The following fields must be kept:
 // - ObjectMeta: Namespace, Name
 // - Spec: Selectors, ClusterIP
-func filterServiceIPFields(obj interface{}) (interface{}, error) {
+func minimizeService(obj interface{}) (interface{}, error) {
 	if svc, ok := obj.(*corev1.Service); ok {
 		svc.Annotations = nil
 		svc.Finalizers = nil
@@ -477,14 +473,14 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 
 		sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
 		podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
-		err = podInformer.SetTransform(filterPodIPFields)
+		err = podInformer.SetTransform(minimizePod)
 		if err != nil {
-			logger.Error("failed to set custom transform into pod store", zap.Error(err))
+			logger.Error("failed to minimize Pod objects", zap.Error(err))
 		}
 		serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
-		err = serviceInformer.SetTransform(filterServiceIPFields)
+		err = serviceInformer.SetTransform(minimizeService)
 		if err != nil {
-			logger.Error("failed to set custom transform into service store", zap.Error(err))
+			logger.Error("failed to minimize Service objects", zap.Error(err))
 		}
 
 		timedDeleter := &TimedDeleter{Delay: deletionDelay}
