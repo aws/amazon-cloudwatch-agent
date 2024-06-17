@@ -217,3 +217,41 @@ func TestTranslateAppSignals(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateJMX(t *testing.T) {
+	tt := NewTranslatorWithName(common.JmxKey, WithDataType(component.DataTypeMetrics))
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		want    *confmap.Conf
+		wantErr error
+	}{
+		"WithJMXEnabled": {
+			input: map[string]interface{}{
+				// @TODO fill this out after pipeline is built
+			},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"http": map[string]interface{}{
+						"endpoint": defaultJMXHttpEndpoint,
+					},
+				},
+			}),
+		},
+	}
+	factory := otlpreceiver.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*otlpreceiver.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
+			}
+		})
+	}
+}

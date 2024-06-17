@@ -22,6 +22,7 @@ const (
 	defaultHttpEndpoint           = "127.0.0.1:4318"
 	defaultAppSignalsGrpcEndpoint = "0.0.0.0:4315"
 	defaultAppSignalsHttpEndpoint = "0.0.0.0:4316"
+	defaultJMXHttpEndpoint        = "0.0.0.0:4314"
 )
 
 var (
@@ -102,6 +103,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
 		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
+	} else if t.name == common.JmxKey {
+		cfg.HTTP.Endpoint = defaultJMXHttpEndpoint
+		cfg.GRPC = nil
+		return cfg, nil
 	}
 	if conf == nil || !conf.IsSet(configKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
