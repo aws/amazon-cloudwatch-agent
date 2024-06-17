@@ -3,7 +3,9 @@
     "metrics_collected": {
       "jmx": {
         "jvm": {
-          "measurement": []
+          "measurement": [
+            "jvm.memory.heap.init"
+          ]
         }
       }
     }
