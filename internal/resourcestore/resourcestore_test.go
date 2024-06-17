@@ -9,7 +9,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -179,4 +181,104 @@ func Test_getRegion(t *testing.T) {
 			assert.Equalf(t, tt.want, got, "getRegion(%v)", tt.metadataProvider)
 		})
 	}
+}
+
+func TestResourceStore_createAttributeMaps(t *testing.T) {
+	type fields struct {
+		ec2Info         ec2Info
+		serviceprovider serviceprovider
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   map[string]*string
+	}{
+		{
+			name: "HappyPath_IAMRole",
+			fields: fields{
+				ec2Info: ec2Info{
+					InstanceID:       "i-123456789",
+					AutoScalingGroup: "test-asg",
+				},
+				serviceprovider: serviceprovider{
+					iamRole: "test-role",
+				},
+			},
+			want: map[string]*string{
+				ServieNameSourceKey: aws.String(ClientIamRole),
+				ASGKey:              aws.String("test-asg"),
+				InstanceIDKey:       aws.String("i-123456789"),
+			},
+		},
+		{
+			name: "HappyPath_TagServiceName",
+			fields: fields{
+				ec2Info: ec2Info{
+					InstanceID:       "i-123456789",
+					AutoScalingGroup: "test-asg",
+				},
+				serviceprovider: serviceprovider{
+					ec2TagServiceName: "test-tag-service",
+				},
+			},
+			want: map[string]*string{
+				ServieNameSourceKey: aws.String(ResourceTags),
+				ASGKey:              aws.String("test-asg"),
+				InstanceIDKey:       aws.String("i-123456789"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ResourceStore{
+				ec2Info:         tt.fields.ec2Info,
+				serviceprovider: tt.fields.serviceprovider,
+			}
+			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(r.createAttributeMaps()), "createAttributeMaps()")
+		})
+	}
+}
+
+func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
+	type fields struct {
+		serviceprovider serviceprovider
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   *cloudwatchlogs.KeyAttributes
+	}{
+		{
+			name: "HappyPath_",
+			fields: fields{
+				serviceprovider: serviceprovider{
+					iamRole: "test-role",
+				},
+			},
+			want: &cloudwatchlogs.KeyAttributes{
+				Name: aws.String("test-role"),
+				Type: aws.String(Service),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ResourceStore{
+				serviceprovider: tt.fields.serviceprovider,
+			}
+			assert.Equalf(t, tt.want, r.createServiceKeyAttributes(), "createServiceKeyAttributes()")
+		})
+	}
+}
+
+func dereferenceMap(input map[string]*string) map[string]string {
+	result := make(map[string]string)
+	for k, v := range input {
+		if v != nil {
+			result[k] = *v
+		} else {
+			result[k] = ""
+		}
+	}
+	return result
 }

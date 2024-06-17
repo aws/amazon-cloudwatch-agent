@@ -20,6 +20,13 @@ import (
 	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
+const (
+	Service             = "Service"
+	InstanceIDKey       = "EC2.InstanceId"
+	ASGKey              = "EC2.AutoScalingGroup"
+	ServieNameSourceKey = "AWS.Internal.ServiceNameSource"
+)
+
 var (
 	resourceStore *ResourceStore
 	once          sync.Once
@@ -105,22 +112,36 @@ func (r *ResourceStore) LogFiles() map[string]string {
 }
 
 func (r *ResourceStore) CreateLogFileRID(fileGlobPath string, filePath string) *cloudwatchlogs.Resource {
-	serviceAttr := r.serviceprovider.ServiceAttribute()
 	return &cloudwatchlogs.Resource{
 		AttributeMaps: []map[string]*string{
-			{
-				"PlatformType":                   aws.String("AWS::EC2"),
-				"EC2.InstanceId":                 aws.String(r.ec2Info.InstanceID),
-				"EC2.AutoScalingGroup":           aws.String(r.ec2Info.AutoScalingGroup),
-				"AWS.Internal.ServiceNameSource": aws.String(serviceAttr.serviceNameSource),
-			},
+			r.createAttributeMaps(),
 		},
-		KeyAttributes: &cloudwatchlogs.KeyAttributes{
-			Type:        aws.String("Service"),
-			Name:        aws.String(serviceAttr.serviceName),
-			Environment: aws.String(serviceAttr.environment),
-		},
+		KeyAttributes: r.createServiceKeyAttributes(),
 	}
+}
+
+func (r *ResourceStore) createAttributeMaps() map[string]*string {
+	serviceAttr := r.serviceprovider.ServiceAttribute()
+	attributeMap := make(map[string]*string)
+
+	addNonEmptyToMap(attributeMap, InstanceIDKey, r.ec2Info.InstanceID)
+	addNonEmptyToMap(attributeMap, ASGKey, r.ec2Info.AutoScalingGroup)
+	addNonEmptyToMap(attributeMap, ServieNameSourceKey, serviceAttr.serviceNameSource)
+	return attributeMap
+}
+
+func (r *ResourceStore) createServiceKeyAttributes() *cloudwatchlogs.KeyAttributes {
+	serviceAttr := r.serviceprovider.ServiceAttribute()
+	serviceKeyAttr := &cloudwatchlogs.KeyAttributes{
+		Type: aws.String(Service),
+	}
+	if serviceAttr.serviceName != "" {
+		serviceKeyAttr.SetName(serviceAttr.serviceName)
+	}
+	if serviceAttr.environment != "" {
+		serviceKeyAttr.SetEnvironment(serviceAttr.environment)
+	}
+	return serviceKeyAttr
 }
 
 func getMetaDataProvider() ec2metadataprovider.MetadataProvider {
@@ -145,4 +166,10 @@ func getRegion(metadataProvider ec2metadataprovider.MetadataProvider) (string, e
 		return "", err
 	}
 	return instanceDocument.Region, nil
+}
+
+func addNonEmptyToMap(m map[string]*string, key, value string) {
+	if value != "" {
+		m[key] = aws.String(value)
+	}
 }
