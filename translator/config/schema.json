@@ -721,14 +721,17 @@
                     ]
                   }
                 },
-                "jmx": {
-                  "$ref": "#/definitions/jmxTargetsDefinition"
+                "enable_jvm": {
+                  "type": "boolean"
                 }
               },
               "tls": {
                 "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
               },
               "additionalProperties": true
+            },
+            "jmx": {
+              "$ref": "#/definitions/jmxTargetsDefinition"
             },
             "ecs": {
               "type": "object",
@@ -757,9 +760,6 @@
                 "disable_metric_extraction": {
                   "description": "Disable the extraction of metrics from EMF logs",
                   "type": "boolean"
-                },
-                "jmx": {
-                  "$ref": "#/definitions/jmxTargetsDefinition"
                 }
               },
               "additionalProperties": true

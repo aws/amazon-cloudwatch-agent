@@ -1,11 +1,9 @@
 {
   "logs": {
     "metrics_collected": {
-      "application_signals": {
-        "jmx": {
-          "jvm": {
-            "measurement": []
-          }
+      "jmx": {
+        "jvm": {
+          "measurement": []
         }
       }
     }

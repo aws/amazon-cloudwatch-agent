@@ -2,30 +2,24 @@
   "logs": {
     "metrics_collected": {
       "application_signals": {
-        "jmx": {
-          "jvm": {
-            "measurement": [
-              "jvm.classes.loaded"
-            ]
-          }
+        "enable_jvm": true
+      },
+      "jmx": {
+        "jvm": {
+          "measurement": [
+            "jvm.classes.loaded"
+          ]
+        },
+        "tomcat": {
+          "measurement": [
+            {
+              "name": "tomcat.sessions",
+              "rename": "TOMCAT_SESSIONS"
+            }
+          ]
         }
       },
       "kubernetes": {
-        "jmx": {
-          "jvm": {
-            "measurement": [
-              "jvm.classes.loaded"
-            ]
-          },
-          "tomcat": {
-            "measurement": [
-              {
-                "name": "tomcat.sessions",
-                "rename": "TOMCAT_SESSIONS"
-              }
-            ]
-          }
-        }
       }
     }
   }
