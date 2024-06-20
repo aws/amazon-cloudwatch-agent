@@ -26,6 +26,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
+	"github.com/aws/amazon-cloudwatch-agent/internal/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
@@ -140,6 +141,10 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 	}
 
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
+	resourcestore := resourcestore.GetResourceStore()
+	if !resourcestore.NativeCredentialExists() {
+		resourcestore.SetNativeCredential(credentialConfig.Credentials())
+	}
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{

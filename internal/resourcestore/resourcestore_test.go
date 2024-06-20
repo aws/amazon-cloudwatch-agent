@@ -10,8 +10,12 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -21,6 +25,14 @@ type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
 	Tags                     string
 	TagValue                 string
+}
+
+type mockSTSClient struct {
+	stsiface.STSAPI
+}
+
+func (ms *mockSTSClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+	return &sts.GetCallerIdentityOutput{Account: aws.String("123456789")}, nil
 }
 
 func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
@@ -269,6 +281,54 @@ func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
 				serviceprovider: tt.fields.serviceprovider,
 			}
 			assert.Equalf(t, tt.want, r.createServiceKeyAttributes(), "createServiceKeyAttributes()")
+		})
+	}
+}
+
+func TestResourceStore_shouldReturnRID(t *testing.T) {
+	type fields struct {
+		metadataprovider ec2metadataprovider.MetadataProvider
+		stsClient        stsiface.STSAPI
+		nativeCredential client.ConfigProvider
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "HappyPath_AccountIDMatches",
+			fields: fields{
+				metadataprovider: &mockMetadataProvider{
+					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+						AccountID: "123456789"},
+				},
+				stsClient:        &mockSTSClient{},
+				nativeCredential: &session.Session{},
+			},
+			want: true,
+		},
+		{
+			name: "HappyPath_AccountIDMismatches",
+			fields: fields{
+				metadataprovider: &mockMetadataProvider{
+					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+						AccountID: "987654321"},
+				},
+				stsClient:        &mockSTSClient{},
+				nativeCredential: &session.Session{},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ResourceStore{
+				metadataprovider: tt.fields.metadataprovider,
+				stsClient:        tt.fields.stsClient,
+				nativeCredential: tt.fields.nativeCredential,
+			}
+			assert.Equalf(t, tt.want, r.shouldReturnRID(), "shouldReturnRID()")
 		})
 	}
 }
