@@ -52,6 +52,16 @@
         "omit_hostname": {
           "description": "Hostname will be tagged by default unless you specifying append_dimensions, this flag allow you to omit hostname from tags without specifying append_dimensions",
           "type": "boolean"
+        },
+        "service.name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "deployment.environment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         }
       },
       "additionalProperties": true
@@ -775,6 +785,16 @@
         "endpoint_override": {
           "description": "The override endpoint to use to access cloudwatch logs",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "service.name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "deployment.environment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         }
       },
       "additionalProperties": false,
@@ -855,6 +875,16 @@
                     "items": {
                       "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
                     }
+                  },
+                  "service.name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "deployment.environment": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
                   }
                 },
                 "required": [

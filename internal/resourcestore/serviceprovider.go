@@ -35,9 +35,9 @@ var (
 )
 
 type ServiceAttribute struct {
-	serviceName       string
-	serviceNameSource string
-	environment       string
+	ServiceName       string
+	ServiceNameSource string
+	Environment       string
 }
 
 type serviceprovider struct {
@@ -46,6 +46,13 @@ type serviceprovider struct {
 	ec2Provider       ec2ProviderType
 	iamRole           string
 	ec2TagServiceName string
+
+	// logFiles is a variable reserved for communication between OTEL components and LogAgent
+	// in order to achieve process correlations where the key is the log file path and the value
+	// is the service name
+	// Example:
+	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": "cloudwatch-agent"
+	logFiles map[string]ServiceAttribute
 }
 
 func (s *serviceprovider) startServiceProvider() {
@@ -78,13 +85,13 @@ func (s *serviceprovider) startServiceProvider() {
 func (s *serviceprovider) ServiceAttribute() ServiceAttribute {
 	serviceAttr := ServiceAttribute{}
 	if s.ec2TagServiceName != "" {
-		serviceAttr.serviceName = s.ec2TagServiceName
-		serviceAttr.serviceNameSource = ResourceTags
+		serviceAttr.ServiceName = s.ec2TagServiceName
+		serviceAttr.ServiceNameSource = ResourceTags
 		return serviceAttr
 	}
 	if s.iamRole != "" {
-		serviceAttr.serviceName = s.iamRole
-		serviceAttr.serviceNameSource = ClientIamRole
+		serviceAttr.ServiceName = s.iamRole
+		serviceAttr.ServiceNameSource = ClientIamRole
 		return serviceAttr
 	}
 	return serviceAttr

@@ -18,6 +18,7 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
 
@@ -59,7 +60,8 @@ func TestLogs(t *testing.T) {
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
+	filename := tmpfile.Name()
+	tt.FileConfig = []FileConfig{{FilePath: filename, FromBeginning: true, ServiceName: "test-service-name", Environment: "ec2:test-environment"}}
 	tt.FileConfig[0].init()
 	tt.started = true
 
@@ -67,6 +69,10 @@ func TestLogs(t *testing.T) {
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when only 1 should be available", len(lsrcs))
 	}
+
+	rs := resourcestore.GetResourceStore()
+	assert.Equal(t, rs.LogFiles()[filename].ServiceName, "test-service-name")
+	assert.Equal(t, rs.LogFiles()[filename].Environment, "ec2:test-environment")
 
 	done := make(chan struct{})
 	lsrc := lsrcs[0]

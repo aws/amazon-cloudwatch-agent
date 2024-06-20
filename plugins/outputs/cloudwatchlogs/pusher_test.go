@@ -738,7 +738,7 @@ func TestPutRetentionValidMaxInput(t *testing.T) {
 		prpc++
 		return nil, nil
 	}
-	stop, p := testPreparation(1000000000000000000, &s, 1*time.Hour, maxRetryTimeout)
+	stop, p := testPreparation(100000000, &s, 1*time.Hour, maxRetryTimeout)
 	p.putRetentionPolicy()
 
 	require.Equal(t, 2, prpc, fmt.Sprintf("Put Retention Policy api should have been called twice. Number of times called: %v", prpc))

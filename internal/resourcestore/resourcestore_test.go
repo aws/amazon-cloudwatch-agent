@@ -118,21 +118,23 @@ func TestResourceStore_EKSInfo(t *testing.T) {
 func TestResourceStore_LogFiles(t *testing.T) {
 	tests := []struct {
 		name         string
-		logFileInput map[string]string
-		want         map[string]string
+		logFileInput map[string]ServiceAttribute
+		want         map[string]ServiceAttribute
 	}{
 		{
 			name:         "happypath",
-			logFileInput: map[string]string{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": "cloudwatch-agent"},
-			want:         map[string]string{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": "cloudwatch-agent"},
+			logFileInput: map[string]ServiceAttribute{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {"cloudwatch-agent", "", "ec2:test"}},
+			want:         map[string]ServiceAttribute{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {"cloudwatch-agent", "", "ec2:test"}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &ResourceStore{
-				logFiles: tt.logFileInput,
+				serviceprovider: serviceprovider{
+					logFiles: tt.logFileInput,
+				},
 			}
-			if got := r.LogFiles(); !reflect.DeepEqual(got, tt.want) {
+			if got := r.serviceprovider.logFiles; !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("LogFiles() = %v, want %v", got, tt.want)
 			}
 		})
@@ -281,4 +283,19 @@ func dereferenceMap(input map[string]*string) map[string]string {
 		}
 	}
 	return result
+}
+
+func TestAddServiceKeyAttributeToLogFilesMap(t *testing.T) {
+	rs := initResourceStore()
+	key := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+	rs.AddServiceAttrEntryToResourceStore(key, "test", "ec2:test")
+
+	expected := &ResourceStore{
+		serviceprovider: serviceprovider{
+			iamRole:  "test-role",
+			logFiles: map[string]ServiceAttribute{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "test", Environment: "ec2:test"}},
+		},
+	}
+
+	assert.Equal(t, true, reflect.DeepEqual(rs.LogFiles(), expected.serviceprovider.logFiles))
 }

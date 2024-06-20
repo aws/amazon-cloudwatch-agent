@@ -59,13 +59,6 @@ type ResourceStore struct {
 	// serviceprovider stores information about possible service names
 	// that we can attach to the resource ID
 	serviceprovider serviceprovider
-
-	// logFiles is a variable reserved for communication between OTEL components and LogAgent
-	// in order to achieve process correlations where the key is the log file path and the value
-	// is the service name
-	// Example:
-	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": "cloudwatch-agent"
-	logFiles map[string]string
 }
 
 func GetResourceStore() *ResourceStore {
@@ -91,6 +84,7 @@ func initResourceStore() *ResourceStore {
 		go rs.ec2Info.initEc2Info()
 	}
 	rs.serviceprovider = *newServiceProvider(metadataProvider, getEC2Provider)
+	rs.serviceprovider.logFiles = map[string]ServiceAttribute{}
 	go rs.serviceprovider.startServiceProvider()
 	return rs
 }
@@ -107,10 +101,6 @@ func (r *ResourceStore) EKSInfo() eksInfo {
 	return r.eksInfo
 }
 
-func (r *ResourceStore) LogFiles() map[string]string {
-	return r.logFiles
-}
-
 func (r *ResourceStore) CreateLogFileRID(fileGlobPath string, filePath string) *cloudwatchlogs.Resource {
 	return &cloudwatchlogs.Resource{
 		AttributeMaps: []map[string]*string{
@@ -120,13 +110,22 @@ func (r *ResourceStore) CreateLogFileRID(fileGlobPath string, filePath string) *
 	}
 }
 
+// AddServiceAttrEntryToResourceStore adds an entry to the resource store for the provided file -> serviceName, environmentName key-value pair
+func (r *ResourceStore) AddServiceAttrEntryToResourceStore(key string, serviceName string, environmentName string) {
+	r.serviceprovider.logFiles[key] = ServiceAttribute{ServiceName: serviceName, Environment: environmentName}
+}
+
+func (r *ResourceStore) LogFiles() map[string]ServiceAttribute {
+	return r.serviceprovider.logFiles
+}
+
 func (r *ResourceStore) createAttributeMaps() map[string]*string {
 	serviceAttr := r.serviceprovider.ServiceAttribute()
 	attributeMap := make(map[string]*string)
 
 	addNonEmptyToMap(attributeMap, InstanceIDKey, r.ec2Info.InstanceID)
 	addNonEmptyToMap(attributeMap, ASGKey, r.ec2Info.AutoScalingGroup)
-	addNonEmptyToMap(attributeMap, ServieNameSourceKey, serviceAttr.serviceNameSource)
+	addNonEmptyToMap(attributeMap, ServieNameSourceKey, serviceAttr.ServiceNameSource)
 	return attributeMap
 }
 
@@ -135,11 +134,11 @@ func (r *ResourceStore) createServiceKeyAttributes() *cloudwatchlogs.KeyAttribut
 	serviceKeyAttr := &cloudwatchlogs.KeyAttributes{
 		Type: aws.String(Service),
 	}
-	if serviceAttr.serviceName != "" {
-		serviceKeyAttr.SetName(serviceAttr.serviceName)
+	if serviceAttr.ServiceName != "" {
+		serviceKeyAttr.SetName(serviceAttr.ServiceName)
 	}
-	if serviceAttr.environment != "" {
-		serviceKeyAttr.SetEnvironment(serviceAttr.environment)
+	if serviceAttr.Environment != "" {
+		serviceKeyAttr.SetEnvironment(serviceAttr.Environment)
 	}
 	return serviceKeyAttr
 }

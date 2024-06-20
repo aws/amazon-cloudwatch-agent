@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
@@ -152,9 +153,17 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 	t.cleanUpStoppedTailerSrc()
 
+	rs := resourcestore.GetResourceStore()
+
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
+
+		//Add file -> {serviceName,  deploymentEnvironment} mapping to resource store
+		rs.AddServiceAttrEntryToResourceStore(fileconfig.FilePath, fileconfig.ServiceName, fileconfig.Environment)
+
+		t.Log.Debugf("Created entry for file=%s with serviceName=%s, environment=%s in resource store", fileconfig.FilePath, fileconfig.ServiceName, fileconfig.Environment)
+
 		targetFiles, err := t.getTargetFiles(fileconfig)
 		if err != nil {
 			t.Log.Errorf("Failed to find target files for file config %v, with error: %v", fileconfig.FilePath, err)

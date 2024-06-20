@@ -174,3 +174,21 @@ func restoreProxyEnv() {
 	os.Setenv("https_proxy", httpsProxy)
 	os.Setenv("no_proxy", noProxy)
 }
+
+func TestAgentServiceAndEnvironmentConfig(t *testing.T) {
+	agentServiceAndEnvironmentConfig(t, config.OS_TYPE_LINUX)
+	agentServiceAndEnvironmentConfig(t, config.OS_TYPE_DARWIN)
+}
+
+func agentServiceAndEnvironmentConfig(t *testing.T, osType string) {
+	a := new(Agent)
+	translator.SetTargetPlatform(osType)
+	var input interface{}
+	err := json.Unmarshal([]byte(`{"agent":{"region": "us-west-2", "service.name": "my-service", "deployment.environment":"test-environment"}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	_, _ = a.ApplyRule(input)
+	assert.Equal(t, "my-service", Global_Config.ServiceName)
+	assert.Equal(t, "test-environment", Global_Config.DeploymentEnvironment)
+}

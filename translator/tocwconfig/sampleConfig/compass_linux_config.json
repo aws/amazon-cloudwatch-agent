@@ -1,0 +1,48 @@
+{
+  "agent": {
+    "metrics_collection_interval": 10,
+    "logfile": "/tmp/fake/log/hotdog.log",
+    "internal": true,
+    "debug": true,
+    "quiet": true,
+    "aws_sdk_log_level": "LogDebug",
+    "user_agent": "CUSTOM USER AGENT VALUE",
+    "credentials": {
+      "role_arn": "global_role_arn_value"
+    },
+    "region": "us-west-2",
+    "service.name": "agent-level-service",
+    "deployment.environment": "agent-level-environment"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "timezone": "UTC",
+            "retention_in_days": 5,
+            "service.name": "file-level-service",
+            "deployment.environment": "file-level-environment"
+          },
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "timezone": "UTC",
+            "auto_removal": true
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME",
+    "force_flush_interval": 60,
+    "credentials": {
+      "role_arn": "log_role_arn_value_test"
+    },
+    "endpoint_override": "https://logs-fips.us-west-2.amazonaws.com",
+    "service.name": "log-level-service"
+  }
+}

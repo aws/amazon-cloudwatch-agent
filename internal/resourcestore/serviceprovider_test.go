@@ -91,8 +91,8 @@ func Test_serviceprovider_ServiceAttribute(t *testing.T) {
 				iamRole: "TestRole",
 			},
 			want: ServiceAttribute{
-				serviceName:       "TestRole",
-				serviceNameSource: ClientIamRole,
+				ServiceName:       "TestRole",
+				ServiceNameSource: ClientIamRole,
 			},
 		},
 		{
@@ -101,8 +101,8 @@ func Test_serviceprovider_ServiceAttribute(t *testing.T) {
 				ec2TagServiceName: "tag-service",
 			},
 			want: ServiceAttribute{
-				serviceName:       "tag-service",
-				serviceNameSource: ResourceTags,
+				ServiceName:       "tag-service",
+				ServiceNameSource: ResourceTags,
 			},
 		},
 	}

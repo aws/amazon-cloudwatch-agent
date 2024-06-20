@@ -200,3 +200,42 @@ func TestLogs_EndpointOverride(t *testing.T) {
 
 	ctx.SetMode(config.ModeEC2) //reset back to default mode
 }
+
+func TestLogs_ServiceAndEnvironment(t *testing.T) {
+	l := new(Logs)
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.RegionType = "any"
+
+	context.ResetContext()
+
+	var input interface{}
+	err := json.Unmarshal([]byte(`{"logs":{"service.name": "my-service",
+     "deployment.environment": "ec2:group","log_stream_name":"LOG_STREAM_NAME"}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+
+	_, _ = l.ApplyRule(input)
+	assert.Equal(t, "my-service", GlobalLogConfig.ServiceName)
+	assert.Equal(t, "ec2:group", GlobalLogConfig.DeploymentEnvironment)
+}
+
+func TestLogs_ServiceAndEnvironmentMissing(t *testing.T) {
+	l := new(Logs)
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.RegionType = "any"
+	agent.Global_Config.DeploymentEnvironment = "ec2:group"
+	agent.Global_Config.ServiceName = "my-service"
+
+	context.ResetContext()
+
+	var input interface{}
+	err := json.Unmarshal([]byte(`{"logs":{"log_stream_name":"LOG_STREAM_NAME"}}`), &input)
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+
+	_, _ = l.ApplyRule(input)
+	assert.Equal(t, "my-service", GlobalLogConfig.ServiceName)
+	assert.Equal(t, "ec2:group", GlobalLogConfig.DeploymentEnvironment)
+}

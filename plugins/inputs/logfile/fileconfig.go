@@ -83,6 +83,11 @@ type FileConfig struct {
 
 	Filters []*LogFilter `toml:"filters"`
 
+	//Customer specified service.name and deployment.environment
+	ServiceName string `toml:"service_name"`
+	//Customer specified deployment.environment
+	Environment string `toml:"deployment_environment"`
+
 	//Time *time.Location Go type timezone info.
 	TimezoneLoc *time.Location
 	//Regexp go type timestampFromLogLine regex
