@@ -12,6 +12,7 @@ const (
 	MetricAttributeRemoteOperation          = "RemoteOperation"
 	MetricAttributeRemoteResourceIdentifier = "RemoteResourceIdentifier"
 	MetricAttributeRemoteResourceType       = "RemoteResourceType"
+	MetricAttributeRemoteDbUser             = "RemoteDbUser"
 )
 
 const (
