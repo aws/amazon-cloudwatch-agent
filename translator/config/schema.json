@@ -229,10 +229,7 @@
               "$ref": "#/definitions/timeIntervalWithZeroDefinition"
             },
             "drop_original_metrics": {
-              "type": "array",
-              "items": { "type": "string" },
-              "minItems": 1,
-              "uniqueItems": true
+              "type": "boolean"
             }
           },
           "additionalProperties": false
@@ -248,9 +245,9 @@
               "properties": {
                 "resources": {
                   "type": "array",
-                    "maxItems": 1,
-                    "items": {
-                      "type": "string",
+                  "maxItems": 1,
+                  "items": {
+                    "type": "string",
                     "enum": [
                       "*"
                     ]
@@ -327,10 +324,7 @@
               "maxLength": 255
             },
             "drop_original_metrics": {
-              "type": "array",
-              "items": { "type": "string" },
-              "minItems": 1,
-              "uniqueItems": true
+              "type": "boolean"
             }
           },
           "additionalProperties": false
@@ -464,10 +458,7 @@
               }
             },
             "drop_original_metrics": {
-              "type": "array",
-              "items": { "type": "string" },
-              "minItems": 1,
-              "uniqueItems": true
+              "type": "boolean"
             }
           },
           "additionalProperties": false
