@@ -70,6 +70,7 @@ var copyMapForMetric = map[string]string{
 	semconv.AttributeK8SJobName:         "K8s.Workload",
 	semconv.AttributeK8SCronJobName:     "K8s.Workload",
 	semconv.AttributeK8SPodName:         "K8s.Pod",
+	semconv.AttributeAWSLogGroupNames:   "aws.log.group.names",
 }
 
 const (
