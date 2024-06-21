@@ -4,6 +4,7 @@
 package resourcestore
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -61,14 +62,19 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			testCtx, cancel := context.WithCancel(context.TODO())
 			s := serviceprovider{
 				metadataProvider: tt.args.metadataProvider,
 				ec2Provider: func(s string) ec2iface.EC2API {
 					return tt.args.ec2Client
 				},
+				ec2API: tt.args.ec2Client,
+				ctx:    testCtx,
 			}
-			s.startServiceProvider()
-			time.Sleep(time.Second)
+			go s.startServiceProvider()
+			time.Sleep(3 * time.Second)
+			cancel()
+
 			assert.Equal(t, tt.wantIAM, s.iamRole)
 			assert.Equal(t, tt.wantTag, s.ec2TagServiceName)
 		})
@@ -111,6 +117,7 @@ func Test_serviceprovider_ServiceAttribute(t *testing.T) {
 			s := &serviceprovider{
 				iamRole:           tt.fields.iamRole,
 				ec2TagServiceName: tt.fields.ec2TagServiceName,
+				ctx:               context.Background(),
 			}
 			assert.Equalf(t, tt.want, s.ServiceAttribute(), "ServiceAttribute()")
 		})
@@ -226,6 +233,65 @@ func Test_serviceprovider_getEC2TagServiceName(t *testing.T) {
 			}
 			s.getEC2TagServiceName()
 			assert.Equal(t, tt.wantTagServiceName, s.ec2TagServiceName)
+		})
+	}
+}
+
+func Test_refreshLoop(t *testing.T) {
+	type fields struct {
+		metadataProvider  ec2metadataprovider.MetadataProvider
+		ec2API            ec2iface.EC2API
+		iamRole           string
+		ec2TagServiceName string
+		refreshInterval   time.Duration
+		oneTime           bool
+	}
+	type expectedInfo struct {
+		iamRole           string
+		ec2TagServiceName string
+	}
+	tests := []struct {
+		name         string
+		fields       fields
+		expectedInfo expectedInfo
+	}{
+		{
+			name: "HappyPath_CorrectRefresh",
+			fields: fields{
+				metadataProvider: &mockMetadataProvider{
+					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+						InstanceID: "i-123456789"},
+				},
+				ec2API:            &mockServiceNameEC2Client{},
+				iamRole:           "original-role",
+				ec2TagServiceName: "original-tag-name",
+				refreshInterval:   time.Millisecond,
+			},
+			expectedInfo: expectedInfo{
+				iamRole:           "TestRole",
+				ec2TagServiceName: "test-service",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testCtx, cancel := context.WithCancel(context.TODO())
+			s := &serviceprovider{
+				metadataProvider: tt.fields.metadataProvider,
+				ec2API:           tt.fields.ec2API,
+				ec2Provider: func(s string) ec2iface.EC2API {
+					return tt.fields.ec2API
+				},
+				iamRole:           tt.fields.iamRole,
+				ec2TagServiceName: tt.fields.ec2TagServiceName,
+				ctx:               testCtx,
+			}
+			go refreshLoop(testCtx, s.getEC2TagServiceName, tt.fields.oneTime)
+			go refreshLoop(testCtx, s.getIAMRole, tt.fields.oneTime)
+			time.Sleep(time.Second)
+			cancel()
+			assert.Equal(t, tt.expectedInfo.iamRole, s.iamRole)
+			assert.Equal(t, tt.expectedInfo.ec2TagServiceName, s.ec2TagServiceName)
 		})
 	}
 }

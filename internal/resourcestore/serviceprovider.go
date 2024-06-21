@@ -6,8 +6,11 @@ package resourcestore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -15,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
 
 const (
@@ -24,6 +28,8 @@ const (
 	APP              = "app"
 	ClientIamRole    = "ClientIamRole"
 	ResourceTags     = "ResourceTags"
+	jitterMax        = 180
+	jitterMin        = 60
 )
 
 var (
@@ -46,6 +52,7 @@ type serviceprovider struct {
 	ec2Provider       ec2ProviderType
 	iamRole           string
 	ec2TagServiceName string
+	ctx               context.Context
 
 	// logFiles is a variable reserved for communication between OTEL components and LogAgent
 	// in order to achieve process correlations where the key is the log file path and the value
@@ -56,23 +63,12 @@ type serviceprovider struct {
 }
 
 func (s *serviceprovider) startServiceProvider() {
-	go func() {
-		err := s.getIAMRole()
-		if err != nil {
-			log.Println("D! serviceprovider failed to get service name through IAM role in service provider: ", err)
-		}
-	}()
-	region, err := getRegion(s.metadataProvider)
+	err := s.getEC2Client()
 	if err != nil {
-		log.Println("D! serviceprovider failed to get region: ", err)
+		go refreshLoop(s.ctx, s.getEC2Client, true)
 	}
-	go func() {
-		s.ec2API = s.ec2Provider(region)
-		err := s.getEC2TagServiceName()
-		if err != nil {
-			log.Println("D! serviceprovider failed to get service name through EC2 tags in service provider: ", err)
-		}
-	}()
+	go refreshLoop(s.ctx, s.getIAMRole, false)
+	go refreshLoop(s.ctx, s.getEC2TagServiceName, false)
 }
 
 // ServiceAttribute function gets the relevant service attributes
@@ -100,27 +96,29 @@ func (s *serviceprovider) ServiceAttribute() ServiceAttribute {
 func (s *serviceprovider) getIAMRole() error {
 	iamRole, err := s.metadataProvider.InstanceProfileIAMRole()
 	if err != nil {
-		log.Println("D! resourceMap: Unable to retrieve EC2 Metadata. This feature must only be used on an EC2 instance.")
-		return err
+		return fmt.Errorf("failed to get instance profile role: %s", err)
 	}
 	iamRoleArn, err := arn.Parse(iamRole)
 	if err != nil {
-		log.Println("D! resourceMap: Unable to parse IAM Role Arn. " + err.Error())
+		return fmt.Errorf("failed to parse IAM Role Arn: %s", err)
 	}
 	iamRoleResource := iamRoleArn.Resource
 	if strings.HasPrefix(iamRoleResource, INSTANCE_PROFILE) {
 		roleName := strings.TrimPrefix(iamRoleResource, INSTANCE_PROFILE)
 		s.iamRole = roleName
 	} else {
-		log.Println("D! resourceMap: IAM Role resource does not follow the expected pattern. Should be instance-profile/<role_name>")
+		return fmt.Errorf("IAM Role resource does not follow the expected pattern. Should be instance-profile/<role_name>")
 	}
 	return nil
 }
 
 func (s *serviceprovider) getEC2TagServiceName() error {
+	if s.ec2API == nil {
+		return fmt.Errorf("can't get EC2 tag since client is not set up yet ")
+	}
 	serviceTagFilters, err := s.getEC2TagFilters()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get service name from EC2 tag: %s", err)
 	}
 	currentTagPriority := -1
 	for {
@@ -146,6 +144,18 @@ func (s *serviceprovider) getEC2TagServiceName() error {
 		}
 		input.SetNextToken(*result.NextToken)
 	}
+	return nil
+}
+
+func (s *serviceprovider) getEC2Client() error {
+	if s.ec2API != nil {
+		return nil
+	}
+	region, err := getRegion(s.metadataProvider)
+	if err != nil {
+		return fmt.Errorf("failed to get EC2 client: %s", err)
+	}
+	s.ec2API = s.ec2Provider(region)
 	return nil
 }
 
@@ -176,5 +186,55 @@ func newServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider, p
 	return &serviceprovider{
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
+		ctx:              context.Background(),
 	}
+}
+
+func refreshLoop(ctx context.Context, updateFunc func() error, oneTime bool) {
+	// Offset retry by 1 so we can start with 1 minute wait time
+	// instead of immediately retrying
+	retry := 1
+	for {
+		err := updateFunc()
+		if err == nil && oneTime {
+			return
+		}
+
+		waitDuration := calculateWaitTime(retry, err)
+		wait := time.NewTimer(waitDuration)
+		select {
+		case <-ctx.Done():
+			wait.Stop()
+			return
+		case <-wait.C:
+		}
+
+		if retry > 1 {
+			log.Printf("D! serviceprovider: attribute retrieval retry count: %d", retry-1)
+		}
+
+		if err != nil {
+			retry++
+			log.Printf("D! serviceprovider: there was an error when retrieving service attribute. Reason: %s", err)
+		} else {
+			retry = 1
+		}
+
+	}
+}
+
+// calculateWaitTime returns different time based on whether if
+// a function call was returned with error. If returned with error,
+// follow exponential backoff wait time, otherwise, refresh with jitter
+func calculateWaitTime(retry int, err error) time.Duration {
+	var waitDuration time.Duration
+	if err == nil {
+		return time.Duration(rand.Intn(jitterMax-jitterMin)+jitterMin) * time.Second
+	}
+	if retry < len(ec2tagger.BackoffSleepArray) {
+		waitDuration = ec2tagger.BackoffSleepArray[retry]
+	} else {
+		waitDuration = ec2tagger.BackoffSleepArray[len(ec2tagger.BackoffSleepArray)-1]
+	}
+	return waitDuration
 }
