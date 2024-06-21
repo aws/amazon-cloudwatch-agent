@@ -164,6 +164,14 @@ func getDropOriginalMetrics(conf *confmap.Conf) map[string]bool {
 		*/
 		if dropMetrics := common.GetArray[any](conf, dropOriginalCfgKey); dropMetrics != nil {
 			for _, dropMetric := range dropMetrics {
+				if category == "collectd" || category == "statsd" || category == "ethtool" {
+					dropMetric, ok := dropMetric.(string)
+					if ok {
+						dropOriginalMetrics[dropMetric] = true
+					}
+					continue
+				}
+
 				measurements := common.GetArray[any](conf, measurementCfgKey)
 				if measurements == nil {
 					continue
