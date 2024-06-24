@@ -15,6 +15,7 @@ import (
 
 func TestCompleteConfigUnix(t *testing.T) {
 	resetContext(t)
+	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{
 		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
@@ -26,6 +27,14 @@ func TestCompleteConfigUnix(t *testing.T) {
 	// so this is separate
 	checkTranslation(t, "complete_linux_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "complete_darwin_config", "darwin", nil, "")
+}
+
+func TestJMXConfigLinux(t *testing.T) {
+	resetContext(t)
+	t.Setenv("JMX_JAR_PATH", "../../packaging/opentelemetry-jmx-metrics.jar")
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "jmx_config_linux", "linux", expectedEnvVars, "")
 }
 
 func TestDeltaConfigLinux(t *testing.T) {

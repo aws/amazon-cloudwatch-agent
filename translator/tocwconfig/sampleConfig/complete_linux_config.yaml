@@ -124,6 +124,45 @@ processors:
             - InstanceId
         imds_retries: 1
         refresh_interval_seconds: 0s
+    filter/jmx/0:
+        error_mode: propagate
+        logs: { }
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - jvm.memory.heap.init
+                    - jvm.memory.heap.used
+                    - jvm.memory.nonheap.init
+                    - kafka.consumer.fetch-rate
+        spans: { }
+        traces: { }
+    filter/jmx/1:
+        error_mode: propagate
+        logs: { }
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - tomcat.sessions
+                    - tomcat.errors
+        spans: { }
+        traces: { }
+    resource/jmx:
+        attributes:
+            - action: delete
+              key: ""
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              pattern: "telemetry.sdk.*"
+            - action: delete
+              key: "service.name"
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              pattern: ""
+              value: "unknown_service:java"
     transform:
         error_mode: propagate
         log_statements: []
@@ -135,6 +174,24 @@ processors:
                 - set(unit, "unit") where name == "cpu_usage_nice"
                 - set(unit, "unit") where name == "disk_free"
                 - set(name, "DISK_FREE") where name == "disk_free"
+        trace_statements: []
+    transform/jmx/0:
+        error_mode: propagate
+        log_statements: []
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(unit, "unit") where name == "jvm.memory.heap.used"
+                  - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                  - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+        trace_statements: []
+    transform/jmx/1:
+        error_mode: propagate
+        log_statements: []
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(name, "TC_ERR") where name == "tomcat.errors"
         trace_statements: []
 receivers:
     awsxray:
@@ -166,6 +223,41 @@ receivers:
                 reload_interval: 0s
                 server_name_override: ""
         transport: udp
+    jmx/0:
+        collection_interval: 1m0s
+        endpoint: localhost:12345
+        jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
+        keystore_path: /keystore
+        keystore_type: PKCS
+        otlp:
+            endpoint: 0.0.0.0:0
+            timeout: 5s
+        realm: test_realm
+        remote_profile: SASL/PLAIN
+        resource_attributes:
+            service.name: jmx_app
+        target_system: jvm,kafka-consumer
+        truststore_path: /truststore
+        truststore_type: PKCS12
+        username: cwagent
+    jmx/1:
+        collection_interval: 1m0s
+        endpoint: localhost:4567
+        jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
+        keystore_path: /keystore
+        keystore_type: PKCS
+        otlp:
+            endpoint: 0.0.0.0:0
+            timeout: 5s
+        realm: test_realm
+        remote_profile: SASL/PLAIN
+        resource_attributes:
+            service.name: jmx_app
+        target_system: tomcat
+        truststore_path: /truststore
+        truststore_type: PKCS12
+        jmx_registry_ssl_enabled: true
+        username: cwagent
     otlp/traces:
         protocols:
             grpc:
@@ -284,6 +376,26 @@ service:
             receivers:
                 - telegraf_net
                 - telegraf_diskio
+        metrics/jmx/0:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx/0
+                - resource/jmx
+                - transform/jmx/0
+                - ec2tagger
+            receivers:
+                - jmx/0
+        metrics/jmx/1:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx/1
+                - resource/jmx
+                - transform/jmx/1
+                - ec2tagger
+            receivers:
+                - jmx/1
         traces/xray:
             exporters:
                 - awsxray

@@ -372,7 +372,7 @@ func (w *windowsEventLog) loadState() {
 		log.Printf("W! [wineventlog] Issue encountered when reading offset from file %s: %v", w.stateFilePath, err)
 		return
 	}
-	offset, err := strconv.ParseInt(strings.Split(string(byteArray), "\n")[0], 10, 64)
+	offset, err := strconv.ParseUint(strings.Split(string(byteArray), "\n")[0], 10, 64)
 	if err != nil {
 		log.Printf("W! [wineventlog] Issue encountered when parsing offset value %v: %v", byteArray, err)
 		return

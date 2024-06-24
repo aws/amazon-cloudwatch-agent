@@ -77,6 +77,9 @@ func (metrics *Metrics) AddGaugeMetricDataPoint(
 }
 
 func DecorateMetricName(measurement, fieldKey string) string {
+	if fieldKey == "" {
+		return ""
+	}
 	// Statsd sets field name as default when the field is empty
 	// https://github.com/aws/amazon-cloudwatch-agent/blob/6b3384ee44dcc07c1359b075eb9ea8e638126bc8/plugins/inputs/statsd/statsd.go#L492-L494
 	if fieldKey == "value" {

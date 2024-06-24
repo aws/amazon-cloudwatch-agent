@@ -7,6 +7,7 @@ on:
   pull_request:
     branches: 
       - main*
+      - feature*
     types: 
       - opened
       - synchronize
@@ -75,14 +76,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-2019, windows-latest, macos-11]
+        os: [ ubuntu-latest, windows-2019, windows-latest, macos-12]
         include:
           - os: ubuntu-latest
             family: linux
             cache-path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-          - os: macos-11
+          - os: macos-12
             family: darwin
             cache-path: |
               ~/Library/Caches/go-build

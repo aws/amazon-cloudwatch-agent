@@ -492,6 +492,7 @@ processors:
         k8snode:
             auth_type: serviceAccount
             context: ""
+            kube_config_path: ""
             node_from_env_var: ""
             resource_attributes:
                 k8s.node.name:
@@ -598,7 +599,10 @@ receivers:
         container_orchestrator: eks
         enable_control_plane_metrics: false
         endpoint: ""
+        host_ip: ""
+        host_name: ""
         imds_retries: 1
+        kube_config_path: ""
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
         local_mode: false

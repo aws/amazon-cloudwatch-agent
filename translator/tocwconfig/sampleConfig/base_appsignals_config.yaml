@@ -120,6 +120,10 @@ exporters:
         telemetry:
             enabled: true
             include_metadata: true
+    debug/application_signals:
+        sampling_initial: 2
+        sampling_thereafter: 500
+        verbosity: Detailed
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -348,6 +352,7 @@ processors:
         k8snode:
             auth_type: serviceAccount
             context: ""
+            kube_config_path: ""
             node_from_env_var: ""
             resource_attributes:
                 k8s.node.name:
@@ -470,6 +475,7 @@ service:
     pipelines:
         metrics/application_signals:
             exporters:
+                - debug/application_signals
                 - awsemf/application_signals
             processors:
                 - resourcedetection
@@ -478,6 +484,7 @@ service:
                 - otlp/application_signals
         traces/application_signals:
             exporters:
+                - debug/application_signals
                 - awsxray/application_signals
             processors:
                 - resourcedetection
@@ -490,7 +497,7 @@ service:
             disable_caller: false
             disable_stacktrace: false
             encoding: console
-            level: info
+            level: debug
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
