@@ -8,10 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net"
-	"regexp"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -31,10 +27,6 @@ import (
 )
 
 const (
-	// kubeAllowedStringAlphaNums holds the characters allowed in replicaset names from as parent deployment
-	// https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/rand/rand.go#L121
-	kubeAllowedStringAlphaNums = "bcdfghjklmnpqrstvwxz2456789"
-
 	// Deletion delay adjustment:
 	// Previously, EKS resolver would instantly remove the IP to Service mapping when a pod was destroyed.
 	// This posed a problem because:
@@ -47,22 +39,6 @@ const (
 	deletionDelay = 2 * time.Minute
 
 	jitterKubernetesAPISeconds = 10
-)
-
-var (
-	// ReplicaSet name = Deployment name + "-" + up to 10 alphanumeric characters string, if the ReplicaSet was created through a deployment
-	// The suffix string of the ReplicaSet name is an int32 number (0 to 4,294,967,295) that is cast to a string and then
-	// mapped to an alphanumeric value with only the following characters allowed: "bcdfghjklmnpqrstvwxz2456789".
-	// The suffix string length is therefore nondeterministic. The regex accepts a suffix of length 6-10 to account for
-	// ReplicaSets not managed by deployments that may have similar names.
-	// Suffix Generation: https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go#L1201
-	// Alphanumeric Mapping: https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/rand/rand.go#L121)
-	replicaSetWithDeploymentNamePattern = fmt.Sprintf(`^(.+)-[%s]{6,10}$`, kubeAllowedStringAlphaNums)
-	deploymentFromReplicaSetPattern     = regexp.MustCompile(replicaSetWithDeploymentNamePattern)
-	// if a pod is launched directly by a replicaSet (with a given name by users), its name has the following pattern:
-	// Pod name = ReplicaSet name + 5 alphanumeric characters long string
-	podWithReplicaSetNamePattern = fmt.Sprintf(`^(.+)-[%s]{5}$`, kubeAllowedStringAlphaNums)
-	replicaSetFromPodPattern     = regexp.MustCompile(podWithReplicaSetNamePattern)
 )
 
 type kubernetesResolver struct {
@@ -108,69 +84,6 @@ func jitterSleep(seconds int) {
 	time.Sleep(jitter)
 }
 
-func attachNamespace(resourceName, namespace string) string {
-	// character "@" is not allowed in kubernetes resource names: https://unofficial-kubernetes.readthedocs.io/en/latest/concepts/overview/working-with-objects/names/
-	return resourceName + "@" + namespace
-}
-
-func getServiceAndNamespace(service *corev1.Service) string {
-	return attachNamespace(service.Name, service.Namespace)
-}
-
-func extractResourceAndNamespace(serviceOrWorkloadAndNamespace string) (string, string) {
-	// extract service name and namespace from serviceAndNamespace
-	parts := strings.Split(serviceOrWorkloadAndNamespace, "@")
-	if len(parts) != 2 {
-		return "", ""
-	}
-	return parts[0], parts[1]
-}
-
-func extractWorkloadNameFromRS(replicaSetName string) (string, error) {
-	match := deploymentFromReplicaSetPattern.FindStringSubmatch(replicaSetName)
-	if match != nil {
-		return match[1], nil
-	}
-
-	return "", errors.New("failed to extract workload name from replicatSet name: " + replicaSetName)
-}
-
-func extractWorkloadNameFromPodName(podName string) (string, error) {
-	match := replicaSetFromPodPattern.FindStringSubmatch(podName)
-	if match != nil {
-		return match[1], nil
-	}
-
-	return "", errors.New("failed to extract workload name from pod name: " + podName)
-}
-
-func getWorkloadAndNamespace(pod *corev1.Pod) string {
-	var workloadAndNamespace string
-	if pod.ObjectMeta.OwnerReferences != nil {
-		for _, ownerRef := range pod.ObjectMeta.OwnerReferences {
-			if workloadAndNamespace != "" {
-				break
-			}
-
-			if ownerRef.Kind == "ReplicaSet" {
-				if workloadName, err := extractWorkloadNameFromRS(ownerRef.Name); err == nil {
-					// when the replicaSet is created by a deployment, use deployment name
-					workloadAndNamespace = attachNamespace(workloadName, pod.Namespace)
-				} else if workloadName, err := extractWorkloadNameFromPodName(pod.Name); err == nil {
-					// when the replicaSet is not created by a deployment, use replicaSet name directly
-					workloadAndNamespace = attachNamespace(workloadName, pod.Namespace)
-				}
-			} else if ownerRef.Kind == "StatefulSet" {
-				workloadAndNamespace = attachNamespace(ownerRef.Name, pod.Namespace)
-			} else if ownerRef.Kind == "DaemonSet" {
-				workloadAndNamespace = attachNamespace(ownerRef.Name, pod.Namespace)
-			}
-		}
-	}
-
-	return workloadAndNamespace
-}
-
 // Deleter represents a type that can delete a key from a map after a certain delay.
 type Deleter interface {
 	DeleteWithDelay(m *sync.Map, key interface{})
@@ -188,8 +101,7 @@ func (td *TimedDeleter) DeleteWithDelay(m *sync.Map, key interface{}) {
 	}()
 }
 
-func onAddOrUpdateService(obj interface{}, ipToServiceAndNamespace, serviceAndNamespaceToSelectors *sync.Map) {
-	service := obj.(*corev1.Service)
+func (s *serviceWatcher) onAddOrUpdateService(service *corev1.Service) {
 	// service can also have an external IP (or ingress IP) that could be accessed
 	// this field can be either an IP address (in some edge case) or a hostname (see "EXTERNAL-IP" column in "k get svc" output)
 	// [ec2-user@ip-172-31-11-104 one-step]$ k get svc -A
@@ -202,150 +114,116 @@ func onAddOrUpdateService(obj interface{}, ipToServiceAndNamespace, serviceAndNa
 	// kube-system         kube-dns                      ClusterIP      10.100.0.10      <none>
 	//
 	// we ignore such case for now and may need to consider it in the future
-	if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != "None" {
-		ipToServiceAndNamespace.Store(service.Spec.ClusterIP, getServiceAndNamespace(service))
+	if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != corev1.ClusterIPNone {
+		s.ipToServiceAndNamespace.Store(service.Spec.ClusterIP, getServiceAndNamespace(service))
 	}
 	labelSet := mapset.NewSet[string]()
 	for key, value := range service.Spec.Selector {
 		labelSet.Add(key + "=" + value)
 	}
 	if labelSet.Cardinality() > 0 {
-		serviceAndNamespaceToSelectors.Store(getServiceAndNamespace(service), labelSet)
+		s.serviceAndNamespaceToSelectors.Store(getServiceAndNamespace(service), labelSet)
 	}
 }
 
-func onDeleteService(obj interface{}, ipToServiceAndNamespace, serviceAndNamespaceToSelectors *sync.Map, deleter Deleter) {
-	service := obj.(*corev1.Service)
-	if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != "None" {
-		deleter.DeleteWithDelay(ipToServiceAndNamespace, service.Spec.ClusterIP)
+func (s *serviceWatcher) onDeleteService(service *corev1.Service, deleter Deleter) {
+	if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != corev1.ClusterIPNone {
+		deleter.DeleteWithDelay(s.ipToServiceAndNamespace, service.Spec.ClusterIP)
 	}
-	deleter.DeleteWithDelay(serviceAndNamespaceToSelectors, getServiceAndNamespace(service))
+	deleter.DeleteWithDelay(s.serviceAndNamespaceToSelectors, getServiceAndNamespace(service))
 }
 
-func removeHostNetworkRecords(pod *corev1.Pod, ipToPod *sync.Map, deleter Deleter) {
+func (p *podWatcher) removeHostNetworkRecords(pod *corev1.Pod) {
 	for _, port := range getHostNetworkPorts(pod) {
-		deleter.DeleteWithDelay(ipToPod, pod.Status.HostIP+":"+port)
+		p.deleter.DeleteWithDelay(p.ipToPod, pod.Status.HostIP+":"+port)
 	}
 }
 
-func updateHostNetworkRecords(newPod *corev1.Pod, oldPod *corev1.Pod, ipToPod *sync.Map, deleter Deleter) {
-	newHostIPPorts := make(map[string]bool)
-	oldHostIPPorts := make(map[string]bool)
-
-	for _, port := range getHostNetworkPorts(newPod) {
-		newHostIPPorts[newPod.Status.HostIP+":"+port] = true
-	}
-
-	for _, port := range getHostNetworkPorts(oldPod) {
-		oldHostIPPorts[oldPod.Status.HostIP+":"+port] = true
-	}
-
-	for oldHostIPPort := range oldHostIPPorts {
-		if _, exist := newHostIPPorts[oldHostIPPort]; !exist {
-			deleter.DeleteWithDelay(ipToPod, oldHostIPPort)
-		}
-	}
-
-	for newHostIPPort := range newHostIPPorts {
-		if _, exist := oldHostIPPorts[newHostIPPort]; !exist {
-			ipToPod.Store(newHostIPPort, newPod.Name)
-		}
-	}
-}
-
-func handlePodAdd(pod *corev1.Pod, ipToPod *sync.Map) {
-	if pod.Spec.HostNetwork {
+func (p *podWatcher) handlePodAdd(pod *corev1.Pod) {
+	if pod.Spec.HostNetwork && pod.Status.HostIP != "" {
 		for _, port := range getHostNetworkPorts(pod) {
-			ipToPod.Store(pod.Status.HostIP+":"+port, pod.Name)
+			p.ipToPod.Store(pod.Status.HostIP+":"+port, pod.Name)
 		}
-	} else if pod.Status.PodIP != "" {
-		ipToPod.Store(pod.Status.PodIP, pod.Name)
+	}
+	if pod.Status.PodIP != "" {
+		p.ipToPod.Store(pod.Status.PodIP, pod.Name)
 	}
 }
 
-func handlePodUpdate(newPod *corev1.Pod, oldPod *corev1.Pod, ipToPod *sync.Map, deleter Deleter) {
-	if oldPod.Spec.HostNetwork && newPod.Spec.HostNetwork {
-		// Case 1: Both oldPod and newPod are using host network
-		// Here we need to update the host network records accordingly
-		updateHostNetworkRecords(newPod, oldPod, ipToPod, deleter)
-	} else if oldPod.Spec.HostNetwork && !newPod.Spec.HostNetwork {
-		// Case 2: The oldPod was using the host network, but the newPod is not
-		// Here we remove the old host network records and add new PodIP record if it is not empty
-		removeHostNetworkRecords(oldPod, ipToPod, deleter)
-		if newPod.Status.PodIP != "" {
-			ipToPod.Store(newPod.Status.PodIP, newPod.Name)
+func (p *podWatcher) handlePodUpdate(newPod *corev1.Pod, oldPod *corev1.Pod) {
+	// HostNetwork is an immutable field
+	if newPod.Spec.HostNetwork && oldPod.Status.HostIP != newPod.Status.HostIP {
+		if oldPod.Status.HostIP != "" {
+			p.logger.Debug("deleting host ip from cache", zap.String("hostNetwork", oldPod.Status.HostIP))
+			p.removeHostNetworkRecords(oldPod)
 		}
-	} else if !oldPod.Spec.HostNetwork && newPod.Spec.HostNetwork {
-		// Case 3: The oldPod was not using the host network, but the newPod is
-		// Here we remove the old PodIP record and add new host network records
+		if newPod.Status.HostIP != "" {
+			for _, port := range getHostNetworkPorts(newPod) {
+				p.ipToPod.Store(newPod.Status.HostIP+":"+port, newPod.Name)
+			}
+		}
+	}
+	if oldPod.Status.PodIP != newPod.Status.PodIP {
 		if oldPod.Status.PodIP != "" {
-			deleter.DeleteWithDelay(ipToPod, oldPod.Status.PodIP)
-		}
-		for _, port := range getHostNetworkPorts(newPod) {
-			ipToPod.Store(newPod.Status.HostIP+":"+port, newPod.Name)
-		}
-	} else if !oldPod.Spec.HostNetwork && !newPod.Spec.HostNetwork && oldPod.Status.PodIP != newPod.Status.PodIP {
-		// Case 4: Both oldPod and newPod are not using the host network, but the Pod IPs are different
-		// Here we replace the old PodIP record with the new one
-		if oldPod.Status.PodIP != "" {
-			deleter.DeleteWithDelay(ipToPod, oldPod.Status.PodIP)
+			p.logger.Debug("deleting pod ip from cache", zap.String("podNetwork", oldPod.Status.PodIP))
+			p.deleter.DeleteWithDelay(p.ipToPod, oldPod.Status.PodIP)
 		}
 		if newPod.Status.PodIP != "" {
-			ipToPod.Store(newPod.Status.PodIP, newPod.Name)
+			p.ipToPod.Store(newPod.Status.PodIP, newPod.Name)
 		}
 	}
 }
 
-func onAddOrUpdatePod(newObj, oldObj interface{}, ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels *sync.Map, workloadPodCount map[string]int, isAdd bool, logger *zap.Logger, deleter Deleter) {
-	pod := newObj.(*corev1.Pod)
-
-	if isAdd {
-		handlePodAdd(pod, ipToPod)
+func (p *podWatcher) onAddOrUpdatePod(pod, oldPod *corev1.Pod) {
+	if oldPod == nil {
+		p.handlePodAdd(pod)
 	} else {
-		oldPod := oldObj.(*corev1.Pod)
-		handlePodUpdate(pod, oldPod, ipToPod, deleter)
+		p.handlePodUpdate(pod, oldPod)
 	}
 
 	workloadAndNamespace := getWorkloadAndNamespace(pod)
 
 	if workloadAndNamespace != "" {
-		podToWorkloadAndNamespace.Store(pod.Name, workloadAndNamespace)
+		p.podToWorkloadAndNamespace.Store(pod.Name, workloadAndNamespace)
 		podLabels := mapset.NewSet[string]()
 		for key, value := range pod.ObjectMeta.Labels {
 			podLabels.Add(key + "=" + value)
 		}
 		if podLabels.Cardinality() > 0 {
-			workloadAndNamespaceToLabels.Store(workloadAndNamespace, podLabels)
+			p.workloadAndNamespaceToLabels.Store(workloadAndNamespace, podLabels)
 		}
-		if isAdd {
-			workloadPodCount[workloadAndNamespace]++
-			logger.Debug("Added pod", zap.String("pod", pod.Name), zap.String("workload", workloadAndNamespace), zap.Int("count", workloadPodCount[workloadAndNamespace]))
+		if oldPod == nil {
+			p.workloadPodCount[workloadAndNamespace]++
+			p.logger.Debug("Added pod", zap.String("pod", pod.Name), zap.String("workload", workloadAndNamespace), zap.Int("count", p.workloadPodCount[workloadAndNamespace]))
 		}
 	}
 }
 
-func onDeletePod(obj interface{}, ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels *sync.Map, workloadPodCount map[string]int, logger *zap.Logger, deleter Deleter) {
+func (p *podWatcher) onDeletePod(obj interface{}) {
 	pod := obj.(*corev1.Pod)
+	if pod.Spec.HostNetwork && pod.Status.HostIP != "" {
+		p.logger.Debug("deleting host ip from cache", zap.String("hostNetwork", pod.Status.HostIP))
+		p.removeHostNetworkRecords(pod)
+	}
 	if pod.Status.PodIP != "" {
-		deleter.DeleteWithDelay(ipToPod, pod.Status.PodIP)
-	} else if pod.Status.HostIP != "" {
-		for _, port := range getHostNetworkPorts(pod) {
-			deleter.DeleteWithDelay(ipToPod, pod.Status.HostIP+":"+port)
-		}
+		p.logger.Debug("deleting pod ip from cache", zap.String("podNetwork", pod.Status.PodIP))
+		p.deleter.DeleteWithDelay(p.ipToPod, pod.Status.PodIP)
 	}
 
-	if workloadKey, ok := podToWorkloadAndNamespace.Load(pod.Name); ok {
+	if workloadKey, ok := p.podToWorkloadAndNamespace.Load(pod.Name); ok {
 		workloadAndNamespace := workloadKey.(string)
-		workloadPodCount[workloadAndNamespace]--
-		logger.Debug("workload pod count", zap.String("workload", workloadAndNamespace), zap.Int("podCount", workloadPodCount[workloadAndNamespace]))
-		if workloadPodCount[workloadAndNamespace] == 0 {
-			deleter.DeleteWithDelay(workloadAndNamespaceToLabels, workloadAndNamespace)
+		p.workloadPodCount[workloadAndNamespace]--
+		p.logger.Debug("decrementing pod count", zap.String("workload", workloadAndNamespace), zap.Int("podCount", p.workloadPodCount[workloadAndNamespace]))
+		if p.workloadPodCount[workloadAndNamespace] == 0 {
+			p.deleter.DeleteWithDelay(p.workloadAndNamespaceToLabels, workloadAndNamespace)
 		}
+	} else {
+		p.logger.Error("failed to load pod workloadKey", zap.String("pod", pod.Name))
 	}
-	deleter.DeleteWithDelay(podToWorkloadAndNamespace, pod.Name)
+	p.deleter.DeleteWithDelay(p.podToWorkloadAndNamespace, pod.Name)
 }
 
-type PodWatcher struct {
+type podWatcher struct {
 	ipToPod                      *sync.Map
 	podToWorkloadAndNamespace    *sync.Map
 	workloadAndNamespaceToLabels *sync.Map
@@ -355,8 +233,8 @@ type PodWatcher struct {
 	deleter                      Deleter
 }
 
-func NewPodWatcher(logger *zap.Logger, informer cache.SharedIndexInformer, deleter Deleter) *PodWatcher {
-	return &PodWatcher{
+func newPodWatcher(logger *zap.Logger, informer cache.SharedIndexInformer, deleter Deleter) *podWatcher {
+	return &podWatcher{
 		ipToPod:                      &sync.Map{},
 		podToWorkloadAndNamespace:    &sync.Map{},
 		workloadAndNamespaceToLabels: &sync.Map{},
@@ -367,19 +245,23 @@ func NewPodWatcher(logger *zap.Logger, informer cache.SharedIndexInformer, delet
 	}
 }
 
-func (p *PodWatcher) Run(stopCh chan struct{}) {
+func (p *podWatcher) run(stopCh chan struct{}) {
 	p.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			p.logger.Debug("list and watch for pods: ADD")
-			onAddOrUpdatePod(obj, nil, p.ipToPod, p.podToWorkloadAndNamespace, p.workloadAndNamespaceToLabels, p.workloadPodCount, true, p.logger, p.deleter)
+			pod := obj.(*corev1.Pod)
+			p.logger.Debug("list and watch for pod: ADD " + pod.Name)
+			p.onAddOrUpdatePod(pod, nil)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			p.logger.Debug("list and watch for pods: UPDATE")
-			onAddOrUpdatePod(newObj, oldObj, p.ipToPod, p.podToWorkloadAndNamespace, p.workloadAndNamespaceToLabels, p.workloadPodCount, false, p.logger, p.deleter)
+			pod := newObj.(*corev1.Pod)
+			oldPod := oldObj.(*corev1.Pod)
+			p.logger.Debug("list and watch for pods: UPDATE " + pod.Name)
+			p.onAddOrUpdatePod(pod, oldPod)
 		},
 		DeleteFunc: func(obj interface{}) {
-			p.logger.Debug("list and watch for pods: DELETE")
-			onDeletePod(obj, p.ipToPod, p.podToWorkloadAndNamespace, p.workloadAndNamespaceToLabels, p.workloadPodCount, p.logger, p.deleter)
+			pod := obj.(*corev1.Pod)
+			p.logger.Debug("list and watch for pods: DELETE " + pod.Name)
+			p.onDeletePod(obj)
 		},
 	})
 
@@ -387,15 +269,15 @@ func (p *PodWatcher) Run(stopCh chan struct{}) {
 
 }
 
-func (p *PodWatcher) WaitForCacheSync(stopCh chan struct{}) {
+func (p *podWatcher) waitForCacheSync(stopCh chan struct{}) {
 	if !cache.WaitForNamedCacheSync("podWatcher", stopCh, p.informer.HasSynced) {
 		p.logger.Fatal("timed out waiting for kubernetes pod watcher caches to sync")
 	}
 
-	p.logger.Info("PodWatcher: Cache synced")
+	p.logger.Info("podWatcher: Cache synced")
 }
 
-type ServiceWatcher struct {
+type serviceWatcher struct {
 	ipToServiceAndNamespace        *sync.Map
 	serviceAndNamespaceToSelectors *sync.Map
 	logger                         *zap.Logger
@@ -403,8 +285,8 @@ type ServiceWatcher struct {
 	deleter                        Deleter
 }
 
-func NewServiceWatcher(logger *zap.Logger, informer cache.SharedIndexInformer, deleter Deleter) *ServiceWatcher {
-	return &ServiceWatcher{
+func newServiceWatcher(logger *zap.Logger, informer cache.SharedIndexInformer, deleter Deleter) *serviceWatcher {
+	return &serviceWatcher{
 		ipToServiceAndNamespace:        &sync.Map{},
 		serviceAndNamespaceToSelectors: &sync.Map{},
 		logger:                         logger,
@@ -413,33 +295,36 @@ func NewServiceWatcher(logger *zap.Logger, informer cache.SharedIndexInformer, d
 	}
 }
 
-func (s *ServiceWatcher) Run(stopCh chan struct{}) {
+func (s *serviceWatcher) Run(stopCh chan struct{}) {
 	s.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			s.logger.Debug("list and watch for services: ADD")
-			onAddOrUpdateService(obj, s.ipToServiceAndNamespace, s.serviceAndNamespaceToSelectors)
+			service := obj.(*corev1.Service)
+			s.logger.Debug("list and watch for services: ADD " + service.Name)
+			s.onAddOrUpdateService(service)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			s.logger.Debug("list and watch for services: UPDATE")
-			onAddOrUpdateService(newObj, s.ipToServiceAndNamespace, s.serviceAndNamespaceToSelectors)
+			service := newObj.(*corev1.Service)
+			s.logger.Debug("list and watch for services: UPDATE " + service.Name)
+			s.onAddOrUpdateService(service)
 		},
 		DeleteFunc: func(obj interface{}) {
-			s.logger.Debug("list and watch for services: DELETE")
-			onDeleteService(obj, s.ipToServiceAndNamespace, s.serviceAndNamespaceToSelectors, s.deleter)
+			service := obj.(*corev1.Service)
+			s.logger.Debug("list and watch for services: DELETE " + service.Name)
+			s.onDeleteService(service, s.deleter)
 		},
 	})
 	go s.informer.Run(stopCh)
 }
 
-func (s *ServiceWatcher) WaitForCacheSync(stopCh chan struct{}) {
+func (s *serviceWatcher) waitForCacheSync(stopCh chan struct{}) {
 	if !cache.WaitForNamedCacheSync("serviceWatcher", stopCh, s.informer.HasSynced) {
 		s.logger.Fatal("timed out waiting for kubernetes service watcher caches to sync")
 	}
 
-	s.logger.Info("ServiceWatcher: Cache synced")
+	s.logger.Info("serviceWatcher: Cache synced")
 }
 
-type ServiceToWorkloadMapper struct {
+type serviceToWorkloadMapper struct {
 	serviceAndNamespaceToSelectors *sync.Map
 	workloadAndNamespaceToLabels   *sync.Map
 	serviceToWorkload              *sync.Map
@@ -447,8 +332,8 @@ type ServiceToWorkloadMapper struct {
 	deleter                        Deleter
 }
 
-func NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload *sync.Map, logger *zap.Logger, deleter Deleter) *ServiceToWorkloadMapper {
-	return &ServiceToWorkloadMapper{
+func newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload *sync.Map, logger *zap.Logger, deleter Deleter) *serviceToWorkloadMapper {
+	return &serviceToWorkloadMapper{
 		serviceAndNamespaceToSelectors: serviceAndNamespaceToSelectors,
 		workloadAndNamespaceToLabels:   workloadAndNamespaceToLabels,
 		serviceToWorkload:              serviceToWorkload,
@@ -457,7 +342,7 @@ func NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNames
 	}
 }
 
-func (m *ServiceToWorkloadMapper) MapServiceToWorkload() {
+func (m *serviceToWorkloadMapper) mapServiceToWorkload() {
 	m.logger.Debug("Map service to workload at:", zap.Time("time", time.Now()))
 
 	m.serviceAndNamespaceToSelectors.Range(func(key, value interface{}) bool {
@@ -490,9 +375,9 @@ func (m *ServiceToWorkloadMapper) MapServiceToWorkload() {
 	})
 }
 
-func (m *ServiceToWorkloadMapper) Start(stopCh chan struct{}) {
+func (m *serviceToWorkloadMapper) Start(stopCh chan struct{}) {
 	// do the first mapping immediately
-	m.MapServiceToWorkload()
+	m.mapServiceToWorkload()
 	m.logger.Debug("First-time map service to workload at:", zap.Time("time", time.Now()))
 
 	go func() {
@@ -501,11 +386,74 @@ func (m *ServiceToWorkloadMapper) Start(stopCh chan struct{}) {
 			case <-stopCh:
 				return
 			case <-time.After(time.Minute + 30*time.Second):
-				m.MapServiceToWorkload()
+				m.mapServiceToWorkload()
 				m.logger.Debug("Map service to workload at:", zap.Time("time", time.Now()))
 			}
 		}
 	}()
+}
+
+// minimizePod removes fields that could contain large objects, and retain essential
+// fields needed for IP/name translation. The following fields must be kept:
+// - ObjectMeta: Namespace, Name, Labels, OwnerReference
+// - Spec: HostNetwork, ContainerPorts
+// - Status: PodIP/s, HostIP/s
+func minimizePod(obj interface{}) (interface{}, error) {
+	if pod, ok := obj.(*corev1.Pod); ok {
+		pod.Annotations = nil
+		pod.Finalizers = nil
+		pod.ManagedFields = nil
+
+		pod.Spec.Volumes = nil
+		pod.Spec.InitContainers = nil
+		pod.Spec.EphemeralContainers = nil
+		pod.Spec.ImagePullSecrets = nil
+		pod.Spec.HostAliases = nil
+		pod.Spec.SchedulingGates = nil
+		pod.Spec.ResourceClaims = nil
+		pod.Spec.Tolerations = nil
+		pod.Spec.Affinity = nil
+
+		pod.Status.InitContainerStatuses = nil
+		pod.Status.ContainerStatuses = nil
+		pod.Status.EphemeralContainerStatuses = nil
+
+		for i := 0; i < len(pod.Spec.Containers); i++ {
+			c := &pod.Spec.Containers[i]
+			c.Image = ""
+			c.Command = nil
+			c.Args = nil
+			c.EnvFrom = nil
+			c.Env = nil
+			c.Resources = corev1.ResourceRequirements{}
+			c.VolumeMounts = nil
+			c.VolumeDevices = nil
+			c.SecurityContext = nil
+		}
+	}
+	return obj, nil
+}
+
+// minimizeService removes fields that could contain large objects, and retain essential
+// fields needed for IP/name translation. The following fields must be kept:
+// - ObjectMeta: Namespace, Name
+// - Spec: Selectors, ClusterIP
+func minimizeService(obj interface{}) (interface{}, error) {
+	if svc, ok := obj.(*corev1.Service); ok {
+		svc.Annotations = nil
+		svc.Finalizers = nil
+		svc.ManagedFields = nil
+
+		svc.Spec.LoadBalancerSourceRanges = nil
+		svc.Spec.SessionAffinityConfig = nil
+		svc.Spec.IPFamilies = nil
+		svc.Spec.IPFamilyPolicy = nil
+		svc.Spec.InternalTrafficPolicy = nil
+		svc.Spec.InternalTrafficPolicy = nil
+
+		svc.Status.Conditions = nil
+	}
+	return obj, nil
 }
 
 func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger) subResolver {
@@ -525,36 +473,44 @@ func getKubernetesResolver(platformCode, clusterName string, logger *zap.Logger)
 
 		sharedInformerFactory := informers.NewSharedInformerFactory(clientset, 0)
 		podInformer := sharedInformerFactory.Core().V1().Pods().Informer()
+		err = podInformer.SetTransform(minimizePod)
+		if err != nil {
+			logger.Error("failed to minimize Pod objects", zap.Error(err))
+		}
 		serviceInformer := sharedInformerFactory.Core().V1().Services().Informer()
+		err = serviceInformer.SetTransform(minimizeService)
+		if err != nil {
+			logger.Error("failed to minimize Service objects", zap.Error(err))
+		}
 
 		timedDeleter := &TimedDeleter{Delay: deletionDelay}
-		podWatcher := NewPodWatcher(logger, podInformer, timedDeleter)
-		serviceWatcher := NewServiceWatcher(logger, serviceInformer, timedDeleter)
+		poWatcher := newPodWatcher(logger, podInformer, timedDeleter)
+		svcWatcher := newServiceWatcher(logger, serviceInformer, timedDeleter)
 
 		safeStopCh := &safeChannel{ch: make(chan struct{}), closed: false}
 		// initialize the pod and service watchers for the cluster
-		podWatcher.Run(safeStopCh.ch)
-		serviceWatcher.Run(safeStopCh.ch)
+		poWatcher.run(safeStopCh.ch)
+		svcWatcher.Run(safeStopCh.ch)
 		// wait for caches to sync (for once) so that clients knows about the pods and services in the cluster
-		podWatcher.WaitForCacheSync(safeStopCh.ch)
-		serviceWatcher.WaitForCacheSync(safeStopCh.ch)
+		poWatcher.waitForCacheSync(safeStopCh.ch)
+		svcWatcher.waitForCacheSync(safeStopCh.ch)
 
 		serviceToWorkload := &sync.Map{}
-		serviceToWorkloadMapper := NewServiceToWorkloadMapper(serviceWatcher.serviceAndNamespaceToSelectors, podWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
-		serviceToWorkloadMapper.Start(safeStopCh.ch)
+		svcToWorkloadMapper := newServiceToWorkloadMapper(svcWatcher.serviceAndNamespaceToSelectors, poWatcher.workloadAndNamespaceToLabels, serviceToWorkload, logger, timedDeleter)
+		svcToWorkloadMapper.Start(safeStopCh.ch)
 
 		instance = &kubernetesResolver{
 			logger:                         logger,
 			clientset:                      clientset,
 			clusterName:                    clusterName,
 			platformCode:                   platformCode,
-			ipToServiceAndNamespace:        serviceWatcher.ipToServiceAndNamespace,
-			serviceAndNamespaceToSelectors: serviceWatcher.serviceAndNamespaceToSelectors,
-			ipToPod:                        podWatcher.ipToPod,
-			podToWorkloadAndNamespace:      podWatcher.podToWorkloadAndNamespace,
-			workloadAndNamespaceToLabels:   podWatcher.workloadAndNamespaceToLabels,
+			ipToServiceAndNamespace:        svcWatcher.ipToServiceAndNamespace,
+			serviceAndNamespaceToSelectors: svcWatcher.serviceAndNamespaceToSelectors,
+			ipToPod:                        poWatcher.ipToPod,
+			podToWorkloadAndNamespace:      poWatcher.podToWorkloadAndNamespace,
+			workloadAndNamespaceToLabels:   poWatcher.workloadAndNamespaceToLabels,
 			serviceToWorkload:              serviceToWorkload,
-			workloadPodCount:               podWatcher.workloadPodCount,
+			workloadPodCount:               poWatcher.workloadPodCount,
 			safeStopCh:                     safeStopCh,
 		}
 	})
@@ -568,7 +524,7 @@ func (e *kubernetesResolver) Stop(_ context.Context) error {
 }
 
 // add a method to kubernetesResolver
-func (e *kubernetesResolver) GetWorkloadAndNamespaceByIP(ip string) (string, string, error) {
+func (e *kubernetesResolver) getWorkloadAndNamespaceByIP(ip string) (string, string, error) {
 	var workload, namespace string
 	if podKey, ok := e.ipToPod.Load(ip); ok {
 		pod := podKey.(string)
@@ -595,7 +551,7 @@ func (e *kubernetesResolver) Process(attributes, resourceAttributes pcommon.Map)
 		valueStr := value.AsString()
 		ipStr := ""
 		if ip, _, ok := extractIPPort(valueStr); ok {
-			if workload, ns, err := e.GetWorkloadAndNamespaceByIP(valueStr); err == nil {
+			if workload, ns, err := e.getWorkloadAndNamespaceByIP(valueStr); err == nil {
 				attributes.PutStr(attr.AWSRemoteService, workload)
 				namespace = ns
 			} else {
@@ -606,12 +562,11 @@ func (e *kubernetesResolver) Process(attributes, resourceAttributes pcommon.Map)
 		}
 
 		if ipStr != "" {
-			if workload, ns, err := e.GetWorkloadAndNamespaceByIP(ipStr); err == nil {
+			if workload, ns, err := e.getWorkloadAndNamespaceByIP(ipStr); err == nil {
 				attributes.PutStr(attr.AWSRemoteService, workload)
 				namespace = ns
 			} else {
 				e.logger.Debug("failed to Process ip", zap.String("ip", ipStr), zap.Error(err))
-				attributes.PutStr(attr.AWSRemoteService, "UnknownRemoteService")
 			}
 		}
 	}
@@ -623,48 +578,6 @@ func (e *kubernetesResolver) Process(attributes, resourceAttributes pcommon.Map)
 	}
 
 	return nil
-}
-
-func isIP(ipString string) bool {
-	ip := net.ParseIP(ipString)
-	return ip != nil
-}
-
-const IP_PORT_PATTERN = `^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$`
-
-var ipPortRegex = regexp.MustCompile(IP_PORT_PATTERN)
-
-func extractIPPort(ipPort string) (string, string, bool) {
-	match := ipPortRegex.MatchString(ipPort)
-
-	if !match {
-		return "", "", false
-	}
-
-	result := ipPortRegex.FindStringSubmatch(ipPort)
-	if len(result) != 3 {
-		return "", "", false
-	}
-
-	ip := result[1]
-	port := result[2]
-
-	return ip, port, true
-}
-
-func getHostNetworkPorts(pod *corev1.Pod) []string {
-	var ports []string
-	if !pod.Spec.HostNetwork {
-		return ports
-	}
-	for _, container := range pod.Spec.Containers {
-		for _, port := range container.Ports {
-			if port.HostPort != 0 {
-				ports = append(ports, strconv.Itoa(int(port.HostPort)))
-			}
-		}
-	}
-	return ports
 }
 
 type kubernetesResourceAttributesResolver struct {
