@@ -40,6 +40,7 @@ var attributesRenamingForMetric = map[string]string{
 	attr.AWSRemoteTarget:             common.MetricAttributeRemoteResourceIdentifier,
 	attr.AWSRemoteResourceIdentifier: common.MetricAttributeRemoteResourceIdentifier,
 	attr.AWSRemoteResourceType:       common.MetricAttributeRemoteResourceType,
+	attr.AWSRemoteDbUser:             common.MetricAttributeRemoteDbUser,
 }
 
 var resourceAttributesRenamingForTrace = map[string]string{
