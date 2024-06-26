@@ -4,7 +4,6 @@
 package normalizer
 
 import (
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -220,7 +219,7 @@ func TestRenameAttributes_AWSRemoteDbUser_for_metric(t *testing.T) {
 		t.Errorf("AWSRemoteDbUser was not removed")
 	}
 
-	if value, ok := attributes.Get(common.MetricAttributeRemoteDbUser); !ok || value.AsString() != "remoteDbUser-value" {
+	if value, ok := attributes.Get("RemoteDbUser"); !ok || value.AsString() != "remoteDbUser-value" {
 		t.Errorf("MetricAttributeRemoteDbUser has incorrect value: got %v, want %v", value.AsString(), "remoteDbUser-value")
 	}
 }
