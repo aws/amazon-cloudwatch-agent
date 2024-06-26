@@ -162,8 +162,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 		//Add file -> {serviceName,  deploymentEnvironment} mapping to resource store
 		rs.AddServiceAttrEntryToResourceStore(fileconfig.FilePath, fileconfig.ServiceName, fileconfig.Environment)
 
-		t.Log.Debugf("Created entry for file=%s with serviceName=%s, environment=%s in resource store", fileconfig.FilePath, fileconfig.ServiceName, fileconfig.Environment)
-
 		targetFiles, err := t.getTargetFiles(fileconfig)
 		if err != nil {
 			t.Log.Errorf("Failed to find target files for file config %v, with error: %v", fileconfig.FilePath, err)

@@ -96,7 +96,6 @@ func initResourceStore() *ResourceStore {
 		go rs.ec2Info.initEc2Info()
 	}
 	rs.serviceprovider = *newServiceProvider(rs.metadataprovider, getEC2Provider)
-	rs.serviceprovider.logFiles = map[string]ServiceAttribute{}
 	go rs.serviceprovider.startServiceProvider()
 	return rs
 }
@@ -127,23 +126,19 @@ func (r *ResourceStore) CreateLogFileRID(fileGlobPath string, filePath string) *
 			AttributeMaps: []map[string]*string{
 				r.createAttributeMaps(),
 			},
-			KeyAttributes: r.createServiceKeyAttributes(),
+			KeyAttributes: r.createServiceKeyAttributes(fileGlobPath),
 		}
 	}
 	return nil
 }
 
 // AddServiceAttrEntryToResourceStore adds an entry to the resource store for the provided file -> serviceName, environmentName key-value pair
-func (r *ResourceStore) AddServiceAttrEntryToResourceStore(key string, serviceName string, environmentName string) {
-	r.serviceprovider.logFiles[key] = ServiceAttribute{ServiceName: serviceName, Environment: environmentName}
-}
-
-func (r *ResourceStore) LogFiles() map[string]ServiceAttribute {
-	return r.serviceprovider.logFiles
+func (r *ResourceStore) AddServiceAttrEntryToResourceStore(fileGlob string, serviceName string, environmentName string) {
+	r.serviceprovider.logFiles[fileGlob] = ServiceAttribute{ServiceName: serviceName, ServiceNameSource: AgentConfig, Environment: environmentName}
 }
 
 func (r *ResourceStore) createAttributeMaps() map[string]*string {
-	serviceAttr := r.serviceprovider.ServiceAttribute()
+	serviceAttr := r.serviceprovider.ServiceAttribute("")
 	attributeMap := make(map[string]*string)
 
 	addNonEmptyToMap(attributeMap, InstanceIDKey, r.ec2Info.InstanceID)
@@ -152,8 +147,8 @@ func (r *ResourceStore) createAttributeMaps() map[string]*string {
 	return attributeMap
 }
 
-func (r *ResourceStore) createServiceKeyAttributes() *cloudwatchlogs.KeyAttributes {
-	serviceAttr := r.serviceprovider.ServiceAttribute()
+func (r *ResourceStore) createServiceKeyAttributes(fileGlob string) *cloudwatchlogs.KeyAttributes {
+	serviceAttr := r.serviceprovider.ServiceAttribute(fileGlob)
 	serviceKeyAttr := &cloudwatchlogs.KeyAttributes{
 		Type: aws.String(Service),
 	}

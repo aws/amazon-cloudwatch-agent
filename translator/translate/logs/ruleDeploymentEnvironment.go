@@ -12,14 +12,13 @@ type DeploymentEnvironment struct {
 }
 
 func (f *DeploymentEnvironment) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
-	_, returnVal = translator.DefaultCase("deployment.environment", "", input)
-	returnKey = "deployment_environment"
+	_, result := translator.DefaultCase("deployment.environment", "", input)
 
-	if returnVal == "" {
-		returnVal = agent.Global_Config.DeploymentEnvironment
+	if result == "" {
+		result = agent.Global_Config.DeploymentEnvironment
 	}
 	// Set global log deployment environment
-	GlobalLogConfig.DeploymentEnvironment = returnVal.(string)
+	GlobalLogConfig.DeploymentEnvironment = result.(string)
 
 	return
 }

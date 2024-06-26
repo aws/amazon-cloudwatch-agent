@@ -12,14 +12,13 @@ type ServiceName struct {
 }
 
 func (f *ServiceName) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
-	_, returnVal = translator.DefaultCase("service.name", "", input)
-	returnKey = "service_name"
+	_, result := translator.DefaultCase("service.name", "", input)
 
-	if returnVal == "" {
-		returnVal = agent.Global_Config.ServiceName
+	if result == "" {
+		result = agent.Global_Config.ServiceName
 	}
 	// Set global log service name
-	GlobalLogConfig.ServiceName = returnVal.(string)
+	GlobalLogConfig.ServiceName = result.(string)
 
 	return
 }

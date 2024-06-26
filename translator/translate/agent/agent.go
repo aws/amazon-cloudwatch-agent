@@ -37,18 +37,13 @@ type Agent struct {
 }
 
 var (
-	Global_Config         Agent = *new(Agent)
-	deploymentEnvironment DeploymentEnvironment
-	serviceName           ServiceName
+	Global_Config Agent = *new(Agent)
 )
 
 func (a *Agent) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
 	result := map[string]interface{}{}
 
-	//Apply DeploymentEnvironment and ServiceName rules
-	serviceName.ApplyRule(m[SectionKey])
-	deploymentEnvironment.ApplyRule(m[SectionKey])
 	/*
 	  In JSON config file, it represent as "agent" : {//specification config information}
 	  To check the specification config entry

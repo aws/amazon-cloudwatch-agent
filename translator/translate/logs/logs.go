@@ -50,7 +50,7 @@ func (l *Logs) ApplyRule(input interface{}) (returnKey string, returnVal interfa
 	cloudwatchConfig := map[string]interface{}{}
 	GlobalLogConfig.MetadataInfo = util.GetMetadataInfo(util.Ec2MetadataInfoProvider)
 
-	//Apply DeploymentEnvironment and ServiceName rules
+	//Apply Environment and ServiceName rules
 	serviceName.ApplyRule(im[SectionKey])
 	deploymentEnvironment.ApplyRule(im[SectionKey])
 

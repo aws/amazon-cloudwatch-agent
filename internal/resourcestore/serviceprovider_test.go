@@ -85,11 +85,13 @@ func Test_serviceprovider_ServiceAttribute(t *testing.T) {
 	type fields struct {
 		iamRole           string
 		ec2TagServiceName string
+		logFiles          map[string]ServiceAttribute
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   ServiceAttribute
+		name            string
+		fields          fields
+		serviceProvider *serviceprovider
+		want            ServiceAttribute
 	}{
 		{
 			name: "HappyPath_IAMRole",
@@ -111,15 +113,33 @@ func Test_serviceprovider_ServiceAttribute(t *testing.T) {
 				ServiceNameSource: ResourceTags,
 			},
 		},
+		{
+			name: "HappyPath_AgentConfig",
+			fields: fields{
+				logFiles: map[string]ServiceAttribute{
+					"test-file": {
+						ServiceName:       "test-service",
+						ServiceNameSource: AgentConfig,
+						Environment:       "test-environment",
+					},
+				},
+			},
+			want: ServiceAttribute{
+				ServiceName:       "test-service",
+				ServiceNameSource: AgentConfig,
+				Environment:       "test-environment",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &serviceprovider{
 				iamRole:           tt.fields.iamRole,
 				ec2TagServiceName: tt.fields.ec2TagServiceName,
+				logFiles:          tt.fields.logFiles,
 				ctx:               context.Background(),
 			}
-			assert.Equalf(t, tt.want, s.ServiceAttribute(), "ServiceAttribute()")
+			assert.Equalf(t, tt.want, s.ServiceAttribute("test-file"), "ServiceAttribute()")
 		})
 	}
 }

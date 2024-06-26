@@ -56,12 +56,12 @@
         "service.name": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 4096
+          "maxLength": 512
         },
         "deployment.environment": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 4096
+          "maxLength": 512
         }
       },
       "additionalProperties": true
@@ -789,12 +789,12 @@
         "service.name": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 4096
+          "maxLength": 512
         },
         "deployment.environment": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 4096
+          "maxLength": 512
         }
       },
       "additionalProperties": false,
@@ -879,12 +879,12 @@
                   "service.name": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 4096
+                    "maxLength": 512
                   },
                   "deployment.environment": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 4096
+                    "maxLength": 512
                   }
                 },
                 "required": [

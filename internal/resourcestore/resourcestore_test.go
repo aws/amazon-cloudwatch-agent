@@ -147,7 +147,7 @@ func TestResourceStore_LogFiles(t *testing.T) {
 				},
 			}
 			if got := r.serviceprovider.logFiles; !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("LogFiles() = %v, want %v", got, tt.want)
+				t.Errorf("logFiles() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -280,7 +280,7 @@ func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
 			r := &ResourceStore{
 				serviceprovider: tt.fields.serviceprovider,
 			}
-			assert.Equalf(t, tt.want, r.createServiceKeyAttributes(), "createServiceKeyAttributes()")
+			assert.Equalf(t, tt.want, r.createServiceKeyAttributes(""), "createServiceKeyAttributes()")
 		})
 	}
 }
@@ -353,9 +353,9 @@ func TestAddServiceKeyAttributeToLogFilesMap(t *testing.T) {
 	expected := &ResourceStore{
 		serviceprovider: serviceprovider{
 			iamRole:  "test-role",
-			logFiles: map[string]ServiceAttribute{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "test", Environment: "ec2:test"}},
+			logFiles: map[string]ServiceAttribute{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "test", ServiceNameSource: AgentConfig, Environment: "ec2:test"}},
 		},
 	}
 
-	assert.Equal(t, true, reflect.DeepEqual(rs.LogFiles(), expected.serviceprovider.logFiles))
+	assert.Equal(t, true, reflect.DeepEqual(rs.serviceprovider.logFiles, expected.serviceprovider.logFiles))
 }

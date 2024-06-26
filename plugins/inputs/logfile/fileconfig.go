@@ -83,7 +83,7 @@ type FileConfig struct {
 
 	Filters []*LogFilter `toml:"filters"`
 
-	//Customer specified service.name and deployment.environment
+	//Customer specified service.name
 	ServiceName string `toml:"service_name"`
 	//Customer specified deployment.environment
 	Environment string `toml:"deployment_environment"`

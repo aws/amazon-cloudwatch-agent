@@ -11,9 +11,14 @@ type ServiceName struct {
 }
 
 func (f *ServiceName) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
-	_, returnVal = translator.DefaultCase("service.name", "", input)
-	returnKey = "service_name"
+	_, result := translator.DefaultCase("service.name", "", input)
+
 	// Set global agent service name
-	Global_Config.ServiceName = returnVal.(string)
+	Global_Config.ServiceName = result.(string)
 	return
+}
+
+func init() {
+	f := new(ServiceName)
+	RegisterRule("service.name", f)
 }

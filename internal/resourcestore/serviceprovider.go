@@ -30,6 +30,7 @@ const (
 	ResourceTags     = "ResourceTags"
 	jitterMax        = 180
 	jitterMin        = 60
+	AgentConfig      = "AgentConfig"
 )
 
 var (
@@ -78,13 +79,22 @@ func (s *serviceprovider) startServiceProvider() {
 //  3. Process correlation
 //  4. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
 //  5. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
-func (s *serviceprovider) ServiceAttribute() ServiceAttribute {
+func (s *serviceprovider) ServiceAttribute(fileGlob string) ServiceAttribute {
 	serviceAttr := ServiceAttribute{}
+	// CWA config
+	if val, ok := s.logFiles[fileGlob]; ok {
+		serviceAttr.ServiceName = val.ServiceName
+		serviceAttr.ServiceNameSource = val.ServiceNameSource
+		serviceAttr.Environment = val.Environment
+		return serviceAttr
+	}
+	// Instance Tags
 	if s.ec2TagServiceName != "" {
 		serviceAttr.ServiceName = s.ec2TagServiceName
 		serviceAttr.ServiceNameSource = ResourceTags
 		return serviceAttr
 	}
+	//IAM Role
 	if s.iamRole != "" {
 		serviceAttr.ServiceName = s.iamRole
 		serviceAttr.ServiceNameSource = ClientIamRole
@@ -187,6 +197,7 @@ func newServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider, p
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
 		ctx:              context.Background(),
+		logFiles:         map[string]ServiceAttribute{},
 	}
 }
 
