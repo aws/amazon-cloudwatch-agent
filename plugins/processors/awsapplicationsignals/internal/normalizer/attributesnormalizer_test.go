@@ -204,3 +204,38 @@ func Test_attributesNormalizer_appendNewAttributes(t *testing.T) {
 		})
 	}
 }
+
+func TestRenameAttributes_AWSRemoteDbUser_for_metric(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	normalizer := NewAttributesNormalizer(logger)
+
+	attributes := pcommon.NewMap()
+	attributes.PutStr(attr.AWSRemoteDbUser, "remoteDbUser-value")
+
+	resourceAttributes := pcommon.NewMap()
+	normalizer.renameAttributes(attributes, resourceAttributes, false)
+
+	if _, ok := attributes.Get(attr.AWSRemoteDbUser); ok {
+		t.Errorf("AWSRemoteDbUser was not removed")
+	}
+
+	if value, ok := attributes.Get("RemoteDbUser"); !ok || value.AsString() != "remoteDbUser-value" {
+		t.Errorf("MetricAttributeRemoteDbUser has incorrect value: got %v, want %v", value.AsString(), "remoteDbUser-value")
+	}
+}
+
+func TestTruncateAttributes_AWSRemoteDbUser(t *testing.T) {
+	attributes := pcommon.NewMap()
+
+	longValue := make([]byte, 300)
+	for i := 0; i < 300; i++ {
+		longValue[i] = 'a'
+	}
+	longStringValue := string(longValue)
+	attributes.PutStr(attr.AWSRemoteDbUser, longStringValue)
+
+	truncateAttributesByLength(attributes)
+
+	val, _ := attributes.Get(attr.AWSRemoteDbUser)
+	assert.True(t, len(val.Str()) <= defaultMetricAttributeLength)
+}
