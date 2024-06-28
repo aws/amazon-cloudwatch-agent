@@ -62,17 +62,6 @@ func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey stri
 	return m.TagValue, nil
 }
 
-func TestInitResourceStore(t *testing.T) {
-	tests := []struct {
-		name string
-	}{}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			initResourceStore()
-		})
-	}
-}
-
 func TestResourceStore_EC2Info(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -98,30 +87,6 @@ func TestResourceStore_EC2Info(t *testing.T) {
 			}
 			if got := r.EC2Info(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("EC2Info() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestResourceStore_EKSInfo(t *testing.T) {
-	tests := []struct {
-		name         string
-		eksInfoInput eksInfo
-		want         eksInfo
-	}{
-		{
-			name:         "happypath",
-			eksInfoInput: eksInfo{ClusterName: "test-cluster"},
-			want:         eksInfo{ClusterName: "test-cluster"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourceStore{
-				eksInfo: tt.eksInfoInput,
-			}
-			if got := r.EKSInfo(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("EKSInfo() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -346,7 +311,13 @@ func dereferenceMap(input map[string]*string) map[string]string {
 }
 
 func TestAddServiceKeyAttributeToLogFilesMap(t *testing.T) {
-	rs := initResourceStore()
+	rs := &ResourceStore{
+		metadataprovider: &mockMetadataProvider{
+			InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+				AccountID: "987654321"},
+		},
+		serviceprovider: serviceprovider{logFiles: map[string]ServiceAttribute{}},
+	}
 	key := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
 	rs.AddServiceAttrEntryToResourceStore(key, "test", "ec2:test")
 

@@ -5,8 +5,6 @@ package resourcestore
 
 import (
 	"context"
-	"log"
-	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -15,6 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/extension"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -28,11 +29,6 @@ const (
 	InstanceIDKey       = "EC2.InstanceId"
 	ASGKey              = "EC2.AutoScalingGroup"
 	ServieNameSourceKey = "AWS.Internal.ServiceNameSource"
-)
-
-var (
-	resourceStore *ResourceStore
-	once          sync.Once
 )
 
 type ec2ProviderType func(string) ec2iface.EC2API
@@ -49,6 +45,10 @@ type eksInfo struct {
 }
 
 type ResourceStore struct {
+	logger *zap.Logger
+	config *Config
+	done   chan struct{}
+
 	// mode should be EC2, ECS, EKS, and K8S
 	mode string
 
@@ -72,44 +72,43 @@ type ResourceStore struct {
 	stsClient stsiface.STSAPI
 }
 
-func GetResourceStore() *ResourceStore {
-	once.Do(func() {
-		resourceStore = initResourceStore()
-	})
-	return resourceStore
-}
+var _ extension.Extension = (*ResourceStore)(nil)
 
-func initResourceStore() *ResourceStore {
+func (r *ResourceStore) Start(ctx context.Context, host component.Host) error {
 	// Get IMDS client and EC2 API client which requires region for authentication
 	// These will be passed down to any object that requires access to IMDS or EC2
 	// API client so we have single source of truth for credential
-	rs := &ResourceStore{
-		metadataprovider: getMetaDataProvider(),
-	}
+	r.done = make(chan struct{})
+	r.metadataprovider = getMetaDataProvider()
 	if translatorCtx.CurrentContext().Mode() != "" {
-		rs.mode = translatorCtx.CurrentContext().Mode()
-		log.Printf("I! resourcestore: ResourceStore mode is %s ", rs.mode)
+		r.mode = translatorCtx.CurrentContext().Mode()
+		r.logger.Debug("ResourceStore mode is " + r.mode)
 	}
-	switch rs.mode {
+	switch r.mode {
 	case config.ModeEC2:
-		rs.ec2Info = *newEC2Info(rs.metadataprovider, getEC2Provider)
-		go rs.ec2Info.initEc2Info()
+		r.ec2Info = *newEC2Info(r.metadataprovider, getEC2Provider, r.done)
+		go r.ec2Info.initEc2Info()
 	}
-	rs.serviceprovider = *newServiceProvider(rs.metadataprovider, getEC2Provider)
-	go rs.serviceprovider.startServiceProvider()
-	return rs
+	r.serviceprovider = *newServiceProvider(r.metadataprovider, getEC2Provider, r.done)
+	go r.serviceprovider.startServiceProvider()
+	return nil
+}
+
+func (r *ResourceStore) Shutdown(_ context.Context) error {
+	close(r.done)
+	return nil
 }
 
 func (r *ResourceStore) Mode() string {
 	return r.mode
 }
 
-func (r *ResourceStore) EC2Info() ec2Info {
-	return r.ec2Info
-}
-
 func (r *ResourceStore) EKSInfo() eksInfo {
 	return r.eksInfo
+}
+
+func (r *ResourceStore) EC2Info() ec2Info {
+	return r.ec2Info
 }
 
 func (r *ResourceStore) SetNativeCredential(client client.ConfigProvider) {
@@ -134,7 +133,9 @@ func (r *ResourceStore) CreateLogFileRID(fileGlobPath string, filePath string) *
 
 // AddServiceAttrEntryToResourceStore adds an entry to the resource store for the provided file -> serviceName, environmentName key-value pair
 func (r *ResourceStore) AddServiceAttrEntryToResourceStore(fileGlob string, serviceName string, environmentName string) {
-	r.serviceprovider.logFiles[fileGlob] = ServiceAttribute{ServiceName: serviceName, ServiceNameSource: AgentConfig, Environment: environmentName}
+	if r.serviceprovider.logFiles != nil {
+		r.serviceprovider.logFiles[fileGlob] = ServiceAttribute{ServiceName: serviceName, ServiceNameSource: AgentConfig, Environment: environmentName}
+	}
 }
 
 func (r *ResourceStore) createAttributeMaps() map[string]*string {
@@ -164,13 +165,13 @@ func (r *ResourceStore) createServiceKeyAttributes(fileGlob string) *cloudwatchl
 // shouldReturnRID checks if the account ID for the instance is
 // matching the account ID when assuming role for the current credential.
 func (r *ResourceStore) shouldReturnRID() bool {
-	if r.nativeCredential == nil {
-		log.Printf("D! resourceStore: there is no credential stored for cross-account checks\n")
+	if r.nativeCredential == nil || r.metadataprovider == nil {
+		r.logger.Debug("there is no credential stored for cross-account checks")
 		return false
 	}
 	doc, err := r.metadataprovider.Get(context.Background())
 	if err != nil {
-		log.Printf("D! resourceStore: an error occurred when getting instance document for cross-account checks. Reason: %v\n", err)
+		r.logger.Debug("an error occurred when getting instance document for cross-account checks. Reason: %v\n", zap.Error(err))
 		return false
 	}
 	instanceAccountID := doc.AccountID
@@ -184,7 +185,7 @@ func (r *ResourceStore) shouldReturnRID() bool {
 	}
 	assumedRoleIdentity, err := r.stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 	if err != nil {
-		log.Printf("D! resourceStore: an error occurred when calling STS GetCallerIdentity for cross-account checks. Reason: %v\n", err)
+		r.logger.Debug("an error occurred when calling STS GetCallerIdentity for cross-account checks. Reason: ", zap.Error(err))
 		return false
 	}
 	return instanceAccountID == *assumedRoleIdentity.Account

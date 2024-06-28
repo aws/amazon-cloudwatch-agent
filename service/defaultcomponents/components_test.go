@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	receiversCount  = 5
+	receiversCount  = 6
 	processorCount  = 8
-	exportersCount  = 5
-	extensionsCount = 2
+	exportersCount  = 6
+	extensionsCount = 3
 )
 
 func TestComponents(t *testing.T) {
@@ -22,6 +22,9 @@ func TestComponents(t *testing.T) {
 	assert.NoError(t, err)
 	receivers := factories.Receivers
 	assert.Len(t, receivers, receiversCount)
+
+	nopType, _ := component.NewType("nop")
+
 	awscontainerinsightreceiverType, _ := component.NewType("awscontainerinsightreceiver")
 	awsxrayType, _ := component.NewType("awsxray")
 	otlpType, _ := component.NewType("otlp")
@@ -32,6 +35,7 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, receivers[otlpType])
 	assert.NotNil(t, receivers[tcplogType])
 	assert.NotNil(t, receivers[udplogType])
+	assert.NotNil(t, receivers[nopType])
 
 	processors := factories.Processors
 	assert.Len(t, processors, processorCount)
@@ -61,6 +65,7 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, exporters[awsemfType])
 	assert.NotNil(t, exporters[awscloudwatchType])
 	assert.NotNil(t, exporters[loggingType])
+	assert.NotNil(t, exporters[nopType])
 
 	extensions := factories.Extensions
 	assert.Len(t, extensions, extensionsCount)

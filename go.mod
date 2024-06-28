@@ -395,8 +395,10 @@ require (
 	go.opentelemetry.io/collector/confmap/provider/httpsprovider v0.98.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/yamlprovider v0.98.0 // indirect
 	go.opentelemetry.io/collector/connector v0.98.0 // indirect
+	go.opentelemetry.io/collector/exporter/nopexporter v0.98.0 // indirect
 	go.opentelemetry.io/collector/extension/auth v0.98.0 // indirect
 	go.opentelemetry.io/collector/pdata/testdata v0.98.0 // indirect
+	go.opentelemetry.io/collector/receiver/nopreceiver v0.98.0 // indirect
 	go.opentelemetry.io/contrib/config v0.4.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect

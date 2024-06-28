@@ -28,12 +28,11 @@ type ec2Info struct {
 	metadataProvider ec2metadataprovider.MetadataProvider
 	ec2API           ec2iface.EC2API
 	ec2Provider      ec2ProviderType
-	shutdownC        chan bool
+	done             chan struct{}
 }
 
 func (ei *ec2Info) initEc2Info() {
 	log.Println("I! ec2Info: Initializing ec2Info")
-	ei.shutdownC = make(chan bool)
 	if err := ei.setInstanceIdAndRegion(); err != nil {
 		return
 	}
@@ -42,7 +41,6 @@ func (ei *ec2Info) initEc2Info() {
 		return
 	}
 	log.Printf("D! ec2Info: Finished initializing ec2Info: InstanceId %s, AutoScalingGroup %s", ei.InstanceID, ei.AutoScalingGroup)
-	ei.Shutdown()
 }
 
 func (ei *ec2Info) setInstanceIdAndRegion() error {
@@ -52,7 +50,7 @@ func (ei *ec2Info) setInstanceIdAndRegion() error {
 			log.Printf("E! ec2Info: Failed to get Instance Id and region through metadata provider: %v", err)
 			wait := time.NewTimer(1 * time.Minute)
 			select {
-			case <-ei.shutdownC:
+			case <-ei.done:
 				wait.Stop()
 				return errors.New("ec2Info: shutdownC received")
 			case <-wait.C:
@@ -78,7 +76,7 @@ func (ei *ec2Info) setAutoScalingGroup() error {
 
 		wait := time.NewTimer(waitDuration)
 		select {
-		case <-ei.shutdownC:
+		case <-ei.done:
 			wait.Stop()
 			return errors.New("ec2Info: shutdownC received")
 		case <-wait.C:
@@ -160,13 +158,10 @@ func (ei *ec2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error
 	return nil
 }
 
-func (ei *ec2Info) Shutdown() {
-	close(ei.shutdownC)
-}
-
-func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType) *ec2Info {
+func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, done chan struct{}) *ec2Info {
 	return &ec2Info{
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
+		done:             done,
 	}
 }

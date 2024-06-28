@@ -4,7 +4,6 @@
 package resourcestore
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -62,18 +61,18 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testCtx, cancel := context.WithCancel(context.TODO())
+			done := make(chan struct{})
 			s := serviceprovider{
 				metadataProvider: tt.args.metadataProvider,
 				ec2Provider: func(s string) ec2iface.EC2API {
 					return tt.args.ec2Client
 				},
 				ec2API: tt.args.ec2Client,
-				ctx:    testCtx,
+				done:   done,
 			}
 			go s.startServiceProvider()
 			time.Sleep(3 * time.Second)
-			cancel()
+			close(done)
 
 			assert.Equal(t, tt.wantIAM, s.iamRole)
 			assert.Equal(t, tt.wantTag, s.ec2TagServiceName)
@@ -137,7 +136,6 @@ func Test_serviceprovider_ServiceAttribute(t *testing.T) {
 				iamRole:           tt.fields.iamRole,
 				ec2TagServiceName: tt.fields.ec2TagServiceName,
 				logFiles:          tt.fields.logFiles,
-				ctx:               context.Background(),
 			}
 			assert.Equalf(t, tt.want, s.ServiceAttribute("test-file"), "ServiceAttribute()")
 		})
@@ -295,7 +293,7 @@ func Test_refreshLoop(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testCtx, cancel := context.WithCancel(context.TODO())
+			done := make(chan struct{})
 			s := &serviceprovider{
 				metadataProvider: tt.fields.metadataProvider,
 				ec2API:           tt.fields.ec2API,
@@ -304,12 +302,12 @@ func Test_refreshLoop(t *testing.T) {
 				},
 				iamRole:           tt.fields.iamRole,
 				ec2TagServiceName: tt.fields.ec2TagServiceName,
-				ctx:               testCtx,
+				done:              done,
 			}
-			go refreshLoop(testCtx, s.getEC2TagServiceName, tt.fields.oneTime)
-			go refreshLoop(testCtx, s.getIAMRole, tt.fields.oneTime)
+			go refreshLoop(done, s.getEC2TagServiceName, tt.fields.oneTime)
+			go refreshLoop(done, s.getIAMRole, tt.fields.oneTime)
 			time.Sleep(time.Second)
-			cancel()
+			close(done)
 			assert.Equal(t, tt.expectedInfo.iamRole, s.iamRole)
 			assert.Equal(t, tt.expectedInfo.ec2TagServiceName, s.ec2TagServiceName)
 		})

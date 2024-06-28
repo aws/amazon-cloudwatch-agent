@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"golang.org/x/text/encoding"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/resourcestore"
+	"github.com/aws/amazon-cloudwatch-agent/extension/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
@@ -171,7 +171,11 @@ func (ts *tailerSrc) AddCleanUpFn(f func()) {
 }
 
 func (ts *tailerSrc) ResourceID() *cloudwatchlogs.Resource {
-	return resourcestore.GetResourceStore().CreateLogFileRID(ts.fileGlobPath, ts.tailer.Filename)
+	rs := resourcestore.GetResourceStore()
+	if rs != nil {
+		return resourcestore.GetResourceStore().CreateLogFileRID(ts.fileGlobPath, ts.tailer.Filename)
+	}
+	return nil
 }
 
 func (ts *tailerSrc) runTail() {

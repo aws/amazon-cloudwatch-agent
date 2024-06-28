@@ -24,9 +24,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
-	"github.com/aws/amazon-cloudwatch-agent/internal/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
@@ -126,10 +126,6 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 }
 
 func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
-	if cwd, ok := c.cwDests[t]; ok {
-		return cwd
-	}
-
 	credentialConfig := &configaws.CredentialConfig{
 		Region:    c.Region,
 		AccessKey: c.AccessKey,
@@ -139,12 +135,16 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 		Filename:  c.Filename,
 		Token:     c.Token,
 	}
-
-	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
 	resourcestore := resourcestore.GetResourceStore()
-	if !resourcestore.NativeCredentialExists() {
+	if resourcestore != nil && !resourcestore.NativeCredentialExists() {
 		resourcestore.SetNativeCredential(credentialConfig.Credentials())
 	}
+	if cwd, ok := c.cwDests[t]; ok {
+		return cwd
+	}
+
+	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
+
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{

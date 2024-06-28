@@ -53,7 +53,7 @@ type serviceprovider struct {
 	ec2Provider       ec2ProviderType
 	iamRole           string
 	ec2TagServiceName string
-	ctx               context.Context
+	done              chan struct{}
 
 	// logFiles is a variable reserved for communication between OTEL components and LogAgent
 	// in order to achieve process correlations where the key is the log file path and the value
@@ -66,10 +66,10 @@ type serviceprovider struct {
 func (s *serviceprovider) startServiceProvider() {
 	err := s.getEC2Client()
 	if err != nil {
-		go refreshLoop(s.ctx, s.getEC2Client, true)
+		go refreshLoop(s.done, s.getEC2Client, true)
 	}
-	go refreshLoop(s.ctx, s.getIAMRole, false)
-	go refreshLoop(s.ctx, s.getEC2TagServiceName, false)
+	go refreshLoop(s.done, s.getIAMRole, false)
+	go refreshLoop(s.done, s.getEC2TagServiceName, false)
 }
 
 // ServiceAttribute function gets the relevant service attributes
@@ -192,16 +192,16 @@ func (s *serviceprovider) getEC2TagFilters() ([]*ec2.Filter, error) {
 	return tagFilters, nil
 }
 
-func newServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType) *serviceprovider {
+func newServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, done chan struct{}) *serviceprovider {
 	return &serviceprovider{
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
-		ctx:              context.Background(),
+		done:             done,
 		logFiles:         map[string]ServiceAttribute{},
 	}
 }
 
-func refreshLoop(ctx context.Context, updateFunc func() error, oneTime bool) {
+func refreshLoop(done chan struct{}, updateFunc func() error, oneTime bool) {
 	// Offset retry by 1 so we can start with 1 minute wait time
 	// instead of immediately retrying
 	retry := 1
@@ -214,7 +214,8 @@ func refreshLoop(ctx context.Context, updateFunc func() error, oneTime bool) {
 		waitDuration := calculateWaitTime(retry, err)
 		wait := time.NewTimer(waitDuration)
 		select {
-		case <-ctx.Done():
+		case <-done:
+			log.Printf("D! serviceprovider: Shutting down now")
 			wait.Stop()
 			return
 		case <-wait.C:

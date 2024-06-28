@@ -18,14 +18,17 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/exporter/nopexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
+	"go.opentelemetry.io/collector/receiver/nopreceiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/extension/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
@@ -42,6 +45,7 @@ func Factories() (otelcol.Factories, error) {
 		otlpreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
+		nopreceiver.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
@@ -65,6 +69,7 @@ func Factories() (otelcol.Factories, error) {
 		awsxrayexporter.NewFactory(),
 		cloudwatch.NewFactory(),
 		loggingexporter.NewFactory(),
+		nopexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
@@ -72,6 +77,7 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Extensions, err = extension.MakeFactoryMap(
 		agenthealth.NewFactory(),
 		awsproxy.NewFactory(),
+		resourcestore.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
