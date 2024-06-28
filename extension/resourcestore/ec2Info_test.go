@@ -4,6 +4,7 @@
 package resourcestore
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -193,6 +194,59 @@ func TestRetrieveASGNameWithDescribeTags(t *testing.T) {
 				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.want.AutoScalingGroup, ei.AutoScalingGroup)
+		})
+	}
+}
+
+func TestIgnoreInvalidFields(t *testing.T) {
+	type want struct {
+		instanceId       string
+		autoScalingGroup string
+	}
+	tests := []struct {
+		name string
+		args *ec2Info
+		want want
+	}{
+		{
+			name: "Happy path",
+			args: &ec2Info{
+				InstanceID:       "i-01d2417c27a396e44",
+				AutoScalingGroup: "asg",
+			},
+			want: want{
+				instanceId:       "i-01d2417c27a396e44",
+				autoScalingGroup: "asg",
+			},
+		},
+		{
+			name: "InstanceId too large",
+			args: &ec2Info{
+				InstanceID:       strings.Repeat("a", 20),
+				AutoScalingGroup: "asg",
+			},
+			want: want{
+				instanceId:       "",
+				autoScalingGroup: "asg",
+			},
+		},
+		{
+			name: "AutoScalingGroup too large",
+			args: &ec2Info{
+				InstanceID:       "i-01d2417c27a396e44",
+				AutoScalingGroup: strings.Repeat("a", 256),
+			},
+			want: want{
+				instanceId:       "i-01d2417c27a396e44",
+				autoScalingGroup: "",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.ignoreInvalidFields()
+			assert.Equal(t, tt.want.instanceId, tt.args.InstanceID)
+			assert.Equal(t, tt.want.autoScalingGroup, tt.args.AutoScalingGroup)
 		})
 	}
 }

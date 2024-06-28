@@ -18,6 +18,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
 
+const (
+	// InstanceId character maximum length is 19.
+	// See https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_Instance.html.
+	instanceIdSizeMax = 19
+
+	// AutoScalingGroup character maximum length is 255.
+	// See https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_AutoScalingGroup.html.
+	autoScalingGroupSizeMax = 255
+)
+
 type ec2Info struct {
 	InstanceID       string
 	AutoScalingGroup string
@@ -41,6 +51,7 @@ func (ei *ec2Info) initEc2Info() {
 		return
 	}
 	log.Printf("D! ec2Info: Finished initializing ec2Info: InstanceId %s, AutoScalingGroup %s", ei.InstanceID, ei.AutoScalingGroup)
+	ei.ignoreInvalidFields()
 }
 
 func (ei *ec2Info) setInstanceIdAndRegion() error {
@@ -54,13 +65,13 @@ func (ei *ec2Info) setInstanceIdAndRegion() error {
 				wait.Stop()
 				return errors.New("ec2Info: shutdownC received")
 			case <-wait.C:
+				continue
 			}
-		} else {
-			ei.InstanceID = metadataDoc.InstanceID
-			ei.Region = metadataDoc.Region
-			log.Printf("D! ec2Info: Successfully retrieved Instance Id %s, Region %s", ei.InstanceID, ei.Region)
-			return nil
 		}
+		log.Printf("D! ec2Info: Successfully retrieved Instance Id %s, Region %s", ei.InstanceID, ei.Region)
+		ei.InstanceID = metadataDoc.InstanceID
+		ei.Region = metadataDoc.Region
+		return nil
 	}
 }
 
@@ -163,5 +174,17 @@ func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerT
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
 		done:             done,
+	}
+}
+
+func (ei *ec2Info) ignoreInvalidFields() {
+	if idLength := len(ei.InstanceID); idLength > instanceIdSizeMax {
+		log.Printf("W! ec2Info: InstanceId length of %d exceeds %d characters and will be ignored", idLength, instanceIdSizeMax)
+		ei.InstanceID = ""
+	}
+
+	if asgLength := len(ei.AutoScalingGroup); asgLength > autoScalingGroupSizeMax {
+		log.Printf("W! ec2Info: AutoScalingGroup length of %d exceeds %d characters and will be ignored", asgLength, autoScalingGroupSizeMax)
+		ei.AutoScalingGroup = ""
 	}
 }

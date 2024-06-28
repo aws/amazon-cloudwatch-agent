@@ -54,14 +54,16 @@
           "type": "boolean"
         },
         "service.name": {
+          "description": "The name of the service to associate with the telemetry produced by the agent.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 512
+          "maxLength": 255
         },
         "deployment.environment": {
+          "description": "The name of the environment to associate with the telemetry produced by the agent.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 512
+          "maxLength": 259
         }
       },
       "additionalProperties": true
@@ -787,14 +789,16 @@
           "$ref": "#/definitions/endpointOverrideDefinition"
         },
         "service.name": {
+          "description": "The name of the service to associate with the telemetry produced by the agent.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 512
+          "maxLength": 255
         },
         "deployment.environment": {
+          "description": "The name of the environment to associate with the telemetry produced by the agent.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 512
+          "maxLength": 259
         }
       },
       "additionalProperties": false,
@@ -877,14 +881,16 @@
                     }
                   },
                   "service.name": {
+                    "description": "The name of the service to associate with the telemetry produced by the agent.",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 512
+                    "maxLength": 255
                   },
                   "deployment.environment": {
+                    "description": "The name of the environment to associate with the telemetry produced by the agent.",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 512
+                    "maxLength": 259
                   }
                 },
                 "required": [

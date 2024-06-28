@@ -25,10 +25,10 @@ import (
 )
 
 const (
-	Service             = "Service"
-	InstanceIDKey       = "EC2.InstanceId"
-	ASGKey              = "EC2.AutoScalingGroup"
-	ServieNameSourceKey = "AWS.Internal.ServiceNameSource"
+	Service              = "Service"
+	InstanceIDKey        = "EC2.InstanceId"
+	ASGKey               = "EC2.AutoScalingGroup"
+	ServiceNameSourceKey = "AWS.Internal.ServiceNameSource"
 )
 
 type ec2ProviderType func(string) ec2iface.EC2API
@@ -144,7 +144,7 @@ func (r *ResourceStore) createAttributeMaps() map[string]*string {
 
 	addNonEmptyToMap(attributeMap, InstanceIDKey, r.ec2Info.InstanceID)
 	addNonEmptyToMap(attributeMap, ASGKey, r.ec2Info.AutoScalingGroup)
-	addNonEmptyToMap(attributeMap, ServieNameSourceKey, serviceAttr.ServiceNameSource)
+	addNonEmptyToMap(attributeMap, ServiceNameSourceKey, serviceAttr.ServiceNameSource)
 	return attributeMap
 }
 

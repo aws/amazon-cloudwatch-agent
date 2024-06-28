@@ -184,9 +184,9 @@ func TestResourceStore_createAttributeMaps(t *testing.T) {
 				},
 			},
 			want: map[string]*string{
-				ServieNameSourceKey: aws.String(ClientIamRole),
-				ASGKey:              aws.String("test-asg"),
-				InstanceIDKey:       aws.String("i-123456789"),
+				ServiceNameSourceKey: aws.String(ClientIamRole),
+				ASGKey:               aws.String("test-asg"),
+				InstanceIDKey:        aws.String("i-123456789"),
 			},
 		},
 		{
@@ -201,9 +201,9 @@ func TestResourceStore_createAttributeMaps(t *testing.T) {
 				},
 			},
 			want: map[string]*string{
-				ServieNameSourceKey: aws.String(ResourceTags),
-				ASGKey:              aws.String("test-asg"),
-				InstanceIDKey:       aws.String("i-123456789"),
+				ServiceNameSourceKey: aws.String(ResourceTags),
+				ASGKey:               aws.String("test-asg"),
+				InstanceIDKey:        aws.String("i-123456789"),
 			},
 		},
 	}
