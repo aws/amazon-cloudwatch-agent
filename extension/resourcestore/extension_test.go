@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 type mockMetadataProvider struct {
@@ -166,6 +167,7 @@ func TestResourceStore_createAttributeMaps(t *testing.T) {
 	type fields struct {
 		ec2Info         ec2Info
 		serviceprovider serviceprovider
+		mode            string
 	}
 	tests := []struct {
 		name   string
@@ -206,12 +208,22 @@ func TestResourceStore_createAttributeMaps(t *testing.T) {
 				InstanceIDKey:        aws.String("i-123456789"),
 			},
 		},
+		{
+			name: "HappyPath_TagServiceName",
+			fields: fields{
+				mode: config.ModeEC2,
+			},
+			want: map[string]*string{
+				PlatformType: aws.String(EC2PlatForm),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &ResourceStore{
 				ec2Info:         tt.fields.ec2Info,
 				serviceprovider: tt.fields.serviceprovider,
+				mode:            tt.fields.mode,
 			}
 			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(r.createAttributeMaps()), "createAttributeMaps()")
 		})

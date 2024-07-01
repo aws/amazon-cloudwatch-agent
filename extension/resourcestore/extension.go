@@ -21,7 +21,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 const (
@@ -29,6 +28,8 @@ const (
 	InstanceIDKey        = "EC2.InstanceId"
 	ASGKey               = "EC2.AutoScalingGroup"
 	ServiceNameSourceKey = "AWS.Internal.ServiceNameSource"
+	PlatformType         = "PlatformType"
+	EC2PlatForm          = "AWS::EC2"
 )
 
 type ec2ProviderType func(string) ec2iface.EC2API
@@ -80,10 +81,7 @@ func (r *ResourceStore) Start(ctx context.Context, host component.Host) error {
 	// API client so we have single source of truth for credential
 	r.done = make(chan struct{})
 	r.metadataprovider = getMetaDataProvider()
-	if translatorCtx.CurrentContext().Mode() != "" {
-		r.mode = translatorCtx.CurrentContext().Mode()
-		r.logger.Debug("ResourceStore mode is " + r.mode)
-	}
+	r.mode = r.config.Mode
 	switch r.mode {
 	case config.ModeEC2:
 		r.ec2Info = *newEC2Info(r.metadataprovider, getEC2Provider, r.done)
@@ -145,6 +143,10 @@ func (r *ResourceStore) createAttributeMaps() map[string]*string {
 	addNonEmptyToMap(attributeMap, InstanceIDKey, r.ec2Info.InstanceID)
 	addNonEmptyToMap(attributeMap, ASGKey, r.ec2Info.AutoScalingGroup)
 	addNonEmptyToMap(attributeMap, ServiceNameSourceKey, serviceAttr.ServiceNameSource)
+	switch r.mode {
+	case config.ModeEC2:
+		attributeMap[PlatformType] = aws.String(EC2PlatForm)
+	}
 	return attributeMap
 }
 
