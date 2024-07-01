@@ -36,7 +36,7 @@ const (
 	remoteProfileKey          = "remote_profile"
 	realmKey                  = "realm"
 	passwordFileKey           = "password_file"
-	defaultCollectionInterval = 10 * time.Second
+	defaultCollectionInterval = time.Minute
 	envJmxJarPath             = "JMX_JAR_PATH"
 	attributeHost             = "host"
 )

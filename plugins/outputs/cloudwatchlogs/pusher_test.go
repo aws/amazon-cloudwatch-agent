@@ -204,7 +204,11 @@ func TestLongMessageGetsTruncated(t *testing.T) {
 
 	stop, p := testPreparation(-1, &s, 1*time.Hour, maxRetryTimeout)
 	p.AddEvent(evtMock{longMsg, time.Now(), nil})
-	time.Sleep(10 * time.Millisecond)
+
+	for len(p.events) < 1 {
+		time.Sleep(10 * time.Millisecond)
+	}
+
 	p.send()
 	close(stop)
 	wg.Wait()
