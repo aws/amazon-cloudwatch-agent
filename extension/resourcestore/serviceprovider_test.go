@@ -15,6 +15,7 @@ import (
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 type mockServiceNameEC2Client struct {
@@ -81,66 +82,168 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 	}
 }
 
-func Test_serviceprovider_ServiceAttribute(t *testing.T) {
-	type fields struct {
-		iamRole           string
-		ec2TagServiceName string
-		logFiles          map[string]ServiceAttribute
+func Test_serviceprovider_addEntryForLogFile(t *testing.T) {
+	s := &serviceprovider{
+		logFiles: make(map[LogFileGlob]ServiceAttribute),
 	}
+	glob := LogFileGlob("glob")
+	serviceAttr := ServiceAttribute{ServiceName: "test-service"}
+
+	s.addEntryForLogFile(glob, serviceAttr)
+
+	actual := s.logFiles[glob]
+	assert.Equal(t, serviceAttr, actual)
+}
+
+func Test_serviceprovider_addEntryForLogGroup(t *testing.T) {
+	s := &serviceprovider{
+		logGroups: make(map[LogGroupName]ServiceAttribute),
+	}
+	group := LogGroupName("group")
+	serviceAttr := ServiceAttribute{ServiceName: "test-service"}
+
+	s.addEntryForLogGroup(group, serviceAttr)
+
+	actual := s.logGroups[group]
+	assert.Equal(t, serviceAttr, actual)
+}
+
+func Test_serviceprovider_mergeServiceAttributes(t *testing.T) {
+	onlySvc1 := func() ServiceAttribute {
+		return ServiceAttribute{ServiceName: "service1", ServiceNameSource: "source1"}
+	}
+	onlySvc2 := func() ServiceAttribute {
+		return ServiceAttribute{ServiceName: "service2", ServiceNameSource: "source2"}
+	}
+	onlyEnv1 := func() ServiceAttribute { return ServiceAttribute{Environment: "environment1"} }
+	onlyEnv2 := func() ServiceAttribute { return ServiceAttribute{Environment: "environment2"} }
+	both2 := func() ServiceAttribute {
+		return ServiceAttribute{ServiceName: "service2", ServiceNameSource: "source2", Environment: "environment2"}
+	}
+	both3 := func() ServiceAttribute {
+		return ServiceAttribute{ServiceName: "service3", ServiceNameSource: "source3", Environment: "environment3"}
+	}
+	empty := func() ServiceAttribute { return ServiceAttribute{} }
+
 	tests := []struct {
-		name            string
-		fields          fields
-		serviceProvider *serviceprovider
-		want            ServiceAttribute
+		name      string
+		providers []serviceAttributeProvider
+		want      ServiceAttribute
 	}{
 		{
-			name: "HappyPath_IAMRole",
-			fields: fields{
-				iamRole: "TestRole",
-			},
-			want: ServiceAttribute{
-				ServiceName:       "TestRole",
-				ServiceNameSource: ClientIamRole,
-			},
+			name:      "RespectServicePriority",
+			providers: []serviceAttributeProvider{onlySvc1, onlySvc2},
+			want:      ServiceAttribute{ServiceName: "service1", ServiceNameSource: "source1"},
 		},
 		{
-			name: "HappyPath_EC2TagServiceName",
-			fields: fields{
-				ec2TagServiceName: "tag-service",
-			},
-			want: ServiceAttribute{
-				ServiceName:       "tag-service",
-				ServiceNameSource: ResourceTags,
-			},
+			name:      "RespectEnvironmentPriority",
+			providers: []serviceAttributeProvider{onlyEnv1, onlyEnv2},
+			want:      ServiceAttribute{Environment: "environment1"},
 		},
 		{
-			name: "HappyPath_AgentConfig",
-			fields: fields{
-				logFiles: map[string]ServiceAttribute{
-					"test-file": {
-						ServiceName:       "test-service",
-						ServiceNameSource: AgentConfig,
-						Environment:       "test-environment",
-					},
-				},
-			},
-			want: ServiceAttribute{
-				ServiceName:       "test-service",
-				ServiceNameSource: AgentConfig,
-				Environment:       "test-environment",
-			},
+			name:      "CombineServiceAndEnvironment",
+			providers: []serviceAttributeProvider{onlySvc1, both2, both3},
+			want:      ServiceAttribute{ServiceName: "service1", ServiceNameSource: "source1", Environment: "environment2"},
+		},
+		{
+			name:      "CombineEnvironmentAndService",
+			providers: []serviceAttributeProvider{onlyEnv1, both2, both3},
+			want:      ServiceAttribute{ServiceName: "service2", ServiceNameSource: "source2", Environment: "environment1"},
+		},
+		{
+			name:      "EmptyList",
+			providers: []serviceAttributeProvider{},
+			want:      ServiceAttribute{},
+		},
+		{
+			name:      "EmptyProvider",
+			providers: []serviceAttributeProvider{empty},
+			want:      ServiceAttribute{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &serviceprovider{
-				iamRole:           tt.fields.iamRole,
-				ec2TagServiceName: tt.fields.ec2TagServiceName,
-				logFiles:          tt.fields.logFiles,
-			}
-			assert.Equalf(t, tt.want, s.ServiceAttribute("test-file"), "ServiceAttribute()")
+			assert.Equalf(t, tt.want, mergeServiceAttributes(tt.providers), "mergeServiceAttributes()")
 		})
 	}
+}
+
+func Test_serviceprovider_serviceAttributeForLogGroup(t *testing.T) {
+	s := &serviceprovider{logGroups: map[LogGroupName]ServiceAttribute{"group": {ServiceName: "test-service"}}}
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogGroup(""))
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogGroup("othergroup"))
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-service"}, s.serviceAttributeForLogGroup("group"))
+}
+
+func Test_serviceprovider_serviceAttributeForLogFile(t *testing.T) {
+	s := &serviceprovider{logFiles: map[LogFileGlob]ServiceAttribute{"glob": {ServiceName: "test-service"}}}
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogFile(""))
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeForLogFile("otherglob"))
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-service"}, s.serviceAttributeForLogFile("glob"))
+}
+
+func Test_serviceprovider_serviceAttributeFromEc2Tags(t *testing.T) {
+	s := &serviceprovider{}
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromEc2Tags())
+
+	s = &serviceprovider{ec2TagServiceName: "test-service"}
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-service", ServiceNameSource: ServiceNameSourceResourceTags}, s.serviceAttributeFromEc2Tags())
+}
+
+func Test_serviceprovider_serviceAttributeFromIamRole(t *testing.T) {
+	s := &serviceprovider{}
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromIamRole())
+
+	s = &serviceprovider{iamRole: "test-service"}
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-service", ServiceNameSource: ServiceNameSourceClientIamRole}, s.serviceAttributeFromIamRole())
+}
+
+func Test_serviceprovider_serviceAttributeFromAsg(t *testing.T) {
+	s := &serviceprovider{}
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
+
+	s = &serviceprovider{ec2Info: &ec2Info{}}
+	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
+
+	s = &serviceprovider{ec2Info: &ec2Info{AutoScalingGroup: "test-asg"}}
+	assert.Equal(t, ServiceAttribute{Environment: "ec2:test-asg"}, s.serviceAttributeFromAsg())
+}
+
+func Test_serviceprovider_serviceAttributeFallback(t *testing.T) {
+	s := &serviceprovider{}
+	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown}, s.serviceAttributeFallback())
+
+	s = &serviceprovider{mode: config.ModeEC2}
+	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:default"}, s.serviceAttributeFallback())
+}
+
+func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
+	s := &serviceprovider{
+		mode:      config.ModeEC2,
+		logGroups: make(map[LogGroupName]ServiceAttribute),
+		logFiles:  make(map[LogFileGlob]ServiceAttribute),
+	}
+
+	// Start with no known source for service attributes, then set values from the bottom of the priority list upward.
+	// This way we test the priority order - if we set the highest priority source first (log groups), then we wouldn't
+	// be able to test that lower priority sources should be used if necessary.
+
+	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:default"}, s.logFileServiceAttribute("glob", "group"))
+
+	s.ec2Info = &ec2Info{AutoScalingGroup: "test-asg"}
+	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
+
+	s.iamRole = "test-role"
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-role", ServiceNameSource: ServiceNameSourceClientIamRole, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
+
+	s.ec2TagServiceName = "test-service-from-tags"
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-service-from-tags", ServiceNameSource: ServiceNameSourceResourceTags, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
+
+	s.logFiles["glob"] = ServiceAttribute{ServiceName: "test-service-from-logfile", ServiceNameSource: ServiceNameSourceUserConfiguration}
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-service-from-logfile", ServiceNameSource: ServiceNameSourceUserConfiguration, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
+
+	s.logGroups["group"] = ServiceAttribute{ServiceName: "test-service-from-loggroup", ServiceNameSource: ServiceNameSourceInstrumentation}
+	assert.Equal(t, ServiceAttribute{ServiceName: "test-service-from-loggroup", ServiceNameSource: ServiceNameSourceInstrumentation, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
 }
 
 func Test_serviceprovider_getIAMRole(t *testing.T) {

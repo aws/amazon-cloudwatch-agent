@@ -173,7 +173,7 @@ func (ts *tailerSrc) AddCleanUpFn(f func()) {
 func (ts *tailerSrc) ResourceID() *cloudwatchlogs.Resource {
 	rs := resourcestore.GetResourceStore()
 	if rs != nil {
-		return resourcestore.GetResourceStore().CreateLogFileRID(ts.fileGlobPath, ts.tailer.Filename)
+		return rs.CreateLogFileRID(resourcestore.LogFileGlob(ts.fileGlobPath), resourcestore.LogGroupName(ts.group))
 	}
 	return nil
 }

@@ -224,6 +224,7 @@ func (p *pusher) send() {
 	if p.logSrc != nil {
 		resourceID = p.logSrc.ResourceID()
 	}
+
 	input := &cloudwatchlogs.PutLogEventsInput{
 		LogEvents:     p.events,
 		LogGroupName:  &p.Group,

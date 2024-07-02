@@ -161,6 +161,7 @@ processors:
     resolvers:
       - name: ""
         platform: generic
+  awsentity: {}
   resourcedetection:
     aks:
       resource_attributes:
@@ -477,6 +478,7 @@ service:
       exporters:
         - awsemf/application_signals
       processors:
+        - awsentity
         - resourcedetection
         - awsapplicationsignals
       receivers:

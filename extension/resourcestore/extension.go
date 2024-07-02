@@ -27,18 +27,18 @@ const (
 	Service              = "Service"
 	InstanceIDKey        = "EC2.InstanceId"
 	ASGKey               = "EC2.AutoScalingGroup"
-	ServiceNameSourceKey = "AWS.Internal.ServiceNameSource"
+	ServiceNameSourceKey = "AWS.ServiceNameSource"
 	PlatformType         = "PlatformType"
 	EC2PlatForm          = "AWS::EC2"
 )
 
 type ec2ProviderType func(string, *configaws.CredentialConfig) ec2iface.EC2API
 
-type ServiceNameProvider interface {
-	ServiceName()
-	startServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider)
-	getIAMRole(metadataProvider ec2metadataprovider.MetadataProvider)
-	getEC2Tags(ec2API ec2iface.EC2API)
+type serviceProviderInterface interface {
+	startServiceProvider()
+	addEntryForLogFile(LogFileGlob, ServiceAttribute)
+	addEntryForLogGroup(LogGroupName, ServiceAttribute)
+	logFileServiceAttribute(LogFileGlob, LogGroupName) ServiceAttribute
 }
 
 type eksInfo struct {
@@ -62,7 +62,7 @@ type ResourceStore struct {
 
 	// serviceprovider stores information about possible service names
 	// that we can attach to the resource ID
-	serviceprovider serviceprovider
+	serviceprovider serviceProviderInterface
 
 	// nativeCredential stores the credential config for agent's native
 	// component such as LogAgent
@@ -91,7 +91,7 @@ func (r *ResourceStore) Start(ctx context.Context, host component.Host) error {
 		r.ec2Info = *newEC2Info(r.metadataprovider, getEC2Provider, ec2CredentialConfig, r.done)
 		go r.ec2Info.initEc2Info()
 	}
-	r.serviceprovider = *newServiceProvider(r.metadataprovider, getEC2Provider, ec2CredentialConfig, r.done)
+	r.serviceprovider = newServiceProvider(r.mode, &r.ec2Info, r.metadataprovider, getEC2Provider, ec2CredentialConfig, r.done)
 	go r.serviceprovider.startServiceProvider()
 	return nil
 }
@@ -121,32 +121,51 @@ func (r *ResourceStore) NativeCredentialExists() bool {
 	return r.nativeCredential != nil
 }
 
-func (r *ResourceStore) CreateLogFileRID(fileGlobPath string, filePath string) *cloudwatchlogs.Resource {
-	if r.shouldReturnRID() {
-		return &cloudwatchlogs.Resource{
-			AttributeMaps: []map[string]*string{
-				r.createAttributeMaps(),
-			},
-			KeyAttributes: r.createServiceKeyAttributes(fileGlobPath),
-		}
+// CreateLogFileRID creates the RID for log events that are being uploaded from a log file in the environment.
+func (r *ResourceStore) CreateLogFileRID(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Resource {
+	if !r.shouldReturnRID() {
+		return nil
 	}
-	return nil
+
+	serviceAttr := r.serviceprovider.logFileServiceAttribute(logFileGlob, logGroupName)
+
+	keyAttributes := r.createServiceKeyAttributes(serviceAttr)
+	attributeMap := r.createAttributeMap()
+	addNonEmptyToMap(attributeMap, ServiceNameSourceKey, serviceAttr.ServiceNameSource)
+
+	return &cloudwatchlogs.Resource{
+		KeyAttributes: keyAttributes,
+		AttributeMaps: []map[string]*string{attributeMap},
+	}
 }
 
-// AddServiceAttrEntryToResourceStore adds an entry to the resource store for the provided file -> serviceName, environmentName key-value pair
-func (r *ResourceStore) AddServiceAttrEntryToResourceStore(fileGlob string, serviceName string, environmentName string) {
-	if r.serviceprovider.logFiles != nil {
-		r.serviceprovider.logFiles[fileGlob] = ServiceAttribute{ServiceName: serviceName, ServiceNameSource: AgentConfig, Environment: environmentName}
+// AddServiceAttrEntryForLogFile adds an entry to the resource store for the provided file glob -> (serviceName, environmentName) key-value pair
+func (r *ResourceStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serviceName string, environmentName string) {
+	if r.serviceprovider != nil {
+		r.serviceprovider.addEntryForLogFile(fileGlob, ServiceAttribute{
+			ServiceName:       serviceName,
+			ServiceNameSource: ServiceNameSourceUserConfiguration,
+			Environment:       environmentName,
+		})
 	}
 }
 
-func (r *ResourceStore) createAttributeMaps() map[string]*string {
-	serviceAttr := r.serviceprovider.ServiceAttribute("")
+// AddServiceAttrEntryForLogGroup adds an entry to the resource store for the provided log group nme -> (serviceName, environmentName) key-value pair
+func (r *ResourceStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, serviceName string, environmentName string) {
+	r.serviceprovider.addEntryForLogGroup(logGroupName, ServiceAttribute{
+		ServiceName:       serviceName,
+		ServiceNameSource: ServiceNameSourceInstrumentation,
+		Environment:       environmentName,
+	})
+}
+
+func (r *ResourceStore) createAttributeMap() map[string]*string {
 	attributeMap := make(map[string]*string)
 
-	addNonEmptyToMap(attributeMap, InstanceIDKey, r.ec2Info.InstanceID)
-	addNonEmptyToMap(attributeMap, ASGKey, r.ec2Info.AutoScalingGroup)
-	addNonEmptyToMap(attributeMap, ServiceNameSourceKey, serviceAttr.ServiceNameSource)
+	if r.mode == config.ModeEC2 {
+		addNonEmptyToMap(attributeMap, InstanceIDKey, r.ec2Info.InstanceID)
+		addNonEmptyToMap(attributeMap, ASGKey, r.ec2Info.AutoScalingGroup)
+	}
 	switch r.mode {
 	case config.ModeEC2:
 		attributeMap[PlatformType] = aws.String(EC2PlatForm)
@@ -154,8 +173,8 @@ func (r *ResourceStore) createAttributeMaps() map[string]*string {
 	return attributeMap
 }
 
-func (r *ResourceStore) createServiceKeyAttributes(fileGlob string) *cloudwatchlogs.KeyAttributes {
-	serviceAttr := r.serviceprovider.ServiceAttribute(fileGlob)
+// createServiceKeyAttribute creates KeyAttributes for Service resources
+func (r *ResourceStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) *cloudwatchlogs.KeyAttributes {
 	serviceKeyAttr := &cloudwatchlogs.KeyAttributes{
 		Type: aws.String(Service),
 	}

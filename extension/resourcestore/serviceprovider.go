@@ -20,6 +20,7 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 const (
@@ -27,11 +28,19 @@ const (
 	SERVICE          = "service"
 	APPLICATION      = "application"
 	APP              = "app"
-	ClientIamRole    = "ClientIamRole"
-	ResourceTags     = "ResourceTags"
-	jitterMax        = 180
-	jitterMin        = 60
-	AgentConfig      = "AgentConfig"
+
+	// Matches the default value from OTel
+	// https://opentelemetry.io/docs/languages/sdk-configuration/general/#otel_service_name
+	ServiceNameUnknown = "unknown_service"
+
+	ServiceNameSourceClientIamRole     = "ClientIamRole"
+	ServiceNameSourceInstrumentation   = "Instrumentation"
+	ServiceNameSourceResourceTags      = "ResourceTags"
+	ServiceNameSourceUnknown           = "Unknown"
+	ServiceNameSourceUserConfiguration = "UserConfiguration"
+
+	jitterMax = 180
+	jitterMin = 60
 )
 
 var (
@@ -48,7 +57,12 @@ type ServiceAttribute struct {
 	Environment       string
 }
 
+type LogGroupName string
+type LogFileGlob string
+
 type serviceprovider struct {
+	mode              string
+	ec2Info           *ec2Info
 	metadataProvider  ec2metadataprovider.MetadataProvider
 	ec2API            ec2iface.EC2API
 	ec2Provider       ec2ProviderType
@@ -57,12 +71,15 @@ type serviceprovider struct {
 	ec2TagServiceName string
 	done              chan struct{}
 
-	// logFiles is a variable reserved for communication between OTEL components and LogAgent
-	// in order to achieve process correlations where the key is the log file path and the value
-	// is the service name
+	// logFiles stores the service attributes that were configured for log files in CloudWatch Agent configuration.
 	// Example:
-	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": "cloudwatch-agent"
-	logFiles map[string]ServiceAttribute
+	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "cloudwatch-agent"}
+	logFiles map[LogFileGlob]ServiceAttribute
+
+	// logGroups stores the associations between log groups and service attributes that were observed from incoming
+	// telemetry.  Example:
+	// "MyLogGroup": {ServiceName: "MyInstrumentedService"}
+	logGroups map[LogGroupName]ServiceAttribute
 }
 
 func (s *serviceprovider) startServiceProvider() {
@@ -74,34 +91,120 @@ func (s *serviceprovider) startServiceProvider() {
 	go refreshLoop(s.done, s.getEC2TagServiceName, false)
 }
 
-// ServiceAttribute function gets the relevant service attributes
+// addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
+// CloudWatch Agent config.
+func (s *serviceprovider) addEntryForLogFile(logFileGlob LogFileGlob, serviceAttr ServiceAttribute) {
+	s.logFiles[logFileGlob] = serviceAttr
+}
+
+// addEntryForLogGroup adds an association between a log group name and a service attribute, as observed from incoming
+// telemetry received by CloudWatch Agent.
+func (s *serviceprovider) addEntryForLogGroup(logGroupName LogGroupName, serviceAttr ServiceAttribute) {
+	s.logGroups[logGroupName] = serviceAttr
+}
+
+type serviceAttributeProvider func() ServiceAttribute
+
+// mergeServiceAttributes takes in a list of functions that create ServiceAttributes, in descending priority order
+// (highest priority first), and proceeds down the list until we have obtained both a ServiceName and an
+// EnvironmentName.
+func mergeServiceAttributes(providers []serviceAttributeProvider) ServiceAttribute {
+	ret := ServiceAttribute{}
+
+	for _, provider := range providers {
+		serviceAttr := provider()
+
+		if ret.ServiceName == "" {
+			ret.ServiceName = serviceAttr.ServiceName
+			ret.ServiceNameSource = serviceAttr.ServiceNameSource
+		}
+		if ret.Environment == "" {
+			ret.Environment = serviceAttr.Environment
+		}
+
+		if ret.ServiceName != "" && ret.Environment != "" {
+			return ret
+		}
+	}
+
+	return ret
+}
+
+// logFileServiceAttribute function gets the relevant service attributes
 // service name is retrieved based on the following priority chain
 //  1. Incoming telemetry attributes
 //  2. CWA config
-//  3. Process correlation
-//  4. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
-//  5. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
-func (s *serviceprovider) ServiceAttribute(fileGlob string) ServiceAttribute {
-	serviceAttr := ServiceAttribute{}
-	// CWA config
-	if val, ok := s.logFiles[fileGlob]; ok {
-		serviceAttr.ServiceName = val.ServiceName
-		serviceAttr.ServiceNameSource = val.ServiceNameSource
-		serviceAttr.Environment = val.Environment
+//  3. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
+//  4. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
+func (s *serviceprovider) logFileServiceAttribute(logFile LogFileGlob, logGroup LogGroupName) ServiceAttribute {
+	return mergeServiceAttributes([]serviceAttributeProvider{
+		func() ServiceAttribute { return s.serviceAttributeForLogGroup(logGroup) },
+		func() ServiceAttribute { return s.serviceAttributeForLogFile(logFile) },
+		s.serviceAttributeFromEc2Tags,
+		s.serviceAttributeFromIamRole,
+		s.serviceAttributeFromAsg,
+		s.serviceAttributeFallback,
+	})
+}
+
+func (s *serviceprovider) serviceAttributeForLogGroup(logGroup LogGroupName) ServiceAttribute {
+	if logGroup == "" {
+		return ServiceAttribute{}
 	}
-	// Instance Tags
-	if s.ec2TagServiceName != "" && serviceAttr.ServiceName == "" {
-		serviceAttr.ServiceName = s.ec2TagServiceName
-		serviceAttr.ServiceNameSource = ResourceTags
-		return serviceAttr
+
+	return s.logGroups[logGroup]
+}
+
+func (s *serviceprovider) serviceAttributeForLogFile(logFile LogFileGlob) ServiceAttribute {
+	if logFile == "" {
+		return ServiceAttribute{}
 	}
-	//IAM Role
-	if s.iamRole != "" && serviceAttr.ServiceName == "" {
-		serviceAttr.ServiceName = s.iamRole
-		serviceAttr.ServiceNameSource = ClientIamRole
-		return serviceAttr
+
+	return s.logFiles[logFile]
+}
+
+func (s *serviceprovider) serviceAttributeFromEc2Tags() ServiceAttribute {
+	if s.ec2TagServiceName == "" {
+		return ServiceAttribute{}
 	}
-	return serviceAttr
+
+	return ServiceAttribute{
+		ServiceName:       s.ec2TagServiceName,
+		ServiceNameSource: ServiceNameSourceResourceTags,
+	}
+}
+
+func (s *serviceprovider) serviceAttributeFromIamRole() ServiceAttribute {
+	if s.iamRole == "" {
+		return ServiceAttribute{}
+	}
+
+	return ServiceAttribute{
+		ServiceName:       s.iamRole,
+		ServiceNameSource: ServiceNameSourceClientIamRole,
+	}
+}
+
+func (s *serviceprovider) serviceAttributeFromAsg() ServiceAttribute {
+	if s.ec2Info == nil || s.ec2Info.AutoScalingGroup == "" {
+		return ServiceAttribute{}
+	}
+
+	return ServiceAttribute{
+		Environment: "ec2:" + s.ec2Info.AutoScalingGroup,
+	}
+}
+
+func (s *serviceprovider) serviceAttributeFallback() ServiceAttribute {
+	attr := ServiceAttribute{
+		ServiceName:       ServiceNameUnknown,
+		ServiceNameSource: ServiceNameSourceUnknown,
+	}
+	if s.mode == config.ModeEC2 {
+		attr.Environment = "ec2:default"
+	}
+
+	return attr
 }
 
 func (s *serviceprovider) getIAMRole() error {
@@ -193,13 +296,17 @@ func (s *serviceprovider) getEC2TagFilters() ([]*ec2.Filter, error) {
 	return tagFilters, nil
 }
 
-func newServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) *serviceprovider {
+func newServiceProvider(mode string, ec2Info *ec2Info, metadataProvider ec2metadataprovider.MetadataProvider,
+	providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) serviceProviderInterface {
 	return &serviceprovider{
+		mode:             mode,
+		ec2Info:          ec2Info,
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
 		ec2Credential:    ec2Credential,
 		done:             done,
-		logFiles:         map[string]ServiceAttribute{},
+		logFiles:         make(map[LogFileGlob]ServiceAttribute),
+		logGroups:        make(map[LogGroupName]ServiceAttribute),
 	}
 }
 

@@ -298,6 +298,7 @@ processors:
         resolvers:
           - name: TestCluster
             platform: k8s
+    awsentity: {}
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -644,6 +645,7 @@ service:
             exporters:
                 - awsemf/application_signals
             processors:
+                - awsentity
                 - resourcedetection
                 - awsapplicationsignals
             receivers:

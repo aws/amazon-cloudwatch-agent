@@ -12,7 +12,7 @@ import (
 
 const (
 	receiversCount  = 6
-	processorCount  = 8
+	processorCount  = 9
 	exportersCount  = 6
 	extensionsCount = 3
 )
@@ -40,19 +40,21 @@ func TestComponents(t *testing.T) {
 	processors := factories.Processors
 	assert.Len(t, processors, processorCount)
 	awsapplicationsignalsType, _ := component.NewType("awsapplicationsignals")
+	awsentityType, _ := component.NewType("awsentity")
 	batchType, _ := component.NewType("batch")
 	cumulativetodeltaType, _ := component.NewType("cumulativetodelta")
 	ec2taggerType, _ := component.NewType("ec2tagger")
+	gpuattributesType, _ := component.NewType("gpuattributes")
 	metricstransformType, _ := component.NewType("metricstransform")
 	transformType, _ := component.NewType("transform")
-	gpuattributesType, _ := component.NewType("gpuattributes")
 	assert.NotNil(t, processors[awsapplicationsignalsType])
+	assert.NotNil(t, processors[awsentityType])
 	assert.NotNil(t, processors[batchType])
 	assert.NotNil(t, processors[cumulativetodeltaType])
 	assert.NotNil(t, processors[ec2taggerType])
+	assert.NotNil(t, processors[gpuattributesType])
 	assert.NotNil(t, processors[metricstransformType])
 	assert.NotNil(t, processors[transformType])
-	assert.NotNil(t, processors[gpuattributesType])
 
 	exporters := factories.Exporters
 	assert.Len(t, exporters, exportersCount)

@@ -17,10 +17,39 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
+
+type mockServiceProvider struct {
+	mock.Mock
+}
+
+func (s *mockServiceProvider) startServiceProvider() {}
+
+func (s *mockServiceProvider) addEntryForLogGroup(logGroupName LogGroupName, serviceAttr ServiceAttribute) {
+	s.Called(logGroupName, serviceAttr)
+}
+
+func (s *mockServiceProvider) addEntryForLogFile(logFileGlob LogFileGlob, serviceAttr ServiceAttribute) {
+	s.Called(logFileGlob, serviceAttr)
+}
+
+func (s *mockServiceProvider) logFileServiceAttribute(glob LogFileGlob, name LogGroupName) ServiceAttribute {
+	args := s.Called(glob, name)
+	return args.Get(0).(ServiceAttribute)
+}
+
+type mockSTSClient struct {
+	stsiface.STSAPI
+	accountId string
+}
+
+func (ms *mockSTSClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+	return &sts.GetCallerIdentityOutput{Account: aws.String(ms.accountId)}, nil
+}
 
 type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
@@ -28,12 +57,12 @@ type mockMetadataProvider struct {
 	TagValue                 string
 }
 
-type mockSTSClient struct {
-	stsiface.STSAPI
-}
-
-func (ms *mockSTSClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
-	return &sts.GetCallerIdentityOutput{Account: aws.String("123456789")}, nil
+func mockMetadataProviderWithAccountId(accountId string) *mockMetadataProvider {
+	return &mockMetadataProvider{
+		InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+			AccountID: accountId,
+		},
+	}
 }
 
 func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2InstanceIdentityDocument, error) {
@@ -93,32 +122,6 @@ func TestResourceStore_EC2Info(t *testing.T) {
 	}
 }
 
-func TestResourceStore_LogFiles(t *testing.T) {
-	tests := []struct {
-		name         string
-		logFileInput map[string]ServiceAttribute
-		want         map[string]ServiceAttribute
-	}{
-		{
-			name:         "happypath",
-			logFileInput: map[string]ServiceAttribute{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {"cloudwatch-agent", "", "ec2:test"}},
-			want:         map[string]ServiceAttribute{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {"cloudwatch-agent", "", "ec2:test"}},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourceStore{
-				serviceprovider: serviceprovider{
-					logFiles: tt.logFileInput,
-				},
-			}
-			if got := r.serviceprovider.logFiles; !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("logFiles() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestResourceStore_Mode(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -165,9 +168,8 @@ func Test_getRegion(t *testing.T) {
 
 func TestResourceStore_createAttributeMaps(t *testing.T) {
 	type fields struct {
-		ec2Info         ec2Info
-		serviceprovider serviceprovider
-		mode            string
+		ec2Info ec2Info
+		mode    string
 	}
 	tests := []struct {
 		name   string
@@ -175,41 +177,35 @@ func TestResourceStore_createAttributeMaps(t *testing.T) {
 		want   map[string]*string
 	}{
 		{
-			name: "HappyPath_IAMRole",
+			name: "HappyPath",
 			fields: fields{
 				ec2Info: ec2Info{
 					InstanceID:       "i-123456789",
 					AutoScalingGroup: "test-asg",
 				},
-				serviceprovider: serviceprovider{
-					iamRole: "test-role",
-				},
+				mode: config.ModeEC2,
 			},
 			want: map[string]*string{
-				ServiceNameSourceKey: aws.String(ClientIamRole),
-				ASGKey:               aws.String("test-asg"),
-				InstanceIDKey:        aws.String("i-123456789"),
+				ASGKey:        aws.String("test-asg"),
+				InstanceIDKey: aws.String("i-123456789"),
+				PlatformType:  aws.String(EC2PlatForm),
 			},
 		},
 		{
-			name: "HappyPath_TagServiceName",
+			name: "HappyPath_AsgMissing",
 			fields: fields{
 				ec2Info: ec2Info{
-					InstanceID:       "i-123456789",
-					AutoScalingGroup: "test-asg",
+					InstanceID: "i-123456789",
 				},
-				serviceprovider: serviceprovider{
-					ec2TagServiceName: "test-tag-service",
-				},
+				mode: config.ModeEC2,
 			},
 			want: map[string]*string{
-				ServiceNameSourceKey: aws.String(ResourceTags),
-				ASGKey:               aws.String("test-asg"),
-				InstanceIDKey:        aws.String("i-123456789"),
+				InstanceIDKey: aws.String("i-123456789"),
+				PlatformType:  aws.String(EC2PlatForm),
 			},
 		},
 		{
-			name: "HappyPath_TagServiceName",
+			name: "HappyPath_InstanceIdAndAsgMissing",
 			fields: fields{
 				mode: config.ModeEC2,
 			},
@@ -217,49 +213,111 @@ func TestResourceStore_createAttributeMaps(t *testing.T) {
 				PlatformType: aws.String(EC2PlatForm),
 			},
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourceStore{
-				ec2Info:         tt.fields.ec2Info,
-				serviceprovider: tt.fields.serviceprovider,
-				mode:            tt.fields.mode,
-			}
-			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(r.createAttributeMaps()), "createAttributeMaps()")
-		})
-	}
-}
-
-func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
-	type fields struct {
-		serviceprovider serviceprovider
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   *cloudwatchlogs.KeyAttributes
-	}{
 		{
-			name: "HappyPath_",
+			name: "NonEC2",
 			fields: fields{
-				serviceprovider: serviceprovider{
-					iamRole: "test-role",
+				ec2Info: ec2Info{
+					InstanceID:       "i-123456789",
+					AutoScalingGroup: "test-asg",
 				},
+				mode: config.ModeOnPrem,
 			},
-			want: &cloudwatchlogs.KeyAttributes{
-				Name: aws.String("test-role"),
-				Type: aws.String(Service),
-			},
+			want: map[string]*string{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &ResourceStore{
-				serviceprovider: tt.fields.serviceprovider,
+				ec2Info: tt.fields.ec2Info,
+				mode:    tt.fields.mode,
 			}
-			assert.Equalf(t, tt.want, r.createServiceKeyAttributes(""), "createServiceKeyAttributes()")
+			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(r.createAttributeMap()), "createAttributeMap()")
 		})
 	}
+}
+
+func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
+	tests := []struct {
+		name        string
+		serviceAttr ServiceAttribute
+		want        *cloudwatchlogs.KeyAttributes
+	}{
+		{
+			name:        "NameAndEnvironmentSet",
+			serviceAttr: ServiceAttribute{ServiceName: "test-service", Environment: "test-environment"},
+			want: &cloudwatchlogs.KeyAttributes{
+				Environment: aws.String("test-environment"),
+				Name:        aws.String("test-service"),
+				Type:        aws.String(Service),
+			},
+		},
+		{
+			name:        "OnlyNameSet",
+			serviceAttr: ServiceAttribute{ServiceName: "test-service"},
+			want: &cloudwatchlogs.KeyAttributes{
+				Name: aws.String("test-service"),
+				Type: aws.String(Service),
+			},
+		},
+		{
+			name:        "OnlyEnvironmentSet",
+			serviceAttr: ServiceAttribute{Environment: "test-environment"},
+			want: &cloudwatchlogs.KeyAttributes{
+				Environment: aws.String("test-environment"),
+				Type:        aws.String(Service),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ResourceStore{}
+			assert.Equalf(t, tt.want, r.createServiceKeyAttributes(tt.serviceAttr), "createServiceKeyAttributes()")
+		})
+	}
+}
+
+func TestResourceStore_createLogFileRID(t *testing.T) {
+	instanceId := "i-abcd1234"
+	accountId := "123456789012"
+	glob := LogFileGlob("glob")
+	group := LogGroupName("group")
+	serviceAttr := ServiceAttribute{
+		ServiceName:       "test-service",
+		ServiceNameSource: ServiceNameSourceUserConfiguration,
+		Environment:       "test-environment",
+	}
+	sp := new(mockServiceProvider)
+	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
+	rs := ResourceStore{
+		mode:             config.ModeEC2,
+		ec2Info:          ec2Info{InstanceID: instanceId},
+		serviceprovider:  sp,
+		metadataprovider: mockMetadataProviderWithAccountId(accountId),
+		stsClient:        &mockSTSClient{accountId: accountId},
+		nativeCredential: &session.Session{},
+	}
+
+	resource := rs.CreateLogFileRID(glob, group)
+
+	expectedResource := cloudwatchlogs.Resource{
+		KeyAttributes: &cloudwatchlogs.KeyAttributes{
+			Environment: aws.String("test-environment"),
+			Name:        aws.String("test-service"),
+			Type:        aws.String(Service),
+		},
+		AttributeMaps: []map[string]*string{
+			{
+				InstanceIDKey:        aws.String(instanceId),
+				ServiceNameSourceKey: aws.String(ServiceNameSourceUserConfiguration),
+				PlatformType:         aws.String(EC2PlatForm),
+			},
+		},
+	}
+	assert.Equal(t, *expectedResource.KeyAttributes.Environment, *resource.KeyAttributes.Environment)
+	assert.Equal(t, *expectedResource.KeyAttributes.Name, *resource.KeyAttributes.Name)
+	assert.Equal(t, *expectedResource.KeyAttributes.Type, *resource.KeyAttributes.Type)
+	assert.Len(t, resource.AttributeMaps, 1)
+	assert.Equal(t, dereferenceMap(expectedResource.AttributeMaps[0]), dereferenceMap(resource.AttributeMaps[0]))
 }
 
 func TestResourceStore_shouldReturnRID(t *testing.T) {
@@ -273,14 +331,12 @@ func TestResourceStore_shouldReturnRID(t *testing.T) {
 		fields fields
 		want   bool
 	}{
+		// TODO need tests for when you can't fetch from IMDS or STS (fail closed)
 		{
 			name: "HappyPath_AccountIDMatches",
 			fields: fields{
-				metadataprovider: &mockMetadataProvider{
-					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
-						AccountID: "123456789"},
-				},
-				stsClient:        &mockSTSClient{},
+				metadataprovider: mockMetadataProviderWithAccountId("123456789012"),
+				stsClient:        &mockSTSClient{accountId: "123456789012"},
 				nativeCredential: &session.Session{},
 			},
 			want: true,
@@ -288,11 +344,8 @@ func TestResourceStore_shouldReturnRID(t *testing.T) {
 		{
 			name: "HappyPath_AccountIDMismatches",
 			fields: fields{
-				metadataprovider: &mockMetadataProvider{
-					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
-						AccountID: "987654321"},
-				},
-				stsClient:        &mockSTSClient{},
+				metadataprovider: mockMetadataProviderWithAccountId("210987654321"),
+				stsClient:        &mockSTSClient{accountId: "123456789012"},
 				nativeCredential: &session.Session{},
 			},
 			want: false,
@@ -322,23 +375,34 @@ func dereferenceMap(input map[string]*string) map[string]string {
 	return result
 }
 
-func TestAddServiceKeyAttributeToLogFilesMap(t *testing.T) {
-	rs := &ResourceStore{
-		metadataprovider: &mockMetadataProvider{
-			InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
-				AccountID: "987654321"},
-		},
-		serviceprovider: serviceprovider{logFiles: map[string]ServiceAttribute{}},
-	}
-	key := "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
-	rs.AddServiceAttrEntryToResourceStore(key, "test", "ec2:test")
+func TestResourceStore_addServiceAttrEntryForLogFile(t *testing.T) {
+	sp := new(mockServiceProvider)
+	rs := ResourceStore{serviceprovider: sp}
 
-	expected := &ResourceStore{
-		serviceprovider: serviceprovider{
-			iamRole:  "test-role",
-			logFiles: map[string]ServiceAttribute{"/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "test", ServiceNameSource: AgentConfig, Environment: "ec2:test"}},
-		},
+	key := LogFileGlob("/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log")
+	serviceAttr := ServiceAttribute{
+		ServiceName:       "test",
+		ServiceNameSource: ServiceNameSourceUserConfiguration,
+		Environment:       "ec2:test",
 	}
+	sp.On("addEntryForLogFile", key, serviceAttr).Return()
+	rs.AddServiceAttrEntryForLogFile(key, "test", "ec2:test")
 
-	assert.Equal(t, true, reflect.DeepEqual(rs.serviceprovider.logFiles, expected.serviceprovider.logFiles))
+	sp.AssertExpectations(t)
+}
+
+func TestResourceStore_addServiceAttrEntryForLogGroup(t *testing.T) {
+	sp := new(mockServiceProvider)
+	rs := ResourceStore{serviceprovider: sp}
+
+	key := LogGroupName("TestLogGroup")
+	serviceAttr := ServiceAttribute{
+		ServiceName:       "test",
+		ServiceNameSource: ServiceNameSourceInstrumentation,
+		Environment:       "ec2:test",
+	}
+	sp.On("addEntryForLogGroup", key, serviceAttr).Return()
+	rs.AddServiceAttrEntryForLogGroup(key, "test", "ec2:test")
+
+	sp.AssertExpectations(t)
 }

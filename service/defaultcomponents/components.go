@@ -31,6 +31,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 )
@@ -52,6 +53,7 @@ func Factories() (otelcol.Factories, error) {
 
 	if factories.Processors, err = processor.MakeFactoryMap(
 		awsapplicationsignals.NewFactory(),
+		awsentity.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		ec2tagger.NewFactory(),

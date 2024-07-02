@@ -157,6 +157,7 @@ extensions:
         profile: AmazonCloudWatchAgent
         shared_credential_file: fake-path
 processors:
+    awsentity: {}
     awsapplicationsignals:
         resolvers:
             - name: ""
@@ -477,6 +478,7 @@ service:
             exporters:
                 - awsemf/application_signals
             processors:
+                - awsentity
                 - resourcedetection
                 - awsapplicationsignals
             receivers:
