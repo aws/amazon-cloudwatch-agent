@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/stretchr/testify/assert"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 )
 
@@ -64,7 +65,7 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 			done := make(chan struct{})
 			s := serviceprovider{
 				metadataProvider: tt.args.metadataProvider,
-				ec2Provider: func(s string) ec2iface.EC2API {
+				ec2Provider: func(s string, config *configaws.CredentialConfig) ec2iface.EC2API {
 					return tt.args.ec2Client
 				},
 				ec2API: tt.args.ec2Client,
@@ -297,7 +298,7 @@ func Test_refreshLoop(t *testing.T) {
 			s := &serviceprovider{
 				metadataProvider: tt.fields.metadataProvider,
 				ec2API:           tt.fields.ec2API,
-				ec2Provider: func(s string) ec2iface.EC2API {
+				ec2Provider: func(s string, config *configaws.CredentialConfig) ec2iface.EC2API {
 					return tt.fields.ec2API
 				},
 				iamRole:           tt.fields.iamRole,

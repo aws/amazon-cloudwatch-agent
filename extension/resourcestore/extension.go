@@ -32,7 +32,7 @@ const (
 	EC2PlatForm          = "AWS::EC2"
 )
 
-type ec2ProviderType func(string) ec2iface.EC2API
+type ec2ProviderType func(string, *configaws.CredentialConfig) ec2iface.EC2API
 
 type ServiceNameProvider interface {
 	ServiceName()
@@ -82,12 +82,16 @@ func (r *ResourceStore) Start(ctx context.Context, host component.Host) error {
 	r.done = make(chan struct{})
 	r.metadataprovider = getMetaDataProvider()
 	r.mode = r.config.Mode
+	ec2CredentialConfig := &configaws.CredentialConfig{
+		Profile:  r.config.Profile,
+		Filename: r.config.Filename,
+	}
 	switch r.mode {
 	case config.ModeEC2:
-		r.ec2Info = *newEC2Info(r.metadataprovider, getEC2Provider, r.done)
+		r.ec2Info = *newEC2Info(r.metadataprovider, getEC2Provider, ec2CredentialConfig, r.done)
 		go r.ec2Info.initEc2Info()
 	}
-	r.serviceprovider = *newServiceProvider(r.metadataprovider, getEC2Provider, r.done)
+	r.serviceprovider = *newServiceProvider(r.metadataprovider, getEC2Provider, ec2CredentialConfig, r.done)
 	go r.serviceprovider.startServiceProvider()
 	return nil
 }
@@ -198,8 +202,7 @@ func getMetaDataProvider() ec2metadataprovider.MetadataProvider {
 	return ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), retryer.GetDefaultRetryNumber())
 }
 
-func getEC2Provider(region string) ec2iface.EC2API {
-	ec2CredentialConfig := &configaws.CredentialConfig{}
+func getEC2Provider(region string, ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 	ec2CredentialConfig.Region = region
 	return ec2.New(
 		ec2CredentialConfig.Credentials(),

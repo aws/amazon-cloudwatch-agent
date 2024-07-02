@@ -17,6 +17,8 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    resourcestore:
+        mode: ec2
 processors:
     ec2tagger:
         imds_retries: 1
@@ -33,6 +35,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - resourcestore
     pipelines:
         metrics/host:
             exporters:

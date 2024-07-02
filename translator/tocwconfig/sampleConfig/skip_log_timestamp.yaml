@@ -1,0 +1,35 @@
+exporters:
+  nop: {}
+extensions:
+  resourcestore:
+    mode: "ec2"
+receivers:
+  nop: {}
+service:
+  extensions:
+    - resourcestore
+  pipelines:
+    metrics/nop:
+      exporters:
+        - nop
+      processors: []
+      receivers:
+        - nop
+  telemetry:
+    logs:
+      development: false
+      disable_caller: false
+      disable_stacktrace: false
+      encoding: console
+      level: info
+      output_paths:
+        - /opt/tmp/a.log
+      sampling:
+        enabled: true
+        initial: 2
+        thereafter: 500
+        tick: 10s
+    metrics:
+      address: ""
+      level: None
+    traces: { }

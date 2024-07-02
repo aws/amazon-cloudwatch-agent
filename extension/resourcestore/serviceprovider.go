@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
@@ -51,6 +52,7 @@ type serviceprovider struct {
 	metadataProvider  ec2metadataprovider.MetadataProvider
 	ec2API            ec2iface.EC2API
 	ec2Provider       ec2ProviderType
+	ec2Credential     *configaws.CredentialConfig
 	iamRole           string
 	ec2TagServiceName string
 	done              chan struct{}
@@ -86,16 +88,15 @@ func (s *serviceprovider) ServiceAttribute(fileGlob string) ServiceAttribute {
 		serviceAttr.ServiceName = val.ServiceName
 		serviceAttr.ServiceNameSource = val.ServiceNameSource
 		serviceAttr.Environment = val.Environment
-		return serviceAttr
 	}
 	// Instance Tags
-	if s.ec2TagServiceName != "" {
+	if s.ec2TagServiceName != "" && serviceAttr.ServiceName == "" {
 		serviceAttr.ServiceName = s.ec2TagServiceName
 		serviceAttr.ServiceNameSource = ResourceTags
 		return serviceAttr
 	}
 	//IAM Role
-	if s.iamRole != "" {
+	if s.iamRole != "" && serviceAttr.ServiceName == "" {
 		serviceAttr.ServiceName = s.iamRole
 		serviceAttr.ServiceNameSource = ClientIamRole
 		return serviceAttr
@@ -165,7 +166,7 @@ func (s *serviceprovider) getEC2Client() error {
 	if err != nil {
 		return fmt.Errorf("failed to get EC2 client: %s", err)
 	}
-	s.ec2API = s.ec2Provider(region)
+	s.ec2API = s.ec2Provider(region, s.ec2Credential)
 	return nil
 }
 
@@ -192,10 +193,11 @@ func (s *serviceprovider) getEC2TagFilters() ([]*ec2.Filter, error) {
 	return tagFilters, nil
 }
 
-func newServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, done chan struct{}) *serviceprovider {
+func newServiceProvider(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) *serviceprovider {
 	return &serviceprovider{
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
+		ec2Credential:    ec2Credential,
 		done:             done,
 		logFiles:         map[string]ServiceAttribute{},
 	}

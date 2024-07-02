@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 )
@@ -38,6 +39,7 @@ type ec2Info struct {
 	metadataProvider ec2metadataprovider.MetadataProvider
 	ec2API           ec2iface.EC2API
 	ec2Provider      ec2ProviderType
+	ec2Credential    *configaws.CredentialConfig
 	done             chan struct{}
 }
 
@@ -46,7 +48,7 @@ func (ei *ec2Info) initEc2Info() {
 	if err := ei.setInstanceIdAndRegion(); err != nil {
 		return
 	}
-	ei.ec2API = ei.ec2Provider(ei.Region)
+	ei.ec2API = ei.ec2Provider(ei.Region, ei.ec2Credential)
 	if err := ei.setAutoScalingGroup(); err != nil {
 		return
 	}
@@ -169,10 +171,11 @@ func (ei *ec2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error
 	return nil
 }
 
-func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, done chan struct{}) *ec2Info {
+func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) *ec2Info {
 	return &ec2Info{
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
+		ec2Credential:    ec2Credential,
 		done:             done,
 	}
 }

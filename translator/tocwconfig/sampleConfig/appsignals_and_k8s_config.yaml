@@ -285,6 +285,8 @@ extensions:
         region: us-east-1
         service_name: ""
         role_arn: ""
+    resourcestore:
+      mode: ec2
 processors:
     awsapplicationsignals:
         limiter:
@@ -636,6 +638,7 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
+        - resourcestore
     pipelines:
         metrics/application_signals:
             exporters:

@@ -17,6 +17,8 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    resourcestore:
+        mode: ec2
 receivers:
     telegraf_socket_listener:
         collection_interval: 1m0s
@@ -25,6 +27,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - resourcestore
     pipelines:
         metrics/host:
             exporters:

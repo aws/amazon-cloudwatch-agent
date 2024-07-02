@@ -152,6 +152,10 @@ extensions:
         service_name: ""
         shared_credentials_file:
             - fake-path
+    resourcestore:
+        mode: onPremise
+        profile: AmazonCloudWatchAgent
+        shared_credential_file: fake-path
 processors:
     awsapplicationsignals:
         resolvers:
@@ -467,6 +471,7 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
+        - resourcestore
     pipelines:
         metrics/application_signals:
             exporters:

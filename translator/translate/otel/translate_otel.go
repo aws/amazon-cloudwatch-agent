@@ -21,11 +21,13 @@ import (
 	receiverAdapter "github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/resourcestore"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/emf_logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/host"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nop"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
@@ -78,9 +80,14 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	)
 	translators.Merge(registry)
 	pipelines, err := pipeline.NewTranslator(translators).Translate(conf)
-	if err != nil {
-		return nil, err
+	if pipelines == nil {
+		translators.Set(nop.NewTranslator())
+		pipelines, err = pipeline.NewTranslator(translators).Translate(conf)
+		if err != nil {
+			return nil, err
+		}
 	}
+	pipelines.Translators.Extensions.Set(resourcestore.NewTranslator())
 	cfg := &otelcol.Config{
 		Receivers:  map[component.ID]component.Config{},
 		Exporters:  map[component.ID]component.Config{},

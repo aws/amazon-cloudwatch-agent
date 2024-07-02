@@ -77,6 +77,8 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    resourcestore:
+        mode: ec2
 processors:
     batch/prometheus:
         metadata_cardinality_limit: 1000
@@ -91,6 +93,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - resourcestore
     pipelines:
         metrics/prometheus:
             exporters:

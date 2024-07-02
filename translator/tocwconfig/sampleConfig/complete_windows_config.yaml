@@ -91,6 +91,8 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    resourcestore:
+        mode: ec2
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000
@@ -234,6 +236,7 @@ service:
         - agenthealth/metrics
         - agenthealth/logs
         - agenthealth/traces
+        - resourcestore
     pipelines:
         logs/emf_logs:
             exporters:

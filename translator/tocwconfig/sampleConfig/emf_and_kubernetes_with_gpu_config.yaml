@@ -657,6 +657,10 @@ extensions:
             usage_flags:
                 mode: OP
                 region_type: ACJ
+    resourcestore:
+        mode: onPremise
+        profile: default
+        shared_credential_file: /root/.aws/credentials
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -1149,6 +1153,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - resourcestore
     pipelines:
         logs/emf_logs:
             exporters:
