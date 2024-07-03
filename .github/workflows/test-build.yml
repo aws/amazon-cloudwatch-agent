@@ -111,6 +111,16 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
 
+      - name: Replace AWS SDK (Linux)
+        run: |
+          mkdir ~/gosdk
+          aws s3 cp s3://compass-pre-release/staging.zip ~
+          unzip -q -d ~/gosdk ~/staging.zip || true
+          sdkPath=$(echo ~/gosdk/apollo/env/AWSGoSDK-Release/var/tmp/release-automation/staging-*/sdk/src/github.com/aws/aws-sdk-go)
+          echo $sdkPath
+          ls
+          go mod edit -replace github.com/aws/aws-sdk-go=$sdkPath
+
       - name: Build Binaries
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: make amazon-cloudwatch-agent-linux amazon-cloudwatch-agent-windows package-rpm package-deb package-win
