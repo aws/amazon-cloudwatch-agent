@@ -17,7 +17,7 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    resourcestore:
+    entitystore:
         mode: ec2
 processors:
     ec2tagger:
@@ -68,7 +68,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
-        - resourcestore
+        - entitystore
     pipelines:
         metrics/host:
             exporters:

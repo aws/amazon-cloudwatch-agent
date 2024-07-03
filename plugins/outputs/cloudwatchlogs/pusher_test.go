@@ -29,18 +29,16 @@ type mockLogSrc struct {
 	logs.LogSrc
 }
 
-func (m *mockLogSrc) ResourceID() *cloudwatchlogs.Resource {
-	return &cloudwatchlogs.Resource{
-		AttributeMaps: []map[string]*string{
-			{
-				"PlatformType":         aws.String("AWS::EC2"),
-				"EC2.InstanceId":       aws.String("i-123456789"),
-				"EC2.AutoScalingGroup": aws.String("test-group"),
-			},
+func (m *mockLogSrc) Entity() *cloudwatchlogs.Entity {
+	return &cloudwatchlogs.Entity{
+		Attributes: map[string]*string{
+			"PlatformType":         aws.String("AWS::EC2"),
+			"EC2.InstanceId":       aws.String("i-123456789"),
+			"EC2.AutoScalingGroup": aws.String("test-group"),
 		},
-		KeyAttributes: &cloudwatchlogs.KeyAttributes{
-			Name:        aws.String("myService"),
-			Environment: aws.String("myEnvironment"),
+		KeyAttributes: map[string]*string{
+			"Name":        aws.String("myService"),
+			"Environment": aws.String("myEnvironment"),
 		},
 	}
 }
@@ -109,17 +107,15 @@ func TestAddSingleEvent(t *testing.T) {
 	var s svcMock
 	called := false
 	nst := "NEXT_SEQ_TOKEN"
-	expectedResourceID := &cloudwatchlogs.Resource{
-		AttributeMaps: []map[string]*string{
-			{
-				"PlatformType":         aws.String("AWS::EC2"),
-				"EC2.InstanceId":       aws.String("i-123456789"),
-				"EC2.AutoScalingGroup": aws.String("test-group"),
-			},
+	expectedEntity := &cloudwatchlogs.Entity{
+		Attributes: map[string]*string{
+			"PlatformType":         aws.String("AWS::EC2"),
+			"EC2.InstanceId":       aws.String("i-123456789"),
+			"EC2.AutoScalingGroup": aws.String("test-group"),
 		},
-		KeyAttributes: &cloudwatchlogs.KeyAttributes{
-			Name:        aws.String("myService"),
-			Environment: aws.String("myEnvironment"),
+		KeyAttributes: map[string]*string{
+			"Name":        aws.String("myService"),
+			"Environment": aws.String("myEnvironment"),
 		},
 	}
 
@@ -137,7 +133,7 @@ func TestAddSingleEvent(t *testing.T) {
 		if len(in.LogEvents) != 1 || *in.LogEvents[0].Message != "MSG" {
 			t.Errorf("PutLogEvents called with incorrect message, got: '%v'", *in.LogEvents[0].Message)
 		}
-		require.Equal(t, expectedResourceID, in.Resource)
+		require.Equal(t, expectedEntity, in.Entity)
 		return &cloudwatchlogs.PutLogEventsOutput{
 			NextSequenceToken: &nst,
 		}, nil

@@ -111,7 +111,7 @@ func (w *windowsEventLog) Stop() {
 	close(w.done)
 }
 
-func (w *windowsEventLog) ResourceID() *cloudwatchlogs.Resource {
+func (w *windowsEventLog) Entity() *cloudwatchlogs.Entity {
 	return nil
 }
 

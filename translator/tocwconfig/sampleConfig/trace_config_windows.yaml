@@ -29,7 +29,7 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    resourcestore:
+    entitystore:
         mode: ec2
         profile: default
         shared_credential_file: /root/.aws/credentials
@@ -82,7 +82,7 @@ receivers:
 service:
     extensions:
         - agenthealth/traces
-        - resourcestore
+        - entitystore
     pipelines:
         traces/xray:
             exporters:

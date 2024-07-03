@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resourcestore
+package entitystore
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/resourcestore"
+	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -22,12 +22,12 @@ func TestTranslate(t *testing.T) {
 		input          map[string]interface{}
 		file_exists    bool
 		profile_exists bool
-		want           *resourcestore.Config
+		want           *entitystore.Config
 	}{
 		"OnlyProfile": {
 			input:          map[string]interface{}{},
 			profile_exists: true,
-			want: &resourcestore.Config{
+			want: &entitystore.Config{
 				Mode:    config.ModeEC2,
 				Profile: "test_profile",
 			},
@@ -35,7 +35,7 @@ func TestTranslate(t *testing.T) {
 		"OnlyFile": {
 			input:       map[string]interface{}{},
 			file_exists: true,
-			want: &resourcestore.Config{
+			want: &entitystore.Config{
 				Mode:     config.ModeEC2,
 				Filename: "test_file",
 			},
@@ -52,7 +52,7 @@ func TestTranslate(t *testing.T) {
 				translateagent.Global_Config.Credentials[translateagent.Profile_Key] = "test_profile"
 			}
 			tt := NewTranslator().(*translator)
-			assert.Equal(t, "resourcestore", tt.ID().String())
+			assert.Equal(t, "entitystore", tt.ID().String())
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.NoError(t, err)

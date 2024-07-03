@@ -97,7 +97,7 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    resourcestore:
+    entitystore:
         mode: ec2
 processors:
     batch/containerinsights:
@@ -165,7 +165,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
-        - resourcestore
+        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:

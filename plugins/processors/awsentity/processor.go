@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/resourcestore"
+	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 )
 
 const (
@@ -20,8 +20,8 @@ const (
 )
 
 // exposed as a variable for unit testing
-var addToResourceStore = func(logGroupName resourcestore.LogGroupName, serviceName string, environmentName string) {
-	rs := resourcestore.GetResourceStore()
+var addToEntityStore = func(logGroupName entitystore.LogGroupName, serviceName string, environmentName string) {
+	rs := entitystore.GetEntityStore()
 	if rs == nil {
 		return
 	}
@@ -30,7 +30,7 @@ var addToResourceStore = func(logGroupName resourcestore.LogGroupName, serviceNa
 
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
-// service/environment names to the resourcestore extension.
+// service/environment names to the entitystore extension.
 type awsEntityProcessor struct {
 	logger *zap.Logger
 }
@@ -58,7 +58,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			if logGroupName == "" {
 				continue
 			}
-			addToResourceStore(resourcestore.LogGroupName(logGroupName), serviceName.Str(), environmentName.Str())
+			addToEntityStore(entitystore.LogGroupName(logGroupName), serviceName.Str(), environmentName.Str())
 		}
 	}
 

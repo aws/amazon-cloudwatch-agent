@@ -657,7 +657,7 @@ extensions:
             usage_flags:
                 mode: OP
                 region_type: ACJ
-    resourcestore:
+    entitystore:
         mode: onPremise
         profile: default
         shared_credential_file: /root/.aws/credentials
@@ -1153,7 +1153,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
-        - resourcestore
+        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:

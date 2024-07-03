@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"golang.org/x/text/encoding"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/resourcestore"
+	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
 )
@@ -170,10 +170,10 @@ func (ts *tailerSrc) AddCleanUpFn(f func()) {
 	ts.cleanUpFns = append(ts.cleanUpFns, f)
 }
 
-func (ts *tailerSrc) ResourceID() *cloudwatchlogs.Resource {
-	rs := resourcestore.GetResourceStore()
+func (ts *tailerSrc) Entity() *cloudwatchlogs.Entity {
+	rs := entitystore.GetEntityStore()
 	if rs != nil {
-		return rs.CreateLogFileRID(resourcestore.LogFileGlob(ts.fileGlobPath), resourcestore.LogGroupName(ts.group))
+		return rs.CreateLogFileEntity(entitystore.LogFileGlob(ts.fileGlobPath), entitystore.LogGroupName(ts.group))
 	}
 	return nil
 }

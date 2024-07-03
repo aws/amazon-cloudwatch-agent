@@ -40,7 +40,7 @@ type LogSrc interface {
 	Description() string
 	Retention() int
 	Class() string
-	ResourceID() *cloudwatchlogs.Resource
+	Entity() *cloudwatchlogs.Entity
 	Stop()
 }
 
@@ -72,11 +72,6 @@ func NewLogAgent(c *config.Config) *LogAgent {
 		destNames:                 make(map[LogDest]string),
 		retentionAlreadyAttempted: make(map[string]bool),
 	}
-}
-
-type ResourceID struct {
-	KeyAttributes map[string]string
-	AttributeMap  map[string]string
 }
 
 // Run LogAgent will scan all input and output plugins for LogCollection and LogBackend.

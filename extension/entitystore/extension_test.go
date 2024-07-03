@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resourcestore
+package entitystore
 
 import (
 	"context"
@@ -92,7 +92,7 @@ func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey stri
 	return m.TagValue, nil
 }
 
-func TestResourceStore_EC2Info(t *testing.T) {
+func TestEntityStore_EC2Info(t *testing.T) {
 	tests := []struct {
 		name         string
 		ec2InfoInput ec2Info
@@ -112,7 +112,7 @@ func TestResourceStore_EC2Info(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourceStore{
+			r := &EntityStore{
 				ec2Info: tt.ec2InfoInput,
 			}
 			if got := r.EC2Info(); !reflect.DeepEqual(got, tt.want) {
@@ -122,7 +122,7 @@ func TestResourceStore_EC2Info(t *testing.T) {
 	}
 }
 
-func TestResourceStore_Mode(t *testing.T) {
+func TestEntityStore_Mode(t *testing.T) {
 	tests := []struct {
 		name      string
 		modeInput string
@@ -132,7 +132,7 @@ func TestResourceStore_Mode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourceStore{
+			r := &EntityStore{
 				mode: tt.modeInput,
 			}
 			if got := r.Mode(); got != tt.want {
@@ -166,7 +166,7 @@ func Test_getRegion(t *testing.T) {
 	}
 }
 
-func TestResourceStore_createAttributeMaps(t *testing.T) {
+func TestEntityStore_createAttributeMaps(t *testing.T) {
 	type fields struct {
 		ec2Info ec2Info
 		mode    string
@@ -227,7 +227,7 @@ func TestResourceStore_createAttributeMaps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourceStore{
+			r := &EntityStore{
 				ec2Info: tt.fields.ec2Info,
 				mode:    tt.fields.mode,
 			}
@@ -236,16 +236,16 @@ func TestResourceStore_createAttributeMaps(t *testing.T) {
 	}
 }
 
-func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
+func TestEntityStore_createServiceKeyAttributes(t *testing.T) {
 	tests := []struct {
 		name        string
 		serviceAttr ServiceAttribute
-		want        *cloudwatchlogs.KeyAttributes
+		want        map[string]*string
 	}{
 		{
 			name:        "NameAndEnvironmentSet",
 			serviceAttr: ServiceAttribute{ServiceName: "test-service", Environment: "test-environment"},
-			want: &cloudwatchlogs.KeyAttributes{
+			want: map[string]*string{
 				Environment: aws.String("test-environment"),
 				Name:        aws.String("test-service"),
 				Type:        aws.String(Service),
@@ -254,7 +254,7 @@ func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
 		{
 			name:        "OnlyNameSet",
 			serviceAttr: ServiceAttribute{ServiceName: "test-service"},
-			want: &cloudwatchlogs.KeyAttributes{
+			want: map[string]*string{
 				Name: aws.String("test-service"),
 				Type: aws.String(Service),
 			},
@@ -262,7 +262,7 @@ func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
 		{
 			name:        "OnlyEnvironmentSet",
 			serviceAttr: ServiceAttribute{Environment: "test-environment"},
-			want: &cloudwatchlogs.KeyAttributes{
+			want: map[string]*string{
 				Environment: aws.String("test-environment"),
 				Type:        aws.String(Service),
 			},
@@ -270,13 +270,13 @@ func TestResourceStore_createServiceKeyAttributes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourceStore{}
-			assert.Equalf(t, tt.want, r.createServiceKeyAttributes(tt.serviceAttr), "createServiceKeyAttributes()")
+			r := &EntityStore{}
+			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(r.createServiceKeyAttributes(tt.serviceAttr)), "createServiceKeyAttributes()")
 		})
 	}
 }
 
-func TestResourceStore_createLogFileRID(t *testing.T) {
+func TestEntityStore_createLogFileRID(t *testing.T) {
 	instanceId := "i-abcd1234"
 	accountId := "123456789012"
 	glob := LogFileGlob("glob")
@@ -288,7 +288,7 @@ func TestResourceStore_createLogFileRID(t *testing.T) {
 	}
 	sp := new(mockServiceProvider)
 	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
-	rs := ResourceStore{
+	rs := EntityStore{
 		mode:             config.ModeEC2,
 		ec2Info:          ec2Info{InstanceID: instanceId},
 		serviceprovider:  sp,
@@ -297,30 +297,25 @@ func TestResourceStore_createLogFileRID(t *testing.T) {
 		nativeCredential: &session.Session{},
 	}
 
-	resource := rs.CreateLogFileRID(glob, group)
+	entity := rs.CreateLogFileEntity(glob, group)
 
-	expectedResource := cloudwatchlogs.Resource{
-		KeyAttributes: &cloudwatchlogs.KeyAttributes{
+	expectedEntity := cloudwatchlogs.Entity{
+		KeyAttributes: map[string]*string{
 			Environment: aws.String("test-environment"),
 			Name:        aws.String("test-service"),
 			Type:        aws.String(Service),
 		},
-		AttributeMaps: []map[string]*string{
-			{
-				InstanceIDKey:        aws.String(instanceId),
-				ServiceNameSourceKey: aws.String(ServiceNameSourceUserConfiguration),
-				PlatformType:         aws.String(EC2PlatForm),
-			},
+		Attributes: map[string]*string{
+			InstanceIDKey:        aws.String(instanceId),
+			ServiceNameSourceKey: aws.String(ServiceNameSourceUserConfiguration),
+			PlatformType:         aws.String(EC2PlatForm),
 		},
 	}
-	assert.Equal(t, *expectedResource.KeyAttributes.Environment, *resource.KeyAttributes.Environment)
-	assert.Equal(t, *expectedResource.KeyAttributes.Name, *resource.KeyAttributes.Name)
-	assert.Equal(t, *expectedResource.KeyAttributes.Type, *resource.KeyAttributes.Type)
-	assert.Len(t, resource.AttributeMaps, 1)
-	assert.Equal(t, dereferenceMap(expectedResource.AttributeMaps[0]), dereferenceMap(resource.AttributeMaps[0]))
+	assert.Equal(t, dereferenceMap(expectedEntity.KeyAttributes), dereferenceMap(entity.KeyAttributes))
+	assert.Equal(t, dereferenceMap(expectedEntity.Attributes), dereferenceMap(entity.Attributes))
 }
 
-func TestResourceStore_shouldReturnRID(t *testing.T) {
+func TestEntityStore_shouldReturnRID(t *testing.T) {
 	type fields struct {
 		metadataprovider ec2metadataprovider.MetadataProvider
 		stsClient        stsiface.STSAPI
@@ -353,12 +348,12 @@ func TestResourceStore_shouldReturnRID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ResourceStore{
+			r := &EntityStore{
 				metadataprovider: tt.fields.metadataprovider,
 				stsClient:        tt.fields.stsClient,
 				nativeCredential: tt.fields.nativeCredential,
 			}
-			assert.Equalf(t, tt.want, r.shouldReturnRID(), "shouldReturnRID()")
+			assert.Equalf(t, tt.want, r.shouldReturnEntity(), "shouldReturnEntity()")
 		})
 	}
 }
@@ -375,9 +370,9 @@ func dereferenceMap(input map[string]*string) map[string]string {
 	return result
 }
 
-func TestResourceStore_addServiceAttrEntryForLogFile(t *testing.T) {
+func TestEntityStore_addServiceAttrEntryForLogFile(t *testing.T) {
 	sp := new(mockServiceProvider)
-	rs := ResourceStore{serviceprovider: sp}
+	rs := EntityStore{serviceprovider: sp}
 
 	key := LogFileGlob("/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log")
 	serviceAttr := ServiceAttribute{
@@ -391,9 +386,9 @@ func TestResourceStore_addServiceAttrEntryForLogFile(t *testing.T) {
 	sp.AssertExpectations(t)
 }
 
-func TestResourceStore_addServiceAttrEntryForLogGroup(t *testing.T) {
+func TestEntityStore_addServiceAttrEntryForLogGroup(t *testing.T) {
 	sp := new(mockServiceProvider)
-	rs := ResourceStore{serviceprovider: sp}
+	rs := EntityStore{serviceprovider: sp}
 
 	key := LogGroupName("TestLogGroup")
 	serviceAttr := ServiceAttribute{

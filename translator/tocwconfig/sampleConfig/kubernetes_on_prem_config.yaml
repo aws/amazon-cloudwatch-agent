@@ -359,7 +359,7 @@ extensions:
             usage_flags:
                 mode: OP
                 region_type: ACJ
-    resourcestore:
+    entitystore:
         mode: onPremise
         profile: AmazonCloudWatchAgent
         shared_credential_file: fake-path
@@ -410,7 +410,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
-        - resourcestore
+        - entitystore
     pipelines:
         metrics/containerinsights:
             exporters:

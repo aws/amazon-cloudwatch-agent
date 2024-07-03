@@ -1,13 +1,13 @@
 exporters:
     nop: {}
 extensions:
-    resourcestore:
+    entitystore:
       mode: "ec2"
 receivers:
     nop: {}
 service:
     extensions:
-      - resourcestore
+      - entitystore
     pipelines:
         metrics/nop:
             exporters:

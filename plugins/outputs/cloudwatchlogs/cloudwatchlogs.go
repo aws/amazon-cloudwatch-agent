@@ -24,7 +24,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
-	"github.com/aws/amazon-cloudwatch-agent/extension/resourcestore"
+	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -135,9 +135,9 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 		Filename:  c.Filename,
 		Token:     c.Token,
 	}
-	resourcestore := resourcestore.GetResourceStore()
-	if resourcestore != nil && !resourcestore.NativeCredentialExists() {
-		resourcestore.SetNativeCredential(credentialConfig.Credentials())
+	entitystore := entitystore.GetEntityStore()
+	if entitystore != nil && !entitystore.NativeCredentialExists() {
+		entitystore.SetNativeCredential(credentialConfig.Credentials())
 	}
 	if cwd, ok := c.cwDests[t]; ok {
 		return cwd

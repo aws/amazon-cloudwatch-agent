@@ -19,7 +19,7 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    resourcestore:
+    entitystore:
         mode: ec2
         profile: AmazonCloudWatchAgent
         shared_credential_file: fake-path
@@ -69,7 +69,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
-        - resourcestore
+        - entitystore
     pipelines:
         metrics/host:
             exporters:

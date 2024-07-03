@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package resourcestore
+package entitystore
 
 import (
 	"context"
@@ -30,6 +30,9 @@ const (
 	ServiceNameSourceKey = "AWS.ServiceNameSource"
 	PlatformType         = "PlatformType"
 	EC2PlatForm          = "AWS::EC2"
+	Type                 = "Type"
+	Name                 = "Name"
+	Environment          = "Environment"
 )
 
 type ec2ProviderType func(string, *configaws.CredentialConfig) ec2iface.EC2API
@@ -45,7 +48,7 @@ type eksInfo struct {
 	ClusterName string
 }
 
-type ResourceStore struct {
+type EntityStore struct {
 	logger *zap.Logger
 	config *Config
 	done   chan struct{}
@@ -61,7 +64,7 @@ type ResourceStore struct {
 	eksInfo eksInfo
 
 	// serviceprovider stores information about possible service names
-	// that we can attach to the resource ID
+	// that we can attach to the entity
 	serviceprovider serviceProviderInterface
 
 	// nativeCredential stores the credential config for agent's native
@@ -73,9 +76,9 @@ type ResourceStore struct {
 	stsClient stsiface.STSAPI
 }
 
-var _ extension.Extension = (*ResourceStore)(nil)
+var _ extension.Extension = (*EntityStore)(nil)
 
-func (r *ResourceStore) Start(ctx context.Context, host component.Host) error {
+func (r *EntityStore) Start(ctx context.Context, host component.Host) error {
 	// Get IMDS client and EC2 API client which requires region for authentication
 	// These will be passed down to any object that requires access to IMDS or EC2
 	// API client so we have single source of truth for credential
@@ -96,34 +99,34 @@ func (r *ResourceStore) Start(ctx context.Context, host component.Host) error {
 	return nil
 }
 
-func (r *ResourceStore) Shutdown(_ context.Context) error {
+func (r *EntityStore) Shutdown(_ context.Context) error {
 	close(r.done)
 	return nil
 }
 
-func (r *ResourceStore) Mode() string {
+func (r *EntityStore) Mode() string {
 	return r.mode
 }
 
-func (r *ResourceStore) EKSInfo() eksInfo {
+func (r *EntityStore) EKSInfo() eksInfo {
 	return r.eksInfo
 }
 
-func (r *ResourceStore) EC2Info() ec2Info {
+func (r *EntityStore) EC2Info() ec2Info {
 	return r.ec2Info
 }
 
-func (r *ResourceStore) SetNativeCredential(client client.ConfigProvider) {
+func (r *EntityStore) SetNativeCredential(client client.ConfigProvider) {
 	r.nativeCredential = client
 }
 
-func (r *ResourceStore) NativeCredentialExists() bool {
+func (r *EntityStore) NativeCredentialExists() bool {
 	return r.nativeCredential != nil
 }
 
-// CreateLogFileRID creates the RID for log events that are being uploaded from a log file in the environment.
-func (r *ResourceStore) CreateLogFileRID(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Resource {
-	if !r.shouldReturnRID() {
+// CreateLogFileEntity creates the entity for log events that are being uploaded from a log file in the environment.
+func (r *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Entity {
+	if !r.shouldReturnEntity() {
 		return nil
 	}
 
@@ -133,14 +136,14 @@ func (r *ResourceStore) CreateLogFileRID(logFileGlob LogFileGlob, logGroupName L
 	attributeMap := r.createAttributeMap()
 	addNonEmptyToMap(attributeMap, ServiceNameSourceKey, serviceAttr.ServiceNameSource)
 
-	return &cloudwatchlogs.Resource{
+	return &cloudwatchlogs.Entity{
 		KeyAttributes: keyAttributes,
-		AttributeMaps: []map[string]*string{attributeMap},
+		Attributes:    attributeMap,
 	}
 }
 
-// AddServiceAttrEntryForLogFile adds an entry to the resource store for the provided file glob -> (serviceName, environmentName) key-value pair
-func (r *ResourceStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serviceName string, environmentName string) {
+// AddServiceAttrEntryForLogFile adds an entry to the entity store for the provided file glob -> (serviceName, environmentName) key-value pair
+func (r *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serviceName string, environmentName string) {
 	if r.serviceprovider != nil {
 		r.serviceprovider.addEntryForLogFile(fileGlob, ServiceAttribute{
 			ServiceName:       serviceName,
@@ -150,8 +153,8 @@ func (r *ResourceStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serv
 	}
 }
 
-// AddServiceAttrEntryForLogGroup adds an entry to the resource store for the provided log group nme -> (serviceName, environmentName) key-value pair
-func (r *ResourceStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, serviceName string, environmentName string) {
+// AddServiceAttrEntryForLogGroup adds an entry to the entity store for the provided log group nme -> (serviceName, environmentName) key-value pair
+func (r *EntityStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, serviceName string, environmentName string) {
 	r.serviceprovider.addEntryForLogGroup(logGroupName, ServiceAttribute{
 		ServiceName:       serviceName,
 		ServiceNameSource: ServiceNameSourceInstrumentation,
@@ -159,7 +162,7 @@ func (r *ResourceStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName
 	})
 }
 
-func (r *ResourceStore) createAttributeMap() map[string]*string {
+func (r *EntityStore) createAttributeMap() map[string]*string {
 	attributeMap := make(map[string]*string)
 
 	if r.mode == config.ModeEC2 {
@@ -173,23 +176,19 @@ func (r *ResourceStore) createAttributeMap() map[string]*string {
 	return attributeMap
 }
 
-// createServiceKeyAttribute creates KeyAttributes for Service resources
-func (r *ResourceStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) *cloudwatchlogs.KeyAttributes {
-	serviceKeyAttr := &cloudwatchlogs.KeyAttributes{
+// createServiceKeyAttribute creates KeyAttributes for Service entities
+func (r *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) map[string]*string {
+	serviceKeyAttr := map[string]*string{
 		Type: aws.String(Service),
 	}
-	if serviceAttr.ServiceName != "" {
-		serviceKeyAttr.SetName(serviceAttr.ServiceName)
-	}
-	if serviceAttr.Environment != "" {
-		serviceKeyAttr.SetEnvironment(serviceAttr.Environment)
-	}
+	addNonEmptyToMap(serviceKeyAttr, Name, serviceAttr.ServiceName)
+	addNonEmptyToMap(serviceKeyAttr, Environment, serviceAttr.Environment)
 	return serviceKeyAttr
 }
 
-// shouldReturnRID checks if the account ID for the instance is
+// shouldReturnEntity checks if the account ID for the instance is
 // matching the account ID when assuming role for the current credential.
-func (r *ResourceStore) shouldReturnRID() bool {
+func (r *EntityStore) shouldReturnEntity() bool {
 	if r.nativeCredential == nil || r.metadataprovider == nil {
 		r.logger.Debug("there is no credential stored for cross-account checks")
 		return false
