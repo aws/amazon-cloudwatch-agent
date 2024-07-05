@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -30,8 +29,8 @@ import (
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -242,7 +241,7 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-
+	log.Printf("I! TOML config: %v", *c)
 	err = loadTomlConfigIntoAgent(c)
 	if err != nil {
 		return err
@@ -289,7 +288,7 @@ func runAgent(ctx context.Context,
 		testWaitDuration := time.Duration(*fTestWait) * time.Second
 		return ag.Test(ctx, testWaitDuration)
 	}
-
+	log.Printf("I! pidfile %v \n", *fPidfile)
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -307,7 +306,7 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
-
+	log.Printf("I! c  %v %v \n", c.Inputs, c.Outputs)
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
@@ -319,19 +318,24 @@ func runAgent(ctx context.Context,
 		_, err = os.Stat(*fOtelConfig)
 		if errors.Is(err, os.ErrNotExist) {
 			useragent.Get().SetComponents(&otelcol.Config{}, c)
+			log.Printf("I! Starting telemetry \n")
 			return ag.Run(ctx)
 		}
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
-
+	log.Printf("I! Starting otel \n")
 	yamlConfigPath := *fOtelConfig
-	provider, err := configprovider.Get(yamlConfigPath)
+	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
+	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
+	providerSettings, err := configprovider.GetSettings(yamlConfigPath, logger)
+	provider, err := configprovider.Get(yamlConfigPath, logger)
 	if err != nil {
 		log.Printf("E! Error while initializing config provider: %v\n", err)
 		return err
 	}
 
 	factories, err := components(c)
+	log.Printf("I! Factories: %+v", factories)
 	if err != nil {
 		log.Printf("E! Error while adapting telegraf input plugins: %v\n", err)
 		return err
@@ -341,31 +345,36 @@ func runAgent(ctx context.Context,
 	if err != nil {
 		return err
 	}
-
+	log.Printf("I! Col config: %+v \n", cfg)
 	useragent.Get().SetComponents(cfg, c)
 
-	params := getCollectorParams(factories, provider, writer)
-
-	_ = featuregate.GlobalRegistry().Set("exporter.xray.allowDot", true)
+	params := getCollectorParams(factories, providerSettings, loggerOptions)
+	log.Printf("I! Starting otelcol %+v\n", params)
 	cmd := otelcol.NewCommand(params)
-
-	// Noticed that args of parent process get passed here to otel collector which causes failures complaining about
-	// unrecognized args. So below change overwrites the args. Need to investigate this further as I dont think the config
-	// path below here is actually used and it still respects what was set in the settings above.
-	e := []string{"--config=" + yamlConfigPath + " --feature-gates=exporter.xray.allowDot"}
+	log.Printf("I! Executing CMD: %#v %#v %#v \n", cmd.Args, cmd.Run, cmd.Commands())
+	for _, command := range cmd.Commands() {
+		log.Println(command.Name(), command, command.Execute())
+	}
+	// *************************************************************************************************
+	// ⚠️ WARNING ⚠️
+	// Noticed that args of parent process get passed here to otel collector which causes failures
+	// complaining about unrecognized args. So below change overwrites the args. Need to investigate this
+	// further as I don't think the config path below here is actually used and it still respects what
+	// was set in the settings above.
+	// *************************************************************************************************
+	e := []string{"--config=" + yamlConfigPath}
 	cmd.SetArgs(e)
-
-	return cmd.Execute()
+	err = cmd.Execute()
+	log.Printf("I! We got error: %+v \n", err)
+	return err
 }
 
-func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider, writer io.Writer) otelcol.CollectorSettings {
-	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
-	loggingOptions := cwaLogger.NewLoggerOptions(writer, level)
+func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.ConfigProviderSettings, loggingOptions []zap.Option) otelcol.CollectorSettings {
 	return otelcol.CollectorSettings{
 		Factories: func() (otelcol.Factories, error) {
 			return factories, nil
 		},
-		ConfigProvider: provider,
+		ConfigProviderSettings: providerSettings,
 		// build info is essential for populating the user agent string in otel contrib upstream exporters, like the EMF exporter
 		BuildInfo: component.BuildInfo{
 			Command:     "CWAgent",
@@ -427,7 +436,6 @@ func (p *program) Stop(_ service.Service) error {
 func main() {
 	flag.Parse()
 	args := flag.Args()
-
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
 	if *fSectionFilters != "" {
 		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
@@ -448,7 +456,6 @@ func main() {
 	}
 
 	logger.SetupLogging(logger.LogConfig{})
-
 	if *pprofAddr != "" {
 		go func() {
 			pprofHostPort := *pprofAddr

@@ -20,7 +20,7 @@ import (
 func Test_getCollectorParams(t *testing.T) {
 	type args struct {
 		factories otelcol.Factories
-		provider  otelcol.ConfigProvider
+		providerSettings  otelcol.ConfigProviderSettings
 	}
 	tests := []struct {
 		name string
@@ -31,13 +31,13 @@ func Test_getCollectorParams(t *testing.T) {
 			name: "BuildInfoIsSet",
 			args: args{
 				factories: otelcol.Factories{},
-				provider:  nil,
+				providerSettings:  otelcol.ConfigProviderSettings{},
 			},
 			want: otelcol.CollectorSettings{
 				Factories: func() (otelcol.Factories, error) {
 					return otelcol.Factories{}, nil
 				},
-				ConfigProvider: nil,
+				ConfigProviderSettings: otelcol.ConfigProviderSettings{},
 				BuildInfo: component.BuildInfo{
 					Command:     "CWAgent",
 					Description: "CloudWatch Agent",
@@ -51,7 +51,7 @@ func Test_getCollectorParams(t *testing.T) {
 		logger.SetLevel(zap.NewAtomicLevelAt(zapcore.InfoLevel))
 		wlog.SetLevel(wlog.INFO)
 		t.Run(tt.name, func(t *testing.T) {
-			got := getCollectorParams(tt.args.factories, tt.args.provider, os.Stderr)
+			got := getCollectorParams(tt.args.factories, tt.args.providerSettings, tt.want.LoggingOptions)
 			if deep.Equal(got, tt.want) != nil {
 				t.Errorf("getCollectorParams() = %v, want %v", got, tt.want)
 			}
