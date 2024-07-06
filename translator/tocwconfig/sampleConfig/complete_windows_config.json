@@ -122,7 +122,19 @@
             "cpu_time_user"
           ]
         }
-      ]
+      ],
+      "jmx": {
+        "endpoint": "localhost:8080",
+        "tomcat": {
+          "measurement": [
+            "tomcat.sessions",
+            {
+              "name": "tomcat.errors",
+              "rename": "TC_ERR"
+            }
+          ]
+        }
+      }
     },
     "append_dimensions": {
       "ImageId": "${aws:ImageId}",

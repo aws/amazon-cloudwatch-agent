@@ -111,6 +111,32 @@ processors:
             - ImageId
         refresh_interval_seconds: 0s
         imds_retries: 1
+    filter/jmx:
+        error_mode: propagate
+        logs: {}
+        metrics:
+            include:
+                match_type: strict
+                metric_names:
+                    - tomcat.sessions
+                    - tomcat.errors
+        spans: {}
+        traces: {}
+    resource/jmx:
+        attributes:
+            - action: delete
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: ""
+              pattern: telemetry.sdk.*
+            - action: delete
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: service.name
+              pattern: ""
+              value: unknown_service:java
     transform:
         error_mode: propagate
         log_statements: []
@@ -121,6 +147,14 @@ processors:
                   - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
                   - set(unit, "PERCENT") where name == "Processor % Idle Time"
                   - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
+        trace_statements: []
+    transform/jmx:
+        error_mode: propagate
+        log_statements: []
+        metric_statements:
+            - context: metric
+              statements:
+                  - set(name, "TC_ERR") where name == "tomcat.errors"
         trace_statements: []
 receivers:
     awsxray:
@@ -152,6 +186,14 @@ receivers:
                 reload_interval: 0s
                 server_name_override: ""
         transport: udp
+    jmx:
+        collection_interval: 1m0s
+        endpoint: localhost:8080
+        jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
+        otlp:
+            endpoint: 0.0.0.0:0
+            timeout: 5s
+        target_system: tomcat
     otlp/traces:
         protocols:
             grpc:
@@ -258,6 +300,16 @@ service:
                 - telegraf_win_perf_counters/3081249416
                 - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
+        metrics/jmx:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx
+                - resource/jmx
+                - transform/jmx
+                - ec2tagger
+            receivers:
+                - jmx
         traces/xray:
             exporters:
                 - awsxray
