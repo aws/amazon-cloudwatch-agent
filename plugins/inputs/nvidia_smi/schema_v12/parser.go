@@ -82,7 +82,19 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.PowerDraw)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.PowerDraw)
+
 		acc.AddFields("nvidia_smi", fields, tags, timestamp)
+
+		for _, process := range gpu.Processes.ProcessInfo {
+			tags := map[string]string{}
+			common.SetTagIfUsed(tags, "process_name", process.ProcessName)
+			common.SetTagIfUsed(tags, "process_id", process.Pid)
+
+			fields := map[string]interface{}{}
+			common.SetIfUsed("int", fields, "process_used_memory", process.UsedMemory)
+
+			acc.AddFields("nvidia_smi", fields, tags, timestamp)
+		}
 
 		for _, device := range gpu.MigDevices.MigDevice {
 			tags := map[string]string{}
@@ -107,6 +119,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 
 			acc.AddFields("nvidia_smi_mig", fields, tags, timestamp)
 		}
+
 	}
 
 	return nil

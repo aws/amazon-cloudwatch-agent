@@ -287,6 +287,26 @@ func TestGatherValidXML(t *testing.T) {
 						"vbios_version":                     "90.04.84.00.06",
 					},
 					time.Unix(0, 0)),
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"process_name": "/usr/lib/xorg/Xorg",
+						"process_id":   "675",
+					},
+					map[string]interface{}{
+						"process_used_memory": 22,
+					},
+					time.Unix(0, 0)),
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"process_name": "python",
+						"process_id":   "5762",
+					},
+					map[string]interface{}{
+						"process_used_memory": 1005,
+					},
+					time.Unix(0, 0)),
 			},
 		},
 		{
@@ -339,6 +359,16 @@ func TestGatherValidXML(t *testing.T) {
 						"vbios_version":                 "94.02.75.00.01",
 					},
 					time.Unix(0, 0)),
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"process_name": "/usr/lib/xorg/Xorg",
+						"process_id":   "725",
+					},
+					map[string]interface{}{
+						"process_used_memory": 22,
+					},
+					time.Unix(0, 0)),
 			},
 		},
 		{
@@ -386,6 +416,26 @@ func TestGatherValidXML(t *testing.T) {
 						"utilization_decoder":           0,
 						"utilization_ofa":               0,
 						"vbios_version":                 "94.02.71.40.72",
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"process_name": "/usr/lib/xorg/Xorg",
+						"process_id":   "675",
+					},
+					map[string]interface{}{
+						"process_used_memory": 22,
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"process_name": "python",
+						"process_id":   "5762",
+					},
+					map[string]interface{}{
+						"process_used_memory": 1005,
 					},
 					time.Unix(1689872450, 0)),
 			},
