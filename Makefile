@@ -16,11 +16,9 @@ CWAGENT_BUILD_MODE=default
 endif
 
 BUILD := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-GATHERER_JAR_HASH = $(shell sha256sum packaging/opentelemetry-jmx-metrics.jar | cut -d' ' -f 1)
 LDFLAGS = -s -w
 LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.VersionStr=${VERSION}
 LDFLAGS +=  -X github.com/aws/amazon-cloudwatch-agent/cfg/agentinfo.BuildStr=${BUILD}
-LDFLAGS +=  -X github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver.MetricsGathererHash=${GATHERER_JAR_HASH}
 LINUX_AMD64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_amd64
 LINUX_ARM64_BUILD = CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/linux_arm64
 WIN_BUILD = GOOS=windows GOARCH=amd64 go build -trimpath -buildmode=${CWAGENT_BUILD_MODE} -ldflags="${LDFLAGS}" -o $(BUILD_SPACE)/bin/windows_amd64
