@@ -73,7 +73,7 @@ processors:
         trace_statements: []
 receivers:
     jmx:
-        collection_interval: 10s
+        collection_interval: 1m0s
         endpoint: localhost:8080
         jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
         otlp:
