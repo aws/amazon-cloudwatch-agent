@@ -30,6 +30,10 @@ type attributesNormalizer struct {
 	logger *zap.Logger
 }
 
+var attributesRenaming = map[string]string{
+	attr.AWSRemoteDbUser: common.AttributeRemoteDbUser,
+}
+
 var attributesRenamingForMetric = map[string]string{
 	attr.AWSLocalService:             common.MetricAttributeLocalService,
 	attr.AWSLocalOperation:           common.MetricAttributeLocalOperation,
@@ -40,7 +44,6 @@ var attributesRenamingForMetric = map[string]string{
 	attr.AWSRemoteTarget:             common.MetricAttributeRemoteResourceIdentifier,
 	attr.AWSRemoteResourceIdentifier: common.MetricAttributeRemoteResourceIdentifier,
 	attr.AWSRemoteResourceType:       common.MetricAttributeRemoteResourceType,
-	attr.AWSRemoteDbUser:             common.MetricAttributeRemoteDbUser,
 }
 
 var resourceAttributesRenamingForTrace = map[string]string{
@@ -98,6 +101,7 @@ func (n *attributesNormalizer) renameAttributes(attributes, resourceAttributes p
 		rename(resourceAttributes, resourceAttributesRenamingForTrace)
 		rename(attributes, attributesRenamingForTrace)
 	} else {
+		rename(attributes, attributesRenaming)
 		rename(attributes, attributesRenamingForMetric)
 	}
 }

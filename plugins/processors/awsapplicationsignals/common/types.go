@@ -12,7 +12,6 @@ const (
 	MetricAttributeRemoteOperation          = "RemoteOperation"
 	MetricAttributeRemoteResourceIdentifier = "RemoteResourceIdentifier"
 	MetricAttributeRemoteResourceType       = "RemoteResourceType"
-	MetricAttributeRemoteDbUser             = "RemoteDbUser"
 )
 
 const (
@@ -23,6 +22,7 @@ const (
 	AttributeEC2InstanceId       = "EC2.InstanceId"
 	AttributeHost                = "Host"
 	AttributePlatformType        = "PlatformType"
+	AttributeRemoteDbUser        = "RemoteDbUser"
 	AttributeTelemetrySDK        = "Telemetry.SDK"
 	AttributeTelemetryAgent      = "Telemetry.Agent"
 	AttributeTelemetrySource     = "Telemetry.Source"
