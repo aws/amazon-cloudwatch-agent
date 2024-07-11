@@ -1,4 +1,18 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300042.0 (2024-07-10)
+========================================================================
+Enhancements:
+* [Application Signals] Optimize memory utilization on Kubernetes
+* [Application Signals] Add remote db user attribute to traces and logs
+* [Metrics] Support append_dimension for ethtool
+
+Bug Fixes:
+* [Metrics/Plugin] Reduce logging for known non-convertible metric units
+* [Metrics/Plugin] Fix tomcat.sessions metric to aggregate for all Tomcat applications
+* [Metrics/Plugin] Update default collection interval to 60 seconds
+* [ApplicationSignals] Add log group names as attribute (#1220)
+
+========================================================================
 Amazon CloudWatch Agent 1.300041.0 (2024-06-07)
 ========================================================================
 
