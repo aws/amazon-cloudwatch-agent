@@ -18,9 +18,9 @@ type supportedJar struct {
 
 func TestOpentelemetryJMXMetricsJarSHA(t *testing.T) {
 	var jmxMetricsGathererVersions = map[string]supportedJar{
-		"60b2ee1a798c35d10f6e3602ea46f1b1c0298080262636d73b4fc652b7dcd0da": {
-			version: "1.35.0-alpha",
-			jar:     "JMX metrics gatherer",
+		"14f28b1c45e6ad91faa7f25462bfd96e6ab3b6980afe5534f92b8a4973895cbb": {
+			version: "1.37.0-fix",
+			jar:     "JMX metrics gatherer w/ Tomcat metrics fix",
 		},
 	}
 	hash, _ := hashFile("opentelemetry-jmx-metrics.jar")
