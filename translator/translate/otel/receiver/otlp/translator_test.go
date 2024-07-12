@@ -87,7 +87,7 @@ func TestTracesTranslator(t *testing.T) {
 				gotCfg, ok := got.(*otlpreceiver.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})
@@ -211,7 +211,7 @@ func TestTranslateAppSignals(t *testing.T) {
 				gotCfg, ok := got.(*otlpreceiver.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

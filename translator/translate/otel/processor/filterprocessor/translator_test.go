@@ -129,7 +129,7 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*filterprocessor.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				require.Equal(t, wantCfg, gotCfg)
 			}
 		})

@@ -72,7 +72,7 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*resourceprocessor.Config)
 				assert.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				assert.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				assert.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

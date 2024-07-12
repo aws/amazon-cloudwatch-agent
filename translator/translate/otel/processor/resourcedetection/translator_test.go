@@ -52,7 +52,7 @@ func TestTranslate(t *testing.T) {
 				gotCfg, ok := got.(*resourcedetectionprocessor.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

@@ -276,15 +276,15 @@ extensions:
         aws_endpoint: ""
         certificate_file_path: ""
         dialer:
-          timeout: "0s"
+            timeout: 0s
         endpoint: 0.0.0.0:2000
         imds_retries: 1
         local_mode: false
         profile: ""
         proxy_address: ""
         region: us-east-1
-        service_name: ""
         role_arn: ""
+        service_name: ""
 processors:
     awsapplicationsignals:
         limiter:
@@ -294,8 +294,8 @@ processors:
             log_dropped_metrics: true
             rotation_interval: 10m0s
         resolvers:
-          - name: TestCluster
-            platform: k8s
+            - name: TestCluster
+              platform: k8s
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -309,7 +309,7 @@ processors:
                 cloud.provider:
                     enabled: true
                 k8s.cluster.name:
-                  enabled: false
+                    enabled: false
         azure:
             resource_attributes:
                 azure.resourcegroup.name:
@@ -332,6 +332,7 @@ processors:
                     enabled: true
                 host.name:
                     enabled: true
+            tags: []
         compression: ""
         consul:
             address: ""
@@ -389,10 +390,10 @@ processors:
                     enabled: true
                 aws.ecs.task.family:
                     enabled: true
+                aws.ecs.task.id:
+                    enabled: true
                 aws.ecs.task.revision:
                     enabled: true
-                aws.ecs.task.id:
-                  enabled: true
                 aws.log.group.arns:
                     enabled: true
                 aws.log.group.names:
@@ -418,7 +419,7 @@ processors:
                 cloud.provider:
                     enabled: true
                 k8s.cluster.name:
-                  enabled: false
+                    enabled: false
         elasticbeanstalk:
             resource_attributes:
                 cloud.platform:
@@ -486,8 +487,8 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
-        http2_ping_timeout: "0s"
-        http2_read_idle_timeout: "0s"
+        http2_ping_timeout: 0s
+        http2_read_idle_timeout: 0s
         idle_conn_timeout: 1m30s
         k8snode:
             auth_type: serviceAccount
@@ -532,16 +533,16 @@ processors:
                 k8s.cluster.name:
                     enabled: true
             tls:
-              ca_file: ""
-              cert_file: ""
-              include_system_ca_certs_pool: false
-              insecure: false
-              insecure_skip_verify: false
-              key_file: ""
-              max_version: ""
-              min_version: ""
-              reload_interval: "0s"
-              server_name_override: ""
+                ca_file: ""
+                cert_file: ""
+                include_system_ca_certs_pool: false
+                insecure: false
+                insecure_skip_verify: false
+                key_file: ""
+                max_version: ""
+                min_version: ""
+                reload_interval: 0s
+                server_name_override: ""
             token: ""
         override: true
         proxy_url: ""
@@ -565,9 +566,9 @@ processors:
                 host.id:
                     enabled: false
                 host.ip:
-                  enabled: false
+                    enabled: false
                 host.mac:
-                  enabled: false
+                    enabled: false
                 host.name:
                     enabled: true
                 os.description:
@@ -576,16 +577,16 @@ processors:
                     enabled: true
         timeout: 2s
         tls:
-          ca_file: ""
-          cert_file: ""
-          include_system_ca_certs_pool: false
-          insecure: false
-          insecure_skip_verify: false
-          key_file: ""
-          max_version: ""
-          min_version: ""
-          reload_interval: "0s"
-          server_name_override: ""
+            ca_file: ""
+            cert_file: ""
+            include_system_ca_certs_pool: false
+            insecure: false
+            insecure_skip_verify: false
+            key_file: ""
+            max_version: ""
+            min_version: ""
+            reload_interval: 0s
+            server_name_override: ""
         write_buffer_size: 0
 receivers:
     awscontainerinsightreceiver:
@@ -619,9 +620,9 @@ receivers:
     otlp/application_signals:
         protocols:
             grpc:
-                endpoint: 0.0.0.0:4315
                 dialer:
-                  timeout: "0s"
+                    timeout: 0s
+                endpoint: 0.0.0.0:4315
                 include_metadata: false
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
