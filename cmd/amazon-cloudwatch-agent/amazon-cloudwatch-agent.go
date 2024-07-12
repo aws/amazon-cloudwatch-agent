@@ -288,7 +288,6 @@ func runAgent(ctx context.Context,
 		testWaitDuration := time.Duration(*fTestWait) * time.Second
 		return ag.Test(ctx, testWaitDuration)
 	}
-	log.Printf("I! pidfile %v \n", *fPidfile)
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -306,7 +305,6 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
-	log.Printf("I! c  %v %v \n", c.Inputs, c.Outputs)
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
@@ -318,12 +316,10 @@ func runAgent(ctx context.Context,
 		_, err = os.Stat(*fOtelConfig)
 		if errors.Is(err, os.ErrNotExist) {
 			useragent.Get().SetComponents(&otelcol.Config{}, c)
-			log.Printf("I! Starting telemetry \n")
 			return ag.Run(ctx)
 		}
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
-	log.Printf("I! Starting otel \n")
 	yamlConfigPath := *fOtelConfig
 	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
 	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
@@ -335,7 +331,6 @@ func runAgent(ctx context.Context,
 	}
 
 	factories, err := components(c)
-	log.Printf("I! Factories: %+v", factories)
 	if err != nil {
 		log.Printf("E! Error while adapting telegraf input plugins: %v\n", err)
 		return err
@@ -345,13 +340,10 @@ func runAgent(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	log.Printf("I! Col config: %+v \n", cfg)
 	useragent.Get().SetComponents(cfg, c)
 
 	params := getCollectorParams(factories, providerSettings, loggerOptions)
-	log.Printf("I! Starting otelcol %+v\n", params)
 	cmd := otelcol.NewCommand(params)
-	log.Printf("I! Executing CMD: %#v %#v %#v \n", cmd.Args, cmd.Run, cmd.Commands())
 	for _, command := range cmd.Commands() {
 		log.Println(command.Name(), command, command.Execute())
 	}

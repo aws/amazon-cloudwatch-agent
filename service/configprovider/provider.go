@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func GetSettings(configPath string, logger * zap.Logger) (otelcol.ConfigProviderSettings, error) {
+func GetSettings(configPath string, logger *zap.Logger) (otelcol.ConfigProviderSettings, error) {
 	fprovider := fileprovider.NewFactory()
 	settings := otelcol.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
@@ -24,8 +24,8 @@ func GetSettings(configPath string, logger * zap.Logger) (otelcol.ConfigProvider
 	}
 	return settings, nil
 }
-func Get(configPath string,logger * zap.Logger) (otelcol.ConfigProvider, error) {
-	settings, err := GetSettings(configPath,logger)
+func Get(configPath string, logger *zap.Logger) (otelcol.ConfigProvider, error) {
+	settings, err := GetSettings(configPath, logger)
 	if err != nil {
 		return nil, err
 	}

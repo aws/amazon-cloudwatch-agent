@@ -19,8 +19,8 @@ import (
 
 func Test_getCollectorParams(t *testing.T) {
 	type args struct {
-		factories otelcol.Factories
-		providerSettings  otelcol.ConfigProviderSettings
+		factories        otelcol.Factories
+		providerSettings otelcol.ConfigProviderSettings
 	}
 	tests := []struct {
 		name string
@@ -30,8 +30,8 @@ func Test_getCollectorParams(t *testing.T) {
 		{
 			name: "BuildInfoIsSet",
 			args: args{
-				factories: otelcol.Factories{},
-				providerSettings:  otelcol.ConfigProviderSettings{},
+				factories:        otelcol.Factories{},
+				providerSettings: otelcol.ConfigProviderSettings{},
 			},
 			want: otelcol.CollectorSettings{
 				Factories: func() (otelcol.Factories, error) {
