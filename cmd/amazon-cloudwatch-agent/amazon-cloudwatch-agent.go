@@ -241,7 +241,6 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	log.Printf("I! TOML config: %v", *c)
 	err = loadTomlConfigIntoAgent(c)
 	if err != nil {
 		return err
@@ -344,9 +343,6 @@ func runAgent(ctx context.Context,
 
 	params := getCollectorParams(factories, providerSettings, loggerOptions)
 	cmd := otelcol.NewCommand(params)
-	for _, command := range cmd.Commands() {
-		log.Println(command.Name(), command, command.Execute())
-	}
 	// *************************************************************************************************
 	// ⚠️ WARNING ⚠️
 	// Noticed that args of parent process get passed here to otel collector which causes failures
@@ -356,9 +352,7 @@ func runAgent(ctx context.Context,
 	// *************************************************************************************************
 	e := []string{"--config=" + yamlConfigPath}
 	cmd.SetArgs(e)
-	err = cmd.Execute()
-	log.Printf("I! We got error: %+v \n", err)
-	return err
+	return cmd.Execute()
 }
 
 func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.ConfigProviderSettings, loggingOptions []zap.Option) otelcol.CollectorSettings {
