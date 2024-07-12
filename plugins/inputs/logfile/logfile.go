@@ -153,15 +153,15 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 	t.cleanUpStoppedTailerSrc()
 
-	rs := entitystore.GetEntityStore()
+	es := entitystore.GetEntityStore()
 
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
 
 		//Add file -> {serviceName,  deploymentEnvironment} mapping to entity store
-		if rs != nil {
-			rs.AddServiceAttrEntryForLogFile(entitystore.LogFileGlob(fileconfig.FilePath), fileconfig.ServiceName, fileconfig.Environment)
+		if es != nil {
+			es.AddServiceAttrEntryForLogFile(entitystore.LogFileGlob(fileconfig.FilePath), fileconfig.ServiceName, fileconfig.Environment)
 		}
 
 		targetFiles, err := t.getTargetFiles(fileconfig)

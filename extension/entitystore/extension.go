@@ -78,62 +78,62 @@ type EntityStore struct {
 
 var _ extension.Extension = (*EntityStore)(nil)
 
-func (r *EntityStore) Start(ctx context.Context, host component.Host) error {
+func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	// Get IMDS client and EC2 API client which requires region for authentication
 	// These will be passed down to any object that requires access to IMDS or EC2
 	// API client so we have single source of truth for credential
-	r.done = make(chan struct{})
-	r.metadataprovider = getMetaDataProvider()
-	r.mode = r.config.Mode
+	e.done = make(chan struct{})
+	e.metadataprovider = getMetaDataProvider()
+	e.mode = e.config.Mode
 	ec2CredentialConfig := &configaws.CredentialConfig{
-		Profile:  r.config.Profile,
-		Filename: r.config.Filename,
+		Profile:  e.config.Profile,
+		Filename: e.config.Filename,
 	}
-	switch r.mode {
+	switch e.mode {
 	case config.ModeEC2:
-		r.ec2Info = *newEC2Info(r.metadataprovider, getEC2Provider, ec2CredentialConfig, r.done)
-		go r.ec2Info.initEc2Info()
+		e.ec2Info = *newEC2Info(e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
+		go e.ec2Info.initEc2Info()
 	}
-	r.serviceprovider = newServiceProvider(r.mode, &r.ec2Info, r.metadataprovider, getEC2Provider, ec2CredentialConfig, r.done)
-	go r.serviceprovider.startServiceProvider()
+	e.serviceprovider = newServiceProvider(e.mode, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
+	go e.serviceprovider.startServiceProvider()
 	return nil
 }
 
-func (r *EntityStore) Shutdown(_ context.Context) error {
-	close(r.done)
+func (e *EntityStore) Shutdown(_ context.Context) error {
+	close(e.done)
 	return nil
 }
 
-func (r *EntityStore) Mode() string {
-	return r.mode
+func (e *EntityStore) Mode() string {
+	return e.mode
 }
 
-func (r *EntityStore) EKSInfo() eksInfo {
-	return r.eksInfo
+func (e *EntityStore) EKSInfo() eksInfo {
+	return e.eksInfo
 }
 
-func (r *EntityStore) EC2Info() ec2Info {
-	return r.ec2Info
+func (e *EntityStore) EC2Info() ec2Info {
+	return e.ec2Info
 }
 
-func (r *EntityStore) SetNativeCredential(client client.ConfigProvider) {
-	r.nativeCredential = client
+func (e *EntityStore) SetNativeCredential(client client.ConfigProvider) {
+	e.nativeCredential = client
 }
 
-func (r *EntityStore) NativeCredentialExists() bool {
-	return r.nativeCredential != nil
+func (e *EntityStore) NativeCredentialExists() bool {
+	return e.nativeCredential != nil
 }
 
 // CreateLogFileEntity creates the entity for log events that are being uploaded from a log file in the environment.
-func (r *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Entity {
-	if !r.shouldReturnEntity() {
+func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Entity {
+	if !e.shouldReturnEntity() {
 		return nil
 	}
 
-	serviceAttr := r.serviceprovider.logFileServiceAttribute(logFileGlob, logGroupName)
+	serviceAttr := e.serviceprovider.logFileServiceAttribute(logFileGlob, logGroupName)
 
-	keyAttributes := r.createServiceKeyAttributes(serviceAttr)
-	attributeMap := r.createAttributeMap()
+	keyAttributes := e.createServiceKeyAttributes(serviceAttr)
+	attributeMap := e.createAttributeMap()
 	addNonEmptyToMap(attributeMap, ServiceNameSourceKey, serviceAttr.ServiceNameSource)
 
 	return &cloudwatchlogs.Entity{
@@ -143,9 +143,9 @@ func (r *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 }
 
 // AddServiceAttrEntryForLogFile adds an entry to the entity store for the provided file glob -> (serviceName, environmentName) key-value pair
-func (r *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serviceName string, environmentName string) {
-	if r.serviceprovider != nil {
-		r.serviceprovider.addEntryForLogFile(fileGlob, ServiceAttribute{
+func (e *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serviceName string, environmentName string) {
+	if e.serviceprovider != nil {
+		e.serviceprovider.addEntryForLogFile(fileGlob, ServiceAttribute{
 			ServiceName:       serviceName,
 			ServiceNameSource: ServiceNameSourceUserConfiguration,
 			Environment:       environmentName,
@@ -154,22 +154,22 @@ func (r *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, servic
 }
 
 // AddServiceAttrEntryForLogGroup adds an entry to the entity store for the provided log group nme -> (serviceName, environmentName) key-value pair
-func (r *EntityStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, serviceName string, environmentName string) {
-	r.serviceprovider.addEntryForLogGroup(logGroupName, ServiceAttribute{
+func (e *EntityStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, serviceName string, environmentName string) {
+	e.serviceprovider.addEntryForLogGroup(logGroupName, ServiceAttribute{
 		ServiceName:       serviceName,
 		ServiceNameSource: ServiceNameSourceInstrumentation,
 		Environment:       environmentName,
 	})
 }
 
-func (r *EntityStore) createAttributeMap() map[string]*string {
+func (e *EntityStore) createAttributeMap() map[string]*string {
 	attributeMap := make(map[string]*string)
 
-	if r.mode == config.ModeEC2 {
-		addNonEmptyToMap(attributeMap, InstanceIDKey, r.ec2Info.InstanceID)
-		addNonEmptyToMap(attributeMap, ASGKey, r.ec2Info.AutoScalingGroup)
+	if e.mode == config.ModeEC2 {
+		addNonEmptyToMap(attributeMap, InstanceIDKey, e.ec2Info.InstanceID)
+		addNonEmptyToMap(attributeMap, ASGKey, e.ec2Info.AutoScalingGroup)
 	}
-	switch r.mode {
+	switch e.mode {
 	case config.ModeEC2:
 		attributeMap[PlatformType] = aws.String(EC2PlatForm)
 	}
@@ -177,7 +177,7 @@ func (r *EntityStore) createAttributeMap() map[string]*string {
 }
 
 // createServiceKeyAttribute creates KeyAttributes for Service entities
-func (r *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) map[string]*string {
+func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) map[string]*string {
 	serviceKeyAttr := map[string]*string{
 		Type: aws.String(Service),
 	}
@@ -188,28 +188,28 @@ func (r *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) m
 
 // shouldReturnEntity checks if the account ID for the instance is
 // matching the account ID when assuming role for the current credential.
-func (r *EntityStore) shouldReturnEntity() bool {
-	if r.nativeCredential == nil || r.metadataprovider == nil {
-		r.logger.Debug("there is no credential stored for cross-account checks")
+func (e *EntityStore) shouldReturnEntity() bool {
+	if e.nativeCredential == nil || e.metadataprovider == nil {
+		e.logger.Debug("there is no credential stored for cross-account checks")
 		return false
 	}
-	doc, err := r.metadataprovider.Get(context.Background())
+	doc, err := e.metadataprovider.Get(context.Background())
 	if err != nil {
-		r.logger.Debug("an error occurred when getting instance document for cross-account checks. Reason: %v\n", zap.Error(err))
+		e.logger.Debug("an error occurred when getting instance document for cross-account checks. Reason: %v\n", zap.Error(err))
 		return false
 	}
 	instanceAccountID := doc.AccountID
-	if r.stsClient == nil {
-		r.stsClient = sts.New(
-			r.nativeCredential,
+	if e.stsClient == nil {
+		e.stsClient = sts.New(
+			e.nativeCredential,
 			&aws.Config{
 				LogLevel: configaws.SDKLogLevel(),
 				Logger:   configaws.SDKLogger{},
 			})
 	}
-	assumedRoleIdentity, err := r.stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	assumedRoleIdentity, err := e.stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 	if err != nil {
-		r.logger.Debug("an error occurred when calling STS GetCallerIdentity for cross-account checks. Reason: ", zap.Error(err))
+		e.logger.Debug("an error occurred when calling STS GetCallerIdentity for cross-account checks. Reason: ", zap.Error(err))
 		return false
 	}
 	return instanceAccountID == *assumedRoleIdentity.Account

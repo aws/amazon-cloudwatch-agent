@@ -171,9 +171,9 @@ func (ts *tailerSrc) AddCleanUpFn(f func()) {
 }
 
 func (ts *tailerSrc) Entity() *cloudwatchlogs.Entity {
-	rs := entitystore.GetEntityStore()
-	if rs != nil {
-		return rs.CreateLogFileEntity(entitystore.LogFileGlob(ts.fileGlobPath), entitystore.LogGroupName(ts.group))
+	es := entitystore.GetEntityStore()
+	if es != nil {
+		return es.CreateLogFileEntity(entitystore.LogFileGlob(ts.fileGlobPath), entitystore.LogGroupName(ts.group))
 	}
 	return nil
 }

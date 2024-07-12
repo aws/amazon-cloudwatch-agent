@@ -21,11 +21,11 @@ const (
 
 // exposed as a variable for unit testing
 var addToEntityStore = func(logGroupName entitystore.LogGroupName, serviceName string, environmentName string) {
-	rs := entitystore.GetEntityStore()
-	if rs == nil {
+	es := entitystore.GetEntityStore()
+	if es == nil {
 		return
 	}
-	rs.AddServiceAttrEntryForLogGroup(logGroupName, serviceName, environmentName)
+	es.AddServiceAttrEntryForLogGroup(logGroupName, serviceName, environmentName)
 }
 
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or

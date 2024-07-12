@@ -112,10 +112,10 @@ func TestEntityStore_EC2Info(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &EntityStore{
+			e := &EntityStore{
 				ec2Info: tt.ec2InfoInput,
 			}
-			if got := r.EC2Info(); !reflect.DeepEqual(got, tt.want) {
+			if got := e.EC2Info(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("EC2Info() = %v, want %v", got, tt.want)
 			}
 		})
@@ -132,10 +132,10 @@ func TestEntityStore_Mode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &EntityStore{
+			e := &EntityStore{
 				mode: tt.modeInput,
 			}
-			if got := r.Mode(); got != tt.want {
+			if got := e.Mode(); got != tt.want {
 				t.Errorf("Mode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -227,11 +227,11 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &EntityStore{
+			e := &EntityStore{
 				ec2Info: tt.fields.ec2Info,
 				mode:    tt.fields.mode,
 			}
-			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(r.createAttributeMap()), "createAttributeMap()")
+			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(e.createAttributeMap()), "createAttributeMap()")
 		})
 	}
 }
@@ -270,8 +270,8 @@ func TestEntityStore_createServiceKeyAttributes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &EntityStore{}
-			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(r.createServiceKeyAttributes(tt.serviceAttr)), "createServiceKeyAttributes()")
+			e := &EntityStore{}
+			assert.Equalf(t, dereferenceMap(tt.want), dereferenceMap(e.createServiceKeyAttributes(tt.serviceAttr)), "createServiceKeyAttributes()")
 		})
 	}
 }
@@ -288,7 +288,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	}
 	sp := new(mockServiceProvider)
 	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
-	rs := EntityStore{
+	e := EntityStore{
 		mode:             config.ModeEC2,
 		ec2Info:          ec2Info{InstanceID: instanceId},
 		serviceprovider:  sp,
@@ -297,7 +297,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 		nativeCredential: &session.Session{},
 	}
 
-	entity := rs.CreateLogFileEntity(glob, group)
+	entity := e.CreateLogFileEntity(glob, group)
 
 	expectedEntity := cloudwatchlogs.Entity{
 		KeyAttributes: map[string]*string{
@@ -348,12 +348,12 @@ func TestEntityStore_shouldReturnRID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &EntityStore{
+			e := &EntityStore{
 				metadataprovider: tt.fields.metadataprovider,
 				stsClient:        tt.fields.stsClient,
 				nativeCredential: tt.fields.nativeCredential,
 			}
-			assert.Equalf(t, tt.want, r.shouldReturnEntity(), "shouldReturnEntity()")
+			assert.Equalf(t, tt.want, e.shouldReturnEntity(), "shouldReturnEntity()")
 		})
 	}
 }
@@ -372,7 +372,7 @@ func dereferenceMap(input map[string]*string) map[string]string {
 
 func TestEntityStore_addServiceAttrEntryForLogFile(t *testing.T) {
 	sp := new(mockServiceProvider)
-	rs := EntityStore{serviceprovider: sp}
+	e := EntityStore{serviceprovider: sp}
 
 	key := LogFileGlob("/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log")
 	serviceAttr := ServiceAttribute{
@@ -381,14 +381,14 @@ func TestEntityStore_addServiceAttrEntryForLogFile(t *testing.T) {
 		Environment:       "ec2:test",
 	}
 	sp.On("addEntryForLogFile", key, serviceAttr).Return()
-	rs.AddServiceAttrEntryForLogFile(key, "test", "ec2:test")
+	e.AddServiceAttrEntryForLogFile(key, "test", "ec2:test")
 
 	sp.AssertExpectations(t)
 }
 
 func TestEntityStore_addServiceAttrEntryForLogGroup(t *testing.T) {
 	sp := new(mockServiceProvider)
-	rs := EntityStore{serviceprovider: sp}
+	e := EntityStore{serviceprovider: sp}
 
 	key := LogGroupName("TestLogGroup")
 	serviceAttr := ServiceAttribute{
@@ -397,7 +397,7 @@ func TestEntityStore_addServiceAttrEntryForLogGroup(t *testing.T) {
 		Environment:       "ec2:test",
 	}
 	sp.On("addEntryForLogGroup", key, serviceAttr).Return()
-	rs.AddServiceAttrEntryForLogGroup(key, "test", "ec2:test")
+	e.AddServiceAttrEntryForLogGroup(key, "test", "ec2:test")
 
 	sp.AssertExpectations(t)
 }

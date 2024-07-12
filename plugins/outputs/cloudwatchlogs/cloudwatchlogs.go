@@ -135,9 +135,9 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 		Filename:  c.Filename,
 		Token:     c.Token,
 	}
-	entitystore := entitystore.GetEntityStore()
-	if entitystore != nil && !entitystore.NativeCredentialExists() {
-		entitystore.SetNativeCredential(credentialConfig.Credentials())
+	es := entitystore.GetEntityStore()
+	if es != nil && !es.NativeCredentialExists() {
+		es.SetNativeCredential(credentialConfig.Credentials())
 	}
 	if cwd, ok := c.cwDests[t]; ok {
 		return cwd
