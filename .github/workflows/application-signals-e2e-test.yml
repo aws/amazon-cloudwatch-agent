@@ -1,0 +1,88 @@
+## Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+## SPDX-License-Identifier: Apache-2.0
+
+# This is a reusable workflow for running the E2E test for Application Signals.
+# It is meant to be called from another workflow.
+# Read more about reusable workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
+name: E2E Testing
+on:
+  workflow_call:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ inputs.aws-region }}'
+  cancel-in-progress: false
+
+
+jobs:
+  java-eks-e2e-test:
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      test-cluster-name: 'e2e-cw-agent-test'
+      caller-workflow-name: 'main-build'
+
+  java-ec2-default-e2e-test:
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  java-ec2-asg-e2e-test:
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-asg-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  java-metric-limiter-e2e-test:
+    needs: [ java-eks-e2e-test ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      test-cluster-name: 'e2e-cw-agent-test'
+      caller-workflow-name: 'main-build'
+
+  java-k8s-e2e-test:
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-k8s-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  python-eks-e2e-test:
+    needs: [ java-metric-limiter-e2e-test ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      test-cluster-name: 'e2e-cw-agent-test'
+      caller-workflow-name: 'main-build'
+
+  python-ec2-default-e2e-test:
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-default-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  python-ec2-asg-e2e-test:
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-asg-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  python-k8s-e2e-test:
+    needs: [ java-k8s-e2e-test ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-e2e-test.yml@consolidate-release
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
