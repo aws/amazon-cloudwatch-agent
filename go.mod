@@ -1,10 +1,13 @@
 module github.com/aws/amazon-cloudwatch-agent
 
-go 1.22.0
-
-toolchain go1.22.2
+go 1.22.4
 
 replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20240423220441-63baeaedb379
+
+replace (
+	go.opentelemetry.io/collector/config/configgrpc => github.com/amazon-contributing/opentelemetry-collector-contrib/config/configgrpc v0.0.0-20240709194807-b0f0c0eda01b
+	go.opentelemetry.io/collector/config/confighttp => github.com/amazon-contributing/opentelemetry-collector-contrib/config/confighttp v0.0.0-20240709194807-b0f0c0eda01b
+)
 
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
@@ -146,7 +149,7 @@ require (
 	go.opentelemetry.io/collector/exporter v0.102.1
 	go.opentelemetry.io/collector/exporter/debugexporter v0.102.1
 	go.opentelemetry.io/collector/extension v0.102.1
-	go.opentelemetry.io/collector/featuregate v1.9.0
+	go.opentelemetry.io/collector/featuregate v1.9.0 // indirect
 	go.opentelemetry.io/collector/otelcol v0.102.1
 	go.opentelemetry.io/collector/pdata v1.9.0
 	go.opentelemetry.io/collector/processor v0.102.1
