@@ -35,10 +35,10 @@ type translator struct {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 // Map to support dropping metrics without measurement.
-var toDropMap = map[string]bool{
-	"collectd": true,
-	"statsd":   true,
-	"ethtool":  true,
+var toDropMap = map[string]struct{}{
+	"collectd": {},
+	"statsd":   {},
+	"ethtool":  {},
 }
 
 func NewTranslator() common.Translator[component.Config] {
