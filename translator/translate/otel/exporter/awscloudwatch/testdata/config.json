@@ -2,7 +2,6 @@
   "metrics": {
     "metrics_collected": {
       "collectd": {
-        "collectd_security_level": "none",
         "drop_original_metrics": ["collectd_drop"]
       },
       "cpu": {
