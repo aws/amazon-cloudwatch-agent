@@ -44,6 +44,7 @@ type pusher struct {
 	RetryDuration time.Duration
 	Log           telegraf.Logger
 
+	region              string
 	logSrc              logs.LogSrc
 	events              []*cloudwatchlogs.InputLogEvent
 	minT, maxT          *time.Time
@@ -65,13 +66,14 @@ type pusher struct {
 	wg                    *sync.WaitGroup
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc) *pusher {
+func NewPusher(region string, target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
 		FlushTimeout:    flushTimeout,
 		RetryDuration:   retryDuration,
 		Log:             logger,
+		region:          region,
 		logSrc:          logSrc,
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
@@ -235,7 +237,9 @@ func (p *pusher) send() {
 		LogGroupName:  &p.Group,
 		LogStreamName: &p.Stream,
 		SequenceToken: p.sequenceToken,
-		Entity:        entity,
+	}
+	if p.region == "us-east-1" {
+		input.Entity = entity
 	}
 
 	startTime := time.Now()

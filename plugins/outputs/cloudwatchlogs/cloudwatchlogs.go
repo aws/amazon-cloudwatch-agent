@@ -167,7 +167,7 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 			c.Log.Info("Configured middleware on AWS client")
 		}
 	}
-	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, logSrc)
+	pusher := NewPusher(c.Region, t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup, logSrc)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
 	c.cwDests[t] = cwd
 	return cwd

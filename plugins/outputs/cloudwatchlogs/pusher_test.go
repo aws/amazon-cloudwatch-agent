@@ -796,6 +796,6 @@ func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
 func testPreparation(retention int, s *svcMock, flushTimeout time.Duration, retryDuration time.Duration) (chan struct{}, *pusher) {
 	stop := make(chan struct{})
 	mockLogSrcObj := &mockLogSrc{}
-	p := NewPusher(Target{"G", "S", util.StandardLogGroupClass, retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg, mockLogSrcObj)
+	p := NewPusher("us-east-1", Target{"G", "S", util.StandardLogGroupClass, retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg, mockLogSrcObj)
 	return stop, p
 }
