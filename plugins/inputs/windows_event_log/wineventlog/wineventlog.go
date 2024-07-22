@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
@@ -28,8 +30,22 @@ import (
 const (
 	RPC_S_INVALID_BOUND syscall.Errno = 1734
 
-	collectionInterval = time.Second
+	serviceName = "eventlog"
+
+	collectionInterval   = time.Second
+	saveStateInterval    = 100 * time.Millisecond
+	serviceCheckInterval = 10 * time.Second
 )
+
+type evtAPIError struct {
+	api  string
+	name string
+	err  error
+}
+
+func (e *evtAPIError) Error() string {
+	return fmt.Sprintf("%s(), name %s, err %v", e.api, e.name, e.err)
+}
 
 type windowsEventLog struct {
 	name          string
@@ -49,35 +65,42 @@ type windowsEventLog struct {
 	offsetCh    chan uint64
 	done        chan struct{}
 	startOnce   sync.Once
-
-	consecutiveNoData    int
-	maxConsecutiveNoData int
+	reopenCh    chan struct{}
 }
 
 func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
-		name:                 name,
-		levels:               levels,
-		logGroupName:         logGroupName,
-		logStreamName:        logStreamName,
-		logGroupClass:        logGroupClass,
-		renderFormat:         renderFormat,
-		maxToRead:            maximumToRead,
-		destination:          destination,
-		stateFilePath:        stateFilePath,
-		retention:            retention,
-		maxConsecutiveNoData: int(time.Minute / collectionInterval),
+		name:          name,
+		levels:        levels,
+		logGroupName:  logGroupName,
+		logStreamName: logStreamName,
+		logGroupClass: logGroupClass,
+		renderFormat:  renderFormat,
+		maxToRead:     maximumToRead,
+		destination:   destination,
+		stateFilePath: stateFilePath,
+		retention:     retention,
 
 		offsetCh: make(chan uint64, 100),
 		done:     make(chan struct{}),
+		reopenCh: make(chan struct{}),
 	}
 	return eventLog
 }
 
 func (w *windowsEventLog) Init() error {
+	go w.checkServiceState()
 	go w.runSaveState()
-	w.loadState()
-	return w.Open()
+	w.eventOffset = w.loadState()
+	// Subscribe for events.
+	// This will fail if the eventlog name has not been registered.
+	// However returning an error would mean the plugin won't monitor other eventlogs.
+	err := w.Open()
+	if _, ok := err.(*evtAPIError); ok {
+		log.Printf("W! [wineventlog] %v", err)
+		return nil
+	}
+	return err
 }
 
 func (w *windowsEventLog) SetOutput(fn func(logs.LogEvent)) {
@@ -119,27 +142,26 @@ func (w *windowsEventLog) Stop() {
 func (w *windowsEventLog) run() {
 	ticker := time.NewTicker(collectionInterval)
 	defer ticker.Stop()
+
+	var shouldReopen bool
 	for {
 		select {
+		case <-w.reopenCh:
+			shouldReopen = true
 		case <-ticker.C:
-			log.Printf("D! [wineventlog] Event handle (%s) is %v", w.name, w.eventHandle)
-			log.Printf("D! [wineventlog] No consecutive data (%s): %v", w.name, w.consecutiveNoData)
-			if w.consecutiveNoData >= w.maxConsecutiveNoData {
-				log.Printf("D! [wineventlog] No records (%s) found for %v. Attempting to re-subscribe.", w.name, time.Duration(w.consecutiveNoData)*collectionInterval)
+			if shouldReopen {
+				w.eventOffset = w.loadState()
 				if err := w.reopen(); err != nil {
 					log.Printf("E! [wineventlog] Unable to re-subscribe to windows events: %v", err)
+				} else {
+					shouldReopen = false
 				}
 			}
 			records := w.read()
-			if len(records) == 0 {
-				w.consecutiveNoData++
-			} else {
-				w.consecutiveNoData = 0
-			}
 			for _, record := range records {
 				value, err := record.Value()
 				if err != nil {
-					log.Printf("E! [wineventlog] Error happened when collecting windows events : %v", err)
+					log.Printf("E! [wineventlog] Error happened when collecting windows events: %v", err)
 					continue
 				}
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
@@ -183,7 +205,7 @@ func (w *windowsEventLog) Open() error {
 	// eventlogs.
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
-		log.Printf("W! [wineventlog] EvtSubscribe(), name %v, err %v", w.name, err)
+		return &evtAPIError{api: "EvtSubscribe", name: w.name, err: err}
 	}
 	w.eventHandle = eventHandle
 	return nil
@@ -198,7 +220,7 @@ func (w *windowsEventLog) Close() error {
 func (w *windowsEventLog) reopen() error {
 	if w.eventHandle != 0 {
 		if err := w.Close(); err != nil {
-			return err
+			return fmt.Errorf("EvtClose(), name %v, err %v", w.name, err)
 		}
 	}
 	w.eventHandle = EvtHandle(0)
@@ -226,14 +248,13 @@ func (w *windowsEventLog) Done(offset uint64) {
 }
 
 func (w *windowsEventLog) runSaveState() {
-	t := time.NewTicker(100 * time.Millisecond)
+	t := time.NewTicker(saveStateInterval)
 	defer w.Stop()
 
 	var offset, lastSavedOffset uint64
 	for {
 		select {
 		case o := <-w.offsetCh:
-
 			if o > offset {
 				offset = o
 			}
@@ -261,7 +282,6 @@ func (w *windowsEventLog) saveState(offset uint64) error {
 	if w.stateFilePath == "" || offset == 0 {
 		return nil
 	}
-
 	content := []byte(strconv.FormatUint(offset, 10) + "\n" + w.logGroupName)
 	return os.WriteFile(w.stateFilePath, content, 0644)
 }
@@ -393,21 +413,63 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	return newRecord, nil
 }
 
-func (w *windowsEventLog) loadState() {
+func (w *windowsEventLog) loadState() uint64 {
 	if _, err := os.Stat(w.stateFilePath); err != nil {
 		log.Printf("I! [wineventlog] The state file for %s does not exist: %v", w.stateFilePath, err)
-		return
+		return 0
 	}
 	byteArray, err := os.ReadFile(w.stateFilePath)
 	if err != nil {
 		log.Printf("W! [wineventlog] Issue encountered when reading offset from file %s: %v", w.stateFilePath, err)
-		return
+		return 0
 	}
 	offset, err := strconv.ParseUint(strings.Split(string(byteArray), "\n")[0], 10, 64)
 	if err != nil {
 		log.Printf("W! [wineventlog] Issue encountered when parsing offset value %v: %v", byteArray, err)
-		return
+		return 0
 	}
 	log.Printf("I! [wineventlog] Reading from offset %v in %s", offset, w.stateFilePath)
-	w.eventOffset = uint64(offset)
+	return offset
+}
+
+func (w *windowsEventLog) checkServiceState() {
+	manager, err := mgr.Connect()
+	if err != nil {
+		log.Printf("E! [wineventlog] Unable to connect to Windows service manager to observe Windows event log service: %v", err)
+		return
+	}
+
+	service, err := manager.OpenService(serviceName)
+	if err != nil {
+		log.Printf("E! [wineventlog] Unable to observe Windows event log service: %v", err)
+		return
+	}
+
+	ticker := time.NewTicker(serviceCheckInterval)
+	defer ticker.Stop()
+
+	// get initial service PID
+	oldPID, _ := getPID(service)
+	for {
+		select {
+		case <-ticker.C:
+			newPID, err := getPID(service)
+			if err == nil && oldPID != newPID {
+				log.Printf("D! [wineventlog] Detected Windows event log service restart")
+				oldPID = newPID
+				w.reopenCh <- struct{}{}
+			}
+		}
+	}
+}
+
+func getPID(service *mgr.Service) (uint32, error) {
+	status, err := service.Query()
+	if err != nil {
+		return 0, err
+	}
+	if status.State == svc.Running {
+		return status.ProcessId, nil
+	}
+	return 0, fmt.Errorf("service is not running")
 }
