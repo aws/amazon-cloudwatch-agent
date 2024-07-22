@@ -173,10 +173,10 @@ func getDropOriginalMetrics(conf *confmap.Conf) map[string]bool {
 			for _, dropMetric := range dropMetrics {
 				if _, in := toDropMap[category]; in {
 					dropMetric, ok := dropMetric.(string)
-					if !ok {
-						continue
+					if ok {
+						dropOriginalMetrics[dropMetric] = true
 					}
-					dropOriginalMetrics[dropMetric] = true
+					continue
 				}
 
 				measurements := common.GetArray[any](conf, measurementCfgKey)
