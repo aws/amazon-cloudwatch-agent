@@ -5,7 +5,9 @@ package config
 
 // pluginAliasMap This provides the real plugin name mapping to the measurement name in user config
 var pluginAliasMap = map[string]string{
-	"nvidia_gpu": "nvidia_smi",
+	"nvidia_gpu":     "nvidia_smi",
+	"kafka-consumer": "kafka.consumer",
+	"kafka-producer": "kafka.producer",
 }
 
 func GetRealPluginName(inputPluginName string) string {

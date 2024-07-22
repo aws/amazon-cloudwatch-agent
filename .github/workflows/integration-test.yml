@@ -125,6 +125,8 @@ jobs:
       eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
+      eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
+
 
     steps:
       - uses: actions/checkout@v3
@@ -135,13 +137,14 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
 
       - name: Generate matrix
         id: set-matrix
         run: |
           go run --tags=generator generator/test_case_generator.go
           echo "::set-output name=ec2_gpu_matrix::$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))"
+          echo "::set-output name=eks_addon_matrix::$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))"
           echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
           echo "::set-output name=ec2_windows_matrix::$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))"
           echo "::set-output name=ec2_mac_matrix::$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))"
@@ -159,6 +162,7 @@ jobs:
       - name: Echo test plan matrix
         run: |
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
+          echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
@@ -192,7 +196,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -398,7 +402,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
 
       - name: SetOutputs
         id: set-outputs
@@ -888,7 +892,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: go.mod
-          key: eks-ec2-integration-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
+          key: ${{ matrix.arrays.terraform_dir }}-${{ matrix.arrays.k8s_version }}-${{ matrix.arrays.instanceType }}-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.test_dir }}
 
       - name: Login ECR
         id: login-ecr
@@ -903,8 +907,8 @@ jobs:
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 3
-          timeout_minutes: 60 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
+          max_attempts: 2
+          timeout_minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
           retry_wait_seconds: 5
           command: |
             if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
@@ -1298,22 +1302,105 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
 
-  EKSEndToEndTest:
-    name: "AppSignals E2E EKS Test"
+  ApplicationSignalsEndToEndTest:
+    name: "Application Signals E2E Test"
     needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/appsignals-e2e-eks-test.yml
+    uses: ./.github/workflows/application-signals-e2e-test.yml
+    secrets: inherit
     permissions:
       id-token: write
       contents: read
-    secrets: inherit
-    with:
-      test-cluster-name: 'e2e-cw-agent-test'
 
-  EC2EndToEndTest:
-    name: "AppSignals E2E EC2 Test"
-    needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/appsignals-e2e-ec2-test.yml
+  GPUEndToEndTest:
+    name: "GPU E2E Test"
+    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_addon_matrix) }}
     permissions:
       id-token: write
       contents: read
-    secrets: inherit
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+
+      - name: Terraform apply and setup
+        run: |
+          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+            cd "${{ matrix.arrays.terraform_dir }}"
+          else
+            cd terraform/eks/addon/gpu
+          fi
+          
+          terraform init
+          if terraform apply --auto-approve \
+            -var="beta=true" \
+            -var="addon_name=amazon-cloudwatch-observability" \
+            -var="addon_version=v1.6.0-eksbuild.1" \
+            -var="k8s_version=1.29" ; then
+            echo "Terraform apply successful."
+          
+            # Capture the output
+            echo "Getting EKS cluster name"
+            EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+            echo "Cluster name is ${EKS_CLUSTER_NAME}"
+            kubectl apply -f ./gpuBurner.yaml
+            kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
+            kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
+          else
+            terraform destroy -var="beta=${{ github.event.inputs.run_in_beta }}" -auto-approve && exit 1
+          fi
+
+      - name: Run Go tests with retry
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 10
+          timeout_minutes: 60
+          retry_wait_seconds: 60
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/addon/gpu
+            fi
+            echo "Getting EKS cluster name"
+            EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+            echo "Cluster name is ${EKS_CLUSTER_NAME}"
+
+            if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia -useE2EMetrics; then
+              echo "Tests passed"
+            else
+              echo "Tests failed"
+              exit 1
+            fi
+
+      - name: Terraform destroy
+        if: always()
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/addon/gpu
+            fi
+            terraform destroy --auto-approve

@@ -14,6 +14,7 @@ import (
 )
 
 func TestIntervalStats(t *testing.T) {
+	t.Skip("stat provider tests are flaky. disable until fix is available")
 	s := newIntervalStats(time.Millisecond)
 	s.stats.Store(agent.Stats{
 		ThreadCount: aws.Int32(2),

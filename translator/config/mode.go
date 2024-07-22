@@ -11,6 +11,10 @@ const (
 )
 
 const (
+	ModeECS = "ECS"
+)
+
+const (
 	ModeEKS       = "EKS"
 	ModeK8sEC2    = "K8sEC2"
 	ModeK8sOnPrem = "K8sOnPrem"

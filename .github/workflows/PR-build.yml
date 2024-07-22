@@ -7,6 +7,7 @@ on:
   pull_request:
     branches: 
       - main*
+      - feature*
     types: 
       - opened
       - synchronize
@@ -47,7 +48,7 @@ jobs:
         if: needs.changes.outputs.lint == 'true'
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
           cache: false
 
       - name: Check out code
@@ -75,14 +76,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-2019, windows-latest, macos-11]
+        os: [ ubuntu-latest, windows-2019, windows-latest, macos-12]
         include:
           - os: ubuntu-latest
             family: linux
             cache-path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-          - os: macos-11
+          - os: macos-12
             family: darwin
             cache-path: |
               ~/Library/Caches/go-build
@@ -102,7 +103,7 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
           cache: false
 
       - name: Check out code

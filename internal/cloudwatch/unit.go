@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/unit"
 )
 
@@ -72,6 +73,20 @@ var scaledBaseUnits = map[types.StandardUnit]map[unit.MetricPrefix]types.Standar
 	},
 }
 
+var knownNonConvertibleUnits = collections.NewSet(
+	// JMX/Tomcat units
+	"errors",
+	"threads",
+	"requests",
+	// JMX/Kafka units
+	"{messages}",
+	"{requests}",
+	"{partitions}",
+	"{operations}",
+	"{controllers}",
+	"{elections}",
+)
+
 // ToStandardUnit converts from the OTEL unit names to the corresponding names
 // supported by AWS CloudWatch. Some OTEL unit types are unsupported.
 func ToStandardUnit(unit string) (string, float64, error) {
@@ -81,6 +96,10 @@ func ToStandardUnit(unit string) (string, float64, error) {
 
 func toStandardUnit(unit string) (types.StandardUnit, float64, error) {
 	u := strings.ToLower(unit)
+	// silently convert to None
+	if knownNonConvertibleUnits.Contains(u) {
+		return types.StandardUnitNone, 1, nil
+	}
 	if standardUnit, ok := standardUnits[u]; ok {
 		return standardUnit, 1, nil
 	}

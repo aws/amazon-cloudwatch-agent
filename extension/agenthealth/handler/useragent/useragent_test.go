@@ -10,6 +10,7 @@ import (
 	telegraf "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/otelcol"
@@ -22,20 +23,26 @@ import (
 )
 
 func TestSetComponents(t *testing.T) {
+	metricsType, _ := component.NewType("metrics")
+	telegrafCPUType, _ := component.NewType(adapter.TelegrafPrefix + "cpu")
+	prometheusType, _ := component.NewType("prometheus")
+	batchType, _ := component.NewType("batch")
+	filterType, _ := component.NewType("filter")
+	cloudwatchType, _ := component.NewType("cloudwatch")
 	otelCfg := &otelcol.Config{
 		Service: service.Config{
 			Pipelines: map[component.ID]*pipelines.PipelineConfig{
-				component.NewID("metrics"): {
+				component.NewID(metricsType): {
 					Receivers: []component.ID{
-						component.NewID(adapter.TelegrafPrefix + "cpu"),
-						component.NewID("prometheus"),
+						component.NewID(telegrafCPUType),
+						component.NewID(prometheusType),
 					},
 					Processors: []component.ID{
-						component.NewID("batch"),
-						component.NewID("filter"),
+						component.NewID(batchType),
+						component.NewID(filterType),
 					},
 					Exporters: []component.ID{
-						component.NewID("cloudwatch"),
+						component.NewID(cloudwatchType),
 					},
 				},
 			},
@@ -101,21 +108,24 @@ func TestAlternateUserAgent(t *testing.T) {
 }
 
 func TestEmf(t *testing.T) {
+	metricsType, _ := component.NewType("metrics")
+	nopType, _ := component.NewType("nop")
+	awsEMFType, _ := component.NewType("awsemf")
 	otelCfg := &otelcol.Config{
 		Service: service.Config{
 			Pipelines: map[component.ID]*pipelines.PipelineConfig{
-				component.NewID("metrics"): {
+				component.NewID(metricsType): {
 					Receivers: []component.ID{
-						component.NewID("nop"),
+						component.NewID(nopType),
 					},
 					Exporters: []component.ID{
-						component.NewID("awsemf"),
+						component.NewID(awsEMFType),
 					},
 				},
 			},
 		},
 		Exporters: map[component.ID]component.Config{
-			component.NewID("awsemf"): &awsemfexporter.Config{Namespace: "AppSignals", LogGroupName: "/aws/appsignals/log/group"},
+			component.NewID(awsEMFType): &awsemfexporter.Config{Namespace: "ApplicationSignals", LogGroupName: "/aws/application-signals/log/group"},
 		},
 	}
 	ua := newUserAgent()
@@ -127,6 +137,50 @@ func TestEmf(t *testing.T) {
 	assert.Equal(t, "inputs:(nop run_as_user)", ua.inputsStr.Load())
 	assert.Equal(t, "", ua.processorsStr.Load())
 	assert.Equal(t, "outputs:(application_signals awsemf)", ua.outputsStr.Load())
+}
+
+func TestJmx(t *testing.T) {
+	jmx := "jmx"
+	jmxOther := "jmxOther"
+	nopType, _ := component.NewType("nop")
+	jmxType, _ := component.NewType(jmx)
+	pipelineType, _ := component.NewType("pipeline")
+	pipelineTypeOther, _ := component.NewType("pipelineOther")
+	pls := make(pipelines.Config)
+	pls[component.NewID(pipelineType)] = &pipelines.PipelineConfig{
+		Receivers: []component.ID{
+			component.NewIDWithName(jmxType, jmx),
+		},
+		Exporters: []component.ID{
+			component.NewID(nopType),
+		},
+	}
+	pls[component.NewID(pipelineTypeOther)] = &pipelines.PipelineConfig{
+		Receivers: []component.ID{
+			component.NewIDWithName(jmxType, jmxOther),
+		},
+		Exporters: []component.ID{
+			component.NewID(nopType),
+		},
+	}
+	otelCfg := &otelcol.Config{
+		Service: service.Config{
+			Pipelines: pls,
+		},
+		Receivers: map[component.ID]component.Config{
+			component.NewIDWithName(jmxType, jmx):      &jmxreceiver.Config{TargetSystem: "jvm,tomcat"},
+			component.NewIDWithName(jmxType, jmxOther): &jmxreceiver.Config{TargetSystem: "jvm,kafka"},
+		},
+	}
+	ua := newUserAgent()
+	ua.SetComponents(otelCfg, &telegraf.Config{})
+	assert.Len(t, ua.inputs, 5)
+	assert.Len(t, ua.processors, 0)
+	assert.Len(t, ua.outputs, 1)
+
+	assert.Equal(t, "inputs:(jmx jmx-jvm jmx-kafka jmx-tomcat run_as_user)", ua.inputsStr.Load())
+	assert.Equal(t, "", ua.processorsStr.Load())
+	assert.Equal(t, "outputs:(nop)", ua.outputsStr.Load())
 }
 
 func TestSingleton(t *testing.T) {

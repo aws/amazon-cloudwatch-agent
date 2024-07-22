@@ -48,7 +48,10 @@ func TestGetString(t *testing.T) {
 }
 
 func TestGetArray(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]interface{}{"int": []int{5, 8, 10}, "string": []string{"bool", "empty"}})
+	conf := confmap.NewFromStringMap(map[string]any{
+		"int":    []any{5, 8, 10},
+		"string": []any{"bool", "empty"},
+	})
 	gotInt := GetArray[int](conf, "int")
 	require.Equal(t, []int{5, 8, 10}, gotInt)
 
@@ -168,26 +171,30 @@ func TestParseDuration(t *testing.T) {
 }
 
 func TestTranslatorMap(t *testing.T) {
-	got := NewTranslatorMap[int](&testTranslator{"first", 0}, &testTranslator{"middle", 1})
+	firstType, _ := component.NewType("first")
+	middleType, _ := component.NewType("middle")
+	lastType, _ := component.NewType("last")
+	got := NewTranslatorMap[int](&testTranslator{firstType, 0}, &testTranslator{middleType, 1})
 	require.Equal(t, 2, got.Len())
-	translator, ok := got.Get(component.NewID("first"))
+	translator, ok := got.Get(component.NewID(firstType))
 	require.True(t, ok)
 	result, err := translator.Translate(nil)
 	require.NoError(t, err)
 	require.Equal(t, 0, result)
-	other := NewTranslatorMap[int](&testTranslator{"first", 2}, &testTranslator{"last", 3})
+	other := NewTranslatorMap[int](&testTranslator{firstType, 2}, &testTranslator{lastType, 3})
 	got.Merge(other)
 	require.Equal(t, 3, got.Len())
-	translator, ok = got.Get(component.NewID("first"))
+	translator, ok = got.Get(component.NewID(firstType))
 	require.True(t, ok)
 	result, err = translator.Translate(nil)
 	require.NoError(t, err)
 	require.Equal(t, 2, result)
-	require.Equal(t, []component.ID{component.NewID("first"), component.NewID("middle"), component.NewID("last")}, got.Keys())
+	require.Equal(t, []component.ID{component.NewID(firstType), component.NewID(middleType), component.NewID(lastType)}, got.Keys())
 }
 
 func TestMissingKeyError(t *testing.T) {
-	err := &MissingKeyError{ID: component.NewID("type"), JsonKey: "key"}
+	newType, _ := component.NewType("type")
+	err := &MissingKeyError{ID: component.NewID(newType), JsonKey: "key"}
 	require.Equal(t, "\"type\" missing key in JSON: \"key\"", err.Error())
 }
 
@@ -249,6 +256,104 @@ func TestGetOrDefaultDuration(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
 			got := GetOrDefaultDuration(conf, sectionKeys, time.Minute)
 			require.Equal(t, testCase.want, got)
+		})
+	}
+}
+
+func TestGetIndexedMap(t *testing.T) {
+	testCases := map[string]struct {
+		input map[string]any
+		index int
+		want  map[string]any
+	}{
+		"WithObject": {
+			input: map[string]any{
+				"test": map[string]any{
+					"endpoint": "test",
+				},
+			},
+			want: map[string]any{
+				"endpoint": "test",
+			},
+		},
+		"WithArray/InvalidIndex": {
+			input: map[string]any{
+				"test": []any{
+					map[string]any{
+						"endpoint": "test",
+					},
+				},
+			},
+			index: -1,
+			want:  nil,
+		},
+		"WithArray/IndexOutOfBounds": {
+			input: map[string]any{
+				"test": []any{
+					map[string]any{
+						"endpoint": "test",
+					},
+				},
+			},
+			index: 1,
+			want:  nil,
+		},
+		"WithArray/ValidIndex": {
+			input: map[string]any{
+				"test": []any{
+					map[string]any{
+						"endpoint": "test",
+					},
+				},
+			},
+			index: 0,
+			want: map[string]any{
+				"endpoint": "test",
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got := GetIndexedMap(conf, "test", testCase.index)
+			assert.Equal(t, testCase.want, got)
+		})
+	}
+}
+
+func TestGetMeasurements(t *testing.T) {
+	testCases := map[string]struct {
+		input map[string]any
+		want  []string
+	}{
+		"WithEmpty": {
+			input: map[string]any{
+				"measurement": []any{},
+			},
+			want: nil,
+		},
+		"WithInvalid": {
+			input: map[string]any{
+				"measurement": []any{1, 2},
+			},
+			want: nil,
+		},
+		"WithValid": {
+			input: map[string]any{
+				"measurement": []any{
+					"1",
+					map[string]any{
+						"name":   "2",
+						"rename": "3",
+					},
+				},
+			},
+			want: []string{"1", "2"},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, testCase.want, GetMeasurements(testCase.input))
 		})
 	}
 }

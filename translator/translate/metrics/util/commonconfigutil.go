@@ -29,7 +29,6 @@ const (
 
 // ProcessLinuxCommonConfig is used by both Linux and Darwin.
 func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string, result map[string]interface{}) bool {
-	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
 	inputMap := input.(map[string]interface{})
 	// Generate allowlisted metric list, process only if Measurement_Key exist
 	if translator.IsValid(inputMap, Measurement_Key, path) {
@@ -49,22 +48,10 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 		return false
 	}
 
-	// Set input plugin specific interval
+	ProcessAppendDimensions(inputMap, pluginName, result)
+
+	isHighResolution := IsHighResolution(agent.Global_Config.Interval)
 	isHighResolution = setTimeInterval(inputMap, result, isHighResolution, pluginName)
-
-	// Set append_dimensions as tags
-	if val, ok := inputMap[Append_Dimensions_Key]; ok {
-		result[Append_Dimensions_Mapped_Key] = val
-		util.Cleanup(val)
-	}
-
-	// Apply any specific rules for the plugin
-	if m, ok := ApplyPluginSpecificRules(pluginName); ok {
-		for key, val := range m {
-			result[key] = val
-		}
-	}
-
 	// Add HighResolution tags
 	if isHighResolution {
 		if result[Append_Dimensions_Mapped_Key] != nil {
@@ -74,6 +61,19 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 		}
 	}
 	return true
+}
+func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string, result map[string]interface{}) {
+	// Set append_dimensions as tags
+	if val, ok := inputMap[Append_Dimensions_Key]; ok {
+		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
+	}
+
+	// Apply any specific rules for the plugin
+	if m, ok := ApplyPluginSpecificRules(pluginName); ok {
+		for key, val := range m {
+			result[key] = val
+		}
+	}
 }
 
 // Windows common config returnVal would be three parts:

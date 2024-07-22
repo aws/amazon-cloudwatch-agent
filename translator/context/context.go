@@ -49,6 +49,7 @@ type Context struct {
 	cloudWatchLogConfig map[string]interface{}
 	runInContainer      bool
 	agentLogFile        string
+	omitHostname        bool
 }
 
 func (ctx *Context) Os() string {
@@ -187,4 +188,12 @@ func (ctx *Context) GetAgentLogFile() string {
 
 func (ctx *Context) SetAgentLogFile(agentLogFile string) {
 	ctx.agentLogFile = agentLogFile
+}
+
+func (ctx *Context) GetOmitHostname() bool {
+	return ctx.omitHostname
+}
+
+func (ctx *Context) SetOmitHostname(omitHostname bool) {
+	ctx.omitHostname = omitHostname
 }

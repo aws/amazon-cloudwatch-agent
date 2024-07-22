@@ -25,9 +25,9 @@ const (
 )
 
 var (
-	MetricsID = component.NewIDWithName(agenthealth.TypeStr, string(component.DataTypeMetrics))
-	LogsID    = component.NewIDWithName(agenthealth.TypeStr, string(component.DataTypeLogs))
-	TracesID  = component.NewIDWithName(agenthealth.TypeStr, string(component.DataTypeTraces))
+	MetricsID = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeMetrics.String())
+	LogsID    = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeLogs.String())
+	TracesID  = component.NewIDWithName(agenthealth.TypeStr, component.DataTypeTraces.String())
 )
 
 type translator struct {
@@ -41,7 +41,7 @@ var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator(name component.DataType, operations []string) common.Translator[component.Config] {
 	return &translator{
-		name:               string(name),
+		name:               name.String(),
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),

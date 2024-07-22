@@ -6,7 +6,6 @@ package gpuattributes
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -128,7 +127,6 @@ func newGpuAttributesProcessor(config *Config, logger *zap.Logger) *gpuAttribute
 
 func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	rms := md.ResourceMetrics()
-	d.logMd(md, "before gpu processor")
 	for i := 0; i < rms.Len(); i++ {
 		rs := rms.At(i)
 		ilms := rs.ScopeMetrics()
@@ -136,7 +134,7 @@ func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Me
 			ils := ilms.At(j)
 			metrics := ils.Metrics()
 
-			d.filterGpuMetricsWithoutPodName(metrics)
+			d.filterGpuMetricsWithoutPodName(metrics, rs.Resource().Attributes())
 
 			metricsLength := metrics.Len()
 			for k := 0; k < metricsLength; k++ {
@@ -229,15 +227,15 @@ func (d *gpuAttributesProcessor) filterAttributes(attributes pcommon.Map, labels
 }
 
 // remove dcgm metrics that do not contain PodName attribute which means there is no workload associated to container/pod
-func (d *gpuAttributesProcessor) filterGpuMetricsWithoutPodName(metrics pmetric.MetricSlice) {
+func (d *gpuAttributesProcessor) filterGpuMetricsWithoutPodName(metrics pmetric.MetricSlice, resourceAttributes pcommon.Map) {
 	metrics.RemoveIf(func(m pmetric.Metric) bool {
 		isGpu := strings.Contains(m.Name(), gpuMetricIdentifier)
 		isContainerOrPod := strings.HasPrefix(m.Name(), gpuContainerMetricPrefix) || strings.HasPrefix(m.Name(), gpuPodMetricPrefix)
-
 		if !isGpu || !isContainerOrPod {
 			return false
 		}
 
+		_, hasPodAtResource := resourceAttributes.Get(internal.PodName)
 		var dps pmetric.NumberDataPointSlice
 		switch m.Type() {
 		case pmetric.MetricTypeGauge:
@@ -248,61 +246,10 @@ func (d *gpuAttributesProcessor) filterGpuMetricsWithoutPodName(metrics pmetric.
 			d.logger.Debug("Ignore unknown metric type", zap.String(containerinsightscommon.MetricType, m.Type().String()))
 		}
 
-		_, hasPodInfo := dps.At(0).Attributes().Get(internal.PodName)
-		return !hasPodInfo
+		dps.RemoveIf(func(dp pmetric.NumberDataPoint) bool {
+			_, hasPodInfo := dp.Attributes().Get(internal.PodName)
+			return !hasPodInfo && !hasPodAtResource
+		})
+		return dps.Len() == 0
 	})
-}
-
-func (d *gpuAttributesProcessor) logMd(md pmetric.Metrics, name string) {
-	var logMessage strings.Builder
-
-	logMessage.WriteString(fmt.Sprintf("\"%s_METRICS_MD\" : {\n", name))
-	rms := md.ResourceMetrics()
-	for i := 0; i < rms.Len(); i++ {
-		rs := rms.At(i)
-		ilms := rs.ScopeMetrics()
-		logMessage.WriteString(fmt.Sprintf("\t\"ResourceMetric_%d\": {\n", i))
-		for j := 0; j < ilms.Len(); j++ {
-			ils := ilms.At(j)
-			metrics := ils.Metrics()
-			logMessage.WriteString(fmt.Sprintf("\t\t\"ScopeMetric_%d\": {\n", j))
-			logMessage.WriteString(fmt.Sprintf("\t\t\"Metrics_%d\": [\n", j))
-
-			for k := 0; k < metrics.Len(); k++ {
-				m := metrics.At(k)
-				logMessage.WriteString(fmt.Sprintf("\t\t\t\"Metric_%d\": {\n", k))
-				logMessage.WriteString(fmt.Sprintf("\t\t\t\t\"name\": \"%s\",\n", m.Name()))
-				logMessage.WriteString(fmt.Sprintf("\t\t\t\t\"type\": \"%s\",\n", m.Type()))
-
-				var datapoints pmetric.NumberDataPointSlice
-				switch m.Type() {
-				case pmetric.MetricTypeGauge:
-					datapoints = m.Gauge().DataPoints()
-				case pmetric.MetricTypeSum:
-					datapoints = m.Sum().DataPoints()
-				default:
-					datapoints = pmetric.NewNumberDataPointSlice()
-				}
-
-				logMessage.WriteString("\t\t\t\t\"datapoints\": [\n")
-				for yu := 0; yu < datapoints.Len(); yu++ {
-					logMessage.WriteString("\t\t\t\t\t{\n")
-					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"attributes\": \"%v\",\n", datapoints.At(yu).Attributes().AsRaw()))
-					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"value\": %v,\n", datapoints.At(yu).DoubleValue()))
-					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"timestamp\": %v,\n", datapoints.At(yu).Timestamp()))
-					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"flags\": %v,\n", datapoints.At(yu).Flags()))
-					logMessage.WriteString(fmt.Sprintf("\t\t\t\t\t\t\"value type\": %v,\n", datapoints.At(yu).ValueType()))
-					logMessage.WriteString("\t\t\t\t\t},\n")
-				}
-				logMessage.WriteString("\t\t\t\t],\n")
-				logMessage.WriteString("\t\t\t},\n")
-			}
-			logMessage.WriteString("\t\t],\n")
-			logMessage.WriteString("\t\t},\n")
-		}
-		logMessage.WriteString("\t},\n")
-	}
-	logMessage.WriteString("},\n")
-
-	d.logger.Info(logMessage.String())
 }
