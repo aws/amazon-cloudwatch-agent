@@ -27,6 +27,8 @@ import (
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385525(v=vs.85).aspx
 const (
 	RPC_S_INVALID_BOUND syscall.Errno = 1734
+
+	collectionInterval = time.Second
 )
 
 type windowsEventLog struct {
@@ -47,20 +49,24 @@ type windowsEventLog struct {
 	offsetCh    chan uint64
 	done        chan struct{}
 	startOnce   sync.Once
+
+	consecutiveNoData    int
+	maxConsecutiveNoData int
 }
 
 func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
 	eventLog := &windowsEventLog{
-		name:          name,
-		levels:        levels,
-		logGroupName:  logGroupName,
-		logStreamName: logStreamName,
-		logGroupClass: logGroupClass,
-		renderFormat:  renderFormat,
-		maxToRead:     maximumToRead,
-		destination:   destination,
-		stateFilePath: stateFilePath,
-		retention:     retention,
+		name:                 name,
+		levels:               levels,
+		logGroupName:         logGroupName,
+		logStreamName:        logStreamName,
+		logGroupClass:        logGroupClass,
+		renderFormat:         renderFormat,
+		maxToRead:            maximumToRead,
+		destination:          destination,
+		stateFilePath:        stateFilePath,
+		retention:            retention,
+		maxConsecutiveNoData: int(time.Minute / collectionInterval),
 
 		offsetCh: make(chan uint64, 100),
 		done:     make(chan struct{}),
@@ -111,12 +117,25 @@ func (w *windowsEventLog) Stop() {
 }
 
 func (w *windowsEventLog) run() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(collectionInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
+			log.Printf("D! [wineventlog] Event handle (%s) is %v", w.name, w.eventHandle)
+			log.Printf("D! [wineventlog] No consecutive data (%s): %v", w.name, w.consecutiveNoData)
+			if w.consecutiveNoData >= w.maxConsecutiveNoData {
+				log.Printf("D! [wineventlog] No records (%s) found for %v. Attempting to re-subscribe.", w.name, time.Duration(w.consecutiveNoData)*collectionInterval)
+				if err := w.reopen(); err != nil {
+					log.Printf("E! [wineventlog] Unable to re-subscribe to windows events: %v", err)
+				}
+			}
 			records := w.read()
+			if len(records) == 0 {
+				w.consecutiveNoData++
+			} else {
+				w.consecutiveNoData = 0
+			}
 			for _, record := range records {
 				value, err := record.Value()
 				if err != nil {
@@ -160,7 +179,7 @@ func (w *windowsEventLog) Open() error {
 	}
 	// Subscribe for events.
 	// This will fail if the eventlog name has not been registered.
-	// However returning an error would mean the the plugin won't monitor other
+	// However returning an error would mean the plugin won't monitor other
 	// eventlogs.
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
@@ -172,6 +191,18 @@ func (w *windowsEventLog) Open() error {
 
 func (w *windowsEventLog) Close() error {
 	return EvtClose(w.eventHandle)
+}
+
+// reopen closes the event subscription based on the event handle and resets the handle to the
+// same state as an EvtSubscribe failure (0) before attempting to open another event subscription.
+func (w *windowsEventLog) reopen() error {
+	if w.eventHandle != 0 {
+		if err := w.Close(); err != nil {
+			return err
+		}
+	}
+	w.eventHandle = EvtHandle(0)
+	return w.Open()
 }
 
 func (w *windowsEventLog) LogGroupName() string {
