@@ -7,7 +7,7 @@
 package windows_event_log
 
 import (
-	"fmt"
+	"errors"
 	"log"
 	"time"
 
@@ -20,6 +20,14 @@ const (
 
 	serviceName = "eventlog"
 )
+
+var (
+	errServiceNotRunning = errors.New("service is not running")
+)
+
+type statusChecker interface {
+	Query() (svc.Status, error)
+}
 
 type serviceMonitor struct {
 	listeners []chan struct{}
@@ -82,7 +90,7 @@ func (m *serviceMonitor) notify() {
 	}
 }
 
-func getPID(service *mgr.Service) (uint32, error) {
+func getPID(service statusChecker) (uint32, error) {
 	status, err := service.Query()
 	if err != nil {
 		return 0, err
@@ -90,5 +98,5 @@ func getPID(service *mgr.Service) (uint32, error) {
 	if status.State == svc.Running {
 		return status.ProcessId, nil
 	}
-	return 0, fmt.Errorf("service is not running")
+	return 0, errServiceNotRunning
 }

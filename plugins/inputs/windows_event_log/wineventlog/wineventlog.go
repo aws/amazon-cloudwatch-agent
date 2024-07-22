@@ -89,15 +89,7 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 func (w *windowsEventLog) Init() error {
 	go w.runSaveState()
 	w.eventOffset = w.loadState()
-	// Subscribe for events.
-	// This will fail if the eventlog name has not been registered.
-	// However returning an error would mean the plugin won't monitor other eventlogs.
-	err := w.Open()
-	if werr, ok := err.(*wevtAPIError); ok && werr.api == apiEvtSubscribe {
-		log.Printf("W! [wineventlog] %v", err)
-		return nil
-	}
-	return err
+	return w.Open()
 }
 
 func (w *windowsEventLog) SetOutput(fn func(logs.LogEvent)) {
@@ -177,7 +169,18 @@ func (w *windowsEventLog) run() {
 	}
 }
 
+// Open subscription for events. Instead of failing the subscription if the eventlog name has not been registered,
+// log the error.
 func (w *windowsEventLog) Open() error {
+	err := w.open()
+	if werr, ok := err.(*wevtAPIError); ok && werr.api == apiEvtSubscribe {
+		log.Printf("W! [wineventlog] %v", err)
+		return nil
+	}
+	return err
+}
+
+func (w *windowsEventLog) open() error {
 	bookmark, err := CreateBookmark(w.name, w.eventOffset)
 	if err != nil {
 		return err
@@ -218,7 +221,7 @@ func (w *windowsEventLog) resubscribe() error {
 		}
 	}
 	w.eventHandle = EvtHandle(0)
-	return w.Open()
+	return w.open()
 }
 
 func (w *windowsEventLog) LogGroupName() string {
