@@ -18,8 +18,6 @@ import (
 	"time"
 
 	"golang.org/x/sys/windows"
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 )
@@ -30,20 +28,20 @@ import (
 const (
 	RPC_S_INVALID_BOUND syscall.Errno = 1734
 
-	serviceName = "eventlog"
+	collectionInterval = time.Second
+	saveStateInterval  = 100 * time.Millisecond
 
-	collectionInterval   = time.Second
-	saveStateInterval    = 100 * time.Millisecond
-	serviceCheckInterval = 10 * time.Second
+	apiEvtSubscribe = "EvtSubscribe"
+	apiEvtClose     = "EvtClose"
 )
 
-type evtAPIError struct {
+type wevtAPIError struct {
 	api  string
 	name string
 	err  error
 }
 
-func (e *evtAPIError) Error() string {
+func (e *wevtAPIError) Error() string {
 	return fmt.Sprintf("%s(), name %s, err %v", e.api, e.name, e.err)
 }
 
@@ -58,14 +56,14 @@ type windowsEventLog struct {
 	destination   string
 	stateFilePath string
 
-	eventHandle EvtHandle
-	eventOffset uint64
-	retention   int
-	outputFn    func(logs.LogEvent)
-	offsetCh    chan uint64
-	done        chan struct{}
-	startOnce   sync.Once
-	reopenCh    chan struct{}
+	eventHandle   EvtHandle
+	eventOffset   uint64
+	retention     int
+	outputFn      func(logs.LogEvent)
+	offsetCh      chan uint64
+	done          chan struct{}
+	startOnce     sync.Once
+	resubscribeCh chan struct{}
 }
 
 func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
@@ -81,22 +79,21 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 		stateFilePath: stateFilePath,
 		retention:     retention,
 
-		offsetCh: make(chan uint64, 100),
-		done:     make(chan struct{}),
-		reopenCh: make(chan struct{}),
+		offsetCh:      make(chan uint64, 100),
+		done:          make(chan struct{}),
+		resubscribeCh: make(chan struct{}),
 	}
 	return eventLog
 }
 
 func (w *windowsEventLog) Init() error {
-	go w.checkServiceState()
 	go w.runSaveState()
 	w.eventOffset = w.loadState()
 	// Subscribe for events.
 	// This will fail if the eventlog name has not been registered.
 	// However returning an error would mean the plugin won't monitor other eventlogs.
 	err := w.Open()
-	if _, ok := err.(*evtAPIError); ok {
+	if werr, ok := err.(*wevtAPIError); ok && werr.api == apiEvtSubscribe {
 		log.Printf("W! [wineventlog] %v", err)
 		return nil
 	}
@@ -143,18 +140,19 @@ func (w *windowsEventLog) run() {
 	ticker := time.NewTicker(collectionInterval)
 	defer ticker.Stop()
 
-	var shouldReopen bool
+	var shouldResubscribe bool
 	for {
 		select {
-		case <-w.reopenCh:
-			shouldReopen = true
+		case <-w.resubscribeCh:
+			shouldResubscribe = true
 		case <-ticker.C:
-			if shouldReopen {
+			if shouldResubscribe {
 				w.eventOffset = w.loadState()
-				if err := w.reopen(); err != nil {
-					log.Printf("E! [wineventlog] Unable to re-subscribe to windows events: %v", err)
+				if err := w.resubscribe(); err != nil {
+					log.Printf("E! [wineventlog] Unable to re-subscribe: %v", err)
 				} else {
-					shouldReopen = false
+					log.Printf("D! [wineventlog] Re-subscribed to %s", w.name)
+					shouldResubscribe = false
 				}
 			}
 			records := w.read()
@@ -199,13 +197,9 @@ func (w *windowsEventLog) Open() error {
 	if err != nil {
 		return err
 	}
-	// Subscribe for events.
-	// This will fail if the eventlog name has not been registered.
-	// However returning an error would mean the plugin won't monitor other
-	// eventlogs.
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
-		return &evtAPIError{api: "EvtSubscribe", name: w.name, err: err}
+		return &wevtAPIError{api: apiEvtSubscribe, name: w.name, err: err}
 	}
 	w.eventHandle = eventHandle
 	return nil
@@ -215,12 +209,12 @@ func (w *windowsEventLog) Close() error {
 	return EvtClose(w.eventHandle)
 }
 
-// reopen closes the event subscription based on the event handle and resets the handle to the
+// resubscribe closes the event subscription based on the event handle and resets the handle to the
 // same state as an EvtSubscribe failure (0) before attempting to open another event subscription.
-func (w *windowsEventLog) reopen() error {
+func (w *windowsEventLog) resubscribe() error {
 	if w.eventHandle != 0 {
 		if err := w.Close(); err != nil {
-			return fmt.Errorf("EvtClose(), name %v, err %v", w.name, err)
+			return &wevtAPIError{api: apiEvtClose, name: w.name, err: err}
 		}
 	}
 	w.eventHandle = EvtHandle(0)
@@ -245,6 +239,10 @@ func (w *windowsEventLog) SetEventOffset(eventOffset uint64) {
 
 func (w *windowsEventLog) Done(offset uint64) {
 	w.offsetCh <- offset
+}
+
+func (w *windowsEventLog) ResubscribeCh() chan struct{} {
+	return w.resubscribeCh
 }
 
 func (w *windowsEventLog) runSaveState() {
@@ -428,48 +426,6 @@ func (w *windowsEventLog) loadState() uint64 {
 		log.Printf("W! [wineventlog] Issue encountered when parsing offset value %v: %v", byteArray, err)
 		return 0
 	}
-	log.Printf("I! [wineventlog] Reading from offset %v in %s", offset, w.stateFilePath)
+	log.Printf("D! [wineventlog] Reading from offset %v in %s", offset, w.stateFilePath)
 	return offset
-}
-
-func (w *windowsEventLog) checkServiceState() {
-	manager, err := mgr.Connect()
-	if err != nil {
-		log.Printf("E! [wineventlog] Unable to connect to Windows service manager to observe Windows event log service: %v", err)
-		return
-	}
-
-	service, err := manager.OpenService(serviceName)
-	if err != nil {
-		log.Printf("E! [wineventlog] Unable to observe Windows event log service: %v", err)
-		return
-	}
-
-	ticker := time.NewTicker(serviceCheckInterval)
-	defer ticker.Stop()
-
-	// get initial service PID
-	oldPID, _ := getPID(service)
-	for {
-		select {
-		case <-ticker.C:
-			newPID, err := getPID(service)
-			if err == nil && oldPID != newPID {
-				log.Printf("D! [wineventlog] Detected Windows event log service restart")
-				oldPID = newPID
-				w.reopenCh <- struct{}{}
-			}
-		}
-	}
-}
-
-func getPID(service *mgr.Service) (uint32, error) {
-	status, err := service.Query()
-	if err != nil {
-		return 0, err
-	}
-	if status.State == svc.Running {
-		return status.ProcessId, nil
-	}
-	return 0, fmt.Errorf("service is not running")
 }
