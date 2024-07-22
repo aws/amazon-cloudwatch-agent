@@ -16,6 +16,11 @@ var SupportedAppendDimensions = map[string]string{
 	"InstanceType":         "${aws:InstanceType}",
 }
 
+const (
+	AttributeVolumeId            = "VolumeId"
+	ValueAppendDimensionVolumeId = "${aws:VolumeId}"
+)
+
 type Config struct {
 	RefreshIntervalSeconds time.Duration `mapstructure:"refresh_interval_seconds"`
 	EC2MetadataTags        []string      `mapstructure:"ec2_metadata_tags"`

@@ -30,6 +30,7 @@ import (
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
@@ -345,12 +346,13 @@ func runAgent(ctx context.Context,
 
 	params := getCollectorParams(factories, provider, writer)
 
+	_ = featuregate.GlobalRegistry().Set("exporter.xray.allowDot", true)
 	cmd := otelcol.NewCommand(params)
 
 	// Noticed that args of parent process get passed here to otel collector which causes failures complaining about
 	// unrecognized args. So below change overwrites the args. Need to investigate this further as I dont think the config
 	// path below here is actually used and it still respects what was set in the settings above.
-	e := []string{"--config=" + yamlConfigPath}
+	e := []string{"--config=" + yamlConfigPath + " --feature-gates=exporter.xray.allowDot"}
 	cmd.SetArgs(e)
 
 	return cmd.Execute()

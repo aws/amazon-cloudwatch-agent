@@ -22,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 //go:embed awsemf_default_ecs.yaml
@@ -41,9 +42,6 @@ var appSignalsConfigK8s string
 
 //go:embed appsignals_config_generic.yaml
 var appSignalsConfigGeneric string
-
-//go:embed appsignals_config_ec2.yaml
-var appSignalsConfigEC2 string
 
 var (
 	ecsBasePathKey          = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.ECSKey)
@@ -142,14 +140,27 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 
 func getAppSignalsConfig() string {
 	ctx := context.CurrentContext()
-	kubernetesMode := ctx.KubernetesMode()
 
-	if kubernetesMode == config.ModeEKS {
-		return appSignalsConfigEks
-	} else if kubernetesMode == config.ModeK8sEC2 || kubernetesMode == config.ModeK8sOnPrem {
-		return appSignalsConfigK8s
+	mode := ctx.KubernetesMode()
+	if mode == "" {
+		mode = ctx.Mode()
 	}
-	return appSignalsConfigGeneric
+	if mode == config.ModeEC2 {
+		if ecsutil.GetECSUtilSingleton().IsECS() {
+			mode = config.ModeECS
+		}
+	}
+
+	switch mode {
+	case config.ModeEKS:
+		return appSignalsConfigEks
+	case config.ModeK8sEC2, config.ModeK8sOnPrem:
+		return appSignalsConfigK8s
+	case config.ModeEC2, config.ModeECS:
+		return appSignalsConfigGeneric
+	default:
+		return appSignalsConfigGeneric
+	}
 }
 
 func (t *translator) isAppSignals(conf *confmap.Conf) bool {

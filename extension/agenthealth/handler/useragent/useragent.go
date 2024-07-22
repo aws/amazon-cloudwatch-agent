@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	telegraf "github.com/influxdata/telegraf/config"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.uber.org/atomic"
 	"golang.org/x/exp/maps"
@@ -22,6 +23,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 const (
@@ -79,15 +81,23 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 	for _, pipeline := range otelCfg.Service.Pipelines {
 		for _, receiver := range pipeline.Receivers {
 			// trim the adapter prefix from adapted Telegraf plugins
-			name := strings.TrimPrefix(string(receiver.Type()), adapter.TelegrafPrefix)
+			name := strings.TrimPrefix(receiver.Type().String(), adapter.TelegrafPrefix)
 			ua.inputs.Add(name)
+			if name == common.JmxKey {
+				cfg := otelCfg.Receivers[receiver].(*jmxreceiver.Config)
+				targetSystems := strings.Split(cfg.TargetSystem, ",")
+				for _, system := range targetSystems {
+					targetSystem := name + "-" + system
+					ua.inputs.Add(targetSystem)
+				}
+			}
 		}
 		for _, processor := range pipeline.Processors {
-			ua.processors.Add(string(processor.Type()))
+			ua.processors.Add(processor.Type().String())
 		}
 		for _, exporter := range pipeline.Exporters {
-			ua.outputs.Add(string(exporter.Type()))
-			if exporter.Type() == "awsemf" {
+			ua.outputs.Add(exporter.Type().String())
+			if exporter.Type().String() == "awsemf" {
 				cfg := otelCfg.Exporters[exporter].(*awsemfexporter.Config)
 				if cfg.IsAppSignalsEnabled() {
 					ua.outputs.Add(flagAppSignals)

@@ -68,3 +68,13 @@ func TestScaledUnits(t *testing.T) {
 		assert.Equal(t, testCase.scale, scale)
 	}
 }
+
+func TestKnownNonStandardUnits(t *testing.T) {
+	testCases := []string{"errors", "{requests}"}
+	for _, testCase := range testCases {
+		unit, scale, err := ToStandardUnit(testCase)
+		assert.NoError(t, err)
+		assert.Equal(t, "None", unit)
+		assert.EqualValues(t, 1, scale)
+	}
+}

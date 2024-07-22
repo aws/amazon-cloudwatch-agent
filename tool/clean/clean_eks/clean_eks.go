@@ -16,6 +16,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
+// make this configurable or construct based on some configs?
+const betaEksEndpoint = "https://api.beta.us-west-2.wesley.amazonaws.com"
+
 var (
 	ClustersToClean = []string{
 		"cwagent-eks-integ-",
@@ -40,9 +43,28 @@ func cleanCluster() error {
 		return err
 	}
 	eksClient := eks.NewFromConfig(defaultConfig)
-
 	terminateClusters(ctx, eksClient)
+
+	// delete beta clusters
+	betaConfig, err := config.LoadDefaultConfig(ctx, config.WithEndpointResolverWithOptions(eksBetaEndpointResolver()))
+	if err != nil {
+		return err
+	}
+	betaClient := eks.NewFromConfig(betaConfig)
+	terminateClusters(ctx, betaClient)
+
 	return nil
+}
+
+func eksBetaEndpointResolver() aws.EndpointResolverWithOptionsFunc {
+	return func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		endpoint, err := eks.NewDefaultEndpointResolver().ResolveEndpoint(region, eks.EndpointResolverOptions{})
+		if err != nil {
+			return aws.Endpoint{}, err
+		}
+		endpoint.URL = betaEksEndpoint
+		return endpoint, nil
+	}
 }
 
 func clusterNameMatchesClustersToClean(clusterName string, clustersToClean []string) bool {
@@ -57,6 +79,7 @@ func clusterNameMatchesClustersToClean(clusterName string, clustersToClean []str
 func terminateClusters(ctx context.Context, client *eks.Client) {
 	listClusterInput := eks.ListClustersInput{}
 	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationFourDays)
+
 	clusters, err := client.ListClusters(ctx, &listClusterInput)
 	if err != nil {
 		log.Fatalf("could not get cluster list")

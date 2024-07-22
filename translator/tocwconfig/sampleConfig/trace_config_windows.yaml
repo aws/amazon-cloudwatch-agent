@@ -38,7 +38,11 @@ processors:
 receivers:
     awsxray:
         endpoint: 127.0.0.1:2000
+        dialer:
+            timeout: "0s"
         proxy_server:
+            dialer:
+                timeout: "0s"
             aws_endpoint: ""
             certificate_file_path: ""
             endpoint: 127.0.0.1:2000
@@ -48,12 +52,15 @@ receivers:
             proxy_address: ""
             region: us-west-2
             role_arn: ""
+            service_name: "xray"
             shared_credentials_file:
                 - /root/.aws/credentials
         transport: udp
     otlp/traces:
         protocols:
             grpc:
+                dialer:
+                    timeout: "0s"
                 endpoint: 127.0.0.1:4317
                 include_metadata: false
                 max_concurrent_streams: 0

@@ -12,6 +12,7 @@ Source:     amazon-cloudwatch-agent.tar.gz
 %define debug_package %{nil}
 %define _source_payload w6.gzdio
 %define _binary_payload w6.gzdio
+%define __jar_repack %{nil}
 
 %prep
 %setup -c %{name}-%{version}
@@ -54,6 +55,7 @@ ln -f -s /opt/aws/amazon-cloudwatch-agent/var ${RPM_BUILD_ROOT}/var/run/amazon/a
 /opt/aws/amazon-cloudwatch-agent/bin/config-downloader
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-config-wizard
 /opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
+/opt/aws/amazon-cloudwatch-agent/bin/opentelemetry-jmx-metrics.jar
 /opt/aws/amazon-cloudwatch-agent/doc/amazon-cloudwatch-agent-schema.json
 %config(noreplace) /opt/aws/amazon-cloudwatch-agent/etc/common-config.toml
 /opt/aws/amazon-cloudwatch-agent/LICENSE
