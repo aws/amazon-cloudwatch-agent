@@ -669,7 +669,6 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(input)
 		require.NoError(t, err)
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
-		os.WriteFile(expectedYamlFilePath, []byte(yamlStr), fs.FileMode(os.O_RDWR))
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
