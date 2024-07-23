@@ -8,12 +8,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
+	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 )
 
 const (
@@ -27,8 +28,8 @@ func TestConfigProvider(t *testing.T) {
 	factories, err := defaultcomponents.Factories()
 	require.NoError(t, err)
 	logger, err := zap.NewProduction()
-	assert.NoError(t,err)
-	actualProvider, err := Get(filepath.Join("../../translator/tocwconfig/sampleConfig", "config_with_env.yaml"),logger)
+	assert.NoError(t, err)
+	actualProvider, err := Get(filepath.Join("../../translator/tocwconfig/sampleConfig", "config_with_env.yaml"), logger)
 	assert.NoError(t, err)
 	actualCfg, err := actualProvider.Get(context.Background(), factories)
 	assert.NoError(t, err)
