@@ -34,6 +34,13 @@ type translator struct {
 
 var _ common.Translator[component.Config] = (*translator)(nil)
 
+// Map to support dropping metrics without measurement.
+var toDropMap = map[string]struct{}{
+	"collectd": {},
+	"statsd":   {},
+	"ethtool":  {},
+}
+
 func NewTranslator() common.Translator[component.Config] {
 	return NewTranslatorWithName("")
 }
@@ -164,6 +171,14 @@ func getDropOriginalMetrics(conf *confmap.Conf) map[string]bool {
 		*/
 		if dropMetrics := common.GetArray[any](conf, dropOriginalCfgKey); dropMetrics != nil {
 			for _, dropMetric := range dropMetrics {
+				if _, in := toDropMap[category]; in {
+					dropMetric, ok := dropMetric.(string)
+					if ok {
+						dropOriginalMetrics[dropMetric] = true
+					}
+					continue
+				}
+
 				measurements := common.GetArray[any](conf, measurementCfgKey)
 				if measurements == nil {
 					continue

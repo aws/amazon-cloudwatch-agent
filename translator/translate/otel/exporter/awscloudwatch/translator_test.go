@@ -118,7 +118,10 @@ func TestTranslator(t *testing.T) {
 				RollupDimensions:   [][]string{{"ImageId"}, {"InstanceId", "InstanceType"}, {"d1"}, {}},
 				DropOriginalConfigs: map[string]bool{
 					"CPU_USAGE_IDLE":  true,
+					"collectd_drop":   true,
 					"cpu_time_active": true,
+					"statsd_drop":     true,
+					"tx_packets":      true,
 				},
 			},
 			wantWindows: &cloudwatch.Config{
@@ -131,7 +134,10 @@ func TestTranslator(t *testing.T) {
 				RollupDimensions:   [][]string{{"ImageId"}, {"InstanceId", "InstanceType"}, {"d1"}, {}},
 				DropOriginalConfigs: map[string]bool{
 					"CPU_USAGE_IDLE":  true,
+					"collectd_drop":   true,
 					"cpu time_active": true,
+					"statsd_drop":     true,
+					"tx_packets":      true,
 				},
 			},
 		},
