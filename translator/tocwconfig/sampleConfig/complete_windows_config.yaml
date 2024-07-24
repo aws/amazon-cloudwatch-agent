@@ -118,10 +118,10 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "PERCENT") where name == "LogicalDisk_% Idle Time"
-                - set(name, "DISK_READ") where name == "LogicalDisk_% Disk Read Time"
                 - set(unit, "PERCENT") where name == "Processor_% Idle Time"
                 - set(name, "CPU_IDLE") where name == "Processor_% Idle Time"
+                - set(unit, "PERCENT") where name == "LogicalDisk_% Idle Time"
+                - set(name, "DISK_READ") where name == "LogicalDisk_% Disk Read Time"
         trace_statements: []
 receivers:
     awsxray:
@@ -251,14 +251,14 @@ service:
                 - transform
             receivers:
                 - telegraf_win_perf_counters/1063858558
-                - telegraf_procstat/1340600742
-                - telegraf_statsd
                 - telegraf_nvidia_smi
                 - telegraf_win_perf_counters/4283769065
-                - telegraf_win_perf_counters/2402387132
                 - telegraf_win_perf_counters/3081249416
+                - telegraf_statsd
                 - telegraf_win_perf_counters/1492679118
+                - telegraf_win_perf_counters/2402387132
                 - telegraf_win_perf_counters/3762679655
+                - telegraf_procstat/1340600742
         traces/xray:
             exporters:
                 - awsxray
