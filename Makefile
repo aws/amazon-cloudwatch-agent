@@ -94,7 +94,7 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
-amazon-cloudwatch-agent-windows:
+amazon-cloudwatch-agent-windows: copy-version-file
 	@echo Building CloudWatchAgent for Windows with AMD64
 	$(WIN_BUILD)/config-downloader.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-downloader
 	$(WIN_BUILD)/config-translator.exe github.com/aws/amazon-cloudwatch-agent/cmd/config-translator
