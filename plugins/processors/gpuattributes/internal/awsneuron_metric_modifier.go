@@ -6,7 +6,6 @@ package internal
 import (
 	"strings"
 
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
@@ -99,26 +98,6 @@ var (
 			"sram_ecc_corrected":   NeuronDeviceHardwareEccEventsAggregatedMetric,
 			"sram_ecc_uncorrected": NeuronDeviceHardwareEccEventsAggregatedMetric},
 	}
-
-	MetricAttributesToKeep = map[string]struct{}{
-		ClusterName:      {},
-		ContainerName:    {},
-		FullPodName:      {},
-		InstanceId:       {},
-		InstanceType:     {},
-		K8sPodName:       {},
-		Namespace:        {},
-		NeuronDevice:     {},
-		NodeName:         {},
-		PodName:          {},
-		Service:          {},
-		AvailabilityZone: {},
-		Kubernetes:       {},
-		Region:           {},
-		RuntimeTag:       {},
-		SubnetId:         {},
-		NeuronCore:       {},
-	}
 )
 
 func NewMetricModifier(logger *zap.Logger) *AwsNeuronMetricModifier {
@@ -156,7 +135,6 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 	}
 
 	modifiedMetricSlice := md.extractDatapointsAsMetricsAndAggregate(originalMetric)
-	filterLabels(modifiedMetricSlice, originalMetricName)
 	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
 }
 
@@ -269,30 +247,6 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 	return newMetricSlice
 }
 
-// This method removes the attribute keys which are not required. The removal is necessary so that the metrics are grouped together
-func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
-	_, exists := metricModificationsMap[originalMetricName]
-	if !exists {
-		return
-	}
-
-	for i := 0; i < slice.Len(); i++ {
-		m := slice.At(i)
-
-		dps := m.Sum().DataPoints()
-		for j := 0; j < dps.Len(); j++ {
-			attributes := dps.At(j).Attributes()
-			attributes.RemoveIf(func(label string, value pcommon.Value) bool {
-				_, exists := MetricAttributesToKeep[label]
-				if !exists {
-					return true
-				}
-				return false
-			})
-		}
-	}
-}
-
 // This method prefixes NeuronCore and NeuronDevice values with `core` and `device` respectively
 // to make the attribute values more verbose
 func prefixCoreAndDeviceLabels(originalMetric pmetric.Metric) {
@@ -364,4 +318,25 @@ func resetStaleDatapoints(originalMetric pmetric.Metric) {
 			dp.SetFlags(dp.Flags().WithNoRecordedValue(false))
 		}
 	}
+}
+
+func (md *AwsNeuronMetricModifier) IsProcessedNeuronMetric(name string) bool {
+	possiblePrefixes := []string{
+		"container_neuroncore_",
+		"pod_neuroncore_",
+		"node_neuroncore_",
+		"container_neurondevice_",
+		"pod_neurondevice_",
+		"node_neurondevice_",
+		"node_neuron_",
+	}
+
+	for _, prefix := range possiblePrefixes {
+		if strings.HasPrefix(name, prefix) {
+			md.logger.Info("is a processed neuron metric : " + name)
+			return true
+		}
+	}
+
+	return false
 }
