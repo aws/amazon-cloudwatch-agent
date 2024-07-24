@@ -977,7 +977,7 @@ func TestTranslateAppSignals(t *testing.T) {
 				gotCfg, ok := got.(*awsemfexporter.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, testCase.want.Unmarshal(&wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})
