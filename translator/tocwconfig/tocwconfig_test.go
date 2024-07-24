@@ -372,6 +372,40 @@ func TestAdvancedConfig(t *testing.T) {
 		})
 	}
 }
+func TestCompeleteConfig(t *testing.T) {
+	expectedEnvVars := map[string]string{
+		"CWAGENT_USER_AGENT": "CUSTOM USER AGENT VALUE",
+		"CWAGENT_LOG_LEVEL":  "DEBUG",
+		"AWS_SDK_LOG_LEVEL":  "LogDebug",
+	}
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "complete_linux_config",
+			targetPlatform:  "linux",
+			expectedEnvVars: expectedEnvVars,
+			appendString:    "",
+		},
+		"darwin": {
+			filename:        "complete_darwin_config",
+			targetPlatform:  "darwin",
+			expectedEnvVars: nil,
+			appendString:    "",
+		},
+		"windows": {
+			filename:        "complete_windows_config",
+			targetPlatform:  "windows",
+			expectedEnvVars: expectedEnvVars,
+			appendString:    "",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
+}
 
 func TestLogOnlyConfig(t *testing.T) {
 	resetContext(t)
@@ -669,6 +703,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfig(input)
 		require.NoError(t, err)
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+		os.WriteFile(expectedYamlFilePath, []byte(yamlStr), fs.FileMode(os.O_RDWR))
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
