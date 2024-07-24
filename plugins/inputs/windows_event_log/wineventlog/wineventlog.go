@@ -28,8 +28,9 @@ import (
 const (
 	RPC_S_INVALID_BOUND syscall.Errno = 1734
 
-	collectionInterval = time.Second
-	saveStateInterval  = 100 * time.Millisecond
+	collectionInterval  = time.Second
+	saveStateInterval   = 100 * time.Millisecond
+	subscribeMaxRetries = 3
 
 	apiEvtSubscribe = "EvtSubscribe"
 	apiEvtClose     = "EvtClose"
@@ -132,6 +133,7 @@ func (w *windowsEventLog) run() {
 	ticker := time.NewTicker(collectionInterval)
 	defer ticker.Stop()
 
+	retryCount := 0
 	var shouldResubscribe bool
 	for {
 		select {
@@ -142,6 +144,12 @@ func (w *windowsEventLog) run() {
 				w.eventOffset = w.loadState()
 				if err := w.resubscribe(); err != nil {
 					log.Printf("E! [wineventlog] Unable to re-subscribe: %v", err)
+					retryCount++
+					if retryCount >= subscribeMaxRetries {
+						log.Printf("D! [wineventlog] Max subscribe retries reached: %d", subscribeMaxRetries)
+						shouldResubscribe = false
+						retryCount = 0
+					}
 				} else {
 					log.Printf("D! [wineventlog] Re-subscribed to %s", w.name)
 					shouldResubscribe = false
