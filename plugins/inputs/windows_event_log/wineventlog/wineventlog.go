@@ -27,7 +27,24 @@ import (
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385525(v=vs.85).aspx
 const (
 	RPC_S_INVALID_BOUND syscall.Errno = 1734
+
+	collectionInterval  = time.Second
+	saveStateInterval   = 100 * time.Millisecond
+	subscribeMaxRetries = 3
+
+	apiEvtSubscribe = "EvtSubscribe"
+	apiEvtClose     = "EvtClose"
 )
+
+type wevtAPIError struct {
+	api  string
+	name string
+	err  error
+}
+
+func (e *wevtAPIError) Error() string {
+	return fmt.Sprintf("%s(), name %s, err %v", e.api, e.name, e.err)
+}
 
 type windowsEventLog struct {
 	name          string
@@ -40,13 +57,14 @@ type windowsEventLog struct {
 	destination   string
 	stateFilePath string
 
-	eventHandle EvtHandle
-	eventOffset uint64
-	retention   int
-	outputFn    func(logs.LogEvent)
-	offsetCh    chan uint64
-	done        chan struct{}
-	startOnce   sync.Once
+	eventHandle   EvtHandle
+	eventOffset   uint64
+	retention     int
+	outputFn      func(logs.LogEvent)
+	offsetCh      chan uint64
+	done          chan struct{}
+	startOnce     sync.Once
+	resubscribeCh chan struct{}
 }
 
 func NewEventLog(name string, levels []string, logGroupName, logStreamName, renderFormat, destination, stateFilePath string, maximumToRead int, retention int, logGroupClass string) *windowsEventLog {
@@ -62,15 +80,16 @@ func NewEventLog(name string, levels []string, logGroupName, logStreamName, rend
 		stateFilePath: stateFilePath,
 		retention:     retention,
 
-		offsetCh: make(chan uint64, 100),
-		done:     make(chan struct{}),
+		offsetCh:      make(chan uint64, 100),
+		done:          make(chan struct{}),
+		resubscribeCh: make(chan struct{}),
 	}
 	return eventLog
 }
 
 func (w *windowsEventLog) Init() error {
 	go w.runSaveState()
-	w.loadState()
+	w.eventOffset = w.loadState()
 	return w.Open()
 }
 
@@ -111,16 +130,36 @@ func (w *windowsEventLog) Stop() {
 }
 
 func (w *windowsEventLog) run() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(collectionInterval)
 	defer ticker.Stop()
+
+	retryCount := 0
+	var shouldResubscribe bool
 	for {
 		select {
+		case <-w.resubscribeCh:
+			shouldResubscribe = true
 		case <-ticker.C:
+			if shouldResubscribe {
+				w.eventOffset = w.loadState()
+				if err := w.resubscribe(); err != nil {
+					log.Printf("E! [wineventlog] Unable to re-subscribe: %v", err)
+					retryCount++
+					if retryCount >= subscribeMaxRetries {
+						log.Printf("D! [wineventlog] Max subscribe retries reached: %d", subscribeMaxRetries)
+						shouldResubscribe = false
+						retryCount = 0
+					}
+				} else {
+					log.Printf("D! [wineventlog] Re-subscribed to %s", w.name)
+					shouldResubscribe = false
+				}
+			}
 			records := w.read()
 			for _, record := range records {
 				value, err := record.Value()
 				if err != nil {
-					log.Printf("E! [wineventlog] Error happened when collecting windows events : %v", err)
+					log.Printf("E! [wineventlog] Error happened when collecting windows events: %v", err)
 					continue
 				}
 				recordNumber, _ := strconv.ParseUint(record.System.EventRecordID, 10, 64)
@@ -138,7 +177,18 @@ func (w *windowsEventLog) run() {
 	}
 }
 
+// Open subscription for events. Instead of failing the subscription if the eventlog name has not been registered,
+// log the error.
 func (w *windowsEventLog) Open() error {
+	err := w.open()
+	if werr, ok := err.(*wevtAPIError); ok && werr.api == apiEvtSubscribe {
+		log.Printf("W! [wineventlog] %v", err)
+		return nil
+	}
+	return err
+}
+
+func (w *windowsEventLog) open() error {
 	bookmark, err := CreateBookmark(w.name, w.eventOffset)
 	if err != nil {
 		return err
@@ -158,13 +208,9 @@ func (w *windowsEventLog) Open() error {
 	if err != nil {
 		return err
 	}
-	// Subscribe for events.
-	// This will fail if the eventlog name has not been registered.
-	// However returning an error would mean the the plugin won't monitor other
-	// eventlogs.
 	eventHandle, err := EvtSubscribe(0, uintptr(signalEvent), channelPath, query, bookmark, 0, 0, EvtSubscribeStartAfterBookmark)
 	if err != nil {
-		log.Printf("W! [wineventlog] EvtSubscribe(), name %v, err %v", w.name, err)
+		return &wevtAPIError{api: apiEvtSubscribe, name: w.name, err: err}
 	}
 	w.eventHandle = eventHandle
 	return nil
@@ -172,6 +218,18 @@ func (w *windowsEventLog) Open() error {
 
 func (w *windowsEventLog) Close() error {
 	return EvtClose(w.eventHandle)
+}
+
+// resubscribe closes the event subscription based on the event handle and resets the handle to the
+// same state as an EvtSubscribe failure (0) before attempting to open another event subscription.
+func (w *windowsEventLog) resubscribe() error {
+	if w.eventHandle != 0 {
+		if err := w.Close(); err != nil {
+			return &wevtAPIError{api: apiEvtClose, name: w.name, err: err}
+		}
+	}
+	w.eventHandle = EvtHandle(0)
+	return w.open()
 }
 
 func (w *windowsEventLog) LogGroupName() string {
@@ -194,15 +252,18 @@ func (w *windowsEventLog) Done(offset uint64) {
 	w.offsetCh <- offset
 }
 
+func (w *windowsEventLog) ResubscribeCh() chan struct{} {
+	return w.resubscribeCh
+}
+
 func (w *windowsEventLog) runSaveState() {
-	t := time.NewTicker(100 * time.Millisecond)
+	t := time.NewTicker(saveStateInterval)
 	defer w.Stop()
 
 	var offset, lastSavedOffset uint64
 	for {
 		select {
 		case o := <-w.offsetCh:
-
 			if o > offset {
 				offset = o
 			}
@@ -230,7 +291,6 @@ func (w *windowsEventLog) saveState(offset uint64) error {
 	if w.stateFilePath == "" || offset == 0 {
 		return nil
 	}
-
 	content := []byte(strconv.FormatUint(offset, 10) + "\n" + w.logGroupName)
 	return os.WriteFile(w.stateFilePath, content, 0644)
 }
@@ -362,21 +422,21 @@ func (w *windowsEventLog) getRecord(evtHandle EvtHandle) (*windowsEventLogRecord
 	return newRecord, nil
 }
 
-func (w *windowsEventLog) loadState() {
+func (w *windowsEventLog) loadState() uint64 {
 	if _, err := os.Stat(w.stateFilePath); err != nil {
 		log.Printf("I! [wineventlog] The state file for %s does not exist: %v", w.stateFilePath, err)
-		return
+		return 0
 	}
 	byteArray, err := os.ReadFile(w.stateFilePath)
 	if err != nil {
 		log.Printf("W! [wineventlog] Issue encountered when reading offset from file %s: %v", w.stateFilePath, err)
-		return
+		return 0
 	}
 	offset, err := strconv.ParseUint(strings.Split(string(byteArray), "\n")[0], 10, 64)
 	if err != nil {
 		log.Printf("W! [wineventlog] Issue encountered when parsing offset value %v: %v", byteArray, err)
-		return
+		return 0
 	}
-	log.Printf("I! [wineventlog] Reading from offset %v in %s", offset, w.stateFilePath)
-	w.eventOffset = uint64(offset)
+	log.Printf("D! [wineventlog] Reading from offset %v in %s", offset, w.stateFilePath)
+	return offset
 }
