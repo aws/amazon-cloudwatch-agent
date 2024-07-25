@@ -119,9 +119,10 @@ func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 			labelFilter = metricFilters.PodNeuronMetricFilter
 		} else if strings.HasPrefix(m.Name(), nodeMetricPrefix) {
 			labelFilter = metricFilters.NodeNeuronMetricFilter
-			if strings.HasPrefix(m.Name(), "node_neurondevice_") {
-				labelFilter = metricFilters.NodeAWSNeuronDeviceMetricFilter
-			}
+		}
+
+		if strings.Contains(m.Name(), "_neurondevice_hw") {
+			delete(labelFilter[internal.Kubernetes], "labels")
 		}
 	}
 
