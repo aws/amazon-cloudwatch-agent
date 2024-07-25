@@ -19,6 +19,7 @@ extensions:
                 region_type: ACJ
     entitystore:
         mode: ec2
+        region: us-west-2
 receivers:
     telegraf_statsd:
         collection_interval: 10s

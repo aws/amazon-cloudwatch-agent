@@ -390,6 +390,7 @@ extensions:
                 region_type: ACJ
     entitystore:
       mode: ec2
+      region: us-east-1
 
 processors:
     batch/containerinsights:

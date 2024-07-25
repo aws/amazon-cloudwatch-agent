@@ -660,6 +660,7 @@ extensions:
     entitystore:
         mode: onPremise
         profile: default
+        region: us-east-1
         shared_credential_file: /root/.aws/credentials
 processors:
     batch/containerinsights:

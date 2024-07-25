@@ -69,6 +69,7 @@ type serviceprovider struct {
 	ec2Credential     *configaws.CredentialConfig
 	iamRole           string
 	ec2TagServiceName string
+	region            string
 	done              chan struct{}
 
 	// logFiles stores the service attributes that were configured for log files in CloudWatch Agent configuration.
@@ -265,11 +266,7 @@ func (s *serviceprovider) getEC2Client() error {
 	if s.ec2API != nil {
 		return nil
 	}
-	region, err := getRegion(s.metadataProvider)
-	if err != nil {
-		return fmt.Errorf("failed to get EC2 client: %s", err)
-	}
-	s.ec2API = s.ec2Provider(region, s.ec2Credential)
+	s.ec2API = s.ec2Provider(s.region, s.ec2Credential)
 	return nil
 }
 
@@ -296,10 +293,10 @@ func (s *serviceprovider) getEC2TagFilters() ([]*ec2.Filter, error) {
 	return tagFilters, nil
 }
 
-func newServiceProvider(mode string, ec2Info *ec2Info, metadataProvider ec2metadataprovider.MetadataProvider,
-	providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) serviceProviderInterface {
+func newServiceProvider(mode string, region string, ec2Info *ec2Info, metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) serviceProviderInterface {
 	return &serviceprovider{
 		mode:             mode,
+		region:           region,
 		ec2Info:          ec2Info,
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,

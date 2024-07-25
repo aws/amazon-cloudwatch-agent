@@ -91,10 +91,10 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	}
 	switch e.mode {
 	case config.ModeEC2:
-		e.ec2Info = *newEC2Info(e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
+		e.ec2Info = *newEC2Info(e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.config.Region)
 		go e.ec2Info.initEc2Info()
 	}
-	e.serviceprovider = newServiceProvider(e.mode, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
+	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
 	go e.serviceprovider.startServiceProvider()
 	return nil
 }
@@ -228,14 +228,6 @@ func getEC2Provider(region string, ec2CredentialConfig *configaws.CredentialConf
 			LogLevel: configaws.SDKLogLevel(),
 			Logger:   configaws.SDKLogger{},
 		})
-}
-
-func getRegion(metadataProvider ec2metadataprovider.MetadataProvider) (string, error) {
-	instanceDocument, err := metadataProvider.Get(context.Background())
-	if err != nil {
-		return "", err
-	}
-	return instanceDocument.Region, nil
 }
 
 func addNonEmptyToMap(m map[string]*string, key, value string) {

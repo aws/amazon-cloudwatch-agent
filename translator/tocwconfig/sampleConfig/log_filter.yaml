@@ -3,6 +3,7 @@ exporters:
 extensions:
   entitystore:
     mode: "ec2"
+    region: us-east-1
 receivers:
   nop: {}
 service:

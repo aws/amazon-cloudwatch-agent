@@ -41,6 +41,7 @@ extensions:
                 region_type: ACJ
     entitystore:
         mode: ec2
+        region: ${ENV_REGION}
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000

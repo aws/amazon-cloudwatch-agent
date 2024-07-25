@@ -82,7 +82,6 @@ func TestSetInstanceIdAndRegion(t *testing.T) {
 			wantErr: false,
 			want: ec2Info{
 				InstanceID: mockedInstanceIdentityDoc.InstanceID,
-				Region:     mockedInstanceIdentityDoc.Region,
 			},
 		},
 	}
@@ -91,11 +90,10 @@ func TestSetInstanceIdAndRegion(t *testing.T) {
 			ei := &ec2Info{
 				metadataProvider: tt.args.metadataProvider,
 			}
-			if err := ei.setInstanceIdAndRegion(); (err != nil) != tt.wantErr {
-				t.Errorf("setInstanceIdAndRegion() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ei.setInstanceId(); (err != nil) != tt.wantErr {
+				t.Errorf("setInstanceId() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.want.InstanceID, ei.InstanceID)
-			assert.Equal(t, tt.want.Region, ei.Region)
 		})
 	}
 }

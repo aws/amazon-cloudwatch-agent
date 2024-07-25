@@ -142,30 +142,6 @@ func TestEntityStore_Mode(t *testing.T) {
 	}
 }
 
-func Test_getRegion(t *testing.T) {
-	tests := []struct {
-		name             string
-		metadataProvider ec2metadataprovider.MetadataProvider
-		want             string
-	}{
-		{
-			name: "HappyPath",
-			metadataProvider: &mockMetadataProvider{
-				InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
-					Region: "us-west-2"},
-			},
-			want: "us-west-2",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getRegion(tt.metadataProvider)
-			assert.NoError(t, err)
-			assert.Equalf(t, tt.want, got, "getRegion(%v)", tt.metadataProvider)
-		})
-	}
-}
-
 func TestEntityStore_createAttributeMaps(t *testing.T) {
 	type fields struct {
 		ec2Info ec2Info

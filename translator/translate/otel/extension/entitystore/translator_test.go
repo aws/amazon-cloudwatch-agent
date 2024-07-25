@@ -18,6 +18,7 @@ import (
 func TestTranslate(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	translateagent.Global_Config.Credentials = make(map[string]interface{})
+	translateagent.Global_Config.Region = "us-east-1"
 	testCases := map[string]struct {
 		input          map[string]interface{}
 		file_exists    bool
@@ -29,6 +30,7 @@ func TestTranslate(t *testing.T) {
 			profile_exists: true,
 			want: &entitystore.Config{
 				Mode:    config.ModeEC2,
+				Region:  "us-east-1",
 				Profile: "test_profile",
 			},
 		},
@@ -37,6 +39,7 @@ func TestTranslate(t *testing.T) {
 			file_exists: true,
 			want: &entitystore.Config{
 				Mode:     config.ModeEC2,
+				Region:   "us-east-1",
 				Filename: "test_file",
 			},
 		},

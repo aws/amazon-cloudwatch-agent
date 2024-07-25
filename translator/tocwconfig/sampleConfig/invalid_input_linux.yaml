@@ -19,6 +19,7 @@ extensions:
                 region_type: ACJ
     entitystore:
         mode: ec2
+        region: us-east-1
 processors:
     ec2tagger:
         ec2_instance_tag_keys:

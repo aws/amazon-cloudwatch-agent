@@ -362,6 +362,7 @@ extensions:
     entitystore:
         mode: onPremise
         profile: AmazonCloudWatchAgent
+        region: us-east-1
         shared_credential_file: fake-path
 processors:
     batch/containerinsights:

@@ -45,7 +45,7 @@ type ec2Info struct {
 
 func (ei *ec2Info) initEc2Info() {
 	log.Println("I! ec2Info: Initializing ec2Info")
-	if err := ei.setInstanceIdAndRegion(); err != nil {
+	if err := ei.setInstanceId(); err != nil {
 		return
 	}
 	ei.ec2API = ei.ec2Provider(ei.Region, ei.ec2Credential)
@@ -56,11 +56,11 @@ func (ei *ec2Info) initEc2Info() {
 	ei.ignoreInvalidFields()
 }
 
-func (ei *ec2Info) setInstanceIdAndRegion() error {
+func (ei *ec2Info) setInstanceId() error {
 	for {
 		metadataDoc, err := ei.metadataProvider.Get(context.Background())
 		if err != nil {
-			log.Printf("E! ec2Info: Failed to get Instance Id and region through metadata provider: %v", err)
+			log.Printf("E! ec2Info: Failed to get Instance Id through metadata provider: %v", err)
 			wait := time.NewTimer(1 * time.Minute)
 			select {
 			case <-ei.done:
@@ -70,9 +70,8 @@ func (ei *ec2Info) setInstanceIdAndRegion() error {
 				continue
 			}
 		}
-		log.Printf("D! ec2Info: Successfully retrieved Instance Id %s, Region %s", ei.InstanceID, ei.Region)
+		log.Printf("D! ec2Info: Successfully retrieved Instance Id %s", ei.InstanceID)
 		ei.InstanceID = metadataDoc.InstanceID
-		ei.Region = metadataDoc.Region
 		return nil
 	}
 }
@@ -171,12 +170,13 @@ func (ei *ec2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error
 	return nil
 }
 
-func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) *ec2Info {
+func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, region string) *ec2Info {
 	return &ec2Info{
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
 		ec2Credential:    ec2Credential,
 		done:             done,
+		Region:           region,
 	}
 }
 

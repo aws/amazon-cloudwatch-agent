@@ -35,6 +35,7 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*entitystore.Config)
 	cfg.Mode = context.CurrentContext().Mode()
+	cfg.Region = agent.Global_Config.Region
 	credentials := confmap.NewFromStringMap(agent.Global_Config.Credentials)
 	_ = credentials.Unmarshal(cfg)
 
