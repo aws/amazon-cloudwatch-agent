@@ -2,7 +2,9 @@ exporters:
     awscloudwatch:
         drop_original_metrics:
             CPU_USAGE_IDLE: true
+            collectd_drop: true
             cpu_time_active: true
+            statsd_drop: true
         endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
         force_flush_interval: 1m0s
         max_datums_per_call: 1000
