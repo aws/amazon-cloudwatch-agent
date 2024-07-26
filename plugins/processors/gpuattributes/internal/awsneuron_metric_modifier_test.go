@@ -309,6 +309,66 @@ func TestMetricWithStaleDatapoint(t *testing.T) {
 	assertModifiedMetric(t, metricsList, expectedMetrics)
 }
 
+func TestAwsNeuronMetricModifier_IsProcessedNeuronMetric(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "container_neuroncore_prefix",
+			input:    "container_neuroncore_metric",
+			expected: true,
+		},
+		{
+			name:     "pod_neuroncore_prefix",
+			input:    "pod_neuroncore_metric",
+			expected: true,
+		},
+		{
+			name:     "node_neuroncore_prefix",
+			input:    "node_neuroncore_metric",
+			expected: true,
+		},
+		{
+			name:     "container_neurondevice_prefix",
+			input:    "container_neurondevice_metric",
+			expected: true,
+		},
+		{
+			name:     "pod_neurondevice_prefix",
+			input:    "pod_neurondevice_metric",
+			expected: true,
+		},
+		{
+			name:     "node_neurondevice_prefix",
+			input:    "node_neurondevice_metric",
+			expected: true,
+		},
+		{
+			name:     "node_neuron_prefix",
+			input:    "node_neuron_metric",
+			expected: true,
+		},
+		{
+			name:     "other_prefix",
+			input:    "other_metric",
+			expected: false,
+		},
+	}
+
+	md := &AwsNeuronMetricModifier{}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := md.IsProcessedNeuronMetric(test.input)
+			if result != test.expected {
+				t.Errorf("IsProcessedNeuronMetric(%q) = %v, expected %v", test.input, result, test.expected)
+			}
+		})
+	}
+}
+
 func createActualMetricForKey(key string) pmetric.Metric {
 	metricDefinition := metricNameToMetricLayout[key]
 
