@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package metricFilters
 
 import "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
