@@ -318,24 +318,3 @@ func resetStaleDatapoints(originalMetric pmetric.Metric) {
 		}
 	}
 }
-
-func (md *AwsNeuronMetricModifier) IsProcessedNeuronMetric(name string) bool {
-	switch {
-	case strings.HasPrefix(name, "container_neuroncore_"):
-		return true
-	case strings.HasPrefix(name, "pod_neuroncore_"):
-		return true
-	case strings.HasPrefix(name, "node_neuroncore_"):
-		return true
-	case strings.HasPrefix(name, "container_neurondevice_"):
-		return true
-	case strings.HasPrefix(name, "pod_neurondevice_"):
-		return true
-	case strings.HasPrefix(name, "node_neurondevice_"):
-		return true
-	case strings.HasPrefix(name, "node_neuron_"):
-		return true
-	default:
-		return false
-	}
-}

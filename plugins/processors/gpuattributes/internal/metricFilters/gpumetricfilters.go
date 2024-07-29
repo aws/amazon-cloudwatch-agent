@@ -5,6 +5,9 @@ package metricFilters
 
 import "github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 
+// This class contains the attribute filters which are applied to the metric datapoints of GPU metrics.
+// If the datapoint contains metrics apart from the ones mentioned in the filter, then they'll be dropped.
+
 var ContainerLabelFilter = map[string]map[string]interface{}{
 	containerinsightscommon.ClusterNameKey:   nil,
 	containerinsightscommon.InstanceIdKey:    nil,

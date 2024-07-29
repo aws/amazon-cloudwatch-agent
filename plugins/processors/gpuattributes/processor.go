@@ -48,6 +48,7 @@ type gpuAttributesProcessor struct {
 	logger                          *zap.Logger
 	awsNeuronMetricModifier         *internal.AwsNeuronMetricModifier
 	awsNeuronMemoryMetricAggregator *internal.AwsNeuronMemoryMetricsAggregator
+	awsNeuronMetricChecker          *internal.AwsNeuronMetricChecker
 }
 
 func newGpuAttributesProcessor(config *Config, logger *zap.Logger) *gpuAttributesProcessor {
@@ -56,6 +57,7 @@ func newGpuAttributesProcessor(config *Config, logger *zap.Logger) *gpuAttribute
 		logger:                          logger,
 		awsNeuronMetricModifier:         internal.NewMetricModifier(logger),
 		awsNeuronMemoryMetricAggregator: internal.NewMemoryMemoryAggregator(),
+		awsNeuronMetricChecker:          internal.NewAwsNeuronMetricChecker(),
 	}
 	return d
 }
@@ -98,7 +100,7 @@ func (d *gpuAttributesProcessor) processMetrics(_ context.Context, md pmetric.Me
 func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 	// only decorate GPU metrics
 	isGpuMetric := strings.Contains(m.Name(), gpuMetricIdentifier)
-	isNeuronMetric := d.awsNeuronMetricModifier.IsProcessedNeuronMetric(m.Name())
+	isNeuronMetric := d.awsNeuronMetricChecker.IsProcessedNeuronMetric(m.Name())
 	if !isNeuronMetric && !isGpuMetric {
 		return
 	}

@@ -10,6 +10,9 @@ import (
 
 const label = "labels"
 
+// This class contains the attribute filters which are applied to the metric datapoints of Neuron metrics.
+// If the datapoint contains metrics apart from the ones mentioned in the filter, then they'll be dropped.
+
 var PodNeuronMetricFilter = map[string]map[string]interface{}{
 	internal.ClusterName:      nil,
 	internal.FullPodName:      nil,
