@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   java-eks-e2e-test:
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -27,14 +27,14 @@ jobs:
       caller-workflow-name: 'main-build'
 
   java-ec2-default-e2e-test:
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
 
   java-ec2-asg-e2e-test:
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-asg-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-asg-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -42,7 +42,7 @@ jobs:
 
   java-metric-limiter-e2e-test:
     needs: [ java-eks-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-metric-limiter-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -50,7 +50,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   java-k8s-e2e-test:
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-k8s-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-k8s-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -58,7 +58,7 @@ jobs:
 
   python-eks-e2e-test:
     needs: [ java-metric-limiter-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -66,14 +66,14 @@ jobs:
       caller-workflow-name: 'main-build'
 
   python-ec2-default-e2e-test:
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-default-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-default-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
       caller-workflow-name: 'main-build'
 
   python-ec2-asg-e2e-test:
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-asg-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-asg-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -81,7 +81,7 @@ jobs:
 
   python-k8s-e2e-test:
     needs: [ java-k8s-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-e2e-test.yml@consolidate-release
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-e2e-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1

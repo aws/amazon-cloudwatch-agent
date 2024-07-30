@@ -230,6 +230,12 @@
             },
             "metrics_aggregation_interval": {
               "$ref": "#/definitions/timeIntervalWithZeroDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
             }
           },
           "additionalProperties": false
@@ -337,6 +343,12 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 255
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
             }
           },
           "additionalProperties": false
@@ -471,6 +483,12 @@
             },
             "append_dimensions": {
               "$ref": "#/definitions/generalAppendDimensionsDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
             }
           },
           "additionalProperties": false
