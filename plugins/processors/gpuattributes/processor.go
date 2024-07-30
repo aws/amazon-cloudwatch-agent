@@ -6,6 +6,7 @@ package gpuattributes
 import (
 	"context"
 	"encoding/json"
+	"golang.org/x/exp/maps"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -124,7 +125,11 @@ func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 		}
 
 		if strings.Contains(m.Name(), "_neurondevice_hw") {
-			delete(labelFilter[internal.Kubernetes], "labels")
+			if kubernetesMap, ok := labelFilter[internal.Kubernetes]; ok {
+				kubernetesMap := maps.Clone(kubernetesMap)
+				delete(kubernetesMap, "labels")
+				labelFilter[internal.Kubernetes] = kubernetesMap
+			}
 		}
 	}
 
