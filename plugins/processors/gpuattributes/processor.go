@@ -126,6 +126,8 @@ func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 
 		if strings.Contains(m.Name(), "_neurondevice_hw") {
 			if kubernetesMap, ok := labelFilter[internal.Kubernetes]; ok {
+				// cloning is done to avoid modifying the original label filters
+				labelFilter = maps.Clone(labelFilter)
 				kubernetesMap := maps.Clone(kubernetesMap)
 				delete(kubernetesMap, "labels")
 				labelFilter[internal.Kubernetes] = kubernetesMap
