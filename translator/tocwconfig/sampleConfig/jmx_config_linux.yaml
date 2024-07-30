@@ -21,6 +21,13 @@ extensions:
                 mode: EC2
                 region_type: ACJ
 processors:
+    cumulativetodelta/jmx:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 0
+        max_staleness: 0s
     filter/jmx:
         error_mode: propagate
         logs: {}
@@ -106,6 +113,7 @@ service:
             processors:
                 - filter/jmx
                 - resource/jmx
+                - cumulativetodelta/jmx
                 - transform/jmx
             receivers:
                 - jmx
