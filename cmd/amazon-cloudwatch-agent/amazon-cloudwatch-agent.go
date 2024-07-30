@@ -323,7 +323,7 @@ func runAgent(ctx context.Context,
 	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
 	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
 	providerSettings, err := configprovider.GetSettings(yamlConfigPath, logger)
-	provider, err := configprovider.Get(yamlConfigPath, logger)
+	provider, err := otelcol.NewConfigProvider(providerSettings)
 	if err != nil {
 		log.Printf("E! Error while initializing config provider: %v\n", err)
 		return err
