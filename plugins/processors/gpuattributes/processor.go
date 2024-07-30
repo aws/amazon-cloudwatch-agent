@@ -6,12 +6,12 @@ package gpuattributes
 import (
 	"context"
 	"encoding/json"
-	"golang.org/x/exp/maps"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
+	"golang.org/x/exp/maps"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/containerinsightscommon"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes/internal"
