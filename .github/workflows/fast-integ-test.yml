@@ -1,0 +1,200 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Run Fast Agent Integration Test
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+  CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
+  CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
+  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+
+on:
+  push:
+    branches:
+      - main*
+    paths-ignore:
+      - '**/*.md'
+      - 'NOTICE'
+      - 'RELEASE_NOTES'
+      - 'THIRD-PARTY'
+      - 'LICENSE'
+      - '.github/**'
+      - '!.github/workflows/integration-test.yml'
+  workflow_dispatch:
+    inputs:
+      plugins:
+        description: 'Comma delimited list of plugins to test. Default is empty, and tests everything'
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  BuildAndUpload:
+    uses: ./.github/workflows/test-build.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BuildAndUploadPackages:
+    uses: ./.github/workflows/test-build-packages.yml
+    needs: [BuildAndUpload]
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BuildDocker:
+    needs: [BuildAndUpload]
+    uses: ./.github/workflows/test-build-docker.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
+      BucketKey: "integration-test/binary/${{ github.sha }}"
+      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+
+  GenerateTestMatrix:
+    name: 'GenerateTestMatrix'
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
+      ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          go run --tags=generator generator/test_case_generator.go
+          echo "::set-output name=ec2_gpu_matrix::$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))"
+          echo "::set-output name=eks_addon_matrix::$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
+          echo "::set-output name=ec2_windows_matrix::$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))"
+          echo "::set-output name=ec2_mac_matrix::$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))"
+          echo "::set-output name=ec2_performance_matrix::$(echo $(cat generator/resources/ec2_performance_complete_test_matrix.json))"
+          echo "::set-output name=ec2_windows_performance_matrix::$(echo $(cat generator/resources/ec2_windows_performance_complete_test_matrix.json))"
+          echo "::set-output name=ec2_stress_matrix::$(echo $(cat generator/resources/ec2_stress_complete_test_matrix.json))"
+          echo "::set-output name=ec2_windows_stress_matrix::$(echo $(cat generator/resources/ec2_windows_stress_complete_test_matrix.json))"
+          echo "::set-output name=ecs_ec2_launch_daemon_matrix::$(echo $(cat generator/resources/ecs_ec2_daemon_complete_test_matrix.json))"
+          echo "::set-output name=ecs_fargate_matrix::$(echo $(cat generator/resources/ecs_fargate_complete_test_matrix.json))"
+          echo "::set-output name=eks_daemon_matrix::$(echo $(cat generator/resources/eks_daemon_complete_test_matrix.json))"
+          echo "::set-output name=eks_deployment_matrix::$(echo $(cat generator/resources/eks_deployment_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_itar_matrix::$(echo $(cat generator/resources/ec2_linux_itar_complete_test_matrix.json))"
+          echo "::set-output name=ec2_linux_china_matrix::$(echo $(cat generator/resources/ec2_linux_china_complete_test_matrix.json))"
+
+      - name: Echo test plan matrix
+        run: |
+          echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
+          echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
+          echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
+          echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
+          echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
+          echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
+          echo "ec2_windows_performance_matrix: ${{ steps.set-matrix.outputs.ec2_windows_performance_matrix}}"
+          echo "ec2_stress_matrix: ${{ steps.set-matrix.outputs.ec2_stress_matrix}}"
+          echo "ec2_windows_stress_matrix: ${{ steps.set-matrix.outputs.ec2_windows_stress_matrix}}"
+          echo "ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
+          echo "ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
+          echo "eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}"
+          echo "eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}"
+          echo "ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}"
+          echo "ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}"
+
+  StartLocalStack:
+    name: 'StartLocalStack'
+    needs: [OutputEnvVariables]
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      github_sha: ${{github.sha}}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  OutputEnvVariables:
+    name: 'OutputEnvVariables'
+    runs-on: ubuntu-latest
+    outputs:
+      CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.22.2
+
+      - name: SetOutputs
+        id: set-outputs
+        run: |
+          echo "::set-output name=CWA_GITHUB_TEST_REPO_NAME::${{ env.CWA_GITHUB_TEST_REPO_NAME }}"
+          echo "::set-output name=CWA_GITHUB_TEST_REPO_URL::${{ env.CWA_GITHUB_TEST_REPO_URL }}"
+          echo "::set-output name=CWA_GITHUB_TEST_REPO_BRANCH::${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}"
+
+      - name: Echo test variables
+        run: |
+          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
+          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+
+  EC2LinuxIntegrationTest:
+    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    name: 'EC2Linux'
+    uses:  ./.github/workflows/ec2-integration-test.yml
+    with:
+      github_sha: ${{github.sha}}
+      test_dir: terraform/ec2/linux
+      job_id: ec2-linux-integration-test
+      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_matrix}}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{needs.StartLocalStack.outputs.local_stack_host_name}}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+    secrets: inherit
+
