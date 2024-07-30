@@ -19,6 +19,7 @@ on:
   push:
     branches:
       - main*
+      - fast-integ-test
     paths-ignore:
       - '**/*.md'
       - 'NOTICE'
