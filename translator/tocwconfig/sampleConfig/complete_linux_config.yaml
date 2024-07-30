@@ -117,6 +117,13 @@ processors:
             match_type: ""
         initial_value: 0
         max_staleness: 0s
+    cumulativetodelta/jmx:
+        exclude:
+            match_type: ""
+        include:
+            match_type: ""
+        initial_value: 0
+        max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -384,6 +391,7 @@ service:
             processors:
                 - filter/jmx/0
                 - resource/jmx
+                - cumulativetodelta/jmx
                 - transform/jmx/0
                 - ec2tagger
             receivers:
@@ -394,6 +402,7 @@ service:
             processors:
                 - filter/jmx/1
                 - resource/jmx
+                - cumulativetodelta/jmx
                 - transform/jmx/1
                 - ec2tagger
             receivers:
