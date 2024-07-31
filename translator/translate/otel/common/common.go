@@ -392,3 +392,13 @@ func GetMeasurements(m map[string]any) []string {
 	}
 	return results
 }
+
+// IsAnySet checks if any of the provided keys are present in the configuration.
+func IsAnySet(conf *confmap.Conf, keys []string) bool {
+	for _, key := range keys {
+		if conf.IsSet(key) {
+			return true
+		}
+	}
+	return false
+}

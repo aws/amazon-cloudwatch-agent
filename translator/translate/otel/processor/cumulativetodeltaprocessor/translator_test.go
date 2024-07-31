@@ -15,8 +15,8 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
-	cdpTranslator := NewTranslator()
-	require.EqualValues(t, "cumulativetodelta", cdpTranslator.ID().String())
+	cdpTranslator := NewTranslator(common.WithName("test"), WithDiskIONetKeys())
+	require.EqualValues(t, "cumulativetodelta/test", cdpTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *cumulativetodeltaprocessor.Config
