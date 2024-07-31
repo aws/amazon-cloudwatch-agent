@@ -323,6 +323,10 @@ func runAgent(ctx context.Context,
 	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
 	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
 	providerSettings, err := configprovider.GetSettings(yamlConfigPath, logger)
+	if err != nil {
+		log.Printf("E! Error while initializing config provider settings: %v\n", err)
+		return err
+	}
 	provider, err := otelcol.NewConfigProvider(providerSettings)
 	if err != nil {
 		log.Printf("E! Error while initializing config provider: %v\n", err)
@@ -346,9 +350,9 @@ func runAgent(ctx context.Context,
 	// *************************************************************************************************
 	// ⚠️ WARNING ⚠️
 	// Noticed that args of parent process get passed here to otel collector which causes failures
-	// complaining about unrecognized args. So below change overwrites the args. Need to investigate this
-	// further as I don't think the config path below here is actually used and it still respects what
-	// was set in the settings above.
+	// complaining about unrecognized args. So below change overwrites the args.
+	// The config path below here is actually used that was set in the settings above.
+	// docs: https://github.com/open-telemetry/opentelemetry-collector/blob/main/otelcol/command.go#L63
 	// *************************************************************************************************
 	e := []string{"--config=" + yamlConfigPath}
 	cmd.SetArgs(e)

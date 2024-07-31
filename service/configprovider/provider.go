@@ -24,10 +24,3 @@ func GetSettings(configPath string, logger *zap.Logger) (otelcol.ConfigProviderS
 	}
 	return settings, nil
 }
-func Get(configPath string, logger *zap.Logger) (otelcol.ConfigProvider, error) {
-	settings, err := GetSettings(configPath, logger)
-	if err != nil {
-		return nil, err
-	}
-	return otelcol.NewConfigProvider(settings)
-}
