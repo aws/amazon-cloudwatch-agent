@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
@@ -226,10 +225,6 @@ func (p *pusher) send() {
 	var entity *cloudwatchlogs.Entity
 	if p.logSrc != nil {
 		entity = p.logSrc.Entity()
-		// The following logics should be removed after Compass GA1
-		if entity != nil && entity.Attributes != nil {
-			delete(entity.Attributes, entitystore.ServiceNameSourceKey)
-		}
 	}
 
 	input := &cloudwatchlogs.PutLogEventsInput{
