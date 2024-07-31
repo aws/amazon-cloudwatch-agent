@@ -109,19 +109,19 @@ func (d *gpuAttributesProcessor) processMetricAttributes(m pmetric.Metric) {
 	labelFilter := map[string]map[string]interface{}{}
 	if isGpuMetric {
 		if strings.HasPrefix(m.Name(), containerMetricPrefix) {
-			labelFilter = metricFilters.ContainerLabelFilter
+			labelFilter = metricFilters.ContainerGpuLabelFilter
 		} else if strings.HasPrefix(m.Name(), podMetricPrefix) {
-			labelFilter = metricFilters.PodLabelFilter
+			labelFilter = metricFilters.PodGpuLabelFilter
 		} else if strings.HasPrefix(m.Name(), nodeMetricPrefix) {
-			labelFilter = metricFilters.NodeLabelFilter
+			labelFilter = metricFilters.NodeGpuLabelFilter
 		}
 	} else if isNeuronMetric {
 		if strings.HasPrefix(m.Name(), containerMetricPrefix) {
-			labelFilter = metricFilters.ContainerNeuronMetricFilter
+			labelFilter = metricFilters.ContainerNeuronLabelFilter
 		} else if strings.HasPrefix(m.Name(), podMetricPrefix) {
-			labelFilter = metricFilters.PodNeuronMetricFilter
+			labelFilter = metricFilters.PodNeuronLabelFilter
 		} else if strings.HasPrefix(m.Name(), nodeMetricPrefix) {
-			labelFilter = metricFilters.NodeNeuronMetricFilter
+			labelFilter = metricFilters.NodeNeuronLabelFilter
 		}
 
 		if strings.Contains(m.Name(), "_neurondevice_hw") {

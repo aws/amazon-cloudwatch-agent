@@ -49,6 +49,11 @@ func TestAwsNeuronMetricModifier_IsProcessedNeuronMetric(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "container_neuron_prefix",
+			input:    "container_neuron_metric",
+			expected: false,
+		},
+		{
 			name:     "other_prefix",
 			input:    "other_metric",
 			expected: false,

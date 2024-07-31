@@ -20,6 +20,7 @@ const (
 	PodOwnersKey     = "PodOwners"
 	HostKey          = "host"
 	K8sKey           = "kubernetes"
+	K8sLabelsKey     = "labels"
 
 	RunningPodCount       = "number_of_running_pods"
 	RunningContainerCount = "number_of_running_containers"
