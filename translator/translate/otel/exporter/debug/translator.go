@@ -13,7 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-var DEFAULT_SAMPLING_THEREAFTER = 500
+const defaultSamplingThereafter = 500
 
 type translator struct {
 	name    string
@@ -38,6 +38,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	cfg := t.factory.CreateDefaultConfig().(*debugexporter.Config)
 	cfg.Verbosity = configtelemetry.LevelDetailed
-	cfg.SamplingThereafter = DEFAULT_SAMPLING_THEREAFTER
+	cfg.SamplingThereafter = defaultSamplingThereafter
 	return cfg, nil
 }
