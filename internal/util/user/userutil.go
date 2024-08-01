@@ -4,16 +4,13 @@
 //go:build linux || darwin
 // +build linux darwin
 
-package cmdutil
+package user
 
 import (
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 var (
@@ -27,23 +24,21 @@ type ChownFunc func(name string, uid, gid int) error
 var chown ChownFunc = os.Chown
 
 // DetectRunAsUser get the user name from toml config. It runs on all platforms except windows.
-func DetectRunAsUser(mergedJsonConfigMap map[string]interface{}) (runAsUser string, err error) {
+func DetectRunAsUser(configMap map[string]any) (string, error) {
 	fmt.Printf("I! Detecting run_as_user...\n")
-	if agentSection, ok := mergedJsonConfigMap["agent"]; ok {
-		agent := agentSection.(map[string]interface{})
+	if agentSection, ok := configMap["agent"]; ok {
+		agent := agentSection.(map[string]any)
 		if user, ok := agent["run_as_user"]; ok {
-			if runasuser, ok := user.(string); ok {
-				return runasuser, nil
+			if runAsUser, ok := user.(string); ok {
+				return runAsUser, nil
 			}
-
 			log.Panicf("E! run_as_user is not string %v", user)
 		}
-
-		// agent section exists, but "runasuser" does not exist, then use "root"
+		// agent section exists, but "run_as_user" does not exist, then use "root"
 		return "root", nil
 	}
 
-	// no agent section, it means no runasuser, use "root"
+	// no agent section, it means no run_as_user, use "root"
 	return "root", nil
 }
 
@@ -70,7 +65,6 @@ func changeFileOwner(uid, gid int) error {
 // or with special purpose to be changed to be owned by root when run_as_user option
 // is removed from the configuration
 func chownRecursive(uid, gid int, dir string) error {
-
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -100,7 +94,7 @@ func chownRecursive(uid, gid int, dir string) error {
 			return nil
 		}
 
-		if err := chown(path, uid, gid); err != nil {
+		if err = chown(path, uid, gid); err != nil {
 			return err
 		}
 		return nil
@@ -110,15 +104,4 @@ func chownRecursive(uid, gid int, dir string) error {
 		return fmt.Errorf("error change owner of dir %s to %v:%v due to error: %w", dir, uid, gid, err)
 	}
 	return nil
-}
-
-func VerifyCredentials(ctx *context.Context, runAsUser string) {
-	credentials := ctx.Credentials()
-	if (config.ModeOnPrem == ctx.Mode()) || (config.ModeOnPremise == ctx.Mode()) {
-		if runAsUser != "root" {
-			if _, ok := credentials["shared_credential_file"]; !ok {
-				log.Panic("E! Credentials path is not set while runasuser is not root")
-			}
-		}
-	}
 }

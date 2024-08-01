@@ -14,16 +14,14 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
-
-// We use an environment variable here because we need this condition before the translator reads agent config json file.
-var runInContainer = os.Getenv(config.RUN_IN_CONTAINER)
 
 func translateConfig() error {
 	args := []string{"--output", paths.TomlConfigPath, "--mode", "auto"}
-	if runInContainer == config.RUN_IN_CONTAINER_TRUE {
+	if envconfig.IsRunningInContainer() {
 		args = append(args, "--input-dir", paths.CONFIG_DIR_IN_CONTAINER)
 	} else {
 		args = append(args, "--input", paths.JsonConfigPath, "--input-dir", paths.JsonDirPath, "--config", paths.CommonConfigPath)
@@ -39,7 +37,7 @@ func translateConfig() error {
 			case status.Exited():
 				log.Printf("I! Return exit error: exit code=%d\n", status.ExitStatus())
 
-				if status.ExitStatus() == config.ERR_CODE_NOJSONFILE {
+				if status.ExitStatus() == constants.ExitCodeNoJSONFile {
 					log.Printf("I! No json config files found, please provide config, exit now\n")
 					os.Exit(0)
 				}
@@ -55,7 +53,7 @@ func translateConfig() error {
 func main() {
 	var writer io.WriteCloser
 
-	if runInContainer != config.RUN_IN_CONTAINER_TRUE {
+	if !envconfig.IsRunningInContainer() {
 		writer = &lumberjack.Logger{
 			Filename:   paths.AgentLogFilePath,
 			MaxSize:    100, //MB

@@ -4,7 +4,7 @@
 //go:build linux
 // +build linux
 
-package cmdutil
+package user
 
 import (
 	"fmt"

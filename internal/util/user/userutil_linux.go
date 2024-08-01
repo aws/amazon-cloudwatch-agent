@@ -4,7 +4,7 @@
 //go:build linux
 // +build linux
 
-package cmdutil
+package user
 
 import (
 	"bufio"
@@ -141,9 +141,7 @@ func getRunAsExecUser(runasuser string) (*ExecUser, error) {
 	return toExecUser(newUser)
 }
 
-func ChangeUser(mergedJsonConfigMap map[string]interface{}) (string, error) {
-	runAsUser, _ := DetectRunAsUser(mergedJsonConfigMap)
-	log.Printf("I! Detected runAsUser: %v", runAsUser)
+func ChangeUser(runAsUser string) (string, error) {
 	if runAsUser == "" {
 		runAsUser = "root"
 	}

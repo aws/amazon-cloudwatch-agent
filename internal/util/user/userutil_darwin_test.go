@@ -4,7 +4,7 @@
 //go:build darwin
 // +build darwin
 
-package cmdutil
+package user
 
 import (
 	"testing"

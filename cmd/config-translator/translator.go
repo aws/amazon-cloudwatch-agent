@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	userutil "github.com/aws/amazon-cloudwatch-agent/internal/util/user"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -104,7 +105,7 @@ func main() {
 		// run as user only applies to non container situation.
 		current, err := user.Current()
 		if err == nil && current.Name == "root" {
-			runAsUser, err := cmdutil.DetectRunAsUser(mergedJsonConfigMap)
+			runAsUser, err := userutil.DetectRunAsUser(mergedJsonConfigMap)
 			if err != nil {
 				log.Panic("E! Failed to detectRunAsUser")
 			}
