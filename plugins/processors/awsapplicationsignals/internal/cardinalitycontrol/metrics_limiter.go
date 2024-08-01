@@ -29,15 +29,15 @@ const (
 
 var awsDeclaredMetricAttributes = []string{
 	common.AttributeEKSClusterName,
-	common.AttributeK8SNamespace,
-	common.MetricAttributeEnvironment,
-	common.MetricAttributeLocalService,
-	common.MetricAttributeLocalOperation,
-	common.MetricAttributeRemoteService,
-	common.MetricAttributeRemoteOperation,
-	common.MetricAttributeRemoteResourceIdentifier,
-	common.MetricAttributeRemoteEnvironment,
 	common.AttributeK8SClusterName,
+	common.AttributeK8SNamespace,
+	common.CWMetricAttributeEnvironment,
+	common.CWMetricAttributeLocalService,
+	common.CWMetricAttributeLocalOperation,
+	common.CWMetricAttributeRemoteService,
+	common.CWMetricAttributeRemoteOperation,
+	common.CWMetricAttributeRemoteResourceIdentifier,
+	common.CWMetricAttributeRemoteEnvironment,
 }
 
 type Limiter interface {
@@ -141,7 +141,7 @@ func (m *MetricsLimiter) Admit(metricName string, attributes, resourceAttributes
 }
 
 func (m *MetricsLimiter) filterAWSDeclaredAttributes(attributes, resourceAttributes pcommon.Map) (map[string]string, string, bool) {
-	svcNameAttr, exists := attributes.Get(common.MetricAttributeLocalService)
+	svcNameAttr, exists := attributes.Get(common.CWMetricAttributeLocalService)
 	if !exists {
 		return nil, "", false
 	}
@@ -336,12 +336,12 @@ func (s *service) admitMetricData(metric *MetricData) bool {
 
 func (s *service) rollupMetricData(attributes pcommon.Map) {
 	for _, indexAttr := range awsDeclaredMetricAttributes {
-		if (indexAttr == common.MetricAttributeEnvironment) || (indexAttr == common.MetricAttributeLocalService) || (indexAttr == common.MetricAttributeRemoteService) {
+		if (indexAttr == common.CWMetricAttributeEnvironment) || (indexAttr == common.CWMetricAttributeLocalService) || (indexAttr == common.CWMetricAttributeRemoteService) {
 			continue
 		}
-		if indexAttr == common.MetricAttributeLocalOperation {
+		if indexAttr == common.CWMetricAttributeLocalOperation {
 			attributes.PutStr(indexAttr, UnprocessedServiceOperationValue)
-		} else if indexAttr == common.MetricAttributeRemoteOperation {
+		} else if indexAttr == common.CWMetricAttributeRemoteOperation {
 			attributes.PutStr(indexAttr, UnprocessedRemoteServiceOperationValue)
 		} else {
 			attributes.PutStr(indexAttr, "-")
