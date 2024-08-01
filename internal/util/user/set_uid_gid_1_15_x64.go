@@ -6,7 +6,7 @@
 // +build arm64 amd64 mips mipsle mips64 mips64le ppc ppc64 ppc64le riscv64 s390x
 // +build !go1.16
 
-package cmdutil
+package user
 
 import (
 	"golang.org/x/sys/unix"

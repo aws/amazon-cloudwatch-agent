@@ -6,7 +6,7 @@
 // +build 386 arm
 // +build !go1.16
 
-package cmdutil
+package user
 
 import (
 	"golang.org/x/sys/unix"
