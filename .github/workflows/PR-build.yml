@@ -133,12 +133,12 @@ jobs:
         if:  steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make test
 
-      - name: Upload coverage to Codecov
+      - name: Run Codecov
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         uses: codecov/codecov-action@v3
         with:
           verbose: true
-
+          dry_run: true
       - name: Build
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make amazon-cloudwatch-agent-${{ matrix.family }}
