@@ -94,6 +94,56 @@ func TestTracesTranslator(t *testing.T) {
 	}
 }
 
+func TestMetricsTranslator(t *testing.T) {
+	tt := NewTranslator(WithDataType(component.DataTypeMetrics))
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		want    *confmap.Conf
+		wantErr error
+	}{
+		"WithMissingKey": {
+			input: map[string]interface{}{"metrics": map[string]interface{}{}},
+			wantErr: &common.MissingKeyError{
+				ID:      tt.ID(),
+				JsonKey: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey),
+			},
+		},
+		"WithDefault": {
+			input: map[string]interface{}{"metrics": map[string]interface{}{"metrics_collected": map[string]interface{}{"otlp": map[string]interface{}{}}}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:4317",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:4318",
+					},
+				},
+			}),
+		},
+		"WithCompleteConfig": {
+			input: testutil.GetJson(t, filepath.Join("testdata", "metrics", "config.json")),
+			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics", "config.yaml")),
+		},
+	}
+	factory := otlpreceiver.NewFactory()
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
+			if err == nil {
+				require.NotNil(t, got)
+				gotCfg, ok := got.(*otlpreceiver.Config)
+				require.True(t, ok)
+				wantCfg := factory.CreateDefaultConfig()
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
+				assert.Equal(t, wantCfg, gotCfg)
+			}
+		})
+	}
+}
+
 func TestTranslateAppSignals(t *testing.T) {
 	tt := NewTranslatorWithName(common.AppSignals, WithDataType(component.DataTypeTraces))
 	testCases := map[string]struct {
