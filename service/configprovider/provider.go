@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func GetSettings(configPath string, logger *zap.Logger) (otelcol.ConfigProviderSettings) {
+func GetSettings(configPath string, logger *zap.Logger) otelcol.ConfigProviderSettings {
 	fprovider := fileprovider.NewFactory()
 	settings := otelcol.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
