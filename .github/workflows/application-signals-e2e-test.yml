@@ -4,9 +4,12 @@
 # This is a reusable workflow for running the E2E test for Application Signals.
 # It is meant to be called from another workflow.
 # Read more about reusable workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
-name: E2E Testing
+name: Application Signals E2E Test
 on:
-  workflow_call:
+  workflow_run:
+    workflows: [ Build Test Artifacts ]
+    types:
+      - completed
 
 permissions:
   id-token: write
@@ -18,7 +21,14 @@ concurrency:
 
 
 jobs:
+  CheckBuildTestArtifacts:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - run: echo 'The triggering build workflow succeeded'
+
   java-eks-e2e-test:
+    needs: CheckBuildTestArtifacts
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-e2e-test.yml@main
     secrets: inherit
     with:
@@ -27,6 +37,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   java-ec2-default-e2e-test:
+    needs: CheckBuildTestArtifacts
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-e2e-test.yml@main
     secrets: inherit
     with:
@@ -34,6 +45,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   java-ec2-asg-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-asg-e2e-test.yml@main
     secrets: inherit
     with:
@@ -41,7 +53,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   java-metric-limiter-e2e-test:
-    needs: [ java-eks-e2e-test ]
+    needs: [ CheckBuildTestArtifacts, java-eks-e2e-test ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-metric-limiter-e2e-test.yml@main
     secrets: inherit
     with:
@@ -50,6 +62,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   java-k8s-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-k8s-e2e-test.yml@main
     secrets: inherit
     with:
@@ -57,7 +70,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   python-eks-e2e-test:
-    needs: [ java-metric-limiter-e2e-test ]
+    needs: [ CheckBuildTestArtifacts, java-metric-limiter-e2e-test ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-e2e-test.yml@main
     secrets: inherit
     with:
@@ -66,6 +79,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   python-ec2-default-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-default-e2e-test.yml@main
     secrets: inherit
     with:
@@ -73,6 +87,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   python-ec2-asg-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-asg-e2e-test.yml@main
     secrets: inherit
     with:
@@ -80,7 +95,7 @@ jobs:
       caller-workflow-name: 'main-build'
 
   python-k8s-e2e-test:
-    needs: [ java-k8s-e2e-test ]
+    needs: [ CheckBuildTestArtifacts, java-k8s-e2e-test ]
     uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-e2e-test.yml@main
     secrets: inherit
     with:

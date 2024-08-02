@@ -20,94 +20,24 @@ env:
   S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 on:
-  push:
-    branches:
-      - main*
-    paths-ignore:
-      - '**/*.md'
-      - 'NOTICE'
-      - 'RELEASE_NOTES'
-      - 'THIRD-PARTY'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/integration-test.yml'
-  workflow_dispatch:
-    inputs:
-      plugins:
-        description: 'Comma delimited list of plugins to test. Default is empty, and tests everything'
-        required: false
-        default: ''
-        type: string
+  workflow_run:
+    workflows: [ Build Test Artifacts ]
+    types:
+      - completed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  BuildAndUpload:
-    uses: ./.github/workflows/test-build.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-
-  BuildAndUploadPackages:
-    uses: ./.github/workflows/test-build-packages.yml
-    needs: [BuildAndUpload]
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-
-  BuildDocker:
-    needs: [BuildAndUpload]
-    uses: ./.github/workflows/test-build-docker.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-
-  BuildAndUploadITAR:
-    uses: ./.github/workflows/test-build.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      Region: "us-gov-east-1"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-
-  BuildAndUploadCN:
-    uses: ./.github/workflows/test-build.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      Region: "cn-north-1"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  CheckBuildTestArtifacts:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - run: echo 'The triggering build workflow succeeded'
 
   GenerateTestMatrix:
+    needs: [ CheckBuildTestArtifacts ]
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
@@ -126,8 +56,6 @@ jobs:
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
       eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
-
-
     steps:
       - uses: actions/checkout@v3
         with:
@@ -178,7 +106,7 @@ jobs:
           echo "ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}"
 
   CloudformationTest:
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     name: 'CFTest'
     runs-on: ubuntu-latest
     strategy:
@@ -272,7 +200,7 @@ jobs:
 
 
   EC2NvidiaGPUIntegrationTest:
-    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix ]
+    needs: [ StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -387,6 +315,7 @@ jobs:
             terraform destroy --auto-approve
 
   OutputEnvVariables:
+    needs: [CheckBuildTestArtifacts]
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
     outputs:
@@ -418,7 +347,7 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
 
   EC2LinuxIntegrationTest:
-    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2Linux'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -436,7 +365,7 @@ jobs:
     secrets: inherit
 
   EC2LinuxIntegrationTestITAR:
-    needs: [ BuildAndUpload, BuildAndUploadITAR, StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2LinuxITAR'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -454,7 +383,7 @@ jobs:
     secrets: inherit
 
   EC2LinuxIntegrationTestCN:
-    needs: [ BuildAndUpload, BuildAndUploadCN, StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2LinuxCN'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -473,7 +402,7 @@ jobs:
 
 
   LinuxOnPremIntegrationTest:
-    needs: [BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
+    needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
     name: 'OnpremLinux'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -489,7 +418,7 @@ jobs:
     secrets: inherit
 
   EC2WinIntegrationTest:
-    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -571,7 +500,7 @@ jobs:
             terraform destroy --auto-approve
 
   EC2DarwinIntegrationTest:
-    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -705,7 +634,7 @@ jobs:
   ECSEC2IntegrationTest:
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
+    needs: [ GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -788,7 +717,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [BuildAndUpload, BuildDocker, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     strategy:
       fail-fast: false
       matrix:
@@ -866,7 +795,7 @@ jobs:
   EKSIntegrationTest:
     name: 'EKSIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
+    needs: [ GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -948,7 +877,7 @@ jobs:
   EKSPrometheusIntegrationTest:
     name: 'EKSPrometheusIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
+    needs: [ GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -1027,7 +956,7 @@ jobs:
 
   PerformanceTrackingTest:
     name: "PerformanceTrackingTest"
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1095,7 +1024,7 @@ jobs:
 
   EC2WinPerformanceTest:
     name: "EC2WinPerformanceTest"
-    needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
+    needs: [ GenerateTestMatrix ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1163,7 +1092,7 @@ jobs:
 
   StressTrackingTest:
     name: "StressTrackingTest"
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1233,7 +1162,7 @@ jobs:
 
   EC2WinStressTrackingTest:
     name: "EC2WinStressTrackingTest"
-    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1302,18 +1231,9 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
 
-  ApplicationSignalsEndToEndTest:
-    name: "Application Signals E2E Test"
-    needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/application-signals-e2e-test.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-
   GPUEndToEndTest:
     name: "GPU E2E Test"
-    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
