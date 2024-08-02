@@ -123,7 +123,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx",
 				receivers:  []string{"jmx"},
-				processors: []string{"filter/jmx", "resource/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "cumulativetodelta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -151,7 +151,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx",
 				receivers:  []string{"jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "transform/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "cumulativetodelta/jmx", "transform/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -185,7 +185,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/0",
 				receivers:  []string{"jmx/0"},
-				processors: []string{"filter/jmx/0", "resource/jmx", "transform/jmx/0", "ec2tagger"},
+				processors: []string{"filter/jmx/0", "resource/jmx", "cumulativetodelta/jmx", "transform/jmx/0", "ec2tagger"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
