@@ -41,15 +41,15 @@ func TestAdmitAndRollup(t *testing.T) {
 			admittedAttributes[uniqKey.AsString()] = attr
 		} else {
 			for _, indexedAttrKey := range awsDeclaredMetricAttributes {
-				if indexedAttrKey == common.MetricAttributeEnvironment ||
-					indexedAttrKey == common.MetricAttributeLocalService ||
-					indexedAttrKey == common.MetricAttributeRemoteService {
+				if indexedAttrKey == common.CWMetricAttributeEnvironment ||
+					indexedAttrKey == common.CWMetricAttributeLocalService ||
+					indexedAttrKey == common.CWMetricAttributeRemoteService {
 					continue
 				}
 				attrValue, _ := attr.Get(indexedAttrKey)
-				if indexedAttrKey == common.MetricAttributeLocalOperation {
+				if indexedAttrKey == common.CWMetricAttributeLocalOperation {
 					assert.Equal(t, UnprocessedServiceOperationValue, attrValue.AsString())
-				} else if indexedAttrKey == common.MetricAttributeRemoteOperation {
+				} else if indexedAttrKey == common.CWMetricAttributeRemoteOperation {
 					assert.Equal(t, UnprocessedRemoteServiceOperationValue, attrValue.AsString())
 				} else {
 					assert.Equal(t, "-", attrValue.AsString())

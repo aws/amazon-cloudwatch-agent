@@ -31,15 +31,15 @@ func generateAttributesWithEnv(service string, operation string, environment str
 			attributes.PutStr(attr.AWSRemoteEnvironment, remoteEnvironment)
 		}
 	} else {
-		attributes.PutStr(common.MetricAttributeLocalService, service)
-		attributes.PutStr(common.MetricAttributeLocalOperation, operation)
+		attributes.PutStr(common.CWMetricAttributeLocalService, service)
+		attributes.PutStr(common.CWMetricAttributeLocalOperation, operation)
 		if environment != "" {
-			attributes.PutStr(common.MetricAttributeEnvironment, environment)
+			attributes.PutStr(common.CWMetricAttributeEnvironment, environment)
 		}
-		attributes.PutStr(common.MetricAttributeRemoteService, remoteService)
-		attributes.PutStr(common.MetricAttributeRemoteOperation, remoteOperation)
+		attributes.PutStr(common.CWMetricAttributeRemoteService, remoteService)
+		attributes.PutStr(common.CWMetricAttributeRemoteOperation, remoteOperation)
 		if remoteEnvironment != "" {
-			attributes.PutStr(common.MetricAttributeRemoteEnvironment, remoteEnvironment)
+			attributes.PutStr(common.CWMetricAttributeRemoteEnvironment, remoteEnvironment)
 		}
 	}
 	return attributes
