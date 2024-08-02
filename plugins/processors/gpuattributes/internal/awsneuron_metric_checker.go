@@ -7,6 +7,10 @@ import (
 	"regexp"
 )
 
+const (
+	PROCESSED_NEURON_METRIC_PATTERN = "^(container|node|pod)_(neuroncore_|neurondevice_).*|^node_neuron_.*"
+)
+
 type AwsNeuronMetricChecker struct {
 }
 
@@ -15,7 +19,7 @@ func NewAwsNeuronMetricChecker() *AwsNeuronMetricChecker {
 }
 
 func (md *AwsNeuronMetricChecker) IsProcessedNeuronMetric(name string) bool {
-	matched, err := regexp.MatchString("^(container|node|pod)_(neuroncore_|neurondevice_).*|^node_neuron_.*", name)
+	matched, err := regexp.MatchString(PROCESSED_NEURON_METRIC_PATTERN, name)
 	if err != nil {
 		print(err)
 		return false
