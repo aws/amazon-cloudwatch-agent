@@ -132,14 +132,7 @@ jobs:
       - name: Unit Test
         if:  steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make test
-
-      - name: Run Codecov
-        if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
-        uses: codecov/codecov-action@v3
-        with:
-          verbose: true
-          dry_run: true
-          os: aarch64
+        
       - name: Build
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make amazon-cloudwatch-agent-${{ matrix.family }}
