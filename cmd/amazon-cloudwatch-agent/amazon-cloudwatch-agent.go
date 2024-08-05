@@ -348,7 +348,7 @@ func runAgent(ctx context.Context,
 	// Noticed that args of parent process get passed here to otel collector which causes failures
 	// complaining about unrecognized args. So below change overwrites the args.
 	// The config path below here is actually used that was set in the settings above.
-	// docs: https://github.com/open-telemetry/opentelemetry-collector/blob/main/otelcol/command.go#L63
+	// docs: https://github.com/open-telemetry/opentelemetry-collector/blob/93cbae436ae61b832279dbbb18a0d99214b7d305/otelcol/command.go#L63
 	// *************************************************************************************************
 	e := []string{"--config=" + yamlConfigPath}
 	cmd.SetArgs(e)

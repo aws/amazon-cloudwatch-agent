@@ -183,8 +183,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfex
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20240801174630-e08453fb681f/go.mod h1:LPWBVdTSNbZkk80v6aCUthS59cnR4VauVRdAIE3ifaY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20240801174630-e08453fb681f h1:6t6//SHAwXK2V94MuxLEzmpjnhSyaeSnpDzqboHiMF0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20240801174630-e08453fb681f/go.mod h1:GNeNylfr5KMt55XowzSdgbP7z8CkIAfIHtWSd+xxtws=
-github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20240709194807-b0f0c0eda01b h1:XqfG8N0PxttnwhO65hDpUK2jO+gIjuqVtZkfCyFbPaQ=
-github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20240709194807-b0f0c0eda01b/go.mod h1:cDpFSR8i0bjVLkxLxOFABagktk5wd7LdMzU4xX7unPo=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20240801174630-e08453fb681f h1:/8f4So+qI4klFbEsHwwRr00egj0bwSebctvfcparHUQ=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20240801174630-e08453fb681f/go.mod h1:/RaNSxxO06niapGT00snMdgFfjjjW/kV3TZGX8kHuwM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20240801174630-e08453fb681f h1:rc/Ux0GFnOHS+soaGGOnYkkqjlWM3NHBkHnwFM8yRkg=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20240801174630-e08453fb681f/go.mod h1:hRZt1DsvoLDIYBwjFvjwg/9IkaBXeCPG0QI57wbj98Q=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20240801174630-e08453fb681f h1:VrJJyh1yw+VxWl5W4txtojZJy4Qwy2orioGSmCfODEA=
@@ -205,8 +205,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/internal/k8sconfi
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/k8sconfig v0.0.0-20240801174630-e08453fb681f/go.mod h1:VS66oUydCMwiWl1BFmLs7iNy4lGsfVYsriXr/d1fpAk=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20240801174630-e08453fb681f h1:tQeYqCjYwH5IisoHRHmRXGarZV/Unwb9cTDLleZ9G4A=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20240801174630-e08453fb681f/go.mod h1:4qvmHiXPOkOXJdpmmxMqprb2BXxOGPgOG45BwLdipUM=
-github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20240709194807-b0f0c0eda01b h1:cCooVxp9OfZaI+j0mfQCmZmNlz2jmJoCvyqN6cEX3wI=
-github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20240709194807-b0f0c0eda01b/go.mod h1:t/hYoRTnlPuRjh8y0BwVGgNvNIXpU2QJME5YVppUUHQ=
+github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20240801174630-e08453fb681f h1:U7zRqrOBMClLENwcasczR254US0op3MlKFjnNoDaxeg=
+github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20240801174630-e08453fb681f/go.mod h1:t/hYoRTnlPuRjh8y0BwVGgNvNIXpU2QJME5YVppUUHQ=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20240801174630-e08453fb681f h1:f5ewI3fLsCKFhw7G4YufgtSKyWJvvLwxG0d10lh+kBM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20240801174630-e08453fb681f/go.mod h1:2NSghK+mafMGxM8c4Gff8qcprdMD3YQebZtD9UAdB3E=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20240801174630-e08453fb681f h1:lqk1TkgI/9wmTf7Y7knRTOeZ4fMWnhGkdgd+24WBvsE=

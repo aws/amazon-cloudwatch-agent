@@ -34,13 +34,6 @@ func NewLogger(writer io.Writer, level zap.AtomicLevel) (*zap.Logger, []zap.Opti
 
 	return logger, []zap.Option{option}
 }
-func NewLoggerOptions(writer io.Writer, level zap.AtomicLevel) []zap.Option {
-	loggerLevel.SetLevel(level.Level())
-	loggingOptions := getLoggingOptions(writer)
-
-	return loggingOptions
-}
-
 func getLoggingOptions(writer io.Writer) []zap.Option {
 	core := zapcore.NewCore(
 		createTelegrafWrapperEncoder(),

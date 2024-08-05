@@ -89,7 +89,7 @@ replace github.com/aws/aws-sdk-go => github.com/aws/aws-sdk-go v1.48.6
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Jeffail/gabs v1.4.0
-	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20240709194807-b0f0c0eda01b
+	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20240801174630-e08453fb681f
 	github.com/aws/aws-sdk-go v1.53.11
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.30.2
 	github.com/bigkevmcd/go-configparser v0.0.0-20200217161103-d137835d2579
@@ -144,7 +144,6 @@ require (
 	go.opentelemetry.io/collector/exporter v0.103.0
 	go.opentelemetry.io/collector/exporter/debugexporter v0.103.0
 	go.opentelemetry.io/collector/extension v0.103.0
-	go.opentelemetry.io/collector/featuregate v1.10.0 // indirect
 	go.opentelemetry.io/collector/otelcol v0.103.0
 	go.opentelemetry.io/collector/pdata v1.10.0
 	go.opentelemetry.io/collector/processor v0.103.0
@@ -193,7 +192,7 @@ require (
 	github.com/alecthomas/participle v0.4.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/units v0.0.0-20231202071711-9a357b53e9c9 // indirect
-	github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20240709194807-b0f0c0eda01b // indirect
+	github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20240801174630-e08453fb681f // indirect
 	github.com/antchfx/jsonquery v1.1.5 // indirect
 	github.com/antchfx/xmlquery v1.3.9 // indirect
 	github.com/antchfx/xpath v1.2.0 // indirect
@@ -401,6 +400,7 @@ require (
 	go.opentelemetry.io/collector/confmap/provider/yamlprovider v0.103.0 // indirect
 	go.opentelemetry.io/collector/connector v0.103.0 // indirect
 	go.opentelemetry.io/collector/extension/auth v0.103.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.10.0 // indirect
 	go.opentelemetry.io/collector/pdata/testdata v0.103.0 // indirect
 	go.opentelemetry.io/contrib/config v0.7.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.52.0 // indirect

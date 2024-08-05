@@ -12,11 +12,10 @@ import (
 )
 
 func GetSettings(configPath string, logger *zap.Logger) otelcol.ConfigProviderSettings {
-	fprovider := fileprovider.NewFactory()
 	settings := otelcol.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
 			URIs:               []string{configPath},
-			ProviderFactories:  []confmap.ProviderFactory{fprovider},
+			ProviderFactories:  []confmap.ProviderFactory{fileprovider.NewFactory()},
 			ProviderSettings:   confmap.ProviderSettings{Logger: logger},
 			ConverterFactories: []confmap.ConverterFactory{expandconverter.NewFactory()},
 			ConverterSettings:  confmap.ConverterSettings{Logger: logger},
