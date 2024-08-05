@@ -44,7 +44,7 @@ func TestMetricPrunerWithIndexableAttribute(t *testing.T) {
 	p := &MetricPruner{}
 	for _, tt := range tests {
 		attributes := pcommon.NewMap()
-		attributes.PutStr(common.MetricAttributeLocalService, tt.val)
+		attributes.PutStr(common.CWMetricAttributeLocalService, tt.val)
 		t.Run(tt.name, func(t *testing.T) {
 			got, _ := p.ShouldBeDropped(attributes)
 			if got != tt.want {

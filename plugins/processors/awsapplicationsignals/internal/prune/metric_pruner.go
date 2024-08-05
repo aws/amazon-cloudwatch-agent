@@ -15,7 +15,7 @@ type MetricPruner struct {
 }
 
 func (p *MetricPruner) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
-	for _, attributeKey := range common.IndexableMetricAttributes {
+	for _, attributeKey := range common.CWMetricAttributes {
 		if val, ok := attributes.Get(attributeKey); ok {
 			if !isAsciiPrintable(val.Str()) {
 				return true, errors.New("Metric attribute " + attributeKey + " must contain only ASCII characters.")

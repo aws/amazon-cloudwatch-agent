@@ -39,6 +39,7 @@ processors:
         refresh_interval_seconds: 0s
     transform:
         error_mode: propagate
+        flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric

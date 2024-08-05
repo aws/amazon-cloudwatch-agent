@@ -58,6 +58,7 @@ processors:
               value: unknown_service:java
     transform:
         error_mode: propagate
+        flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric
@@ -70,6 +71,7 @@ processors:
         trace_statements: []
     transform/jmx:
         error_mode: propagate
+        flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric
