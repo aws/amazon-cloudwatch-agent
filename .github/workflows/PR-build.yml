@@ -76,14 +76,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-2019, windows-latest, macos-latest]
+        os: [ ubuntu-latest, windows-2019, windows-latest, macos-12]
         include:
           - os: ubuntu-latest
             family: linux
             cache-path: |
               ~/.cache/go-build
               ~/go/pkg/mod
-          - os: macos-latest
+          - os: macos-12
             family: darwin
             cache-path: |
               ~/Library/Caches/go-build
@@ -132,7 +132,7 @@ jobs:
       - name: Unit Test
         if:  steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make test
-        
+
       - name: Build
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make amazon-cloudwatch-agent-${{ matrix.family }}
