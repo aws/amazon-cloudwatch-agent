@@ -22,6 +22,8 @@ func Test_getCollectorParams(t *testing.T) {
 		factories        otelcol.Factories
 		providerSettings otelcol.ConfigProviderSettings
 	}
+
+	_, loggerOptions := logger.NewLogger(os.Stderr, zap.NewAtomicLevelAt(zapcore.InfoLevel))
 	tests := []struct {
 		name string
 		args args
@@ -43,7 +45,7 @@ func Test_getCollectorParams(t *testing.T) {
 					Description: "CloudWatch Agent",
 					Version:     "Unknown",
 				},
-				LoggingOptions: logger.NewLoggerOptions(os.Stderr, zap.NewAtomicLevelAt(zapcore.InfoLevel)),
+				LoggingOptions: loggerOptions,
 			},
 		},
 	}
