@@ -1,4 +1,16 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300043.0 (2024-08-06)
+========================================================================
+Bug Fixes:
+* [Metrics/Plugin] Drop original metrics support added for statsd, collectd and ethtool metrics
+* [Logs/Windows Event] Add windows event log service restart detection and resubscribe
+
+Enhancements:
+* [Metrics/JMX] Add cumulative to delta conversion for JMX metrics
+* [ApplicationSignals] Rename and group application signals attributes
+* Upgrade OTEL Contrib to v0.103.0
+
+========================================================================
 Amazon CloudWatch Agent 1.300042.1 (2024-07-16)
 ========================================================================
 Bug Fixes:

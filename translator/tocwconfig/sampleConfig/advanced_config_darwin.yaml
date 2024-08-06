@@ -72,11 +72,11 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_mem
                 - telegraf_netstat
                 - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
