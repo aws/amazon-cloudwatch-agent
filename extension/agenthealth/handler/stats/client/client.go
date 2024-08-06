@@ -139,6 +139,7 @@ func rejectedEntityInfoExists(r *http.Response) bool {
 	if r == nil || r.Body == nil {
 		return false
 	}
+	defer r.Body.Close()
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		return false
