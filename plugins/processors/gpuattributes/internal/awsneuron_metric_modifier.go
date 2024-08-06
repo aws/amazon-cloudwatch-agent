@@ -6,7 +6,6 @@ package internal
 import (
 	"strings"
 
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
 
@@ -99,26 +98,6 @@ var (
 			"sram_ecc_corrected":   NeuronDeviceHardwareEccEventsAggregatedMetric,
 			"sram_ecc_uncorrected": NeuronDeviceHardwareEccEventsAggregatedMetric},
 	}
-
-	MetricAttributesToKeep = map[string]struct{}{
-		ClusterName:      {},
-		ContainerName:    {},
-		FullPodName:      {},
-		InstanceId:       {},
-		InstanceType:     {},
-		K8sPodName:       {},
-		Namespace:        {},
-		NeuronDevice:     {},
-		NodeName:         {},
-		PodName:          {},
-		Service:          {},
-		AvailabilityZone: {},
-		Kubernetes:       {},
-		Region:           {},
-		RuntimeTag:       {},
-		SubnetId:         {},
-		NeuronCore:       {},
-	}
 )
 
 func NewMetricModifier(logger *zap.Logger) *AwsNeuronMetricModifier {
@@ -156,7 +135,6 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 	}
 
 	modifiedMetricSlice := md.extractDatapointsAsMetricsAndAggregate(originalMetric)
-	filterLabels(modifiedMetricSlice, originalMetricName)
 	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
 }
 
@@ -251,7 +229,6 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 
 	// Creating body for the aggregated metric and add it to the new newMetricSlice for each runtime
 	for aggregatedMetricMetadata, value := range aggregatedValuesPerRuntimeTag {
-		// Aggregated metric for neuron device ecc events is not required
 		aggregatedMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), aggregatedMetricMetadata.aggregatedMetricName, originalMetric.Unit())
 
 		originalMetricDatapoints.At(0).CopyTo(aggregatedMetric.SetEmptySum().DataPoints().AppendEmpty())
@@ -267,30 +244,6 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 	}
 
 	return newMetricSlice
-}
-
-// This method removes the attribute keys which are not required. The removal is necessary so that the metrics are grouped together
-func filterLabels(slice pmetric.MetricSlice, originalMetricName string) {
-	_, exists := metricModificationsMap[originalMetricName]
-	if !exists {
-		return
-	}
-
-	for i := 0; i < slice.Len(); i++ {
-		m := slice.At(i)
-
-		dps := m.Sum().DataPoints()
-		for j := 0; j < dps.Len(); j++ {
-			attributes := dps.At(j).Attributes()
-			attributes.RemoveIf(func(label string, value pcommon.Value) bool {
-				_, exists := MetricAttributesToKeep[label]
-				if !exists {
-					return true
-				}
-				return false
-			})
-		}
-	}
 }
 
 // This method prefixes NeuronCore and NeuronDevice values with `core` and `device` respectively
