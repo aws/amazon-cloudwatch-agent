@@ -3,6 +3,15 @@
 
 name: Build Test Artifacts
 on:
+  pull_request:
+    branches:
+      - main*
+      - feature*
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   push:
     branches:
       - main*
