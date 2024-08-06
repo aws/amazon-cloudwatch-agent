@@ -20,10 +20,12 @@ env:
   S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 on:
-  workflow_run:
-    workflows: [ Build Test Artifacts ]
-    types:
-      - completed
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'The ID of the build-test-artifacts workflow run'
+        type: number
+        required: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
@@ -32,9 +34,17 @@ concurrency:
 jobs:
   CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - run: echo 'The triggering build workflow succeeded'
+      - run: |
+          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+          if [[ $conclusion == "success" ]]; then
+            echo "Run succeeded"
+          else
+            echo "Run failed"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   GenerateTestMatrix:
     needs: [ CheckBuildTestArtifacts ]

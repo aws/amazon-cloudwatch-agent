@@ -83,3 +83,19 @@ jobs:
       Region: "cn-north-1"
       TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
       Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+
+  StartIntegrationTests:
+    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  StartApplicationSignalsE2ETests:
+    needs: [ BuildAndUpload, BuildDocker ]
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
