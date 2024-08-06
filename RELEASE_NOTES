@@ -6,7 +6,7 @@ Bug Fixes:
 * [Logs/Windows Event] Add windows event log service restart detection and resubscribe
 
 Enhancements:
-* Add cumulative to delta conversion for JMX metrics. by @jefchien
+* [Metrics/JMX] Add cumulative to delta conversion for JMX metrics
 * [ApplicationSignals] Rename and group application signals attributes
 * Upgrade OTEL Contrib to v0.103.0
 
