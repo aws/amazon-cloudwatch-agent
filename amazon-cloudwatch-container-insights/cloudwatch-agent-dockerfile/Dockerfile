@@ -2,7 +2,7 @@ FROM ubuntu:latest as build
 
 # NOTE: This arg will be populated by docker buildx
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
-ARG TARGETARCH
+ARG TARGETARCH="amd64"
 
 RUN apt-get update &&  \
     apt-get install -y ca-certificates curl && \

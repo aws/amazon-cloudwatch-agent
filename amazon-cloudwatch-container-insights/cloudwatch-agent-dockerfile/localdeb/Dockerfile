@@ -1,7 +1,7 @@
 ARG BUILD_IMAGE=ubuntu:latest
 FROM $BUILD_IMAGE as build
 
-ARG TARGETARCH
+ARG TARGETARCH="amd64"
 
 RUN apt-get update &&  \
     apt-get install -y ca-certificates && \

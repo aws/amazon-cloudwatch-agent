@@ -5,7 +5,7 @@ FROM $GO_IMAGE as builder
 
 # NOTE: This arg will be populated by docker buildx
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
-ARG TARGETARCH
+ARG TARGETARCH="amd64"
 ENV GOPROXY=direct
 RUN mkdir -p /go/src/github.com/aws/amazon-cloudwatch-agent/
 WORKDIR /go/src/github.com/aws/amazon-cloudwatch-agent/
@@ -15,17 +15,17 @@ ENV GO111MODULE=${GO111MODULE}
 
 COPY go.mod /go/src/github.com/aws/amazon-cloudwatch-agent/
 COPY go.sum /go/src/github.com/aws/amazon-cloudwatch-agent/
-RUN go mod download -x
+# RUN go mod download -x
 
-COPY . /go/src/github.com/aws/amazon-cloudwatch-agent/
+COPY build /go/src/github.com/aws/amazon-cloudwatch-agent/build
 
-RUN make build-for-docker-${TARGETARCH}
+# RUN make build-for-docker-${TARGETARCH}
 
 # Install cert and binaries
 FROM $CERT_IMAGE as cert
 
 # Need to repeat the ARG after each FROM
-ARG TARGETARCH
+ARG TARGETARCH="amd64"
 RUN mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
 RUN mkdir -p /opt/aws/amazon-cloudwatch-agent/var
 RUN apt-get update &&  \
