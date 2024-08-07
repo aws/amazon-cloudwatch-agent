@@ -45,6 +45,7 @@ const (
 	Kubernetes                                    = "kubernetes"
 	Region                                        = "region"
 	SubnetId                                      = "subnet_id"
+	RuntimeTagOverride                            = "DEFAULT"
 	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
 	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
 )
@@ -257,7 +258,7 @@ func updateCoreDeviceRuntimeLabels(originalMetric pmetric.Metric) {
 				dp.Attributes().PutStr(attributeKey, attributeValuePrefix+value.Str())
 			}
 		}
-		dp.Attributes().PutStr(RuntimeTag, "DEFAULT")
+		dp.Attributes().PutStr(RuntimeTag, RuntimeTagOverride)
 	}
 }
 
@@ -314,7 +315,7 @@ func resetStaleDatapoints(originalMetric pmetric.Metric) {
 		dp := dps.At(i)
 		if dp.ValueType() == pmetric.NumberDataPointValueTypeEmpty || dp.Flags().NoRecordedValue() {
 			dp.SetDoubleValue(dp.DoubleValue())
-			dp.Attributes().PutStr(RuntimeTag, "default")
+			dp.Attributes().PutStr(RuntimeTag, RuntimeTagOverride)
 			dp.SetFlags(dp.Flags().WithNoRecordedValue(false))
 		}
 	}
