@@ -232,6 +232,7 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 					"ClusterName": "cluster",
 					"Drop":        "val",
 					"percentile":  "p50",
+					"runtime_tag": "DEFAULT",
 					"kubernetes":  "{\"host\":\"test\",\"drop\":\"2\",\"labels\":\"label\"}",
 				},
 				{
@@ -259,7 +260,7 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				{
 					"ClusterName":   "cluster",
 					"Drop":          "val",
-					"runtime_tag":   "10",
+					"runtime_tag":   "DEFAULT",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"PodName":       "testPod",
@@ -268,7 +269,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":   "cluster",
-					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"Type":          "ContainerAWSNeuronCore",
@@ -278,7 +278,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "PodAWSNeuronCore",
@@ -287,7 +286,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronCore",
@@ -295,7 +293,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":   "cluster",
-					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"Type":          "ContainerAWSNeuronCore",
@@ -305,7 +302,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "PodAWSNeuronCore",
@@ -314,7 +310,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronCore",
@@ -338,14 +333,13 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				{
 					"ClusterName":  "cluster",
 					"Drop":         "val",
-					"runtime_tag":  "10",
+					"runtime_tag":  "DEFAULT",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"kubernetes":   "{\"host\":\"test\",\"drop\":\"2\",\"labels\":\"label\"}",
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronCore",
@@ -353,7 +347,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronCore",
@@ -380,7 +373,7 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				{
 					"ClusterName":   "cluster",
 					"Drop":          "val",
-					"runtime_tag":   "10",
+					"runtime_tag":   "DEFAULT",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"event_type":    "mem_ecc_corrected",
@@ -390,7 +383,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":   "cluster",
-					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"Type":          "ContainerAWSNeuronDevice",
@@ -400,7 +392,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "PodAWSNeuronDevice",
@@ -409,7 +400,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronDevice",
@@ -417,7 +407,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":   "cluster",
-					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"Type":          "ContainerAWSNeuronDevice",
@@ -427,7 +416,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "PodAWSNeuronDevice",
@@ -436,7 +424,6 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 				},
 				{
 					"ClusterName":  "cluster",
-					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronDevice",
