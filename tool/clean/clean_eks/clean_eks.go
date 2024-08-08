@@ -23,6 +23,7 @@ var (
 	ClustersToClean = []string{
 		"cwagent-eks-integ-",
 		"cwagent-operator-helm-integ-",
+		"cwagent-helm-chart-integ-",
 		"cwagent-operator-eks-integ-",
 	}
 )
