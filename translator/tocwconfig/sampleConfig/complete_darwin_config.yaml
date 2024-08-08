@@ -110,7 +110,7 @@ processors:
                 - diskio_iops_in_progress
         include:
             match_type: ""
-        initial_value: 0
+        initial_value: 2
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
