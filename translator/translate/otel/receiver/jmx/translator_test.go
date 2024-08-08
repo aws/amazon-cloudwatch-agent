@@ -115,7 +115,7 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*jmxreceiver.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig().(*jmxreceiver.Config)
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				wantCfg.JARPath = paths.JMXJarPath
 				if wantCfg.ResourceAttributes != nil && wantCfg.ResourceAttributes[attributeHost] == attributeHost {
 					wantCfg.ResourceAttributes[attributeHost] = hostname

@@ -31,15 +31,15 @@ type attributesNormalizer struct {
 }
 
 var attributesRenamingForMetric = map[string]string{
-	attr.AWSLocalService:             common.MetricAttributeLocalService,
-	attr.AWSLocalOperation:           common.MetricAttributeLocalOperation,
-	attr.AWSLocalEnvironment:         common.MetricAttributeEnvironment,
-	attr.AWSRemoteService:            common.MetricAttributeRemoteService,
-	attr.AWSRemoteOperation:          common.MetricAttributeRemoteOperation,
-	attr.AWSRemoteEnvironment:        common.MetricAttributeRemoteEnvironment,
-	attr.AWSRemoteTarget:             common.MetricAttributeRemoteResourceIdentifier,
-	attr.AWSRemoteResourceIdentifier: common.MetricAttributeRemoteResourceIdentifier,
-	attr.AWSRemoteResourceType:       common.MetricAttributeRemoteResourceType,
+	attr.AWSLocalService:             common.CWMetricAttributeLocalService,
+	attr.AWSLocalOperation:           common.CWMetricAttributeLocalOperation,
+	attr.AWSLocalEnvironment:         common.CWMetricAttributeEnvironment,
+	attr.AWSRemoteService:            common.CWMetricAttributeRemoteService,
+	attr.AWSRemoteOperation:          common.CWMetricAttributeRemoteOperation,
+	attr.AWSRemoteEnvironment:        common.CWMetricAttributeRemoteEnvironment,
+	attr.AWSRemoteTarget:             common.CWMetricAttributeRemoteResourceIdentifier,
+	attr.AWSRemoteResourceIdentifier: common.CWMetricAttributeRemoteResourceIdentifier,
+	attr.AWSRemoteResourceType:       common.CWMetricAttributeRemoteResourceType,
 	attr.AWSRemoteDbUser:             common.MetricAttributeRemoteDbUser,
 }
 
@@ -48,12 +48,12 @@ var resourceAttributesRenamingForTrace = map[string]string{
 	// see the code references from upstream:
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L245
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L305C43-L305C43
-	semconv.AttributeK8SDeploymentName:  "K8s.Workload",
-	semconv.AttributeK8SStatefulSetName: "K8s.Workload",
-	semconv.AttributeK8SDaemonSetName:   "K8s.Workload",
-	semconv.AttributeK8SJobName:         "K8s.Workload",
-	semconv.AttributeK8SCronJobName:     "K8s.Workload",
-	semconv.AttributeK8SPodName:         "K8s.Pod",
+	semconv.AttributeK8SDeploymentName:  common.AttributeK8SWorkload,
+	semconv.AttributeK8SStatefulSetName: common.AttributeK8SWorkload,
+	semconv.AttributeK8SDaemonSetName:   common.AttributeK8SWorkload,
+	semconv.AttributeK8SJobName:         common.AttributeK8SWorkload,
+	semconv.AttributeK8SCronJobName:     common.AttributeK8SWorkload,
+	semconv.AttributeK8SPodName:         common.AttributeK8SPod,
 }
 
 var attributesRenamingForTrace = map[string]string{
@@ -65,12 +65,12 @@ var copyMapForMetric = map[string]string{
 	// see the code referecnes from upstream:
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L245
 	// * https://github.com/open-telemetry/opentelemetry-operator/blob/0e39ee77693146e0924da3ca474a0fe14dc30b3a/pkg/instrumentation/sdk.go#L305C43-L305C43
-	semconv.AttributeK8SDeploymentName:  "K8s.Workload",
-	semconv.AttributeK8SStatefulSetName: "K8s.Workload",
-	semconv.AttributeK8SDaemonSetName:   "K8s.Workload",
-	semconv.AttributeK8SJobName:         "K8s.Workload",
-	semconv.AttributeK8SCronJobName:     "K8s.Workload",
-	semconv.AttributeK8SPodName:         "K8s.Pod",
+	semconv.AttributeK8SDeploymentName:  common.AttributeK8SWorkload,
+	semconv.AttributeK8SStatefulSetName: common.AttributeK8SWorkload,
+	semconv.AttributeK8SDaemonSetName:   common.AttributeK8SWorkload,
+	semconv.AttributeK8SJobName:         common.AttributeK8SWorkload,
+	semconv.AttributeK8SCronJobName:     common.AttributeK8SWorkload,
+	semconv.AttributeK8SPodName:         common.AttributeK8SPod,
 	semconv.AttributeAWSLogGroupNames:   "aws.log.group.names",
 }
 
@@ -165,8 +165,8 @@ func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resource
 		sdkVersion = sdkAutoVersion
 		mode = instrumentationModeAuto
 	}
-	attributes.PutStr(common.AttributeTelemetrySDK, fmt.Sprintf("%s,%s,%s,%s", sdkName, sdkVersion, sdkLang, mode))
-	attributes.PutStr(common.AttributeTelemetryAgent, fmt.Sprintf("CWAgent/%s", version.Number()))
+	attributes.PutStr(common.MetricAttributeTelemetrySDK, fmt.Sprintf("%s,%s,%s,%s", sdkName, sdkVersion, sdkLang, mode))
+	attributes.PutStr(common.MetricAttributeTelemetryAgent, fmt.Sprintf("CWAgent/%s", version.Number()))
 
 	var telemetrySource string
 	if val, ok := attributes.Get(attr.AWSSpanKind); ok {
@@ -182,7 +182,7 @@ func (n *attributesNormalizer) normalizeTelemetryAttributes(attributes, resource
 		case "LOCAL_ROOT":
 			telemetrySource = "LocalRootSpan"
 		}
-		attributes.PutStr(common.AttributeTelemetrySource, telemetrySource)
+		attributes.PutStr(common.MetricAttributeTelemetrySource, telemetrySource)
 		attributes.Remove(attr.AWSSpanKind)
 	}
 }
