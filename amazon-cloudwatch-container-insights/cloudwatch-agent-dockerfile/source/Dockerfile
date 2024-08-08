@@ -25,7 +25,7 @@ RUN make build-for-docker-${TARGETARCH}
 FROM $CERT_IMAGE as cert
 
 # Need to repeat the ARG after each FROM
-ARG TARGETARCH="amd64"
+ARG TARGETARCH
 RUN mkdir -p /opt/aws/amazon-cloudwatch-agent/etc
 RUN mkdir -p /opt/aws/amazon-cloudwatch-agent/var
 RUN apt-get update &&  \
