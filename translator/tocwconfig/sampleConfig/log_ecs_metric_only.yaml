@@ -120,7 +120,10 @@ receivers:
         container_orchestrator: ecs
         enable_control_plane_metrics: false
         endpoint: ""
+        host_ip: ""
+        host_name: ""
         imds_retries: 1
+        kube_config_path: ""
         leader_lock_name: otel-container-insight-clusterleader
         leader_lock_using_config_map_only: false
         local_mode: false

@@ -1,0 +1,113 @@
+## Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+## SPDX-License-Identifier: Apache-2.0
+
+# This is a reusable workflow for running the E2E test for Application Signals.
+# It is meant to be called from another workflow.
+# Read more about reusable workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
+name: Application Signals E2E Test
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'The ID of the build-test-artifacts workflow run'
+        type: number
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ inputs.aws-region }}'
+  cancel-in-progress: false
+
+
+jobs:
+  CheckBuildTestArtifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+          if [[ $conclusion == "success" ]]; then
+            echo "Run succeeded"
+          else
+            echo "Run failed"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  java-eks-e2e-test:
+    needs: CheckBuildTestArtifacts
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      test-cluster-name: 'e2e-cw-agent-test'
+      caller-workflow-name: 'main-build'
+
+  java-ec2-default-e2e-test:
+    needs: CheckBuildTestArtifacts
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  java-ec2-asg-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-asg-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  java-metric-limiter-e2e-test:
+    needs: [ CheckBuildTestArtifacts, java-eks-e2e-test ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-metric-limiter-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      test-cluster-name: 'e2e-cw-agent-test'
+      caller-workflow-name: 'main-build'
+
+  java-k8s-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-k8s-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  python-eks-e2e-test:
+    needs: [ CheckBuildTestArtifacts, java-metric-limiter-e2e-test ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      test-cluster-name: 'e2e-cw-agent-test'
+      caller-workflow-name: 'main-build'
+
+  python-ec2-default-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-default-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  python-ec2-asg-e2e-test:
+    needs: [ CheckBuildTestArtifacts ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-asg-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'
+
+  python-k8s-e2e-test:
+    needs: [ CheckBuildTestArtifacts, java-k8s-e2e-test ]
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-e2e-test.yml@main
+    secrets: inherit
+    with:
+      aws-region: us-east-1
+      caller-workflow-name: 'main-build'

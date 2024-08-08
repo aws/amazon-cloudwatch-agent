@@ -49,14 +49,14 @@ type ActionItem struct {
 }
 
 var traceKeyMap = map[string]string{
-	common.MetricAttributeLocalService:             attributes.AWSLocalService,
-	common.MetricAttributeEnvironment:              attributes.AWSLocalEnvironment,
-	common.MetricAttributeLocalOperation:           attributes.AWSLocalOperation,
-	common.MetricAttributeRemoteService:            attributes.AWSRemoteService,
-	common.MetricAttributeRemoteEnvironment:        attributes.AWSRemoteEnvironment,
-	common.MetricAttributeRemoteOperation:          attributes.AWSRemoteOperation,
-	common.MetricAttributeRemoteResourceIdentifier: attributes.AWSRemoteResourceIdentifier,
-	common.MetricAttributeRemoteResourceType:       attributes.AWSRemoteResourceType,
+	common.CWMetricAttributeLocalService:             attributes.AWSLocalService,
+	common.CWMetricAttributeEnvironment:              attributes.AWSLocalEnvironment,
+	common.CWMetricAttributeLocalOperation:           attributes.AWSLocalOperation,
+	common.CWMetricAttributeRemoteService:            attributes.AWSRemoteService,
+	common.CWMetricAttributeRemoteEnvironment:        attributes.AWSRemoteEnvironment,
+	common.CWMetricAttributeRemoteOperation:          attributes.AWSRemoteOperation,
+	common.CWMetricAttributeRemoteResourceIdentifier: attributes.AWSRemoteResourceIdentifier,
+	common.CWMetricAttributeRemoteResourceType:       attributes.AWSRemoteResourceType,
 }
 
 func GetAllowListAction(action string) (AllowListAction, error) {
