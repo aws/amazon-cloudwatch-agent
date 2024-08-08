@@ -4,6 +4,7 @@ Amazon CloudWatch Agent 1.300043.0 (2024-08-08)
 Bug Fixes:
 * [Metrics/Plugin] Drop original metrics support added for statsd, collectd and ethtool metrics
 * [Logs/Windows Event] Add windows event log service restart detection and resubscribe
+* [Metrics/JMX, Metrics/Net, Metrics/DiskIO] Change cumulative to delta conversion to drop initial value
 * [Metrics/JMX] Suppress sessions unit warning
 * [ContainerInsights] Filtering out redundant attributes for Neuron metrics
 
