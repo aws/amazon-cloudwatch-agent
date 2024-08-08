@@ -14,6 +14,8 @@ on:
       - 'LICENSE'
       - '.github/**'
       - '!.github/workflows/build-test-artifacts.yml'
+      - '!.github/workflows/integration-test.yml'
+      - '!.github/workflows/application-signals-e2e-test.yml'
   workflow_dispatch:
 
 concurrency:
@@ -93,7 +95,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   StartApplicationSignalsE2ETests:
-    needs: [ BuildAndUpload, BuildDocker ]
+    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
+    # Workflow only runs against main
+    if: ${{ contains(github.ref_name, 'main') }}
     runs-on: ubuntu-latest
     steps:
       - run: gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }}
