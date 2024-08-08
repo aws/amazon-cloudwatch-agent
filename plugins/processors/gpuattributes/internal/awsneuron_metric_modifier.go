@@ -45,7 +45,6 @@ const (
 	Kubernetes                                    = "kubernetes"
 	Region                                        = "region"
 	SubnetId                                      = "subnet_id"
-	RuntimeTagOverride                            = "DEFAULT"
 	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
 	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
 )
@@ -122,7 +121,7 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 	}
 	// Neuron metrics sent by the neuron monitor don't have any units so we add them in the agent.
 	addUnit(originalMetric)
-	updateCoreDeviceRuntimeLabels(originalMetric)
+	prefixCoreAndDeviceLabels(originalMetric)
 	resetStaleDatapoints(originalMetric)
 
 	originalMetricName := originalMetric.Name()
@@ -249,7 +248,7 @@ func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(origin
 
 // This method prefixes NeuronCore and NeuronDevice values with `core` and `device` respectively
 // to make the attribute values more verbose
-func updateCoreDeviceRuntimeLabels(originalMetric pmetric.Metric) {
+func prefixCoreAndDeviceLabels(originalMetric pmetric.Metric) {
 	dps := originalMetric.Sum().DataPoints()
 	for i := 0; i < dps.Len(); i++ {
 		dp := dps.At(i)
@@ -258,7 +257,6 @@ func updateCoreDeviceRuntimeLabels(originalMetric pmetric.Metric) {
 				dp.Attributes().PutStr(attributeKey, attributeValuePrefix+value.Str())
 			}
 		}
-		dp.Attributes().PutStr(RuntimeTag, RuntimeTagOverride)
 	}
 }
 
@@ -315,7 +313,7 @@ func resetStaleDatapoints(originalMetric pmetric.Metric) {
 		dp := dps.At(i)
 		if dp.ValueType() == pmetric.NumberDataPointValueTypeEmpty || dp.Flags().NoRecordedValue() {
 			dp.SetDoubleValue(dp.DoubleValue())
-			dp.Attributes().PutStr(RuntimeTag, RuntimeTagOverride)
+			dp.Attributes().PutStr(RuntimeTag, "default")
 			dp.SetFlags(dp.Flags().WithNoRecordedValue(false))
 		}
 	}
