@@ -230,3 +230,4 @@ func dropResourceMetricAttributes(resourceMetric pmetric.ResourceMetrics) {
 		resourceMetric.Resource().Attributes().Clear()
 	}
 }
+
