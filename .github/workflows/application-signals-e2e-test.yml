@@ -6,10 +6,12 @@
 # Read more about reusable workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
 name: Application Signals E2E Test
 on:
-  workflow_run:
-    workflows: [ Build Test Artifacts ]
-    types:
-      - completed
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'The ID of the build-test-artifacts workflow run'
+        type: number
+        required: true
 
 permissions:
   id-token: write
@@ -23,9 +25,17 @@ concurrency:
 jobs:
   CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - run: echo 'The triggering build workflow succeeded'
+      - run: |
+          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+          if [[ $conclusion == "success" ]]; then
+            echo "Run succeeded"
+          else
+            echo "Run failed"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   java-eks-e2e-test:
     needs: CheckBuildTestArtifacts
