@@ -228,15 +228,12 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 			}),
 			wantMetricCnt: 2,
 			want: []map[string]string{
-				// neuron_execution_latency
 				{
 					"ClusterName": "cluster",
 					"Drop":        "val",
 					"percentile":  "p50",
-					"runtime_tag": "DEFAULT",
 					"kubernetes":  "{\"host\":\"test\",\"drop\":\"2\",\"labels\":\"label\"}",
 				},
-				// node_neuron_execution_latency
 				{
 					"ClusterName": "cluster",
 					"Type":        "NodeAWSNeuron",
@@ -259,20 +256,19 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 			}),
 			wantMetricCnt: 7,
 			want: []map[string]string{
-				// neuroncore_memory_usage_constants
 				{
 					"ClusterName":   "cluster",
 					"Drop":          "val",
-					"runtime_tag":   "DEFAULT",
+					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"PodName":       "testPod",
 					"ContainerName": "testContainer",
 					"kubernetes":    "{\"host\":\"test\",\"drop\":\"2\",\"labels\":\"label\"}",
 				},
-				// container_neuroncore_memory_usage_constants
 				{
 					"ClusterName":   "cluster",
+					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"Type":          "ContainerAWSNeuronCore",
@@ -280,26 +276,26 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 					"ContainerName": "testContainer",
 					"kubernetes":    "{\"host\":\"test\",\"labels\":\"label\"}",
 				},
-				// pod_neuroncore_memory_usage_constants
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "PodAWSNeuronCore",
 					"PodName":      "testPod",
 					"kubernetes":   "{\"host\":\"test\",\"labels\":\"label\"}",
 				},
-				// node_neuroncore_memory_usage_constants
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronCore",
 					"kubernetes":   "{\"host\":\"test\",\"labels\":\"label\"}",
 				},
-				// container_neuroncore_memory_usage_total
 				{
 					"ClusterName":   "cluster",
+					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"Type":          "ContainerAWSNeuronCore",
@@ -307,18 +303,18 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 					"ContainerName": "testContainer",
 					"kubernetes":    "{\"host\":\"test\",\"labels\":\"label\"}",
 				},
-				// pod_neuroncore_memory_usage_total
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "PodAWSNeuronCore",
 					"PodName":      "testPod",
 					"kubernetes":   "{\"host\":\"test\",\"labels\":\"label\"}",
 				},
-				// node_neuroncore_memory_usage_total
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronCore",
@@ -339,26 +335,25 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 			}),
 			wantMetricCnt: 3,
 			want: []map[string]string{
-				// neuroncore_memory_usage_constants
 				{
 					"ClusterName":  "cluster",
 					"Drop":         "val",
-					"runtime_tag":  "DEFAULT",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"kubernetes":   "{\"host\":\"test\",\"drop\":\"2\",\"labels\":\"label\"}",
 				},
-				// node_neuroncore_memory_usage_constants
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronCore",
 					"kubernetes":   "{\"host\":\"test\",\"labels\":\"label\"}",
 				},
-				// node_neuroncore_memory_usage_total
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronCore",
@@ -382,11 +377,10 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 			}),
 			wantMetricCnt: 7,
 			want: []map[string]string{
-				// neurondevice_hw_ecc_events
 				{
 					"ClusterName":   "cluster",
 					"Drop":          "val",
-					"runtime_tag":   "DEFAULT",
+					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"event_type":    "mem_ecc_corrected",
@@ -394,9 +388,9 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 					"PodName":       "testPod",
 					"ContainerName": "testContainer",
 				},
-				// container_neurondevice_hw_ecc_events_mem_ecc_corrected
 				{
 					"ClusterName":   "cluster",
+					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"Type":          "ContainerAWSNeuronDevice",
@@ -404,26 +398,26 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 					"PodName":       "testPod",
 					"ContainerName": "testContainer",
 				},
-				// pod_neurondevice_hw_ecc_events_mem_ecc_corrected
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "PodAWSNeuronDevice",
 					"kubernetes":   "{\"host\":\"test\"}",
 					"PodName":      "testPod",
 				},
-				// node_neurondevice_hw_ecc_events_mem_ecc_corrected
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronDevice",
 					"kubernetes":   "{\"host\":\"test\"}",
 				},
-				// container_neurondevice_hw_ecc_events_total
 				{
 					"ClusterName":   "cluster",
+					"runtime_tag":   "10",
 					"NeuronCore":    "core0",
 					"NeuronDevice":  "device0",
 					"Type":          "ContainerAWSNeuronDevice",
@@ -431,18 +425,18 @@ func TestProcessMetricsForNeuronMetrics(t *testing.T) {
 					"PodName":       "testPod",
 					"ContainerName": "testContainer",
 				},
-				// pod_neurondevice_hw_ecc_events_total
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "PodAWSNeuronDevice",
 					"kubernetes":   "{\"host\":\"test\"}",
 					"PodName":      "testPod",
 				},
-				// node_neurondevice_hw_ecc_events_total
 				{
 					"ClusterName":  "cluster",
+					"runtime_tag":  "10",
 					"NeuronCore":   "core0",
 					"NeuronDevice": "device0",
 					"Type":         "NodeAWSNeuronDevice",
