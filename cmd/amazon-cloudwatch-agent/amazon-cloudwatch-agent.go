@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -30,8 +29,8 @@ import (
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -242,7 +241,6 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-
 	err = loadTomlConfigIntoAgent(c)
 	if err != nil {
 		return err
@@ -289,7 +287,6 @@ func runAgent(ctx context.Context,
 		testWaitDuration := time.Duration(*fTestWait) * time.Second
 		return ag.Test(ctx, testWaitDuration)
 	}
-
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -307,7 +304,6 @@ func runAgent(ctx context.Context,
 			}()
 		}
 	}
-
 	if len(c.Inputs) != 0 && len(c.Outputs) != 0 {
 		log.Println("creating new logs agent")
 		logAgent := logs.NewLogAgent(c)
@@ -323,9 +319,11 @@ func runAgent(ctx context.Context,
 		}
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
-
 	yamlConfigPath := *fOtelConfig
-	provider, err := configprovider.Get(yamlConfigPath)
+	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
+	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
+	providerSettings := configprovider.GetSettings(yamlConfigPath, logger)
+	provider, err := otelcol.NewConfigProvider(providerSettings)
 	if err != nil {
 		log.Printf("E! Error while initializing config provider: %v\n", err)
 		return err
@@ -341,31 +339,28 @@ func runAgent(ctx context.Context,
 	if err != nil {
 		return err
 	}
-
 	useragent.Get().SetComponents(cfg, c)
 
-	params := getCollectorParams(factories, provider, writer)
-
-	_ = featuregate.GlobalRegistry().Set("exporter.xray.allowDot", true)
+	params := getCollectorParams(factories, providerSettings, loggerOptions)
 	cmd := otelcol.NewCommand(params)
-
-	// Noticed that args of parent process get passed here to otel collector which causes failures complaining about
-	// unrecognized args. So below change overwrites the args. Need to investigate this further as I dont think the config
-	// path below here is actually used and it still respects what was set in the settings above.
-	e := []string{"--config=" + yamlConfigPath + " --feature-gates=exporter.xray.allowDot"}
+	// *************************************************************************************************
+	// ⚠️ WARNING ⚠️
+	// Noticed that args of parent process get passed here to otel collector which causes failures
+	// complaining about unrecognized args. So below change overwrites the args.
+	// The config path below here is actually used that was set in the settings above.
+	// docs: https://github.com/open-telemetry/opentelemetry-collector/blob/93cbae436ae61b832279dbbb18a0d99214b7d305/otelcol/command.go#L63
+	// *************************************************************************************************
+	e := []string{"--config=" + yamlConfigPath}
 	cmd.SetArgs(e)
-
 	return cmd.Execute()
 }
 
-func getCollectorParams(factories otelcol.Factories, provider otelcol.ConfigProvider, writer io.Writer) otelcol.CollectorSettings {
-	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
-	loggingOptions := cwaLogger.NewLoggerOptions(writer, level)
+func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.ConfigProviderSettings, loggingOptions []zap.Option) otelcol.CollectorSettings {
 	return otelcol.CollectorSettings{
 		Factories: func() (otelcol.Factories, error) {
 			return factories, nil
 		},
-		ConfigProvider: provider,
+		ConfigProviderSettings: providerSettings,
 		// build info is essential for populating the user agent string in otel contrib upstream exporters, like the EMF exporter
 		BuildInfo: component.BuildInfo{
 			Command:     "CWAgent",
@@ -427,7 +422,6 @@ func (p *program) Stop(_ service.Service) error {
 func main() {
 	flag.Parse()
 	args := flag.Args()
-
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
 	if *fSectionFilters != "" {
 		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
@@ -448,7 +442,6 @@ func main() {
 	}
 
 	logger.SetupLogging(logger.LogConfig{})
-
 	if *pprofAddr != "" {
 		go func() {
 			pprofHostPort := *pprofAddr

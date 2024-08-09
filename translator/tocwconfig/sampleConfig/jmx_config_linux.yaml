@@ -26,7 +26,7 @@ processors:
             match_type: ""
         include:
             match_type: ""
-        initial_value: 0
+        initial_value: 2
         max_staleness: 0s
     filter/jmx:
         error_mode: propagate
@@ -58,6 +58,7 @@ processors:
               value: unknown_service:java
     transform:
         error_mode: propagate
+        flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric
@@ -70,6 +71,7 @@ processors:
         trace_statements: []
     transform/jmx:
         error_mode: propagate
+        flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric
