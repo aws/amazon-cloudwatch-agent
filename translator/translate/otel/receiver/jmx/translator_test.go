@@ -86,7 +86,7 @@ func TestTranslator(t *testing.T) {
 			want: confmap.NewFromStringMap(map[string]any{
 				"endpoint":            "localhost:8080",
 				"target_system":       "tomcat",
-				"collection_interval": "10s",
+				"collection_interval": "60s",
 				"otlp": map[string]any{
 					"endpoint": "0.0.0.0:0",
 					"timeout":  "5s",
@@ -115,7 +115,7 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*jmxreceiver.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig().(*jmxreceiver.Config)
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				wantCfg.JARPath = paths.JMXJarPath
 				if wantCfg.ResourceAttributes != nil && wantCfg.ResourceAttributes[attributeHost] == attributeHost {
 					wantCfg.ResourceAttributes[attributeHost] = hostname

@@ -27,13 +27,14 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         refresh_interval_seconds: 0s
     transform:
         error_mode: propagate
+        flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric

@@ -20,13 +20,20 @@ type TelegrafWrapperEncoder struct {
 	zapcore.Encoder
 }
 
-func NewLoggerOptions(writer io.Writer, level zap.AtomicLevel) []zap.Option {
-	loggerLevel.SetLevel(level.Level())
-	loggingOptions := getLoggingOptions(writer)
+func NewLogger(writer io.Writer, level zap.AtomicLevel) (*zap.Logger, []zap.Option) {
+	core := zapcore.NewCore(
+		createTelegrafWrapperEncoder(),
+		zapcore.AddSync(writer),
+		loggerLevel,
+	)
+	option := zap.WrapCore(func(zapcore.Core) zapcore.Core {
+		return core
+	})
+	logger := zap.New(core)
+	defer logger.Sync()
 
-	return loggingOptions
+	return logger, []zap.Option{option}
 }
-
 func getLoggingOptions(writer io.Writer) []zap.Option {
 	core := zapcore.NewCore(
 		createTelegrafWrapperEncoder(),

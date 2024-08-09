@@ -26,7 +26,7 @@ processors:
                 - diskio_iops_in_progress
         include:
             match_type: ""
-        initial_value: 0
+        initial_value: 2
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
@@ -39,6 +39,7 @@ processors:
         refresh_interval_seconds: 0s
     transform:
         error_mode: propagate
+        flatten_data: false
         log_statements: []
         metric_statements:
             - context: metric

@@ -1,4 +1,38 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300043.0 (2024-08-08)
+========================================================================
+Bug Fixes:
+* [Metrics/Plugin] Drop original metrics support added for statsd, collectd and ethtool metrics
+* [Logs/Windows Event] Add windows event log service restart detection and resubscribe
+* [Metrics/JMX, Metrics/Net, Metrics/DiskIO] Change cumulative to delta conversion to drop initial value
+* [Metrics/JMX] Suppress sessions unit warning
+
+Enhancements:
+* [Metrics/JMX] Add cumulative to delta conversion for JMX metrics
+* [ApplicationSignals] Rename and group application signals attributes
+* Upgrade OTEL Contrib to v0.103.0
+
+========================================================================
+Amazon CloudWatch Agent 1.300042.1 (2024-07-16)
+========================================================================
+Bug Fixes:
+* [Container Insights/Prometheus] Fix Prometheus file-path start-up issue in Containers
+
+========================================================================
+Amazon CloudWatch Agent 1.300042.0 (2024-07-10)
+========================================================================
+Enhancements:
+* [Application Signals] Optimize memory utilization on Kubernetes
+* [Application Signals] Add remote db user attribute to traces and logs
+* [Metrics] Support append_dimension for ethtool
+
+Bug Fixes:
+* [Metrics/Plugin] Reduce logging for known non-convertible metric units
+* [Metrics/Plugin] Fix tomcat.sessions metric to aggregate for all Tomcat applications
+* [Metrics/Plugin] Update default collection interval to 60 seconds
+* [ApplicationSignals] Add log group names as attribute (#1220)
+
+========================================================================
 Amazon CloudWatch Agent 1.300041.0 (2024-06-07)
 ========================================================================
 
