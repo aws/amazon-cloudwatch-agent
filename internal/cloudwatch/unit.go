@@ -75,6 +75,7 @@ var scaledBaseUnits = map[types.StandardUnit]map[unit.MetricPrefix]types.Standar
 
 var knownNonConvertibleUnits = collections.NewSet(
 	// JMX/Tomcat units
+	"sessions",
 	"errors",
 	"threads",
 	"requests",

@@ -19,6 +19,7 @@ import (
 const (
 	EKSClusterNameTagKeyPrefix = "kubernetes.io/cluster/"
 	defaultRetryCount          = 5
+	defaultBackoffDuration     = time.Duration(1 * time.Minute)
 )
 
 var (
@@ -111,12 +112,15 @@ func callFuncWithRetries(fn func(input *ec2.DescribeTagsInput) (*ec2.DescribeTag
 
 // sleep some back off time before retries.
 func backoffSleep(i int) {
-	//save the sleep time for the last occurrence since it will exit the loop immediately after the sleep
-	backoffDuration := time.Duration(time.Minute * 1)
-	if i <= defaultRetryCount {
-		backoffDuration = sleeps[i]
-	}
-
+	backoffDuration := getBackoffDuration(i)
 	log.Printf("W! It is the %v time, going to sleep %v before retrying.", i, backoffDuration)
 	time.Sleep(backoffDuration)
+}
+
+func getBackoffDuration(i int) time.Duration {
+	backoffDuration := defaultBackoffDuration
+	if i >= 0 && i < len(sleeps) {
+		backoffDuration = sleeps[i]
+	}
+	return backoffDuration
 }

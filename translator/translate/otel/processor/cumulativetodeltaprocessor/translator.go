@@ -15,9 +15,12 @@ import (
 )
 
 const (
-	// Match types are in internal package from contrib
+	// Match types are in an internal package from contrib
 	// Strict is the FilterType for filtering by exact string matches.
 	strict = "strict"
+	// InitialValue types are in an internal package
+	// 2 is the int value for the enum
+	initialValueDrop = 2
 )
 
 var (
@@ -74,7 +77,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg := t.factory.CreateDefaultConfig().(*cumulativetodeltaprocessor.Config)
-
+	cfg.InitialValue = initialValueDrop
 	excludeMetrics := t.getExcludeMetrics(conf)
 	if len(excludeMetrics) != 0 {
 		cfg.Exclude.MatchType = strict
