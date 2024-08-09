@@ -5,6 +5,7 @@ package awsentity
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -38,7 +39,11 @@ func createMetricsProcessor(
 	cfg component.Config,
 	nextConsumer consumer.Metrics,
 ) (processor.Metrics, error) {
-	metricsProcessor := newAwsEntityProcessor(set.Logger)
+	processorConfig, ok := cfg.(*Config)
+	if !ok {
+		return nil, errors.New("configuration parsing error")
+	}
+	metricsProcessor := newAwsEntityProcessor(processorConfig, set.Logger)
 
 	return processorhelper.NewMetricsProcessor(
 		ctx,

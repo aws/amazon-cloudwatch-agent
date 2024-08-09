@@ -40,9 +40,9 @@ func newAddToMockEntityStore(rs *mockEntityStore) func(entitystore.LogGroupName,
 	}
 }
 
-func TestProcessMetrics(t *testing.T) {
+func TestProcessMetricsLogGroupAssociation(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	p := newAwsEntityProcessor(logger)
+	p := newAwsEntityProcessor(&Config{}, logger)
 	ctx := context.Background()
 
 	// empty metrics, no action
@@ -125,6 +125,110 @@ func TestProcessMetrics(t *testing.T) {
 	}
 }
 
+func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ctx := context.Background()
+	tests := []struct {
+		name    string
+		metrics pmetric.Metrics
+		want    map[string]any
+	}{
+		{
+			name:    "EmptyMetrics",
+			metrics: pmetric.NewMetrics(),
+			want:    map[string]any{},
+		},
+		{
+			name:    "ResourceAttributeServiceNameOnly",
+			metrics: generateMetrics(attributeServiceName, "test-service"),
+			want: map[string]any{
+				attributeEntityServiceName: "test-service",
+				attributeServiceName:       "test-service",
+			},
+		},
+		{
+			name:    "ResourceAttributeEnvironmentOnly",
+			metrics: generateMetrics(attributeDeploymentEnvironment, "test-environment"),
+			want: map[string]any{
+				attributeEntityDeploymentEnvironment: "test-environment",
+				attributeDeploymentEnvironment:       "test-environment",
+			},
+		},
+		{
+			name:    "ResourceAttributeServiceNameAndEnvironment",
+			metrics: generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
+			want: map[string]any{
+				attributeEntityServiceName:           "test-service",
+				attributeEntityDeploymentEnvironment: "test-environment",
+				attributeServiceName:                 "test-service",
+				attributeDeploymentEnvironment:       "test-environment",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newAwsEntityProcessor(&Config{}, logger)
+			_, err := p.processMetrics(ctx, tt.metrics)
+			assert.NoError(t, err)
+			rm := tt.metrics.ResourceMetrics()
+			if rm.Len() > 0 {
+				assert.Equal(t, tt.want, rm.At(0).Resource().Attributes().AsRaw())
+			}
+		})
+	}
+}
+
+func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ctx := context.Background()
+	tests := []struct {
+		name    string
+		metrics pmetric.Metrics
+		want    map[string]any
+	}{
+		{
+			name:    "EmptyMetrics",
+			metrics: pmetric.NewMetrics(),
+			want:    map[string]any{},
+		},
+		{
+			name:    "DatapointAttributeServiceNameOnly",
+			metrics: generateDatapointMetrics(attributeServiceName, "test-service"),
+			want: map[string]any{
+				attributeEntityServiceName: "test-service",
+			},
+		},
+		{
+			name:    "DatapointAttributeEnvironmentOnly",
+			metrics: generateDatapointMetrics(attributeDeploymentEnvironment, "test-environment"),
+			want: map[string]any{
+				attributeEntityDeploymentEnvironment: "test-environment",
+			},
+		},
+		{
+			name:    "DatapointAttributeServiceNameAndEnvironment",
+			metrics: generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
+			want: map[string]any{
+				attributeEntityServiceName:           "test-service",
+				attributeEntityDeploymentEnvironment: "test-environment",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newAwsEntityProcessor(&Config{ScrapeDatapointAttribute: true}, logger)
+			_, err := p.processMetrics(ctx, tt.metrics)
+			assert.NoError(t, err)
+			rm := tt.metrics.ResourceMetrics()
+			if rm.Len() > 0 {
+				assert.Equal(t, tt.want, rm.At(0).Resource().Attributes().AsRaw())
+			}
+		})
+	}
+}
+
 func generateMetrics(resourceAttrs ...string) pmetric.Metrics {
 	md := pmetric.NewMetrics()
 	generateResource(md, resourceAttrs...)
@@ -138,9 +242,22 @@ func generateMetricsWithTwoResources() pmetric.Metrics {
 	return md
 }
 
+func generateDatapointMetrics(datapointAttrs ...string) pmetric.Metrics {
+	md := pmetric.NewMetrics()
+	generateDatapoints(md, datapointAttrs...)
+	return md
+}
+
 func generateResource(md pmetric.Metrics, resourceAttrs ...string) {
 	attrs := md.ResourceMetrics().AppendEmpty().Resource().Attributes()
 	for i := 0; i < len(resourceAttrs); i += 2 {
 		attrs.PutStr(resourceAttrs[i], resourceAttrs[i+1])
+	}
+}
+
+func generateDatapoints(md pmetric.Metrics, datapointAttrs ...string) {
+	attrs := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics().AppendEmpty().SetEmptyGauge().DataPoints().AppendEmpty().Attributes()
+	for i := 0; i < len(datapointAttrs); i += 2 {
+		attrs.PutStr(datapointAttrs[i], datapointAttrs[i+1])
 	}
 }
