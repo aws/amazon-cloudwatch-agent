@@ -17,6 +17,7 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
+	telegrafTestType, _ := component.NewType("telegraf_test")
 	testCases := map[string]struct {
 		input             map[string]interface{}
 		cfgName           string
@@ -31,7 +32,7 @@ func TestTranslator(t *testing.T) {
 			cfgName: "",
 			cfgType: "test",
 			cfgKey:  "mem",
-			wantErr: &common.MissingKeyError{ID: component.NewID("telegraf_test"), JsonKey: "mem"},
+			wantErr: &common.MissingKeyError{ID: component.NewID(telegrafTestType), JsonKey: "mem"},
 		},
 		"WithoutIntervalInSection": {
 			input: map[string]interface{}{

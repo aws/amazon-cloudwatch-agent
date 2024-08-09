@@ -16,6 +16,8 @@ const (
 	AgentBinaryName      = "amazon-cloudwatch-agent"
 	WizardBinaryName     = "amazon-cloudwatch-agent-config-wizard"
 	AgentStartName       = "amazon-cloudwatch-agent-ctl"
+	//TODO this CONFIG_DIR_IN_CONTAINER should change to something indicate dir, keep it for now to avoid break testing
+	CONFIG_DIR_IN_CONTAINER = "/etc/cwagentconfig"
 )
 
 func init() {
@@ -28,4 +30,5 @@ func init() {
 	AgentLogFilePath = filepath.Join(AgentDir, "logs", AGENT_LOG_FILE)
 	TranslatorBinaryPath = filepath.Join(AgentDir, "bin", TranslatorBinaryName)
 	AgentBinaryPath = filepath.Join(AgentDir, "bin", AgentBinaryName)
+	JMXJarPath = filepath.Join(AgentDir, "bin", JMXJarName)
 }

@@ -1,0 +1,3 @@
+resolvers:
+  - platform: ec2
+    name: test

@@ -23,7 +23,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
@@ -150,8 +149,8 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 			Logger:   configaws.SDKLogger{},
 		},
 	)
-	provider.GetFlagsStats().SetFlagWithValue(provider.FlagRegionType, c.RegionType)
-	provider.GetFlagsStats().SetFlagWithValue(provider.FlagMode, c.Mode)
+	agent.UsageFlags().SetValue(agent.FlagRegionType, c.RegionType)
+	agent.UsageFlags().SetValue(agent.FlagMode, c.Mode)
 	if containerInsightsRegexp.MatchString(t.Group) {
 		useragent.Get().SetContainerInsightsFlag()
 	}

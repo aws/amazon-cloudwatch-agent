@@ -1,0 +1,84 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Start Localstack
+
+env:
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+
+on:
+  workflow_call:
+    inputs:
+      region:
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      terraform_assume_role:
+        type: string
+      test_repo_url:
+        required: true
+        type: string
+      github_sha:
+        required: true
+        type: string
+      s3_integration_bucket:
+        type: string
+    outputs:
+      local_stack_host_name:
+        value: ${{ jobs.StartLocalStack.outputs.local_stack_host_name }}
+
+
+jobs:
+  StartLocalStack:
+    name: 'StartLocalStack'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/ec2/localstack
+    outputs:
+      local_stack_host_name: ${{ steps.localstack.outputs.local_stack_host_name }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.test_repo_name }}
+          ref: ${{ inputs.test_repo_branch }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Echo Localstack Config
+        run: echo repo name ${{inputs.test_repo_name}} repo branch ${{ inputs.test_repo_branch }} region ${{ inputs.region }}
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform apply
+        id: localstack
+        run: >
+          echo run terraform and execute test code &&
+          terraform apply --auto-approve
+          -var="ssh_key_value=${{env.PRIVATE_KEY}}"
+          -var="github_test_repo=${{inputs.test_repo_url}}"
+          -var="github_test_repo_branch=${{inputs.test_repo_branch}}"
+          -var="cwa_github_sha=${{inputs.github_sha}}"
+          -var="s3_bucket=${{inputs.s3_integration_bucket}}"
+          -var="region=${{inputs.region}}"
+          -var="ssh_key_name=${{env.KEY_NAME}}" &&
+          LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
+          echo $LOCAL_STACK_HOST_NAME &&
+          echo "::set-output name=local_stack_host_name::$LOCAL_STACK_HOST_NAME" &&
+          aws s3 cp terraform.tfstate s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate

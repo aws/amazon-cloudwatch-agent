@@ -1,0 +1,30 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "logs": {
+    "metrics_collected": {
+      "application_signals": {
+        "hosted_in": "TestCluster",
+        "limiter": {
+          "log_dropped_metrics": true,
+          "rotation_interval": "10m"
+        }
+      },
+      "kubernetes": {
+        "cluster_name": "TestCluster",
+        "metrics_collection_interval": 30,
+        "disable_metric_extraction": true,
+        "enhanced_container_insights": false,
+        "accelerated_compute_metrics": false
+      }
+    },
+    "force_flush_interval": 5,
+    "endpoint_override":"https://fake_endpoint"
+  },
+  "traces": {
+    "traces_collected": {
+      "application_signals": {}
+    }
+  }
+}

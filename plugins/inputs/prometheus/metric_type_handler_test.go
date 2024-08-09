@@ -9,7 +9,6 @@ import (
 
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/model/textparse"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,7 +16,7 @@ import (
 
 type mockMetricMetadataStore struct {
 	MetricList []string
-	Type       textparse.MetricType
+	Type       model.MetricType
 	Help       string
 	Unit       string
 }
@@ -76,7 +75,7 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 	target1 := scrape.NewTarget(labels1, labels1, params)
 	mStore1 := &mockMetricMetadataStore{
 		MetricList: []string{"m1", "m2", "m4"},
-		Type:       textparse.MetricTypeCounter,
+		Type:       model.MetricTypeCounter,
 		Help:       "",
 		Unit:       "",
 	}
@@ -96,7 +95,7 @@ func (ms *mockScrapeManager) TargetsAll() map[string][]*scrape.Target {
 	target2 := scrape.NewTarget(labels2, labels2, params2)
 	mStore2 := &mockMetricMetadataStore{
 		MetricList: []string{"m1", "m2"},
-		Type:       textparse.MetricTypeGauge,
+		Type:       model.MetricTypeGauge,
 		Help:       "",
 		Unit:       "",
 	}
@@ -135,7 +134,7 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 	require.NoError(t, err)
 	expectedMetricMetadata := scrape.MetricMetadata{
 		Metric: "m1",
-		Type:   textparse.MetricTypeCounter,
+		Type:   model.MetricTypeCounter,
 		Help:   "",
 		Unit:   "",
 	}
@@ -145,7 +144,7 @@ func TestMetadataServiceImpl_GetWithOriginalJobname(t *testing.T) {
 
 	expectedMetricMetadata = scrape.MetricMetadata{
 		Metric: "m2",
-		Type:   textparse.MetricTypeCounter,
+		Type:   model.MetricTypeCounter,
 		Help:   "",
 		Unit:   "",
 	}
@@ -219,16 +218,16 @@ func TestNewMetricsTypeHandler_HandleWithNormalTarget(t *testing.T) {
 		metricNameBeforeRelabel: "m1",
 		jobBeforeRelabel:        "job1",
 		instanceBeforeRelabel:   "instance1",
-		metricType:              string(textparse.MetricTypeCounter),
-		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(textparse.MetricTypeCounter)},
+		metricType:              string(model.MetricTypeCounter),
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(model.MetricTypeCounter)},
 	}
 	expectedMetric2 := PrometheusMetric{
 		metricName:              "m2",
 		metricNameBeforeRelabel: "m2",
 		jobBeforeRelabel:        "job1",
 		instanceBeforeRelabel:   "instance1",
-		metricType:              string(textparse.MetricTypeCounter),
-		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(textparse.MetricTypeCounter)},
+		metricType:              string(model.MetricTypeCounter),
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(model.MetricTypeCounter)},
 	}
 	assert.Equal(t, *result[0], expectedMetric1)
 	assert.Equal(t, *result[1], expectedMetric2)
@@ -269,16 +268,16 @@ func TestNewMetricsTypeHandler_HandleWithReplacedJobname(t *testing.T) {
 		metricNameBeforeRelabel: "m1",
 		jobBeforeRelabel:        "job2",
 		instanceBeforeRelabel:   "instance2",
-		metricType:              string(textparse.MetricTypeGauge),
-		tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2_replaced", "prom_metric_type": string(textparse.MetricTypeGauge)},
+		metricType:              string(model.MetricTypeGauge),
+		tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2_replaced", "prom_metric_type": string(model.MetricTypeGauge)},
 	}
 	expectedMetric2 := PrometheusMetric{
 		metricName:              "m2",
 		metricNameBeforeRelabel: "m2",
 		jobBeforeRelabel:        "job2",
 		instanceBeforeRelabel:   "instance2",
-		metricType:              string(textparse.MetricTypeGauge),
-		tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2", "prom_metric_type": string(textparse.MetricTypeGauge)},
+		metricType:              string(model.MetricTypeGauge),
+		tags:                    map[string]string{"job": "job2_replaced", "instance": "instance2", "prom_metric_type": string(model.MetricTypeGauge)},
 	}
 	assert.Equal(t, *result[0], expectedMetric1)
 	assert.Equal(t, *result[1], expectedMetric2)
@@ -325,24 +324,24 @@ func TestNewMetricsTypeHandler_HandleWithMetricSuffix(t *testing.T) {
 		metricNameBeforeRelabel: "m1_sum",
 		jobBeforeRelabel:        "job1",
 		instanceBeforeRelabel:   "instance1",
-		metricType:              string(textparse.MetricTypeCounter),
-		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(textparse.MetricTypeCounter)},
+		metricType:              string(model.MetricTypeCounter),
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(model.MetricTypeCounter)},
 	}
 	expectedMetric2 := PrometheusMetric{
 		metricName:              "m2_count",
 		metricNameBeforeRelabel: "m2_count",
 		jobBeforeRelabel:        "job1",
 		instanceBeforeRelabel:   "instance1",
-		metricType:              string(textparse.MetricTypeCounter),
-		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(textparse.MetricTypeCounter)},
+		metricType:              string(model.MetricTypeCounter),
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(model.MetricTypeCounter)},
 	}
 	expectedMetric4 := PrometheusMetric{
 		metricName:              "m4_total",
 		metricNameBeforeRelabel: "m4_total",
 		jobBeforeRelabel:        "job1",
 		instanceBeforeRelabel:   "instance1",
-		metricType:              string(textparse.MetricTypeCounter),
-		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(textparse.MetricTypeCounter)},
+		metricType:              string(model.MetricTypeCounter),
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(model.MetricTypeCounter)},
 	}
 	assert.Equal(t, *result[0], expectedMetric1)
 	assert.Equal(t, *result[1], expectedMetric2)
@@ -382,19 +381,19 @@ func TestNewMetricsTypeHandler_HandleRelabelName(t *testing.T) {
 	expectedMetric1 := PrometheusMetric{
 		metricName:              "m1",
 		metricNameBeforeRelabel: "m1",
-		metricType:              string(textparse.MetricTypeCounter),
+		metricType:              string(model.MetricTypeCounter),
 		jobBeforeRelabel:        "job1",
 		instanceBeforeRelabel:   "instance1",
 		// The saved label should be gone
-		tags: map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(textparse.MetricTypeCounter)},
+		tags: map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(model.MetricTypeCounter)},
 	}
 	expectedMetric2 := PrometheusMetric{
 		metricName:              "m2_changed",
 		metricNameBeforeRelabel: "m2",
 		jobBeforeRelabel:        "job1",
 		instanceBeforeRelabel:   "instance1",
-		metricType:              string(textparse.MetricTypeCounter),
-		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(textparse.MetricTypeCounter)},
+		metricType:              string(model.MetricTypeCounter),
+		tags:                    map[string]string{"job": "job1", "instance": "instance1", "prom_metric_type": string(model.MetricTypeCounter)},
 	}
 	assert.Equal(t, expectedMetric1, *result[0])
 	assert.Equal(t, expectedMetric2, *result[1])

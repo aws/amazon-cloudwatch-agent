@@ -17,7 +17,7 @@ import (
 )
 
 func TestNodeFull(t *testing.T) {
-	tags := map[string]string{MetricType: TypeNode, NodeNameKey: "TestNodeName", ClusterNameKey: "TestClusterName", InstanceId: "i-123"}
+	tags := map[string]string{MetricType: TypeNode, NodeNameKey: "TestNodeName", ClusterNameKey: "TestClusterName", InstanceIdKey: "i-123"}
 	fields := map[string]interface{}{MetricName(TypeNode, CpuUtilization): 0, MetricName(TypeNode, MemUtilization): 0,
 		MetricName(TypeNode, NetTotalBytes): 0, MetricName(TypeNode, CpuReservedCapacity): 0, MetricName(TypeNode, MemReservedCapacity): 0,
 		MetricName(TypeNode, RunningPodCount): 0, MetricName(TypeNode, RunningContainerCount): 0, MetricName(TypeNode, CpuTotal): 0,
@@ -31,7 +31,7 @@ func TestNodeFull(t *testing.T) {
 }
 
 func TestNodeLackOfCpuUtilization(t *testing.T) {
-	tags := map[string]string{MetricType: TypeNode, NodeNameKey: "TestNodeName", ClusterNameKey: "TestClusterName", InstanceId: "i-123"}
+	tags := map[string]string{MetricType: TypeNode, NodeNameKey: "TestNodeName", ClusterNameKey: "TestClusterName", InstanceIdKey: "i-123"}
 	fields := map[string]interface{}{MetricName(TypeNode, MemUtilization): 0,
 		MetricName(TypeNode, NetTotalBytes): 0, MetricName(TypeNode, CpuReservedCapacity): 0, MetricName(TypeNode, MemReservedCapacity): 0,
 		MetricName(TypeNode, RunningPodCount): 0, MetricName(TypeNode, RunningContainerCount): 0, MetricName(TypeNode, CpuTotal): 0,
@@ -48,7 +48,7 @@ func TestNodeLackOfCpuUtilization(t *testing.T) {
 }
 
 func TestNodeLackOfNodeNameKey(t *testing.T) {
-	tags := map[string]string{MetricType: TypeNode, ClusterNameKey: "TestClusterName", InstanceId: "i-123"}
+	tags := map[string]string{MetricType: TypeNode, ClusterNameKey: "TestClusterName", InstanceIdKey: "i-123"}
 	fields := map[string]interface{}{MetricName(TypeNode, CpuUtilization): 0, MetricName(TypeNode, MemUtilization): 0,
 		MetricName(TypeNode, NetTotalBytes): 0, MetricName(TypeNode, CpuReservedCapacity): 0, MetricName(TypeNode, MemReservedCapacity): 0,
 		MetricName(TypeNode, RunningPodCount): 0, MetricName(TypeNode, RunningContainerCount): 0, MetricName(TypeNode, CpuTotal): 0,
@@ -91,7 +91,7 @@ func TestPodFullLackOfService(t *testing.T) {
 }
 
 func TestNodeFSFull(t *testing.T) {
-	tags := map[string]string{MetricType: TypeNodeFS, NodeNameKey: "TestNodeName", ClusterNameKey: "TestClusterName", InstanceId: "i-123"}
+	tags := map[string]string{MetricType: TypeNodeFS, NodeNameKey: "TestNodeName", ClusterNameKey: "TestClusterName", InstanceIdKey: "i-123"}
 	fields := map[string]interface{}{MetricName(TypeNodeFS, FSUtilization): 0}
 	m := metric.New("test", tags, fields, time.Now())
 	TagMetricRule(m)

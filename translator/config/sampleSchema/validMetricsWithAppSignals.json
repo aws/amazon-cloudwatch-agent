@@ -1,0 +1,44 @@
+{
+  "agent": {
+    "region": "us-west-2",
+    "debug": true
+  },
+  "traces": {
+    "traces_collected": {
+      "app_signals": {}
+    }
+  },
+  "logs": {
+    "metrics_collected": {
+      "app_signals": {
+        "hosted_in": "test",
+        "rules": [
+          {
+            "selectors": [
+              {
+                "dimension": "Service",
+                "match": "pet-clinic-frontend"
+              },
+              {
+                "dimension": "RemoteService",
+                "match": "customers-service"
+              }
+            ],
+            "action": "keep",
+            "rule_name": "keep01"
+          },
+          {
+            "selectors": [
+              {
+                "dimension": "Operation",
+                "match": "GET *"
+              }
+            ],
+            "action": "drop",
+            "rule_name": "drop01"
+          }
+        ]
+      }
+    }
+  }
+}

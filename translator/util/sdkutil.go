@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
@@ -27,6 +28,7 @@ var DetectRegion = detectRegion
 var DetectCredentialsPath = detectCredentialsPath
 var DefaultEC2Region = defaultEC2Region
 var DefaultECSRegion = defaultECSRegion
+var IsEKS = isEKS
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
 
@@ -57,6 +59,25 @@ func DetectAgentMode(configuredMode string) string {
 
 	fmt.Println("I! Detected the instance is OnPremise")
 	return config.ModeOnPrem
+}
+
+func DetectKubernetesMode(configuredMode string) string {
+	isEKS := IsEKS()
+
+	if isEKS.Err != nil {
+		return "" // not kubernetes
+	}
+
+	if isEKS.Value {
+		return config.ModeEKS
+	}
+
+	if configuredMode == config.ModeEC2 {
+		return config.ModeK8sEC2
+	}
+
+	return config.ModeK8sOnPrem
+
 }
 
 func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) (region string) {
@@ -97,6 +118,10 @@ func defaultECSRegion() string {
 	return ecsutil.GetECSUtilSingleton().Region
 }
 
+func isEKS() eksdetector.IsEKSCache {
+	return eksdetector.IsEKS()
+}
+
 func detectRegion(mode string, credsConfig map[string]string) (region string, regionType string) {
 	region = SDKRegionWithCredsMap(mode, credsConfig)
 	regionType = config.RegionTypeNotFound
@@ -106,6 +131,7 @@ func detectRegion(mode string, credsConfig map[string]string) (region string, re
 
 	// For ec2, fallback to metadata when no region info found in credential profile.
 	if region == "" && mode == config.ModeEC2 {
+
 		fmt.Println("I! Trying to detect region from ec2")
 		region = DefaultEC2Region()
 		regionType = config.RegionTypeEC2Metadata

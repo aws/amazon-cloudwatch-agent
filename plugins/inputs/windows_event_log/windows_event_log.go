@@ -88,6 +88,8 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 	if alreadyRan {
 		return nil
 	}
+
+	monitor := newServiceMonitor()
 	for _, eventConfig := range s.Events {
 		// Assume no 2 EventConfigs have the same combination of:
 		// LogGroupName, LogStreamName, Name.
@@ -115,8 +117,10 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
+		monitor.addListener(eventLog.ResubscribeCh())
 		s.newEvents = append(s.newEvents, eventLog)
 	}
+	go monitor.start()
 	return nil
 }
 

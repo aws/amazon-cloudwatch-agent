@@ -7,3 +7,4 @@ proxy_server:
   tls:
     insecure: true
   proxy_address: https://proxy.proxy.com
+  imds_retries: 1

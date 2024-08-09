@@ -128,10 +128,12 @@ func TestTranslator(t *testing.T) {
 		},
 	}
 	for name, testCase := range testCases {
+		nopType, _ := component.NewType("nop")
+		otherType, _ := component.NewType("other")
 		t.Run(name, func(t *testing.T) {
 			ht := NewTranslator(testCase.pipelineName, common.NewTranslatorMap[component.Config](
-				&testTranslator{id: component.NewID("nop")},
-				&testTranslator{id: component.NewID("other")},
+				&testTranslator{id: component.NewID(nopType)},
+				&testTranslator{id: component.NewID(otherType)},
 			))
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := ht.Translate(conf)

@@ -10,6 +10,7 @@ import (
 
 	// Enabled cloudwatch-agent input plugins
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/statsd"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/win_perf_counters"
@@ -28,7 +29,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/ethtool"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net"
-	_ "github.com/influxdata/telegraf/plugins/inputs/nvidia_smi"
 	_ "github.com/influxdata/telegraf/plugins/inputs/processes"
 	_ "github.com/influxdata/telegraf/plugins/inputs/procstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/socket_listener"

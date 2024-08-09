@@ -27,7 +27,6 @@ import (
 	"golang.org/x/exp/maps"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/provider"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -97,8 +96,6 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 		Filename:  c.config.SharedCredentialFilename,
 		Token:     c.config.Token,
 	}
-	provider.GetFlagsStats().SetFlagWithValue(provider.FlagRegionType, c.config.RegionType)
-	provider.GetFlagsStats().SetFlagWithValue(provider.FlagMode, c.config.Mode)
 	configProvider := credentialConfig.Credentials()
 	logger := models.NewLogger("outputs", "cloudwatch", "")
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(logger)

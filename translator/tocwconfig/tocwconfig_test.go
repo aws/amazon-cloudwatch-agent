@@ -38,6 +38,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
@@ -58,6 +59,7 @@ type testCase struct {
 func TestBaseContainerInsightsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/etc/test/ca_bundle.pem")
@@ -70,34 +72,108 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 
 func TestGenericAppSignalsConfig(t *testing.T) {
 	resetContext(t)
-	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
-	expectedEnvVars := map[string]string{}
+	expectedEnvVars := map[string]string{"CWAGENT_LOG_LEVEL": "DEBUG"}
 	checkTranslation(t, "base_appsignals_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "base_appsignals_config", "windows", expectedEnvVars, "")
 }
 
-func TestAppSignalsAndKubernetesConfig(t *testing.T) {
+func TestGenericAppSignalsFallbackConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "base_appsignals_fallback_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "base_appsignals_fallback_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsAndEKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "appsignals_and_kubernetes_config", "linux", expectedEnvVars, "")
-	checkTranslation(t, "appsignals_and_kubernetes_config", "windows", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_eks_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_eks_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_fallback_and_eks_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_fallback_and_eks_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_eks_config")
+	eksdetector.NewDetector = eksdetector.TestEKSDetector
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_over_fallback_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_over_fallback_config", "windows", expectedEnvVars, "")
+}
+
+func TestAppSignalsAndNativeKubernetesConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	t.Setenv(common.KubernetesEnvVar, "use_appsignals_k8s_config")
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheK8s
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeK8sEC2)
+
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "appsignals_and_k8s_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
 }
 
 func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "emf_and_kubernetes_config", "linux", expectedEnvVars, "")
 	checkTranslation(t, "emf_and_kubernetes_config", "darwin", nil, "")
+}
+
+func TestEmfAndKubernetesWithGpuConfig(t *testing.T) {
+	resetContext(t)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "linux", expectedEnvVars, "")
+	checkTranslation(t, "emf_and_kubernetes_with_gpu_config", "darwin", nil, "")
 }
 
 func TestKubernetesModeOnPremiseConfig(t *testing.T) {
@@ -113,6 +189,7 @@ func TestKubernetesModeOnPremiseConfig(t *testing.T) {
 func TestLogsAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	t.Setenv(config.HOST_IP, "127.0.0.1")
 	// for otel components and not our adapter components like
@@ -175,6 +252,7 @@ func TestCollectDConfig(t *testing.T) {
 func TestPrometheusConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
 	temp := t.TempDir()
 	prometheusConfigFileName := filepath.Join(temp, "prometheus.yaml")
@@ -396,6 +474,7 @@ func TestTraceConfig(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
 			readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
 			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
 		})
@@ -404,6 +483,7 @@ func TestTraceConfig(t *testing.T) {
 
 func TestConfigWithEnvironmentVariables(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "config_with_env", "linux", expectedEnvVars, "")
 }
@@ -459,6 +539,8 @@ func TestDeltaNetConfigLinux(t *testing.T) {
 
 func TestECSNodeMetricConfig(t *testing.T) {
 	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	context.CurrentContext().SetMode(config.ModeEC2)
 	t.Setenv("RUN_IN_CONTAINER", "True")
 	t.Setenv("HOST_NAME", "fake-host-name")
 	t.Setenv("HOST_IP", "127.0.0.1")

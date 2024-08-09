@@ -65,6 +65,14 @@ func TestTracesConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidTrace.json", false, expectedErrorMap)
 }
 
+func TestJMXConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validJMX.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["number_one_of"] = 1
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidJMX.json", false, expectedErrorMap)
+}
+
 func TestLogFilesConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogFiles.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}
@@ -97,6 +105,7 @@ func TestLogWindowsEventConfig(t *testing.T) {
 func TestMetricsConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLinuxMetrics.json", true, map[string]int{})
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validWindowsMetrics.json", true, map[string]int{})
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validMetricsWithAppSignals.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}
 	expectedErrorMap["invalid_type"] = 2
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithInvalidAggregationDimensions.json", false, expectedErrorMap)

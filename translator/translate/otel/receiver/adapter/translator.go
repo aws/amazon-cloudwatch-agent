@@ -62,7 +62,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: t.cfgKey}
 	}
 	cfg := &adapter.Config{
-		ScraperControllerSettings: scraperhelper.NewDefaultScraperControllerSettings(t.ID().Type()),
+		ControllerConfig: scraperhelper.NewDefaultControllerConfig(),
+		AliasName:        t.ID().String(),
 	}
 
 	intervalKeyChain := []string{

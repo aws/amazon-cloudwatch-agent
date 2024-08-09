@@ -1,14 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-
-//go:build clean
-// +build clean
-
 package main
 
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -31,7 +28,7 @@ func cleanHost() error {
 	log.Print("Begin to clean EC2 Host")
 
 	cxt := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(cxt)
+	defaultConfig, err := config.LoadDefaultConfig(cxt, config.WithRegion(os.Args[1]))
 	if err != nil {
 		return err
 	}
@@ -57,6 +54,7 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 		"cwagent-performance-*",
 		"cwagent-stress-*",
 		"LocalStackIntegrationTestInstance",
+		"NvidiaDataCollector-*",
 	}}
 
 	instanceInput := ec2.DescribeInstancesInput{

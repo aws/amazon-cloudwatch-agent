@@ -233,6 +233,17 @@ func TestTimestampParserWithFracSeconds(t *testing.T) {
 		fmt.Sprintf("The timestampFromLogLine value %v is not the same as expected %v.", timestamp, expectedTimestamp))
 }
 
+func TestNonAllowlistedTimezone(t *testing.T) {
+	fileConfig := &FileConfig{
+		Timezone: "EST",
+	}
+
+	err := fileConfig.init()
+	assert.NoError(t, err)
+
+	assert.Equal(t, time.Local, fileConfig.TimezoneLoc, "The timezone location should be in local timezone.")
+}
+
 func TestMultiLineStartPattern(t *testing.T) {
 	multiLineStartPattern := "---"
 	fileConfig := &FileConfig{

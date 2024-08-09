@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 type OmitHostname struct {
@@ -19,6 +20,7 @@ func (o *OmitHostname) ApplyRule(input interface{}) (returnKey string, returnVal
 	} else {
 		returnKey, returnVal = translator.DefaultCase("omit_hostname", false, input)
 	}
+	context.CurrentContext().SetOmitHostname(returnVal.(bool))
 	return
 }
 

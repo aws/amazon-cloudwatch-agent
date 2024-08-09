@@ -1,0 +1,38 @@
+log_group_name: "/aws/application-signals/data"
+namespace: "ApplicationSignals"
+middleware: agenthealth/logs
+dimension_rollup_option: "NoDimensionRollup"
+metric_declarations:
+  - dimensions:
+      - [Environment, Service, Operation]
+      - [Environment, Service]
+    label_matchers:
+      - label_names:
+          - Telemetry.Source
+        regex: ^(ServerSpan|LocalRootSpan)$
+    metric_name_selectors:
+      - Latency
+      - Fault
+      - Error
+  - dimensions:
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteEnvironment, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteEnvironment]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, Operation, RemoteService, RemoteOperation]
+      - [Environment, Service, RemoteService, RemoteEnvironment]
+      - [Environment, Service, RemoteService]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteEnvironment, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteEnvironment]
+      - [Environment, Service, RemoteService, RemoteOperation, RemoteResourceIdentifier, RemoteResourceType]
+      - [Environment, Service, RemoteService, RemoteOperation]
+      - [Environment, Service, RemoteService, RemoteResourceIdentifier, RemoteResourceType]
+      - [RemoteService, RemoteResourceIdentifier, RemoteResourceType]
+      - [RemoteService]
+    label_matchers:
+      - label_names:
+          - Telemetry.Source
+        regex: '^(ClientSpan|ProducerSpan|ConsumerSpan)$'
+    metric_name_selectors:
+      - Latency
+      - Fault
+      - Error

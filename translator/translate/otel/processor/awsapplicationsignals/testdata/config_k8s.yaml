@@ -1,0 +1,3 @@
+resolvers:
+  - platform: k8s
+    name: test

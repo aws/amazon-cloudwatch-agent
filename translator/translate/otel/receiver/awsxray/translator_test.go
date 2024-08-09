@@ -10,7 +10,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
@@ -41,9 +40,10 @@ func TestTranslator(t *testing.T) {
 				"endpoint":  "127.0.0.1:2000",
 				"transport": "udp",
 				"proxy_server": map[string]interface{}{
-					"endpoint": "127.0.0.1:2000",
-					"region":   "us-east-1",
-					"role_arn": "global_arn",
+					"endpoint":     "127.0.0.1:2000",
+					"region":       "us-east-1",
+					"role_arn":     "global_arn",
+					"imds_retries": 1,
 				},
 			}),
 		},
@@ -63,7 +63,7 @@ func TestTranslator(t *testing.T) {
 				gotCfg, ok := got.(*awsxrayreceiver.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

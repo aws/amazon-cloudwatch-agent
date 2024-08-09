@@ -30,7 +30,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: ~1.21.1
+          go-version: ~1.22.2
           cache: false
       - name: Update OTel fork components version
         id: set-matrix

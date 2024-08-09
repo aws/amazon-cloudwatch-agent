@@ -14,13 +14,14 @@ import (
 
 func TestTranslate(t *testing.T) {
 	tt := NewTranslator()
-	conf := confmap.NewFromStringMap(map[string]interface{}{})
+	conf := confmap.NewFromStringMap(map[string]any{"traces": map[string]any{}})
 	got, err := tt.Translate(conf)
 	if err == nil {
 		require.NotNil(t, got)
 		gotCfg, ok := got.(*awsproxy.Config)
 		require.True(t, ok)
-		wantCfg := awsproxy.NewFactory().CreateDefaultConfig()
+		wantCfg := awsproxy.NewFactory().CreateDefaultConfig().(*awsproxy.Config)
+		wantCfg.ProxyConfig.IMDSRetries = 1
 		assert.Equal(t, wantCfg, gotCfg)
 	}
 }

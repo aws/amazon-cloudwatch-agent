@@ -501,7 +501,8 @@ func TestPublish(t *testing.T) {
 func TestMiddleware(t *testing.T) {
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
-	id := component.NewID("test")
+	newType, _ := component.NewType("test")
+	id := component.NewID(newType)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))

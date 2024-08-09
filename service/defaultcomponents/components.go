@@ -9,15 +9,18 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"go.opentelemetry.io/collector/exporter"
-	"go.opentelemetry.io/collector/exporter/loggingexporter"
+	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor"
@@ -27,8 +30,9 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsappsignals"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -38,6 +42,7 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Receivers, err = receiver.MakeFactoryMap(
 		awscontainerinsightreceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
+		jmxreceiver.NewFactory(),
 		otlpreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
@@ -46,13 +51,16 @@ func Factories() (otelcol.Factories, error) {
 	}
 
 	if factories.Processors, err = processor.MakeFactoryMap(
-		awsappsignals.NewFactory(),
+		awsapplicationsignals.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
+		filterprocessor.NewFactory(),
 		ec2tagger.NewFactory(),
 		metricstransformprocessor.NewFactory(),
+		resourceprocessor.NewFactory(),
 		resourcedetectionprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
+		gpuattributes.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
@@ -62,7 +70,7 @@ func Factories() (otelcol.Factories, error) {
 		awsemfexporter.NewFactory(),
 		awsxrayexporter.NewFactory(),
 		cloudwatch.NewFactory(),
-		loggingexporter.NewFactory(),
+		debugexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
