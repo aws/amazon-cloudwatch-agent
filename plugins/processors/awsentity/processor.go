@@ -13,17 +13,21 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/eksattributescraper"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
 )
 
 const (
-	attributeAwsLogGroupNames            = "aws.log.group.names"
-	attributeDeploymentEnvironment       = "deployment.environment"
-	attributeServiceName                 = "service.name"
-	attributeService                     = "Service"
-	attributeEntityServiceName           = "aws.entity.service.name"
-	attributeEntityDeploymentEnvironment = "aws.entity.deployment.environment"
-	EMPTY                                = ""
+	attributeAwsLogGroupNames      = "aws.log.group.names"
+	attributeDeploymentEnvironment = "deployment.environment"
+	attributeServiceName           = "service.name"
+	attributeService               = "Service"
+	EMPTY                          = ""
 )
+
+type scraper interface {
+	Scrape(rm pcommon.Resource)
+}
 
 // exposed as a variable for unit testing
 var addToEntityStore = func(logGroupName entitystore.LogGroupName, serviceName string, environmentName string) {
@@ -38,20 +42,23 @@ var addToEntityStore = func(logGroupName entitystore.LogGroupName, serviceName s
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
 type awsEntityProcessor struct {
-	config *Config
-	logger *zap.Logger
+	config     *Config
+	eksscraper scraper
+	logger     *zap.Logger
 }
 
 func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcessor {
 	return &awsEntityProcessor{
-		config: config,
-		logger: logger,
+		config:     config,
+		eksscraper: eksattributescraper.NewEKSAttributeScraper(config.ClusterName),
+		logger:     logger,
 	}
 }
 
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	rm := md.ResourceMetrics()
 	for i := 0; i < rm.Len(); i++ {
+		p.eksscraper.Scrape(rm.At(i).Resource())
 		resourceAttrs := rm.At(i).Resource().Attributes()
 		logGroupNames, _ := resourceAttrs.Get(attributeAwsLogGroupNames)
 		serviceName, _ := resourceAttrs.Get(attributeServiceName)
@@ -63,10 +70,10 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			entityServiceName, entityEnvironmentName = p.scrapeServiceAttribute(rm.At(i).ScopeMetrics())
 		}
 		if entityServiceName != EMPTY {
-			resourceAttrs.PutStr(attributeEntityServiceName, entityServiceName)
+			resourceAttrs.PutStr(entityattributes.AttributeEntityServiceName, entityServiceName)
 		}
 		if entityEnvironmentName != EMPTY {
-			resourceAttrs.PutStr(attributeEntityDeploymentEnvironment, entityEnvironmentName)
+			resourceAttrs.PutStr(entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
 		}
 
 		if logGroupNames.Str() == EMPTY || (serviceName.Str() == EMPTY && environmentName.Str() == EMPTY) {

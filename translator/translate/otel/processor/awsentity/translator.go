@@ -9,6 +9,9 @@ import (
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -28,6 +31,29 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), "")
 }
 
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
-	return t.factory.CreateDefaultConfig().(*awsentity.Config), nil
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	cfg := t.factory.CreateDefaultConfig().(*awsentity.Config)
+
+	hostedInConfigKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignals, "hosted_in")
+	hostedIn, hostedInConfigured := common.GetString(conf, hostedInConfigKey)
+	if !hostedInConfigured {
+		hostedInConfigKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.AppSignalsFallback, "hosted_in")
+		hostedIn, hostedInConfigured = common.GetString(conf, hostedInConfigKey)
+	}
+	if common.IsAppSignalsKubernetes() {
+		if !hostedInConfigured {
+			hostedIn = util.GetClusterNameFromEc2Tagger()
+		}
+	}
+
+	mode := context.CurrentContext().KubernetesMode()
+	if mode == "" {
+		mode = context.CurrentContext().Mode()
+	}
+	switch mode {
+	case config.ModeEKS:
+		cfg.ClusterName = hostedIn
+		cfg.Mode = config.ModeEKS
+	}
+	return cfg, nil
 }

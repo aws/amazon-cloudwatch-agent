@@ -299,7 +299,9 @@ processors:
         resolvers:
             - name: TestCluster
               platform: eks
-    awsentity: {}
+    awsentity:
+        cluster_name: TestCluster
+        mode: EKS
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0

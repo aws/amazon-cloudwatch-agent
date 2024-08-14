@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
 )
 
 type mockEntityStore struct {
@@ -142,26 +143,26 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			name:    "ResourceAttributeServiceNameOnly",
 			metrics: generateMetrics(attributeServiceName, "test-service"),
 			want: map[string]any{
-				attributeEntityServiceName: "test-service",
-				attributeServiceName:       "test-service",
+				entityattributes.AttributeEntityServiceName: "test-service",
+				attributeServiceName:                        "test-service",
 			},
 		},
 		{
 			name:    "ResourceAttributeEnvironmentOnly",
 			metrics: generateMetrics(attributeDeploymentEnvironment, "test-environment"),
 			want: map[string]any{
-				attributeEntityDeploymentEnvironment: "test-environment",
-				attributeDeploymentEnvironment:       "test-environment",
+				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
+				attributeDeploymentEnvironment:                        "test-environment",
 			},
 		},
 		{
 			name:    "ResourceAttributeServiceNameAndEnvironment",
 			metrics: generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
 			want: map[string]any{
-				attributeEntityServiceName:           "test-service",
-				attributeEntityDeploymentEnvironment: "test-environment",
-				attributeServiceName:                 "test-service",
-				attributeDeploymentEnvironment:       "test-environment",
+				entityattributes.AttributeEntityServiceName:           "test-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
+				attributeServiceName:                                  "test-service",
+				attributeDeploymentEnvironment:                        "test-environment",
 			},
 		},
 	}
@@ -196,22 +197,22 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			name:    "DatapointAttributeServiceNameOnly",
 			metrics: generateDatapointMetrics(attributeServiceName, "test-service"),
 			want: map[string]any{
-				attributeEntityServiceName: "test-service",
+				entityattributes.AttributeEntityServiceName: "test-service",
 			},
 		},
 		{
 			name:    "DatapointAttributeEnvironmentOnly",
 			metrics: generateDatapointMetrics(attributeDeploymentEnvironment, "test-environment"),
 			want: map[string]any{
-				attributeEntityDeploymentEnvironment: "test-environment",
+				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
 			},
 		},
 		{
 			name:    "DatapointAttributeServiceNameAndEnvironment",
 			metrics: generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
 			want: map[string]any{
-				attributeEntityServiceName:           "test-service",
-				attributeEntityDeploymentEnvironment: "test-environment",
+				entityattributes.AttributeEntityServiceName:           "test-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
 			},
 		},
 	}
