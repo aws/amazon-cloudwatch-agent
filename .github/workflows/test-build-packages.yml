@@ -3,7 +3,7 @@
 
 name: Build And Upload Packages
 env:
-  CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_NAME: "pkkokane28/amazon-cloudwatch-agent-test"
 
 on:
   workflow_dispatch:
