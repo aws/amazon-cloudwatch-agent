@@ -144,6 +144,10 @@ exporters:
                 - pod_container_status_waiting_reason_create_container_error
                 - pod_container_status_waiting_reason_create_container_config_error
                 - pod_container_status_terminated_reason_oom_killed
+                - pod_gpu_usage_total
+                - pod_gpu_request
+                - pod_gpu_limit
+                - pod_gpu_reserved_capacity
             - dimensions:
                 - - ClusterName
                   - InstanceId
@@ -169,6 +173,9 @@ exporters:
                 - node_status_condition_unknown
                 - node_status_capacity_pods
                 - node_status_allocatable_pods
+                - node_gpu_usage_total
+                - node_gpu_limit
+                - node_gpu_reserved_capacity
             - dimensions:
                 - - ClusterName
                   - InstanceId
@@ -369,32 +376,6 @@ exporters:
                 - node_gpu_memory_used
                 - node_gpu_power_draw
                 - node_gpu_temperature
-            - dimensions:
-                - - ClusterName
-                - - ClusterName
-                  - Namespace
-                  - Service
-                - - ClusterName
-                  - Namespace
-                  - PodName
-                - - ClusterName
-                  - FullPodName
-                  - Namespace
-                  - PodName
-              metric_name_selectors:
-                - pod_gpu_usage_total
-                - pod_gpu_request
-                - pod_gpu_limit
-                - pod_gpu_reserved_capacity
-            - dimensions:
-                - - ClusterName
-                - - ClusterName
-                  - InstanceId
-                  - NodeName
-              metric_name_selectors:
-                - node_gpu_usage_total
-                - node_gpu_limit
-                - node_gpu_reserved_capacity
             - dimensions:
                 - - ClusterName
                 - - ClusterName
