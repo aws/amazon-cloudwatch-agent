@@ -119,36 +119,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			}
 		}
 
-		// replicate pod level nvidia gpu count metrics _limit, _request and _total for node and cluster
-		for _, m := range []string{containerinsightscommon.GpuLimit, containerinsightscommon.GpuRequest, containerinsightscommon.GpuTotal} {
-			transformRules = append(transformRules, []map[string]interface{}{
-				{
-					"include":  containerinsightscommon.MetricName(containerinsightscommon.TypePod, m),
-					"action":   "insert",
-					"new_name": containerinsightscommon.MetricName(containerinsightscommon.TypeNode, m),
-					"operations": append([]map[string]interface{}{
-						{
-							"action":    "add_label",
-							"new_label": containerinsightscommon.MetricType,
-							"new_value": containerinsightscommon.TypeGpuNode,
-						},
-					}),
-				},
-				{
-					"include":  containerinsightscommon.MetricName(containerinsightscommon.TypePod, m),
-					"action":   "insert",
-					"new_name": containerinsightscommon.MetricName(containerinsightscommon.TypeCluster, m),
-					"operations": append([]map[string]interface{}{
-						{
-							"action":    "add_label",
-							"new_label": containerinsightscommon.MetricType,
-							"new_value": containerinsightscommon.TypeGpuCluster,
-						},
-					}),
-				},
-			}...)
-		}
-
 		for oldName, newName := range renameMapForNeuronMonitor {
 			var operations []map[string]interface{}
 			if newName == containerinsightscommon.NeuronCoreUtilization {

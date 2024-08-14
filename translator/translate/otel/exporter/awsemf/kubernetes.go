@@ -505,26 +505,20 @@ func getGPUMetricDeclarations(conf *confmap.Conf) []*awsemfexporter.MetricDeclar
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "Namespace", "Service"}, {"ClusterName", "Namespace", "PodName"}, {"ClusterName", "Namespace", "PodName", "FullPodName"}},
 				MetricNameSelectors: []string{
-					"pod_gpu_total",
 					"pod_gpu_request",
 					"pod_gpu_limit",
+					"pod_gpu_usage_total",
+					"pod_gpu_reserved_capacity",
 				},
 			},
 			{
-				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType"}},
+				Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}},
 				MetricNameSelectors: []string{
-					"node_gpu_total",
-					"node_gpu_request",
 					"node_gpu_limit",
-				},
-			},
-			{
-				Dimensions: [][]string{{"ClusterName"}},
-				MetricNameSelectors: []string{
-					"cluster_gpu_total",
-					"cluster_gpu_request",
+					"node_gpu_usage_total",
+					"node_gpu_reserved_capacity",
 				},
 			},
 		}...)
