@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300044.0 (2024-08-14)
+========================================================================
+Bug Fixes:
+* [ContainerInsights] Update GPU usage metrics emitted 
+* [ContainerInsights] Deprecate runtime tag from neuron metrics to fix false average calculation
+
+Enhancements:
+* [ContainerInsights] Filter some neuron attributes to reduce the size of EMF logs
+
+========================================================================
 Amazon CloudWatch Agent 1.300043.0 (2024-08-08)
 ========================================================================
 Bug Fixes:
