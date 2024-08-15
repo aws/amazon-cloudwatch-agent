@@ -1,19 +1,23 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package k8sclient
 
 import (
-	"log"
 	"testing"
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s/k8sutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
-var nodeArray = []interface{}{
+var nodeArray = []any{
 	&v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "ip-192-168-200-63.eu-west-1.compute.internal",
@@ -27,12 +31,14 @@ var nodeArray = []interface{}{
 				Time: time.Now(),
 			},
 			Labels: map[string]string{
-				"beta.kubernetes.io/arch":                  "amd64",
-				"beta.kubernetes.io/instance-type":         "t3.medium",
-				"beta.kubernetes.io/os":                    "linux",
-				"failure-domain.beta.kubernetes.io/region": "eu-west-1",
-				"failure-domain.beta.kubernetes.io/zone":   "eu-west-1c",
-				"kubernetes.io/hostname":                   "ip-192-168-200-63.eu-west-1.compute.internal",
+				"kubernetes.io/arch":                         "amd64",
+				"beta.kubernetes.io/instance-type":           "t3.medium",
+				"kubernetes.io/os":                           "linux",
+				"failure-domain.beta.kubernetes.io/region":   "eu-west-1",
+				"failure-domain.beta.kubernetes.io/zone":     "eu-west-1c",
+				"kubernetes.io/hostname":                     "ip-192-168-200-63.eu-west-1.compute.internal",
+				"node.kubernetes.io/instance-type":           "t3.medium",
+				"sagemaker.amazonaws.com/node-health-status": "Schedulable",
 			},
 			Annotations: map[string]string{
 				"node.alpha.kubernetes.io/ttl":                           "0",
@@ -40,6 +46,12 @@ var nodeArray = []interface{}{
 			},
 		},
 		Status: v1.NodeStatus{
+			Capacity: v1.ResourceList{
+				v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+			},
+			Allocatable: v1.ResourceList{
+				v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+			},
 			Conditions: []v1.NodeCondition{
 				{
 					Type:   "MemoryPressure",
@@ -117,12 +129,14 @@ var nodeArray = []interface{}{
 				Time: time.Now(),
 			},
 			Labels: map[string]string{
-				"beta.kubernetes.io/os":                    "linux",
-				"failure-domain.beta.kubernetes.io/region": "eu-west-1",
-				"failure-domain.beta.kubernetes.io/zone":   "eu-west-1a",
-				"kubernetes.io/hostname":                   "ip-192-168-76-61.eu-west-1.compute.internal",
-				"beta.kubernetes.io/arch":                  "amd64",
-				"beta.kubernetes.io/instance-type":         "t3.medium",
+				"kubernetes.io/os":                           "linux",
+				"failure-domain.beta.kubernetes.io/region":   "eu-west-1",
+				"failure-domain.beta.kubernetes.io/zone":     "eu-west-1a",
+				"kubernetes.io/hostname":                     "ip-192-168-76-61.eu-west-1.compute.internal",
+				"kubernetes.io/arch":                         "amd64",
+				"beta.kubernetes.io/instance-type":           "t3.medium",
+				"node.kubernetes.io/instance-type":           "t3.medium",
+				"sagemaker.amazonaws.com/node-health-status": "UnschedulablePendingReboot",
 			},
 			Annotations: map[string]string{
 				"node.alpha.kubernetes.io/ttl":                           "0",
@@ -130,6 +144,12 @@ var nodeArray = []interface{}{
 			},
 		},
 		Status: v1.NodeStatus{
+			Capacity: v1.ResourceList{
+				v1.ResourcePods: *resource.NewQuantity(10, resource.DecimalSI),
+			},
+			Allocatable: v1.ResourceList{
+				v1.ResourcePods: *resource.NewQuantity(10, resource.DecimalSI),
+			},
 			Conditions: []v1.NodeCondition{
 				{
 					Type:   "MemoryPressure",
@@ -207,9 +227,9 @@ var nodeArray = []interface{}{
 				Time: time.Now(),
 			},
 			Labels: map[string]string{
-				"beta.kubernetes.io/arch":                  "amd64",
+				"kubernetes.io/arch":                       "amd64",
 				"beta.kubernetes.io/instance-type":         "t3.medium",
-				"beta.kubernetes.io/os":                    "linux",
+				"kubernetes.io/os":                         "linux",
 				"failure-domain.beta.kubernetes.io/region": "eu-west-1",
 				"failure-domain.beta.kubernetes.io/zone":   "eu-west-1b",
 				"kubernetes.io/hostname":                   "ip-192-168-153-1.eu-west-1.compute.internal",
@@ -220,6 +240,12 @@ var nodeArray = []interface{}{
 			},
 		},
 		Status: v1.NodeStatus{
+			Capacity: v1.ResourceList{
+				v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+			},
+			Allocatable: v1.ResourceList{
+				v1.ResourcePods: *resource.NewQuantity(1, resource.DecimalSI),
+			},
 			Conditions: []v1.NodeCondition{
 				{
 					Type:   "MemoryPressure",
@@ -233,7 +259,7 @@ var nodeArray = []interface{}{
 					Reason:  "KubeletHasSufficientMemory",
 					Message: "kubelet has sufficient memory available",
 				},
-				{ //This entry shows failed node
+				{ // This entry shows failed node
 					Type:   "DiskPressure",
 					Status: "True",
 					LastHeartbeatTime: metav1.Time{
@@ -259,7 +285,7 @@ var nodeArray = []interface{}{
 				},
 				{
 					Type:   "Ready",
-					Status: "True",
+					Status: "False",
 					LastHeartbeatTime: metav1.Time{
 						Time: time.Now(),
 					},
@@ -267,7 +293,7 @@ var nodeArray = []interface{}{
 						Time: time.Now(),
 					},
 					Reason:  "KubeletReady",
-					Message: "kubelet is posting ready status",
+					Message: "kubelet is not posting ready status",
 				},
 			},
 			NodeInfo: v1.NodeSystemInfo{
@@ -286,29 +312,295 @@ var nodeArray = []interface{}{
 	},
 }
 
-func setUpNodeClient() (*nodeClient, chan struct{}) {
-	stopChan := make(chan struct{})
-
-	client := &nodeClient{
-		stopChan: stopChan,
-		store:    NewObjStore(transformFuncNode),
-		inited:   true, //make it true to avoid further initialization invocation.
+func TestNodeClient(t *testing.T) {
+	testCases := map[string]struct {
+		options []nodeClientOption
+		want    map[string]any
+	}{
+		"Default": {
+			options: []nodeClientOption{
+				nodeSyncCheckerOption(&mockReflectorSyncChecker{}),
+			},
+			want: map[string]any{
+				"clusterNodeCount":       3,
+				"clusterFailedNodeCount": 1,
+				"nodeToCapacityMap":      map[string]v1.ResourceList{},                             // Node level info is not captured by default
+				"nodeToAllocatableMap":   map[string]v1.ResourceList{},                             // Node level info is not captured by default
+				"nodeToConditionsMap":    map[string]map[v1.NodeConditionType]v1.ConditionStatus{}, // Node level info is not captured by default
+				"nodeInfos": []*NodeInfo{
+					{
+						Name: "ip-192-168-200-63.eu-west-1.compute.internal",
+						Conditions: []*NodeCondition{
+							{
+								Type:   v1.NodeConditionType("MemoryPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("DiskPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("PIDPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("Ready"),
+								Status: v1.ConditionTrue,
+							},
+						},
+						Allocatable: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+						},
+						Capacity: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+						},
+						ProviderId:   "aws:///eu-west-1c/i-09087f37a14b9ded1",
+						InstanceType: "t3.medium",
+						Labels:       map[Label]int8{},
+					},
+					{
+						Name: "ip-192-168-76-61.eu-west-1.compute.internal",
+						Conditions: []*NodeCondition{
+							{
+								Type:   v1.NodeConditionType("MemoryPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("DiskPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("PIDPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("Ready"),
+								Status: v1.ConditionTrue,
+							},
+						},
+						Allocatable: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(10, resource.DecimalSI),
+						},
+						Capacity: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(10, resource.DecimalSI),
+						},
+						ProviderId:   "aws:///eu-west-1a/i-09087f37a14b9ded2",
+						InstanceType: "t3.medium",
+						Labels:       map[Label]int8{},
+					},
+					{
+						Name: "ip-192-168-153-1.eu-west-1.compute.internal",
+						Conditions: []*NodeCondition{
+							{
+								Type:   v1.NodeConditionType("MemoryPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("DiskPressure"),
+								Status: v1.ConditionTrue,
+							},
+							{
+								Type:   v1.NodeConditionType("PIDPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("Ready"),
+								Status: v1.ConditionFalse,
+							},
+						},
+						Allocatable: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(1, resource.DecimalSI),
+						},
+						Capacity: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+						},
+						ProviderId:   "aws:///eu-west-1b/i-09087f37a14b9ded3",
+						InstanceType: "t3.medium",
+						Labels:       map[Label]int8{},
+					},
+				},
+				"NodeToLabelsMap": map[string]map[Label]int8{},
+			},
+		},
+		"CaptureNodeLevelInfo": {
+			options: []nodeClientOption{
+				nodeSyncCheckerOption(&mockReflectorSyncChecker{}),
+				captureNodeLevelInfoOption(true),
+				captureOnlyNodeLabelInfoOption(true),
+			},
+			want: map[string]any{
+				"clusterNodeCount":       3,
+				"clusterFailedNodeCount": 1,
+				"nodeToCapacityMap": map[string]v1.ResourceList{
+					"ip-192-168-200-63.eu-west-1.compute.internal": {
+						"pods": *resource.NewQuantity(5, resource.DecimalSI),
+					},
+					"ip-192-168-76-61.eu-west-1.compute.internal": {
+						"pods": *resource.NewQuantity(10, resource.DecimalSI),
+					},
+					"ip-192-168-153-1.eu-west-1.compute.internal": {
+						"pods": *resource.NewQuantity(5, resource.DecimalSI),
+					},
+				},
+				"nodeToAllocatableMap": map[string]v1.ResourceList{
+					"ip-192-168-200-63.eu-west-1.compute.internal": {
+						"pods": *resource.NewQuantity(5, resource.DecimalSI),
+					},
+					"ip-192-168-76-61.eu-west-1.compute.internal": {
+						"pods": *resource.NewQuantity(10, resource.DecimalSI),
+					},
+					"ip-192-168-153-1.eu-west-1.compute.internal": {
+						"pods": *resource.NewQuantity(1, resource.DecimalSI),
+					},
+				},
+				"nodeToConditionsMap": map[string]map[v1.NodeConditionType]v1.ConditionStatus{
+					"ip-192-168-200-63.eu-west-1.compute.internal": {
+						"DiskPressure":   "False",
+						"MemoryPressure": "False",
+						"PIDPressure":    "False",
+						"Ready":          "True",
+					},
+					"ip-192-168-76-61.eu-west-1.compute.internal": {
+						"DiskPressure":   "False",
+						"MemoryPressure": "False",
+						"PIDPressure":    "False",
+						"Ready":          "True",
+					},
+					"ip-192-168-153-1.eu-west-1.compute.internal": {
+						"DiskPressure":   "True",
+						"MemoryPressure": "False",
+						"PIDPressure":    "False",
+						"Ready":          "False",
+					},
+				},
+				"NodeToLabelsMap": map[string]map[Label]int8{
+					"ip-192-168-200-63.eu-west-1.compute.internal": {
+						SageMakerNodeHealthStatus: int8(k8sutil.Schedulable),
+					},
+					"ip-192-168-76-61.eu-west-1.compute.internal": {
+						SageMakerNodeHealthStatus: int8(k8sutil.UnschedulablePendingReboot),
+					},
+				},
+				"nodeInfos": []*NodeInfo{
+					{
+						Name: "ip-192-168-200-63.eu-west-1.compute.internal",
+						Conditions: []*NodeCondition{
+							{
+								Type:   v1.NodeConditionType("MemoryPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("DiskPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("PIDPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("Ready"),
+								Status: v1.ConditionTrue,
+							},
+						},
+						Allocatable: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+						},
+						Capacity: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+						},
+						ProviderId:   "aws:///eu-west-1c/i-09087f37a14b9ded1",
+						InstanceType: "t3.medium",
+						Labels: map[Label]int8{
+							SageMakerNodeHealthStatus: int8(k8sutil.Schedulable),
+						},
+					},
+					{
+						Name: "ip-192-168-76-61.eu-west-1.compute.internal",
+						Conditions: []*NodeCondition{
+							{
+								Type:   v1.NodeConditionType("MemoryPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("DiskPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("PIDPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("Ready"),
+								Status: v1.ConditionTrue,
+							},
+						},
+						Allocatable: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(10, resource.DecimalSI),
+						},
+						Capacity: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(10, resource.DecimalSI),
+						},
+						ProviderId:   "aws:///eu-west-1a/i-09087f37a14b9ded2",
+						InstanceType: "t3.medium",
+						Labels: map[Label]int8{
+							SageMakerNodeHealthStatus: int8(k8sutil.UnschedulablePendingReboot),
+						},
+					},
+					{
+						Name: "ip-192-168-153-1.eu-west-1.compute.internal",
+						Conditions: []*NodeCondition{
+							{
+								Type:   v1.NodeConditionType("MemoryPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("DiskPressure"),
+								Status: v1.ConditionTrue,
+							},
+							{
+								Type:   v1.NodeConditionType("PIDPressure"),
+								Status: v1.ConditionFalse,
+							},
+							{
+								Type:   v1.NodeConditionType("Ready"),
+								Status: v1.ConditionFalse,
+							},
+						},
+						Allocatable: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(1, resource.DecimalSI),
+						},
+						Capacity: v1.ResourceList{
+							v1.ResourcePods: *resource.NewQuantity(5, resource.DecimalSI),
+						},
+						ProviderId:   "aws:///eu-west-1b/i-09087f37a14b9ded3",
+						InstanceType: "t3.medium",
+						Labels:       map[Label]int8{},
+					},
+				},
+			},
+		},
 	}
-	return client, stopChan
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			fakeClientSet := fake.NewSimpleClientset()
+			client := newNodeClient(fakeClientSet, zap.NewNop(), testCase.options...)
+			assert.NoError(t, client.store.Replace(nodeArray, ""))
+
+			require.Equal(t, testCase.want["clusterNodeCount"], client.ClusterNodeCount())
+			require.Equal(t, testCase.want["clusterFailedNodeCount"], client.ClusterFailedNodeCount())
+			require.Equal(t, testCase.want["nodeToCapacityMap"], client.NodeToCapacityMap())
+			require.Equal(t, testCase.want["nodeToAllocatableMap"], client.NodeToAllocatableMap())
+			require.Equal(t, testCase.want["nodeToConditionsMap"], client.NodeToConditionsMap())
+			require.Equal(t, testCase.want["NodeToLabelsMap"], client.NodeToLabelsMap())
+			require.EqualValues(t, testCase.want["nodeInfos"], client.NodeInfos())
+			client.shutdown()
+			assert.True(t, client.stopped)
+		})
+	}
 }
 
-func TestNodeClient(t *testing.T) {
-	client, stopChan := setUpNodeClient()
-	defer close(stopChan)
-
-	client.store.Replace(nodeArray, "")
-
-	expectedClusterNodeCount := 3
-	expectedClusterFailedNodeCount := 1
-	clusterNodeCount := client.ClusterNodeCount()
-	clusterFailedNodeCount := client.ClusterFailedNodeCount()
-	log.Printf("clusterNodeCount: %v, clusterFailedNodeCount: %v", clusterNodeCount, clusterFailedNodeCount)
-
-	assert.Equal(t, clusterNodeCount, expectedClusterNodeCount)
-	assert.Equal(t, clusterFailedNodeCount, expectedClusterFailedNodeCount)
+func TestTransformFuncNode(t *testing.T) {
+	info, err := transformFuncNode(nil)
+	assert.Nil(t, info)
+	assert.Error(t, err)
 }
