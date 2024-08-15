@@ -319,8 +319,8 @@ github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.13.6/go.mod h1:akrYtxss2
 github.com/aws/smithy-go v1.8.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
 github.com/aws/smithy-go v1.17.0 h1:wWJD7LX6PBV6etBUwO0zElG0nWN9rUhp0WdYeHSHAaI=
 github.com/aws/smithy-go v1.17.0/go.mod h1:NukqUGpCZIILqqiV0NIjeFh24kd/FAa4beRb6nbIUPE=
-github.com/aws/telegraf v0.10.2-0.20240802204712-483bd77d26a2 h1:MxKmCOpGDxB6nrezuG/kUbzVNq5I5TMXt6ymrjiL5xU=
-github.com/aws/telegraf v0.10.2-0.20240802204712-483bd77d26a2/go.mod h1:5LhWLYfsZ7isLfw+TJUxPdTuzYuP8qiMiXz/DvqovRY=
+github.com/aws/telegraf v0.10.2-0.20240815170856-a51192ff0d38 h1:+hdRFaLglvX/l8FpCGGOIx6chLGotXXrBPtzdnxhmFI=
+github.com/aws/telegraf v0.10.2-0.20240815170856-a51192ff0d38/go.mod h1:5LhWLYfsZ7isLfw+TJUxPdTuzYuP8qiMiXz/DvqovRY=
 github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20231109213610-a8c21c54a2be h1:sF6OUdk1hpuX7lf74vn+zBUFtQRe+hky0jmMYyFp5Kk=
 github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20231109213610-a8c21c54a2be/go.mod h1:1W1wnODUDv+FBSAtAa878Kxto5kj8eV+kI0AF4LIjq4=
 github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f h1:Pf0BjJDga7C98f0vhw+Ip5EaiE07S3lTKpIYPNS0nMo=
