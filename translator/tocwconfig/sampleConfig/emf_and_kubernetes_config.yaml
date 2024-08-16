@@ -134,6 +134,8 @@ exporters:
                 - pod_memory_request
                 - pod_memory_limit
                 - pod_cpu_limit
+                - pod_cpu_usage_total
+                - pod_memory_working_set
                 - pod_cpu_request
                 - pod_container_status_running
                 - pod_container_status_terminated

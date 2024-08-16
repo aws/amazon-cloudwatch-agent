@@ -99,6 +99,8 @@ exporters:
                 - pod_status_unknown
                 - pod_status_succeeded
                 - pod_memory_request
+                - pod_cpu_usage_total
+                - pod_memory_working_set
                 - pod_memory_limit
                 - pod_cpu_limit
                 - pod_cpu_request
