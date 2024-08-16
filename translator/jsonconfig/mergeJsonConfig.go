@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
@@ -26,7 +27,7 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 			}
 		}
 		if multiConfig == "remove" {
-			os.Exit(config.ERR_CODE_NOJSONFILE)
+			os.Exit(constants.ExitCodeNoJSONFile)
 		} else {
 			log.Println("No json config files found, use the default one")
 		}

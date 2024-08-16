@@ -4,7 +4,7 @@
 //go:build linux && go1.16
 // +build linux,go1.16
 
-package cmdutil
+package user
 
 import "syscall"
 
