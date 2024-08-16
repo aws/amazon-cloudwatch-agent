@@ -6,7 +6,6 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/golang-lru/simplelru"
 	"regexp"
 	"strings"
 	"sync"
@@ -16,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"go.uber.org/zap"

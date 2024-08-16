@@ -4,9 +4,9 @@
 package cloudwatchlogs
 
 import (
-	"github.com/hashicorp/golang-lru/simplelru"
 	"testing"
 
+	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
