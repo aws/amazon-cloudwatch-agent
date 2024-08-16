@@ -404,9 +404,15 @@ func (c *CloudWatchLogs) SampleConfig() string {
 	return sampleConfig
 }
 
+func onEvict(key interface{}, value interface{}) {
+	if cwd, ok := value.(*cwDest); ok {
+		cwd.Stop()
+	}
+}
+
 func init() {
 	outputs.Add("cloudwatchlogs", func() telegraf.Output {
-		lru, _ := simplelru.NewLRU(100, nil)
+		lru, _ := simplelru.NewLRU(100, onEvict)
 		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			pusherStopChan:     make(chan struct{}),

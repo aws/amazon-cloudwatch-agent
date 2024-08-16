@@ -59,7 +59,7 @@ func TestCreateDestination(t *testing.T) {
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			lru, _ := simplelru.NewLRU(100, nil)
+			lru, _ := simplelru.NewLRU(100, onEvict)
 			c := &CloudWatchLogs{
 				LogGroupName:   "G1",
 				LogStreamName:  "S1",
@@ -78,7 +78,7 @@ func TestCreateDestination(t *testing.T) {
 }
 
 func TestDuplicateDestination(t *testing.T) {
-	lru, _ := simplelru.NewLRU(100, nil)
+	lru, _ := simplelru.NewLRU(100, onEvict)
 	c := &CloudWatchLogs{
 		AccessKey:      "access_key",
 		SecretKey:      "secret_key",
