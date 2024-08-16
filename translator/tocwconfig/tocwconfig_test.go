@@ -564,7 +564,7 @@ func TestIgnoreInvalidAppendDimensions(t *testing.T) {
 
 func TestTomlToTomlComparison(t *testing.T) {
 	resetContext(t)
-	var jsonFilePath = "./totomlconfig/tomlConfigTemplate/agentToml.json"
+	var jsonFilePath = "./totomlconfig/testdata/agentToml.json"
 	var input interface{}
 	x := os.Getenv("HOST_NAME")
 	require.Equal(t, "", x)
@@ -572,7 +572,7 @@ func TestTomlToTomlComparison(t *testing.T) {
 	content, err := os.ReadFile(jsonFilePath)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(content, &input))
-	verifyToTomlTranslation(t, input, "./totomlconfig/tomlConfigTemplate/agentToml.conf", map[string]string{})
+	verifyToTomlTranslation(t, input, "./totomlconfig/testdata/agentToml.conf", map[string]string{})
 }
 
 func checkTranslation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string, tokenReplacements ...map[string]string) {

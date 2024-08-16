@@ -4,7 +4,7 @@
 //go:build !windows
 // +build !windows
 
-package cmdutil
+package user
 
 import (
 	"os"

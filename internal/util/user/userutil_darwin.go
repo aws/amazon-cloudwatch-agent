@@ -4,7 +4,7 @@
 //go:build darwin
 // +build darwin
 
-package cmdutil
+package user
 
 import (
 	"fmt"
@@ -113,9 +113,7 @@ func switchUser(execUser *user.User) error {
 	return nil
 }
 
-func ChangeUser(mergedJsonConfigMap map[string]interface{}) (string, error) {
-	runAsUser, _ := DetectRunAsUser(mergedJsonConfigMap)
-	log.Printf("I! Detected runAsUser: %v", runAsUser)
+func ChangeUser(runAsUser string) (string, error) {
 	if runAsUser == "" {
 		return "root", nil
 	}
