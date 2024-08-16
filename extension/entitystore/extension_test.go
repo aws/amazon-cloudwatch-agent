@@ -55,6 +55,7 @@ type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
 	Tags                     string
 	TagValue                 string
+	InstanceTagError         bool
 }
 
 func mockMetadataProviderWithAccountId(accountId string) *mockMetadataProvider {
@@ -85,6 +86,9 @@ func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
 }
 
 func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
+	if m.InstanceTagError {
+		return "", errors.New("an error occurred for instance tag retrieval")
+	}
 	return m.Tags, nil
 }
 
