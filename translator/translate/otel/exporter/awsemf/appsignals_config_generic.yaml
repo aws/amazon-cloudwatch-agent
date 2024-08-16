@@ -31,3 +31,11 @@ metric_declarations:
       - Latency
       - Fault
       - Error
+  - dimensions:
+      - [Environment, Service]
+    label_matchers:
+      - label_names:
+          - Telemetry.Source
+        regex: '^RuntimeMetric$'
+    metric_name_selectors:
+      - '^.*$'

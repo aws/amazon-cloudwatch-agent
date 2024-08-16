@@ -73,6 +73,7 @@ func TestProcessMetrics(t *testing.T) {
 		"dim_action": "reserved",
 		"dim_val":    "test",
 		"dim_op":     "keep",
+		"Telemetry.Source": "RuntimeMetric",
 	})
 	ap.processMetrics(ctx, keepMetrics)
 	assert.Equal(t, "reserved", getDimensionValue(t, keepMetrics, "dim_action"))
@@ -81,6 +82,7 @@ func TestProcessMetrics(t *testing.T) {
 	replaceMetrics := generateMetrics(map[string]string{
 		"dim_action": "reserved",
 		"dim_val":    "test1",
+		"Telemetry.Source": "RuntimeMetric",
 	})
 	ap.processMetrics(ctx, replaceMetrics)
 	assert.Equal(t, "reserved", getDimensionValue(t, replaceMetrics, "dim_action"))
@@ -89,12 +91,14 @@ func TestProcessMetrics(t *testing.T) {
 	dropMetricsByDrop := generateMetrics(map[string]string{
 		"dim_action": "reserved",
 		"dim_drop":   "hc",
+		"Telemetry.Source": "RuntimeMetric",
 	})
 	ap.processMetrics(ctx, dropMetricsByDrop)
 	assert.True(t, isMetricNil(dropMetricsByDrop))
 
 	dropMetricsByKeep := generateMetrics(map[string]string{
 		"dim_op": "drop",
+		"Telemetry.Source": "RuntimeMetric",
 	})
 	ap.processMetrics(ctx, dropMetricsByKeep)
 	assert.True(t, isMetricNil(dropMetricsByKeep))

@@ -5,6 +5,7 @@ package awsapplicationsignals
 
 import (
 	"context"
+	"unicode"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -137,7 +138,10 @@ func (ap *awsapplicationsignalsprocessor) processMetrics(ctx context.Context, md
 			metrics := ils.Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				m := metrics.At(k)
-				m.SetName(metricCaser.String(m.Name())) // Ensure metric name is in sentence case
+				// Check if the first letter of the metric name is not capitalized
+				if len(m.Name()) > 0 && !unicode.IsUpper(rune(m.Name()[0])) {
+					m.SetName(metricCaser.String(m.Name())) // Ensure metric name is in sentence case
+				}
 				ap.processMetricAttributes(ctx, m, resourceAttributes)
 			}
 		}
