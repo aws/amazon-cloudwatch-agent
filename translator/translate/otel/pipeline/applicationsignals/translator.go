@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awsproxy"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/appsignalsmetricstransformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
@@ -52,6 +53,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
+	}
+
+    if t.dataType == component.DataTypeMetrics {
+		translators.Processors.Set(appsignalsmetricstransformprocessor.NewTranslator(appsignalsmetricstransformprocessor.WithDataType(t.dataType)))
+
 	}
 
 	mode := context.CurrentContext().KubernetesMode()
