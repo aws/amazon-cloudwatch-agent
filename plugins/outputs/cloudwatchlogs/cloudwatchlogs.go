@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/golang-lru/simplelru"
 	"regexp"
 	"strings"
 	"sync"
@@ -78,7 +79,8 @@ type CloudWatchLogs struct {
 
 	pusherStopChan  chan struct{}
 	pusherWaitGroup sync.WaitGroup
-	cwDests         map[Target]*cwDest
+	cwDests         *simplelru.LRU
+	cwDestsMutex    sync.Mutex
 	middleware      awsmiddleware.Middleware
 }
 
@@ -90,8 +92,15 @@ func (c *CloudWatchLogs) Close() error {
 	close(c.pusherStopChan)
 	c.pusherWaitGroup.Wait()
 
-	for _, d := range c.cwDests {
-		d.Stop()
+	c.cwDestsMutex.Lock()
+	defer c.cwDestsMutex.Unlock()
+
+	for _, key := range c.cwDests.Keys() {
+		if value, ok := c.cwDests.Get(key); ok {
+			if d, ok := value.(*cwDest); ok {
+				d.Stop()
+			}
+		}
 	}
 
 	return nil
@@ -125,8 +134,10 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 }
 
 func (c *CloudWatchLogs) getDest(t Target) *cwDest {
-	if cwd, ok := c.cwDests[t]; ok {
-		return cwd
+	c.cwDestsMutex.Lock()
+	defer c.cwDestsMutex.Unlock()
+	if cwd, ok := c.cwDests.Get(t); ok {
+		return cwd.(*cwDest)
 	}
 
 	credentialConfig := &configaws.CredentialConfig{
@@ -164,7 +175,7 @@ func (c *CloudWatchLogs) getDest(t Target) *cwDest {
 	}
 	pusher := NewPusher(t, client, c.ForceFlushInterval.Duration, maxRetryTimeout, c.Log, c.pusherStopChan, &c.pusherWaitGroup)
 	cwd := &cwDest{pusher: pusher, retryer: logThrottleRetryer}
-	c.cwDests[t] = cwd
+	c.cwDests.Add(t, cwd)
 	return cwd
 }
 
@@ -395,10 +406,11 @@ func (c *CloudWatchLogs) SampleConfig() string {
 
 func init() {
 	outputs.Add("cloudwatchlogs", func() telegraf.Output {
+		lru, _ := simplelru.NewLRU(100, nil)
 		return &CloudWatchLogs{
 			ForceFlushInterval: internal.Duration{Duration: defaultFlushTimeout},
 			pusherStopChan:     make(chan struct{}),
-			cwDests:            make(map[Target]*cwDest),
+			cwDests:            lru,
 			middleware: agenthealth.NewAgentHealth(
 				zap.NewNop(),
 				&agenthealth.Config{

@@ -4,6 +4,7 @@
 package cloudwatchlogs
 
 import (
+	"github.com/hashicorp/golang-lru/simplelru"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -58,13 +59,14 @@ func TestCreateDestination(t *testing.T) {
 
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			lru, _ := simplelru.NewLRU(100, nil)
 			c := &CloudWatchLogs{
 				LogGroupName:   "G1",
 				LogStreamName:  "S1",
 				AccessKey:      "access_key",
 				SecretKey:      "secret_key",
 				pusherStopChan: make(chan struct{}),
-				cwDests:        make(map[Target]*cwDest),
+				cwDests:        lru,
 			}
 			dest := c.CreateDest(testCase.cfgLogGroup, testCase.cfgLogStream, testCase.cfgLogRetention, testCase.cfgLogClass).(*cwDest)
 			require.Equal(t, testCase.expectedLogGroup, dest.pusher.Group)
@@ -76,10 +78,11 @@ func TestCreateDestination(t *testing.T) {
 }
 
 func TestDuplicateDestination(t *testing.T) {
+	lru, _ := simplelru.NewLRU(100, nil)
 	c := &CloudWatchLogs{
 		AccessKey:      "access_key",
 		SecretKey:      "secret_key",
-		cwDests:        make(map[Target]*cwDest),
+		cwDests:        lru,
 		pusherStopChan: make(chan struct{}),
 	}
 	// Given the same log group, log stream, same retention, and logClass
