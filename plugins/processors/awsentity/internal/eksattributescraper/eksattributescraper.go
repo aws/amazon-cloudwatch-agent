@@ -11,12 +11,9 @@ import (
 )
 
 var (
-	clusterAllowlist = []string{
-		semconv.AttributeK8SClusterName,
-	}
-
 	namespaceAllowlist = []string{
 		semconv.AttributeK8SNamespaceName,
+		entityattributes.Namespace,
 	}
 
 	workloadAllowlist = []string{
@@ -25,9 +22,11 @@ var (
 		semconv.AttributeK8SStatefulSetName,
 		semconv.AttributeK8SReplicaSetName,
 		semconv.AttributeK8SContainerName,
+		entityattributes.PodName,
 	}
 	nodeAllowlist = []string{
 		semconv.AttributeK8SNodeName,
+		entityattributes.NodeName,
 	}
 )
 

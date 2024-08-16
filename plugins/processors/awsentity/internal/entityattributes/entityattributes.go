@@ -11,3 +11,11 @@ const (
 	AttributeEntityWorkload              = "aws.entity.k8s.workload.name"
 	AttributeEntityNode                  = "aws.entity.k8s.node.name"
 )
+
+// Container Insights attributes used for scraping EKS related information
+const (
+	NodeName  = "NodeName"
+	Namespace = "Namespace"
+	// PodName in Container Insights is the workload(Deployment, Daemonset, etc) name
+	PodName = "PodName"
+)

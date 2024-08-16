@@ -42,13 +42,27 @@ func Test_eksattributescraper_Scrape(t *testing.T) {
 			}),
 		},
 		{
-			name:        "AllAttributes",
+			name:        "AllAppSignalAttributes",
 			clusterName: "test-cluster",
 			args:        generateResourceMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node"),
 			want: getAttributeMap(map[string]any{
 				semconv.AttributeK8SNamespaceName:         "test-namespace",
 				semconv.AttributeK8SDeploymentName:        "test-workload",
 				semconv.AttributeK8SNodeName:              "test-node",
+				entityattributes.AttributeEntityCluster:   "test-cluster",
+				entityattributes.AttributeEntityNamespace: "test-namespace",
+				entityattributes.AttributeEntityWorkload:  "test-workload",
+				entityattributes.AttributeEntityNode:      "test-node",
+			}),
+		},
+		{
+			name:        "AllContainerInsightsAttributes",
+			clusterName: "test-cluster",
+			args:        generateResourceMetrics(entityattributes.Namespace, "test-namespace", entityattributes.PodName, "test-workload", entityattributes.NodeName, "test-node"),
+			want: getAttributeMap(map[string]any{
+				entityattributes.Namespace:                "test-namespace",
+				entityattributes.PodName:                  "test-workload",
+				entityattributes.NodeName:                 "test-node",
 				entityattributes.AttributeEntityCluster:   "test-cluster",
 				entityattributes.AttributeEntityNamespace: "test-namespace",
 				entityattributes.AttributeEntityWorkload:  "test-workload",
@@ -187,8 +201,13 @@ func Test_eksattributescraper_scrapeNamespace(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "NodeExists",
+			name: "AppSignalNodeExists",
 			args: getAttributeMap(map[string]any{semconv.AttributeK8SNamespaceName: "namespace-name"}),
+			want: "namespace-name",
+		},
+		{
+			name: "ContainerInsightsNodeExists",
+			args: getAttributeMap(map[string]any{entityattributes.Namespace: "namespace-name"}),
 			want: "namespace-name",
 		},
 		{
@@ -218,8 +237,13 @@ func Test_eksattributescraper_scrapeNode(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "NodeExists",
+			name: "AppsignalNodeExists",
 			args: getAttributeMap(map[string]any{semconv.AttributeK8SNodeName: "node-name"}),
+			want: "node-name",
+		},
+		{
+			name: "ContainerInsightNodeExists",
+			args: getAttributeMap(map[string]any{entityattributes.NodeName: "node-name"}),
 			want: "node-name",
 		},
 		{
@@ -272,6 +296,11 @@ func Test_eksattributescraper_scrapeWorkload(t *testing.T) {
 			name: "ContainerWorkload",
 			args: getAttributeMap(map[string]any{semconv.AttributeK8SContainerName: "test-container"}),
 			want: "test-container",
+		},
+		{
+			name: "ContainerInsightPodNameWorkload",
+			args: getAttributeMap(map[string]any{entityattributes.PodName: "test-workload"}),
+			want: "test-workload",
 		},
 		{
 			name: "MultipleWorkloads",
