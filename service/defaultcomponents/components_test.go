@@ -12,9 +12,9 @@ import (
 
 const (
 	receiversCount  = 6
-	processorCount  = 9
-	exportersCount  = 6
-	extensionsCount = 3
+	processorCount  = 10
+	exportersCount  = 5
+	extensionsCount = 2
 )
 
 func TestComponents(t *testing.T) {
@@ -61,12 +61,12 @@ func TestComponents(t *testing.T) {
 	awscloudwatchlogsType, _ := component.NewType("awscloudwatchlogs")
 	awsemfType, _ := component.NewType("awsemf")
 	awscloudwatchType, _ := component.NewType("awscloudwatch")
-	loggingType, _ := component.NewType("logging")
+	debugType, _ := component.NewType("debug")
 	assert.NotNil(t, exporters[awscloudwatchlogsType])
 	assert.NotNil(t, exporters[awsemfType])
 	assert.NotNil(t, exporters[awsemfType])
 	assert.NotNil(t, exporters[awscloudwatchType])
-	assert.NotNil(t, exporters[loggingType])
+	assert.NotNil(t, exporters[debugType])
 	assert.NotNil(t, exporters[nopType])
 
 	extensions := factories.Extensions

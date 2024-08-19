@@ -1,6 +1,9 @@
 {
   "metrics": {
     "metrics_collected": {
+      "collectd": {
+        "drop_original_metrics": ["collectd_drop"]
+      },
       "cpu": {
         "drop_original_metrics": ["cpu_usage_idle", "time_active"],
         "measurement": [
@@ -19,8 +22,18 @@
         ]
       },
       "disk": {},
+      "ethtool": {
+        "metrics_include": [
+          "rx_packets",
+          "tx_packets"
+        ],
+        "drop_original_metrics": ["tx_packets"]
+      },
       "nvidia_gpu": {
         "drop_original_metrics": ["utilization_gpu", "temperature_gpu"]
+      },
+      "statsd": {
+        "drop_original_metrics": ["statsd_drop"]
       }
     },
     "aggregation_dimensions" : [["ImageId"], ["InstanceId", "InstanceType"], ["d1"], []],

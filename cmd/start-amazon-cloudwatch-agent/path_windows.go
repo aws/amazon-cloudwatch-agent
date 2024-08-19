@@ -13,13 +13,13 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 func startAgent(writer io.WriteCloser) error {
-
-	if os.Getenv(config.RUN_IN_CONTAINER) != config.RUN_IN_CONTAINER_TRUE {
+	if !envconfig.IsRunningInContainer() {
 		if err := writer.Close(); err != nil {
 			log.Printf("E! Cannot close the log file, ERROR is %v \n", err)
 			return err

@@ -29,7 +29,7 @@ processors:
                 - diskio_iops_in_progress
         include:
             match_type: ""
-        initial_value: 0
+        initial_value: 2
         max_staleness: 0s
     ec2tagger:
         ec2_instance_tag_keys:
@@ -84,13 +84,13 @@ service:
             processors:
                 - ec2tagger
             receivers:
+                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
                 - telegraf_netstat
                 - telegraf_swap
                 - telegraf_ethtool
                 - telegraf_nvidia_smi
-                - telegraf_cpu
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

@@ -133,6 +133,8 @@ exporters:
                 - pod_memory_limit
                 - pod_cpu_limit
                 - pod_cpu_request
+                - pod_cpu_usage_total
+                - pod_memory_working_set
                 - pod_container_status_running
                 - pod_container_status_terminated
                 - pod_container_status_waiting
@@ -425,7 +427,10 @@ receivers:
         container_orchestrator: eks
         enable_control_plane_metrics: true
         endpoint: ""
+        host_ip: ""
+        host_name: ""
         imds_retries: 0
+        kube_config_path: ""
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
         local_mode: false

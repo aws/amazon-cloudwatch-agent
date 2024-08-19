@@ -16,8 +16,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awscontainerinsight"
 )
 
-const gpuLogSuffix = "GPU"
-
 var metricDuplicateTypes = []string{
 	containerinsightscommon.TypeGpuContainer,
 	containerinsightscommon.TypeGpuPod,

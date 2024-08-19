@@ -181,7 +181,7 @@ func TestSetLevel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := buffer.NewPool().Get()
-			logger, _ := zap.NewDevelopment(NewLoggerOptions(bufio.NewWriter(buf), zap.NewAtomicLevelAt(zapcore.InfoLevel))...)
+			logger, _ := NewLogger(bufio.NewWriter(buf), zap.NewAtomicLevelAt(zapcore.InfoLevel))
 			SetLevel(tt.args.level)
 			logger.Debug("debug")
 			logger.Info("info")

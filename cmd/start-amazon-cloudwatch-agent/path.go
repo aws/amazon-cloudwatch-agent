@@ -14,14 +14,15 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/BurntSushi/toml"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/user"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
-	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 func startAgent(writer io.WriteCloser) error {
-	if os.Getenv(config.RUN_IN_CONTAINER) == config.RUN_IN_CONTAINER_TRUE {
+	if envconfig.IsRunningInContainer() {
 		// Use exec so PID 1 changes to agent from start-agent.
 		execArgs := []string{
 			paths.AgentBinaryPath, // when using syscall.Exec, must pass binary name as args[0]
@@ -37,13 +38,16 @@ func startAgent(writer io.WriteCloser) error {
 		return nil
 	}
 
-	mergedJsonConfigMap, err := generateMergedJsonConfigMap()
+	configMap, err := getTOMLConfigMap()
 	if err != nil {
-		log.Printf("E! Failed to generate merged json config: %v ", err)
+		log.Printf("E! Failed to read TOML config: %v ", err)
 		return err
 	}
 
-	_, err = cmdutil.ChangeUser(mergedJsonConfigMap)
+	runAsUser, _ := user.DetectRunAsUser(configMap)
+	log.Printf("I! Detected runAsUser: %v", runAsUser)
+
+	_, err = user.ChangeUser(runAsUser)
 	if err != nil {
 		log.Printf("E! Failed to ChangeUser: %v ", err)
 		return err
@@ -77,11 +81,16 @@ func startAgent(writer io.WriteCloser) error {
 	return nil
 }
 
-func generateMergedJsonConfigMap() (map[string]interface{}, error) {
-	ctx := context.CurrentContext()
-	setCTXOS(ctx)
-	ctx.SetInputJsonFilePath(paths.JsonConfigPath)
-	ctx.SetInputJsonDirPath(paths.JsonDirPath)
-	ctx.SetMultiConfig("remove")
-	return cmdutil.GenerateMergedJsonConfigMap(ctx)
+func getTOMLConfigMap() (map[string]any, error) {
+	f, err := os.Open(paths.TomlConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	var m map[string]any
+	_, err = toml.NewDecoder(f).Decode(&m)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
 }
