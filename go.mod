@@ -135,7 +135,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.opentelemetry.io/collector/component v0.103.0
 	go.opentelemetry.io/collector/config/configopaque v1.10.0
-	go.opentelemetry.io/collector/config/configtelemetry v0.103.0
+	go.opentelemetry.io/collector/config/configtelemetry v0.107.0
 	go.opentelemetry.io/collector/config/configtls v0.103.0
 	go.opentelemetry.io/collector/confmap v0.103.0
 	go.opentelemetry.io/collector/confmap/converter/expandconverter v0.103.0
