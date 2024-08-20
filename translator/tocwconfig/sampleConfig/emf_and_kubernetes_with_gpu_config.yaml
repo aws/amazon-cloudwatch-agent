@@ -135,6 +135,8 @@ exporters:
                 - pod_memory_limit
                 - pod_cpu_limit
                 - pod_cpu_request
+                - pod_cpu_usage_total
+                - pod_memory_working_set
                 - pod_container_status_running
                 - pod_container_status_terminated
                 - pod_container_status_waiting
@@ -144,6 +146,10 @@ exporters:
                 - pod_container_status_waiting_reason_create_container_error
                 - pod_container_status_waiting_reason_create_container_config_error
                 - pod_container_status_terminated_reason_oom_killed
+                - pod_gpu_usage_total
+                - pod_gpu_request
+                - pod_gpu_limit
+                - pod_gpu_reserved_capacity
             - dimensions:
                 - - ClusterName
                   - InstanceId
@@ -169,6 +175,9 @@ exporters:
                 - node_status_condition_unknown
                 - node_status_capacity_pods
                 - node_status_allocatable_pods
+                - node_gpu_usage_total
+                - node_gpu_limit
+                - node_gpu_reserved_capacity
             - dimensions:
                 - - ClusterName
                   - InstanceId
@@ -369,20 +378,6 @@ exporters:
                 - node_gpu_memory_used
                 - node_gpu_power_draw
                 - node_gpu_temperature
-            - dimensions:
-                - - ClusterName
-                  - InstanceId
-                  - NodeName
-                - - ClusterName
-              metric_name_selectors:
-                - node_gpu_total
-                - node_gpu_request
-                - node_gpu_limit
-            - dimensions:
-                - - ClusterName
-              metric_name_selectors:
-                - cluster_gpu_request
-                - cluster_gpu_total
             - dimensions:
                 - - ClusterName
                 - - ClusterName
@@ -686,69 +681,6 @@ processors:
               submatch_case: ""
             - action: insert
               aggregation_type: ""
-              include: DCGM_FI_DEV_FB_USED_PERCENT
-              match_type: ""
-              new_name: container_gpu_memory_utilization
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: ContainerGPU
-                - action: experimental_scale_value
-                  aggregation_type: ""
-                  experimental_scale: 100
-                  label: ""
-                  label_value: ""
-                  new_label: ""
-                  new_value: ""
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_FB_USED_PERCENT
-              match_type: ""
-              new_name: pod_gpu_memory_utilization
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: PodGPU
-                - action: experimental_scale_value
-                  aggregation_type: ""
-                  experimental_scale: 100
-                  label: ""
-                  label_value: ""
-                  new_label: ""
-                  new_value: ""
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
-              include: DCGM_FI_DEV_FB_USED_PERCENT
-              match_type: ""
-              new_name: node_gpu_memory_utilization
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeGPU
-                - action: experimental_scale_value
-                  aggregation_type: ""
-                  experimental_scale: 100
-                  label: ""
-                  label_value: ""
-                  new_label: ""
-                  new_value: ""
-              submatch_case: ""
-            - action: insert
-              aggregation_type: ""
               include: DCGM_FI_DEV_FB_USED
               match_type: ""
               new_name: container_gpu_memory_used
@@ -999,6 +931,104 @@ processors:
                   new_label: Type
                   new_value: NodeGPU
               submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_FB_USED_PERCENT
+              match_type: ""
+              new_name: container_gpu_memory_utilization
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: ContainerGPU
+                - action: experimental_scale_value
+                  aggregation_type: ""
+                  experimental_scale: 100
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_FB_USED_PERCENT
+              match_type: ""
+              new_name: pod_gpu_memory_utilization
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: PodGPU
+                - action: experimental_scale_value
+                  aggregation_type: ""
+                  experimental_scale: 100
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+            - action: insert
+              aggregation_type: ""
+              include: DCGM_FI_DEV_FB_USED_PERCENT
+              match_type: ""
+              new_name: node_gpu_memory_utilization
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeGPU
+                - action: experimental_scale_value
+                  aggregation_type: ""
+                  experimental_scale: 100
+                  label: ""
+                  label_value: ""
+                  new_label: ""
+                  new_value: ""
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuron_hardware
+              match_type: ""
+              new_name: neuron_hardware
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: execution_errors_total
+              match_type: ""
+              new_name: neuron_execution_errors
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuron_runtime_memory_used_bytes
+              match_type: ""
+              new_name: neurondevice_runtime_memory_used_bytes
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_constants
+              match_type: ""
+              new_name: neuroncore_memory_usage_constants
+              operations: []
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: neuroncore_memory_usage_model_code
+              match_type: ""
+              new_name: neuroncore_memory_usage_model_code
+              operations: []
+              submatch_case: ""
             - action: update
               aggregation_type: ""
               include: neuroncore_memory_usage_model_shared_scratchpad
@@ -1015,37 +1045,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: hardware_ecc_events_total
-              match_type: ""
-              new_name: neurondevice_hw_ecc_events
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: execution_latency_seconds
-              match_type: ""
-              new_name: neuron_execution_latency
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: execution_status_total
               match_type: ""
               new_name: neuron_execution_status
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuron_runtime_memory_used_bytes
-              match_type: ""
-              new_name: neurondevice_runtime_memory_used_bytes
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_model_code
-              match_type: ""
-              new_name: neuroncore_memory_usage_model_code
               operations: []
               submatch_case: ""
             - action: update
@@ -1078,23 +1080,16 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: neuron_hardware
+              include: hardware_ecc_events_total
               match_type: ""
-              new_name: neuron_hardware
+              new_name: neurondevice_hw_ecc_events
               operations: []
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: execution_errors_total
+              include: execution_latency_seconds
               match_type: ""
-              new_name: neuron_execution_errors
-              operations: []
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: neuroncore_memory_usage_constants
-              match_type: ""
-              new_name: neuroncore_memory_usage_constants
+              new_name: neuron_execution_latency
               operations: []
               submatch_case: ""
 receivers:
@@ -1109,7 +1104,10 @@ receivers:
         container_orchestrator: eks
         enable_control_plane_metrics: true
         endpoint: ""
+        host_ip: ""
+        host_name: ""
         imds_retries: 2
+        kube_config_path: ""
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
         local_mode: true

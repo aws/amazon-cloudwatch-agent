@@ -20,94 +20,37 @@ env:
   S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
 on:
-  push:
-    branches:
-      - main*
-    paths-ignore:
-      - '**/*.md'
-      - 'NOTICE'
-      - 'RELEASE_NOTES'
-      - 'THIRD-PARTY'
-      - 'LICENSE'
-      - '.github/**'
-      - '!.github/workflows/integration-test.yml'
   workflow_dispatch:
     inputs:
-      plugins:
-        description: 'Comma delimited list of plugins to test. Default is empty, and tests everything'
-        required: false
-        default: ''
+      build_run_id:
+        description: 'The ID of the build-test-artifacts workflow run'
+        type: number
+        required: true
+      build_sha:
+        description: 'The SHA of the build-test-artifacts workflow run'
         type: string
+        required: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  BuildAndUpload:
-    uses: ./.github/workflows/test-build.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-
-  BuildAndUploadPackages:
-    uses: ./.github/workflows/test-build-packages.yml
-    needs: [BuildAndUpload]
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-
-  BuildDocker:
-    needs: [BuildAndUpload]
-    uses: ./.github/workflows/test-build-docker.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-
-  BuildAndUploadITAR:
-    uses: ./.github/workflows/test-build.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      Region: "us-gov-east-1"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-
-  BuildAndUploadCN:
-    uses: ./.github/workflows/test-build.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      BucketKey: "integration-test/binary/${{ github.sha }}"
-      PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
-      Region: "cn-north-1"
-      TerraformAWSAssumeRole: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-      Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  CheckBuildTestArtifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          if [[ ${{ inputs.build_sha }} == ${{ github.sha }} ]]; then
+            echo "Build SHA matches test SHA"
+          else
+            echo "Build SHA does not match test SHA"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   GenerateTestMatrix:
+    needs: [ CheckBuildTestArtifacts ]
     name: 'GenerateTestMatrix'
     runs-on: ubuntu-latest
     outputs:
@@ -125,7 +68,7 @@ jobs:
       eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
-
+      eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -142,6 +85,7 @@ jobs:
         run: |
           go run --tags=generator generator/test_case_generator.go
           echo "::set-output name=ec2_gpu_matrix::$(echo $(cat generator/resources/ec2_gpu_complete_test_matrix.json))"
+          echo "::set-output name=eks_addon_matrix::$(echo $(cat generator/resources/eks_addon_complete_test_matrix.json))"
           echo "::set-output name=ec2_linux_matrix::$(echo $(cat generator/resources/ec2_linux_complete_test_matrix.json))"
           echo "::set-output name=ec2_windows_matrix::$(echo $(cat generator/resources/ec2_windows_complete_test_matrix.json))"
           echo "::set-output name=ec2_mac_matrix::$(echo $(cat generator/resources/ec2_mac_complete_test_matrix.json))"
@@ -159,6 +103,7 @@ jobs:
       - name: Echo test plan matrix
         run: |
           echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
+          echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
           echo "ec2_linux_matrix: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}"
           echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
           echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
@@ -174,7 +119,7 @@ jobs:
           echo "ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}"
 
   CloudformationTest:
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     name: 'CFTest'
     runs-on: ubuntu-latest
     strategy:
@@ -268,7 +213,7 @@ jobs:
 
 
   EC2NvidiaGPUIntegrationTest:
-    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix ]
+    needs: [ StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -383,6 +328,7 @@ jobs:
             terraform destroy --auto-approve
 
   OutputEnvVariables:
+    needs: [CheckBuildTestArtifacts]
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
     outputs:
@@ -414,7 +360,7 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
 
   EC2LinuxIntegrationTest:
-    needs: [ BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2Linux'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -432,7 +378,7 @@ jobs:
     secrets: inherit
 
   EC2LinuxIntegrationTestITAR:
-    needs: [ BuildAndUpload, BuildAndUploadITAR, StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2LinuxITAR'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -450,7 +396,7 @@ jobs:
     secrets: inherit
 
   EC2LinuxIntegrationTestCN:
-    needs: [ BuildAndUpload, BuildAndUploadCN, StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
+    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2LinuxCN'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -469,7 +415,7 @@ jobs:
 
 
   LinuxOnPremIntegrationTest:
-    needs: [BuildAndUpload, StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
+    needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
     name: 'OnpremLinux'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -485,7 +431,7 @@ jobs:
     secrets: inherit
 
   EC2WinIntegrationTest:
-    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     name: 'EC2WinIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -567,7 +513,7 @@ jobs:
             terraform destroy --auto-approve
 
   EC2DarwinIntegrationTest:
-    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     name: 'EC2DarwinIntegrationTest'
     runs-on: ubuntu-latest
     strategy:
@@ -649,7 +595,7 @@ jobs:
 
   StopLocalStack:
     name: 'StopLocalStack'
-    if: ${{ always() }}
+    if: ${{ always() && needs.StartLocalStack.result == 'success' }}
     needs: [ StartLocalStack, EC2LinuxIntegrationTest, LinuxOnPremIntegrationTest, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
@@ -666,8 +612,8 @@ jobs:
 
   StopLocalStackITAR:
     name: 'StopLocalStackITAR'
-    if: ${{ always() }}
-    needs: [ EC2LinuxIntegrationTestITAR, OutputEnvVariables ]
+    if: ${{ always() && needs.StartLocalStackITAR.result == 'success' }}
+    needs: [ StartLocalStackITAR, EC2LinuxIntegrationTestITAR, OutputEnvVariables ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
@@ -683,8 +629,8 @@ jobs:
 
   StopLocalStackCN:
     name: 'StopLocalStackCN'
-    if: ${{ always() }}
-    needs: [ EC2LinuxIntegrationTestCN ]
+    if: ${{ always() && needs.StartLocalStackCN.result == 'success' }}
+    needs: [ StartLocalStackCN, EC2LinuxIntegrationTestCN ]
     uses: ./.github/workflows/stop-localstack.yml
     secrets: inherit
     permissions:
@@ -701,7 +647,7 @@ jobs:
   ECSEC2IntegrationTest:
     name: 'ECSEC2IntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
+    needs: [ GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -732,7 +678,7 @@ jobs:
       - name: Login ECR
         id: login-ecr
         if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Verify Terraform version
         if: steps.ecs-ec2-integration-test.outputs.cache-hit != 'true'
@@ -784,7 +730,7 @@ jobs:
   ECSFargateIntegrationTest:
     name: 'ECSFargateIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [BuildAndUpload, BuildDocker, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     strategy:
       fail-fast: false
       matrix:
@@ -815,7 +761,7 @@ jobs:
       - name: Login ECR
         id: login-ecr
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Verify Terraform version
         if: steps.ecs-fargate-integration-test.outputs.cache-hit != 'true'
@@ -862,7 +808,7 @@ jobs:
   EKSIntegrationTest:
     name: 'EKSIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
+    needs: [ GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -893,7 +839,7 @@ jobs:
       - name: Login ECR
         id: login-ecr
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Verify Terraform version
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
@@ -944,7 +890,7 @@ jobs:
   EKSPrometheusIntegrationTest:
     name: 'EKSPrometheusIntegrationTest'
     runs-on: ubuntu-latest
-    needs: [ BuildAndUpload, BuildDocker, GenerateTestMatrix ]
+    needs: [ GenerateTestMatrix ]
     strategy:
       fail-fast: false
       matrix:
@@ -975,7 +921,7 @@ jobs:
       - name: Login ECR
         id: login-ecr
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Verify Terraform version
         if: steps.eks-ec2-integration-test.outputs.cache-hit != 'true'
@@ -1023,7 +969,7 @@ jobs:
 
   PerformanceTrackingTest:
     name: "PerformanceTrackingTest"
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1091,7 +1037,7 @@ jobs:
 
   EC2WinPerformanceTest:
     name: "EC2WinPerformanceTest"
-    needs: [ BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix ]
+    needs: [ GenerateTestMatrix ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1159,7 +1105,7 @@ jobs:
 
   StressTrackingTest:
     name: "StressTrackingTest"
-    needs: [BuildAndUpload, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1229,7 +1175,7 @@ jobs:
 
   EC2WinStressTrackingTest:
     name: "EC2WinStressTrackingTest"
-    needs: [BuildAndUpload, BuildAndUploadPackages, GenerateTestMatrix]
+    needs: [GenerateTestMatrix]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1298,66 +1244,101 @@ jobs:
           retry_wait_seconds: 5
           command: cd terraform/stress && terraform destroy --auto-approve
 
-  JavaEKSEndToEndTest:
-    name: "AppSignals E2E EKS Test"
-    needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/application-signals-java-e2e-eks-test.yml
+  GPUEndToEndTest:
+    name: "GPU E2E Test"
+    needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_addon_matrix) }}
     permissions:
       id-token: write
       contents: read
-    secrets: inherit
-    with:
-      test-cluster-name: 'e2e-cw-agent-test'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
 
-  JavaEC2EndToEndTest:
-    name: "AppSignals E2E EC2 Test"
-    needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/application-signals-java-e2e-ec2-test.yml
-    permissions:
-      id-token: write
-      contents: read
-    secrets: inherit
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
-  PythonEKSEndToEndTest:
-    name: "AppSignals E2E EKS Test"
-    needs: [ BuildAndUpload, BuildDocker, JavaEKSEndToEndTest ]
-    uses: ./.github/workflows/application-signals-python-e2e-eks-test.yml
-    permissions:
-      id-token: write
-      contents: read
-    secrets: inherit
-    with:
-      test-cluster-name: 'e2e-cw-agent-test'
 
-  PythonEC2EndToEndTest:
-    name: "AppSignals E2E EC2 Test"
-    needs: [ BuildAndUpload, BuildDocker, JavaEC2EndToEndTest ]
-    uses: ./.github/workflows/application-signals-python-e2e-ec2-test.yml
-    permissions:
-      id-token: write
-      contents: read
-    secrets: inherit
+      - name: Verify Terraform version
+        run: terraform --version
 
-  JavaEC2ASGEndToEndTest:
-    name: "AppSignals E2E EC2 Test"
-    needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/application-signals-java-e2e-ec2-asg-test.yml
-    permissions:
-      id-token: write
-      contents: read
-    secrets: inherit
 
-  PythonEC2ASGEndToEndTest:
-    name: "AppSignals E2E EC2 Test"
-    needs: [ BuildAndUpload, BuildDocker ]
-    uses: ./.github/workflows/application-signals-python-e2e-ec2-asg-test.yml
-    permissions:
-      id-token: write
-      contents: read
-    secrets: inherit
+      - name: Terraform apply and setup
+        run: |
+          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+            cd "${{ matrix.arrays.terraform_dir }}"
+          else
+            cd terraform/eks/addon/gpu
+          fi
+          
+          terraform init
+          if terraform apply --auto-approve \
+            -var="beta=true" \
+            -var="addon_name=amazon-cloudwatch-observability" \
+            -var="addon_version=v1.6.0-eksbuild.1" \
+            -var="k8s_version=1.29" ; then
+            echo "Terraform apply successful."
+          
+            # Capture the output
+            echo "Getting EKS cluster name"
+            EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+            echo "Cluster name is ${EKS_CLUSTER_NAME}"
+            kubectl apply -f ./gpuBurner.yaml
+            kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.15.0/deployments/static/nvidia-device-plugin.yml
+            kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
+          else
+            terraform destroy -var="beta=${{ github.event.inputs.run_in_beta }}" -auto-approve && exit 1
+          fi
 
+      - name: Run Go tests with retry
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 10
+          timeout_minutes: 60
+          retry_wait_seconds: 60
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/addon/gpu
+            fi
+            echo "Getting EKS cluster name"
+            EKS_CLUSTER_NAME=$(terraform output -raw eks_cluster_name)
+            echo "Cluster name is ${EKS_CLUSTER_NAME}"
+
+            if go test ${{ matrix.arrays.test_dir }} -eksClusterName ${EKS_CLUSTER_NAME} -computeType=EKS -v -eksDeploymentStrategy=DAEMON -eksGpuType=nvidia -useE2EMetrics; then
+              echo "Tests passed"
+            else
+              echo "Tests failed"
+              exit 1
+            fi
+
+      - name: Terraform destroy
+        if: always()
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+              cd "${{ matrix.arrays.terraform_dir }}"
+            else
+              cd terraform/eks/addon/gpu
+            fi
+            terraform destroy --auto-approve
   CompassLinuxIntegrationTest:
-    needs: [ BuildAndUpload ]
+    needs: [ GenerateTestMatrix ]
     name: 'CompassLinuxIntegrationTest'
     runs-on: ubuntu-latest
     permissions:

@@ -8,18 +8,18 @@ import (
 	"go.opentelemetry.io/collector/confmap/converter/expandconverter"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/otelcol"
+	"go.uber.org/zap"
 )
 
-func Get(configPath string) (otelcol.ConfigProvider, error) {
-	fprovider := fileprovider.NewWithSettings(confmap.ProviderSettings{})
+func GetSettings(configPath string, logger *zap.Logger) otelcol.ConfigProviderSettings {
 	settings := otelcol.ConfigProviderSettings{
 		ResolverSettings: confmap.ResolverSettings{
-			URIs:       []string{configPath},
-			Converters: []confmap.Converter{expandconverter.New(confmap.ConverterSettings{})},
-			Providers: map[string]confmap.Provider{
-				fprovider.Scheme(): fprovider,
-			},
+			URIs:               []string{configPath},
+			ProviderFactories:  []confmap.ProviderFactory{fileprovider.NewFactory()},
+			ProviderSettings:   confmap.ProviderSettings{Logger: logger},
+			ConverterFactories: []confmap.ConverterFactory{expandconverter.NewFactory()},
+			ConverterSettings:  confmap.ConverterSettings{Logger: logger},
 		},
 	}
-	return otelcol.NewConfigProvider(settings)
+	return settings
 }
