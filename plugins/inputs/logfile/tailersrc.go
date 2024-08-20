@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"golang.org/x/text/encoding"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
