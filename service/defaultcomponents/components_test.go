@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	receiversCount  = 6
-	processorCount  = 10
-	exportersCount  = 5
-	extensionsCount = 2
+	receiversCount  = 7
+	processorCount  = 11
+	exportersCount  = 6
+	extensionsCount = 3
 )
 
 func TestComponents(t *testing.T) {

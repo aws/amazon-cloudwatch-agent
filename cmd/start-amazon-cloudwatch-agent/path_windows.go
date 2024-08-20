@@ -15,7 +15,6 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 func startAgent(writer io.WriteCloser) error {

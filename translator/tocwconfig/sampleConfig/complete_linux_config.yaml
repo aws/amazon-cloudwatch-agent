@@ -195,9 +195,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -379,11 +379,9 @@ service:
                 - telegraf_disk
                 - telegraf_statsd
                 - telegraf_swap
-                - telegraf_processes
                 - telegraf_mem
                 - telegraf_netstat
                 - telegraf_processes
-                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch

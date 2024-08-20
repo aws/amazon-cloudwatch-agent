@@ -258,8 +258,6 @@ processors:
                     enabled: true
                 aws.ecs.task.id:
                     enabled: true
-                aws.ecs.task.id:
-                    enabled: true
                 aws.ecs.task.revision:
                     enabled: true
                 aws.log.group.arns:

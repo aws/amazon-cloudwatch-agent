@@ -627,8 +627,6 @@ receivers:
                 dialer:
                     timeout: 0s
                 endpoint: 0.0.0.0:4315
-                dialer:
-                  timeout: "0s"
                 include_metadata: false
                 max_concurrent_streams: 0
                 max_recv_msg_size_mib: 0
