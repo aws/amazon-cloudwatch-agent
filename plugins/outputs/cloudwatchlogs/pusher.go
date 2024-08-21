@@ -4,9 +4,12 @@
 package cloudwatchlogs
 
 import (
+	"errors"
 	"math/rand"
+	"net"
 	"sort"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -27,6 +30,13 @@ const (
 
 var (
 	seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
+
+type retryWaitStrategy int
+
+const (
+	retryShort retryWaitStrategy = iota
+	retryLong
 )
 
 type CloudWatchLogsService interface {
@@ -228,7 +238,8 @@ func (p *pusher) send() {
 
 	startTime := time.Now()
 
-	retryCount := 0
+	retryCountShort := 0
+	retryCountLong := 0
 	for {
 		input.SequenceToken = p.sequenceToken
 		output, err := p.Service.PutLogEvents(input)
@@ -297,36 +308,101 @@ func (p *pusher) send() {
 			p.Log.Errorf("Aws error received when sending logs to %v/%v: %v", p.Group, p.Stream, awsErr)
 		}
 
-		wait := retryWait(retryCount)
+		// retry wait strategy depends on the type of error returned
+		var wait time.Duration
+		if chooseRetryWaitStrategy(err) == retryLong {
+			wait = retryWaitLong(retryCountLong)
+			retryCountLong++
+		} else {
+			wait = retryWaitShort(retryCountShort)
+			retryCountShort++
+		}
+
 		if time.Since(startTime)+wait > p.RetryDuration {
-			p.Log.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
+			p.Log.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, p.Group, p.Stream)
 			p.reset()
 			return
 		}
 
-		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCount, wait)
+		p.Log.Warnf("Retried %v time, going to sleep %v before retrying.", retryCountShort+retryCountLong-1, wait)
 
 		select {
 		case <-p.stop:
-			p.Log.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCount, p.Group, p.Stream)
+			p.Log.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, p.Group, p.Stream)
 			p.reset()
 			return
 		case <-time.After(wait):
 		}
 
-		retryCount++
 	}
 
 }
 
-func retryWait(n int) time.Duration {
+// retryWaitShort returns a duration to wait before retrying a request.
+// This implements an exponential backoff strategy with jitter.
+// The base wait time is 200 milliseconds, and the maximum wait time is 1 minute (jittered).
+// The wait time is capped at 1 minute if the retry count exceeds 5.
+func retryWaitShort(retryCount int) time.Duration {
 	const base = 200 * time.Millisecond
 	// Max wait time is 1 minute (jittered)
 	d := 1 * time.Minute
-	if n < 5 {
-		d = base * time.Duration(1<<int64(n))
+	if retryCount < 5 {
+		d = base * time.Duration(1<<int64(retryCount))
 	}
 	return time.Duration(seededRand.Int63n(int64(d/2)) + int64(d/2))
+}
+
+// retryWaitLong returns a duration to wait before retrying a request.
+// This implements an exponential backoff strategy with jitter.
+// The base wait time is 2 seconds, and the maximum wait time is 1 minute (jittered).
+// The wait time is capped at 1 minute if the long-retry count exceeds 2.
+func retryWaitLong(retryCount int) time.Duration {
+	const base = 2 * time.Second
+	// Max wait time is 1 minute (jittered)
+	d := 1 * time.Minute
+	if retryCount < 2 {
+		d = base * time.Duration(1<<int64(retryCount))
+	}
+	return time.Duration(seededRand.Int63n(int64(d/2)) + int64(d/2))
+}
+
+// chooseRetryWaitStrategy decides if a "long" or "short" retry strategy should be used when the PutLogEvents API call
+// returns an error. A short retry strategy should be used for most errors, while a long retry strategy is used for
+// errors where retrying too quickly could cause excessive strain on the backend servers.
+//
+// Specifically, use the long retry strategy for the following PutLogEvent errors:
+//   - 500 (InternalFailure)
+//   - 503 (ServiceUnavailable)
+//   - Connection Refused
+//   - Connection Reset by Peer
+//   - Connection Timeout
+//   - Throttling
+func chooseRetryWaitStrategy(err error) retryWaitStrategy {
+	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+		return retryLong
+	}
+
+	// Connection reset/refused are actually syscalls
+	if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNREFUSED) {
+		return retryLong
+	}
+
+	// Check AWS Error codes if available
+	if awsErr, ok := err.(awserr.Error); ok {
+		if awsErr.Code() == cloudwatchlogs.ErrCodeServiceUnavailableException || awsErr.Code() == cloudwatchlogs.ErrCodeThrottlingException {
+			return retryLong
+		}
+
+		// Check HTTP status codes if available
+		if requestFailure, ok := err.(awserr.RequestFailure); ok {
+			if requestFailure.StatusCode() == 500 || requestFailure.StatusCode() == 503 {
+				return retryLong
+			}
+		}
+	}
+
+	// Otherwise, default to short retry strategy
+	return retryShort
 }
 
 func (p *pusher) createLogGroupAndStream() error {
