@@ -1,4 +1,12 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300045.0 (2024-08-20)
+========================================================================
+Enhancements:
+* [ContainerInsights] Add HyperPod status metrics for SageMaker (#1309)
+* [ContainerInsights] Add pod_cpu_usage_total & pod_memory_working_set (#1294)
+* Reduce the size of the start-amazon-cloudwatch-agent binary (#1302)
+
+========================================================================
 Amazon CloudWatch Agent 1.300044.0 (2024-08-14)
 ========================================================================
 Bug Fixes:
