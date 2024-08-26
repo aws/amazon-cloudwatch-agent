@@ -75,7 +75,7 @@ jobs:
 
   java-metric-limiter-e2e-test:
     needs: [ CheckBuildTestArtifacts, java-eks-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-metric-limiter-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/metric-limiter-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
