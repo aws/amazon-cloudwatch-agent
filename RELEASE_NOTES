@@ -1,4 +1,13 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300046.0 (2024-08-23)
+========================================================================
+Bug Fixes:
+* [ApplicationSignals] Fix EKS detector nil panic (#1315)
+
+Enhancements:
+* [ContainerInsights] Update the prefix for SageMaker HyperPod status metrics (#1313)
+
+========================================================================
 Amazon CloudWatch Agent 1.300045.0 (2024-08-20)
 ========================================================================
 Enhancements:
@@ -8,7 +17,7 @@ Enhancements:
 
 ========================================================================
 Amazon CloudWatch Agent 1.300044.0 (2024-08-14)
-========================================================================
+=====================================================`===================
 Bug Fixes:
 * [ContainerInsights] Update GPU usage metrics emitted 
 * [ContainerInsights] Deprecate runtime tag from neuron metrics to fix false average calculation
