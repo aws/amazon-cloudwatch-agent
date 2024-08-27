@@ -103,6 +103,7 @@ processors:
     - cpu_time_active
   transform:
     error_mode: propagate
+    flatten_data: false
     log_statements: [ ]
     metric_statements:
     - context: metric
