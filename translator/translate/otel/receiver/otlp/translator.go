@@ -22,6 +22,8 @@ const (
 	defaultHttpEndpoint           = "127.0.0.1:4318"
 	defaultAppSignalsGrpcEndpoint = "0.0.0.0:4315"
 	defaultAppSignalsHttpEndpoint = "0.0.0.0:4316"
+	defaultJMXGrpcEndpoint        = "0.0.0.0:4313"
+	defaultJMXHttpEndpoint        = "0.0.0.0:4314"
 )
 
 var (
@@ -87,6 +89,11 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
+	if t.name == common.JmxKey {
+		cfg.GRPC.NetAddr.Endpoint = defaultJMXGrpcEndpoint
+		cfg.HTTP.Endpoint = defaultJMXHttpEndpoint
+		return cfg, nil
+	}
 	// init default configuration
 	configBase, ok := configKeys[t.dataType]
 	if !ok {

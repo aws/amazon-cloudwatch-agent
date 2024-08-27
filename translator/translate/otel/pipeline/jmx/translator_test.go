@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -24,10 +25,11 @@ func TestTranslator(t *testing.T) {
 		extensions []string
 	}
 	testCases := map[string]struct {
-		input   map[string]any
-		index   int
-		want    *want
-		wantErr error
+		input       map[string]any
+		index       int
+		isContainer bool
+		want        *want
+		wantErr     error
 	}{
 		"WithoutJMX": {
 			input: map[string]any{},
@@ -128,6 +130,30 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics"},
 			},
 		},
+		"WithValidJMX/Object/EKS": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_collected": map[string]any{
+						"jmx": map[string]any{
+							"jvm": map[string]any{
+								"measurement": []any{
+									"jvm.memory.heap.init",
+								},
+							},
+						},
+					},
+				},
+			},
+			index:       -1,
+			isContainer: true,
+			want: &want{
+				pipelineID: "metrics/jmx",
+				receivers:  []string{"otlp/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "cumulativetodelta/jmx"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
 		"WithValidJMX/Object/AMP": {
 			input: map[string]any{
 				"metrics": map[string]any{
@@ -152,6 +178,35 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx",
 				receivers:  []string{"jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "cumulativetodelta/jmx", "batch/jmx"},
+				exporters:  []string{"prometheusremotewrite/amp"},
+				extensions: []string{"sigv4auth"},
+			},
+		},
+		"WithValidJMX/Object/AMP/EKS": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"jmx": map[string]any{
+							"jvm": map[string]any{
+								"measurement": []any{
+									"jvm.memory.heap.init",
+								},
+							},
+						},
+					},
+				},
+			},
+			index:       -1,
+			isContainer: true,
+			want: &want{
+				pipelineID: "metrics/jmx",
+				receivers:  []string{"otlp/jmx"},
 				processors: []string{"filter/jmx", "resource/jmx", "cumulativetodelta/jmx", "batch/jmx"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
@@ -219,9 +274,48 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"agenthealth/metrics"},
 			},
 		},
+		"WithValidJMX/Array/AMP/EKS": {
+			input: map[string]any{
+				"metrics": map[string]any{
+					"metrics_destinations": map[string]any{
+						"amp": map[string]any{
+							"workspace_id": "ws-12345",
+						},
+					},
+					"metrics_collected": map[string]any{
+						"jmx": []any{
+							map[string]any{
+								"jvm": map[string]any{
+									"measurement": []any{
+										"jvm.memory.heap.init",
+										map[string]any{
+											"name":   "jvm.classes.loaded",
+											"rename": "JVM.CLASSES.LOADED",
+											"unit":   "Count",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			index:       0,
+			isContainer: true,
+			want: &want{
+				pipelineID: "metrics/jmx/0",
+				receivers:  []string{"otlp/jmx"},
+				processors: []string{"filter/jmx/0", "resource/jmx", "cumulativetodelta/jmx", "transform/jmx/0", "batch/jmx/0"},
+				exporters:  []string{"prometheusremotewrite/amp"},
+				extensions: []string{"sigv4auth"},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			if testCase.isContainer {
+				t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
+			}
 			tt := NewTranslator(WithIndex(testCase.index))
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)

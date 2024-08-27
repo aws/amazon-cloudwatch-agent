@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
@@ -23,6 +24,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
 const (
@@ -81,7 +83,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	translators := common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap(jmx.NewTranslator(jmx.WithIndex(t.index))),
+		Receivers: common.NewTranslatorMap[component.Config](),
 		Processors: common.NewTranslatorMap(
 			filterprocessor.NewTranslator(filterprocessor.WithName(common.PipelineNameJmx), filterprocessor.WithIndex(t.index)),
 			resourceprocessor.NewTranslator(resourceprocessor.WithName(common.PipelineNameJmx)),
@@ -91,17 +93,15 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Extensions: common.NewTranslatorMap[component.Config](),
 	}
 
+	if envconfig.IsRunningInContainer() {
+		translators.Receivers.Set(otlp.NewTranslatorWithName(common.JmxKey))
+	} else {
+		translators.Receivers.Set(jmx.NewTranslator(jmx.WithIndex(t.index)))
+	}
+
 	if !conf.IsSet(metricsDestinationsKey) || conf.IsSet(common.ConfigKey(metricsDestinationsKey, "cloudwatch")) {
 		translators.Exporters.Set(awscloudwatch.NewTranslator())
 		translators.Extensions.Set(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData}))
-	}
-	if conf.IsSet(metricsDestinationsKey) && conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.AMPKey)) {
-		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
-		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
-		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
-			translators.Processors.Set(rollupprocessor.NewTranslator())
-		}
-		translators.Extensions.Set(sigv4auth.NewTranslator())
 	}
 
 	mdt := metricsdecorator.NewTranslator(
@@ -115,6 +115,15 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	if conf.IsSet(common.ConfigKey(common.MetricsKey, common.AppendDimensionsKey)) {
 		translators.Processors.Set(ec2taggerprocessor.NewTranslator())
+	}
+
+	if conf.IsSet(metricsDestinationsKey) && conf.IsSet(common.ConfigKey(metricsDestinationsKey, common.AMPKey)) {
+		translators.Exporters.Set(prometheusremotewrite.NewTranslatorWithName(common.AMPKey))
+		translators.Processors.Set(batchprocessor.NewTranslatorWithNameAndSection(t.name, common.MetricsKey))
+		if conf.IsSet(common.MetricsAggregationDimensionsKey) {
+			translators.Processors.Set(rollupprocessor.NewTranslator())
+		}
+		translators.Extensions.Set(sigv4auth.NewTranslator())
 	}
 
 	return &translators, nil
