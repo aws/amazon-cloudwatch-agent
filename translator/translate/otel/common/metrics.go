@@ -9,12 +9,16 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/metric"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/config"
 )
 
 const (
 	dropOriginalWildcard = "*"
 )
+
+// Map to support dropping metrics without measurement.
+var toDropMap = collections.NewSet("collectd", "statsd", "ethtool")
 
 func GetRollupDimensions(conf *confmap.Conf) [][]string {
 	key := ConfigKey(MetricsKey, AggregationDimensionsKey)
@@ -90,6 +94,14 @@ func GetDropOriginalMetrics(conf *confmap.Conf) map[string]bool {
 		*/
 		if dropMetrics := GetArray[any](conf, dropOriginalCfgKey); dropMetrics != nil {
 			for _, dropMetric := range dropMetrics {
+				if _, in := toDropMap[category]; in {
+					dropMetricStr, ok := dropMetric.(string)
+					if ok {
+						dropOriginalMetrics[dropMetricStr] = true
+					}
+					continue
+				}
+
 				measurements := GetArray[any](conf, measurementCfgKey)
 				if measurements == nil {
 					continue
