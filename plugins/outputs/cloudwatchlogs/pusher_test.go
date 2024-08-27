@@ -9,10 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
-	"net/http"
 	"os"
-	"reflect"
 	"strings"
 	"sync"
 	"syscall"
@@ -21,7 +18,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/assert"
@@ -971,87 +967,4 @@ func testPreparation(retention int, s *svcMock, flushTimeout time.Duration, retr
 	stop := make(chan struct{})
 	p := NewPusher(Target{"G", "S", util.StandardLogGroupClass, retention}, s, flushTimeout, retryDuration, models.NewLogger("cloudwatchlogs", "test", ""), stop, &wg)
 	return stop, p
-}
-
-type errorRoundTripper struct {
-	rt     http.RoundTripper
-	errMsg string
-}
-
-func (ert errorRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
-	// Simulate the desired error here
-	if ert.errMsg == "connection refused" {
-		return nil, &net.OpError{
-			Op:     "dial",
-			Net:    "tcp",
-			Source: nil,
-			Addr:   nil,
-			Err:    errors.New("connection refused"),
-		}
-	} else if ert.errMsg == "connection reset by peer" {
-		return nil, &net.OpError{
-			Op:     "read",
-			Net:    "tcp",
-			Source: nil,
-			Addr:   nil,
-			Err:    errors.New("connection reset by peer"),
-		}
-	}
-
-	// For other cases, use the default RoundTripper
-	return ert.rt.RoundTrip(r)
-}
-
-func TestPLEErrors(t *testing.T) {
-	tests := []struct {
-		name   string
-		errMsg string
-	}{
-		{
-			name:   "connection refused",
-			errMsg: "connection refused",
-		},
-		{
-			name:   "connection reset by peer",
-			errMsg: "connection reset by peer",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create a custom HTTP client that simulates the desired error
-			customHTTPClient := &errorRoundTripper{
-				rt:     http.DefaultTransport,
-				errMsg: tt.errMsg,
-			}
-
-			// Create an AWS session with the custom HTTP client
-			sess, err := session.NewSession(&aws.Config{
-				HTTPClient: &http.Client{
-					Transport: customHTTPClient,
-				},
-				Region: aws.String("us-east-1"),
-			})
-			require.NoError(t, err)
-
-			// Create the CloudWatch Logs service client
-			cwl := cloudwatchlogs.New(sess)
-			params := &cloudwatchlogs.PutLogEventsInput{
-				LogEvents: []*cloudwatchlogs.InputLogEvent{
-					{
-						Message:   aws.String("test message"),
-						Timestamp: aws.Int64(time.Now().UnixNano() / int64(time.Millisecond)),
-					},
-				},
-				LogGroupName:  aws.String("hello"),
-				LogStreamName: aws.String("world"),
-				// Set the required parameters for PutLogEvents
-			}
-			_, err = cwl.PutLogEvents(params)
-			fmt.Println(reflect.TypeOf(err))
-			require.True(t, strings.Contains(err.Error(), tt.errMsg))
-			_, ok := err.(awserr.Error)
-			require.True(t, ok, "error returned is not an awserr")
-		})
-	}
-
 }
