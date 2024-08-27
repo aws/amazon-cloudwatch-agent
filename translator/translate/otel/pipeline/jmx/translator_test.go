@@ -152,7 +152,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx",
 				receivers:  []string{"jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "cumulativetodelta/jmx", "batch/jmx"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},

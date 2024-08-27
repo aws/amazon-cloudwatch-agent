@@ -25,6 +25,9 @@ func TestGetDropOriginalMetrics(t *testing.T) {
 	conf := confmap.NewFromStringMap(jsonCfg)
 	assert.Equal(t, map[string]bool{
 		"CPU_USAGE_IDLE": true,
+		"collectd_drop":  true,
 		metric.DecorateMetricName("cpu", "time_active"): true,
+		"statsd_drop": true,
+		"tx_packets":  true,
 	}, GetDropOriginalMetrics(conf))
 }

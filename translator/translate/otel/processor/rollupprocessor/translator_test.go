@@ -44,7 +44,7 @@ func TestTranslator(t *testing.T) {
 			},
 		},
 		"WithFull": {
-			input: testutil.GetJson(t, filepath.Join("..", "..", "common", "testdata", "config.json")),
+			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
 			want: &rollupprocessor.Config{
 				AttributeGroups: [][]string{{"ImageId"}, {"InstanceId", "InstanceType"}, {"d1"}, {}},
 				DropOriginal:    []string{"CPU_USAGE_IDLE", metric.DecorateMetricName("cpu", "time_active")},
