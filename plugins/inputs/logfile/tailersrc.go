@@ -13,8 +13,10 @@ import (
 
 	"golang.org/x/text/encoding"
 
+	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
@@ -60,6 +62,7 @@ type tailerSrc struct {
 	group           string
 	stream          string
 	class           string
+	fileGlobPath    string
 	destination     string
 	stateFilePath   string
 	tailer          *tail.Tail
@@ -83,7 +86,7 @@ type tailerSrc struct {
 var _ logs.LogSrc = (*tailerSrc)(nil)
 
 func NewTailerSrc(
-	group, stream, destination, stateFilePath, logClass string,
+	group, stream, destination, stateFilePath, logClass, fileGlobPath string,
 	tailer *tail.Tail,
 	autoRemoval bool,
 	isMultilineStartFn func(string) bool,
@@ -100,6 +103,7 @@ func NewTailerSrc(
 		destination:     destination,
 		stateFilePath:   stateFilePath,
 		class:           logClass,
+		fileGlobPath:    fileGlobPath,
 		tailer:          tailer,
 		autoRemoval:     autoRemoval,
 		isMLStart:       isMultilineStartFn,
@@ -164,6 +168,14 @@ func (ts *tailerSrc) Stop() {
 
 func (ts *tailerSrc) AddCleanUpFn(f func()) {
 	ts.cleanUpFns = append(ts.cleanUpFns, f)
+}
+
+func (ts *tailerSrc) Entity() *cloudwatchlogs.Entity {
+	es := entitystore.GetEntityStore()
+	if es != nil {
+		return es.CreateLogFileEntity(entitystore.LogFileGlob(ts.fileGlobPath), entitystore.LogGroupName(ts.group))
+	}
+	return nil
 }
 
 func (ts *tailerSrc) runTail() {

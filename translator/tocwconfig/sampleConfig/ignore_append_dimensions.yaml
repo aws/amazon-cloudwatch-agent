@@ -17,6 +17,9 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-east-1
 processors:
     ec2tagger:
         imds_retries: 1
@@ -33,6 +36,7 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
+        - entitystore
     pipelines:
         metrics/host:
             exporters:
@@ -40,8 +44,8 @@ service:
             processors:
                 - ec2tagger
             receivers:
-                - telegraf_disk
                 - telegraf_mem
+                - telegraf_disk
     telemetry:
         logs:
             development: false

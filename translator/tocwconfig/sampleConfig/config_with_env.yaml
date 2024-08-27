@@ -39,6 +39,9 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: ${ENV_REGION}
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000
@@ -75,6 +78,7 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
+        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:

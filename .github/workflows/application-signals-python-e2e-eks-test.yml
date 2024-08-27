@@ -1,0 +1,317 @@
+## Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+## SPDX-License-Identifier: Apache-2.0
+
+# This is a reusable workflow for running the E2E test for Application Signals.
+# It is meant to be called from another workflow.
+# Read more about reusable workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
+name: Application Signals Enablement E2E Testing - Python EKS
+on:
+  workflow_call:
+    inputs:
+      test-cluster-name:
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_DEFAULT_REGION: us-east-1
+  APP_SIGNALS_E2E_TEST_ACCOUNT_ID: ${{ secrets.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
+  SAMPLE_APP_NAMESPACE: sample-app-namespace
+  SAMPLE_APP_FRONTEND_SERVICE_IMAGE: ${{ secrets.APP_SIGNALS_E2E_SAMPLE_APP_FRONTEND_SVC_IMG }}
+  SAMPLE_APP_REMOTE_SERVICE_IMAGE: ${{ secrets.APP_SIGNALS_E2E_SAMPLE_APP_REMOTE_SVC_IMG }}
+  METRIC_NAMESPACE: ApplicationSignals
+  LOG_GROUP_NAME: /aws/application-signals/data
+  ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
+  APPLICATION_SIGNALS_ADOT_IMAGE: 637423224110.dkr.ecr.us-east-1.amazonaws.com/aws-observability/adot-autoinstrumentation-python-staging:0.2.0-408d938
+
+jobs:
+  python-e2e-eks-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: aws-observability/aws-application-signals-test-framework
+          ref: ga-python
+
+      - name: Download enablement script
+        uses: actions/checkout@v4
+        with:
+          repository: aws-observability/application-signals-demo
+          ref: main
+          path: enablement-script
+          sparse-checkout: |
+            scripts/eks/appsignals/enable-app-signals.sh
+            scripts/eks/appsignals/clean-app-signals.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Generate testing id
+        run: echo TESTING_ID="${{ env.AWS_DEFAULT_REGION }}-${{ github.run_id }}-${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}:role/${{ secrets.APP_SIGNALS_E2E_TEST_ROLE_NAME }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+      # local directory to store the kubernetes config
+      - name: Create kubeconfig directory
+        run: mkdir -p ${{ github.workspace }}/.kube
+
+      - name: Set KUBECONFIG environment variable
+        run: echo KUBECONFIG="${{ github.workspace }}/.kube/config" >> $GITHUB_ENV
+
+      - name: Set up kubeconfig
+        run: aws eks update-kubeconfig --name ${{ inputs.test-cluster-name }} --region ${{ env.AWS_DEFAULT_REGION }}
+
+      - name: Install eksctl
+        run: |
+          mkdir ${{ github.workspace }}/eksctl
+          curl -sLO "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz"
+          tar -xzf eksctl_Linux_amd64.tar.gz -C ${{ github.workspace }}/eksctl && rm eksctl_Linux_amd64.tar.gz
+          echo "${{ github.workspace }}/eksctl" >> $GITHUB_PATH
+
+      - name: Create role for AWS access from the sample app
+        id: create_service_account
+        run: |
+          eksctl create iamserviceaccount \
+          --name service-account-${{ env.TESTING_ID }} \
+          --namespace ${{ env.SAMPLE_APP_NAMESPACE }} \
+          --cluster ${{ inputs.test-cluster-name }} \
+          --role-name eks-s3-access-${{ env.TESTING_ID }} \
+          --attach-policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess \
+          --region ${{ env.AWS_DEFAULT_REGION }} \
+          --approve
+
+      - name: Set up terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Deploy sample app via terraform
+        working-directory: terraform/python/eks
+        run: |
+          terraform init
+          terraform validate
+          terraform apply -auto-approve \
+            -var="test_id=${{ env.TESTING_ID }}" \
+            -var="aws_region=${{ env.AWS_DEFAULT_REGION }}" \
+            -var="kube_directory_path=${{ github.workspace }}/.kube" \
+            -var="eks_cluster_name=${{ inputs.test-cluster-name }}" \
+            -var="eks_cluster_context_name=$(kubectl config current-context)" \
+            -var="test_namespace=${{ env.SAMPLE_APP_NAMESPACE }}" \
+            -var="service_account_aws_access=service-account-${{ env.TESTING_ID }}" \
+            -var="python_app_image=654654176582.dkr.ecr.us-east-1.amazonaws.com/appsignals-python-django-main-service" \
+            -var="python_remote_app_image=654654176582.dkr.ecr.us-east-1.amazonaws.com/appsignals-python-django-remote-service"
+
+      # Enable App Signals on the test cluster
+      - name: Enable App Signals
+        working-directory: enablement-script/scripts/eks/appsignals
+        run: |
+          ./enable-app-signals.sh \
+          ${{ inputs.test-cluster-name }} \
+          ${{ env.AWS_DEFAULT_REGION }} \
+          ${{ env.SAMPLE_APP_NAMESPACE }}
+
+      - name: Save CloudWatch image to environment before patching
+        run: |
+          echo "OLD_CW_AGENT_IMAGE"=$(kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o json | \
+          jq '.items[0].status.containerStatuses[0].image') >> $GITHUB_ENV
+
+      - name: Patch the CloudWatch Agent image and restart CloudWatch pods
+        run: |
+          kubectl patch amazoncloudwatchagents -n amazon-cloudwatch cloudwatch-agent --type='json' -p='[{"op": "replace", "path": "/spec/image", "value": ${{ secrets.AWS_ECR_PRIVATE_REGISTRY }}/${{ env.ECR_INTEGRATION_TEST_REPO }}:${{ github.sha }}}]'
+          kubectl delete pods --all -n amazon-cloudwatch
+          sleep 10
+          kubectl wait --for=condition=Ready pod --all -n amazon-cloudwatch
+
+      - name: Patch the ADOT image and restart CloudWatch pods
+        run: |
+          kubectl patch deploy -namazon-cloudwatch amazon-cloudwatch-observability-controller-manager --type='json' \
+          -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/args/2", "value": "--auto-instrumentation-python-image=${{ env.APPLICATION_SIGNALS_ADOT_IMAGE }}"}]'
+          kubectl delete pods --all -n amazon-cloudwatch
+          sleep 10
+          kubectl wait --for=condition=Ready pod --all -n amazon-cloudwatch
+
+      # Application pods need to be restarted for the
+      # app signals instrumentation to take effect
+      - name: Restart the app pods
+        run: kubectl delete pods --all -n ${{ env.SAMPLE_APP_NAMESPACE }}
+
+      - name: Wait for sample app pods to come up
+        run: |
+          kubectl wait --for=condition=Ready pod --all -n ${{ env.SAMPLE_APP_NAMESPACE }} \
+
+      - name: Get remote service deployment name and IP
+        run: |
+          echo "REMOTE_SERVICE_DEPLOYMENT_NAME=$(kubectl get deployments -n ${{ env.SAMPLE_APP_NAMESPACE }} --selector=app=remote-app -o jsonpath='{.items[0].metadata.name}')" >> $GITHUB_ENV
+          echo "REMOTE_SERVICE_POD_IP=$(kubectl get pods -n ${{ env.SAMPLE_APP_NAMESPACE }} --selector=app=remote-app -o jsonpath='{.items[0].status.podIP}')" >> $GITHUB_ENV
+
+      - name: Log pod ADOT image ID
+        run: |
+          kubectl get pods -n ${{ env.SAMPLE_APP_NAMESPACE }} --output json | \
+          jq '.items[0].status.initContainerStatuses[0].imageID'
+
+      - name: Log pod CWAgent Operator image ID
+        run: |
+          kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=amazon-cloudwatch-observability -o json | \
+          jq '.items[0].status.containerStatuses[0].imageID'
+
+      - name: Log pod FluentBit image ID
+        run: |
+          kubectl get pods -n amazon-cloudwatch -l k8s-app=fluent-bit -o json | \
+          jq '.items[0].status.containerStatuses[0].imageID'
+
+      - name: Log pod CWAgent image ID and save image to the environment
+        run: |
+          kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o json | \
+          jq '.items[0].status.containerStatuses[0].imageID'
+          
+          echo "NEW_CW_AGENT_IMAGE"=$(kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent -o json | \
+          jq '.items[0].status.containerStatuses[0].image') >> $GITHUB_ENV
+
+#      - name: Check if CW Agent image has changed
+#        run: |
+#          if [ ${{ env.OLD_CW_AGENT_IMAGE }} = ${{ env.NEW_CW_AGENT_IMAGE }} ]; then
+#            echo "Operator image did not change"
+#            exit 1
+#          fi
+
+      - name: Get the sample app endpoint
+        run: |
+          echo "APP_ENDPOINT=$(terraform output python_app_endpoint)" >> $GITHUB_ENV
+        working-directory: terraform/python/eks
+
+      - name: Wait for app endpoint to come online
+        id: endpoint-check
+        run: |
+          attempt_counter=0
+          max_attempts=30
+          until $(curl --output /dev/null --silent --head --fail http://${{ env.APP_ENDPOINT }}); do
+            if [ ${attempt_counter} -eq ${max_attempts} ];then
+              echo "Max attempts reached"
+              exit 1
+            fi
+
+            printf '.'
+            attempt_counter=$(($attempt_counter+1))
+            sleep 10
+          done
+
+      # This steps increases the speed of the validation by creating the telemetry data in advance
+      - name: Call all test APIs
+        continue-on-error: true
+        run: |
+          curl -S -s -o /dev/null "http://${{ env.APP_ENDPOINT }}/outgoing-http-call"; echo
+          curl -S -s -o /dev/null "http://${{ env.APP_ENDPOINT }}/aws-sdk-call?ip=${{ env.REMOTE_SERVICE_POD_IP }}&testingId=${{ env.TESTING_ID }}"; echo
+          curl -S -s -o /dev/null "http://${{ env.APP_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_POD_IP }}&testingId=${{ env.TESTING_ID }}"; echo
+          curl -S -s -o /dev/null "http://${{ env.APP_ENDPOINT }}/client-call"; echo
+
+      - name: Build Gradle
+        run: ./gradlew
+
+      # Validation for application signals telemetry data
+      - name: Call endpoint and validate generated EMF logs
+        id: log-validation
+        if: steps.endpoint-check.outcome == 'success' && !cancelled()
+        run: ./gradlew validator:run --args='-c python/eks/log-validation.yml
+          --testing-id ${{ env.TESTING_ID }}
+          --endpoint http://${{ env.APP_ENDPOINT }}
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --account-id ${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
+          --metric-namespace ${{ env.METRIC_NAMESPACE }}
+          --log-group ${{ env.LOG_GROUP_NAME }}
+          --app-namespace ${{ env.SAMPLE_APP_NAMESPACE }}
+          --platform-info ${{ inputs.test-cluster-name }}
+          --service-name python-application-${{ env.TESTING_ID }}
+          --remote-service-deployment-name ${{ env.REMOTE_SERVICE_DEPLOYMENT_NAME }}
+          --query-string ip=${{ env.REMOTE_SERVICE_POD_IP }}&testingId=${{ env.TESTING_ID }}
+          --rollup'
+
+      - name: Call endpoints and validate generated metrics
+        id: metric-validation
+        if: (success() || steps.log-validation.outcome == 'failure') && !cancelled()
+        run: ./gradlew validator:run --args='-c python/eks/metric-validation.yml
+          --testing-id ${{ env.TESTING_ID }}
+          --endpoint http://${{ env.APP_ENDPOINT }}
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --account-id ${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
+          --metric-namespace ${{ env.METRIC_NAMESPACE }}
+          --log-group ${{ env.LOG_GROUP_NAME }}
+          --app-namespace ${{ env.SAMPLE_APP_NAMESPACE }}
+          --platform-info ${{ inputs.test-cluster-name }}
+          --service-name python-application-${{ env.TESTING_ID }}
+          --remote-service-name python-remote-application-${{ env.TESTING_ID }}
+          --remote-service-deployment-name ${{ env.REMOTE_SERVICE_DEPLOYMENT_NAME }}
+          --query-string ip=${{ env.REMOTE_SERVICE_POD_IP }}&testingId=${{ env.TESTING_ID }}
+          --rollup'
+
+      - name: Call endpoints and validate generated traces
+        id: trace-validation
+        if: (success() || steps.log-validation.outcome == 'failure' || steps.metric-validation.outcome == 'failure') && !cancelled()
+        run: ./gradlew validator:run --args='-c python/eks/trace-validation.yml
+          --testing-id ${{ env.TESTING_ID }}
+          --endpoint http://${{ env.APP_ENDPOINT }}
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --account-id ${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
+          --log-group ${{ env.LOG_GROUP_NAME }}
+          --app-namespace ${{ env.SAMPLE_APP_NAMESPACE }}
+          --platform-info ${{ inputs.test-cluster-name }}
+          --service-name python-application-${{ env.TESTING_ID }}
+          --remote-service-deployment-name ${{ env.REMOTE_SERVICE_DEPLOYMENT_NAME }}
+          --query-string ip=${{ env.REMOTE_SERVICE_POD_IP }}&testingId=${{ env.TESTING_ID }}
+          --rollup'
+
+      # Clean up Procedures
+
+      - name: Remove log group deletion command
+        if: always()
+        working-directory: enablement-script/scripts/eks/appsignals
+        run: |
+          delete_log_group="aws logs delete-log-group --log-group-name '${{ env.LOG_GROUP_NAME }}' --region \$REGION"
+          sed -i "s#$delete_log_group##g" clean-app-signals.sh
+
+      - name: Clean Up Application Signals
+        if: always()
+        continue-on-error: true
+        working-directory: enablement-script
+        run: |
+          ./clean-app-signals.sh \
+          ${{ inputs.test-cluster-name }} \
+          ${{ inputs.aws-region }} \
+          ${{ env.SAMPLE_APP_NAMESPACE }}
+
+      # This step also deletes lingering resources from previous test runs
+      - name: Delete all sample app resources
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 10
+        run: kubectl delete namespace ${{ env.SAMPLE_APP_NAMESPACE }}
+
+      - name: Terraform destroy
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 5
+        working-directory: terraform/python/eks
+        run: |
+          terraform destroy -auto-approve \
+            -var="test_id=${{ env.TESTING_ID }}" \
+            -var="aws_region=${{ inputs.aws-region }}" \
+            -var="kube_directory_path=${{ github.workspace }}/.kube" \
+            -var="eks_cluster_name=${{ inputs.test-cluster-name }}" \
+            -var="test_namespace=${{ env.SAMPLE_APP_NAMESPACE }}" \
+            -var="service_account_aws_access=service-account-${{ env.TESTING_ID }}" \
+            -var="python_app_image=${{ env.ACCOUNT_ID }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com/${{ secrets.APP_SIGNALS_PYTHON_E2E_FE_SA_IMG }}" \
+            -var="python_remote_app_image=${{ env.ACCOUNT_ID }}.dkr.ecr.${{ inputs.aws-region }}.amazonaws.com/${{ secrets.APP_SIGNALS_PYTHON_E2E_RE_SA_IMG }}"
+
+      - name: Remove aws access service account
+        if: always()
+        continue-on-error: true
+        run: |
+          eksctl delete iamserviceaccount \
+          --name service-account-${{ env.TESTING_ID }} \
+          --namespace ${{ env.SAMPLE_APP_NAMESPACE }} \
+          --cluster ${{ inputs.test-cluster-name }} \
+          --region ${{ inputs.aws-region }}

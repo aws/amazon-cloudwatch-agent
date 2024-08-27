@@ -1,0 +1,160 @@
+## Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+## SPDX-License-Identifier: Apache-2.0
+
+# This is a reusable workflow for running the Python E2E Canary test for Application Signals.
+# It is meant to be called from another workflow.
+# Read more about reusable workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
+name: Application Signals Enablement E2E Testing - Python EC2 Use Case
+on:
+  workflow_call:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_DEFAULT_REGION: us-east-1
+  APP_SIGNALS_E2E_TEST_ACCOUNT_ID: ${{ secrets.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
+  SAMPLE_APP_ZIP: s3://aws-appsignals-sample-app-prod-us-east-1/python-sample-app.zip
+  METRIC_NAMESPACE: ApplicationSignals
+  LOG_GROUP_NAME: /aws/application-signals/data
+  TEST_RESOURCES_FOLDER: ${GITHUB_WORKSPACE}
+  GET_CW_AGENT_RPM_COMMAND: "aws s3 cp s3://${{ secrets.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ github.sha }}/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm ./cw-agent.rpm"
+  GET_ADOT_WHEEL_COMMAND: "aws s3 cp s3://metric-schema-changes/aws_opentelemetry_distro-0.2.0-py3-none-any.whl ./aws_opentelemetry_distro-0.2.0-py3-none-any.whl && python3.9 -m pip install aws_opentelemetry_distro-0.2.0-py3-none-any.whl"
+
+jobs:
+  python-e2e-ec2-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get testing resources from aws-application-signals-test-framework
+        uses: actions/checkout@v4
+        with:
+          repository: aws-observability/aws-application-signals-test-framework
+          ref: ga-python
+
+      - name: Generate testing id
+        run: echo TESTING_ID="${{ github.run_id }}-${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}:role/${{ secrets.APP_SIGNALS_E2E_TEST_ROLE_NAME }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+      - name: Set up terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Deploy sample app via terraform
+        working-directory: terraform/python/ec2
+        run: |
+          terraform init
+          terraform validate
+          terraform apply -auto-approve \
+              -var="aws_region=${{ env.AWS_DEFAULT_REGION }}" \
+              -var="test_id=${{ env.TESTING_ID }}" \
+              -var="sample_app_zip=${{ env.SAMPLE_APP_ZIP }}" \
+              -var="get_cw_agent_rpm_command=${{ env.GET_CW_AGENT_RPM_COMMAND }}" \
+              -var="get_adot_wheel_command=${{ env.GET_ADOT_WHEEL_COMMAND }}"
+
+      - name: Get the ec2 instance ami id
+        working-directory: terraform/python/ec2
+        run: |
+          echo "EC2_INSTANCE_AMI=$(terraform output ec2_instance_ami)" >> $GITHUB_ENV
+
+      - name: Get the sample app endpoint
+        working-directory: terraform/python/ec2
+        run: |
+          echo "MAIN_SERVICE_ENDPOINT=$(terraform output sample_app_main_service_public_dns):8000" >> $GITHUB_ENV
+          echo "REMOTE_SERVICE_IP=$(terraform output sample_app_remote_service_public_ip)" >> $GITHUB_ENV
+          echo "MAIN_SERVICE_INSTANCE_ID=$(terraform output main_service_instance_id)" >> $GITHUB_ENV
+
+      - name: Wait for app endpoint to come online
+        id: endpoint-check
+        run: |
+          attempt_counter=0
+          max_attempts=30
+          until $(curl --output /dev/null --silent --head --fail http://${{ env.MAIN_SERVICE_ENDPOINT }}); do
+            if [ ${attempt_counter} -eq ${max_attempts} ];then
+              echo "Max attempts reached"
+              exit 1
+            fi
+
+            printf '.'
+            attempt_counter=$(($attempt_counter+1))
+            sleep 10
+          done
+
+      # This steps increases the speed of the validation by creating the telemetry data in advance
+      - name: Call all test APIs
+        continue-on-error: true
+        run: |
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/outgoing-http-call/; echo
+          curl -S -s -o /dev/null "http://${{ env.MAIN_SERVICE_ENDPOINT }}/aws-sdk-call?ip=${{ env.REMOTE_SERVICE_IP }}&testingId=${{ env.TESTING_ID }}"; echo
+          curl -S -s -o /dev/null "http://${{ env.MAIN_SERVICE_ENDPOINT }}/remote-service?ip=${{ env.REMOTE_SERVICE_IP }}&testingId=${{ env.TESTING_ID }}"; echo
+          curl -S -s -o /dev/null http://${{ env.MAIN_SERVICE_ENDPOINT }}/client-call/; echo
+
+      - name: Build Gradle
+        run: ./gradlew
+
+      # Validation for pulse telemetry data
+      - name: Validate generated EMF logs
+        id: log-validation
+        run: ./gradlew validator:run --args='-c python/ec2/log-validation.yml
+          --testing-id ${{ env.TESTING_ID }}
+          --endpoint http://${{ env.MAIN_SERVICE_ENDPOINT }}
+          --remote-service-deployment-name ${{ env.REMOTE_SERVICE_IP }}:8001
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --metric-namespace ${{ env.METRIC_NAMESPACE }}
+          --log-group ${{ env.LOG_GROUP_NAME }}
+          --service-name python-sample-application-${{ env.TESTING_ID }}
+          --remote-service-name python-sample-remote-application-${{ env.TESTING_ID }}
+          --query-string ip=${{ env.REMOTE_SERVICE_IP }}&testingId=${{ env.TESTING_ID }}
+          --instance-ami ${{ env.EC2_INSTANCE_AMI }}
+          --instance-id ${{ env.MAIN_SERVICE_INSTANCE_ID }}
+          --rollup'
+
+      - name: Validate generated metrics
+        id: metric-validation
+        if: (success() || steps.log-validation.outcome == 'failure') && !cancelled()
+        run: ./gradlew validator:run --args='-c python/ec2/metric-validation.yml
+          --testing-id ${{ env.TESTING_ID }}
+          --endpoint http://${{ env.MAIN_SERVICE_ENDPOINT }}
+          --remote-service-deployment-name ${{ env.REMOTE_SERVICE_IP }}:8001
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --metric-namespace ${{ env.METRIC_NAMESPACE }}
+          --log-group ${{ env.LOG_GROUP_NAME }}
+          --service-name python-sample-application-${{ env.TESTING_ID }}
+          --remote-service-name python-sample-remote-application-${{ env.TESTING_ID }}
+          --query-string ip=${{ env.REMOTE_SERVICE_IP }}&testingId=${{ env.TESTING_ID }}
+          --instance-ami ${{ env.EC2_INSTANCE_AMI }}
+          --instance-id ${{ env.MAIN_SERVICE_INSTANCE_ID }}
+          --rollup'
+
+      - name: Validate generated traces
+        id: trace-validation
+        if: (success() || steps.log-validation.outcome == 'failure' || steps.metric-validation.outcome == 'failure') && !cancelled()
+        run: ./gradlew validator:run --args='-c python/ec2/trace-validation.yml
+          --testing-id ${{ env.TESTING_ID }}
+          --endpoint http://${{ env.MAIN_SERVICE_ENDPOINT }}
+          --remote-service-deployment-name ${{ env.REMOTE_SERVICE_IP }}:8001
+          --region ${{ env.AWS_DEFAULT_REGION }}
+          --account-id ${{ env.APP_SIGNALS_E2E_TEST_ACCOUNT_ID }}
+          --metric-namespace ${{ env.METRIC_NAMESPACE }}
+          --log-group ${{ env.LOG_GROUP_NAME }}
+          --service-name python-sample-application-${{ env.TESTING_ID }}
+          --remote-service-name python-sample-remote-application-${{ env.TESTING_ID }}
+          --query-string ip=${{ env.REMOTE_SERVICE_IP }}&testingId=${{ env.TESTING_ID }}
+          --instance-ami ${{ env.EC2_INSTANCE_AMI }}
+          --instance-id ${{ env.MAIN_SERVICE_INSTANCE_ID }}
+          --rollup'
+
+      # Clean up Procedures
+      - name: Terraform destroy
+        if: always()
+        continue-on-error: true
+        working-directory: terraform/ec2
+        run: |
+          terraform destroy -auto-approve \
+            -var="test_id=${{ env.TESTING_ID }}"
