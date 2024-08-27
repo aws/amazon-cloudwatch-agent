@@ -146,6 +146,9 @@
             },
             "nvidia_smi": {
               "$ref": "#/definitions/metricsDefinition/definitions/nvidiaGpuDefinitions"
+            },
+            "jmx": {
+              "$ref": "#/definitions/metricsDefinition/definitions/jmxDefinitions"
             }
           },
           "minProperties": 1,
@@ -239,6 +242,12 @@
             },
             "metrics_aggregation_interval": {
               "$ref": "#/definitions/timeIntervalWithZeroDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
             }
           },
           "additionalProperties": false
@@ -308,6 +317,21 @@
             }
           ]
         },
+        "jmxDefinitions": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 255,
+              "items": {
+                "$ref": "#/definitions/jmxObjectDefinition"
+              }
+            },
+            {
+              "$ref": "#/definitions/jmxObjectDefinition"
+            }
+          ]
+        },
         "statsdDefinitions": {
           "type": "object",
           "properties": {
@@ -331,6 +355,12 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 255
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
             }
           },
           "additionalProperties": false
@@ -462,6 +492,15 @@
                 "minLength": 1,
                 "maxLength": 255
               }
+            },
+            "append_dimensions": {
+              "$ref": "#/definitions/generalAppendDimensionsDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
             }
           },
           "additionalProperties": false
@@ -1060,6 +1099,11 @@
               "properties": {},
               "additionalProperties": true
             },
+            "application_signals": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": true
+            },
             "xray": {
               "$ref": "#/definitions/tracesDefinition/definitions/xrayDefinition"
             },
@@ -1213,6 +1257,132 @@
         }
       },
       "additionalProperties": false
+    },
+    "otlpObjectDefinition": {
+      "type": "object",
+      "properties": {
+        "grpc_endpoint": {
+          "description": "gRPC endpoint to use to listen for OTLP protobuf information",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "http_endpoint": {
+          "description": "HTTP endpoint to use to listen for OTLP JSON information",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        }
+      },
+      "additionalProperties": false
+    },
+    "jmxObjectDefinition": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "description": "The endpoint to listen for JMX",
+          "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "metrics_collection_interval": {
+          "$ref": "#/definitions/timeIntervalDefinition"
+        },
+        "username": {
+          "description": "The username to use for JMX authentication",
+          "type": "string"
+        },
+        "password_file": {
+          "description": "The password file to read in the passwords for JMX authentication",
+          "type": "string"
+        },
+        "keystore_path": {
+          "description": "The keystore path is required if SSL is enabled on the target JVM",
+          "type": "string"
+        },
+        "keystore_type": {
+          "description": "The keystore type if required by SSL",
+          "type": "string"
+        },
+        "truststore_path": {
+          "description": "The truststore path is required if SSL is enabled on the target JVM",
+          "type": "string"
+        },
+        "truststore_type": {
+          "description": "The truststore type if required by SSL",
+          "type": "string"
+        },
+        "registry_ssl_enabled": {
+          "description": "If SSL is enabled for RMI registry",
+          "type": "boolean"
+        },
+        "remote_profile": {
+          "description": "Supported JMX remote profiles in combination with SASL profiles",
+          "type": "string"
+        },
+        "realm": {
+          "description": "The realm, as required by remote profile SASL/DIGEST-MD5.",
+          "type": "string"
+        },
+        "jvm": {
+          "$ref": "#/definitions/jmxTargetDefinition"
+        },
+        "kafka": {
+          "$ref": "#/definitions/jmxTargetDefinition"
+        },
+        "kafka-consumer": {
+          "$ref": "#/definitions/jmxTargetDefinition"
+        },
+        "kafka-producer": {
+          "$ref": "#/definitions/jmxTargetDefinition"
+        },
+        "tomcat": {
+          "$ref": "#/definitions/jmxTargetDefinition"
+        },
+        "insecure": {
+          "description": "Disable JMX remote TLS/password authentication requirements",
+          "type": "boolean"
+        },
+        "append_dimensions": {
+          "$ref": "#/definitions/generalAppendDimensionsDefinition"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "endpoint"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "jvm"
+          ]
+        },
+        {
+          "required": [
+            "kafka"
+          ]
+        },
+        {
+          "required": [
+            "kafka-consumer"
+          ]
+        },
+        {
+          "required": [
+            "kafka-producer"
+          ]
+        },
+        {
+          "required": [
+            "tomcat"
+          ]
+        }
+      ]
+    },
+    "jmxTargetDefinition": {
+      "type": "object",
+      "properties": {
+        "measurement": {
+          "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementDefinition"
+        }
+      },
+      "required": [
+        "measurement"
+      ]
     },
     "ecsServiceDiscoveryDefinition": {
       "type": "object",
@@ -1392,3 +1562,4 @@
     }
   }
 }
+

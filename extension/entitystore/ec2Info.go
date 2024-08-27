@@ -6,13 +6,13 @@ package entitystore
 import (
 	"context"
 	"errors"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -40,11 +40,12 @@ type ec2Info struct {
 	ec2API           ec2iface.EC2API
 	ec2Provider      ec2ProviderType
 	ec2Credential    *configaws.CredentialConfig
+	logger           *zap.Logger
 	done             chan struct{}
 }
 
 func (ei *ec2Info) initEc2Info() {
-	log.Println("I! ec2Info: Initializing ec2Info")
+	ei.logger.Debug("Initializing ec2Info")
 	if err := ei.setInstanceId(); err != nil {
 		return
 	}
@@ -52,7 +53,7 @@ func (ei *ec2Info) initEc2Info() {
 	if err := ei.setAutoScalingGroup(); err != nil {
 		return
 	}
-	log.Printf("D! ec2Info: Finished initializing ec2Info: InstanceId %s, AutoScalingGroup %s", ei.InstanceID, ei.AutoScalingGroup)
+	ei.logger.Debug("Finished initializing ec2Info")
 	ei.ignoreInvalidFields()
 }
 
@@ -60,17 +61,17 @@ func (ei *ec2Info) setInstanceId() error {
 	for {
 		metadataDoc, err := ei.metadataProvider.Get(context.Background())
 		if err != nil {
-			log.Printf("E! ec2Info: Failed to get Instance Id through metadata provider: %v", err)
+			ei.logger.Warn("Failed to get Instance Id through metadata provider", zap.Error(err))
 			wait := time.NewTimer(1 * time.Minute)
 			select {
 			case <-ei.done:
 				wait.Stop()
-				return errors.New("ec2Info: shutdownC received")
+				return errors.New("shutdown signal received")
 			case <-wait.C:
 				continue
 			}
 		}
-		log.Printf("D! ec2Info: Successfully retrieved Instance Id %s", ei.InstanceID)
+		ei.logger.Debug("Successfully retrieved Instance ID")
 		ei.InstanceID = metadataDoc.InstanceID
 		return nil
 	}
@@ -90,18 +91,18 @@ func (ei *ec2Info) setAutoScalingGroup() error {
 		select {
 		case <-ei.done:
 			wait.Stop()
-			return errors.New("ec2Info: shutdownC received")
+			return errors.New("shutdown signal received")
 		case <-wait.C:
 		}
 
 		if retry > 0 {
-			log.Printf("D! ec2Info: initial retrieval of tags and volumes with retry: %d", retry)
+			ei.logger.Debug("Initial retrieval of tags and volumes", zap.Int("retry", retry))
 		}
 
 		if err := ei.retrieveAsgName(ei.ec2API); err != nil {
-			log.Printf("E! ec2Info: Unable to describe ec2 tags for retry %d with error %v", retry, err)
+			ei.logger.Warn("Unable to describe ec2 tags", zap.Int("retry", retry), zap.Error(err))
 		} else {
-			log.Println("I! ec2Info: Retrieval of tags succeeded")
+			ei.logger.Debug("Retrieval of auto-scaling group tags succeeded")
 			return nil
 		}
 
@@ -117,14 +118,14 @@ as we need to distinguish the tags not being fetchable at all, from the ASG tag 
 func (ei *ec2Info) retrieveAsgName(ec2API ec2iface.EC2API) error {
 	tags, err := ei.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
-		log.Printf("E! ec2Info: Failed to get tags through metadata provider: %v", err.Error())
+		ei.logger.Debug("Failed to get tags through metadata provider", zap.Error(err))
 		return ei.retrieveAsgNameWithDescribeTags(ec2API)
 	} else if strings.Contains(tags, ec2tagger.Ec2InstanceTagKeyASG) {
 		asg, err := ei.metadataProvider.InstanceTagValue(context.Background(), ec2tagger.Ec2InstanceTagKeyASG)
 		if err != nil {
-			log.Printf("E! ec2Info: Failed to get AutoScalingGroup through metadata provider: %v", err.Error())
+			ei.logger.Error("Failed to get AutoScalingGroup through metadata provider", zap.Error(err))
 		} else {
-			log.Printf("D! ec2Info: AutoScalingGroup retrieved through IMDS: %s", asg)
+			ei.logger.Debug("AutoScalingGroup retrieved through IMDS")
 			ei.AutoScalingGroup = asg
 		}
 	}
@@ -152,7 +153,7 @@ func (ei *ec2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error
 	for {
 		result, err := ec2API.DescribeTags(input)
 		if err != nil {
-			log.Println("E! ec2Info: Unable to retrieve EC2 AutoScalingGroup. This feature must only be used on an EC2 instance.")
+			ei.logger.Error("Unable to retrieve EC2 AutoScalingGroup. This feature must only be used on an EC2 instance.")
 			return err
 		}
 		for _, tag := range result.Tags {
@@ -170,24 +171,25 @@ func (ei *ec2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error
 	return nil
 }
 
-func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, region string) *ec2Info {
+func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, region string, logger *zap.Logger) *ec2Info {
 	return &ec2Info{
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
 		ec2Credential:    ec2Credential,
 		done:             done,
 		Region:           region,
+		logger:           logger,
 	}
 }
 
 func (ei *ec2Info) ignoreInvalidFields() {
 	if idLength := len(ei.InstanceID); idLength > instanceIdSizeMax {
-		log.Printf("W! ec2Info: InstanceId length of %d exceeds %d characters and will be ignored", idLength, instanceIdSizeMax)
+		ei.logger.Warn("InstanceId length exceeds characters limit and will be ignored", zap.Int("length", idLength), zap.Int("character limit", instanceIdSizeMax))
 		ei.InstanceID = ""
 	}
 
 	if asgLength := len(ei.AutoScalingGroup); asgLength > autoScalingGroupSizeMax {
-		log.Printf("W! ec2Info: AutoScalingGroup length of %d exceeds %d characters and will be ignored", asgLength, autoScalingGroupSizeMax)
+		ei.logger.Warn("AutoScalingGroup length exceeds characters limit and will be ignored", zap.Int("length", asgLength), zap.Int("character limit", autoScalingGroupSizeMax))
 		ei.AutoScalingGroup = ""
 	}
 }

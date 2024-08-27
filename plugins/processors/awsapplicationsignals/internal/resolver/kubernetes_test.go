@@ -241,8 +241,8 @@ func TestServiceToWorkloadMapper_MapServiceToWorkload(t *testing.T) {
 	serviceAndNamespaceToSelectors.Store("service1@namespace1", mapset.NewSet("label1=value1", "label2=value2"))
 	workloadAndNamespaceToLabels.Store("deployment1@namespace1", mapset.NewSet("label1=value1", "label2=value2", "label3=value3"))
 
-	mapper := NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
-	mapper.MapServiceToWorkload()
+	mapper := newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
+	mapper.mapServiceToWorkload()
 
 	if _, ok := serviceToWorkload.Load("service1@namespace1"); !ok {
 		t.Errorf("Expected service1@namespace1 to be mapped to a workload, but it was not")
@@ -261,8 +261,8 @@ func TestServiceToWorkloadMapper_MapServiceToWorkload_NoWorkload(t *testing.T) {
 	serviceAndNamespaceToSelectors.Store(serviceAndNamespace, mapset.NewSet("label1=value1"))
 	serviceToWorkload.Store(serviceAndNamespace, "workload@namespace")
 
-	mapper := NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
-	mapper.MapServiceToWorkload()
+	mapper := newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
+	mapper.mapServiceToWorkload()
 
 	// Check that the service was deleted from serviceToWorkload
 	if _, ok := serviceToWorkload.Load(serviceAndNamespace); ok {
@@ -284,8 +284,8 @@ func TestServiceToWorkloadMapper_MapServiceToWorkload_MultipleWorkloads(t *testi
 	workloadAndNamespaceToLabels.Store("workload1@namespace", mapset.NewSet("label1=value1", "label2=value2", "label3=value3"))
 	workloadAndNamespaceToLabels.Store("workload2@namespace", mapset.NewSet("label1=value1", "label2=value2", "label4=value4"))
 
-	mapper := NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
-	mapper.MapServiceToWorkload()
+	mapper := newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
+	mapper.mapServiceToWorkload()
 
 	// Check that the service does not map to any workload
 	if _, ok := serviceToWorkload.Load(serviceAndNamespace); ok {
@@ -307,7 +307,7 @@ func TestMapServiceToWorkload_StopsWhenSignaled(t *testing.T) {
 		close(stopchan)
 	})
 
-	mapper := NewServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
+	mapper := newServiceToWorkloadMapper(serviceAndNamespaceToSelectors, workloadAndNamespaceToLabels, serviceToWorkload, logger, mockDeleter)
 
 	start := time.Now()
 	mapper.Start(stopchan)
@@ -339,7 +339,8 @@ func TestOnAddOrUpdateService(t *testing.T) {
 	serviceAndNamespaceToSelectors := &sync.Map{}
 
 	// Call the function
-	onAddOrUpdateService(service, ipToServiceAndNamespace, serviceAndNamespaceToSelectors)
+	svcWatcher := newServiceWatcherForTesting(ipToServiceAndNamespace, serviceAndNamespaceToSelectors)
+	svcWatcher.onAddOrUpdateService(service)
 
 	// Check that the maps contain the expected entries
 	if _, ok := ipToServiceAndNamespace.Load("1.2.3.4"); !ok {
@@ -372,7 +373,8 @@ func TestOnDeleteService(t *testing.T) {
 	serviceAndNamespaceToSelectors.Store("myservice@mynamespace", mapset.NewSet("app=myapp"))
 
 	// Call the function
-	onDeleteService(service, ipToServiceAndNamespace, serviceAndNamespaceToSelectors, mockDeleter)
+	svcWatcher := newServiceWatcherForTesting(ipToServiceAndNamespace, serviceAndNamespaceToSelectors)
+	svcWatcher.onDeleteService(service, mockDeleter)
 
 	// Check that the maps do not contain the service
 	if _, ok := ipToServiceAndNamespace.Load("1.2.3.4"); ok {
@@ -384,8 +386,6 @@ func TestOnDeleteService(t *testing.T) {
 }
 
 func TestOnAddOrUpdatePod(t *testing.T) {
-	logger, _ := zap.NewProduction()
-
 	t.Run("pod with both PodIP and HostIP", func(t *testing.T) {
 		ipToPod := &sync.Map{}
 		podToWorkloadAndNamespace := &sync.Map{}
@@ -409,7 +409,8 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 			},
 		}
 
-		onAddOrUpdatePod(pod, nil, ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount, true, logger, mockDeleter)
+		poWatcher := newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount)
+		poWatcher.onAddOrUpdatePod(pod, nil)
 
 		// Test the mappings in ipToPod
 		if podName, _ := ipToPod.Load("1.2.3.4"); podName != "testPod" {
@@ -461,7 +462,8 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 			},
 		}
 
-		onAddOrUpdatePod(pod, nil, ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount, true, logger, mockDeleter)
+		poWatcher := newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount)
+		poWatcher.onAddOrUpdatePod(pod, nil)
 
 		// Test the mappings in ipToPod
 		if podName, _ := ipToPod.Load("5.6.7.8:8080"); podName != "testPod" {
@@ -483,7 +485,6 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 		ipToPod := &sync.Map{}
 		podToWorkloadAndNamespace := &sync.Map{}
 		workloadAndNamespaceToLabels := &sync.Map{}
-		workloadPodCount := map[string]int{}
 
 		pod := &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
@@ -516,7 +517,8 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 		}
 
 		// add the pod
-		onAddOrUpdatePod(pod, nil, ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount, true, logger, mockDeleter)
+		poWatcher := newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, map[string]int{})
+		poWatcher.onAddOrUpdatePod(pod, nil)
 
 		// Test the mappings in ipToPod
 		if podName, ok := ipToPod.Load("5.6.7.8:8080"); !ok && podName != "testPod" {
@@ -552,14 +554,24 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 				PodIP:  "1.2.3.4",
 				HostIP: "5.6.7.8",
 			},
+			Spec: corev1.PodSpec{
+				HostNetwork: true,
+				Containers: []corev1.Container{
+					{
+						Ports: []corev1.ContainerPort{
+							{HostPort: 8080},
+						},
+					},
+				},
+			},
 		}
 
 		// add the pod
-		onAddOrUpdatePod(pod2, pod, ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount, false, logger, mockDeleter)
+		poWatcher.onAddOrUpdatePod(pod2, pod)
 
 		// Test the mappings in ipToPod
-		if _, ok := ipToPod.Load("5.6.7.8:8080"); ok {
-			t.Errorf("ipToPod[%s] should be deleted", "5.6.7.8:8080")
+		if podName, ok := ipToPod.Load("5.6.7.8:8080"); !ok && podName != "testPod" {
+			t.Errorf("ipToPod[%s] was incorrect, got: %s, want: %s.", "5.6.7.8:8080", podName, "testPod")
 		}
 
 		if podName, ok := ipToPod.Load("1.2.3.4"); !ok && podName != "testPod" {
@@ -577,8 +589,6 @@ func TestOnAddOrUpdatePod(t *testing.T) {
 }
 
 func TestOnDeletePod(t *testing.T) {
-	logger, _ := zap.NewProduction()
-
 	t.Run("pod with both PodIP and HostIP", func(t *testing.T) {
 		ipToPod := &sync.Map{}
 		podToWorkloadAndNamespace := &sync.Map{}
@@ -609,7 +619,8 @@ func TestOnDeletePod(t *testing.T) {
 		workloadAndNamespaceToLabels.Store("testDeployment@testNamespace", "testLabels")
 		workloadPodCount["testDeployment@testNamespace"] = 1
 
-		onDeletePod(pod, ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount, logger, mockDeleter)
+		poWatcher := newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount)
+		poWatcher.onDeletePod(pod)
 
 		// Test if the entries in ipToPod and podToWorkloadAndNamespace have been deleted
 		if _, ok := ipToPod.Load("1.2.3.4"); ok {
@@ -671,7 +682,8 @@ func TestOnDeletePod(t *testing.T) {
 		workloadAndNamespaceToLabels.Store("testDeployment@testNamespace", "testLabels")
 		workloadPodCount["testDeployment@testNamespace"] = 1
 
-		onDeletePod(pod, ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount, logger, mockDeleter)
+		poWatcher := newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels, workloadPodCount)
+		poWatcher.onDeletePod(pod)
 
 		// Test if the entries in ipToPod and podToWorkloadAndNamespace have been deleted
 		if _, ok := ipToPod.Load("5.6.7.8:8080"); ok {
@@ -697,7 +709,7 @@ func TestEksResolver(t *testing.T) {
 	logger, _ := zap.NewProduction()
 	ctx := context.Background()
 
-	t.Run("Test GetWorkloadAndNamespaceByIP", func(t *testing.T) {
+	t.Run("Test getWorkloadAndNamespaceByIP", func(t *testing.T) {
 		resolver := &kubernetesResolver{
 			logger:                    logger,
 			clusterName:               "test",
@@ -716,13 +728,13 @@ func TestEksResolver(t *testing.T) {
 		resolver.podToWorkloadAndNamespace.Store(pod, workloadAndNamespace)
 
 		// Test existing IP
-		workload, namespace, err := resolver.GetWorkloadAndNamespaceByIP(ip)
+		workload, namespace, err := resolver.getWorkloadAndNamespaceByIP(ip)
 		if err != nil || workload != "testDeployment" || namespace != "testNamespace" {
 			t.Errorf("Expected testDeployment@testNamespace, got %s@%s, error: %v", workload, namespace, err)
 		}
 
 		// Test non-existing IP
-		_, _, err = resolver.GetWorkloadAndNamespaceByIP("5.6.7.8")
+		_, _, err = resolver.getWorkloadAndNamespaceByIP("5.6.7.8")
 		if err == nil || !strings.Contains(err.Error(), "no kubernetes workload found for ip: 5.6.7.8") {
 			t.Errorf("Expected error, got %v", err)
 		}
@@ -732,7 +744,7 @@ func TestEksResolver(t *testing.T) {
 		serviceAndNamespace := "testService@testNamespace"
 		resolver.ipToServiceAndNamespace.Store(newIP, serviceAndNamespace)
 		resolver.serviceToWorkload.Store(serviceAndNamespace, workloadAndNamespace)
-		workload, namespace, err = resolver.GetWorkloadAndNamespaceByIP(newIP)
+		workload, namespace, err = resolver.getWorkloadAndNamespaceByIP(newIP)
 		if err != nil || workload != "testDeployment" || namespace != "testNamespace" {
 			t.Errorf("Expected testDeployment@testNamespace, got %s@%s, error: %v", workload, namespace, err)
 		}
@@ -812,13 +824,13 @@ func TestEksResolver(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "not-an-ip", getStrAttr(attributes, attr.AWSRemoteService, t))
 
-		// Test case 4: Process with valid IP but GetWorkloadAndNamespaceByIP returns error
+		// Test case 4: Process with valid IP but getWorkloadAndNamespaceByIP returns error
 		attributes = pcommon.NewMap()
 		attributes.PutStr(attr.AWSRemoteService, "192.168.1.2")
 		resourceAttributes = pcommon.NewMap()
 		err = resolver.Process(attributes, resourceAttributes)
 		assert.NoError(t, err)
-		assert.Equal(t, "UnknownRemoteService", getStrAttr(attributes, attr.AWSRemoteService, t))
+		assert.Equal(t, "192.168.1.2", getStrAttr(attributes, attr.AWSRemoteService, t))
 	})
 }
 
@@ -1073,19 +1085,38 @@ func TestExtractIPPort(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestGetHostNetworkPorts(t *testing.T) {
-	// Test Pod with no ports
+func TestFilterPodIPFields(t *testing.T) {
+	meta := metav1.ObjectMeta{
+		Name:      "test",
+		Namespace: "default",
+		Labels: map[string]string{
+			"name": "app",
+		},
+	}
 	pod := &corev1.Pod{
+		ObjectMeta: meta,
 		Spec: corev1.PodSpec{
+			HostNetwork: true,
 			Containers: []corev1.Container{
 				{},
 			},
 		},
+		Status: corev1.PodStatus{},
 	}
-	assert.Empty(t, getHostNetworkPorts(pod))
+	newPod, err := minimizePod(pod)
+	assert.Nil(t, err)
+	assert.Empty(t, getHostNetworkPorts(newPod.(*corev1.Pod)))
 
-	// Test Pod with one port
+	podStatus := corev1.PodStatus{
+		PodIP: "192.168.0.12",
+		HostIPs: []corev1.HostIP{
+			{
+				IP: "132.168.3.12",
+			},
+		},
+	}
 	pod = &corev1.Pod{
+		ObjectMeta: meta,
 		Spec: corev1.PodSpec{
 			HostNetwork: true,
 			Containers: []corev1.Container{
@@ -1096,10 +1127,14 @@ func TestGetHostNetworkPorts(t *testing.T) {
 				},
 			},
 		},
+		Status: podStatus,
 	}
-	assert.Equal(t, []string{"8080"}, getHostNetworkPorts(pod))
+	newPod, err = minimizePod(pod)
+	assert.Nil(t, err)
+	assert.Equal(t, "app", newPod.(*corev1.Pod).Labels["name"])
+	assert.Equal(t, []string{"8080"}, getHostNetworkPorts(newPod.(*corev1.Pod)))
+	assert.Equal(t, podStatus, newPod.(*corev1.Pod).Status)
 
-	// Test Pod with multiple ports
 	pod = &corev1.Pod{
 		Spec: corev1.PodSpec{
 			HostNetwork: true,
@@ -1112,8 +1147,32 @@ func TestGetHostNetworkPorts(t *testing.T) {
 				},
 			},
 		},
+		Status: podStatus,
 	}
-	assert.Equal(t, []string{"8080", "8081"}, getHostNetworkPorts(pod))
+	newPod, err = minimizePod(pod)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"8080", "8081"}, getHostNetworkPorts(newPod.(*corev1.Pod)))
+	assert.Equal(t, podStatus, newPod.(*corev1.Pod).Status)
+}
+
+func TestFilterServiceIPFields(t *testing.T) {
+	meta := metav1.ObjectMeta{
+		Name:      "test",
+		Namespace: "default",
+	}
+	svc := &corev1.Service{
+		ObjectMeta: meta,
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"name": "app",
+			},
+			ClusterIP: "10.0.12.4",
+		},
+	}
+	newSvc, err := minimizeService(svc)
+	assert.Nil(t, err)
+	assert.Equal(t, "10.0.12.4", newSvc.(*corev1.Service).Spec.ClusterIP)
+	assert.Equal(t, "app", newSvc.(*corev1.Service).Spec.Selector["name"])
 }
 
 func TestHandlePodUpdate(t *testing.T) {
@@ -1124,136 +1183,6 @@ func TestHandlePodUpdate(t *testing.T) {
 		initialIPToPod  map[string]string
 		expectedIPToPod map[string]string
 	}{
-		{
-			name: "Old and New Pod Use Host Network, Different Ports",
-			oldPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					HostIP: "192.168.1.1",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: true,
-					Containers: []corev1.Container{
-						{
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort: 8000,
-								},
-							},
-						},
-					},
-				},
-			},
-			newPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					HostIP: "192.168.1.1",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: true,
-					Containers: []corev1.Container{
-						{
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort: 8080,
-								},
-							},
-						},
-					},
-				},
-			},
-			initialIPToPod: map[string]string{
-				"192.168.1.1:8000": "mypod",
-			},
-			expectedIPToPod: map[string]string{
-				"192.168.1.1:8080": "mypod",
-			},
-		},
-		// ...other test cases...
-		{
-			name: "Old Pod Uses Host Network, New Pod Does Not",
-			oldPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					HostIP: "192.168.1.2",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: true,
-					Containers: []corev1.Container{
-						{
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort: 8001,
-								},
-							},
-						},
-					},
-				},
-			},
-			newPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					PodIP: "10.0.0.1",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: false,
-				},
-			},
-			initialIPToPod: map[string]string{
-				"192.168.1.2:8001": "mypod",
-			},
-			expectedIPToPod: map[string]string{
-				"10.0.0.1": "mypod",
-			},
-		},
-		{
-			name: "Old Pod Does Not Use Host Network, New Pod Does",
-			oldPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					PodIP: "10.0.0.2",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: false,
-				},
-			},
-			newPod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mypod",
-				},
-				Status: corev1.PodStatus{
-					HostIP: "192.168.1.3",
-				},
-				Spec: corev1.PodSpec{
-					HostNetwork: true,
-					Containers: []corev1.Container{
-						{
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort: 8002,
-								},
-							},
-						},
-					},
-				},
-			},
-			initialIPToPod: map[string]string{
-				"10.0.0.2": "mypod",
-			},
-			expectedIPToPod: map[string]string{
-				"192.168.1.3:8002": "mypod",
-			},
-		},
 		{
 			name: "Old and New Pod Do Not Use Host Network, Different Pod IPs",
 			oldPod: &corev1.Pod{
@@ -1323,7 +1252,8 @@ func TestHandlePodUpdate(t *testing.T) {
 			for k, v := range tc.initialIPToPod {
 				ipToPod.Store(k, v)
 			}
-			handlePodUpdate(tc.newPod, tc.oldPod, ipToPod, mockDeleter)
+			poWatcher := newPodWatcherForTesting(ipToPod, nil, nil, map[string]int{})
+			poWatcher.handlePodUpdate(tc.newPod, tc.oldPod)
 
 			// Now validate that ipToPod map has been updated correctly
 			for key, expectedValue := range tc.expectedIPToPod {
@@ -1341,5 +1271,23 @@ func TestHandlePodUpdate(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func newServiceWatcherForTesting(ipToServiceAndNamespace, serviceAndNamespaceToSelectors *sync.Map) *serviceWatcher {
+	logger, _ := zap.NewDevelopment()
+	return &serviceWatcher{ipToServiceAndNamespace, serviceAndNamespaceToSelectors, logger, nil, nil}
+}
+
+func newPodWatcherForTesting(ipToPod, podToWorkloadAndNamespace, workloadAndNamespaceToLabels *sync.Map, workloadPodCount map[string]int) *podWatcher {
+	logger, _ := zap.NewDevelopment()
+	return &podWatcher{
+		ipToPod:                      ipToPod,
+		podToWorkloadAndNamespace:    podToWorkloadAndNamespace,
+		workloadAndNamespaceToLabels: workloadAndNamespaceToLabels,
+		workloadPodCount:             workloadPodCount,
+		logger:                       logger,
+		informer:                     nil,
+		deleter:                      mockDeleter,
 	}
 }

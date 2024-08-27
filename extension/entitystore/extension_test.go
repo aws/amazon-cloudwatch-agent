@@ -13,13 +13,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
@@ -55,6 +55,7 @@ type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
 	Tags                     string
 	TagValue                 string
+	InstanceTagError         bool
 }
 
 func mockMetadataProviderWithAccountId(accountId string) *mockMetadataProvider {
@@ -85,6 +86,9 @@ func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
 }
 
 func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
+	if m.InstanceTagError {
+		return "", errors.New("an error occurred for instance tag retrieval")
+	}
 	return m.Tags, nil
 }
 

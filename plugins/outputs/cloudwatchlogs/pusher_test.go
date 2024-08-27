@@ -17,11 +17,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf/models"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
@@ -234,7 +234,11 @@ func TestLongMessageGetsTruncated(t *testing.T) {
 
 	stop, p := testPreparation(-1, &s, 1*time.Hour, maxRetryTimeout)
 	p.AddEvent(evtMock{longMsg, time.Now(), nil})
-	time.Sleep(10 * time.Millisecond)
+
+	for len(p.events) < 1 {
+		time.Sleep(10 * time.Millisecond)
+	}
+
 	p.send()
 	close(stop)
 	wg.Wait()

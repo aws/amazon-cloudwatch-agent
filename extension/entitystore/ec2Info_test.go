@@ -4,14 +4,20 @@
 package entitystore
 
 import (
+	"bytes"
+	"log"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 )
 
@@ -64,6 +70,10 @@ func (m *mockEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsO
 	return &allTags, nil
 }
 
+func mockEC2Provider(region string, credential *configaws.CredentialConfig) ec2iface.EC2API {
+	return &mockEC2Client{withASG: true}
+}
+
 func TestSetInstanceIdAndRegion(t *testing.T) {
 	type args struct {
 		metadataProvider ec2metadataprovider.MetadataProvider
@@ -86,9 +96,11 @@ func TestSetInstanceIdAndRegion(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		logger, _ := zap.NewDevelopment()
 		t.Run(tt.name, func(t *testing.T) {
 			ei := &ec2Info{
 				metadataProvider: tt.args.metadataProvider,
+				logger:           logger,
 			}
 			if err := ei.setInstanceId(); (err != nil) != tt.wantErr {
 				t.Errorf("setInstanceId() error = %v, wantErr %v", err, tt.wantErr)
@@ -144,8 +156,9 @@ func TestRetrieveASGName(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		logger, _ := zap.NewDevelopment()
 		t.Run(tt.name, func(t *testing.T) {
-			ei := &ec2Info{metadataProvider: tt.args.metadataProvider}
+			ei := &ec2Info{metadataProvider: tt.args.metadataProvider, logger: logger}
 			if err := ei.retrieveAsgName(tt.args.ec2Client); (err != nil) != tt.wantErr {
 				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -186,8 +199,9 @@ func TestRetrieveASGNameWithDescribeTags(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		logger, _ := zap.NewDevelopment()
 		t.Run(tt.name, func(t *testing.T) {
-			ei := &ec2Info{}
+			ei := &ec2Info{logger: logger}
 			if err := ei.retrieveAsgNameWithDescribeTags(tt.args.ec2Client); (err != nil) != tt.wantErr {
 				t.Errorf("retrieveAsgName() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -197,6 +211,7 @@ func TestRetrieveASGNameWithDescribeTags(t *testing.T) {
 }
 
 func TestIgnoreInvalidFields(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
 	type want struct {
 		instanceId       string
 		autoScalingGroup string
@@ -211,6 +226,7 @@ func TestIgnoreInvalidFields(t *testing.T) {
 			args: &ec2Info{
 				InstanceID:       "i-01d2417c27a396e44",
 				AutoScalingGroup: "asg",
+				logger:           logger,
 			},
 			want: want{
 				instanceId:       "i-01d2417c27a396e44",
@@ -222,6 +238,7 @@ func TestIgnoreInvalidFields(t *testing.T) {
 			args: &ec2Info{
 				InstanceID:       strings.Repeat("a", 20),
 				AutoScalingGroup: "asg",
+				logger:           logger,
 			},
 			want: want{
 				instanceId:       "",
@@ -233,6 +250,7 @@ func TestIgnoreInvalidFields(t *testing.T) {
 			args: &ec2Info{
 				InstanceID:       "i-01d2417c27a396e44",
 				AutoScalingGroup: strings.Repeat("a", 256),
+				logger:           logger,
 			},
 			want: want{
 				instanceId:       "i-01d2417c27a396e44",
@@ -245,6 +263,64 @@ func TestIgnoreInvalidFields(t *testing.T) {
 			tt.args.ignoreInvalidFields()
 			assert.Equal(t, tt.want.instanceId, tt.args.InstanceID)
 			assert.Equal(t, tt.want.autoScalingGroup, tt.args.AutoScalingGroup)
+		})
+	}
+}
+
+func TestLogMessageDoesNotIncludeResourceInfo(t *testing.T) {
+	type args struct {
+		metadataProvider ec2metadataprovider.MetadataProvider
+	}
+	tests := []struct {
+		name string
+		args args
+		want ec2Info
+	}{
+		{
+			name: "AutoScalingGroupWithDescribeTags",
+			args: args{
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, InstanceTagError: true},
+			},
+			want: ec2Info{
+				InstanceID: mockedInstanceIdentityDoc.InstanceID,
+			},
+		},
+		{
+			name: "AutoScalingGroupWithInstanceTags",
+			args: args{
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDoc, Tags: "aws:autoscaling:groupName", TagValue: tagVal3},
+			},
+			want: ec2Info{
+				InstanceID: mockedInstanceIdentityDoc.InstanceID,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a buffer to capture the logger output
+			var buf bytes.Buffer
+			writer := zapcore.AddSync(&buf)
+
+			// Create a custom zapcore.Core that writes to the buffer
+			encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+			core := zapcore.NewCore(encoder, writer, zapcore.DebugLevel)
+
+			logger := zap.New(core)
+			done := make(chan struct{})
+
+			ei := &ec2Info{
+				metadataProvider: tt.args.metadataProvider,
+				ec2Provider:      mockEC2Provider,
+				logger:           logger,
+				done:             done,
+			}
+			go ei.initEc2Info()
+			time.Sleep(3 * time.Second)
+
+			logOutput := buf.String()
+			log.Println(logOutput)
+			assert.NotContains(t, logOutput, ei.InstanceID)
+			assert.NotContains(t, logOutput, ei.AutoScalingGroup)
 		})
 	}
 }

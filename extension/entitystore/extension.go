@@ -8,7 +8,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -20,6 +19,7 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
@@ -91,7 +91,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	}
 	switch e.mode {
 	case config.ModeEC2:
-		e.ec2Info = *newEC2Info(e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.config.Region)
+		e.ec2Info = *newEC2Info(e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.config.Region, e.logger)
 		go e.ec2Info.initEc2Info()
 	}
 	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)

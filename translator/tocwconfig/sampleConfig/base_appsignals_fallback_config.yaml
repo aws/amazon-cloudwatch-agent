@@ -194,6 +194,7 @@ processors:
           enabled: true
         host.name:
           enabled: true
+      tags: []
     compression: ""
     consul:
       address: ""
@@ -354,6 +355,7 @@ processors:
     k8snode:
       auth_type: serviceAccount
       context: ""
+      kube_config_path: ""
       node_from_env_var: ""
       resource_attributes:
         k8s.node.name:

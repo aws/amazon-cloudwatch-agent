@@ -226,11 +226,7 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 	if err != nil {
 		return nil, err
 	}
-	var result map[string]any
-	if result, err = mapstructure.Marshal(cfg); err != nil {
-		return nil, err
-	}
-	return result, nil
+	return mapstructure.Marshal(cfg)
 }
 
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {

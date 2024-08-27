@@ -16,6 +16,7 @@ const (
 	AWSRemoteResourceIdentifier = "aws.remote.resource.identifier"
 	AWSRemoteResourceType       = "aws.remote.resource.type"
 	AWSHostedInEnvironment      = "aws.hostedin.environment"
+	AWSRemoteDbUser             = "aws.remote.db.user"
 
 	// resource detection processor attributes
 	ResourceDetectionHostId   = "host.id"

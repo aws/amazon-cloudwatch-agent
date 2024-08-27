@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/otelcol"
+	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 )
@@ -26,8 +28,10 @@ func TestConfigProvider(t *testing.T) {
 	t.Setenv("ENV_REGION", envRegion)
 	factories, err := defaultcomponents.Factories()
 	require.NoError(t, err)
-
-	actualProvider, err := Get(filepath.Join("../../translator/tocwconfig/sampleConfig", "config_with_env.yaml"))
+	logger, err := zap.NewProduction()
+	assert.NoError(t, err)
+	providerSettings := GetSettings(filepath.Join("../../translator/tocwconfig/sampleConfig", "config_with_env.yaml"), logger)
+	actualProvider, err := otelcol.NewConfigProvider(providerSettings)
 	assert.NoError(t, err)
 	actualCfg, err := actualProvider.Get(context.Background(), factories)
 	assert.NoError(t, err)

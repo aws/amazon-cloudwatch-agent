@@ -1,0 +1,17 @@
+endpoint: my_jmx_host:12345
+target_system: jvm,tomcat
+collection_interval: 60s
+otlp:
+  endpoint: 0.0.0.0:0
+  timeout: 5s
+username: cwagent
+password_file: /path/to/password/file
+keystore_path: /keystore
+keystore_type: PKCS
+truststore_path: /truststore
+truststore_type: PKCS12
+remote_profile: SASL/PLAIN
+realm: test_realm
+resource_attributes: 
+  service.name: jmx_app
+  host: host

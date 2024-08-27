@@ -29,6 +29,7 @@ cp ${PREPKGPATH}/amazon-cloudwatch-agent-config-wizard.exe ${BUILD_ROOT}/amazon-
 cp ${PREPKGPATH}/start-amazon-cloudwatch-agent.exe ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/common-config.toml ${BUILD_ROOT}/amazon-cloudwatch-agent/
 cp ${PREPKGPATH}/amazon-cloudwatch-agent-schema.json ${BUILD_ROOT}/amazon-cloudwatch-agent/
+cp ${PREPKGPATH}/opentelemetry-jmx-metrics.jar ${BUILD_ROOT}/amazon-cloudwatch-agent/
 
 echo "Constructing the zip package"
 

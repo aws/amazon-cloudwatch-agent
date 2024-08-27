@@ -22,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/procstat"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/jmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -30,13 +31,9 @@ const (
 )
 
 var (
-	logKey       = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
-	logMetricKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey)
-	metricKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
-	skipInputSet = collections.NewSet[string](files.SectionKey, windows_events.SectionKey)
-)
-
-var (
+	logKey           = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
+	metricKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
+	skipInputSet     = collections.NewSet[string](common.JmxKey, files.SectionKey, windows_events.SectionKey)
 	multipleInputSet = collections.NewSet[string](
 		procstat.SectionKey,
 	)
@@ -53,6 +50,10 @@ var (
 	windowsInputSet = collections.NewSet[string](
 		gpu.SectionKey,
 		statsd.SectionKey,
+	)
+	// skipWindowsInputSet contains all the supported metric input plugins that should not be included in telegraf windows plugins
+	skipWindowsInputSet = collections.NewSet[string](
+		common.JmxKey,
 	)
 	// aliasMap contains mappings for all input plugins that use another
 	// name in Telegraf.
@@ -72,6 +73,7 @@ var (
 	// exports to Cloudwatch while not having to follow the adapter rules
 	OtelReceivers = map[string]common.Translator[component.Config]{
 		common.OtlpKey: otlp.NewTranslator(otlp.WithDataType(component.DataTypeMetrics)),
+		common.JmxKey:  jmx.NewTranslator(),
 	}
 )
 
@@ -152,6 +154,10 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 	translators := common.NewTranslatorMap[component.Config]()
 	if inputs, ok := conf.Get(baseKey).(map[string]interface{}); ok {
 		for inputName := range inputs {
+			if skipInputSet.Contains(inputName) {
+				// logs agent is separate from otel agent
+				continue
+			}
 			if validInputs != nil {
 				if _, ok := validInputs[inputName]; !ok {
 					log.Printf("W! Ignoring unrecognized input %s", inputName)
@@ -159,10 +165,7 @@ func fromInputs(conf *confmap.Conf, validInputs map[string]bool, baseKey string)
 				}
 			}
 			cfgKey := common.ConfigKey(baseKey, inputName)
-			if skipInputSet.Contains(inputName) {
-				// logs agent is separate from otel agent
-				continue
-			} else if measurement := common.GetArray[any](conf, common.ConfigKey(cfgKey, common.MeasurementKey)); measurement != nil && len(measurement) == 0 {
+			if measurement := common.GetArray[any](conf, common.ConfigKey(cfgKey, common.MeasurementKey)); measurement != nil && len(measurement) == 0 {
 				log.Printf("W! Agent will not emit any metrics for %s due to empty measurement field ", inputName)
 				continue
 			} else if multipleInputSet.Contains(inputName) {
@@ -222,7 +225,7 @@ func fromMultipleInput(conf *confmap.Conf, inputName, os string) common.Translat
 				}
 			}
 		}
-	} else if os == translatorconfig.OS_TYPE_WINDOWS && !windowsInputSet.Contains(inputName) {
+	} else if os == translatorconfig.OS_TYPE_WINDOWS && !windowsInputSet.Contains(inputName) && !skipWindowsInputSet.Contains(inputName) {
 		/* For customized metrics from Windows and  window performance counters metrics
 		   	[[inputs.win_perf_counters.object]]
 		   		ObjectName = "Processor"

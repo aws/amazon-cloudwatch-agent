@@ -11,7 +11,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
@@ -309,10 +308,11 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"PodName", "Namespace", "ClusterName"}, {"ClusterName"}, {"FullPodName", "PodName", "Namespace", "ClusterName"}, {"Service", "Namespace", "ClusterName"}},
 						MetricNameSelectors: []string{"pod_cpu_reserved_capacity", "pod_memory_reserved_capacity", "pod_number_of_container_restarts", "pod_number_of_containers", "pod_number_of_running_containers",
 							"pod_status_ready", "pod_status_scheduled", "pod_status_running", "pod_status_pending", "pod_status_failed", "pod_status_unknown",
-							"pod_status_succeeded", "pod_memory_request", "pod_memory_limit", "pod_cpu_limit", "pod_cpu_request",
+							"pod_status_succeeded", "pod_memory_request", "pod_memory_limit", "pod_cpu_limit", "pod_cpu_request", "pod_cpu_usage_total", "pod_memory_working_set",
 							"pod_container_status_running", "pod_container_status_terminated", "pod_container_status_waiting", "pod_container_status_waiting_reason_crash_loop_back_off",
 							"pod_container_status_waiting_reason_image_pull_error", "pod_container_status_waiting_reason_start_error", "pod_container_status_waiting_reason_create_container_error",
 							"pod_container_status_waiting_reason_create_container_config_error", "pod_container_status_terminated_reason_oom_killed",
+							"pod_gpu_request", "pod_gpu_limit", "pod_gpu_usage_total", "pod_gpu_reserved_capacity",
 						},
 					},
 					{
@@ -322,7 +322,7 @@ func TestTranslator(t *testing.T) {
 							"node_cpu_usage_total", "node_cpu_limit", "node_memory_working_set", "node_memory_limit",
 							"node_status_condition_ready", "node_status_condition_disk_pressure", "node_status_condition_memory_pressure",
 							"node_status_condition_pid_pressure", "node_status_condition_network_unavailable", "node_status_condition_unknown",
-							"node_status_capacity_pods", "node_status_allocatable_pods"},
+							"node_status_capacity_pods", "node_status_allocatable_pods", "node_gpu_limit", "node_gpu_usage_total", "node_gpu_reserved_capacity"},
 					},
 					{
 						Dimensions: [][]string{
@@ -417,18 +417,6 @@ func TestTranslator(t *testing.T) {
 						Dimensions: [][]string{{"ClusterName"}, {"ClusterName", "NodeName", "InstanceId"}, {"ClusterName", "NodeName", "InstanceId", "InstanceType", "GpuDevice"}},
 						MetricNameSelectors: []string{
 							"node_gpu_utilization", "node_gpu_memory_utilization", "node_gpu_memory_total", "node_gpu_memory_used", "node_gpu_power_draw", "node_gpu_temperature",
-						},
-					},
-					{
-						Dimensions: [][]string{{"ClusterName", "NodeName", "InstanceId"}, {"ClusterName"}},
-						MetricNameSelectors: []string{
-							"node_gpu_total", "node_gpu_request", "node_gpu_limit",
-						},
-					},
-					{
-						Dimensions: [][]string{{"ClusterName"}},
-						MetricNameSelectors: []string{
-							"cluster_gpu_request", "cluster_gpu_total",
 						},
 					},
 					{
@@ -974,7 +962,7 @@ func TestTranslateAppSignals(t *testing.T) {
 				gotCfg, ok := got.(*awsemfexporter.Config)
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
-				require.NoError(t, component.UnmarshalConfig(testCase.want, wantCfg))
+				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

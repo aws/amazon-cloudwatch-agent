@@ -9,11 +9,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 var ErrOutputStopped = errors.New("Output plugin stopped")
