@@ -1313,9 +1313,6 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "endpoint"
-      ],
       "anyOf": [
         {
           "required": [
