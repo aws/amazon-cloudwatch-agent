@@ -56,7 +56,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithDataType(t.dataType)))
 
 	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
-		translators.Exporters.Set(debug.NewTranslator())
+		translators.Exporters.Set(debug.NewTranslatorWithName(common.AppSignals))
 	}
 
 	if t.dataType == component.DataTypeTraces {

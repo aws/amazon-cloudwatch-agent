@@ -23,12 +23,15 @@ type translator struct {
 var _ common.Translator[component.Config] = (*translator)(nil)
 
 func NewTranslator() common.Translator[component.Config] {
-	t := &translator{factory: debugexporter.NewFactory()}
-	return t
+	return NewTranslatorWithName("")
+}
+
+func NewTranslatorWithName(name string) common.Translator[component.Config] {
+	return &translator{name: name, factory: debugexporter.NewFactory()}
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), common.AppSignals)
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
