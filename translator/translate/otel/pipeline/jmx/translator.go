@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/prometheusremotewrite"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -124,6 +125,10 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			translators.Processors.Set(rollupprocessor.NewTranslator())
 		}
 		translators.Extensions.Set(sigv4auth.NewTranslator())
+	}
+
+	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
+		translators.Exporters.Set(debug.NewTranslatorWithName(common.JmxKey))
 	}
 
 	return &translators, nil
