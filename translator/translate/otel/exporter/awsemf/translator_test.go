@@ -330,9 +330,9 @@ func TestTranslator(t *testing.T) {
 						MetricNameSelectors: []string{
 							"node_interface_network_rx_dropped", "node_interface_network_tx_dropped",
 							"node_diskio_io_service_bytes_total", "node_diskio_io_serviced_total",
-							"hyper_pod_node_health_status_schedulable", "hyper_pod_node_health_status_unschedulable_pending_replacement",
-							"hyper_pod_node_health_status_unschedulable_pending_reboot",
-							"hyper_pod_node_health_status_unschedulable"},
+							"hyperpod_node_health_status_schedulable", "hyperpod_node_health_status_unschedulable_pending_replacement",
+							"hyperpod_node_health_status_unschedulable_pending_reboot",
+							"hyperpod_node_health_status_unschedulable"},
 					},
 					{
 						Dimensions:          [][]string{{"NodeName", "InstanceId", "ClusterName"}, {"ClusterName"}},
