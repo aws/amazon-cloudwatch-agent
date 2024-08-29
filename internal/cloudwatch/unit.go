@@ -40,6 +40,7 @@ var uniqueConversions = map[string]struct {
 	scale        float64
 }{
 	// time
+	"ns":  {types.StandardUnitNone, 1},
 	"min": {types.StandardUnitSeconds, time.Minute.Seconds()},
 	"h":   {types.StandardUnitSeconds, time.Hour.Seconds()},
 	"d":   {types.StandardUnitSeconds, 24 * time.Hour.Seconds()},
