@@ -2,11 +2,11 @@
 Amazon CloudWatch Agent 1.300045.1 (2024-09-03)
 ========================================================================
 Bug Fixes:
-* [ApplicationSignals] EKS detector no-op on non-EKS environments
+* [ApplicationSignals] EKS resource detector is now no-op on non-EKS environments
 * Stop converting nanosecond metrics to microsecond
 
 Enhancements:
-* [ContainerInsights] Add support for NeuronMonitor on HyperPod on EKS
+* [ContainerInsights] Use IMDS to get instance ID and type for Neuron Monitor.
 
 ========================================================================
 Amazon CloudWatch Agent 1.300045.0 (2024-08-26)
