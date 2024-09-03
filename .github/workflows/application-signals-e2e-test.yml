@@ -50,7 +50,7 @@ jobs:
 
   java-eks-e2e-test:
     needs: CheckBuildTestArtifacts
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-eks-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -59,7 +59,7 @@ jobs:
 
   java-ec2-default-e2e-test:
     needs: CheckBuildTestArtifacts
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-default-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -67,7 +67,7 @@ jobs:
 
   java-ec2-asg-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-asg-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-ec2-asg-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -75,7 +75,7 @@ jobs:
 
   java-metric-limiter-e2e-test:
     needs: [ CheckBuildTestArtifacts, java-eks-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-metric-limiter-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/metric-limiter-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -84,7 +84,7 @@ jobs:
 
   java-k8s-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-k8s-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/java-k8s-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -92,7 +92,7 @@ jobs:
 
   python-eks-e2e-test:
     needs: [ CheckBuildTestArtifacts, java-metric-limiter-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-eks-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -101,7 +101,7 @@ jobs:
 
   python-ec2-default-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-default-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-default-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -109,7 +109,7 @@ jobs:
 
   python-ec2-asg-e2e-test:
     needs: [ CheckBuildTestArtifacts ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-asg-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-ec2-asg-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
@@ -117,7 +117,7 @@ jobs:
 
   python-k8s-e2e-test:
     needs: [ CheckBuildTestArtifacts, java-k8s-e2e-test ]
-    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-e2e-test.yml@main
+    uses: aws-observability/aws-application-signals-test-framework/.github/workflows/python-k8s-test.yml@main
     secrets: inherit
     with:
       aws-region: us-east-1
