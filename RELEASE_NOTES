@@ -1,4 +1,14 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300045.1 (2024-09-03)
+========================================================================
+Bug Fixes:
+* [ApplicationSignals] EKS resource detector is now no-op on non-EKS environments
+* Stop converting nanosecond metrics to microsecond
+
+Enhancements:
+* [ContainerInsights] Use IMDS to get instance ID and type for Neuron Monitor.
+
+========================================================================
 Amazon CloudWatch Agent 1.300045.0 (2024-08-26)
 ========================================================================
 Bug Fixes:
