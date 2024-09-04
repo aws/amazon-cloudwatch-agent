@@ -41,7 +41,7 @@ func cleanLaunchConfiguration() error {
 	for _, launchConfig := range launchConfigOut.LaunchConfigurations {
 		log.Printf("Found %s with creation date: %v", *launchConfig.LaunchConfigurationName, *launchConfig.CreatedTime)
 		// if not cwagent-integ-test ignore it
-		if !strings.Contains(*launchConfig.LaunchConfigurationName, "cwagent-integ-test") {
+		if !strings.Contains(*launchConfig.LaunchConfigurationName, "integ") {
 			continue
 		}
 		if expirationDate.After(*launchConfig.CreatedTime) {
