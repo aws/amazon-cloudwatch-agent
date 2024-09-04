@@ -156,7 +156,13 @@ extensions:
         service_name: ""
         shared_credentials_file:
             - fake-path
+    entitystore:
+        mode: onPremise
+        profile: AmazonCloudWatchAgent
+        region: us-east-1
+        shared_credential_file: fake-path
 processors:
+    awsentity: {}
     awsapplicationsignals:
         resolvers:
             - name: ""
@@ -401,7 +407,7 @@ processors:
                 key_file: ""
                 max_version: ""
                 min_version: ""
-                reload_interval: 0s
+                reload_interval: "0s"
                 server_name_override: ""
             token: ""
         override: true
@@ -473,12 +479,14 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
+        - entitystore
     pipelines:
         metrics/application_signals:
             exporters:
                 - debug/application_signals
                 - awsemf/application_signals
             processors:
+                - awsentity
                 - resourcedetection
                 - awsapplicationsignals
             receivers:
