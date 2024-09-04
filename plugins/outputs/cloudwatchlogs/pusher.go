@@ -14,11 +14,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
@@ -53,6 +53,7 @@ type pusher struct {
 	RetryDuration time.Duration
 	Log           telegraf.Logger
 
+	logSrc              logs.LogSrc
 	events              []*cloudwatchlogs.InputLogEvent
 	minT, maxT          *time.Time
 	doneCallbacks       []func()
@@ -73,13 +74,14 @@ type pusher struct {
 	wg                    *sync.WaitGroup
 }
 
-func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup) *pusher {
+func NewPusher(target Target, service CloudWatchLogsService, flushTimeout time.Duration, retryDuration time.Duration, logger telegraf.Logger, stop <-chan struct{}, wg *sync.WaitGroup, logSrc logs.LogSrc) *pusher {
 	p := &pusher{
 		Target:          target,
 		Service:         service,
 		FlushTimeout:    flushTimeout,
 		RetryDuration:   retryDuration,
 		Log:             logger,
+		logSrc:          logSrc,
 		events:          make([]*cloudwatchlogs.InputLogEvent, 0, 10),
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushTimer:      time.NewTimer(flushTimeout),
@@ -228,6 +230,10 @@ func (p *pusher) send() {
 	if p.needSort {
 		sort.Stable(ByTimestamp(p.events))
 	}
+	var entity *cloudwatchlogs.Entity
+	if p.logSrc != nil {
+		entity = p.logSrc.Entity()
+	}
 
 	input := &cloudwatchlogs.PutLogEventsInput{
 		LogEvents:     p.events,
@@ -235,6 +241,7 @@ func (p *pusher) send() {
 		LogStreamName: &p.Stream,
 		SequenceToken: p.sequenceToken,
 	}
+	input.Entity = entity
 
 	startTime := time.Now()
 
