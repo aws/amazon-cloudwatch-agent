@@ -60,14 +60,14 @@ func cleanAMI() error {
 		}
 		log.Printf("image name %v image id %v experation date %v creation date parsed %v image creation date raw %v",
 			*image.Name, *image.ImageId, creationDate, expirationDate, *image.CreationDate)
-		if expirationDate.After(creationDate) {
-			log.Printf("Try to delete ami %s tags %v launch-date %s", *image.Name, image.Tags, *image.CreationDate)
-			deregisterImageInput := ec2.DeregisterImageInput{ImageId: image.ImageId}
-			_, err := ec2client.DeregisterImage(cxt, &deregisterImageInput)
-			if err != nil {
-				errList = append(errList, err)
-			}
-		}
+		// if expirationDate.After(creationDate) {
+		// 	log.Printf("Try to delete ami %s tags %v launch-date %s", *image.Name, image.Tags, *image.CreationDate)
+		// 	deregisterImageInput := ec2.DeregisterImageInput{ImageId: image.ImageId}
+		// 	_, err := ec2client.DeregisterImage(cxt, &deregisterImageInput)
+		// 	if err != nil {
+		// 		errList = append(errList, err)
+		// 	}
+		// }
 	}
 
 	if len(errList) != 0 {
