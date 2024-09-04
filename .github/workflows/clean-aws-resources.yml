@@ -249,7 +249,7 @@ jobs:
           role-to-assume: ${{ secrets.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
 
-      - name: Clean old asggit
+      - name: Clean old launch configuration
         working-directory: tool/clean
         run: go run ./clean_launch_configuration/clean_launch_configuration.go --tags=clean
   clean-iam-roles:
