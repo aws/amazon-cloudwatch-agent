@@ -5,11 +5,13 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	"log"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+
+	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
 
 func main() {

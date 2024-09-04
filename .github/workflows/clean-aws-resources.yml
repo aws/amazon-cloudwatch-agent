@@ -269,4 +269,4 @@ jobs:
 
       - name: Clean old IAM roles
         working-directory: tool/clean
-        run: go run ./clean_iam_roles/clean_iam_roles.go --tags=clean
+        run: go run ./clean_iam_roles/clean_iam_roles.go --tags=cleanfame
