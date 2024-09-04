@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -39,6 +40,10 @@ func cleanLaunchConfiguration() error {
 	log.Printf("Found %d launch configurations", len(launchConfigOut.LaunchConfigurations))
 	for _, launchConfig := range launchConfigOut.LaunchConfigurations {
 		log.Printf("Found %s with creation date: %v", *launchConfig.LaunchConfigurationName, *launchConfig.CreatedTime)
+		// if not cwagent-integ-test ignore it
+		if !strings.Contains(*launchConfig.LaunchConfigurationName, "cwagent-integ-test") {
+			continue
+		}
 		if expirationDate.After(*launchConfig.CreatedTime) {
 			log.Printf("Try to delete %s", *launchConfig.LaunchConfigurationName)
 			_, err := autoScalingClient.DeleteLaunchConfiguration(ctx, &autoscaling.DeleteLaunchConfigurationInput{
