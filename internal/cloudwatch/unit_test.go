@@ -56,7 +56,7 @@ func TestScaledUnits(t *testing.T) {
 		{"kB", "Kilobytes", 1},
 		{"kib/s", "Kilobytes/Second", 1.024},
 		{"ms", "Milliseconds", 1},
-		{"ns", "Microseconds", 0.001},
+		{"ns", "None", 1},
 		{"min", "Seconds", 60},
 		{"h", "Seconds", 60 * 60},
 		{"d", "Seconds", 24 * 60 * 60},

@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385588(v=vs.85).aspx
@@ -127,6 +128,10 @@ func (w *windowsEventLog) Class() string {
 
 func (w *windowsEventLog) Stop() {
 	close(w.done)
+}
+
+func (w *windowsEventLog) Entity() *cloudwatchlogs.Entity {
+	return nil
 }
 
 func (w *windowsEventLog) run() {

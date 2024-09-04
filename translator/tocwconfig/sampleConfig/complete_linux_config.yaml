@@ -96,6 +96,9 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
 processors:
     batch/emf_logs:
         metadata_cardinality_limit: 1000
@@ -128,9 +131,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         refresh_interval_seconds: 0s
     filter/jmx/0:
@@ -192,9 +195,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -354,6 +357,7 @@ service:
         - agenthealth/metrics
         - agenthealth/logs
         - agenthealth/traces
+        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:
@@ -375,9 +379,9 @@ service:
                 - telegraf_disk
                 - telegraf_statsd
                 - telegraf_swap
+                - telegraf_mem
                 - telegraf_netstat
                 - telegraf_processes
-                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
