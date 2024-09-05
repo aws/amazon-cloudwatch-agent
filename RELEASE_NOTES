@@ -7,9 +7,6 @@ Features:
 Enhancements:
 * Increase retry delay on PLE for certain exceptions
 
-Bug Fixes:
-* Fix duplicate log events
-
 ========================================================================
 Amazon CloudWatch Agent 1.300045.1 (2024-09-03)
 ========================================================================
