@@ -141,11 +141,11 @@ func rejectedEntityInfoExists(r *http.Response) bool {
 	}
 	bodyBytes, err := io.ReadAll(r.Body)
 	r.Body.Close()
-	if err != nil {
-		return false
-	}
 	// Reset the response body stream since it can only be read once. Not doing this results in duplicate requests.
 	// See https://stackoverflow.com/questions/33532374/in-go-how-can-i-reuse-a-readcloser
 	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	if err != nil {
+		return false
+	}
 	return bytes.Contains(bodyBytes, rejectedEntityInfo)
 }
