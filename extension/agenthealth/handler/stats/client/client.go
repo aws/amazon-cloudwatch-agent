@@ -4,7 +4,6 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -22,10 +21,6 @@ const (
 	handlerID   = "cloudwatchagent.ClientStats"
 	ttlDuration = 10 * time.Second
 	cacheSize   = 1000
-)
-
-var (
-	rejectedEntityInfo = []byte("\"rejectedEntityInfo\"")
 )
 
 type Stats interface {
@@ -113,9 +108,6 @@ func (csh *clientStatsHandler) HandleResponse(ctx context.Context, r *http.Respo
 	}
 	latency := time.Since(recorder.start)
 	stats.LatencyMillis = aws.Int64(latency.Milliseconds())
-	if rejectedEntityInfoExists(r) {
-		stats.EntityRejected = aws.Int(1)
-	}
 	csh.statsByOperation.Store(operation, stats)
 }
 
@@ -129,20 +121,4 @@ func (csh *clientStatsHandler) Stats(operation string) agent.Stats {
 		return agent.Stats{}
 	}
 	return stats
-}
-
-// rejectedEntityInfoExists checks if the response body
-// contains element rejectedEntityInfo
-func rejectedEntityInfoExists(r *http.Response) bool {
-	// Example body for rejectedEntityInfo would be:
-	// {"rejectedEntityInfo":{"errorType":"InvalidAttributes"}}
-	if r == nil || r.Body == nil {
-		return false
-	}
-	defer r.Body.Close()
-	bodyBytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		return false
-	}
-	return bytes.Contains(bodyBytes, rejectedEntityInfo)
 }
