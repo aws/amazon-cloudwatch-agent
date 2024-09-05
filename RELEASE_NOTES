@@ -1,9 +1,14 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300046.0 (2024-09-04)
+Amazon CloudWatch Agent 1.300046.0 (2024-09-05)
 ========================================================================
-Enhancements:
+Features:
 * Attach Entity field to CloudWatch Logs PutLogEvent API
+
+Enhancements:
 * Increase retry delay on PLE for certain exceptions
+
+Bug Fixes:
+* Fix duplicate log events
 
 ========================================================================
 Amazon CloudWatch Agent 1.300045.1 (2024-09-03)
