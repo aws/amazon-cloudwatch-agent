@@ -88,7 +88,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Processors: common.NewTranslatorMap(
 			filterprocessor.NewTranslator(filterprocessor.WithName(common.PipelineNameJmx), filterprocessor.WithIndex(t.index)),
 			resourceprocessor.NewTranslator(resourceprocessor.WithName(common.PipelineNameJmx)),
-			cumulativetodeltaprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), cumulativetodeltaprocessor.WithConfigKeys(common.JmxConfigKey)),
 		),
 		Exporters:  common.NewTranslatorMap[component.Config](),
 		Extensions: common.NewTranslatorMap[component.Config](),
@@ -125,6 +124,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			translators.Processors.Set(rollupprocessor.NewTranslator())
 		}
 		translators.Extensions.Set(sigv4auth.NewTranslator())
+	} else {
+		translators.Processors.Set(cumulativetodeltaprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), cumulativetodeltaprocessor.WithConfigKeys(common.JmxConfigKey)))
 	}
 
 	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
