@@ -58,6 +58,8 @@ func (c *K8sClient) init() {
 			return
 		}
 	}
+	config.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
+	config.ContentType = "application/vnd.kubernetes.protobuf"
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Printf("E! Failed to build ClientSet: %v", err)

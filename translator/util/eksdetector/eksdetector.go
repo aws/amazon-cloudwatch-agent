@@ -41,7 +41,11 @@ var (
 
 var (
 	getInClusterConfig  = func() (*rest.Config, error) { return rest.InClusterConfig() }
-	getKubernetesClient = func(confs *rest.Config) (kubernetes.Interface, error) { return kubernetes.NewForConfig(confs) }
+	getKubernetesClient = func(confs *rest.Config) (kubernetes.Interface, error) {
+		confs.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
+		confs.ContentType = "application/vnd.kubernetes.protobuf"
+		return kubernetes.NewForConfig(confs)
+	}
 	// NewDetector creates a new singleton detector for EKS
 	NewDetector = func() (Detector, error) {
 		var errors error
