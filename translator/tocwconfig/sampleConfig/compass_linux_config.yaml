@@ -1,21 +1,68 @@
 exporters:
-    nop: {}
+    awscloudwatch:
+        drop_original_metrics:
+            collectd_drop: true
+            statsd_drop: true
+        endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
+        force_flush_interval: 1m0s
+        max_datums_per_call: 1000
+        max_values_per_datum: 5000
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+        role_arn: metrics_role_arn_value_test
+        rollup_dimensions:
+            - - ImageId
+            - - InstanceId
+              - InstanceType
+            - - d1
+            - []
 extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
     entitystore:
         mode: ec2
         region: us-west-2
+processors:
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - ImageId
+            - InstanceId
+            - InstanceType
+        imds_retries: 1
+        refresh_interval_seconds: 0s
 receivers:
-    nop: {}
+    telegraf_socket_listener:
+        collection_interval: 10s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_statsd:
+        collection_interval: 10s
+        initial_delay: 1s
+        timeout: 0s
 service:
     extensions:
+        - agenthealth/metrics
         - entitystore
     pipelines:
-        metrics/nop:
+        metrics/host:
             exporters:
-                - nop
-            processors: []
+                - awscloudwatch
+            processors:
+                - ec2tagger
             receivers:
-                - nop
+                - telegraf_socket_listener
+                - telegraf_statsd
     telemetry:
         logs:
             development: false

@@ -34,6 +34,8 @@ func TestCollectD_HappyCase(t *testing.T) {
 			"collectd_security_level": "none",
 			"collectd_typesdb":        []interface{}{"/usr/share/collectd/types.db", "/custom_location/types.db"},
 			"tags":                    map[string]interface{}{"aws:AggregationInterval": "30s"},
+			"service_name":            "",
+			"deployment_environment":  "",
 		},
 	}
 
@@ -57,6 +59,8 @@ func TestCollectD_MinimumConfig(t *testing.T) {
 			"collectd_security_level": "encrypt",
 			"collectd_typesdb":        []interface{}{"/usr/share/collectd/types.db"},
 			"tags":                    map[string]interface{}{"aws:AggregationInterval": "60s"},
+			"service_name":            "",
+			"deployment_environment":  "",
 		},
 	}
 

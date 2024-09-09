@@ -167,6 +167,16 @@
         "endpoint_override": {
           "description": "The override endpoint to use to access cloudwatch",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "service.name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "deployment.environment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
         }
       },
       "additionalProperties": false,
@@ -248,6 +258,16 @@
               "items": { "type": "string" },
               "minItems": 1,
               "uniqueItems": true
+            },
+            "service.name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "deployment.environment": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
             }
           },
           "additionalProperties": false
@@ -361,6 +381,16 @@
               "items": { "type": "string" },
               "minItems": 1,
               "uniqueItems": true
+            },
+            "service.name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "deployment.environment": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
             }
           },
           "additionalProperties": false
