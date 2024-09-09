@@ -27,6 +27,7 @@ func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input       map[string]any
 		index       int
+		destination string
 		isContainer bool
 		want        *want
 		wantErr     error
@@ -174,11 +175,12 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			index: -1,
+			index:       -1,
+			destination: "amp",
 			want: &want{
-				pipelineID: "metrics/jmx",
+				pipelineID: "metrics/jmx/amp",
 				receivers:  []string{"jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -203,11 +205,12 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			index:       -1,
+			destination: "amp",
 			isContainer: true,
 			want: &want{
-				pipelineID: "metrics/jmx",
+				pipelineID: "metrics/jmx/amp",
 				receivers:  []string{"otlp/jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -231,9 +234,10 @@ func TestTranslator(t *testing.T) {
 					},
 				},
 			},
-			index: -1,
+			index:       -1,
+			destination: "cloudwatch",
 			want: &want{
-				pipelineID: "metrics/jmx",
+				pipelineID: "metrics/jmx/cloudwatch",
 				receivers:  []string{"jmx"},
 				processors: []string{"filter/jmx", "resource/jmx", "transform/jmx", "cumulativetodelta/jmx"},
 				exporters:  []string{"awscloudwatch"},
@@ -301,11 +305,12 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			index:       0,
+			destination: "amp",
 			isContainer: true,
 			want: &want{
-				pipelineID: "metrics/jmx/0",
+				pipelineID: "metrics/jmx/amp/0",
 				receivers:  []string{"otlp/jmx"},
-				processors: []string{"filter/jmx/0", "resource/jmx", "transform/jmx/0", "batch/jmx/0"},
+				processors: []string{"filter/jmx/0", "resource/jmx", "transform/jmx/0", "batch/jmx/amp/0"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -316,7 +321,7 @@ func TestTranslator(t *testing.T) {
 			if testCase.isContainer {
 				t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
 			}
-			tt := NewTranslator(WithIndex(testCase.index))
+			tt := NewTranslator(WithIndex(testCase.index), WithDestination(testCase.destination))
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			require.Equal(t, testCase.wantErr, err)

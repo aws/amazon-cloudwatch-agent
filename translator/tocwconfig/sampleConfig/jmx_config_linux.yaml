@@ -75,7 +75,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    batch/jmx:
+    batch/jmx/amp:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
@@ -178,16 +178,24 @@ service:
             receivers:
                 - telegraf_cpu
                 - telegraf_disk
-        metrics/jmx:
+        metrics/jmx/amp:
             exporters:
-                - awscloudwatch
                 - prometheusremotewrite/amp
             processors:
                 - filter/jmx
                 - resource/jmx
-                - cumulativetodelta/jmx
-                - batch/jmx
+                - batch/jmx/amp
                 - transform/jmx
+            receivers:
+                - jmx
+        metrics/jmx/cloudwatch:
+            exporters:
+                - awscloudwatch
+            processors:
+                - filter/jmx
+                - resource/jmx
+                - transform/jmx
+                - cumulativetodelta/jmx
             receivers:
                 - jmx
     telemetry:
