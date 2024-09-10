@@ -4,6 +4,8 @@
 package entitystore
 
 import (
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"testing"
 	"time"
 
@@ -20,6 +22,8 @@ import (
 
 type mockServiceNameEC2Client struct {
 	ec2iface.EC2API
+	throttleError bool
+	authError     bool
 }
 
 // construct the return results for the mocked DescribeTags api
@@ -27,9 +31,17 @@ var (
 	tagKeyService = "service"
 	tagValService = "test-service"
 	tagDesService = ec2.TagDescription{Key: &tagKeyService, Value: &tagValService}
+
+	FastBackOffArray = []time.Duration{0, 0, 0}
 )
 
 func (m *mockServiceNameEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
+	if m.throttleError {
+		return nil, awserr.New(RequestLimitExceeded, "throttle limit exceeded", nil)
+	}
+	if m.authError {
+		return nil, awserr.New("UnauthorizedOperation", "UnauthorizedOperation occurred", nil)
+	}
 	testTags := ec2.DescribeTagsOutput{
 		NextToken: nil,
 		Tags:      []*ec2.TagDescription{&tagDesService},
@@ -365,7 +377,6 @@ func Test_refreshLoop(t *testing.T) {
 		ec2API            ec2iface.EC2API
 		iamRole           string
 		ec2TagServiceName string
-		refreshInterval   time.Duration
 		oneTime           bool
 	}
 	type expectedInfo struct {
@@ -387,7 +398,6 @@ func Test_refreshLoop(t *testing.T) {
 				ec2API:            &mockServiceNameEC2Client{},
 				iamRole:           "original-role",
 				ec2TagServiceName: "original-tag-name",
-				refreshInterval:   time.Millisecond,
 			},
 			expectedInfo: expectedInfo{
 				iamRole:           "TestRole",
@@ -408,12 +418,69 @@ func Test_refreshLoop(t *testing.T) {
 				ec2TagServiceName: tt.fields.ec2TagServiceName,
 				done:              done,
 			}
-			go refreshLoop(done, s.getEC2TagServiceName, tt.fields.oneTime)
-			go refreshLoop(done, s.getIAMRole, tt.fields.oneTime)
+			go refreshLoop(done, s.getEC2TagServiceName, tt.fields.oneTime, RequestLimitExceeded, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry)
+			go refreshLoop(done, s.getIAMRole, tt.fields.oneTime, "", defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry)
 			time.Sleep(time.Second)
 			close(done)
 			assert.Equal(t, tt.expectedInfo.iamRole, s.iamRole)
 			assert.Equal(t, tt.expectedInfo.ec2TagServiceName, s.ec2TagServiceName)
+		})
+	}
+}
+
+func Test_refreshLoopRetry(t *testing.T) {
+	type fields struct {
+		metadataProvider ec2metadataprovider.MetadataProvider
+		ec2API           ec2iface.EC2API
+		oneTime          bool
+	}
+	tests := []struct {
+		name          string
+		fields        fields
+		expectedRetry int
+	}{
+		{
+			name: "ThrottleLimitError",
+			fields: fields{
+				metadataProvider: &mockMetadataProvider{
+					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+						InstanceID: "i-123456789"},
+				},
+				ec2API: &mockServiceNameEC2Client{
+					throttleError: true,
+				},
+			},
+			expectedRetry: 4,
+		},
+		{
+			name: "AuthError",
+			fields: fields{
+				metadataProvider: &mockMetadataProvider{
+					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+						InstanceID: "i-123456789"},
+				},
+				ec2API: &mockServiceNameEC2Client{
+					authError: true,
+				},
+			},
+			expectedRetry: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			done := make(chan struct{})
+			s := &serviceprovider{
+				metadataProvider: tt.fields.metadataProvider,
+				ec2API:           tt.fields.ec2API,
+				ec2Provider: func(s string, config *configaws.CredentialConfig) ec2iface.EC2API {
+					return tt.fields.ec2API
+				},
+				done: done,
+			}
+			retry := refreshLoop(done, s.getEC2TagServiceName, tt.fields.oneTime, RequestLimitExceeded, describeTagsJitterMin, describeTagsJitterMax, FastBackOffArray, maxRetry)
+			time.Sleep(time.Second)
+			close(done)
+			assert.Equal(t, tt.expectedRetry, retry)
 		})
 	}
 }
