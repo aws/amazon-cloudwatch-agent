@@ -12,24 +12,24 @@ type mapEntry struct {
 
 // MapWithExpiry act like a map which provide a method to clean up expired entries
 type MapWithExpiry struct {
-	ttl    time.Duration
-	entris map[string]*mapEntry
+	ttl     time.Duration
+	entries map[string]*mapEntry
 }
 
 func NewMapWithExpiry(ttl time.Duration) *MapWithExpiry {
-	return &MapWithExpiry{ttl: ttl, entris: make(map[string]*mapEntry)}
+	return &MapWithExpiry{ttl: ttl, entries: make(map[string]*mapEntry)}
 }
 
 func (m *MapWithExpiry) CleanUp(now time.Time) {
-	for k, v := range m.entris {
+	for k, v := range m.entries {
 		if now.Sub(v.creation) >= m.ttl {
-			delete(m.entris, k)
+			delete(m.entries, k)
 		}
 	}
 }
 
 func (m *MapWithExpiry) Get(key string) (interface{}, bool) {
-	res, ok := m.entris[key]
+	res, ok := m.entries[key]
 	if ok {
 		return res.content, true
 	}
@@ -37,13 +37,13 @@ func (m *MapWithExpiry) Get(key string) (interface{}, bool) {
 }
 
 func (m *MapWithExpiry) Set(key string, content interface{}) {
-	m.entris[key] = &mapEntry{content: content, creation: time.Now()}
+	m.entries[key] = &mapEntry{content: content, creation: time.Now()}
 }
 
 func (m *MapWithExpiry) Size() int {
-	return len(m.entris)
+	return len(m.entries)
 }
 
 func (m *MapWithExpiry) Delete(key string) {
-	delete(m.entris, key)
+	delete(m.entries, key)
 }

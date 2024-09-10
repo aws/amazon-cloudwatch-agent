@@ -27,7 +27,7 @@ var sdkLogLevel aws.LogLevelType = aws.LogOff
 // The levels are a bit field that is OR'd together.
 // So the user can specify multiple levels and we OR them together.
 // Example: "aws_sdk_log_level": "LogDebugWithSigning | LogDebugWithRequestErrors".
-// JSON string value must contain the levels seperated by "|" and optionally whitespace.
+// JSON string value must contain the levels separated by "|" and optionally whitespace.
 func SetSDKLogLevel(sdkLogLevelString string) {
 	var temp aws.LogLevelType = aws.LogOff
 

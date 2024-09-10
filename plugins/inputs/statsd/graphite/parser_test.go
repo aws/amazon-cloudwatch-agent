@@ -132,7 +132,7 @@ func TestTemplateApply(t *testing.T) {
 
 		measurement, tags, _, _ := tmpl.Apply(test.input)
 		if measurement != test.measurement {
-			t.Fatalf("name parse failer.  expected %v, got %v", test.measurement, measurement)
+			t.Fatalf("name parse failure.  expected %v, got %v", test.measurement, measurement)
 		}
 		if len(tags) != len(test.tags) {
 			t.Fatalf("unexpected number of tags.  expected %v, got %v", test.tags, tags)
@@ -234,7 +234,7 @@ func TestParseLine(t *testing.T) {
 			continue
 		}
 		if metric.Name() != test.measurement {
-			t.Fatalf("name parse failer.  expected %v, got %v",
+			t.Fatalf("name parse failure.  expected %v, got %v",
 				test.measurement, metric.Name())
 		}
 		if len(metric.Tags()) != len(test.tags) {
@@ -335,7 +335,7 @@ func TestParse(t *testing.T) {
 			continue
 		}
 		if metrics[0].Name() != test.measurement {
-			t.Fatalf("name parse failer.  expected %v, got %v",
+			t.Fatalf("name parse failure.  expected %v, got %v",
 				test.measurement, metrics[0].Name())
 		}
 		if len(metrics[0].Tags()) != len(test.tags) {
@@ -361,7 +361,7 @@ func TestParseNaN(t *testing.T) {
 	_, err = p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
 	assert.Error(t, err)
 
-	if _, ok := err.(*UnsupposedValueError); !ok {
+	if _, ok := err.(*UnsupportedValueError); !ok {
 		t.Fatalf("expected *ErrUnsupportedValue, got %v", reflect.TypeOf(err))
 	}
 }
