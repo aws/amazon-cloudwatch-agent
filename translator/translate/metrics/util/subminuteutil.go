@@ -5,11 +5,11 @@ package util
 
 import "time"
 
-const Metric_High_Resolution_Threhold = 60 * time.Second
+const Metric_High_Resolution_Threshold = 60 * time.Second
 
 func IsHighResolution(intervalVal string) bool {
 	if actualInterval, err := time.ParseDuration(intervalVal); err == nil {
-		if actualInterval < Metric_High_Resolution_Threhold {
+		if actualInterval < Metric_High_Resolution_Threshold {
 			return true
 		}
 	}
