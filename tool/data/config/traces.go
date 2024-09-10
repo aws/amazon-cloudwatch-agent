@@ -22,7 +22,7 @@ type Traces struct {
 	BufferSizeMB int    `json:"buffer_size_mb"`
 	ResourceArn  string `json:"resource_arn,omitempty"`
 	LocalMode    bool   `json:"local_mode,omitempty"` //local
-	Insecure     bool   `json:"insecure, omitempty"`  //noverifyssl
+	Insecure     bool   `json:"insecure,omitempty"`   //noverifyssl
 	Credentials  *struct {
 		RoleArn string `json:"role_arn,omitempty"`
 	} `json:"credentials,omitempty"`

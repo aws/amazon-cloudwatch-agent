@@ -61,7 +61,7 @@ type FileConfig struct {
 
 	//Indicate whether to tail the log file from the beginning or not.
 	//The default value for this field should be set as true in configuration.
-	//Otherwise, it may skip some log entries for timestampFromLogLine suffix roatated new file.
+	//Otherwise, it may skip some log entries for timestampFromLogLine suffix rotated new file.
 	FromBeginning bool `toml:"from_beginning"`
 	//Indicate whether it is a named pipe.
 	Pipe bool `toml:"pipe"`

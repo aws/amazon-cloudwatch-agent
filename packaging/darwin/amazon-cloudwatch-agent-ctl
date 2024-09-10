@@ -30,7 +30,7 @@ readonly OTEL_YAML="${CONFDIR}/amazon-cloudwatch-agent.yaml"
 readonly JSON="${CONFDIR}/amazon-cloudwatch-agent.json"
 readonly JSON_DIR="${CONFDIR}/amazon-cloudwatch-agent.d"
 readonly CV_LOG_FILE="${AGENTDIR}/logs/configuration-validation.log"
-readonly COMMON_CONIG="${CONFDIR}/common-config.toml"
+readonly COMMON_CONFIG="${CONFDIR}/common-config.toml"
 
 readonly ALL_CONFIG='all'
 
@@ -176,7 +176,7 @@ cwa_config() {
      if [ "${config_location}" = "${ALL_CONFIG}" ]; then
           rm -rf "${JSON_DIR}"/*
      else
-          runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${config_location}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
+          runDownloaderCommand=$("${CMDDIR}/config-downloader" --output-dir "${JSON_DIR}" --download-source "${config_location}" --mode ${mode} --config "${COMMON_CONFIG}" --multi-config ${multi_config})
           echo "${runDownloaderCommand}"
      fi
 
@@ -185,7 +185,7 @@ cwa_config() {
           rm -f "${TOML}"
           rm -f "${OTEL_YAML}"
      else
-          runTranslatorCommand=$("${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
+          runTranslatorCommand=$("${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${mode} --config "${COMMON_CONFIG}" --multi-config ${multi_config})
           echo "${runTranslatorCommand}"
 
           runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"

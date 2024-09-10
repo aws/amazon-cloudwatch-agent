@@ -119,7 +119,7 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 			}
 			attributes.PutStr(v, resourceAttrValue.AsString())
 			if k == semconv.AttributeK8SPodName {
-				// only copy "host.id" from resource attributes to "K8s.Node" in attributesif the pod name is set
+				// only copy "host.id" from resource attributes to "K8s.Node" in attributes if the pod name is set
 				if host, ok := resourceAttributes.Get("host.id"); ok {
 					attributes.PutStr("K8s.Node", host.AsString())
 				}

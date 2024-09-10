@@ -166,7 +166,7 @@ func createNodeListWatch(client kubernetes.Interface) cache.ListerWatcher {
 	return &cache.ListWatch{
 		ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 			opts.ResourceVersion = ""
-			// Passing emput context as this was not required by old List()
+			// Passing empty context as this was not required by old List()
 			return client.CoreV1().Nodes().List(ctx, opts)
 		},
 		WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {

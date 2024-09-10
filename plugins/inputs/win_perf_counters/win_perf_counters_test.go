@@ -312,7 +312,7 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	require.NoError(t, err)
 
 	// We made change to allow non-existent counter to be parsed so counters that initially not
-	// showing up at agent start up time would still possbily be picked up later
+	// showing up at agent start up time would still possibly be picked up later
 	if len(metrics.items) != 3 {
 		t.Errorf("expecting exactly 3 result from query but got: %v", metrics.items)
 	}

@@ -52,7 +52,7 @@ type limiter interface {
 
 // Config is used to specify how a file must be tailed.
 type Config struct {
-	// File-specifc
+	// File-specific
 	Location    *SeekInfo // Seek to this location before tailing
 	ReOpen      bool      // Reopen recreated files (tail -F)
 	MustExist   bool      // Fail early if the file does not exist
@@ -137,8 +137,8 @@ func TailFile(filename string, config Config) (*Tail, error) {
 
 // Return the file's current position, like stdio's ftell().
 // But this value is not very accurate.
-// it may readed one line in the chan(tail.Lines),
-// so it may lost one line.
+// it may read one line in the chan(tail.Lines),
+// so it may lose one line.
 func (tail *Tail) Tell() (offset int64, err error) {
 	if tail.file == nil {
 		return

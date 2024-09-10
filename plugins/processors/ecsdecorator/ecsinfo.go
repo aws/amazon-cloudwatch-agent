@@ -146,10 +146,10 @@ func (e *ecsInfo) getContainerInstanceIdFromArn(arn string) (containerInstanceId
 	// When splitting the ARN with ":", the 6th segments could be either:
 	// container-instance/47c0ab6e-2c2c-475e-9c30-b878fa7a8c3d or
 	// container-instance/cluster-name/47c0ab6e-2c2c-475e-9c30-b878fa7a8c3d
-	if splitedList := strings.Split(arn, ":"); len(splitedList) >= 6 {
-		// Further splitting tmpResult with "/", it could be splitted into either 2 or 3
+	if splitList := strings.Split(arn, ":"); len(splitList) >= 6 {
+		// Further splitting tmpResult with "/", it could be split into either 2 or 3
 		// Characters of "cluster-name" is only allowed to be letters, numbers and hyphens
-		tmpResult := strings.Split(splitedList[5], "/")
+		tmpResult := strings.Split(splitList[5], "/")
 		if len(tmpResult) == 2 {
 			containerInstanceId = tmpResult[1]
 			return

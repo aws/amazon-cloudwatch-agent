@@ -100,21 +100,21 @@ func (e *ecsUtil) getMetadataResponse(endpoint string) (em *ecsMetadataResponse,
 // arn:aws:ecs:region:aws_account_id:task/cluster-name/task-id
 // This function will return region extracted from Task ARN
 func (e *ecsUtil) parseRegion(em *ecsMetadataResponse) {
-	splitedContent := strings.Split(em.TaskARN, ":")
+	splitContent := strings.Split(em.TaskARN, ":")
 	// When splitting the ARN with ":", the 4th segment is the region
-	if len(splitedContent) < 4 {
+	if len(splitContent) < 4 {
 		log.Printf("E! Invalid ecs task arn: %s", em.TaskARN)
 	}
-	e.Region = splitedContent[3]
+	e.Region = splitContent[3]
 }
 
 // There is only one format for ClusterArn (https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Cluster.html)
 // arn:aws:ecs:region:aws_account_id:cluster/cluster-name
 func (e *ecsUtil) parseClusterName(em *ecsMetadataResponse) {
-	splitedContent := strings.Split(em.Cluster, "/")
+	splitContent := strings.Split(em.Cluster, "/")
 	// When splitting the ClusterName with /, the last is always the cluster name
-	if len(splitedContent) == 0 {
+	if len(splitContent) == 0 {
 		log.Printf("E! Invalid cluster arn: %s", em.Cluster)
 	}
-	e.Cluster = splitedContent[len(splitedContent)-1]
+	e.Cluster = splitContent[len(splitContent)-1]
 }

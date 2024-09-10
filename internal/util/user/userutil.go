@@ -55,7 +55,7 @@ func changeFileOwner(uid, gid int) error {
 }
 
 // chownRecursive would recursively change the ownership of the directory
-// similar to `chown -R <dir>`, except it will igore any files that are:
+// similar to `chown -R <dir>`, except it will ignore any files that are:
 //   - Executable
 //   - With SUID or SGID bit set
 //   - Allow anyone to write to
@@ -78,7 +78,7 @@ func chownRecursive(uid, gid int, dir string) error {
 			}
 
 			// Do not change ownership of executable files
-			// Perm() returns the lower 7 bit of permission of file, which represes rwxrwxrws
+			// Perm() returns the lower 7 bit of permission of file, which represents rwxrwxrws
 			// 0111 maps to --x--x--x, so it would check any user have the execution right
 			if fmode.Perm()&0111 != 0 {
 				return nil

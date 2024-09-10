@@ -121,7 +121,7 @@ func terminateClusters(ctx context.Context, client *ecs.Client) {
 				deleteServiceInput := ecs.DeleteServiceInput{Cluster: clusterId, Service: aws.String(service)}
 				_, err := client.DeleteService(ctx, &deleteServiceInput)
 				if err != nil {
-					log.Printf("Error %v deleteing service %s cluster %s", err, serviceInput, *clusterId)
+					log.Printf("Error %v deleting service %s cluster %s", err, serviceInput, *clusterId)
 					continue
 				}
 			}

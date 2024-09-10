@@ -138,7 +138,7 @@ func (t *LogFile) Start(acc telegraf.Accumulator) error {
 
 func (t *LogFile) Stop() {
 	// Tailer srcs are stopped by log agent after the output plugin is stopped instead of here
-	// because the tailersrc would like to record an accurate uploaded offset
+	// because the tailerSrc would like to record an accurate uploaded offset
 	close(t.done)
 }
 
@@ -368,7 +368,7 @@ func (t *LogFile) cleanupStateFolder() {
 	}
 	for _, file := range files {
 		if info, err := os.Stat(file); err != nil || info.IsDir() {
-			t.Log.Debugf("File %v does not exist or is a dirctory: %v, %v", file, err, info)
+			t.Log.Debugf("File %v does not exist or is a directory: %v, %v", file, err, info)
 			continue
 		}
 
@@ -378,7 +378,7 @@ func (t *LogFile) cleanupStateFolder() {
 
 		byteArray, err := os.ReadFile(file)
 		if err != nil {
-			t.Log.Errorf("Error happens when reading the content from file %s in clean up state fodler step: %v", file, err)
+			t.Log.Errorf("Error happens when reading the content from file %s in clean up state folder step: %v", file, err)
 			continue
 		}
 		contentArray := strings.Split(string(byteArray), "\n")

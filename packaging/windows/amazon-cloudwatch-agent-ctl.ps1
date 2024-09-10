@@ -91,7 +91,7 @@ $TOML="${CWAProgramData}\amazon-cloudwatch-agent.toml"
 $OTEL_YAML="${CWAProgramData}\amazon-cloudwatch-agent.yaml"
 $JSON="${CWAProgramData}\amazon-cloudwatch-agent.json"
 $JSON_DIR = "${CWAProgramData}\Configs"
-$COMMON_CONIG="${CWAProgramData}\common-config.toml"
+$COMMON_CONFIG="${CWAProgramData}\common-config.toml"
 $ENV_CONFIG="${CWAProgramData}\env-config.json"
 
 $EC2 = $false
@@ -301,7 +301,7 @@ Function CWAConfig() {
     if ($ConfigLocation -eq $AllConfig) {
         Remove-Item -Path "${JSON_DIR}\*" -Force -ErrorAction SilentlyContinue
     } else {
-        & $CWAProgramFiles\config-downloader.exe --output-dir "${JSON_DIR}" --download-source "${ConfigLocation}" --mode "${param_mode}" --config "${COMMON_CONIG}" --multi-config "${multi_config}"
+        & $CWAProgramFiles\config-downloader.exe --output-dir "${JSON_DIR}" --download-source "${ConfigLocation}" --mode "${param_mode}" --config "${COMMON_CONFIG}" --multi-config "${multi_config}"
         CheckCMDResult
     }
 
@@ -313,7 +313,7 @@ Function CWAConfig() {
         Remove-Item "${OTEL_YAML}" -Force -ErrorAction SilentlyContinue
     } else {
         Write-Output "Start configuration validation..."
-        & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
+        & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONFIG} --multi-config ${multi_config} 2>&1"
         CheckCMDResult
         # Let command pass so we can check return code and give user-friendly error-message
         $ErrorActionPreference = "Continue"

@@ -19,7 +19,7 @@ import (
 const (
 	metricUnit                    = "metric_unit"
 	metricNamespace               = "metric_namespace"
-	metricDeclartion              = "metric_declaration"
+	metricDeclaration             = "metric_declaration"
 	ecsDefaultCloudWatchNamespace = "ECS/ContainerInsights/Prometheus"
 	k8sDefaultCloudWatchNamespace = "ContainerInsights/Prometheus"
 	ec2DefaultCloudWatchNamespace = "CWAgent/Prometheus"
@@ -97,7 +97,7 @@ func setPrometheusMetricDescriptors(conf *confmap.Conf, cfg *awsemfexporter.Conf
 }
 
 func setPrometheusMetricDeclarations(conf *confmap.Conf, cfg *awsemfexporter.Config) error {
-	metricDeclarationKey := common.ConfigKey(emfProcessorBasePathKey, metricDeclartion)
+	metricDeclarationKey := common.ConfigKey(emfProcessorBasePathKey, metricDeclaration)
 	if !conf.IsSet(metricDeclarationKey) {
 		return nil
 	}

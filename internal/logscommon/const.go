@@ -11,7 +11,7 @@ const (
 
 	//Field key in metrics indicting if the line is the start of the multiline.
 	//If this key is not present, it means the multiline mode is not enabled,
-	//    we set it to true, it indicates it is a real event, but not part of a mulltiple line.
+	//    we set it to true, it indicates it is a real event, but not part of a multiple line.
 	//If this key is false, it means the line is not start line of multiline entry.
 	//If this key is true, it means the line is the start of multiline entry.
 	MultiLineStartField = "multi_line_start"
