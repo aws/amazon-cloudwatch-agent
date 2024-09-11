@@ -203,6 +203,7 @@ func (e *EntityStore) shouldReturnEntity() bool {
 		e.stsClient = sts.New(
 			e.nativeCredential,
 			&aws.Config{
+				Region:   aws.String(e.config.Region),
 				LogLevel: configaws.SDKLogLevel(),
 				Logger:   configaws.SDKLogger{},
 			})
@@ -225,6 +226,7 @@ func getEC2Provider(region string, ec2CredentialConfig *configaws.CredentialConf
 	return ec2.New(
 		ec2CredentialConfig.Credentials(),
 		&aws.Config{
+			Region:   aws.String(region),
 			LogLevel: configaws.SDKLogLevel(),
 			Logger:   configaws.SDKLogger{},
 		})
