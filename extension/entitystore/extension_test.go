@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
@@ -141,6 +142,28 @@ func TestEntityStore_Mode(t *testing.T) {
 			}
 			if got := e.Mode(); got != tt.want {
 				t.Errorf("Mode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEntityStore_KubernetesMode(t *testing.T) {
+	tests := []struct {
+		name         string
+		k8sModeInput string
+		want         string
+	}{
+		{name: "modeEKS", k8sModeInput: config.ModeEKS, want: config.ModeEKS},
+		{name: "modeK8sEc2", k8sModeInput: config.ModeK8sEC2, want: config.ModeK8sEC2},
+		{name: "modeK8sOnPrem", k8sModeInput: config.ModeK8sOnPrem, want: config.ModeK8sOnPrem},
+		{name: "modeNotSet", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &EntityStore{}
+			e.kubernetesMode = tt.k8sModeInput
+			if got := e.KubernetesMode(); got != tt.want {
+				t.Errorf("Kubernetes Mode() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -380,4 +403,34 @@ func TestEntityStore_addServiceAttrEntryForLogGroup(t *testing.T) {
 	e.AddServiceAttrEntryForLogGroup(key, "test", "ec2:test")
 
 	sp.AssertExpectations(t)
+}
+
+func TestEntityStore_AddPodServiceEnvironmentMapping(t *testing.T) {
+
+	logger, _ := zap.NewProduction()
+	eks := *newEKSInfo(logger)
+	e := EntityStore{eksInfo: eks}
+	e.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
+	expectedMap := map[string]ServiceEnvironment{
+		"pod1": {
+			ServiceName: "service1",
+			Environment: "env1",
+		},
+	}
+	assert.Equal(t, expectedMap, e.eksInfo.GetPodServiceEnvironmentMapping())
+}
+
+func TestEntityStore_GetPodServiceEnvironmentMapping(t *testing.T) {
+
+	logger, _ := zap.NewProduction()
+	eks := *newEKSInfo(logger)
+	e := EntityStore{eksInfo: eks}
+	expectedMap := map[string]ServiceEnvironment{
+		"pod1": {
+			ServiceName: "service1",
+			Environment: "env1",
+		},
+	}
+	e.eksInfo.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
+	assert.Equal(t, expectedMap, e.GetPodServiceEnvironmentMapping())
 }

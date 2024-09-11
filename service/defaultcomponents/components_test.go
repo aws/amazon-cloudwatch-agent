@@ -14,7 +14,7 @@ const (
 	receiversCount  = 7
 	processorCount  = 11
 	exportersCount  = 6
-	extensionsCount = 3
+	extensionsCount = 4
 )
 
 func TestComponents(t *testing.T) {
@@ -73,6 +73,10 @@ func TestComponents(t *testing.T) {
 	assert.Len(t, extensions, extensionsCount)
 	agenthealthType, _ := component.NewType("agenthealth")
 	awsproxyType, _ := component.NewType("awsproxy")
+	entitystore, _ := component.NewType("entitystore")
+	server, _ := component.NewType("server")
 	assert.NotNil(t, extensions[agenthealthType])
 	assert.NotNil(t, extensions[awsproxyType])
+	assert.NotNil(t, extensions[entitystore])
+	assert.NotNil(t, extensions[server])
 }

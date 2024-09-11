@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/eksattributescraper"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 const (
@@ -38,6 +39,14 @@ var addToEntityStore = func(logGroupName entitystore.LogGroupName, serviceName s
 	es.AddServiceAttrEntryForLogGroup(logGroupName, serviceName, environmentName)
 }
 
+var addPodToServiceEnvironmentMap = func(podName string, serviceName string, environmentName string) {
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return
+	}
+	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName)
+}
+
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
@@ -58,7 +67,9 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	rm := md.ResourceMetrics()
 	for i := 0; i < rm.Len(); i++ {
-		p.eksscraper.Scrape(rm.At(i).Resource())
+		if p.config.KubernetesMode == config.ModeEKS {
+			p.eksscraper.Scrape(rm.At(i).Resource())
+		}
 		resourceAttrs := rm.At(i).Resource().Attributes()
 		logGroupNames, _ := resourceAttrs.Get(attributeAwsLogGroupNames)
 		serviceName, _ := resourceAttrs.Get(attributeServiceName)
@@ -75,7 +86,12 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 		if entityEnvironmentName != EMPTY {
 			resourceAttrs.PutStr(entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
 		}
-
+		if p.config.KubernetesMode != "" {
+			fullPodName := scrapeK8sPodName(resourceAttrs)
+			if fullPodName != EMPTY && (entityServiceName != EMPTY || entityEnvironmentName != EMPTY) {
+				addPodToServiceEnvironmentMap(fullPodName, entityServiceName, entityEnvironmentName)
+			}
+		}
 		if logGroupNames.Str() == EMPTY || (serviceName.Str() == EMPTY && environmentName.Str() == EMPTY) {
 			continue
 		}
@@ -183,6 +199,15 @@ func getServiceAttributes(p pcommon.Map) string {
 	}
 	if serviceName, ok := p.Get(attributeService); ok {
 		return serviceName.Str()
+	}
+	return EMPTY
+}
+
+// scrapeK8sPodName gets the k8s pod name which is full pod name from the resource attributes
+// This is needed to map the pod to the service/environment
+func scrapeK8sPodName(p pcommon.Map) string {
+	if podAttr, ok := p.Get(semconv.AttributeK8SPodName); ok {
+		return podAttr.Str()
 	}
 	return EMPTY
 }

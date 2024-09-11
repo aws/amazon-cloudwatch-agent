@@ -21,6 +21,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
@@ -73,6 +74,9 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		}
 	}
 	pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
+	if context.CurrentContext().KubernetesMode() != "" {
+		pipelines.Translators.Extensions.Set(server.NewTranslator())
+	}
 	cfg := &otelcol.Config{
 		Receivers:  map[component.ID]component.Config{},
 		Exporters:  map[component.ID]component.Config{},

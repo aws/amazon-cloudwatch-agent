@@ -288,6 +288,9 @@ extensions:
     entitystore:
       mode: ec2
       region: us-east-1
+      kubernetes_mode: K8sEC2
+    server:
+      listen_addr: :4311
 processors:
     awsapplicationsignals:
         limiter:
@@ -299,7 +302,8 @@ processors:
         resolvers:
           - name: TestCluster
             platform: k8s
-    awsentity: {}
+    awsentity:
+      kubernetes_mode: K8sEC2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -646,6 +650,7 @@ service:
         - agenthealth/traces
         - agenthealth/logs
         - entitystore
+        - server
     pipelines:
         metrics/application_signals:
             exporters:

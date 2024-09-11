@@ -44,10 +44,6 @@ type serviceProviderInterface interface {
 	logFileServiceAttribute(LogFileGlob, LogGroupName) ServiceAttribute
 }
 
-type eksInfo struct {
-	ClusterName string
-}
-
 type EntityStore struct {
 	logger *zap.Logger
 	config *Config
@@ -56,11 +52,13 @@ type EntityStore struct {
 	// mode should be EC2, ECS, EKS, and K8S
 	mode string
 
+	kubernetesMode string
+
 	// ec2Info stores information about EC2 instances such as instance ID and
 	// auto scaling groups
 	ec2Info ec2Info
 
-	// ekeInfo stores information about EKS such as cluster
+	// eksInfo stores information about EKS such as pod to service Env map
 	eksInfo eksInfo
 
 	// serviceprovider stores information about possible service names
@@ -85,6 +83,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	e.done = make(chan struct{})
 	e.metadataprovider = getMetaDataProvider()
 	e.mode = e.config.Mode
+	e.kubernetesMode = e.config.KubernetesMode
 	ec2CredentialConfig := &configaws.CredentialConfig{
 		Profile:  e.config.Profile,
 		Filename: e.config.Filename,
@@ -93,6 +92,9 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	case config.ModeEC2:
 		e.ec2Info = *newEC2Info(e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.config.Region, e.logger)
 		go e.ec2Info.initEc2Info()
+	}
+	if e.kubernetesMode != "" {
+		e.eksInfo = *newEKSInfo(e.logger)
 	}
 	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
 	go e.serviceprovider.startServiceProvider()
@@ -106,6 +108,10 @@ func (e *EntityStore) Shutdown(_ context.Context) error {
 
 func (e *EntityStore) Mode() string {
 	return e.mode
+}
+
+func (e *EntityStore) KubernetesMode() string {
+	return e.kubernetesMode
 }
 
 func (e *EntityStore) EKSInfo() eksInfo {
@@ -160,6 +166,14 @@ func (e *EntityStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, 
 		ServiceNameSource: ServiceNameSourceInstrumentation,
 		Environment:       environmentName,
 	})
+}
+
+func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string) {
+	e.eksInfo.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName)
+}
+
+func (e *EntityStore) GetPodServiceEnvironmentMapping() map[string]ServiceEnvironment {
+	return e.eksInfo.GetPodServiceEnvironmentMapping()
 }
 
 func (e *EntityStore) createAttributeMap() map[string]*string {

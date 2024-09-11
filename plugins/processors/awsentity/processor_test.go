@@ -9,14 +9,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 type mockEntityStore struct {
-	entries []entityStoreEntry
+	entries                    []entityStoreEntry
+	podToServiceEnvironmentMap map[string]entitystore.ServiceEnvironment
 }
 
 type entityStoreEntry struct {
@@ -27,7 +30,14 @@ type entityStoreEntry struct {
 
 func newMockEntityStore() *mockEntityStore {
 	return &mockEntityStore{
-		entries: make([]entityStoreEntry, 0),
+		entries:                    make([]entityStoreEntry, 0),
+		podToServiceEnvironmentMap: make(map[string]entitystore.ServiceEnvironment),
+	}
+}
+
+func newMockAddPodServiceEnvironmentMapping(es *mockEntityStore) func(string, string, string) {
+	return func(podName string, serviceName string, deploymentName string) {
+		es.podToServiceEnvironmentMap[podName] = entitystore.ServiceEnvironment{ServiceName: serviceName, Environment: deploymentName}
 	}
 }
 
@@ -122,6 +132,65 @@ func TestProcessMetricsLogGroupAssociation(t *testing.T) {
 			_, err := p.processMetrics(ctx, tt.metrics)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, rs.entries)
+		})
+	}
+}
+
+func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	p := newAwsEntityProcessor(&Config{}, logger)
+	ctx := context.Background()
+	tests := []struct {
+		name    string
+		metrics pmetric.Metrics
+		k8sMode string
+		want    map[string]entitystore.ServiceEnvironment
+	}{
+		{
+			name:    "WithPodNameAndServiceName",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service"}},
+			k8sMode: config.ModeEKS,
+		},
+		{
+			name:    "WithPodNameAndServiceEnvironmentName",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", attributeDeploymentEnvironment, "test-deployment"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "test-deployment"}},
+			k8sMode: config.ModeK8sEC2,
+		},
+		{
+			name:    "WithPodNameAndAttributeService",
+			metrics: generateMetrics(attributeService, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service"}},
+			k8sMode: config.ModeK8sOnPrem,
+		},
+		{
+			name:    "WithPodNameAndEmptyServiceAndEnvironmentName",
+			metrics: generateMetrics(semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
+			k8sMode: config.ModeEKS,
+			want:    map[string]entitystore.ServiceEnvironment{},
+		},
+		{
+			name:    "WithEmptyPodName",
+			metrics: generateMetrics(),
+			k8sMode: config.ModeEKS,
+			want:    map[string]entitystore.ServiceEnvironment{},
+		},
+		{
+			name:    "WithEmptyKubernetesMode",
+			metrics: generateMetrics(semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
+			want:    map[string]entitystore.ServiceEnvironment{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			es := newMockEntityStore()
+			addPodToServiceEnvironmentMap = newMockAddPodServiceEnvironmentMapping(es)
+			p.config.KubernetesMode = tt.k8sMode
+			_, err := p.processMetrics(ctx, tt.metrics)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, es.podToServiceEnvironmentMap)
 		})
 	}
 }

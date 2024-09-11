@@ -16,8 +16,8 @@ type Config struct {
 	// ClusterName can be used to explicitly provide the Cluster's Name for scenarios where it's not
 	// possible to auto-detect it using EC2 tags.
 	ClusterName string `mapstructure:"cluster_name,omitempty"`
-	// Mode is the platform that the component is being used on, such as EKS
-	Mode string `mapstructure:"mode,omitempty"`
+	// KubernetesMode
+	KubernetesMode string `mapstructure:"kubernetes_mode,omitempty"`
 }
 
 // Verify Config implements Processor interface.

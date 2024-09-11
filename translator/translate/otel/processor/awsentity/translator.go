@@ -46,14 +46,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 	}
 
-	mode := context.CurrentContext().KubernetesMode()
-	if mode == "" {
-		mode = context.CurrentContext().Mode()
-	}
-	switch mode {
+	cfg.KubernetesMode = context.CurrentContext().KubernetesMode()
+	switch cfg.KubernetesMode {
 	case config.ModeEKS:
 		cfg.ClusterName = hostedIn
-		cfg.Mode = config.ModeEKS
 	}
 	return cfg, nil
 }

@@ -30,8 +30,8 @@ func TestTranslate(t *testing.T) {
 					},
 				}},
 			want: &awsentity.Config{
-				ClusterName: "test",
-				Mode:        config.ModeEKS,
+				ClusterName:    "test",
+				KubernetesMode: config.ModeEKS,
 			},
 		},
 	}

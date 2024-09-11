@@ -8,11 +8,12 @@ import (
 )
 
 type Config struct {
-	Mode     string `mapstructure:"mode"`
-	Region   string `mapstructure:"region"`
-	Profile  string `mapstructure:"profile,omitempty"`
-	RoleARN  string `mapstructure:"role_arn,omitempty"`
-	Filename string `mapstructure:"shared_credential_file,omitempty"`
+	Mode           string `mapstructure:"mode"`
+	KubernetesMode string `mapstructure:"kubernetes_mode,omitempty"`
+	Region         string `mapstructure:"region"`
+	Profile        string `mapstructure:"profile,omitempty"`
+	RoleARN        string `mapstructure:"role_arn,omitempty"`
+	Filename       string `mapstructure:"shared_credential_file,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)

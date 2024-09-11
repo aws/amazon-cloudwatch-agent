@@ -288,6 +288,9 @@ extensions:
     entitystore:
       mode: ec2
       region: us-east-1
+      kubernetes_mode: EKS
+    server:
+      listen_addr: :4311
 processors:
     awsapplicationsignals:
         limiter:
@@ -301,7 +304,7 @@ processors:
               platform: eks
     awsentity:
         cluster_name: TestCluster
-        mode: EKS
+        kubernetes_mode: EKS
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -668,6 +671,7 @@ service:
         - agenthealth/traces
         - agenthealth/logs
         - entitystore
+        - server
     pipelines:
         metrics/application_signals:
             exporters:
