@@ -5,6 +5,7 @@ package entitystore
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
@@ -36,6 +37,9 @@ func createExtension(_ context.Context, settings extension.CreateSettings, cfg c
 	entityStore = &EntityStore{
 		logger: settings.Logger,
 		config: cfg.(*Config),
+		currentTime: func() time.Time {
+			return time.Now()
+		},
 	}
 	return entityStore, nil
 }

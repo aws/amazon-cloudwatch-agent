@@ -36,6 +36,8 @@ const (
 	Type                 = "Type"
 	Name                 = "Name"
 	Environment          = "Environment"
+	successfulRefresh    = time.Hour * 24
+	failureRefresh       = time.Minute * 5
 )
 
 type ec2ProviderType func(string, *configaws.CredentialConfig) ec2iface.EC2API
@@ -77,6 +79,14 @@ type EntityStore struct {
 	metadataprovider ec2metadataprovider.MetadataProvider
 
 	stsClient stsiface.STSAPI
+
+	// nextRefreshTime is the time when the next refresh should happen
+	// determining whether we should return the EntityStore
+	nextRefreshTime time.Time
+
+	// currentTime will always return the current time. This parameter exists mainly for testing
+	// purposes, so we can mock the time
+	currentTime func() time.Time
 }
 
 var _ extension.Extension = (*EntityStore)(nil)
@@ -130,7 +140,9 @@ func (e *EntityStore) NativeCredentialExists() bool {
 
 // CreateLogFileEntity creates the entity for log events that are being uploaded from a log file in the environment.
 func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Entity {
-	if !e.shouldReturnEntity() {
+	// To prevent unnecessary calls to the sts:GetCallerIdentity API, we verify whether we should return the entity every 24 hours on success and
+	// every 5 minutes on failure.
+	if !e.needToRefreshInterval() {
 		return nil
 	}
 
@@ -144,6 +156,16 @@ func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 		KeyAttributes: keyAttributes,
 		Attributes:    attributeMap,
 	}
+}
+
+func (e *EntityStore) needToRefreshInterval() bool {
+	var shouldReturn bool
+	currentTime := e.currentTime()
+	if currentTime.After(e.nextRefreshTime) {
+		shouldReturn = e.shouldReturnEntity()
+		e.nextRefreshTime = calculateNextRefreshPeriod(shouldReturn, currentTime)
+	}
+	return shouldReturn
 }
 
 // AddServiceAttrEntryForLogFile adds an entry to the entity store for the provided file glob -> (serviceName, environmentName) key-value pair
@@ -220,6 +242,14 @@ func (e *EntityStore) shouldReturnEntity() bool {
 		return false
 	}
 	return instanceAccountID == *assumedRoleIdentity.Account
+}
+
+// depending on the result of shouldReturnEntity, we update the nextRefreshTime to 24 hours on success, and 5 minutes on failure
+func calculateNextRefreshPeriod(shouldReturn bool, currentTime time.Time) time.Time {
+	if shouldReturn {
+		return currentTime.Add(successfulRefresh)
+	}
+	return currentTime.Add(failureRefresh)
 }
 
 func getMetaDataProvider() ec2metadataprovider.MetadataProvider {

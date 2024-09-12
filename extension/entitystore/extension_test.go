@@ -8,6 +8,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -22,6 +23,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
+
+var fixedTime = time.Date(2020, 11, 28, 0, 0, 0, 0, time.UTC)
 
 type mockServiceProvider struct {
 	mock.Mock
@@ -45,9 +48,11 @@ func (s *mockServiceProvider) logFileServiceAttribute(glob LogFileGlob, name Log
 type mockSTSClient struct {
 	stsiface.STSAPI
 	accountId string
+	callCount int
 }
 
 func (ms *mockSTSClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+	ms.callCount++
 	return &sts.GetCallerIdentityOutput{Account: aws.String(ms.accountId)}, nil
 }
 
@@ -275,6 +280,9 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 		metadataprovider: mockMetadataProviderWithAccountId(accountId),
 		stsClient:        &mockSTSClient{accountId: accountId},
 		nativeCredential: &session.Session{},
+		currentTime: func() time.Time {
+			return time.Now()
+		},
 	}
 
 	entity := e.CreateLogFileEntity(glob, group)
@@ -291,20 +299,22 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 			PlatformType:         aws.String(EC2PlatForm),
 		},
 	}
+	assert.Equal(t, 1, e.stsClient.(*mockSTSClient).callCount)
 	assert.Equal(t, dereferenceMap(expectedEntity.KeyAttributes), dereferenceMap(entity.KeyAttributes))
 	assert.Equal(t, dereferenceMap(expectedEntity.Attributes), dereferenceMap(entity.Attributes))
 }
 
-func TestEntityStore_shouldReturnRID(t *testing.T) {
+func TestNeedToRefreshInterval(t *testing.T) {
 	type fields struct {
 		metadataprovider ec2metadataprovider.MetadataProvider
 		stsClient        stsiface.STSAPI
 		nativeCredential client.ConfigProvider
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		want   bool
+		name            string
+		fields          fields
+		shouldReturn    bool
+		nextRefreshTime time.Time
 	}{
 		// TODO need tests for when you can't fetch from IMDS or STS (fail closed)
 		{
@@ -314,7 +324,8 @@ func TestEntityStore_shouldReturnRID(t *testing.T) {
 				stsClient:        &mockSTSClient{accountId: "123456789012"},
 				nativeCredential: &session.Session{},
 			},
-			want: true,
+			shouldReturn:    true,
+			nextRefreshTime: fixedTime.Add(successfulRefresh),
 		},
 		{
 			name: "HappyPath_AccountIDMismatches",
@@ -323,7 +334,8 @@ func TestEntityStore_shouldReturnRID(t *testing.T) {
 				stsClient:        &mockSTSClient{accountId: "123456789012"},
 				nativeCredential: &session.Session{},
 			},
-			want: false,
+			shouldReturn:    false,
+			nextRefreshTime: fixedTime.Add(failureRefresh),
 		},
 	}
 	for _, tt := range tests {
@@ -332,10 +344,113 @@ func TestEntityStore_shouldReturnRID(t *testing.T) {
 				metadataprovider: tt.fields.metadataprovider,
 				stsClient:        tt.fields.stsClient,
 				nativeCredential: tt.fields.nativeCredential,
+				currentTime: func() time.Time {
+					return fixedTime
+				},
+				nextRefreshTime: fixedTime.Add(successfulRefresh * -1),
 			}
-			assert.Equalf(t, tt.want, e.shouldReturnEntity(), "shouldReturnEntity()")
+			assert.Equalf(t, tt.shouldReturn, e.needToRefreshInterval(), "needToRefreshInterval()")
+			assert.Equalf(t, tt.nextRefreshTime, e.nextRefreshTime, "nextRefreshTime")
+			assert.Equal(t, 1, e.stsClient.(*mockSTSClient).callCount)
 		})
 	}
+}
+
+func TestNumberOfStsCalls(t *testing.T) {
+	type fields struct {
+		metadataprovider ec2metadataprovider.MetadataProvider
+		stsClient        stsiface.STSAPI
+		nativeCredential client.ConfigProvider
+	}
+	instanceId := "i-abcd1234"
+	accountId := "123456789012"
+	glob := LogFileGlob("glob")
+	group := LogGroupName("group")
+	serviceAttr := ServiceAttribute{
+		ServiceName:       "test-service",
+		ServiceNameSource: ServiceNameSourceUserConfiguration,
+		Environment:       "test-environment",
+	}
+	sp := new(mockServiceProvider)
+	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
+	tests := []struct {
+		name                  string
+		fields                fields
+		numberOfFunctionCalls int
+		wantNumberOfStsCalls  int
+		mockTimeSkipInterval  int64
+	}{
+		{
+			name: "1_function_call",
+			fields: fields{
+				metadataprovider: mockMetadataProviderWithAccountId(accountId),
+				stsClient:        &mockSTSClient{accountId: accountId},
+				nativeCredential: &session.Session{},
+			},
+			numberOfFunctionCalls: 1,
+			wantNumberOfStsCalls:  1,
+		},
+		{
+			name: "50_function_calls_immediate",
+			fields: fields{
+				metadataprovider: mockMetadataProviderWithAccountId(accountId),
+				stsClient:        &mockSTSClient{accountId: accountId},
+				nativeCredential: &session.Session{},
+			},
+			numberOfFunctionCalls: 50,
+			wantNumberOfStsCalls:  1,
+		},
+		{
+			name: "50_function_calls_after_successful_interval",
+			fields: fields{
+				metadataprovider: mockMetadataProviderWithAccountId(accountId),
+				stsClient:        &mockSTSClient{accountId: accountId},
+				nativeCredential: &session.Session{},
+			},
+			numberOfFunctionCalls: 50,
+			wantNumberOfStsCalls:  50,
+			mockTimeSkipInterval:  int64(successfulRefresh),
+		},
+		{
+			name: "50_function_calls_after_failure_interval",
+			fields: fields{
+				metadataprovider: mockMetadataProviderWithAccountId("210987654321"),
+				stsClient:        &mockSTSClient{accountId: accountId},
+				nativeCredential: &session.Session{},
+			},
+			numberOfFunctionCalls: 50,
+			wantNumberOfStsCalls:  50,
+			mockTimeSkipInterval:  int64(failureRefresh),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var currentTime = time.Now()
+			e := EntityStore{
+				mode:             config.ModeEC2,
+				ec2Info:          ec2Info{InstanceID: instanceId},
+				serviceprovider:  sp,
+				metadataprovider: tt.fields.metadataprovider,
+				stsClient:        tt.fields.stsClient,
+				nativeCredential: tt.fields.nativeCredential,
+				currentTime: func() time.Time {
+					currentTime = currentTime.Add(time.Duration(tt.mockTimeSkipInterval) + 1)
+					return currentTime
+				},
+			}
+			for i := 0; i < tt.numberOfFunctionCalls; i++ {
+				e.CreateLogFileEntity(glob, group)
+			}
+			assert.Equal(t, tt.wantNumberOfStsCalls, e.stsClient.(*mockSTSClient).callCount)
+		})
+	}
+}
+
+func TestCalculateNextRefreshPeriod(t *testing.T) {
+	refreshPeriod := calculateNextRefreshPeriod(true, fixedTime)
+	assert.Equal(t, fixedTime.Add(successfulRefresh), refreshPeriod)
+	refreshPeriod = calculateNextRefreshPeriod(false, fixedTime)
+	assert.Equal(t, fixedTime.Add(failureRefresh), refreshPeriod)
 }
 
 func dereferenceMap(input map[string]*string) map[string]string {
