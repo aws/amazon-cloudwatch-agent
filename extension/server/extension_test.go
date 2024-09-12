@@ -58,32 +58,51 @@ func TestK8sPodToServiceMapHandler(t *testing.T) {
 	config := &Config{
 		ListenAddress: ":8080",
 	}
-	server := NewServer(logger, config)
-
-	expectedMap := map[string]entitystore.ServiceEnvironment{
-		"pod1": {
-			ServiceName: "service1",
-			Environment: "env1",
+	tests := []struct {
+		name     string
+		want     map[string]entitystore.ServiceEnvironment
+		emptyMap bool
+	}{
+		{
+			name: "HappyPath",
+			want: map[string]entitystore.ServiceEnvironment{
+				"pod1": {
+					ServiceName: "service1",
+					Environment: "env1",
+				},
+				"pod2": {
+					ServiceName: "service2",
+					Environment: "env2",
+				},
+			},
 		},
-		"pod2": {
-			ServiceName: "service2",
-			Environment: "env2",
+		{
+			name:     "Empty Map",
+			want:     map[string]entitystore.ServiceEnvironment{},
+			emptyMap: true,
 		},
 	}
-	es := newMockEntityStore()
-	getPodServiceEnvironmentMapping = newMockGetPodServiceEnvironmentMapping(es)
-	es.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
-	es.AddPodServiceEnvironmentMapping("pod2", "service2", "env2")
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	server.k8sPodToServiceMapHandler(c)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := NewServer(logger, config)
+			es := newMockEntityStore()
+			getPodServiceEnvironmentMapping = newMockGetPodServiceEnvironmentMapping(es)
+			if !tt.emptyMap {
+				es.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
+				es.AddPodServiceEnvironmentMapping("pod2", "service2", "env2")
+			}
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			server.k8sPodToServiceMapHandler(c)
 
-	assert.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, http.StatusOK, w.Code)
 
-	var actualMap map[string]entitystore.ServiceEnvironment
-	err := json.Unmarshal(w.Body.Bytes(), &actualMap)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedMap, actualMap)
+			var actualMap map[string]entitystore.ServiceEnvironment
+			err := json.Unmarshal(w.Body.Bytes(), &actualMap)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, actualMap)
+		})
+	}
 }
 
 func TestJSONHandler(t *testing.T) {

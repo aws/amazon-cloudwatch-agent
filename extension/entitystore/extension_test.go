@@ -405,32 +405,34 @@ func TestEntityStore_addServiceAttrEntryForLogGroup(t *testing.T) {
 	sp.AssertExpectations(t)
 }
 
-func TestEntityStore_AddPodServiceEnvironmentMapping(t *testing.T) {
-
+func TestEntityStore_AddAndGetPodServiceEnvironmentMapping(t *testing.T) {
 	logger, _ := zap.NewProduction()
-	eks := *newEKSInfo(logger)
-	e := EntityStore{eksInfo: eks}
-	e.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
-	expectedMap := map[string]ServiceEnvironment{
-		"pod1": {
-			ServiceName: "service1",
-			Environment: "env1",
+	tests := []struct {
+		name string
+		want map[string]ServiceEnvironment
+		eks  *eksInfo
+	}{
+		{
+			name: "HappyPath",
+			want: map[string]ServiceEnvironment{
+				"pod1": {
+					ServiceName: "service1",
+					Environment: "env1",
+				},
+			},
+			eks: newEKSInfo(logger),
+		},
+		{
+			name: "Empty EKS Info",
+			want: map[string]ServiceEnvironment{},
+			eks:  nil,
 		},
 	}
-	assert.Equal(t, expectedMap, e.eksInfo.GetPodServiceEnvironmentMapping())
-}
-
-func TestEntityStore_GetPodServiceEnvironmentMapping(t *testing.T) {
-
-	logger, _ := zap.NewProduction()
-	eks := *newEKSInfo(logger)
-	e := EntityStore{eksInfo: eks}
-	expectedMap := map[string]ServiceEnvironment{
-		"pod1": {
-			ServiceName: "service1",
-			Environment: "env1",
-		},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := EntityStore{eksInfo: tt.eks}
+			e.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
+			assert.Equal(t, tt.want, e.GetPodServiceEnvironmentMapping())
+		})
 	}
-	e.eksInfo.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
-	assert.Equal(t, expectedMap, e.GetPodServiceEnvironmentMapping())
 }

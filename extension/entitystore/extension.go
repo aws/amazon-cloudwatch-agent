@@ -59,7 +59,7 @@ type EntityStore struct {
 	ec2Info ec2Info
 
 	// eksInfo stores information about EKS such as pod to service Env map
-	eksInfo eksInfo
+	eksInfo *eksInfo
 
 	// serviceprovider stores information about possible service names
 	// that we can attach to the entity
@@ -94,7 +94,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		go e.ec2Info.initEc2Info()
 	}
 	if e.kubernetesMode != "" {
-		e.eksInfo = *newEKSInfo(e.logger)
+		e.eksInfo = newEKSInfo(e.logger)
 	}
 	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
 	go e.serviceprovider.startServiceProvider()
@@ -114,7 +114,7 @@ func (e *EntityStore) KubernetesMode() string {
 	return e.kubernetesMode
 }
 
-func (e *EntityStore) EKSInfo() eksInfo {
+func (e *EntityStore) EKSInfo() *eksInfo {
 	return e.eksInfo
 }
 
@@ -169,11 +169,16 @@ func (e *EntityStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, 
 }
 
 func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string) {
-	e.eksInfo.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName)
+	if e.eksInfo != nil {
+		e.eksInfo.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName)
+	}
 }
 
 func (e *EntityStore) GetPodServiceEnvironmentMapping() map[string]ServiceEnvironment {
-	return e.eksInfo.GetPodServiceEnvironmentMapping()
+	if e.eksInfo != nil {
+		return e.eksInfo.GetPodServiceEnvironmentMapping()
+	}
+	return map[string]ServiceEnvironment{}
 }
 
 func (e *EntityStore) createAttributeMap() map[string]*string {

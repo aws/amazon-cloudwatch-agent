@@ -73,7 +73,7 @@ func (s *Server) k8sPodToServiceMapHandler(c *gin.Context) {
 // Added this for testing purpose
 var getPodServiceEnvironmentMapping = func() map[string]entitystore.ServiceEnvironment {
 	es := entitystore.GetEntityStore()
-	if es != nil {
+	if es != nil && es.GetPodServiceEnvironmentMapping() != nil {
 		return es.GetPodServiceEnvironmentMapping()
 	}
 	return map[string]entitystore.ServiceEnvironment{}
