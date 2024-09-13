@@ -144,18 +144,6 @@ func (m *mockMetadataProvider) InstanceID(ctx context.Context) (string, error) {
 	return "MockInstanceID", nil
 }
 
-func (m *mockMetadataProvider) InstanceTags(ctx context.Context) (string, error) {
-	return "MockInstanceTag", nil
-}
-
-func (m *mockMetadataProvider) InstanceProfileIAMRole() (string, error) {
-	return "MockIAM", nil
-}
-
-func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey string) (string, error) {
-	return "MockInstanceValue", nil
-}
-
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 	InstanceID:   "i-01d2417c27a396e44",
 	Region:       "us-east-1",
@@ -298,7 +286,7 @@ func TestStartSuccessWithNoTagsVolumesUpdate(t *testing.T) {
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
 
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
@@ -341,7 +329,7 @@ func TestStartSuccessWithTagsVolumesUpdate(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 10 * time.Millisecond
 
 	tagger := &Tagger{
@@ -397,7 +385,7 @@ func TestStartSuccessWithWildcardTagVolumeKey(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
@@ -442,7 +430,7 @@ func TestApplyWithTagsVolumesUpdate(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
@@ -535,7 +523,7 @@ func TestMetricsDroppedBeforeStarted(t *testing.T) {
 		return ec2Client
 	}
 	volumeCache := &mockVolumeCache{cache: make(map[string]string)}
-	BackoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
+	backoffSleepArray = []time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 30 * time.Millisecond}
 	defaultRefreshInterval = 50 * time.Millisecond
 	tagger := &Tagger{
 		Config:            cfg,
@@ -599,7 +587,7 @@ func TestTaggerStartDoesNotBlock(t *testing.T) {
 	ec2Provider := func(*configaws.CredentialConfig) ec2iface.EC2API {
 		return ec2Client
 	}
-	BackoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
+	backoffSleepArray = []time.Duration{1 * time.Minute, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute}
 	defaultRefreshInterval = 180 * time.Second
 	tagger := &Tagger{
 		Config:            cfg,

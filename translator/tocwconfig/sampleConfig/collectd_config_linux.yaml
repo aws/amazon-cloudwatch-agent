@@ -17,9 +17,6 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    entitystore:
-        mode: ec2
-        region: us-west-2
 receivers:
     telegraf_socket_listener:
         collection_interval: 1m0s
@@ -28,7 +25,6 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
-        - entitystore
     pipelines:
         metrics/host:
             exporters:

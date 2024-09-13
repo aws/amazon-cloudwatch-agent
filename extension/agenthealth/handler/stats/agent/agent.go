@@ -29,7 +29,6 @@ type Stats struct {
 	RunningInContainer        *int     `json:"ric,omitempty"`
 	RegionType                *string  `json:"rt,omitempty"`
 	Mode                      *string  `json:"m,omitempty"`
-	EntityRejected            *int     `json:"ent,omitempty"`
 }
 
 // Merge the other Stats into the current. If the field is not nil,
@@ -76,9 +75,6 @@ func (s *Stats) Merge(other Stats) {
 	}
 	if other.Mode != nil {
 		s.Mode = other.Mode
-	}
-	if other.EntityRejected != nil {
-		s.EntityRejected = other.EntityRejected
 	}
 }
 

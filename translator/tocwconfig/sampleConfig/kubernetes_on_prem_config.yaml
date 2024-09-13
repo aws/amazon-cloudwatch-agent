@@ -365,11 +365,6 @@ extensions:
             usage_flags:
                 mode: OP
                 region_type: ACJ
-    entitystore:
-        mode: onPremise
-        profile: AmazonCloudWatchAgent
-        region: us-east-1
-        shared_credential_file: fake-path
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -420,7 +415,6 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
-        - entitystore
     pipelines:
         metrics/containerinsights:
             exporters:

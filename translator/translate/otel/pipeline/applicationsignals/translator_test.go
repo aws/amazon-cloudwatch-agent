@@ -125,7 +125,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"awsentity", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -145,7 +145,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"awsentity", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -162,7 +162,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"awsentity", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -220,7 +220,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"awsentity", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -240,7 +240,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/application_signals"},
-				processors: []string{"awsentity", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs"},
 			},

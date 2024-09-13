@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
@@ -153,17 +152,9 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 
 	t.cleanUpStoppedTailerSrc()
 
-	es := entitystore.GetEntityStore()
-
 	// Create a "tailer" for each file
 	for i := range t.FileConfig {
 		fileconfig := &t.FileConfig[i]
-
-		//Add file -> {serviceName,  deploymentEnvironment} mapping to entity store
-		if es != nil {
-			es.AddServiceAttrEntryForLogFile(entitystore.LogFileGlob(fileconfig.FilePath), fileconfig.ServiceName, fileconfig.Environment)
-		}
-
 		targetFiles, err := t.getTargetFiles(fileconfig)
 		if err != nil {
 			t.Log.Errorf("Failed to find target files for file config %v, with error: %v", fileconfig.FilePath, err)
@@ -243,7 +234,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				t.Destination,
 				t.getStateFilePath(filename),
 				fileconfig.LogGroupClass,
-				fileconfig.FilePath,
 				tailer,
 				fileconfig.AutoRemoval,
 				mlCheck,

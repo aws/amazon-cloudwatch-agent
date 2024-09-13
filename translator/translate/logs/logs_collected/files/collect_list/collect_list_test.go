@@ -17,7 +17,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 )
 
 func TestFileConfig(t *testing.T) {
@@ -31,15 +30,13 @@ func TestFileConfig(t *testing.T) {
 	_, val := f.ApplyRule(input)
 
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"log_group_name":         "group1",
-		"log_stream_name":        "LOG_STREAM_NAME",
-		"log_group_class":        util.StandardLogGroupClass,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"log_group_name":    "group1",
+		"log_stream_name":   "LOG_STREAM_NAME",
+		"log_group_class":   util.StandardLogGroupClass,
+		"pipe":              false,
+		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -54,14 +51,12 @@ func TestFileConfigOverride(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         false,
-		"log_group_name":         "group1",
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    false,
+		"log_group_name":    "group1",
+		"pipe":              false,
+		"retention_in_days": -1,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -83,16 +78,14 @@ func TestTimestampFormat(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"timestamp_layout":       []string{"15:04:05 06 Jan _2"},
-		"timestamp_regex":        "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
-		"timezone":               "UTC",
-		"retention_in_days":      -1,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"timestamp_layout":  []string{"15:04:05 06 Jan _2"},
+		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
+		"timezone":          "UTC",
+		"retention_in_days": -1,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -112,15 +105,13 @@ func TestTimestampFormatAll(t *testing.T) {
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path1",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"15:04:05 06 Jan _2"},
-				"timestamp_regex":        "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
+				"file_path":         "path1",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"15:04:05 06 Jan _2"},
+				"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
+				"log_group_class":   "",
 			}},
 		},
 		{
@@ -133,15 +124,13 @@ func TestTimestampFormatAll(t *testing.T) {
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path1",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"1 _2 15:04:05", "01 _2 15:04:05"},
-				"timestamp_regex":        "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
+				"file_path":         "path1",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"1 _2 15:04:05", "01 _2 15:04:05"},
+				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "",
 			}},
 		},
 		{
@@ -154,15 +143,13 @@ func TestTimestampFormatAll(t *testing.T) {
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path1",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"_2 1 15:04:05", "_2 01 15:04:05"},
-				"timestamp_regex":        "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
+				"file_path":         "path1",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"_2 1 15:04:05", "_2 01 15:04:05"},
+				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "",
 			}},
 		},
 		{
@@ -175,15 +162,13 @@ func TestTimestampFormatAll(t *testing.T) {
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path4",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"Jan _2 15:04:05"},
-				"timestamp_regex":        "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
+				"file_path":         "path4",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"Jan _2 15:04:05"},
+				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "",
 			}},
 		},
 		{
@@ -196,57 +181,13 @@ func TestTimestampFormatAll(t *testing.T) {
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path5",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"Jan _2 15:04:05"},
-				"timestamp_regex":        "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
-			}},
-		},
-		{
-			input: `{
-					"collect_list":[
-						{
-							"file_path":"path4",
-                            "timestamp_format": "%b %d %H:%M:%S"
-						}
-					]
-				}`,
-			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path4",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"Jan _2 15:04:05"},
-				"timestamp_regex":        "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
-			}},
-		},
-		{
-			input: `{
-					"collect_list":[
-						{
-							"file_path":"path5",
-                            "timestamp_format": "%b %-d %H:%M:%S"
-						}
-					]
-				}`,
-			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path5",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"Jan _2 15:04:05"},
-				"timestamp_regex":        "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
+				"file_path":         "path5",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"Jan _2 15:04:05"},
+				"timestamp_regex":   "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "",
 			}},
 		},
 		{
@@ -259,15 +200,13 @@ func TestTimestampFormatAll(t *testing.T) {
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path1",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"5 _2 1 15:04:05", "5 _2 01 15:04:05"},
-				"timestamp_regex":        "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
+				"file_path":         "path1",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"5 _2 1 15:04:05", "5 _2 01 15:04:05"},
+				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "",
 			}},
 		},
 		{
@@ -280,15 +219,13 @@ func TestTimestampFormatAll(t *testing.T) {
 					]
 				}`,
 			expected: []interface{}{map[string]interface{}{
-				"file_path":              "path7",
-				"from_beginning":         true,
-				"pipe":                   false,
-				"retention_in_days":      -1,
-				"timestamp_layout":       []string{"5 _2 01 15:04:05", "5 _2 1 15:04:05"},
-				"timestamp_regex":        "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
-				"log_group_class":        "",
-				"service_name":           "",
-				"deployment_environment": "",
+				"file_path":         "path7",
+				"from_beginning":    true,
+				"pipe":              false,
+				"retention_in_days": -1,
+				"timestamp_layout":  []string{"5 _2 01 15:04:05", "5 _2 1 15:04:05"},
+				"timestamp_regex":   "(\\d{1,2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})",
+				"log_group_class":   "",
 			}},
 		},
 	}
@@ -330,16 +267,14 @@ func TestTimestampFormat_NonZeroPadding(t *testing.T) {
 	expectedLayout := []string{"3:4:5 06 1 _2", "3:4:5 06 01 _2"}
 	expectedRegex := "(\\d{1,2}:\\d{1,2}:\\d{1,2} \\d{2} \\s{0,1}\\d{1,2} \\s{0,1}\\d{1,2})"
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_class":        "",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"timestamp_layout":       expectedLayout,
-		"timestamp_regex":        expectedRegex,
-		"timezone":               "UTC",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_class":   "",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"timestamp_layout":  expectedLayout,
+		"timestamp_regex":   expectedRegex,
+		"timezone":          "UTC",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -378,16 +313,14 @@ func TestTimestampFormat_SpecialCharacters(t *testing.T) {
 	expectedLayout := []string{"^.*?|[({15:04:05 06 Jan _2})]$"}
 	expectedRegex := "(\\^\\.\\*\\?\\|\\[\\(\\{\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2}\\}\\)\\]\\$)"
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_class":        "",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"timestamp_layout":       expectedLayout,
-		"timestamp_regex":        expectedRegex,
-		"timezone":               "UTC",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_class":   "",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"timestamp_layout":  expectedLayout,
+		"timestamp_regex":   expectedRegex,
+		"timezone":          "UTC",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -420,15 +353,13 @@ func TestTimestampFormat_Template(t *testing.T) {
 	expectedLayout := []string{"Jan _2 15:04:05"}
 	expectedRegex := "(\\w{3} \\s{0,1}\\d{1,2} \\d{2}:\\d{2}:\\d{2})"
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_class":        "",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"timestamp_layout":       expectedLayout,
-		"timestamp_regex":        expectedRegex,
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_class":   "",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"timestamp_layout":  expectedLayout,
+		"timestamp_regex":   expectedRegex,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -486,8 +417,6 @@ func TestMultiLineStartPattern(t *testing.T) {
 		"timestamp_regex":          "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
 		"timezone":                 "UTC",
 		"multi_line_start_pattern": "{timestamp_regex}",
-		"service_name":             "",
-		"deployment_environment":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -510,17 +439,15 @@ func TestEncoding(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"log_group_class":        "",
-		"timestamp_layout":       []string{"15:04:05 06 Jan _2"},
-		"timestamp_regex":        "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
-		"timezone":               "UTC",
-		"encoding":               "gbk",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"log_group_class":   "",
+		"timestamp_layout":  []string{"15:04:05 06 Jan _2"},
+		"timestamp_regex":   "(\\d{2}:\\d{2}:\\d{2} \\d{2} \\w{3} \\s{0,1}\\d{1,2})",
+		"timezone":          "UTC",
+		"encoding":          "gbk",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -542,13 +469,11 @@ func TestEncoding_Invalid(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"log_group_class":        "",
-		"retention_in_days":      -1,
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"log_group_class":   "",
+		"retention_in_days": -1,
 	}}
 	assert.Equal(t, expectVal, val)
 	assert.False(t, translator.IsTranslateSuccess())
@@ -572,14 +497,12 @@ func TestAutoRemoval(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"log_group_class":        "",
-		"auto_removal":           true,
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"log_group_class":   "",
+		"auto_removal":      true,
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -596,14 +519,12 @@ func TestAutoRemoval(t *testing.T) {
 	}
 	_, val = f.ApplyRule(input)
 	expectVal = []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"auto_removal":           false,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"auto_removal":      false,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -619,13 +540,11 @@ func TestAutoRemoval(t *testing.T) {
 	}
 	_, val = f.ApplyRule(input)
 	expectVal = []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -694,16 +613,14 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"log_group_class":        "",
-		"blacklist":              "^agent.log",
-		"publish_multi_logs":     true,
-		"timezone":               "UTC",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":          "path1",
+		"from_beginning":     true,
+		"pipe":               false,
+		"retention_in_days":  -1,
+		"log_group_class":    "",
+		"blacklist":          "^agent.log",
+		"publish_multi_logs": true,
+		"timezone":           "UTC",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -721,15 +638,13 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 	}
 	_, val = f.ApplyRule(input)
 	expectVal = []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"publish_multi_logs":     false,
-		"timezone":               "UTC",
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":          "path1",
+		"from_beginning":     true,
+		"pipe":               false,
+		"retention_in_days":  -1,
+		"publish_multi_logs": false,
+		"timezone":           "UTC",
+		"log_group_class":    "",
 	}}
 	assert.Equal(t, expectVal, val)
 
@@ -745,13 +660,11 @@ func TestPublishMultiLogs_WithBlackList(t *testing.T) {
 	}
 	_, val = f.ApplyRule(input)
 	expectVal = []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -772,12 +685,10 @@ func TestLogFilters(t *testing.T) {
 	assert.Nil(t, e)
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"from_beginning":         true,
-		"pipe":                   false,
-		"retention_in_days":      -1,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"from_beginning":    true,
+		"pipe":              false,
+		"retention_in_days": -1,
+		"log_group_class":   "",
 		"filters": []interface{}{
 			map[string]interface{}{
 				"type":       "include",
@@ -814,23 +725,19 @@ func TestRetentionDifferentLogGroups(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test2",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test2",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "",
 	}, map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -857,23 +764,19 @@ func TestDuplicateRetention(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "",
 	}, map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -901,23 +804,19 @@ func TestConflictingRetention(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "",
 	}, map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      5,
-		"from_beginning":         true,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 5,
+		"from_beginning":    true,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different retention_in_days values can't be set for the same log group: test1", translator.ErrorMessages[len(translator.ErrorMessages)-1])
 	assert.Equal(t, expectVal, val)
@@ -945,23 +844,19 @@ func TestDifferentLogGroupClasses(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test2",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test2",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "",
 	}, map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        "",
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   "",
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -990,23 +885,19 @@ func TestDuplicateLogGroupClass(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        util.StandardLogGroupClass,
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   util.StandardLogGroupClass,
 	}, map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        util.StandardLogGroupClass,
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   util.StandardLogGroupClass,
 	}}
 	assert.Equal(t, expectVal, val)
 }
@@ -1038,97 +929,20 @@ func TestConflictingLogGroupClass(t *testing.T) {
 	}
 	_, val := f.ApplyRule(input)
 	expectVal := []interface{}{map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        util.StandardLogGroupClass,
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   util.StandardLogGroupClass,
 	}, map[string]interface{}{
-		"file_path":              "path1",
-		"log_group_name":         "test1",
-		"pipe":                   false,
-		"retention_in_days":      3,
-		"from_beginning":         true,
-		"log_group_class":        util.InfrequentAccessLogGroupClass,
-		"service_name":           "",
-		"deployment_environment": "",
+		"file_path":         "path1",
+		"log_group_name":    "test1",
+		"pipe":              false,
+		"retention_in_days": 3,
+		"from_beginning":    true,
+		"log_group_class":   util.InfrequentAccessLogGroupClass,
 	}}
 	assert.Equal(t, "Under path : /logs/logs_collected/files/collect_list/ | Error : Different log_group_class values can't be set for the same log group: test1", translator.ErrorMessages[len(translator.ErrorMessages)-1])
-	assert.Equal(t, expectVal, val)
-}
-
-func TestServiceAndEnvironment(t *testing.T) {
-	logs.GlobalLogConfig.DeploymentEnvironment = "ec2:default"
-
-	f := new(FileConfig)
-	var input interface{}
-	e := json.Unmarshal([]byte(`{
-		"collect_list": [
-			{
-				"service.name": "my-service1",
-				"deployment.environment": "ec2:test-deployment-environment",
-				"file_path": "path1",
-         		"log_group_name": "group1",
-         		"log_stream_name": "stream",
-				"log_group_class":   "standard"
-      		},
-      		{
-				"service.name": "my-service2",
-         		"file_path": "path2",
-         		"log_group_name": "group2",
-         		"log_stream_name": "stream",
-				"log_group_class":   "standard"
-      		},
-			{
-         		"file_path": "path3",
-         		"log_group_name": "group3",
-         		"log_stream_name": "stream",
-				"log_group_class":   "standard"
-      		}
-		]
-	}`), &input)
-	if e != nil {
-		assert.Fail(t, e.Error())
-	}
-	_, val := f.ApplyRule(input)
-
-	expectVal := []interface{}{
-		map[string]interface{}{
-			"file_path":              "path1",
-			"log_group_name":         "group1",
-			"log_stream_name":        "stream",
-			"service_name":           "my-service1",
-			"deployment_environment": "ec2:test-deployment-environment",
-			"from_beginning":         true,
-			"log_group_class":        util.StandardLogGroupClass,
-			"pipe":                   false,
-			"retention_in_days":      -1,
-		},
-		map[string]interface{}{
-			"file_path":              "path2",
-			"log_group_name":         "group2",
-			"log_stream_name":        "stream",
-			"service_name":           "my-service2",
-			"deployment_environment": "ec2:default",
-			"from_beginning":         true,
-			"log_group_class":        util.StandardLogGroupClass,
-			"pipe":                   false,
-			"retention_in_days":      -1,
-		},
-		map[string]interface{}{
-			"file_path":              "path3",
-			"log_group_name":         "group3",
-			"log_stream_name":        "stream",
-			"from_beginning":         true,
-			"log_group_class":        util.StandardLogGroupClass,
-			"pipe":                   false,
-			"retention_in_days":      -1,
-			"service_name":           "",
-			"deployment_environment": "ec2:default",
-		},
-	}
 	assert.Equal(t, expectVal, val)
 }

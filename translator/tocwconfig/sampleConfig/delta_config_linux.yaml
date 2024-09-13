@@ -17,9 +17,6 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    entitystore:
-        mode: ec2
-        region: us-east-1
 processors:
     cumulativetodelta/hostDeltaMetrics:
         exclude:
@@ -62,7 +59,6 @@ receivers:
 service:
     extensions:
         - agenthealth/metrics
-        - entitystore
     pipelines:
         metrics/hostDeltaMetrics:
             exporters:
