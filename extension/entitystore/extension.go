@@ -241,6 +241,7 @@ func (e *EntityStore) shouldReturnEntity() bool {
 		e.logger.Debug("an error occurred when calling STS GetCallerIdentity for cross-account checks. Reason: ", zap.Error(err))
 		return false
 	}
+	e.logger.Debug("Made call to STS GetCallerIdentity")
 	return instanceAccountID == *assumedRoleIdentity.Account
 }
 
