@@ -14,7 +14,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 
@@ -40,13 +39,8 @@ const (
 	ServiceNameSourceUnknown           = "Unknown"
 	ServiceNameSourceUserConfiguration = "UserConfiguration"
 
-	describeTagsJitterMax = 3600
-	describeTagsJitterMin = 3000
-	defaultJitterMin      = 60
-	defaultJitterMax      = 180
-	maxRetry              = 3
-	infRetry              = -1
-	RequestLimitExceeded  = "RequestLimitExceeded"
+	jitterMax = 180
+	jitterMin = 60
 )
 
 var (
@@ -92,10 +86,10 @@ type serviceprovider struct {
 func (s *serviceprovider) startServiceProvider() {
 	err := s.getEC2Client()
 	if err != nil {
-		go refreshLoop(s.done, s.getEC2Client, true, "", defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry)
+		go refreshLoop(s.done, s.getEC2Client, true)
 	}
-	go refreshLoop(s.done, s.getIAMRole, false, "", defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry)
-	go refreshLoop(s.done, s.getEC2TagServiceName, false, RequestLimitExceeded, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry)
+	go refreshLoop(s.done, s.getIAMRole, false)
+	go refreshLoop(s.done, s.getEC2TagServiceName, false)
 }
 
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
@@ -248,7 +242,7 @@ func (s *serviceprovider) getEC2TagServiceName() error {
 		}
 		result, err := s.ec2API.DescribeTags(input)
 		if err != nil {
-			return err
+			continue
 		}
 		for _, tag := range result.Tags {
 			key := *tag.Key
@@ -313,28 +307,23 @@ func newServiceProvider(mode string, region string, ec2Info *ec2Info, metadataPr
 	}
 }
 
-func refreshLoop(done chan struct{}, updateFunc func() error, oneTime bool, retryOnError string, successRetryMin int, successRetryMax int, backoffArray []time.Duration, maxRetry int) int {
+func refreshLoop(done chan struct{}, updateFunc func() error, oneTime bool) {
 	// Offset retry by 1 so we can start with 1 minute wait time
 	// instead of immediately retrying
 	retry := 1
 	for {
-		if maxRetry != -1 && retry > maxRetry {
-			return retry
-		}
 		err := updateFunc()
 		if err == nil && oneTime {
-			return retry
-		} else if awsErr, ok := err.(awserr.Error); ok && retryOnError != "" && awsErr.Code() != retryOnError {
-			return retry
+			return
 		}
 
-		waitDuration := calculateWaitTime(retry-1, err, successRetryMin, successRetryMax, backoffArray)
+		waitDuration := calculateWaitTime(retry, err)
 		wait := time.NewTimer(waitDuration)
 		select {
 		case <-done:
 			log.Printf("D! serviceprovider: Shutting down now")
 			wait.Stop()
-			return retry
+			return
 		case <-wait.C:
 		}
 
@@ -350,21 +339,20 @@ func refreshLoop(done chan struct{}, updateFunc func() error, oneTime bool, retr
 		}
 
 	}
-	return retry
 }
 
 // calculateWaitTime returns different time based on whether if
 // a function call was returned with error. If returned with error,
 // follow exponential backoff wait time, otherwise, refresh with jitter
-func calculateWaitTime(retry int, err error, successRetryMin int, successRetryMax int, backoffArray []time.Duration) time.Duration {
+func calculateWaitTime(retry int, err error) time.Duration {
 	var waitDuration time.Duration
 	if err == nil {
-		return time.Duration(rand.Intn(successRetryMax-successRetryMin)+successRetryMin) * time.Second
+		return time.Duration(rand.Intn(jitterMax-jitterMin)+jitterMin) * time.Second
 	}
-	if retry < len(backoffArray) {
-		waitDuration = backoffArray[retry]
+	if retry < len(ec2tagger.BackoffSleepArray) {
+		waitDuration = ec2tagger.BackoffSleepArray[retry]
 	} else {
-		waitDuration = backoffArray[len(backoffArray)-1]
+		waitDuration = ec2tagger.BackoffSleepArray[len(ec2tagger.BackoffSleepArray)-1]
 	}
 	return waitDuration
 }

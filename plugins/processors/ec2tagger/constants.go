@@ -70,6 +70,5 @@ const (
 var (
 	// issue with newer versions of the sdk take longer when hop limit is 1 in eks
 	defaultRefreshInterval = 180 * time.Second
-	ThrottleBackOffArray   = []time.Duration{0, 1 * time.Minute, 3 * time.Minute}                                                                      // backoff retry for ec2 describe instances API call. Assuming the throttle limit is 20 per second. 10 mins allow 12000 API calls.
 	BackoffSleepArray      = []time.Duration{0, 1 * time.Minute, 1 * time.Minute, 3 * time.Minute, 3 * time.Minute, 3 * time.Minute, 10 * time.Minute} // backoff retry for ec2 describe instances API call. Assuming the throttle limit is 20 per second. 10 mins allow 12000 API calls.
 )
