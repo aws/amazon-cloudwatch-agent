@@ -5,12 +5,9 @@ package entitystore
 
 import (
 	"context"
-	"net/http"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -91,7 +88,6 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	ec2CredentialConfig := &configaws.CredentialConfig{
 		Profile:  e.config.Profile,
 		Filename: e.config.Filename,
-		Region:   e.config.Region,
 	}
 	switch e.mode {
 	case config.ModeEC2:
@@ -207,11 +203,8 @@ func (e *EntityStore) shouldReturnEntity() bool {
 		e.stsClient = sts.New(
 			e.nativeCredential,
 			&aws.Config{
-				Region:              aws.String(e.config.Region),
-				LogLevel:            configaws.SDKLogLevel(),
-				Logger:              configaws.SDKLogger{},
-				STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
-				HTTPClient:          &http.Client{Timeout: 1 * time.Minute},
+				LogLevel: configaws.SDKLogLevel(),
+				Logger:   configaws.SDKLogger{},
 			})
 	}
 	assumedRoleIdentity, err := e.stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
