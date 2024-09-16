@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 var ErrOutputStopped = errors.New("Output plugin stopped")
@@ -40,14 +39,13 @@ type LogSrc interface {
 	Description() string
 	Retention() int
 	Class() string
-	Entity() *cloudwatchlogs.Entity
 	Stop()
 }
 
 // A LogBackend is able to return a LogDest of a given name.
 // The same name should always return the same LogDest.
 type LogBackend interface {
-	CreateDest(string, string, int, string, LogSrc) LogDest
+	CreateDest(string, string, int, string) LogDest
 }
 
 // A LogDest represents a final endpoint where log events are published to.
@@ -124,7 +122,7 @@ func (l *LogAgent) Run(ctx context.Context) {
 						continue
 					}
 					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
-					dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass, src)
+					dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass)
 					l.destNames[dest] = dname
 					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
 					go l.runSrcToDest(src, dest)

@@ -285,9 +285,6 @@ extensions:
         region: us-east-1
         role_arn: ""
         service_name: ""
-    entitystore:
-      mode: ec2
-      region: us-east-1
 processors:
     awsapplicationsignals:
         limiter:
@@ -299,7 +296,6 @@ processors:
         resolvers:
             - name: TestCluster
               platform: eks
-    awsentity: {}
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -665,13 +661,11 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
-        - entitystore
     pipelines:
         metrics/application_signals:
             exporters:
                 - awsemf/application_signals
             processors:
-                - awsentity
                 - resourcedetection
                 - awsapplicationsignals
             receivers:

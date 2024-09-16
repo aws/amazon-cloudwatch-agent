@@ -19,7 +19,6 @@ import (
 	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
-	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger/internal/volume"
 	translatorCtx "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
@@ -44,7 +43,7 @@ type Tagger struct {
 
 	logger           *zap.Logger
 	cancelFunc       context.CancelFunc
-	metadataProvider ec2metadataprovider.MetadataProvider
+	metadataProvider MetadataProvider
 	ec2Provider      ec2ProviderType
 
 	shutdownC          chan bool
@@ -68,7 +67,7 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 		Config:           config,
 		logger:           logger,
 		cancelFunc:       cancel,
-		metadataProvider: ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
+		metadataProvider: NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),
@@ -173,7 +172,7 @@ func (t *Tagger) updateTags() error {
 		}
 		for _, tag := range result.Tags {
 			key := *tag.Key
-			if Ec2InstanceTagKeyASG == key {
+			if ec2InstanceTagKeyASG == key {
 				// rename to match CW dimension as applied by AutoScaling service, not the EC2 tag
 				key = cwDimensionASG
 			}
@@ -247,7 +246,7 @@ func (t *Tagger) ec2TagsRetrieved() bool {
 	defer t.RUnlock()
 	if t.ec2TagCache != nil {
 		for _, key := range t.EC2InstanceTagKeys {
-			if key == Ec2InstanceTagKeyASG {
+			if key == ec2InstanceTagKeyASG {
 				key = cwDimensionASG
 			}
 			if key == "*" {
@@ -306,7 +305,7 @@ func (t *Tagger) Start(ctx context.Context, _ component.Host) error {
 		// and filter for the EC2 tag name called 'aws:autoscaling:groupName'
 		for i, key := range t.EC2InstanceTagKeys {
 			if cwDimensionASG == key {
-				t.EC2InstanceTagKeys[i] = Ec2InstanceTagKeyASG
+				t.EC2InstanceTagKeys[i] = ec2InstanceTagKeyASG
 			}
 		}
 
@@ -443,10 +442,10 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 	retry := 0
 	for {
 		var waitDuration time.Duration
-		if retry < len(BackoffSleepArray) {
-			waitDuration = BackoffSleepArray[retry]
+		if retry < len(backoffSleepArray) {
+			waitDuration = backoffSleepArray[retry]
 		} else {
-			waitDuration = BackoffSleepArray[len(BackoffSleepArray)-1]
+			waitDuration = backoffSleepArray[len(backoffSleepArray)-1]
 		}
 
 		wait := time.NewTimer(waitDuration)

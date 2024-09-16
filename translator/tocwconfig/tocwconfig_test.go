@@ -152,19 +152,6 @@ func TestAppSignalsAndNativeKubernetesConfig(t *testing.T) {
 	checkTranslation(t, "appsignals_and_k8s_config", "windows", expectedEnvVars, "")
 }
 
-func TestEntityConfig(t *testing.T) {
-	resetContext(t)
-
-	context.CurrentContext().SetRunInContainer(true)
-	context.CurrentContext().SetMode(config.ModeEC2)
-
-	t.Setenv(config.HOST_NAME, "host_name_from_env")
-	t.Setenv(config.HOST_IP, "127.0.0.1")
-
-	checkTranslation(t, "entity_linux_config", "linux", nil, "")
-	checkTranslation(t, "entity_linux_config", "darwin", nil, "")
-}
-
 func TestEmfAndKubernetesConfig(t *testing.T) {
 	resetContext(t)
 	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
