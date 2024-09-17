@@ -8,64 +8,89 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
-)
+	"golang.org/x/exp/maps"
 
-const (
-	receiversCount  = 6
-	processorCount  = 10
-	exportersCount  = 5
-	extensionsCount = 2
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
 func TestComponents(t *testing.T) {
 	factories, err := Factories()
 	assert.NoError(t, err)
-	receivers := factories.Receivers
-	assert.Len(t, receivers, receiversCount)
-	awscontainerinsightreceiverType, _ := component.NewType("awscontainerinsightreceiver")
-	awsxrayType, _ := component.NewType("awsxray")
-	otlpType, _ := component.NewType("otlp")
-	tcplogType, _ := component.NewType("tcplog")
-	udplogType, _ := component.NewType("udplog")
-	assert.NotNil(t, receivers[awscontainerinsightreceiverType])
-	assert.NotNil(t, receivers[awsxrayType])
-	assert.NotNil(t, receivers[otlpType])
-	assert.NotNil(t, receivers[tcplogType])
-	assert.NotNil(t, receivers[udplogType])
+	wantReceivers := []string{
+		"awscontainerinsightreceiver",
+		"awsecscontainermetrics",
+		"awsxray",
+		"filelog",
+		"jaeger",
+		"jmx",
+		"kafka",
+		"otlp",
+		"prometheus",
+		"statsd",
+		"tcplog",
+		"udplog",
+		"zipkin",
+	}
+	gotReceivers := collections.MapSlice(maps.Keys(factories.Receivers), component.Type.String)
+	assert.Equal(t, len(wantReceivers), len(gotReceivers))
+	for _, typeStr := range wantReceivers {
+		assert.Contains(t, gotReceivers, typeStr)
+	}
 
-	processors := factories.Processors
-	assert.Len(t, processors, processorCount)
-	awsapplicationsignalsType, _ := component.NewType("awsapplicationsignals")
-	batchType, _ := component.NewType("batch")
-	cumulativetodeltaType, _ := component.NewType("cumulativetodelta")
-	ec2taggerType, _ := component.NewType("ec2tagger")
-	metricstransformType, _ := component.NewType("metricstransform")
-	transformType, _ := component.NewType("transform")
-	gpuattributesType, _ := component.NewType("gpuattributes")
-	assert.NotNil(t, processors[awsapplicationsignalsType])
-	assert.NotNil(t, processors[batchType])
-	assert.NotNil(t, processors[cumulativetodeltaType])
-	assert.NotNil(t, processors[ec2taggerType])
-	assert.NotNil(t, processors[metricstransformType])
-	assert.NotNil(t, processors[transformType])
-	assert.NotNil(t, processors[gpuattributesType])
+	wantProcessors := []string{
+		"awsapplicationsignals",
+		"attributes",
+		"batch",
+		"cumulativetodelta",
+		"deltatorate",
+		"ec2tagger",
+		"experimental_metricsgeneration",
+		"filter",
+		"gpuattributes",
+		"groupbytrace",
+		"k8sattributes",
+		"memory_limiter",
+		"metricstransform",
+		"resourcedetection",
+		"resource",
+		"probabilistic_sampler",
+		"span",
+		"tail_sampling",
+		"transform",
+	}
+	gotProcessors := collections.MapSlice(maps.Keys(factories.Processors), component.Type.String)
+	assert.Equal(t, len(wantProcessors), len(gotProcessors))
+	for _, typeStr := range wantProcessors {
+		assert.Contains(t, gotProcessors, typeStr)
+	}
 
-	exporters := factories.Exporters
-	assert.Len(t, exporters, exportersCount)
-	awscloudwatchlogsType, _ := component.NewType("awscloudwatchlogs")
-	awsemfType, _ := component.NewType("awsemf")
-	awscloudwatchType, _ := component.NewType("awscloudwatch")
-	debugType, _ := component.NewType("debug")
-	assert.NotNil(t, exporters[awscloudwatchlogsType])
-	assert.NotNil(t, exporters[awsemfType])
-	assert.NotNil(t, exporters[awsemfType])
-	assert.NotNil(t, exporters[awscloudwatchType])
-	assert.NotNil(t, exporters[debugType])
+	wantExporters := []string{
+		"awscloudwatchlogs",
+		"awsemf",
+		"awscloudwatch",
+		"awsxray",
+		"debug",
+	}
+	gotExporters := collections.MapSlice(maps.Keys(factories.Exporters), component.Type.String)
+	assert.Equal(t, len(wantExporters), len(gotExporters))
+	for _, typeStr := range wantExporters {
+		assert.Contains(t, gotExporters, typeStr)
+	}
 
-	extensions := factories.Extensions
-	assert.Len(t, extensions, extensionsCount)
-	agenthealthType, _ := component.NewType("agenthealth")
-	awsproxyType, _ := component.NewType("awsproxy")
-	assert.NotNil(t, extensions[agenthealthType])
-	assert.NotNil(t, extensions[awsproxyType])
+	wantExtensions := []string{
+		"agenthealth",
+		"awsproxy",
+		"ecs_observer",
+		"file_storage",
+		"health_check",
+		"memory_ballast",
+		"pprof",
+		"sigv4auth",
+		"zpages",
+	}
+	gotExtensions := collections.MapSlice(maps.Keys(factories.Extensions), component.Type.String)
+	assert.Equal(t, len(wantExtensions), len(gotExtensions))
+	for _, typeStr := range wantExtensions {
+		assert.Contains(t, gotExtensions, typeStr)
+	}
 }
