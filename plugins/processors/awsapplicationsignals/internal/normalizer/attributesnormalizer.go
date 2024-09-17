@@ -126,8 +126,8 @@ func (n *attributesNormalizer) copyResourceAttributesToAttributes(attributes, re
 			}
 		}
 	}
-	// runtime metrics do not have service attribute, so need to manually add
-	if serviceAttribute, ok := resourceAttributes.Get("aws.local.service"); ok {
+	// Runtime metrics do not have service attribute, so need to manually add
+	if serviceAttribute, ok := resourceAttributes.Get(attr.AWSLocalService); ok {
 		attributes.PutStr(attr.AWSLocalService, serviceAttribute.AsString())
 	}
 }

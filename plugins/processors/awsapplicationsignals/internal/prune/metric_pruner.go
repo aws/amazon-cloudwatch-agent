@@ -22,7 +22,7 @@ func (p *MetricPruner) ShouldBeDropped(attributes pcommon.Map) (bool, error) {
 			}
 		}
 		if _, ok := attributes.Get(common.MetricAttributeTelemetrySource); !ok {
-			return true, errors.New("metric must contain Telemetry.Source")
+			return true, errors.New("Metric must contain Telemetry.Source.")
 		}
 	}
 	return false, nil
