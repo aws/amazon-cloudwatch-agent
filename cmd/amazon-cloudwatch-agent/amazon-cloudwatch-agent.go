@@ -63,8 +63,6 @@ func (o *otelConfigFlags) Set(value string) error {
 	return nil
 }
 
-var fOtelConfigs otelConfigFlags
-
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
 var pprofAddr = flag.String("pprof-addr", "",
@@ -75,6 +73,7 @@ var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print th
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
 var fTomlConfig = flag.String("config", "", "configuration file to load")
+var fOtelConfigs otelConfigFlags
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -241,15 +240,6 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	flag.Var(&fOtelConfigs, "otelconfig", "YAML configuration files to run OTel pipeline")
-
-	if len(fOtelConfigs) == 0 {
-		err := fOtelConfigs.Set(paths.YamlConfigPath)
-		if err != nil {
-			return err
-		}
-	}
-
 	envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig)
 	if err != nil {
 		return err
@@ -452,6 +442,15 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
+	flag.Var(&fOtelConfigs, "otelconfig", "YAML configuration files to run OTel pipeline")
+
+	if len(fOtelConfigs) == 0 {
+		err := fOtelConfigs.Set(paths.YamlConfigPath)
+		if err != nil {
+			log.Fatal("E! " + err.Error())
+		}
+	}
+
 	flag.Parse()
 	args := flag.Args()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
