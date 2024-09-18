@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -46,6 +45,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 const (
