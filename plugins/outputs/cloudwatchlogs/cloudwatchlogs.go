@@ -23,7 +23,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
-	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/handlers"
 	"github.com/aws/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -126,6 +125,10 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int, logGrou
 }
 
 func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
+	if cwd, ok := c.cwDests[t]; ok {
+		return cwd
+	}
+
 	credentialConfig := &configaws.CredentialConfig{
 		Region:    c.Region,
 		AccessKey: c.AccessKey,
@@ -135,16 +138,8 @@ func (c *CloudWatchLogs) getDest(t Target, logSrc logs.LogSrc) *cwDest {
 		Filename:  c.Filename,
 		Token:     c.Token,
 	}
-	es := entitystore.GetEntityStore()
-	if es != nil && !es.NativeCredentialExists() {
-		es.SetNativeCredential(credentialConfig.Credentials())
-	}
-	if cwd, ok := c.cwDests[t]; ok {
-		return cwd
-	}
 
 	logThrottleRetryer := retryer.NewLogThrottleRetryer(c.Log)
-
 	client := cloudwatchlogs.New(
 		credentialConfig.Credentials(),
 		&aws.Config{

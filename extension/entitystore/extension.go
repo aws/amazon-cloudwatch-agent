@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
@@ -132,10 +131,6 @@ func (e *EntityStore) NativeCredentialExists() bool {
 
 // CreateLogFileEntity creates the entity for log events that are being uploaded from a log file in the environment.
 func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName LogGroupName) *cloudwatchlogs.Entity {
-	if !e.shouldReturnEntity() {
-		return nil
-	}
-
 	serviceAttr := e.serviceprovider.logFileServiceAttribute(logFileGlob, logGroupName)
 
 	keyAttributes := e.createServiceKeyAttributes(serviceAttr)
@@ -203,35 +198,6 @@ func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) m
 	addNonEmptyToMap(serviceKeyAttr, Name, serviceAttr.ServiceName)
 	addNonEmptyToMap(serviceKeyAttr, Environment, serviceAttr.Environment)
 	return serviceKeyAttr
-}
-
-// shouldReturnEntity checks if the account ID for the instance is
-// matching the account ID when assuming role for the current credential.
-func (e *EntityStore) shouldReturnEntity() bool {
-	if e.nativeCredential == nil || e.metadataprovider == nil {
-		e.logger.Debug("there is no credential stored for cross-account checks")
-		return false
-	}
-	doc, err := e.metadataprovider.Get(context.Background())
-	if err != nil {
-		e.logger.Debug("an error occurred when getting instance document for cross-account checks. Reason: %v\n", zap.Error(err))
-		return false
-	}
-	instanceAccountID := doc.AccountID
-	if e.stsClient == nil {
-		e.stsClient = sts.New(
-			e.nativeCredential,
-			&aws.Config{
-				LogLevel: configaws.SDKLogLevel(),
-				Logger:   configaws.SDKLogger{},
-			})
-	}
-	assumedRoleIdentity, err := e.stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-	if err != nil {
-		e.logger.Debug("an error occurred when calling STS GetCallerIdentity for cross-account checks. Reason: ", zap.Error(err))
-		return false
-	}
-	return instanceAccountID == *assumedRoleIdentity.Account
 }
 
 func getMetaDataProvider() ec2metadataprovider.MetadataProvider {

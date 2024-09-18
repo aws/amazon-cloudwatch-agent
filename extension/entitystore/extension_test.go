@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -19,7 +18,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
@@ -316,49 +314,6 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	}
 	assert.Equal(t, dereferenceMap(expectedEntity.KeyAttributes), dereferenceMap(entity.KeyAttributes))
 	assert.Equal(t, dereferenceMap(expectedEntity.Attributes), dereferenceMap(entity.Attributes))
-}
-
-func TestEntityStore_shouldReturnRID(t *testing.T) {
-	type fields struct {
-		metadataprovider ec2metadataprovider.MetadataProvider
-		stsClient        stsiface.STSAPI
-		nativeCredential client.ConfigProvider
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		// TODO need tests for when you can't fetch from IMDS or STS (fail closed)
-		{
-			name: "HappyPath_AccountIDMatches",
-			fields: fields{
-				metadataprovider: mockMetadataProviderWithAccountId("123456789012"),
-				stsClient:        &mockSTSClient{accountId: "123456789012"},
-				nativeCredential: &session.Session{},
-			},
-			want: true,
-		},
-		{
-			name: "HappyPath_AccountIDMismatches",
-			fields: fields{
-				metadataprovider: mockMetadataProviderWithAccountId("210987654321"),
-				stsClient:        &mockSTSClient{accountId: "123456789012"},
-				nativeCredential: &session.Session{},
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			e := &EntityStore{
-				metadataprovider: tt.fields.metadataprovider,
-				stsClient:        tt.fields.stsClient,
-				nativeCredential: tt.fields.nativeCredential,
-			}
-			assert.Equalf(t, tt.want, e.shouldReturnEntity(), "shouldReturnEntity()")
-		})
-	}
 }
 
 func dereferenceMap(input map[string]*string) map[string]string {
