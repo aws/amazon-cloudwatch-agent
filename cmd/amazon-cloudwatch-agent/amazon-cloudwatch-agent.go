@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -45,12 +46,24 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
-	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 const (
 	defaultEnvCfgFileName = "env-config.json"
 )
+
+type otelConfigFlags []string
+
+func (o *otelConfigFlags) String() string {
+	return fmt.Sprint(*o)
+}
+
+func (o *otelConfigFlags) Set(value string) error {
+	*o = append(*o, value)
+	return nil
+}
+
+var fOtelConfigs otelConfigFlags
 
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
@@ -62,7 +75,6 @@ var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print th
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
 var fTomlConfig = flag.String("config", "", "configuration file to load")
-var fOtelConfig = flag.String("otelconfig", paths.YamlConfigPath, "YAML configuration file to run OTel pipeline")
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -229,6 +241,15 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
+	flag.Var(&fOtelConfigs, "otelconfig", "YAML configuration files to run OTel pipeline")
+
+	if len(fOtelConfigs) == 0 {
+		err := fOtelConfigs.Set(paths.YamlConfigPath)
+		if err != nil {
+			return err
+		}
+	}
+
 	envConfigPath, err := getEnvConfigPath(*fTomlConfig, *fEnvConfig)
 	if err != nil {
 		return err
@@ -314,17 +335,19 @@ func runAgent(ctx context.Context,
 
 		// If OTEL config does not exist, then ASSUME just monitoring logs.
 		// So just start Telegraf.
-		_, err = os.Stat(*fOtelConfig)
-		if errors.Is(err, os.ErrNotExist) {
-			useragent.Get().SetComponents(&otelcol.Config{}, c)
-			return ag.Run(ctx)
+		for _, fOtelConfig := range fOtelConfigs {
+			_, err = os.Stat(fOtelConfig)
+			if errors.Is(err, os.ErrNotExist) {
+				useragent.Get().SetComponents(&otelcol.Config{}, c)
+				return ag.Run(ctx)
+			}
 		}
 	}
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
-	yamlConfigPath := *fOtelConfig
+	yamlConfigPaths := fOtelConfigs
 	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
 	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
-	providerSettings := configprovider.GetSettings(yamlConfigPath, logger)
+	providerSettings := configprovider.GetSettings(yamlConfigPaths, logger)
 	provider, err := otelcol.NewConfigProvider(providerSettings)
 	if err != nil {
 		log.Printf("E! Error while initializing config provider: %v\n", err)
@@ -352,7 +375,10 @@ func runAgent(ctx context.Context,
 	// The config path below here is actually used that was set in the settings above.
 	// docs: https://github.com/open-telemetry/opentelemetry-collector/blob/93cbae436ae61b832279dbbb18a0d99214b7d305/otelcol/command.go#L63
 	// *************************************************************************************************
-	e := []string{"--config=" + yamlConfigPath}
+	var e []string
+	for _, yamlConfigPath := range yamlConfigPaths {
+		e = append(e, "--config="+yamlConfigPath)
+	}
 	cmd.SetArgs(e)
 	return cmd.Execute()
 }
