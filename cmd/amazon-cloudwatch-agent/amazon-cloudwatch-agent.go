@@ -9,6 +9,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
+	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -359,6 +361,13 @@ func runAgent(ctx context.Context,
 		return err
 	}
 
+	result, err := mapstructure.Marshal(cfg)
+	if err == nil {
+		log.Printf("I! Merged and resolved OTEL configuration:\n%s\n", toyamlconfig.ToYamlConfig(result))
+	} else {
+		log.Printf("E! Failed to merge")
+	}
+
 	useragent.Get().SetComponents(cfg, c)
 
 	params := getCollectorParams(factories, providerSettings, loggerOptions)
@@ -445,6 +454,7 @@ func (p *program) Stop(_ service.Service) error {
 func main() {
 	flag.Var(&fOtelConfigs, "otelconfig", "YAML configuration files to run OTel pipeline")
 	if len(fOtelConfigs) == 0 {
+		log.Printf("len is 0")
 		err := fOtelConfigs.Set(paths.YamlConfigPath)
 		if err != nil {
 			log.Fatal("E! " + err.Error())
