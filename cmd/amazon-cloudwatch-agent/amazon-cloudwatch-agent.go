@@ -327,14 +327,8 @@ func runAgent(ctx context.Context,
 
 		// If OTEL configs do not exist, then ASSUME just monitoring logs.
 		// So just start Telegraf.
-		exists := false
-		for _, fOtelConfig := range fOtelConfigs {
-			_, err = os.Stat(fOtelConfig)
-			if !errors.Is(err, os.ErrNotExist) {
-				exists = true
-			}
-		}
-		if !exists {
+		_, err = os.Stat(paths.YamlConfigPath)
+		if len(fOtelConfigs) == 1 && errors.Is(err, os.ErrNotExist) {
 			useragent.Get().SetComponents(&otelcol.Config{}, c)
 			return ag.Run(ctx)
 		}
