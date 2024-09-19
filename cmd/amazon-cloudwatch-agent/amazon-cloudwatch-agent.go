@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"log"
 	"net/http"
@@ -47,7 +48,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
-	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
 const (
@@ -453,6 +453,7 @@ func (p *program) Stop(_ service.Service) error {
 
 func main() {
 	flag.Var(&fOtelConfigs, "otelconfig", "YAML configuration files to run OTel pipeline")
+	flag.Parse()
 	if len(fOtelConfigs) == 0 {
 		log.Printf("len is 0")
 		err := fOtelConfigs.Set(paths.YamlConfigPath)
@@ -460,7 +461,6 @@ func main() {
 			log.Fatal("E! " + err.Error())
 		}
 	}
-	flag.Parse()
 	args := flag.Args()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
 	if *fSectionFilters != "" {
