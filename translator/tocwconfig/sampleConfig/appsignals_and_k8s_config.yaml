@@ -285,9 +285,6 @@ extensions:
         region: us-east-1
         role_arn: ""
         service_name: ""
-    entitystore:
-      mode: ec2
-      region: us-east-1
 processors:
     awsapplicationsignals:
         limiter:
@@ -297,9 +294,8 @@ processors:
             log_dropped_metrics: true
             rotation_interval: 10m0s
         resolvers:
-          - name: TestCluster
-            platform: k8s
-    awsentity: {}
+            - name: TestCluster
+              platform: k8s
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -645,13 +641,11 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - agenthealth/logs
-        - entitystore
     pipelines:
         metrics/application_signals:
             exporters:
                 - awsemf/application_signals
             processors:
-                - awsentity
                 - resourcedetection
                 - awsapplicationsignals
             receivers:

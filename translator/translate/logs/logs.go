@@ -30,17 +30,11 @@ func RegisterRule(fieldname string, r Rule) {
 }
 
 type Logs struct {
-	FileStateFolder       string
-	MetadataInfo          map[string]string
-	ServiceName           string
-	DeploymentEnvironment string
+	FileStateFolder string
+	MetadataInfo    map[string]string
 }
 
-var (
-	GlobalLogConfig       = Logs{}
-	serviceName           ServiceName
-	deploymentEnvironment DeploymentEnvironment
-)
+var GlobalLogConfig = Logs{}
 
 func (l *Logs) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	im := input.(map[string]interface{})
@@ -49,10 +43,6 @@ func (l *Logs) ApplyRule(input interface{}) (returnKey string, returnVal interfa
 	processors := map[string]interface{}{}
 	cloudwatchConfig := map[string]interface{}{}
 	GlobalLogConfig.MetadataInfo = util.GetMetadataInfo(util.Ec2MetadataInfoProvider)
-
-	//Apply Environment and ServiceName rules
-	serviceName.ApplyRule(im[SectionKey])
-	deploymentEnvironment.ApplyRule(im[SectionKey])
 
 	//Check if this plugin exist in the input instance
 	//If not, not process

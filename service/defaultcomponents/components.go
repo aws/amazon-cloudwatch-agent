@@ -21,20 +21,16 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
-	"go.opentelemetry.io/collector/exporter/nopexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/processor"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 	"go.opentelemetry.io/collector/receiver"
-	"go.opentelemetry.io/collector/receiver/nopreceiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
-	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 )
@@ -50,14 +46,12 @@ func Factories() (otelcol.Factories, error) {
 		otlpreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
-		nopreceiver.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
 
 	if factories.Processors, err = processor.MakeFactoryMap(
 		awsapplicationsignals.NewFactory(),
-		awsentity.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		filterprocessor.NewFactory(),
@@ -76,7 +70,6 @@ func Factories() (otelcol.Factories, error) {
 		awsemfexporter.NewFactory(),
 		awsxrayexporter.NewFactory(),
 		cloudwatch.NewFactory(),
-		nopexporter.NewFactory(),
 		debugexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
@@ -85,7 +78,6 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Extensions, err = extension.MakeFactoryMap(
 		agenthealth.NewFactory(),
 		awsproxy.NewFactory(),
-		entitystore.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}

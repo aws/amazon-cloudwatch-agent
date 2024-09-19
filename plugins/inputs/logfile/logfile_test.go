@@ -59,8 +59,7 @@ func TestLogs(t *testing.T) {
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
-	filename := tmpfile.Name()
-	tt.FileConfig = []FileConfig{{FilePath: filename, FromBeginning: true, ServiceName: "test-service-name", Environment: "ec2:test-environment"}}
+	tt.FileConfig = []FileConfig{{FilePath: tmpfile.Name(), FromBeginning: true}}
 	tt.FileConfig[0].init()
 	tt.started = true
 

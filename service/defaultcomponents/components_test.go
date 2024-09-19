@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	receiversCount  = 7
-	processorCount  = 11
-	exportersCount  = 6
-	extensionsCount = 3
+	receiversCount  = 6
+	processorCount  = 10
+	exportersCount  = 5
+	extensionsCount = 2
 )
 
 func TestComponents(t *testing.T) {
@@ -22,9 +22,6 @@ func TestComponents(t *testing.T) {
 	assert.NoError(t, err)
 	receivers := factories.Receivers
 	assert.Len(t, receivers, receiversCount)
-
-	nopType, _ := component.NewType("nop")
-
 	awscontainerinsightreceiverType, _ := component.NewType("awscontainerinsightreceiver")
 	awsxrayType, _ := component.NewType("awsxray")
 	otlpType, _ := component.NewType("otlp")
@@ -35,26 +32,23 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, receivers[otlpType])
 	assert.NotNil(t, receivers[tcplogType])
 	assert.NotNil(t, receivers[udplogType])
-	assert.NotNil(t, receivers[nopType])
 
 	processors := factories.Processors
 	assert.Len(t, processors, processorCount)
 	awsapplicationsignalsType, _ := component.NewType("awsapplicationsignals")
-	awsentityType, _ := component.NewType("awsentity")
 	batchType, _ := component.NewType("batch")
 	cumulativetodeltaType, _ := component.NewType("cumulativetodelta")
 	ec2taggerType, _ := component.NewType("ec2tagger")
-	gpuattributesType, _ := component.NewType("gpuattributes")
 	metricstransformType, _ := component.NewType("metricstransform")
 	transformType, _ := component.NewType("transform")
+	gpuattributesType, _ := component.NewType("gpuattributes")
 	assert.NotNil(t, processors[awsapplicationsignalsType])
-	assert.NotNil(t, processors[awsentityType])
 	assert.NotNil(t, processors[batchType])
 	assert.NotNil(t, processors[cumulativetodeltaType])
 	assert.NotNil(t, processors[ec2taggerType])
-	assert.NotNil(t, processors[gpuattributesType])
 	assert.NotNil(t, processors[metricstransformType])
 	assert.NotNil(t, processors[transformType])
+	assert.NotNil(t, processors[gpuattributesType])
 
 	exporters := factories.Exporters
 	assert.Len(t, exporters, exportersCount)
@@ -67,7 +61,6 @@ func TestComponents(t *testing.T) {
 	assert.NotNil(t, exporters[awsemfType])
 	assert.NotNil(t, exporters[awscloudwatchType])
 	assert.NotNil(t, exporters[debugType])
-	assert.NotNil(t, exporters[nopType])
 
 	extensions := factories.Extensions
 	assert.Len(t, extensions, extensionsCount)

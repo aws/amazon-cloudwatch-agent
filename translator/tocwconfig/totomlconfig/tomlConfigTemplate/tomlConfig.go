@@ -126,12 +126,8 @@ type (
 		Pipe            bool
 		RetentionInDays int `toml:"retention_in_days"`
 		Timezone        string
-		//Customer specified service.name
-		ServiceName string `toml:"service_name"`
-		//Customer specified deployment.environment
-		DeploymentEnvironment string `toml:"deployment_environment"`
-		Tags                  map[string]string
-		Filters               []fileConfigFilter
+		Tags            map[string]string
+		Filters         []fileConfigFilter
 	}
 
 	k8sApiServerConfig struct {
