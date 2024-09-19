@@ -358,6 +358,7 @@ func runAgent(ctx context.Context,
 	if err != nil {
 		return err
 	}
+
 	useragent.Get().SetComponents(cfg, c)
 
 	params := getCollectorParams(factories, providerSettings, loggerOptions)
@@ -443,14 +444,12 @@ func (p *program) Stop(_ service.Service) error {
 
 func main() {
 	flag.Var(&fOtelConfigs, "otelconfig", "YAML configuration files to run OTel pipeline")
-
 	if len(fOtelConfigs) == 0 {
 		err := fOtelConfigs.Set(paths.YamlConfigPath)
 		if err != nil {
 			log.Fatal("E! " + err.Error())
 		}
 	}
-
 	flag.Parse()
 	args := flag.Args()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
