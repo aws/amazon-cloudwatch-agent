@@ -437,7 +437,7 @@ func main() {
 	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlag, "YAML configuration files to run OTel pipeline")
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
-		log.Printf("I! No OTEL configs passed in")
+		log.Print("I! No OTEL configs passed in")
 		err := fOtelConfigs.Set(paths.YamlConfigPath)
 		if err != nil {
 			log.Fatalf("E! Failed to set OTEL config: %v", err)
