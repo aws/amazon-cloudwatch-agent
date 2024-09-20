@@ -86,7 +86,7 @@ jobs:
 #      Bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   StartIntegrationTests:
-    needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker ]
+    needs: [ BuildAndUpload ]
     runs-on: ubuntu-latest
     steps:
       - run: gh workflow run integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
