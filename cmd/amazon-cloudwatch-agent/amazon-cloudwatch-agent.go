@@ -54,17 +54,6 @@ const (
 	defaultEnvCfgFileName = "env-config.json"
 )
 
-type otelConfigFlags []string
-
-func (o *otelConfigFlags) String() string {
-	return fmt.Sprint(*o)
-}
-
-func (o *otelConfigFlags) Set(value string) error {
-	*o = append(*o, value)
-	return nil
-}
-
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
 var pprofAddr = flag.String("pprof-addr", "",
@@ -75,7 +64,7 @@ var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print th
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fSchemaTest = flag.Bool("schematest", false, "validate the toml file schema")
 var fTomlConfig = flag.String("config", "", "configuration file to load")
-var fOtelConfigs otelConfigFlags
+var fOtelConfigs configprovider.OtelConfigFlags
 var fEnvConfig = flag.String("envconfig", "", "env configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -325,7 +314,7 @@ func runAgent(ctx context.Context,
 		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
 		go logAgent.Run(ctx)
 
-		// If OTEL configs do not exist, then ASSUME just monitoring logs.
+		// If OTEL config does not exist, then ASSUME just monitoring logs.
 		// So just start Telegraf.
 		_, err = os.Stat(paths.YamlConfigPath)
 		if len(fOtelConfigs) == 1 && errors.Is(err, os.ErrNotExist) {
@@ -356,11 +345,10 @@ func runAgent(ctx context.Context,
 	}
 
 	result, err := mapstructure.Marshal(cfg)
-	if err == nil {
-		log.Printf("I! Merged and resolved OTEL configuration:\n%s\n", toyamlconfig.ToYamlConfig(result))
-	} else {
-		log.Printf("E! Failed to merge")
+	if err != nil {
+		log.Fatalf("E! Failed to merge OTEL configs: %v", err)
 	}
+	log.Printf("I! Merged and resolved OTEL configuration: \n%s\n", toyamlconfig.ToYamlConfig(result))
 
 	useragent.Get().SetComponents(cfg, c)
 
@@ -446,13 +434,13 @@ func (p *program) Stop(_ service.Service) error {
 }
 
 func main() {
-	flag.Var(&fOtelConfigs, "otelconfig", "YAML configuration files to run OTel pipeline")
+	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlag, "YAML configuration files to run OTel pipeline")
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
-		log.Printf("len is 0")
+		log.Printf("I! No OTEL configs passed in")
 		err := fOtelConfigs.Set(paths.YamlConfigPath)
 		if err != nil {
-			log.Fatal("E! " + err.Error())
+			log.Fatalf("E! Failed to set OTEL config: %v", err)
 		}
 	}
 	args := flag.Args()
