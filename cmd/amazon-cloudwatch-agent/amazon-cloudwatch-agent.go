@@ -365,6 +365,7 @@ func runAgent(ctx context.Context,
 	for _, yamlConfigPath := range yamlConfigPaths {
 		e = append(e, "--config="+yamlConfigPath)
 	}
+	log.Printf("I! Merged OTEL config file paths: %s", fmt.Sprint(e))
 	cmd.SetArgs(e)
 	return cmd.Execute()
 }
