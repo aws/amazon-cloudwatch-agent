@@ -13,14 +13,14 @@ type DeploymentEnvironment struct {
 
 const SectionkeyDeploymentEnvironment = "deployment.environment"
 
-func (obj *DeploymentEnvironment) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
-	_, returnVal = translator.DefaultCase(SectionkeyDeploymentEnvironment, "", input)
-	returnKey = "deployment_environment"
+func (obj *DeploymentEnvironment) ApplyRule(input interface{}) (string, interface{}) {
+	_, returnVal := translator.DefaultCase(SectionkeyDeploymentEnvironment, "", input)
+	returnKey := "deployment.environment"
 
 	if returnVal == "" {
 		returnVal = metrics.GlobalMetricConfig.DeploymentEnvironment
 	}
-	return
+	return "tags", map[string]interface{}{returnKey: returnVal}
 }
 
 func init() {

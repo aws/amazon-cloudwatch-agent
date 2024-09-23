@@ -29,9 +29,8 @@ func TestStatsD_HappyCase(t *testing.T) {
 			"service_address":          ":12345",
 			"interval":                 "5s",
 			"parse_data_dog_tags":      true,
-			"tags":                     map[string]interface{}{"aws:AggregationInterval": "30s"},
-			"service_name":             "",
-			"deployment_environment":   "",
+			"tags": map[string]interface{}{"aws:AggregationInterval": "30s",
+				"deployment.environment": "", "service.name": ""},
 		},
 	}
 
@@ -48,12 +47,11 @@ func TestStatsD_MinimumConfig(t *testing.T) {
 
 	expect := []interface{}{
 		map[string]interface{}{
-			"service_address":        ":8125",
-			"interval":               "10s",
-			"parse_data_dog_tags":    true,
-			"tags":                   map[string]interface{}{"aws:AggregationInterval": "60s"},
-			"service_name":           "",
-			"deployment_environment": "",
+			"service_address":     ":8125",
+			"interval":            "10s",
+			"parse_data_dog_tags": true,
+			"tags": map[string]interface{}{"aws:AggregationInterval": "60s",
+				"deployment.environment": "", "service.name": ""},
 		},
 	}
 
@@ -72,12 +70,11 @@ func TestStatsD_DisableAggregation(t *testing.T) {
 
 	expect := []interface{}{
 		map[string]interface{}{
-			"service_address":        ":8125",
-			"interval":               "10s",
-			"parse_data_dog_tags":    true,
-			"tags":                   map[string]interface{}{"aws:StorageResolution": "true"},
-			"service_name":           "",
-			"deployment_environment": "",
+			"service_address":     ":8125",
+			"interval":            "10s",
+			"parse_data_dog_tags": true,
+			"tags": map[string]interface{}{"aws:StorageResolution": "true",
+				"deployment.environment": "", "service.name": ""},
 		},
 	}
 
@@ -96,13 +93,12 @@ func TestStatsD_MetricSeparator(t *testing.T) {
 
 	expect := []interface{}{
 		map[string]interface{}{
-			"service_address":        ":8125",
-			"interval":               "10s",
-			"parse_data_dog_tags":    true,
-			"tags":                   map[string]interface{}{"aws:AggregationInterval": "60s"},
-			"metric_separator":       ".",
-			"service_name":           "",
-			"deployment_environment": "",
+			"service_address":     ":8125",
+			"interval":            "10s",
+			"parse_data_dog_tags": true,
+			"tags": map[string]interface{}{"aws:AggregationInterval": "60s",
+				"deployment.environment": "", "service.name": ""},
+			"metric_separator": ".",
 		},
 	}
 

@@ -219,11 +219,6 @@ type (
 		NameOverride          string   `toml:"name_override"`
 		ServiceAddress        string   `toml:"service_address"`
 		Tags                  map[string]string
-
-		//Customer specified service.name
-		ServiceName string `toml:"service_name"`
-		//Customer specified deployment.environment
-		DeploymentEnvironment string `toml:"deployment_environment"`
 	}
 
 	statsdConfig struct {
@@ -233,11 +228,6 @@ type (
 		ParseDataDogTags       bool   `toml:"parse_data_dog_tags"`
 		ServiceAddress         string `toml:"service_address"`
 		Tags                   map[string]string
-
-		//Customer specified service.name
-		ServiceName string `toml:"service_name"`
-		//Customer specified deployment.environment
-		DeploymentEnvironment string `toml:"deployment_environment"`
 	}
 
 	swapConfig struct {

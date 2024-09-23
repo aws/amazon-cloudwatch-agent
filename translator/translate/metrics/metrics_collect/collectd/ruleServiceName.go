@@ -13,14 +13,14 @@ type ServiceName struct {
 
 const SectionkeyServicename = "service.name"
 
-func (obj *ServiceName) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
-	_, returnVal = translator.DefaultCase(SectionkeyServicename, "", input)
-	returnKey = "service_name"
+func (obj *ServiceName) ApplyRule(input interface{}) (string, interface{}) {
+	_, returnVal := translator.DefaultCase(SectionkeyServicename, "", input)
+	returnKey := "service.name"
 
 	if returnVal == "" {
 		returnVal = metrics.GlobalMetricConfig.ServiceName
 	}
-	return
+	return "tags", map[string]interface{}{returnKey: returnVal}
 }
 
 func init() {
