@@ -57,7 +57,7 @@ func (p *Procstat) ApplyRule(input interface{}) (returnKey string, returnVal int
 		according to the public documents if multiple configuration is specified
 		https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-procstat-process-metrics.html#CloudWatch-Agent-procstat-configuration
 		*/
-		for _, procstatMonitored := range []string{PatternKey, ExeKey, PidFileKey} {
+		for _, procstatMonitored := range []string{PatternKey, ExeKey, PidFileKey, MMapKey} {
 			for _, rule := range ChildRule {
 				if key, val := rule.ApplyRule(processConfig); key != "" && key == procstatMonitored {
 					result[util.Alias_Key] = hash.HashName(val.(string))
