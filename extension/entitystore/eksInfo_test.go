@@ -12,12 +12,13 @@ import (
 
 func TestAddPodServiceEnvironmentMapping(t *testing.T) {
 	tests := []struct {
-		name    string
-		want    map[string]ServiceEnvironment
-		podName string
-		service string
-		env     string
-		mapNil  bool
+		name              string
+		want              map[string]ServiceEnvironment
+		podName           string
+		service           string
+		env               string
+		serviceNameSource string
+		mapNil            bool
 	}{
 		{
 			name: "AddPodWithServiceMapping",
@@ -42,6 +43,20 @@ func TestAddPodServiceEnvironmentMapping(t *testing.T) {
 			env:     "test-env",
 		},
 		{
+			name: "AddPodWithServiceEnvMapping",
+			want: map[string]ServiceEnvironment{
+				"test-pod": {
+					ServiceName:       "test-service",
+					Environment:       "test-env",
+					ServiceNameSource: ServiceNameSourceInstrumentation,
+				},
+			},
+			podName:           "test-pod",
+			service:           "test-service",
+			env:               "test-env",
+			serviceNameSource: "Instrumentation",
+		},
+		{
 			name:   "AddWhenPodToServiceMapIsNil",
 			mapNil: true,
 		},
@@ -53,7 +68,7 @@ func TestAddPodServiceEnvironmentMapping(t *testing.T) {
 			if tt.mapNil {
 				ei.podToServiceEnvMap = nil
 			}
-			ei.AddPodServiceEnvironmentMapping(tt.podName, tt.service, tt.env)
+			ei.AddPodServiceEnvironmentMapping(tt.podName, tt.service, tt.env, tt.serviceNameSource)
 			assert.Equal(t, tt.want, ei.podToServiceEnvMap)
 		})
 	}
@@ -69,8 +84,9 @@ func TestGetPodServiceEnvironmentMapping(t *testing.T) {
 			name: "GetPodWithServiceEnvMapping",
 			want: map[string]ServiceEnvironment{
 				"test-pod": {
-					ServiceName: "test-service",
-					Environment: "test-env",
+					ServiceName:       "test-service",
+					Environment:       "test-env",
+					ServiceNameSource: "test-service-name-source",
 				},
 			},
 			addMap: true,
@@ -85,7 +101,7 @@ func TestGetPodServiceEnvironmentMapping(t *testing.T) {
 			logger, _ := zap.NewDevelopment()
 			ei := newEKSInfo(logger)
 			if tt.addMap {
-				ei.AddPodServiceEnvironmentMapping("test-pod", "test-service", "test-env")
+				ei.AddPodServiceEnvironmentMapping("test-pod", "test-service", "test-env", "test-service-name-source")
 			}
 			assert.Equal(t, tt.want, ei.GetPodServiceEnvironmentMapping())
 		})

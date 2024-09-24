@@ -35,9 +35,9 @@ func newMockEntityStore() *mockEntityStore {
 	}
 }
 
-func newMockAddPodServiceEnvironmentMapping(es *mockEntityStore) func(string, string, string) {
-	return func(podName string, serviceName string, deploymentName string) {
-		es.podToServiceEnvironmentMap[podName] = entitystore.ServiceEnvironment{ServiceName: serviceName, Environment: deploymentName}
+func newMockAddPodServiceEnvironmentMapping(es *mockEntityStore) func(string, string, string, string) {
+	return func(podName string, serviceName string, deploymentName string, serviceNameSource string) {
+		es.podToServiceEnvironmentMap[podName] = entitystore.ServiceEnvironment{ServiceName: serviceName, Environment: deploymentName, ServiceNameSource: serviceNameSource}
 	}
 }
 
@@ -138,7 +138,7 @@ func TestProcessMetricsLogGroupAssociation(t *testing.T) {
 
 func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	p := newAwsEntityProcessor(&Config{}, logger)
+	p := newAwsEntityProcessor(&Config{ClusterName: "test-cluster"}, logger)
 	ctx := context.Background()
 	tests := []struct {
 		name    string
@@ -147,22 +147,58 @@ func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
 		want    map[string]entitystore.ServiceEnvironment
 	}{
 		{
-			name:    "WithPodNameAndServiceName",
+			name:    "WithPodNameAndServiceNameNoSource",
 			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
-			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service"}},
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceUnknown}},
 			k8sMode: config.ModeEKS,
 		},
 		{
-			name:    "WithPodNameAndServiceEnvironmentName",
+			name:    "WithPodNameAndServiceNameHasSource",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
+			k8sMode: config.ModeEKS,
+		},
+		{
+			name:    "WithPodNameAndServiceNameHasSourceDefaultEnvironmentEKS",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", semconv.AttributeK8SNamespaceName, "test-namespace", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "eks:test-cluster/test-namespace", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
+			k8sMode: config.ModeEKS,
+		},
+		{
+			name:    "WithPodNameAndServiceNameHasSourceDefaultEnvironmentK8SEC2",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", semconv.AttributeK8SNamespaceName, "test-namespace", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "k8s:test-cluster/test-namespace", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
+			k8sMode: config.ModeK8sEC2,
+		},
+		{
+			name:    "WithPodNameAndServiceNameHasSourceDefaultEnvironmentK8SOnPrem",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", semconv.AttributeK8SNamespaceName, "test-namespace", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "k8s:test-cluster/test-namespace", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
+			k8sMode: config.ModeK8sOnPrem,
+		},
+		{
+			name:    "WithPodNameAndServiceEnvironmentNameNoSource",
 			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", attributeDeploymentEnvironment, "test-deployment"),
-			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "test-deployment"}},
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "test-deployment", ServiceNameSource: entitystore.ServiceNameSourceUnknown}},
+			k8sMode: config.ModeK8sEC2,
+		},
+		{
+			name:    "WithPodNameAndServiceEnvironmentNameHasSource",
+			metrics: generateMetrics(attributeServiceName, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", attributeDeploymentEnvironment, "test-deployment", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", Environment: "test-deployment", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
 			k8sMode: config.ModeK8sEC2,
 		},
 		{
 			name:    "WithPodNameAndAttributeService",
-			metrics: generateMetrics(attributeService, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
-			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service"}},
+			metrics: generateMetrics(attributeService, "test-service", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", entityattributes.AttributeEntityServiceNameSource, "Instrumentation"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "test-service", ServiceNameSource: entitystore.ServiceNameSourceInstrumentation}},
 			k8sMode: config.ModeK8sOnPrem,
+		},
+		{
+			name:    "WithPodNameAndWorkload",
+			metrics: generateMetrics(attributeServiceName, "cloudwatch-agent-adhgaf", semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf", entityattributes.AttributeEntityServiceNameSource, "K8sWorkload"),
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "cloudwatch-agent-adhgaf", ServiceNameSource: entitystore.ServiceNameSourceK8sWorkload}},
+			k8sMode: config.ModeEKS,
 		},
 		{
 			name:    "WithPodNameAndEmptyServiceAndEnvironmentName",

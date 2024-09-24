@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package eksattributescraper
+package k8sattributescraper
 
 import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -30,29 +30,28 @@ var (
 	}
 )
 
-type eksattributescraper struct {
+type K8sAttributeScraper struct {
 	Cluster   string
 	Namespace string
 	Workload  string
 	Node      string
 }
 
-func NewEKSAttributeScraper(clusterName string) *eksattributescraper {
-	return &eksattributescraper{
+func NewK8sAttributeScraper(clusterName string) *K8sAttributeScraper {
+	return &K8sAttributeScraper{
 		Cluster: clusterName,
 	}
 }
 
-func (e *eksattributescraper) Scrape(rm pcommon.Resource) {
+func (e *K8sAttributeScraper) Scrape(rm pcommon.Resource) {
 	resourceAttrs := rm.Attributes()
 	e.scrapeNamespace(resourceAttrs)
 	e.scrapeWorkload(resourceAttrs)
 	e.scrapeNode(resourceAttrs)
 	e.decorateEntityAttributes(resourceAttrs)
-	e.reset()
 }
 
-func (e *eksattributescraper) scrapeNamespace(p pcommon.Map) {
+func (e *K8sAttributeScraper) scrapeNamespace(p pcommon.Map) {
 	for _, namespace := range namespaceAllowlist {
 		if namespaceAttr, ok := p.Get(namespace); ok {
 			e.Namespace = namespaceAttr.Str()
@@ -61,7 +60,7 @@ func (e *eksattributescraper) scrapeNamespace(p pcommon.Map) {
 	}
 }
 
-func (e *eksattributescraper) scrapeWorkload(p pcommon.Map) {
+func (e *K8sAttributeScraper) scrapeWorkload(p pcommon.Map) {
 	for _, workload := range workloadAllowlist {
 		if workloadAttr, ok := p.Get(workload); ok {
 			e.Workload = workloadAttr.Str()
@@ -71,7 +70,7 @@ func (e *eksattributescraper) scrapeWorkload(p pcommon.Map) {
 
 }
 
-func (e *eksattributescraper) scrapeNode(p pcommon.Map) {
+func (e *K8sAttributeScraper) scrapeNode(p pcommon.Map) {
 	for _, node := range nodeAllowlist {
 		if nodeAttr, ok := p.Get(node); ok {
 			e.Node = nodeAttr.Str()
@@ -80,15 +79,15 @@ func (e *eksattributescraper) scrapeNode(p pcommon.Map) {
 	}
 }
 
-func (e *eksattributescraper) decorateEntityAttributes(p pcommon.Map) {
+func (e *K8sAttributeScraper) decorateEntityAttributes(p pcommon.Map) {
 	addAttributeIfNonEmpty(p, entityattributes.AttributeEntityCluster, e.Cluster)
 	addAttributeIfNonEmpty(p, entityattributes.AttributeEntityNamespace, e.Namespace)
 	addAttributeIfNonEmpty(p, entityattributes.AttributeEntityWorkload, e.Workload)
 	addAttributeIfNonEmpty(p, entityattributes.AttributeEntityNode, e.Node)
 }
 
-func (e *eksattributescraper) reset() {
-	*e = eksattributescraper{
+func (e *K8sAttributeScraper) Reset() {
+	*e = K8sAttributeScraper{
 		Cluster: e.Cluster,
 	}
 }

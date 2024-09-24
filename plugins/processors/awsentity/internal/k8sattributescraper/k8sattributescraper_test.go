@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package eksattributescraper
+package k8sattributescraper
 
 import (
 	"testing"
@@ -14,12 +14,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
 )
 
-func TestNewEKSAttributeScraper(t *testing.T) {
-	scraper := NewEKSAttributeScraper("test")
+func TestNewK8sAttributeScraper(t *testing.T) {
+	scraper := NewK8sAttributeScraper("test")
 	assert.Equal(t, "test", scraper.Cluster)
 }
 
-func Test_eksattributescraper_Scrape(t *testing.T) {
+func Test_k8sattributescraper_Scrape(t *testing.T) {
 
 	tests := []struct {
 		name        string
@@ -72,14 +72,14 @@ func Test_eksattributescraper_Scrape(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := NewEKSAttributeScraper(tt.clusterName)
+			e := NewK8sAttributeScraper(tt.clusterName)
 			e.Scrape(tt.args)
 			assert.Equal(t, tt.want.AsRaw(), tt.args.Attributes().AsRaw())
 		})
 	}
 }
 
-func Test_eksattributescraper_decorateEntityAttributes(t *testing.T) {
+func Test_k8sattributescraper_decorateEntityAttributes(t *testing.T) {
 	type fields struct {
 		Cluster   string
 		Namespace string
@@ -124,7 +124,7 @@ func Test_eksattributescraper_decorateEntityAttributes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := pcommon.NewMap()
-			e := &eksattributescraper{
+			e := &K8sAttributeScraper{
 				Cluster:   tt.fields.Cluster,
 				Namespace: tt.fields.Namespace,
 				Workload:  tt.fields.Workload,
@@ -136,7 +136,7 @@ func Test_eksattributescraper_decorateEntityAttributes(t *testing.T) {
 	}
 }
 
-func Test_eksattributescraper_reset(t *testing.T) {
+func Test_k8sattributescraper_reset(t *testing.T) {
 	type fields struct {
 		Cluster   string
 		Namespace string
@@ -146,19 +146,19 @@ func Test_eksattributescraper_reset(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   *eksattributescraper
+		want   *K8sAttributeScraper
 	}{
 		{
 			name:   "Empty",
 			fields: fields{},
-			want:   &eksattributescraper{},
+			want:   &K8sAttributeScraper{},
 		},
 		{
 			name: "ClusterExists",
 			fields: fields{
 				Cluster: "test-cluster",
 			},
-			want: &eksattributescraper{
+			want: &K8sAttributeScraper{
 				Cluster: "test-cluster",
 			},
 		},
@@ -170,26 +170,26 @@ func Test_eksattributescraper_reset(t *testing.T) {
 				Workload:  "test-workload",
 				Node:      "test-node",
 			},
-			want: &eksattributescraper{
+			want: &K8sAttributeScraper{
 				Cluster: "test-cluster",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &eksattributescraper{
+			e := &K8sAttributeScraper{
 				Cluster:   tt.fields.Cluster,
 				Namespace: tt.fields.Namespace,
 				Workload:  tt.fields.Workload,
 				Node:      tt.fields.Node,
 			}
-			e.reset()
+			e.Reset()
 			assert.Equal(t, tt.want, e)
 		})
 	}
 }
 
-func Test_eksattributescraper_scrapeNamespace(t *testing.T) {
+func Test_k8sattributescraper_scrapeNamespace(t *testing.T) {
 	tests := []struct {
 		name string
 		args pcommon.Map
@@ -218,14 +218,14 @@ func Test_eksattributescraper_scrapeNamespace(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &eksattributescraper{}
+			e := &K8sAttributeScraper{}
 			e.scrapeNamespace(tt.args)
 			assert.Equal(t, tt.want, e.Namespace)
 		})
 	}
 }
 
-func Test_eksattributescraper_scrapeNode(t *testing.T) {
+func Test_k8sattributescraper_scrapeNode(t *testing.T) {
 	tests := []struct {
 		name string
 		args pcommon.Map
@@ -254,14 +254,14 @@ func Test_eksattributescraper_scrapeNode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &eksattributescraper{}
+			e := &K8sAttributeScraper{}
 			e.scrapeNode(tt.args)
 			assert.Equal(t, tt.want, e.Node)
 		})
 	}
 }
 
-func Test_eksattributescraper_scrapeWorkload(t *testing.T) {
+func Test_k8sattributescraper_scrapeWorkload(t *testing.T) {
 	tests := []struct {
 		name string
 		args pcommon.Map
@@ -312,7 +312,7 @@ func Test_eksattributescraper_scrapeWorkload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &eksattributescraper{}
+			e := &K8sAttributeScraper{}
 			e.scrapeWorkload(tt.args)
 			assert.Equal(t, tt.want, e.Workload)
 		})

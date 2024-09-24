@@ -4,12 +4,14 @@
 package entityattributes
 
 const (
-	AttributeEntityServiceName           = "aws.entity.service.name"
-	AttributeEntityDeploymentEnvironment = "aws.entity.deployment.environment"
-	AttributeEntityCluster               = "aws.entity.k8s.cluster.name"
-	AttributeEntityNamespace             = "aws.entity.k8s.namespace.name"
-	AttributeEntityWorkload              = "aws.entity.k8s.workload.name"
-	AttributeEntityNode                  = "aws.entity.k8s.node.name"
+	AWSEntityPrefix                      = "com.amazonaws.cloudwatch.entity.internal."
+	AttributeEntityServiceName           = AWSEntityPrefix + "service.name"
+	AttributeEntityDeploymentEnvironment = AWSEntityPrefix + "deployment.environment"
+	AttributeEntityCluster               = AWSEntityPrefix + "k8s.cluster.name"
+	AttributeEntityNamespace             = AWSEntityPrefix + "k8s.namespace.name"
+	AttributeEntityWorkload              = AWSEntityPrefix + "k8s.workload.name"
+	AttributeEntityNode                  = AWSEntityPrefix + "k8s.node.name"
+	AttributeEntityServiceNameSource     = AWSEntityPrefix + "service.name.source"
 )
 
 // Container Insights attributes used for scraping EKS related information

@@ -6,8 +6,9 @@ package entitystore
 import "go.uber.org/zap"
 
 type ServiceEnvironment struct {
-	ServiceName string
-	Environment string
+	ServiceName       string
+	Environment       string
+	ServiceNameSource string
 }
 
 type eksInfo struct {
@@ -23,11 +24,12 @@ func newEKSInfo(logger *zap.Logger) *eksInfo {
 	}
 }
 
-func (eks *eksInfo) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string) {
+func (eks *eksInfo) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string, serviceNameSource string) {
 	if eks.podToServiceEnvMap != nil {
 		eks.podToServiceEnvMap[podName] = ServiceEnvironment{
-			ServiceName: serviceName,
-			Environment: environmentName,
+			ServiceName:       serviceName,
+			Environment:       environmentName,
+			ServiceNameSource: serviceNameSource,
 		}
 	}
 }

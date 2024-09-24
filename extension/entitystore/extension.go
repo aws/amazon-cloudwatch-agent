@@ -163,9 +163,9 @@ func (e *EntityStore) AddServiceAttrEntryForLogGroup(logGroupName LogGroupName, 
 	})
 }
 
-func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string) {
+func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string, serviceNameSource string) {
 	if e.eksInfo != nil {
-		e.eksInfo.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName)
+		e.eksInfo.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName, serviceNameSource)
 	}
 }
 

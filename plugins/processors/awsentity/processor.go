@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/eksattributescraper"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/k8sattributescraper"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
@@ -28,6 +28,7 @@ const (
 
 type scraper interface {
 	Scrape(rm pcommon.Resource)
+	Reset()
 }
 
 // exposed as a variable for unit testing
@@ -39,12 +40,12 @@ var addToEntityStore = func(logGroupName entitystore.LogGroupName, serviceName s
 	es.AddServiceAttrEntryForLogGroup(logGroupName, serviceName, environmentName)
 }
 
-var addPodToServiceEnvironmentMap = func(podName string, serviceName string, environmentName string) {
+var addPodToServiceEnvironmentMap = func(podName string, serviceName string, environmentName string, serviceNameSource string) {
 	es := entitystore.GetEntityStore()
 	if es == nil {
 		return
 	}
-	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName)
+	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName, serviceNameSource)
 }
 
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or
@@ -52,28 +53,32 @@ var addPodToServiceEnvironmentMap = func(podName string, serviceName string, env
 // service/environment names to the entitystore extension.
 type awsEntityProcessor struct {
 	config     *Config
-	eksscraper scraper
+	k8sscraper scraper
 	logger     *zap.Logger
 }
 
 func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcessor {
 	return &awsEntityProcessor{
 		config:     config,
-		eksscraper: eksattributescraper.NewEKSAttributeScraper(config.ClusterName),
+		k8sscraper: k8sattributescraper.NewK8sAttributeScraper(config.ClusterName),
 		logger:     logger,
 	}
 }
 
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
+	var entityServiceNameSource string
 	rm := md.ResourceMetrics()
 	for i := 0; i < rm.Len(); i++ {
-		if p.config.KubernetesMode == config.ModeEKS {
-			p.eksscraper.Scrape(rm.At(i).Resource())
+		if p.config.KubernetesMode != "" {
+			p.k8sscraper.Scrape(rm.At(i).Resource())
 		}
 		resourceAttrs := rm.At(i).Resource().Attributes()
 		logGroupNames, _ := resourceAttrs.Get(attributeAwsLogGroupNames)
 		serviceName, _ := resourceAttrs.Get(attributeServiceName)
 		environmentName, _ := resourceAttrs.Get(attributeDeploymentEnvironment)
+		if serviceNameSource, sourceExists := resourceAttrs.Get(entityattributes.AttributeEntityServiceNameSource); sourceExists {
+			entityServiceNameSource = serviceNameSource.Str()
+		}
 
 		entityServiceName := getServiceAttributes(resourceAttrs)
 		entityEnvironmentName := environmentName.Str()
@@ -87,11 +92,21 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			resourceAttrs.PutStr(entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
 		}
 		if p.config.KubernetesMode != "" {
+			fallbackEnvironment := entityEnvironmentName
+			podInfo, ok := p.k8sscraper.(*k8sattributescraper.K8sAttributeScraper)
+			if fallbackEnvironment == EMPTY && p.config.KubernetesMode == config.ModeEKS && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
+				fallbackEnvironment = "eks:" + p.config.ClusterName + "/" + podInfo.Namespace
+			} else if fallbackEnvironment == EMPTY && (p.config.KubernetesMode == config.ModeK8sEC2 || p.config.KubernetesMode == config.ModeK8sOnPrem) && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
+				fallbackEnvironment = "k8s:" + p.config.ClusterName + "/" + podInfo.Namespace
+			}
 			fullPodName := scrapeK8sPodName(resourceAttrs)
-			if fullPodName != EMPTY && (entityServiceName != EMPTY || entityEnvironmentName != EMPTY) {
-				addPodToServiceEnvironmentMap(fullPodName, entityServiceName, entityEnvironmentName)
+			if fullPodName != EMPTY && entityServiceName != EMPTY && entityServiceNameSource != EMPTY {
+				addPodToServiceEnvironmentMap(fullPodName, entityServiceName, fallbackEnvironment, entityServiceNameSource)
+			} else if fullPodName != EMPTY && entityServiceName != EMPTY && entityServiceNameSource == EMPTY {
+				addPodToServiceEnvironmentMap(fullPodName, entityServiceName, fallbackEnvironment, entitystore.ServiceNameSourceUnknown)
 			}
 		}
+		p.k8sscraper.Reset()
 		if logGroupNames.Str() == EMPTY || (serviceName.Str() == EMPTY && environmentName.Str() == EMPTY) {
 			continue
 		}
@@ -104,7 +119,6 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			addToEntityStore(entitystore.LogGroupName(logGroupName), serviceName.Str(), environmentName.Str())
 		}
 	}
-
 	return md, nil
 }
 

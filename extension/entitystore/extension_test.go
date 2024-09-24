@@ -371,8 +371,9 @@ func TestEntityStore_AddAndGetPodServiceEnvironmentMapping(t *testing.T) {
 			name: "HappyPath",
 			want: map[string]ServiceEnvironment{
 				"pod1": {
-					ServiceName: "service1",
-					Environment: "env1",
+					ServiceName:       "service1",
+					Environment:       "env1",
+					ServiceNameSource: ServiceNameSourceK8sWorkload,
 				},
 			},
 			eks: newEKSInfo(logger),
@@ -386,7 +387,7 @@ func TestEntityStore_AddAndGetPodServiceEnvironmentMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := EntityStore{eksInfo: tt.eks}
-			e.AddPodServiceEnvironmentMapping("pod1", "service1", "env1")
+			e.AddPodServiceEnvironmentMapping("pod1", "service1", "env1", ServiceNameSourceK8sWorkload)
 			assert.Equal(t, tt.want, e.GetPodServiceEnvironmentMapping())
 		})
 	}

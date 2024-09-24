@@ -38,6 +38,7 @@ const (
 	ServiceNameSourceResourceTags      = "ResourceTags"
 	ServiceNameSourceUnknown           = "Unknown"
 	ServiceNameSourceUserConfiguration = "UserConfiguration"
+	ServiceNameSourceK8sWorkload       = "K8sWorkload"
 
 	jitterMax = 180
 	jitterMin = 60
