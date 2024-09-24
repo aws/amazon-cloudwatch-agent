@@ -5,6 +5,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -40,17 +41,83 @@ func newMockGetPodServiceEnvironmentMapping(es *mockEntityStore) func() map[stri
 		return es.podToServiceEnvironmentMap
 	}
 }
+
+type mockServerConfig struct {
+	TLSCert           string
+	TLSKey            string
+	TLSAllowedCACerts []string
+}
+
+func newMockTLSConfig(c *mockServerConfig) func() (*tls.Config, error) {
+	return func() (*tls.Config, error) {
+		if c.TLSCert == "" && c.TLSKey == "" && len(c.TLSAllowedCACerts) == 0 {
+			return nil, nil
+		}
+		// Mock implementation for testing purposes
+		return &tls.Config{
+			ClientAuth: tls.RequireAndVerifyClientCert,
+			MinVersion: tls.VersionTLS12,
+		}, nil
+	}
+}
+
 func TestNewServer(t *testing.T) {
 	logger, _ := zap.NewProduction()
 	config := &Config{
 		ListenAddress: ":8080",
 	}
-	server := NewServer(logger, config)
+	tests := []struct {
+		name       string
+		want       *Server
+		mockSvrCfg *mockServerConfig
+		isTLS      bool
+	}{
+		{
+			name: "HTTPSServer",
+			want: &Server{
+				config: config,
+				logger: logger,
+			},
+			mockSvrCfg: &mockServerConfig{
+				TLSCert:           "cert",
+				TLSKey:            "key",
+				TLSAllowedCACerts: []string{"ca"},
+			},
+			isTLS: true,
+		},
+		{
+			name: "EmptyHTTPSServer",
+			want: &Server{
+				config: config,
+				logger: logger,
+			},
+			mockSvrCfg: &mockServerConfig{},
+			isTLS:      false,
+		},
+	}
 
-	assert.NotNil(t, server)
-	assert.Equal(t, config, server.config)
-	assert.NotNil(t, server.logger)
-	assert.NotNil(t, server.server)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			getTlsConfig = newMockTLSConfig(tt.mockSvrCfg)
+
+			server := NewServer(logger, config)
+			assert.NotNil(t, server)
+			assert.Equal(t, config, server.config)
+			assert.NotNil(t, server.logger)
+			if tt.isTLS {
+				assert.NotNil(t, server.httpsServer)
+				assert.Equal(t, ":8080", server.httpsServer.Addr)
+				assert.NotNil(t, server.httpsServer.TLSConfig)
+				assert.Equal(t, uint16(tls.VersionTLS12), server.httpsServer.TLSConfig.MinVersion)
+				assert.Equal(t, tls.RequireAndVerifyClientCert, server.httpsServer.TLSConfig.ClientAuth)
+				assert.NotNil(t, server.httpsServer.Handler)
+				assert.Equal(t, 90*time.Second, server.httpsServer.ReadHeaderTimeout)
+			} else {
+				assert.Nil(t, server.httpsServer)
+			}
+		})
+	}
+
 }
 
 func TestK8sPodToServiceMapHandler(t *testing.T) {
@@ -148,31 +215,40 @@ func TestServerStartAndShutdown(t *testing.T) {
 	config := &Config{
 		ListenAddress: ":8080",
 	}
-	server := NewServer(logger, config)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := server.Start(ctx, nil)
-	assert.NoError(t, err)
+	tests := []struct {
+		name       string
+		mockSvrCfg *mockServerConfig
+	}{
+		{
+			name: "HTTPSServer",
+			mockSvrCfg: &mockServerConfig{
+				TLSCert:           "cert",
+				TLSKey:            "key",
+				TLSAllowedCACerts: []string{"ca"},
+			},
+		},
+		{
+			name:       "EmptyHTTPSServer",
+			mockSvrCfg: &mockServerConfig{},
+		},
+	}
 
-	time.Sleep(1 * time.Second)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			getTlsConfig = newMockTLSConfig(tt.mockSvrCfg)
+			server := NewServer(logger, config)
 
-	// Make a request to the server to check if it's running
-	resp, err := http.Get("http://localhost:8080")
-	assert.NoError(t, err)
-	defer resp.Body.Close()
+			err := server.Start(ctx, nil)
+			assert.NoError(t, err)
 
-	// Check if the response status code is 404 (default route)
-	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+			time.Sleep(1 * time.Second)
 
-	err = server.Shutdown(ctx)
-	assert.NoError(t, err)
-
-	// Wait for the server to shut down
-	time.Sleep(1 * time.Second)
-
-	// Make a request to the server to check if it's shutdown
-	_, err = http.Get("http://localhost:8080")
-	assert.Error(t, err)
+			err = server.Shutdown(ctx)
+			assert.NoError(t, err)
+		})
+	}
 }

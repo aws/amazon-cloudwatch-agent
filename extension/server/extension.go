@@ -5,7 +5,9 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	jsoniter "github.com/json-iterator/go"
@@ -14,13 +16,20 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
+	tlsInternal "github.com/aws/amazon-cloudwatch-agent/internal/tls"
+)
+
+const (
+	tlsServerCertFilePath = "/etc/amazon-cloudwatch-observability-agent-server-cert/server.crt"
+	tlsServerKeyFilePath  = "/etc/amazon-cloudwatch-observability-agent-server-cert/server.key"
+	caFilePath            = "/etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt"
 )
 
 type Server struct {
 	logger         *zap.Logger
 	config         *Config
-	server         *http.Server
 	jsonMarshaller jsoniter.API
+	httpsServer    *http.Server
 }
 
 var _ extension.Extension = (*Server)(nil)
@@ -40,29 +49,49 @@ func NewServer(logger *zap.Logger, config *Config) *Server {
 		jsonMarshaller: jsoniter.ConfigCompatibleWithStandardLibrary,
 	}
 	gin.SetMode(gin.ReleaseMode)
-	router := gin.New()
-	s.setRouter(router)
-	s.server = &http.Server{
-		Addr:    config.ListenAddress,
-		Handler: router,
+
+	tlsConfig, err := getTlsConfig()
+	if tlsConfig == nil {
+		s.logger.Error("failed to create TLS config", zap.Error(err))
+		return s
 	}
+
+	httpsRouter := gin.New()
+	s.setRouter(httpsRouter)
+
+	s.httpsServer = &http.Server{Addr: config.ListenAddress, Handler: httpsRouter, ReadHeaderTimeout: 90 * time.Second, TLSConfig: tlsConfig}
+
 	return s
 }
 
+var getTlsConfig = func() (*tls.Config, error) {
+	serverConfig := &tlsInternal.ServerConfig{
+		TLSCert:           tlsServerCertFilePath,
+		TLSKey:            tlsServerKeyFilePath,
+		TLSAllowedCACerts: []string{caFilePath},
+	}
+	return serverConfig.TLSConfig()
+}
+
 func (s *Server) Start(context.Context, component.Host) error {
-	s.logger.Info("Starting server ...")
-	go func() {
-		err := s.server.ListenAndServe()
-		if err != nil {
-			s.logger.Error("failed to serve and listen", zap.Error(err))
-		}
-	}()
+	if s.httpsServer != nil {
+		s.logger.Info("Starting HTTPS server...")
+		go func() {
+			err := s.httpsServer.ListenAndServeTLS("", "")
+			if err != nil {
+				s.logger.Error("failed to serve and listen", zap.Error(err))
+			}
+		}()
+	}
 	return nil
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	s.logger.Info("Shutting down server...")
-	return s.server.Shutdown(ctx)
+	if s.httpsServer != nil {
+		s.logger.Info("Shutting down HTTPS server...")
+		return s.httpsServer.Shutdown(ctx)
+	}
+	return nil
 }
 
 func (s *Server) k8sPodToServiceMapHandler(c *gin.Context) {
