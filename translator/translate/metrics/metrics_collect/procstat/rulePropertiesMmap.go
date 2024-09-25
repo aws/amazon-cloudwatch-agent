@@ -11,9 +11,6 @@ func (mm *MMap) ApplyRule(input interface{}) (returnKey string, returnVal interf
 	m := input.(map[string]interface{})
 
 	if measurementArray, exists := m["measurement"]; !exists {
-		returnKey = ""
-		returnVal = ""
-	} else {
 		for _, val := range measurementArray.([]interface{}) {
 			if val.(string) == "memory_swap" {
 				returnKey = MMapKey
@@ -21,6 +18,7 @@ func (mm *MMap) ApplyRule(input interface{}) (returnKey string, returnVal interf
 			}
 		}
 	}
+
 	return
 }
 
