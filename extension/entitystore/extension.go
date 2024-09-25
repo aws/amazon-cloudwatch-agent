@@ -143,6 +143,12 @@ func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 	}
 }
 
+// GetServiceMetricAttributesMap creates the attribute map for service metrics. This will be expanded upon in a later PR'S,
+// but for now is just covering the EC2 attributes for service metrics.
+func (e *EntityStore) GetServiceMetricAttributesMap() map[string]*string {
+	return e.createAttributeMap()
+}
+
 // AddServiceAttrEntryForLogFile adds an entry to the entity store for the provided file glob -> (serviceName, environmentName) key-value pair
 func (e *EntityStore) AddServiceAttrEntryForLogFile(fileGlob LogFileGlob, serviceName string, environmentName string) {
 	if e.serviceprovider != nil {

@@ -21,6 +21,9 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform:  ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: ""
@@ -32,9 +35,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceId
             - InstanceType
             - ImageId
-            - InstanceId
         imds_retries: 1
         refresh_interval_seconds: 0s
 receivers:
@@ -51,6 +54,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
             receivers:

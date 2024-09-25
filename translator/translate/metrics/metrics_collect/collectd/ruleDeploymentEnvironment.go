@@ -6,6 +6,7 @@ package collected
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 type DeploymentEnvironment struct {
@@ -14,13 +15,15 @@ type DeploymentEnvironment struct {
 const SectionkeyDeploymentEnvironment = "deployment.environment"
 
 func (obj *DeploymentEnvironment) ApplyRule(input interface{}) (string, interface{}) {
-	_, returnVal := translator.DefaultCase(SectionkeyDeploymentEnvironment, "", input)
-	returnKey := "deployment.environment"
+	returnKey, returnVal := translator.DefaultCase(SectionkeyDeploymentEnvironment, "", input)
 
-	if returnVal == "" {
-		returnVal = metrics.GlobalMetricConfig.DeploymentEnvironment
+	parentKeyVal := metrics.GlobalMetricConfig.DeploymentEnvironment
+	if returnVal != "" {
+		return common.Tags, map[string]interface{}{returnKey: returnVal}
+	} else if parentKeyVal != "" {
+		return common.Tags, map[string]interface{}{returnKey: parentKeyVal}
 	}
-	return "tags", map[string]interface{}{returnKey: returnVal}
+	return "", nil
 }
 
 func init() {

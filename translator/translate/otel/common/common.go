@@ -14,6 +14,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
 
 const (
@@ -61,12 +63,38 @@ const (
 	Udp                                = "udp"
 	Tcp                                = "tcp"
 	TlsKey                             = "tls"
+	Tags                               = "tags"
 	Region                             = "region"
 	LogGroupName                       = "log_group_name"
 	LogStreamName                      = "log_stream_name"
 	NameKey                            = "name"
 	RenameKey                          = "rename"
 	UnitKey                            = "unit"
+)
+
+const (
+	CollectDMetricKey = "collectd"
+	CPUMetricKey      = "cpu"
+	DiskMetricKey     = "disk"
+	DiskIoMetricKey   = "diskio"
+	StatsDMetricKey   = "statsd"
+	SwapMetricKey     = "swap"
+	MemMetricKey      = "mem"
+	NetMetricKey      = "net"
+	NetStatMetricKey  = "netstat"
+	ProcessMetricKey  = "process"
+	ProcStatMetricKey = "procstat"
+
+	//Windows Plugins
+	MemMetricKeyWindows          = "Memory"
+	LogicalDiskMetricKeyWindows  = "LogicalDisk"
+	NetworkMetricKeyWindows      = "Network Interface"
+	PagingMetricKeyWindows       = "Paging"
+	PhysicalDiskMetricKeyWindows = "PhysicalDisk"
+	ProcessorMetricKeyWindows    = "Processor"
+	SystemMetricKeyWindows       = "System"
+	TCPv4MetricKeyWindows        = "TCPv4"
+	TCPv6MetricKeyWindows        = "TCPv6"
 )
 
 const (
@@ -93,6 +121,12 @@ var (
 	JmxTargets   = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 
 	AgentDebugConfigKey = ConfigKey(AgentKey, DebugKey)
+
+	TelegrafPlugins = collections.NewSet[string](CollectDMetricKey, CPUMetricKey, DiskMetricKey, DiskIoMetricKey,
+		StatsDMetricKey, SwapMetricKey, MemMetricKey, NetMetricKey, NetStatMetricKey, ProcessMetricKey, ProcStatMetricKey,
+		//Windows Plugins
+		MemMetricKeyWindows, LogicalDiskMetricKeyWindows, NetworkMetricKeyWindows, PagingMetricKeyWindows, PhysicalDiskMetricKeyWindows,
+		ProcessorMetricKeyWindows, SystemMetricKeyWindows, TCPv4MetricKeyWindows, TCPv6MetricKeyWindows)
 )
 
 // Translator is used to translate the JSON config into an
@@ -398,6 +432,16 @@ func GetMeasurements(m map[string]any) []string {
 func IsAnySet(conf *confmap.Conf, keys []string) bool {
 	for _, key := range keys {
 		if conf.IsSet(key) {
+			return true
+		}
+	}
+	return false
+}
+
+// TelegrafMetricsEnabled checks if any telegraf plugin is present in the configuration.
+func TelegrafMetricsEnabled(conf *confmap.Conf) bool {
+	for plugin := range TelegrafPlugins {
+		if conf.IsSet(ConfigKey(MetricsKey, MetricsCollectedKey, plugin)) {
 			return true
 		}
 	}

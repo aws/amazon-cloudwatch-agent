@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsentity"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/cumulativetodeltaprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/ec2taggerprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricsdecorator"
@@ -66,7 +67,7 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
-		Processors: common.NewTranslatorMap[component.Config](),
+		Processors: common.NewTranslatorMap(awsentity.NewTranslator()),
 		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
 	}

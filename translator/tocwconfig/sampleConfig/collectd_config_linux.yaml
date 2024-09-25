@@ -20,6 +20,10 @@ extensions:
     entitystore:
         mode: ec2
         region: us-west-2
+processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform:  ec2
 receivers:
     telegraf_socket_listener:
         collection_interval: 1m0s
@@ -33,7 +37,8 @@ service:
         metrics/host:
             exporters:
                 - awscloudwatch
-            processors: []
+            processors:
+                - awsentity
             receivers:
                 - telegraf_socket_listener
     telemetry:

@@ -48,6 +48,15 @@ var addPodToServiceEnvironmentMap = func(podName string, serviceName string, env
 	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName, serviceNameSource)
 }
 
+var getMetricAttributesFromEntityStore = func() map[string]*string {
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return map[string]*string{}
+	}
+
+	return es.GetServiceMetricAttributesMap()
+}
+
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or
 // deployment.environment resource attributes set, then adds the association between the log group(s) and the
 // service/environment names to the entitystore extension.
@@ -67,6 +76,20 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	var entityServiceNameSource string
+	// Get the following metric attributes from the EntityStore: PlatformType, EC2.InstanceId, EC2.AutoScalingGroup
+	metricAttributes := getMetricAttributesFromEntityStore()
+
+	var platformType, instanceID, autoScalingGroup string
+	if metricAttributes[entitystore.PlatformType] != nil {
+		platformType = *metricAttributes[entitystore.PlatformType]
+	}
+	if metricAttributes[entitystore.InstanceIDKey] != nil {
+		instanceID = *metricAttributes[entitystore.InstanceIDKey]
+	}
+	if metricAttributes[entitystore.ASGKey] != nil {
+		autoScalingGroup = *metricAttributes[entitystore.ASGKey]
+	}
+
 	rm := md.ResourceMetrics()
 	for i := 0; i < rm.Len(); i++ {
 		if p.config.KubernetesMode != "" {
@@ -90,6 +113,17 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 		}
 		if entityEnvironmentName != EMPTY {
 			resourceAttrs.PutStr(entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
+		}
+		if p.config.Platform == config.ModeEC2 {
+			if platformType != EMPTY {
+				resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, platformType)
+			}
+			if instanceID != EMPTY {
+				resourceAttrs.PutStr(entityattributes.AttributeEntityInstanceID, instanceID)
+			}
+			if autoScalingGroup != EMPTY {
+				resourceAttrs.PutStr(entityattributes.AttributeEntityAutoScalingGroup, autoScalingGroup)
+			}
 		}
 		if p.config.KubernetesMode != "" {
 			fallbackEnvironment := entityEnvironmentName

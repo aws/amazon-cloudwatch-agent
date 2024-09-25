@@ -18,6 +18,8 @@ type Config struct {
 	ClusterName string `mapstructure:"cluster_name,omitempty"`
 	// KubernetesMode
 	KubernetesMode string `mapstructure:"kubernetes_mode,omitempty"`
+	// Specific Mode agent is running on (i.e. EC2, EKS, ECS etc)
+	Platform string `mapstructure:"platform,omitempty"`
 }
 
 // Verify Config implements Processor interface.

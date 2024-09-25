@@ -100,6 +100,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform:  ec2
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -131,9 +134,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
         refresh_interval_seconds: 0s
     filter/jmx/0:
@@ -182,11 +185,11 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
-                - set(unit, "unit") where name == "cpu_usage_idle"
-                - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
-                - set(unit, "unit") where name == "cpu_usage_nice"
+                  - set(unit, "unit") where name == "cpu_usage_idle"
+                  - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
+                  - set(unit, "unit") where name == "cpu_usage_nice"
+                  - set(unit, "unit") where name == "disk_free"
+                  - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx/0:
         error_mode: propagate
@@ -195,9 +198,9 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(unit, "unit") where name == "jvm.memory.heap.used"
-                - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+                  - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+                  - set(unit, "unit") where name == "jvm.memory.heap.used"
+                  - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
         trace_statements: []
     transform/jmx/1:
         error_mode: propagate
@@ -206,7 +209,7 @@ processors:
         metric_statements:
             - context: metric
               statements:
-                - set(name, "TC_ERR") where name == "tomcat.errors"
+                  - set(name, "TC_ERR") where name == "tomcat.errors"
         trace_statements: []
 receivers:
     awsxray:
@@ -370,28 +373,30 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_cpu
-                - telegraf_socket_listener
-                - telegraf_procstat/1917393364
-                - telegraf_disk
-                - telegraf_statsd
-                - telegraf_swap
                 - telegraf_mem
                 - telegraf_netstat
+                - telegraf_socket_listener
+                - telegraf_statsd
+                - telegraf_procstat/1917393364
+                - telegraf_swap
+                - telegraf_cpu
+                - telegraf_disk
                 - telegraf_processes
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
                 - transform
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         metrics/jmx/0:
             exporters:
                 - awscloudwatch

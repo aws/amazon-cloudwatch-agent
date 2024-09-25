@@ -33,8 +33,7 @@ func TestCollectD_HappyCase(t *testing.T) {
 			"collectd_auth_file":      "/etc/collectd/_auth_file",
 			"collectd_security_level": "none",
 			"collectd_typesdb":        []interface{}{"/usr/share/collectd/types.db", "/custom_location/types.db"},
-			"tags": map[string]interface{}{"aws:AggregationInterval": "30s",
-				"deployment.environment": "", "service.name": ""},
+			"tags":                    map[string]interface{}{"aws:AggregationInterval": "30s"},
 		},
 	}
 
@@ -57,8 +56,7 @@ func TestCollectD_MinimumConfig(t *testing.T) {
 			"collectd_auth_file":      "/etc/collectd/auth_file",
 			"collectd_security_level": "encrypt",
 			"collectd_typesdb":        []interface{}{"/usr/share/collectd/types.db"},
-			"tags": map[string]interface{}{"aws:AggregationInterval": "60s",
-				"deployment.environment": "", "service.name": ""},
+			"tags":                    map[string]interface{}{"aws:AggregationInterval": "60s"},
 		},
 	}
 

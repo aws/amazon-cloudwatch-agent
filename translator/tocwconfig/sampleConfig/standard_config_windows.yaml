@@ -21,6 +21,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform: ec2
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -64,13 +67,14 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - ec2tagger
             receivers:
-                - telegraf_win_perf_counters/3446270237
-                - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
+                - telegraf_win_perf_counters/3446270237
+                - telegraf_win_perf_counters/3762679655
     telemetry:
         logs:
             development: false

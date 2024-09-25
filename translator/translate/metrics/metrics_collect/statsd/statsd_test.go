@@ -29,8 +29,7 @@ func TestStatsD_HappyCase(t *testing.T) {
 			"service_address":          ":12345",
 			"interval":                 "5s",
 			"parse_data_dog_tags":      true,
-			"tags": map[string]interface{}{"aws:AggregationInterval": "30s",
-				"deployment.environment": "", "service.name": ""},
+			"tags":                     map[string]interface{}{"aws:AggregationInterval": "30s"},
 		},
 	}
 
@@ -50,8 +49,7 @@ func TestStatsD_MinimumConfig(t *testing.T) {
 			"service_address":     ":8125",
 			"interval":            "10s",
 			"parse_data_dog_tags": true,
-			"tags": map[string]interface{}{"aws:AggregationInterval": "60s",
-				"deployment.environment": "", "service.name": ""},
+			"tags":                map[string]interface{}{"aws:AggregationInterval": "60s"},
 		},
 	}
 
@@ -73,8 +71,7 @@ func TestStatsD_DisableAggregation(t *testing.T) {
 			"service_address":     ":8125",
 			"interval":            "10s",
 			"parse_data_dog_tags": true,
-			"tags": map[string]interface{}{"aws:StorageResolution": "true",
-				"deployment.environment": "", "service.name": ""},
+			"tags":                map[string]interface{}{"aws:StorageResolution": "true"},
 		},
 	}
 
@@ -96,9 +93,8 @@ func TestStatsD_MetricSeparator(t *testing.T) {
 			"service_address":     ":8125",
 			"interval":            "10s",
 			"parse_data_dog_tags": true,
-			"tags": map[string]interface{}{"aws:AggregationInterval": "60s",
-				"deployment.environment": "", "service.name": ""},
-			"metric_separator": ".",
+			"tags":                map[string]interface{}{"aws:AggregationInterval": "60s"},
+			"metric_separator":    ".",
 		},
 	}
 

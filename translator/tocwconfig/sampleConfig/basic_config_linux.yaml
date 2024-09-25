@@ -21,6 +21,9 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform: ec2
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -48,10 +51,11 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - ec2tagger
             receivers:
-                - telegraf_disk
                 - telegraf_mem
+                - telegraf_disk
     telemetry:
         logs:
             development: false

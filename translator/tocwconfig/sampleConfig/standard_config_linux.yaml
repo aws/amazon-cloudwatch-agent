@@ -21,6 +21,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform:  ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -35,9 +38,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         refresh_interval_seconds: 0s
 receivers:
     telegraf_cpu:
@@ -69,16 +72,18 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - ec2tagger
             receivers:
+                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
                 - telegraf_swap
-                - telegraf_cpu
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
             receivers:

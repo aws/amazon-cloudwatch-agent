@@ -51,6 +51,25 @@ func newAddToMockEntityStore(rs *mockEntityStore) func(entitystore.LogGroupName,
 	}
 }
 
+func newMockGetMetricAttributesFromEntityStore() func() map[string]*string {
+	mockPlatform := "AWS::EC2"
+	mockInstanceID := "i-123456789"
+	mockAutoScalingGroup := "auto-scaling"
+	return func() map[string]*string {
+		return map[string]*string{
+			entitystore.PlatformType:  &mockPlatform,
+			entitystore.InstanceIDKey: &mockInstanceID,
+			entitystore.ASGKey:        &mockAutoScalingGroup,
+		}
+	}
+}
+
+func newMockGetMetricAttributesFromEntityStoreReset() func() map[string]*string {
+	return func() map[string]*string {
+		return map[string]*string{}
+	}
+}
+
 func TestProcessMetricsLogGroupAssociation(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	p := newAwsEntityProcessor(&Config{}, logger)
@@ -235,9 +254,10 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ctx := context.Background()
 	tests := []struct {
-		name    string
-		metrics pmetric.Metrics
-		want    map[string]any
+		name            string
+		metrics         pmetric.Metrics
+		want            map[string]any
+		containsMetrics bool
 	}{
 		{
 			name:    "EmptyMetrics",
@@ -248,9 +268,13 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			name:    "ResourceAttributeServiceNameOnly",
 			metrics: generateMetrics(attributeServiceName, "test-service"),
 			want: map[string]any{
-				entityattributes.AttributeEntityServiceName: "test-service",
-				attributeServiceName:                        "test-service",
+				entityattributes.AttributeEntityServiceName:      "test-service",
+				attributeServiceName:                             "test-service",
+				entityattributes.AttributeEntityPlatformType:     "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:       "i-123456789",
+				entityattributes.AttributeEntityAutoScalingGroup: "auto-scaling",
 			},
+			containsMetrics: true,
 		},
 		{
 			name:    "ResourceAttributeEnvironmentOnly",
@@ -258,7 +282,11 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			want: map[string]any{
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
 				attributeDeploymentEnvironment:                        "test-environment",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAutoScalingGroup:      "auto-scaling",
 			},
+			containsMetrics: true,
 		},
 		{
 			name:    "ResourceAttributeServiceNameAndEnvironment",
@@ -268,19 +296,28 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
 				attributeServiceName:                                  "test-service",
 				attributeDeploymentEnvironment:                        "test-environment",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAutoScalingGroup:      "auto-scaling",
 			},
+			containsMetrics: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.containsMetrics {
+				getMetricAttributesFromEntityStore = newMockGetMetricAttributesFromEntityStore()
+			}
 			p := newAwsEntityProcessor(&Config{}, logger)
+			p.config.Platform = config.ModeEC2
 			_, err := p.processMetrics(ctx, tt.metrics)
 			assert.NoError(t, err)
 			rm := tt.metrics.ResourceMetrics()
 			if rm.Len() > 0 {
 				assert.Equal(t, tt.want, rm.At(0).Resource().Attributes().AsRaw())
 			}
+			getMetricAttributesFromEntityStore = newMockGetMetricAttributesFromEntityStoreReset()
 		})
 	}
 }
@@ -325,6 +362,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := newAwsEntityProcessor(&Config{ScrapeDatapointAttribute: true}, logger)
+			p.config.Platform = config.ModeEC2
 			_, err := p.processMetrics(ctx, tt.metrics)
 			assert.NoError(t, err)
 			rm := tt.metrics.ResourceMetrics()

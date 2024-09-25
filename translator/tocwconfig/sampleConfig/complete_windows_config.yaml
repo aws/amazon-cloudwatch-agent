@@ -95,6 +95,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform: ec2
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -251,6 +254,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - ec2tagger
                 - transform
             receivers:

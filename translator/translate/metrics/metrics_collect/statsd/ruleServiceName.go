@@ -6,6 +6,7 @@ package statsd
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 type ServiceName struct {
@@ -14,13 +15,15 @@ type ServiceName struct {
 const SectionkeyServicename = "service.name"
 
 func (obj *ServiceName) ApplyRule(input interface{}) (string, interface{}) {
-	_, returnVal := translator.DefaultCase(SectionkeyServicename, "", input)
-	returnKey := "service.name"
+	returnKey, returnVal := translator.DefaultCase(SectionkeyServicename, "", input)
 
-	if returnVal == "" {
-		returnVal = metrics.GlobalMetricConfig.ServiceName
+	parentKeyVal := metrics.GlobalMetricConfig.ServiceName
+	if returnVal != "" {
+		return common.Tags, map[string]interface{}{returnKey: returnVal}
+	} else if parentKeyVal != "" {
+		return common.Tags, map[string]interface{}{returnKey: parentKeyVal}
 	}
-	return "tags", map[string]interface{}{returnKey: returnVal}
+	return "", nil
 }
 
 func init() {

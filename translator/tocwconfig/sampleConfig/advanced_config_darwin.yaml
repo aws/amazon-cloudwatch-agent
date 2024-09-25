@@ -21,6 +21,9 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform: ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -74,17 +77,19 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - ec2tagger
             receivers:
+                - telegraf_disk
                 - telegraf_mem
                 - telegraf_netstat
                 - telegraf_swap
                 - telegraf_cpu
-                - telegraf_disk
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
             receivers:

@@ -12,6 +12,9 @@ const (
 	AttributeEntityWorkload              = AWSEntityPrefix + "k8s.workload.name"
 	AttributeEntityNode                  = AWSEntityPrefix + "k8s.node.name"
 	AttributeEntityServiceNameSource     = AWSEntityPrefix + "service.name.source"
+	AttributeEntityPlatformType          = AWSEntityPrefix + "platform.type"
+	AttributeEntityInstanceID            = AWSEntityPrefix + "instance.id"
+	AttributeEntityAutoScalingGroup      = AWSEntityPrefix + "auto.scaling.group"
 )
 
 // Container Insights attributes used for scraping EKS related information

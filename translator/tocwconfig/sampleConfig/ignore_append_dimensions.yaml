@@ -21,6 +21,9 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform:  ec2
     ec2tagger:
         imds_retries: 1
         refresh_interval_seconds: 0s
@@ -42,10 +45,11 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - ec2tagger
             receivers:
-                - telegraf_mem
                 - telegraf_disk
+                - telegraf_mem
     telemetry:
         logs:
             development: false

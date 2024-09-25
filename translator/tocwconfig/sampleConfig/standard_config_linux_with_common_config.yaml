@@ -25,6 +25,9 @@ extensions:
         region: us-west-2
         shared_credential_file: fake-path
 processors:
+    awsentity:
+        scrape_datapoint_attribute: true
+        platform: ec2
     cumulativetodelta/hostDeltaMetrics:
         exclude:
             match_type: strict
@@ -76,16 +79,18 @@ service:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - ec2tagger
             receivers:
+                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_mem
                 - telegraf_swap
-                - telegraf_cpu
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
+                - awsentity
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
             receivers:

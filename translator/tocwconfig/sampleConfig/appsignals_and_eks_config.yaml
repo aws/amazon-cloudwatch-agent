@@ -305,6 +305,7 @@ processors:
     awsentity:
         cluster_name: TestCluster
         kubernetes_mode: EKS
+        platform: EKS
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
