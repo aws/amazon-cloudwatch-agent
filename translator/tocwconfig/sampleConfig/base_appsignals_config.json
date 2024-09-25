@@ -15,17 +15,5 @@
       "application_signals": {}
     },
     "endpoint_override":"https://fake_endpoint"
-  },
-  "metrics": {
-    "metrics_collected": {
-      "procstat": [
-        {
-          "pattern": "amazon-cloudwatch-agent",
-          "measurement": [
-            "memory_swap"
-          ]
-        }
-      ]
-    }
   }
 }

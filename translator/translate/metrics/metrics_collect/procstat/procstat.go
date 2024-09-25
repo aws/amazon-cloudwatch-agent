@@ -46,6 +46,7 @@ func (p *Procstat) ApplyRule(input interface{}) (returnKey string, returnVal int
 		if !util.ProcessLinuxCommonConfig(processConfig, SectionKey, GetCurPath(), result) {
 			return
 		}
+
 		for _, rule := range ChildRule {
 			if key, val := rule.ApplyRule(processConfig); key != "" {
 				result[key] = val
