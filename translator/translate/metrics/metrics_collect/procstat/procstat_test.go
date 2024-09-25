@@ -83,7 +83,28 @@ func TestPatternConfig(t *testing.T) {
 	}}
 	checkResult(t, input, expectedVal)
 }
+func TestMemorySwapConfig(t *testing.T) {
+	input := []byte(`{
+		"procstat": [
+			{
+				"measurement": [
+					"memory_swap"
+				]
+			}
+		]
+	}`)
 
+	expectedVal := []interface{}{
+		map[string]interface{}{
+			"fieldpass":  []string{"memory_swap"},
+			"pid_finder": "native",
+			"properties": []string{"mmap"},
+			"tagexclude": []string{"user", "result"},
+		},
+	}
+
+	checkResult(t, input, expectedVal)
+}
 func TestMultiLookupConfig(t *testing.T) {
 	input := []byte(`{"procstat": [
 	{
