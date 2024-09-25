@@ -5,18 +5,19 @@ package attributes
 
 const (
 	// aws attributes
-	AWSSpanKind                 = "aws.span.kind"
-	AWSLocalService             = "aws.local.service"
-	AWSLocalEnvironment         = "aws.local.environment"
-	AWSLocalOperation           = "aws.local.operation"
-	AWSRemoteService            = "aws.remote.service"
-	AWSRemoteOperation          = "aws.remote.operation"
-	AWSRemoteEnvironment        = "aws.remote.environment"
-	AWSRemoteTarget             = "aws.remote.target"
-	AWSRemoteResourceIdentifier = "aws.remote.resource.identifier"
-	AWSRemoteResourceType       = "aws.remote.resource.type"
-	AWSHostedInEnvironment      = "aws.hostedin.environment"
-	AWSRemoteDbUser             = "aws.remote.db.user"
+	AWSSpanKind                           = "aws.span.kind"
+	AWSLocalService                       = "aws.local.service"
+	AWSLocalEnvironment                   = "aws.local.environment"
+	AWSLocalOperation                     = "aws.local.operation"
+	AWSRemoteService                      = "aws.remote.service"
+	AWSRemoteOperation                    = "aws.remote.operation"
+	AWSRemoteEnvironment                  = "aws.remote.environment"
+	AWSRemoteTarget                       = "aws.remote.target"
+	AWSRemoteResourceIdentifier           = "aws.remote.resource.identifier"
+	AWSRemoteResourceType                 = "aws.remote.resource.type"
+	AWSHostedInEnvironment                = "aws.hostedin.environment"
+	AWSRemoteDbUser                       = "aws.remote.db.user"
+	AWSRemoteResourceCfnPrimaryIdentifier = "aws.remote.resource.cfn.primary.identifier"
 
 	// resource detection processor attributes
 	ResourceDetectionHostId   = "host.id"

@@ -239,3 +239,22 @@ func TestTruncateAttributes_AWSRemoteDbUser(t *testing.T) {
 	val, _ := attributes.Get(attr.AWSRemoteDbUser)
 	assert.True(t, len(val.Str()) <= defaultMetricAttributeLength)
 }
+
+func TestRenameAttributes_AWSRemoteResourceCfnIdentifier_for_metric(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	normalizer := NewAttributesNormalizer(logger)
+
+	attributes := pcommon.NewMap()
+	attributes.PutStr(attr.AWSRemoteResourceCfnPrimaryIdentifier, "arn:123:abc-value")
+
+	resourceAttributes := pcommon.NewMap()
+	normalizer.renameAttributes(attributes, resourceAttributes, false)
+
+	if _, ok := attributes.Get(attr.AWSRemoteResourceCfnPrimaryIdentifier); ok {
+		t.Errorf("AWSRemoteResourceCfnPrimaryIdentifier was not removed")
+	}
+
+	if value, ok := attributes.Get("RemoteResourceCfnPrimaryIdentifier"); !ok || value.AsString() != "arn:123:abc-value" {
+		t.Errorf("RemoteResourceCfnPrimaryIdentifier has incorrect value: got %v, want %v", value.AsString(), "arn:123:abc-value")
+	}
+}
