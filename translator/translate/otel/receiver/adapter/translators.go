@@ -44,7 +44,6 @@ var (
 		procstat.PidFileKey,
 		procstat.ExeKey,
 		procstat.PatternKey,
-		procstat.MMapKey,
 	}
 	// windowsInputSet contains all the supported metric input plugins. All others are considered custom metrics.
 	// An exception would be procstat metrics

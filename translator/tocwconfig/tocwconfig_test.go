@@ -637,51 +637,26 @@ func resetContext(t *testing.T) {
 // toml files in the given path will be parsed into the config toml struct and be compared as struct
 func verifyToTomlTranslation(t *testing.T, input interface{}, desiredTomlPath string, tokenReplacements ...map[string]string) {
 	t.Helper()
-
-	// Translate input to TOML config
 	tomlConfig, err := cmdutil.TranslateJsonMapToTomlConfig(input)
 	assert.NoError(t, err)
 
-	// Convert TOML config to TOML string
 	tomlStr := totomlconfig.ToTomlConfig(tomlConfig)
-
-	// Load expected TOML from file
 	var expect tomlConfigTemplate.TomlConfig
 	blob, err := os.ReadFile(desiredTomlPath)
 	assert.NoError(t, err)
-
-	// Replace tokens in the content
 	content := replaceTokens(blob, tokenReplacements...)
 	_, decodeError := toml.Decode(content, &expect)
 	assert.NoError(t, decodeError)
 
-	// Decode the actual TOML string
 	var actual tomlConfigTemplate.TomlConfig
 	_, decodeError2 := toml.Decode(tomlStr, &actual)
 	assert.NoError(t, decodeError2)
-
-	// Option for sorting slices when comparing
+	// This less function sort the content of string slice in alphabetical order so the
+	// cmp.Equal method will compare the two struct with slices in them, regardless the elements within the slices
 	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 		return pretty.Sprint(x) < pretty.Sprint(y)
 	})
-
-	// Compare expected and actual TOML configs
-	if !cmp.Equal(expect, actual, opt) {
-		// Create TOML strings for expected and actual configurations
-		expectBuf, actualBuf := new(bytes.Buffer), new(bytes.Buffer)
-		if err := toml.NewEncoder(expectBuf).Encode(expect); err != nil {
-			t.Fatalf("Failed to encode expected value to TOML: %v", err)
-		}
-		if err := toml.NewEncoder(actualBuf).Encode(actual); err != nil {
-			t.Fatalf("Failed to encode actual value to TOML: %v", err)
-		}
-
-		// Print TOML diff
-		t.Errorf("D! TOML diff:\nExpected TOML:\n%s\nActual TOML:\n%s\nDiff:\n%s",
-			expectBuf.String(),
-			actualBuf.String(),
-			cmp.Diff(expect, actual))
-	}
+	assert.True(t, cmp.Equal(expect, actual, opt), "D! TOML diff: %s", cmp.Diff(expect, actual))
 }
 
 func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePath string, tokenReplacements ...map[string]string) {
