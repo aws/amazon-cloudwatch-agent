@@ -14,6 +14,7 @@ import (
 	"os/exec"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/config"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
@@ -23,24 +24,24 @@ func startAgent(writer io.WriteCloser) error {
 			log.Printf("E! Cannot close the log file, ERROR is %v \n", err)
 			return err
 		}
-		cmd := exec.Command(
-			paths.AgentBinaryPath,
+		execArgs := []string{
 			"-config", paths.TomlConfigPath,
 			"-envconfig", paths.EnvConfigPath,
-			"-otelconfig", paths.YamlConfigPath,
-		)
+		}
+		execArgs = append(execArgs, config.GetOTELConfigArgs(paths.ConfigDirPath)...)
+		cmd := exec.Command(paths.AgentBinaryPath, execArgs...)
 		stdoutStderr, err := cmd.CombinedOutput()
 		// log file is closed, so use fmt here
 		fmt.Printf("%s \n", stdoutStderr)
 		return err
 	} else {
-		cmd := exec.Command(
-			paths.AgentBinaryPath,
+		execArgs := []string{
 			"-config", paths.TomlConfigPath,
 			"-envconfig", paths.EnvConfigPath,
-			"-otelconfig", paths.YamlConfigPath,
-			"-console", "true",
-		)
+		}
+		execArgs = append(execArgs, config.GetOTELConfigArgs(paths.CONFIG_DIR_IN_CONTAINER)...)
+		execArgs = append(execArgs, "-console", "true")
+		cmd := exec.Command(paths.AgentBinaryPath, execArgs...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

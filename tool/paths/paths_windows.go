@@ -15,7 +15,7 @@ import (
 
 const (
 	AgentDir             = "\\Amazon\\AmazonCloudWatchAgent\\"
-	JsonDir              = "\\Configs"
+	ConfigDir            = "\\Configs"
 	BinaryDir            = "bin"
 	TranslatorBinaryName = "config-translator.exe"
 	AgentBinaryName      = "amazon-cloudwatch-agent.exe"
@@ -44,7 +44,7 @@ func init() {
 	AgentRootDir := filepath.Join(programFiles, AgentDir)
 	AgentConfigDir := filepath.Join(programData, AgentDir)
 	JsonConfigPath = filepath.Join(AgentConfigDir, JSON)
-	JsonDirPath = filepath.Join(AgentConfigDir, JsonDir)
+	ConfigDirPath = filepath.Join(AgentConfigDir, ConfigDir)
 	EnvConfigPath = filepath.Join(AgentConfigDir, ENV)
 	TomlConfigPath = filepath.Join(AgentConfigDir, TOML)
 	YamlConfigPath = filepath.Join(AgentConfigDir, YAML)

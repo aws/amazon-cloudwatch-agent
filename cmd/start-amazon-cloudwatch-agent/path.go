@@ -17,6 +17,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/config"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/user"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
@@ -28,9 +29,9 @@ func startAgent(writer io.WriteCloser) error {
 			paths.AgentBinaryPath, // when using syscall.Exec, must pass binary name as args[0]
 			"-config", paths.TomlConfigPath,
 			"-envconfig", paths.EnvConfigPath,
-			"-otelconfig", paths.YamlConfigPath,
-			"-pidfile", paths.AgentDir + "/var/amazon-cloudwatch-agent.pid",
 		}
+		execArgs = append(execArgs, config.GetOTELConfigArgs(paths.CONFIG_DIR_IN_CONTAINER)...)
+		execArgs = append(execArgs, "-pidfile", paths.AgentDir+"/var/amazon-cloudwatch-agent.pid")
 		if err := syscall.Exec(paths.AgentBinaryPath, execArgs, os.Environ()); err != nil {
 			return fmt.Errorf("error exec as agent binary: %w", err)
 		}
@@ -69,9 +70,9 @@ func startAgent(writer io.WriteCloser) error {
 		paths.AgentBinaryPath,
 		"-config", paths.TomlConfigPath,
 		"-envconfig", paths.EnvConfigPath,
-		"-otelconfig", paths.YamlConfigPath,
-		"-pidfile", paths.AgentDir + "/var/amazon-cloudwatch-agent.pid",
 	}
+	agentCmd = append(agentCmd, config.GetOTELConfigArgs(paths.ConfigDirPath)...)
+	agentCmd = append(agentCmd, "-pidfile", paths.AgentDir+"/var/amazon-cloudwatch-agent.pid")
 	if err = syscall.Exec(name, agentCmd, os.Environ()); err != nil {
 		// log file is closed, so use fmt here
 		fmt.Printf("E! Exec failed: %v \n", err)

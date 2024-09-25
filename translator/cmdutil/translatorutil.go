@@ -13,6 +13,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -150,17 +151,27 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 				}
 			}
 
-			if filepath.Ext(path) == context.TmpFileSuffix {
+			ext := filepath.Ext(path)
+			if ext == constants.FileSuffixTmp {
+				key := strings.TrimSuffix(path, constants.FileSuffixTmp)
 				// .tmp files
+				ext = filepath.Ext(key)
+				// skip .yaml files
+				if ext == constants.FileSuffixYAML {
+					return nil
+				}
 				if ctx.MultiConfig() == "default" || ctx.MultiConfig() == "append" {
 					jsonConfigMap, err := getJsonConfigMap(path, ctx.Os())
 					if err != nil {
 						return err
 					}
 					if jsonConfigMap != nil {
-						jsonConfigMapMap[strings.TrimSuffix(path, context.TmpFileSuffix)] = jsonConfigMap
+						jsonConfigMapMap[key] = jsonConfigMap
 					}
 				}
+			} else if ext == constants.FileSuffixYAML {
+				// skip .yaml files
+				return nil
 			} else {
 				// non .tmp / existing files
 				if ctx.MultiConfig() == "append" || ctx.MultiConfig() == "remove" {
