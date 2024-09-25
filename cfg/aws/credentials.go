@@ -16,9 +16,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
@@ -174,7 +176,7 @@ func (s *stsCredentialProvider) Retrieve() (credentials.Value, error) {
 
 func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *credentials.Credentials {
 	regional := &stscreds.AssumeRoleProvider{
-		Client: sts.New(c, &aws.Config{
+		Client: newStsClient(c, &aws.Config{
 			Region:              aws.String(region),
 			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
 			HTTPClient:          &http.Client{Timeout: 1 * time.Minute},
@@ -188,7 +190,7 @@ func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *
 	fallbackRegion := getFallbackRegion(region)
 
 	partitional := &stscreds.AssumeRoleProvider{
-		Client: sts.New(c, &aws.Config{
+		Client: newStsClient(c, &aws.Config{
 			Region:              aws.String(fallbackRegion),
 			Endpoint:            aws.String(getFallbackEndpoint(fallbackRegion)),
 			STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
@@ -201,6 +203,37 @@ func newStsCredentials(c client.ConfigProvider, roleARN string, region string) *
 	}
 
 	return credentials.NewCredentials(&stsCredentialProvider{regional: regional, partitional: partitional})
+}
+
+const (
+	SourceArnHeaderKey     = "x-amz-source-arn"
+	SourceAccountHeaderKey = "x-amz-source-account"
+)
+
+var (
+	sourceAccount = os.Getenv(envconfig.AmzSourceAccount) // populates the "x-amz-source-account" header
+	sourceArn     = os.Getenv(envconfig.AmzSourceArn)     // populates the "x-amz-source-arn" header
+)
+
+// newStsClient creates a new STS client with the provided config and options.
+// Additionally, if specific environment variables are set, it also appends the confused deputy headers to requests
+// made by the client. These headers allow resource-based policies to limit the permissions that a service has to
+// a specific resource. Note that BOTH environment variables need to contain non-empty values in order for the headers
+// to be set.
+//
+// See https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html#cross-service-confused-deputy-prevention
+func newStsClient(p client.ConfigProvider, cfgs ...*aws.Config) *sts.STS {
+	client := sts.New(p, cfgs...)
+	if sourceAccount != "" && sourceArn != "" {
+		client.Handlers.Sign.PushFront(func(r *request.Request) {
+			r.HTTPRequest.Header.Set(SourceArnHeaderKey, sourceArn)
+			r.HTTPRequest.Header.Set(SourceAccountHeaderKey, sourceAccount)
+		})
+
+		log.Printf("I! Found confused deputy header environment variables: source account: %q, source arn: %q", sourceAccount, sourceArn)
+	}
+
+	return client
 }
 
 // The partitional STS endpoint used to fallback when regional STS endpoint is not activated.
