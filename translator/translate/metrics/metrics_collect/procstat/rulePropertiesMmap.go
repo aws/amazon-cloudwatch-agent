@@ -10,9 +10,9 @@ const MMapKey = "properties"
 func (mm *MMap) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	m := input.(map[string]interface{})
 
-	if measurementArray, exists := m["measurement"]; !exists {
+	if measurementArray, exists := m["measurement"]; exists {
 		for _, val := range measurementArray.([]interface{}) {
-			if val.(string) == "memory_swap" {
+			if strVal, ok := val.(string); ok && strVal == "memory_swap" {
 				returnKey = MMapKey
 				returnVal = []string{"mmap"}
 			}
