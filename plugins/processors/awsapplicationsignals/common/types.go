@@ -37,7 +37,8 @@ const (
 
 // Resource attributes used as CloudWatch EMF log fields.
 const (
-	MetricAttributeRemoteDbUser = "RemoteDbUser"
+	MetricAttributeRemoteDbUser                       = "RemoteDbUser"
+	MetricAttributeRemoteResourceCfnPrimaryIdentifier = "RemoteResourceCfnPrimaryIdentifier"
 )
 
 const (
