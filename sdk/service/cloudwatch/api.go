@@ -11268,6 +11268,8 @@ type PutMetricDataInput struct {
 	//
 	// Namespace is a required field
 	Namespace *string `min:"1" type:"string" required:"true"`
+
+	StrictEntityValidation *bool `type:"boolean"`
 }
 
 // String returns the string representation.
@@ -11342,6 +11344,12 @@ func (s *PutMetricDataInput) SetMetricData(v []*MetricDatum) *PutMetricDataInput
 // SetNamespace sets the Namespace field's value.
 func (s *PutMetricDataInput) SetNamespace(v string) *PutMetricDataInput {
 	s.Namespace = &v
+	return s
+}
+
+// SetStrictEntityValidation sets the StrictEntityValidation field's value.
+func (s *PutMetricDataInput) SetStrictEntityValidation(v bool) *PutMetricDataInput {
+	s.StrictEntityValidation = &v
 	return s
 }
 
