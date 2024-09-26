@@ -7,7 +7,7 @@ exporters:
         local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
-        log_stream_name: fake-host-name
+        log_stream_name: i-UNKNOWN
         max_retries: 2
         middleware: agenthealth/logs
         no_verify_ssl: false
@@ -97,9 +97,6 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    entitystore:
-        mode: ec2
-        region: us-west-2
 processors:
     batch/containerinsights:
         metadata_cardinality_limit: 1000
@@ -169,7 +166,6 @@ receivers:
 service:
     extensions:
         - agenthealth/logs
-        - entitystore
     pipelines:
         logs/emf_logs:
             exporters:

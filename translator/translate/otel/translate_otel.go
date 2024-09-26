@@ -31,6 +31,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nop"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 var registry = common.NewTranslatorMap[*common.ComponentTranslators]()
@@ -73,7 +74,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			return nil, err
 		}
 	}
-	pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
+	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms
+	if !ecsutil.GetECSUtilSingleton().IsECS() {
+		pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
+	}
 	if context.CurrentContext().KubernetesMode() != "" {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
 	}

@@ -38,6 +38,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
@@ -554,12 +555,16 @@ func TestECSNodeMetricConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeEC2)
+	ecsSingleton := ecsutil.GetECSUtilSingleton()
+	ecsSingleton.Region = "us-west-2"
 	t.Setenv("RUN_IN_CONTAINER", "True")
 	t.Setenv("HOST_NAME", "fake-host-name")
 	t.Setenv("HOST_IP", "127.0.0.1")
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "log_ecs_metric_only", "linux", expectedEnvVars, "")
 	checkTranslation(t, "log_ecs_metric_only", "darwin", nil, "")
+	//Reset back to default value to not impact other tests
+	ecsSingleton.Region = ""
 }
 
 func TestLogFilterConfig(t *testing.T) {
