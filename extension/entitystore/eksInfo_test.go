@@ -5,7 +5,9 @@ package entitystore
 
 import (
 	"testing"
+	"time"
 
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -13,7 +15,7 @@ import (
 func TestAddPodServiceEnvironmentMapping(t *testing.T) {
 	tests := []struct {
 		name              string
-		want              map[string]ServiceEnvironment
+		want              *ttlcache.Cache[string, ServiceEnvironment]
 		podName           string
 		service           string
 		env               string
@@ -22,35 +24,35 @@ func TestAddPodServiceEnvironmentMapping(t *testing.T) {
 	}{
 		{
 			name: "AddPodWithServiceMapping",
-			want: map[string]ServiceEnvironment{
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{
 				"test-pod": {
 					ServiceName: "test-service",
 				},
-			},
+			}, ttlDuration),
 			podName: "test-pod",
 			service: "test-service",
 		},
 		{
 			name: "AddPodWithServiceEnvMapping",
-			want: map[string]ServiceEnvironment{
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{
 				"test-pod": {
 					ServiceName: "test-service",
 					Environment: "test-env",
 				},
-			},
+			}, ttlDuration),
 			podName: "test-pod",
 			service: "test-service",
 			env:     "test-env",
 		},
 		{
 			name: "AddPodWithServiceEnvMapping",
-			want: map[string]ServiceEnvironment{
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{
 				"test-pod": {
 					ServiceName:       "test-service",
 					Environment:       "test-env",
 					ServiceNameSource: ServiceNameSourceInstrumentation,
 				},
-			},
+			}, ttlDuration),
 			podName:           "test-pod",
 			service:           "test-service",
 			env:               "test-env",
@@ -69,31 +71,59 @@ func TestAddPodServiceEnvironmentMapping(t *testing.T) {
 				ei.podToServiceEnvMap = nil
 			}
 			ei.AddPodServiceEnvironmentMapping(tt.podName, tt.service, tt.env, tt.serviceNameSource)
-			assert.Equal(t, tt.want, ei.podToServiceEnvMap)
+			if tt.mapNil {
+				assert.Nil(t, ei.podToServiceEnvMap)
+			} else {
+				for pod, se := range tt.want.Items() {
+					assert.Equal(t, se.Value(), ei.GetPodServiceEnvironmentMapping().Get(pod).Value())
+				}
+				assert.Equal(t, tt.want.Len(), ei.GetPodServiceEnvironmentMapping().Len())
+			}
 		})
 	}
+}
+
+func TestAddPodServiceEnvironmentMapping_TtlRefresh(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ei := newEKSInfo(logger)
+
+	//adds new pod to service environment mapping
+	ei.AddPodServiceEnvironmentMapping("test-pod", "test-service", "test-environment", "Instrumentation")
+	assert.Equal(t, 1, ei.podToServiceEnvMap.Len())
+	expiration := ei.podToServiceEnvMap.Get("test-pod").ExpiresAt()
+
+	//sleep for 1 second to simulate ttl refresh
+	time.Sleep(1 * time.Second)
+
+	// simulate adding the same pod to service environment mapping
+	ei.AddPodServiceEnvironmentMapping("test-pod", "test-service", "test-environment", "Instrumentation")
+	newExpiration := ei.podToServiceEnvMap.Get("test-pod").ExpiresAt()
+
+	// assert that the expiration time is updated
+	assert.True(t, newExpiration.After(expiration))
+	assert.Equal(t, 1, ei.podToServiceEnvMap.Len())
 }
 
 func TestGetPodServiceEnvironmentMapping(t *testing.T) {
 	tests := []struct {
 		name   string
-		want   map[string]ServiceEnvironment
+		want   *ttlcache.Cache[string, ServiceEnvironment]
 		addMap bool
 	}{
 		{
 			name: "GetPodWithServiceEnvMapping",
-			want: map[string]ServiceEnvironment{
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{
 				"test-pod": {
 					ServiceName:       "test-service",
 					Environment:       "test-env",
 					ServiceNameSource: "test-service-name-source",
 				},
-			},
+			}, ttlDuration),
 			addMap: true,
 		},
 		{
 			name: "GetWhenPodToServiceMapIsEmpty",
-			want: map[string]ServiceEnvironment{},
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{}, ttlDuration),
 		},
 	}
 	for _, tt := range tests {
@@ -103,7 +133,41 @@ func TestGetPodServiceEnvironmentMapping(t *testing.T) {
 			if tt.addMap {
 				ei.AddPodServiceEnvironmentMapping("test-pod", "test-service", "test-env", "test-service-name-source")
 			}
-			assert.Equal(t, tt.want, ei.GetPodServiceEnvironmentMapping())
+			for pod, se := range tt.want.Items() {
+				assert.Equal(t, se.Value(), ei.GetPodServiceEnvironmentMapping().Get(pod).Value())
+			}
+			assert.Equal(t, tt.want.Len(), ei.GetPodServiceEnvironmentMapping().Len())
 		})
 	}
+}
+
+func TestTTLServicePodEnvironmentMapping(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ei := newEKSInfo(logger)
+
+	ei.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{
+		"pod": {
+			ServiceName: "service",
+			Environment: "environment",
+		},
+	}, time.Microsecond)
+	assert.Equal(t, 1, ei.podToServiceEnvMap.Len())
+
+	//starting the ttl cache like we do in code. This will automatically evict expired pods.
+	go ei.podToServiceEnvMap.Start()
+	defer ei.podToServiceEnvMap.Stop()
+
+	//sleep for 1 second to simulate ttl refresh
+	time.Sleep(1 * time.Second)
+
+	//stops the ttl cache.
+	assert.Equal(t, 0, ei.podToServiceEnvMap.Len())
+}
+
+func setupTTLCacheForTesting(podToServiceMap map[string]ServiceEnvironment, ttlDuration time.Duration) *ttlcache.Cache[string, ServiceEnvironment] {
+	cache := ttlcache.New[string, ServiceEnvironment](ttlcache.WithTTL[string, ServiceEnvironment](ttlDuration))
+	for pod, serviceEnv := range podToServiceMap {
+		cache.Set(pod, serviceEnv, ttlcache.DefaultTTL)
+	}
+	return cache
 }

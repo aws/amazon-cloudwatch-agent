@@ -5,12 +5,14 @@ package entitystore
 
 import (
 	"context"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/jellydator/ttlcache/v3"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
 	"go.uber.org/zap"
@@ -23,15 +25,16 @@ import (
 )
 
 const (
-	Service              = "Service"
-	InstanceIDKey        = "EC2.InstanceId"
-	ASGKey               = "EC2.AutoScalingGroup"
-	ServiceNameSourceKey = "AWS.ServiceNameSource"
-	PlatformType         = "PlatformType"
-	EC2PlatForm          = "AWS::EC2"
-	Type                 = "Type"
-	Name                 = "Name"
-	Environment          = "Environment"
+	Service                     = "Service"
+	InstanceIDKey               = "EC2.InstanceId"
+	ASGKey                      = "EC2.AutoScalingGroup"
+	ServiceNameSourceKey        = "AWS.ServiceNameSource"
+	PlatformType                = "PlatformType"
+	EC2PlatForm                 = "AWS::EC2"
+	Type                        = "Type"
+	Name                        = "Name"
+	Environment                 = "Environment"
+	podTerminationCheckInterval = 5 * time.Minute
 )
 
 type ec2ProviderType func(string, *configaws.CredentialConfig) ec2iface.EC2API
@@ -71,6 +74,8 @@ type EntityStore struct {
 	metadataprovider ec2metadataprovider.MetadataProvider
 
 	stsClient stsiface.STSAPI
+
+	podTerminationCheckInterval time.Duration
 }
 
 var _ extension.Extension = (*EntityStore)(nil)
@@ -83,6 +88,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	e.metadataprovider = getMetaDataProvider()
 	e.mode = e.config.Mode
 	e.kubernetesMode = e.config.KubernetesMode
+	e.podTerminationCheckInterval = podTerminationCheckInterval
 	ec2CredentialConfig := &configaws.CredentialConfig{
 		Profile:  e.config.Profile,
 		Filename: e.config.Filename,
@@ -94,6 +100,8 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 	}
 	if e.kubernetesMode != "" {
 		e.eksInfo = newEKSInfo(e.logger)
+		// Starting the ttl cache will automatically evict all expired pods from the map
+		go e.StartPodToServiceEnvironmentMappingTtlCache(e.done)
 	}
 	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
 	go e.serviceprovider.startServiceProvider()
@@ -175,11 +183,26 @@ func (e *EntityStore) AddPodServiceEnvironmentMapping(podName string, serviceNam
 	}
 }
 
-func (e *EntityStore) GetPodServiceEnvironmentMapping() map[string]ServiceEnvironment {
+func (e *EntityStore) StartPodToServiceEnvironmentMappingTtlCache(done chan struct{}) {
+	if e.eksInfo != nil {
+		e.eksInfo.podToServiceEnvMap.Start()
+
+		// Start a goroutine to stop the cache when done channel is closed
+		go func() {
+			<-done
+			e.eksInfo.podToServiceEnvMap.Stop()
+			e.logger.Info("Pod to Service Environment Mapping TTL Cache stopped")
+		}()
+	}
+}
+
+func (e *EntityStore) GetPodServiceEnvironmentMapping() *ttlcache.Cache[string, ServiceEnvironment] {
 	if e.eksInfo != nil {
 		return e.eksInfo.GetPodServiceEnvironmentMapping()
 	}
-	return map[string]ServiceEnvironment{}
+	return ttlcache.New[string, ServiceEnvironment](
+		ttlcache.WithTTL[string, ServiceEnvironment](ttlDuration),
+	)
 }
 
 func (e *EntityStore) createAttributeMap() map[string]*string {

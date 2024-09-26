@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
@@ -20,24 +21,26 @@ import (
 )
 
 type mockEntityStore struct {
-	podToServiceEnvironmentMap map[string]entitystore.ServiceEnvironment
+	podToServiceEnvironmentMap *ttlcache.Cache[string, entitystore.ServiceEnvironment]
 }
 
 func newMockEntityStore() *mockEntityStore {
 	return &mockEntityStore{
-		podToServiceEnvironmentMap: make(map[string]entitystore.ServiceEnvironment),
+		podToServiceEnvironmentMap: ttlcache.New[string, entitystore.ServiceEnvironment](
+			ttlcache.WithTTL[string, entitystore.ServiceEnvironment](time.Hour),
+		),
 	}
 }
 
 func (es *mockEntityStore) AddPodServiceEnvironmentMapping(podName string, service string, env string) {
-	es.podToServiceEnvironmentMap[podName] = entitystore.ServiceEnvironment{
+	es.podToServiceEnvironmentMap.Set(podName, entitystore.ServiceEnvironment{
 		ServiceName: service,
 		Environment: env,
-	}
+	}, time.Hour)
 }
 
-func newMockGetPodServiceEnvironmentMapping(es *mockEntityStore) func() map[string]entitystore.ServiceEnvironment {
-	return func() map[string]entitystore.ServiceEnvironment {
+func newMockGetPodServiceEnvironmentMapping(es *mockEntityStore) func() *ttlcache.Cache[string, entitystore.ServiceEnvironment] {
+	return func() *ttlcache.Cache[string, entitystore.ServiceEnvironment] {
 		return es.podToServiceEnvironmentMap
 	}
 }
@@ -127,12 +130,12 @@ func TestK8sPodToServiceMapHandler(t *testing.T) {
 	}
 	tests := []struct {
 		name     string
-		want     map[string]entitystore.ServiceEnvironment
+		want     *ttlcache.Cache[string, entitystore.ServiceEnvironment]
 		emptyMap bool
 	}{
 		{
 			name: "HappyPath",
-			want: map[string]entitystore.ServiceEnvironment{
+			want: setupTTLCacheForTesting(map[string]entitystore.ServiceEnvironment{
 				"pod1": {
 					ServiceName: "service1",
 					Environment: "env1",
@@ -141,11 +144,11 @@ func TestK8sPodToServiceMapHandler(t *testing.T) {
 					ServiceName: "service2",
 					Environment: "env2",
 				},
-			},
+			}),
 		},
 		{
 			name:     "Empty Map",
-			want:     map[string]entitystore.ServiceEnvironment{},
+			want:     setupTTLCacheForTesting(map[string]entitystore.ServiceEnvironment{}),
 			emptyMap: true,
 		},
 	}
@@ -167,7 +170,11 @@ func TestK8sPodToServiceMapHandler(t *testing.T) {
 			var actualMap map[string]entitystore.ServiceEnvironment
 			err := json.Unmarshal(w.Body.Bytes(), &actualMap)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, actualMap)
+			actualTtlCache := setupTTLCacheForTesting(actualMap)
+			for pod, se := range tt.want.Items() {
+				assert.Equal(t, se.Value(), actualTtlCache.Get(pod).Value())
+			}
+			assert.Equal(t, tt.want.Len(), actualTtlCache.Len())
 		})
 	}
 }
@@ -251,4 +258,28 @@ func TestServerStartAndShutdown(t *testing.T) {
 			assert.NoError(t, err)
 		})
 	}
+}
+
+func TestConvertTtlCacheToMap(t *testing.T) {
+	podToServiceMap := map[string]entitystore.ServiceEnvironment{
+		"pod1": {
+			ServiceName: "service1",
+			Environment: "env1",
+		},
+		"pod2": {
+			ServiceName: "service2",
+			Environment: "env2",
+		},
+	}
+	ttlcache := setupTTLCacheForTesting(podToServiceMap)
+	convertedMap := convertTtlCacheToMap(ttlcache)
+	assert.Equal(t, convertedMap, podToServiceMap)
+}
+
+func setupTTLCacheForTesting(podToServiceMap map[string]entitystore.ServiceEnvironment) *ttlcache.Cache[string, entitystore.ServiceEnvironment] {
+	cache := ttlcache.New[string, entitystore.ServiceEnvironment](ttlcache.WithTTL[string, entitystore.ServiceEnvironment](time.Minute))
+	for pod, serviceEnv := range podToServiceMap {
+		cache.Set(pod, serviceEnv, ttlcache.DefaultTTL)
+	}
+	return cache
 }

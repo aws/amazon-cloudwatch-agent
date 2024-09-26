@@ -3,7 +3,14 @@
 
 package entitystore
 
-import "go.uber.org/zap"
+import (
+	"time"
+
+	"github.com/jellydator/ttlcache/v3"
+	"go.uber.org/zap"
+)
+
+const ttlDuration = 5 * time.Minute
 
 type ServiceEnvironment struct {
 	ServiceName       string
@@ -13,27 +20,28 @@ type ServiceEnvironment struct {
 
 type eksInfo struct {
 	logger             *zap.Logger
-	podToServiceEnvMap map[string]ServiceEnvironment
+	podToServiceEnvMap *ttlcache.Cache[string, ServiceEnvironment]
 }
 
 func newEKSInfo(logger *zap.Logger) *eksInfo {
-	podToServiceEnvMap := make(map[string]ServiceEnvironment)
 	return &eksInfo{
-		logger:             logger,
-		podToServiceEnvMap: podToServiceEnvMap,
+		logger: logger,
+		podToServiceEnvMap: ttlcache.New[string, ServiceEnvironment](
+			ttlcache.WithTTL[string, ServiceEnvironment](ttlDuration),
+		),
 	}
 }
 
 func (eks *eksInfo) AddPodServiceEnvironmentMapping(podName string, serviceName string, environmentName string, serviceNameSource string) {
 	if eks.podToServiceEnvMap != nil {
-		eks.podToServiceEnvMap[podName] = ServiceEnvironment{
+		eks.podToServiceEnvMap.Set(podName, ServiceEnvironment{
 			ServiceName:       serviceName,
 			Environment:       environmentName,
 			ServiceNameSource: serviceNameSource,
-		}
+		}, ttlcache.DefaultTTL)
 	}
 }
 
-func (eks *eksInfo) GetPodServiceEnvironmentMapping() map[string]ServiceEnvironment {
+func (eks *eksInfo) GetPodServiceEnvironmentMapping() *ttlcache.Cache[string, ServiceEnvironment] {
 	return eks.podToServiceEnvMap
 }

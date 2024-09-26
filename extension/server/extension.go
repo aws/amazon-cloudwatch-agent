@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jellydator/ttlcache/v3"
 	jsoniter "github.com/json-iterator/go"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
@@ -95,17 +96,19 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) k8sPodToServiceMapHandler(c *gin.Context) {
-	podServiceEnvironmentMap := getPodServiceEnvironmentMapping()
+	podServiceEnvironmentMap := convertTtlCacheToMap(getPodServiceEnvironmentMapping())
 	s.jsonHandler(c.Writer, podServiceEnvironmentMap)
 }
 
 // Added this for testing purpose
-var getPodServiceEnvironmentMapping = func() map[string]entitystore.ServiceEnvironment {
+var getPodServiceEnvironmentMapping = func() *ttlcache.Cache[string, entitystore.ServiceEnvironment] {
 	es := entitystore.GetEntityStore()
 	if es != nil && es.GetPodServiceEnvironmentMapping() != nil {
 		return es.GetPodServiceEnvironmentMapping()
 	}
-	return map[string]entitystore.ServiceEnvironment{}
+	return ttlcache.New[string, entitystore.ServiceEnvironment](
+		ttlcache.WithTTL[string, entitystore.ServiceEnvironment](time.Hour * 1),
+	)
 }
 
 func (s *Server) jsonHandler(w http.ResponseWriter, data interface{}) {
@@ -114,4 +117,12 @@ func (s *Server) jsonHandler(w http.ResponseWriter, data interface{}) {
 	if err != nil {
 		s.logger.Error("failed to encode data for http response", zap.Error(err))
 	}
+}
+
+func convertTtlCacheToMap(cache *ttlcache.Cache[string, entitystore.ServiceEnvironment]) map[string]entitystore.ServiceEnvironment {
+	m := make(map[string]entitystore.ServiceEnvironment)
+	for pod, se := range cache.Items() {
+		m[pod] = se.Value()
+	}
+	return m
 }

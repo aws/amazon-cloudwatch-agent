@@ -8,12 +8,14 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
@@ -364,23 +366,23 @@ func TestEntityStore_AddAndGetPodServiceEnvironmentMapping(t *testing.T) {
 	logger, _ := zap.NewProduction()
 	tests := []struct {
 		name string
-		want map[string]ServiceEnvironment
+		want *ttlcache.Cache[string, ServiceEnvironment]
 		eks  *eksInfo
 	}{
 		{
 			name: "HappyPath",
-			want: map[string]ServiceEnvironment{
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{
 				"pod1": {
 					ServiceName:       "service1",
 					Environment:       "env1",
 					ServiceNameSource: ServiceNameSourceK8sWorkload,
 				},
-			},
+			}, ttlDuration),
 			eks: newEKSInfo(logger),
 		},
 		{
 			name: "Empty EKS Info",
-			want: map[string]ServiceEnvironment{},
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{}, ttlDuration),
 			eks:  nil,
 		},
 	}
@@ -388,7 +390,89 @@ func TestEntityStore_AddAndGetPodServiceEnvironmentMapping(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := EntityStore{eksInfo: tt.eks}
 			e.AddPodServiceEnvironmentMapping("pod1", "service1", "env1", ServiceNameSourceK8sWorkload)
-			assert.Equal(t, tt.want, e.GetPodServiceEnvironmentMapping())
+			for pod, se := range tt.want.Items() {
+				assert.Equal(t, se.Value(), e.GetPodServiceEnvironmentMapping().Get(pod).Value())
+			}
+			assert.Equal(t, tt.want.Len(), e.GetPodServiceEnvironmentMapping().Len())
 		})
 	}
+}
+
+func TestEntityStore_ClearTerminatedPodsFromServiceMap(t *testing.T) {
+	logger, _ := zap.NewProduction()
+	tests := []struct {
+		name            string
+		podToServiceMap *ttlcache.Cache[string, ServiceEnvironment]
+		want            *ttlcache.Cache[string, ServiceEnvironment]
+		eks             *eksInfo
+	}{
+		{
+			name: "HappyPath_NoClear",
+			podToServiceMap: setupTTLCacheForTesting(map[string]ServiceEnvironment{
+				"pod1": {
+					ServiceName: "service1",
+					Environment: "env1",
+				},
+			}, ttlDuration),
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{
+				"pod1": {
+					ServiceName: "service1",
+					Environment: "env1",
+				},
+			}, ttlDuration),
+			eks: newEKSInfo(logger),
+		},
+		{
+			name: "HappyPath_Clear",
+			podToServiceMap: setupTTLCacheForTesting(map[string]ServiceEnvironment{
+				"pod1": {
+					ServiceName: "service1",
+					Environment: "env1",
+				},
+			}, time.Nanosecond),
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{}, time.Nanosecond),
+			eks:  newEKSInfo(logger),
+		},
+		{
+			name: "Empty EKS Info",
+			want: setupTTLCacheForTesting(map[string]ServiceEnvironment{}, ttlDuration),
+			eks:  nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := EntityStore{eksInfo: tt.eks}
+			if tt.eks != nil {
+				e.eksInfo.podToServiceEnvMap = tt.podToServiceMap
+				go e.eksInfo.podToServiceEnvMap.Start()
+			}
+			//sleep for 1 second to allow the cache to update
+			time.Sleep(1 * time.Second)
+			for pod, se := range tt.want.Items() {
+				assert.Equal(t, se.Value(), e.GetPodServiceEnvironmentMapping().Get(pod).Value())
+			}
+			if tt.eks != nil {
+				e.eksInfo.podToServiceEnvMap.Stop()
+			}
+			assert.Equal(t, tt.want.Len(), e.GetPodServiceEnvironmentMapping().Len())
+		})
+	}
+}
+
+func TestEntityStore_StartPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
+	e := EntityStore{eksInfo: newEKSInfo(zap.NewExample())}
+	e.done = make(chan struct{})
+	e.eksInfo.podToServiceEnvMap = setupTTLCacheForTesting(map[string]ServiceEnvironment{}, time.Microsecond)
+
+	go e.StartPodToServiceEnvironmentMappingTtlCache(e.done)
+	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
+	e.AddPodServiceEnvironmentMapping("pod", "service", "env", "Instrumentation")
+	assert.Equal(t, 1, e.GetPodServiceEnvironmentMapping().Len())
+
+	// sleep for 1 second to allow the cache to update
+	time.Sleep(time.Second)
+
+	//cache should be cleared
+	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
+
 }
