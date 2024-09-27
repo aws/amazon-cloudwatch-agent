@@ -43,6 +43,10 @@ func (s *mockServiceProvider) logFileServiceAttribute(glob LogFileGlob, name Log
 	return args.Get(0).(ServiceAttribute)
 }
 
+func (s *mockServiceProvider) getServiceNameAndSource() (string, string) {
+	return "test-service-name", "UserConfiguration"
+}
+
 type mockSTSClient struct {
 	stsiface.STSAPI
 	accountId string
@@ -475,4 +479,23 @@ func TestEntityStore_StartPodToServiceEnvironmentMappingTtlCache(t *testing.T) {
 	//cache should be cleared
 	assert.Equal(t, 0, e.GetPodServiceEnvironmentMapping().Len())
 
+}
+
+func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
+	instanceId := "i-abcd1234"
+	accountId := "123456789012"
+	sp := new(mockServiceProvider)
+	e := EntityStore{
+		mode:             config.ModeEC2,
+		ec2Info:          ec2Info{InstanceID: instanceId},
+		serviceprovider:  sp,
+		metadataprovider: mockMetadataProviderWithAccountId(accountId),
+		stsClient:        &mockSTSClient{accountId: accountId},
+		nativeCredential: &session.Session{},
+	}
+
+	serviceName, serviceNameSource := e.GetMetricServiceNameAndSource()
+
+	assert.Equal(t, "test-service-name", serviceName)
+	assert.Equal(t, "UserConfiguration", serviceNameSource)
 }

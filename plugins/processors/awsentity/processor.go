@@ -19,11 +19,12 @@ import (
 )
 
 const (
-	attributeAwsLogGroupNames      = "aws.log.group.names"
-	attributeDeploymentEnvironment = "deployment.environment"
-	attributeServiceName           = "service.name"
-	attributeService               = "Service"
-	EMPTY                          = ""
+	attributeAwsLogGroupNames            = "aws.log.group.names"
+	attributeDeploymentEnvironment       = "deployment.environment"
+	attributeServiceName                 = "service.name"
+	attributeService                     = "Service"
+	attributeServiceNameSourceUserConfig = "UserConfiguration"
+	EMPTY                                = ""
 )
 
 type scraper interface {
@@ -55,6 +56,14 @@ var getMetricAttributesFromEntityStore = func() map[string]*string {
 	}
 
 	return es.GetServiceMetricAttributesMap()
+}
+
+var getServiceNameSource = func() (string, string) {
+	es := entitystore.GetEntityStore()
+	if es == nil {
+		return EMPTY, EMPTY
+	}
+	return es.GetMetricServiceNameAndSource()
 }
 
 // awsEntityProcessor looks for metrics that have the aws.log.group.names and either the service.name or
@@ -107,6 +116,12 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 		entityEnvironmentName := environmentName.Str()
 		if (entityServiceName == EMPTY || entityEnvironmentName == EMPTY) && p.config.ScrapeDatapointAttribute {
 			entityServiceName, entityEnvironmentName = p.scrapeServiceAttribute(rm.At(i).ScopeMetrics())
+			// If the entityServiceNameSource is empty here, that means it was not configured via instrumentation
+			// If entityServiceName is a datapoint attribute, that means the service name is coming from the UserConfiguration source
+			if entityServiceNameSource == EMPTY && entityServiceName != EMPTY {
+				entityServiceNameSource = attributeServiceNameSourceUserConfig
+				resourceAttrs.PutStr(entityattributes.AttributeEntityServiceNameSource, attributeServiceNameSourceUserConfig)
+			}
 		}
 		if entityServiceName != EMPTY {
 			resourceAttrs.PutStr(entityattributes.AttributeEntityServiceName, entityServiceName)
@@ -115,6 +130,15 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 			resourceAttrs.PutStr(entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
 		}
 		if p.config.Platform == config.ModeEC2 {
+			//If entityServiceNameSource is empty, it was not configured via the config. Get the source in descending priority
+			//  1. Incoming telemetry attributes
+			//  2. CWA config
+			//  3. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
+			//  4. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
+			if entityServiceNameSource == EMPTY {
+				entityServiceName, entityServiceNameSource = getServiceNameSource()
+				resourceAttrs.PutStr(entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
+			}
 			if platformType != EMPTY {
 				resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, platformType)
 			}

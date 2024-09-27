@@ -149,6 +149,15 @@ func (s *serviceprovider) logFileServiceAttribute(logFile LogFileGlob, logGroup 
 	})
 }
 
+func (s *serviceprovider) getServiceNameAndSource() (string, string) {
+	sa := mergeServiceAttributes([]serviceAttributeProvider{
+		s.serviceAttributeFromEc2Tags,
+		s.serviceAttributeFromIamRole,
+		s.serviceAttributeFallback,
+	})
+	return sa.ServiceName, sa.ServiceNameSource
+}
+
 func (s *serviceprovider) serviceAttributeForLogGroup(logGroup LogGroupName) ServiceAttribute {
 	if logGroup == "" {
 		return ServiceAttribute{}

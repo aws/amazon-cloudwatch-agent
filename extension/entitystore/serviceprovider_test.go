@@ -246,6 +246,28 @@ func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
 	assert.Equal(t, ServiceAttribute{ServiceName: "test-service-from-loggroup", ServiceNameSource: ServiceNameSourceInstrumentation, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
 }
 
+func Test_serviceprovider_getServiceNameSource(t *testing.T) {
+	s := &serviceprovider{
+		mode:      config.ModeEC2,
+		logGroups: make(map[LogGroupName]ServiceAttribute),
+		logFiles:  make(map[LogFileGlob]ServiceAttribute),
+	}
+
+	serviceName, serviceNameSource := s.getServiceNameAndSource()
+	assert.Equal(t, ServiceNameUnknown, serviceName)
+	assert.Equal(t, ServiceNameSourceUnknown, serviceNameSource)
+
+	s.iamRole = "test-role"
+	serviceName, serviceNameSource = s.getServiceNameAndSource()
+	assert.Equal(t, s.iamRole, serviceName)
+	assert.Equal(t, ServiceNameSourceClientIamRole, serviceNameSource)
+
+	s.ec2TagServiceName = "test-service-from-tags"
+	serviceName, serviceNameSource = s.getServiceNameAndSource()
+	assert.Equal(t, s.ec2TagServiceName, serviceName)
+	assert.Equal(t, ServiceNameSourceResourceTags, serviceNameSource)
+}
+
 func Test_serviceprovider_getIAMRole(t *testing.T) {
 	type fields struct {
 		metadataProvider ec2metadataprovider.MetadataProvider

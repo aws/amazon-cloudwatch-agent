@@ -44,6 +44,7 @@ type serviceProviderInterface interface {
 	addEntryForLogFile(LogFileGlob, ServiceAttribute)
 	addEntryForLogGroup(LogGroupName, ServiceAttribute)
 	logFileServiceAttribute(LogFileGlob, LogGroupName) ServiceAttribute
+	getServiceNameAndSource() (string, string)
 }
 
 type EntityStore struct {
@@ -149,6 +150,11 @@ func (e *EntityStore) CreateLogFileEntity(logFileGlob LogFileGlob, logGroupName 
 		KeyAttributes: keyAttributes,
 		Attributes:    attributeMap,
 	}
+}
+
+// GetMetricServiceNameAndSource gets the service name source for service metrics if not customer provided
+func (e *EntityStore) GetMetricServiceNameAndSource() (string, string) {
+	return e.serviceprovider.getServiceNameAndSource()
 }
 
 // GetServiceMetricAttributesMap creates the attribute map for service metrics. This will be expanded upon in a later PR'S,
