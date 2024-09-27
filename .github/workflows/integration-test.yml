@@ -184,42 +184,6 @@ jobs:
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
 
-  StartLocalStackITAR:
-    name: 'StartLocalStackITAR'
-    needs: [OutputEnvVariables]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-gov-east-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-
-  StartLocalStackCN:
-    name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables ]
-    uses: ./.github/workflows/start-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: cn-north-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
-
-
-
   EC2NvidiaGPUIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix ]
     name: 'EC2NVIDIAGPUIntegrationTest'
@@ -384,43 +348,6 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
     secrets: inherit
-
-  EC2LinuxIntegrationTestITAR:
-    needs: [ StartLocalStackITAR, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2LinuxITAR'
-    uses: ./.github/workflows/ec2-integration-test.yml
-    with:
-      github_sha: ${{github.sha}}
-      test_dir: terraform/ec2/linux
-      job_id: ec2-linux-integration-test
-      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_itar_matrix}}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      localstack_host: ${{needs.StartLocalStackITAR.outputs.local_stack_host_name}}
-      region: us-gov-east-1
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-    secrets: inherit
-
-  EC2LinuxIntegrationTestCN:
-    needs: [ StartLocalStackCN, GenerateTestMatrix, OutputEnvVariables ]
-    name: 'EC2LinuxCN'
-    uses: ./.github/workflows/ec2-integration-test.yml
-    with:
-      github_sha: ${{github.sha}}
-      test_dir: terraform/ec2/linux
-      job_id: ec2-linux-integration-test
-      test_props: ${{needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix}}
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      localstack_host: ${{needs.StartLocalStackCN.outputs.local_stack_host_name}}
-      region: cn-north-1
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
-    secrets: inherit
-
 
   LinuxOnPremIntegrationTest:
     needs: [StartLocalStack, GenerateTestMatrix, OutputEnvVariables]
@@ -617,40 +544,6 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       github_sha: ${{github.sha}}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
-
-  StopLocalStackITAR:
-    name: 'StopLocalStackITAR'
-    if: ${{ always() && needs.StartLocalStackITAR.result == 'success' }}
-    needs: [ StartLocalStackITAR, EC2LinuxIntegrationTestITAR, OutputEnvVariables ]
-    uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: us-gov-east-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-
-  StopLocalStackCN:
-    name: 'StopLocalStackCN'
-    if: ${{ always() && needs.StartLocalStackCN.result == 'success' }}
-    needs: [ StartLocalStackCN, EC2LinuxIntegrationTestCN ]
-    uses: ./.github/workflows/stop-localstack.yml
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    with:
-      region: cn-north-1
-      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-      github_sha: ${{github.sha}}
-      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   ECSEC2IntegrationTest:
     name: 'ECSEC2IntegrationTest'
@@ -1110,147 +1003,6 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: cd terraform/performance && terraform destroy --auto-approve
-
-  StressTrackingTest:
-    name: "StressTrackingTest"
-    needs: [GenerateTestMatrix]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_stress_matrix) }}
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-
-      - name: Cache if success
-        id: stress-tracking
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
-      - name: Verify Terraform version
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
-        run: terraform --version
-
-      - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
-
-      - name: Terraform apply
-        if: steps.stress-tracking.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 1
-          timeout_minutes: 60
-          retry_wait_seconds: 5
-          command: |
-            cd terraform/stress
-            terraform init
-            if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}"  \
-              -var="cwa_github_sha=${GITHUB_SHA}" \
-              -var="ami=${{ matrix.arrays.ami }}" \
-              -var="arc=${{ matrix.arrays.arc }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="ssh_key_name=${KEY_NAME}" \
-              -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
-            else
-              terraform destroy -auto-approve && exit 1
-            fi
-
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: cd terraform/stress && terraform destroy --auto-approve
-
-  EC2WinStressTrackingTest:
-    name: "EC2WinStressTrackingTest"
-    needs: [GenerateTestMatrix]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_stress_matrix) }}
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
-          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
-          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-
-      - name: Cache if success
-        id: ec2-win-stress-tracking-test
-        uses: actions/cache@v3
-        with:
-          path: go.mod
-          key: ec2-win-stress-tracking-test-${{ github.sha }}-${{ matrix.arrays.os }}-${{ matrix.arrays.arc }}-${{ matrix.arrays.test_dir }}
-
-      - name: Verify Terraform version
-        if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
-        run: terraform --version
-
-      - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
-
-      - name: Terraform apply
-        if: steps.ec2-win-stress-tracking-test.outputs.cache-hit != 'true'
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 1
-          timeout_minutes: 60
-          retry_wait_seconds: 5
-          command: |
-            cd terraform/stress
-            terraform init
-            if terraform apply --auto-approve \
-              -var="ssh_key_value=${PRIVATE_KEY}"  \
-              -var="cwa_github_sha=${GITHUB_SHA}" \
-              -var="ami=${{ matrix.arrays.ami }}" \
-              -var="arc=${{ matrix.arrays.arc }}" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-              -var="ssh_key_name=${KEY_NAME}" \
-              -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-              -var="family=${{ matrix.arrays.family}}"\
-              -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
-            else
-              terraform destroy -auto-approve && exit 1
-            fi
-
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() }}
-        uses: nick-fields/retry@v2
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: cd terraform/stress && terraform destroy --auto-approve
 
   GPUEndToEndTest:
     name: "GPU E2E Test"
