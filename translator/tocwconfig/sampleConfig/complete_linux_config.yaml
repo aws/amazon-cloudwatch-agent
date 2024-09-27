@@ -100,9 +100,14 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
-    awsentity:
+    awsentity/resource:
+        entity_type: Resource
         scrape_datapoint_attribute: true
         platform:  ec2
+    awsentity/service:
+        entity_type: Service
+        scrape_datapoint_attribute: true
+        platform: ec2
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -373,24 +378,32 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity
+                - awsentity/resource
                 - ec2tagger
                 - transform
             receivers:
                 - telegraf_mem
                 - telegraf_netstat
-                - telegraf_socket_listener
-                - telegraf_statsd
                 - telegraf_procstat/1917393364
                 - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
                 - telegraf_processes
+        metrics/hostCustomMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - awsentity/service
+                - ec2tagger
+                - transform
+            receivers:
+                - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity
+                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
                 - transform

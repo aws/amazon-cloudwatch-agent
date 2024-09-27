@@ -202,10 +202,10 @@ func Test_serviceprovider_serviceAttributeFromAsg(t *testing.T) {
 	s := &serviceprovider{}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
-	s = &serviceprovider{ec2Info: &ec2Info{}}
+	s = &serviceprovider{ec2Info: &EC2Info{}}
 	assert.Equal(t, ServiceAttribute{}, s.serviceAttributeFromAsg())
 
-	s = &serviceprovider{ec2Info: &ec2Info{AutoScalingGroup: "test-asg"}}
+	s = &serviceprovider{ec2Info: &EC2Info{AutoScalingGroup: "test-asg"}}
 	assert.Equal(t, ServiceAttribute{Environment: "ec2:test-asg"}, s.serviceAttributeFromAsg())
 }
 
@@ -230,7 +230,7 @@ func Test_serviceprovider_logFileServiceAttribute(t *testing.T) {
 
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:default"}, s.logFileServiceAttribute("glob", "group"))
 
-	s.ec2Info = &ec2Info{AutoScalingGroup: "test-asg"}
+	s.ec2Info = &EC2Info{AutoScalingGroup: "test-asg"}
 	assert.Equal(t, ServiceAttribute{ServiceName: ServiceNameUnknown, ServiceNameSource: ServiceNameSourceUnknown, Environment: "ec2:test-asg"}, s.logFileServiceAttribute("glob", "group"))
 
 	s.iamRole = "test-role"

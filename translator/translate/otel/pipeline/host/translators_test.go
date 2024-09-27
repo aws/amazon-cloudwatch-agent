@@ -57,6 +57,20 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
+		"WithCustomMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"statsd": map[string]interface{}{},
+					},
+				},
+			},
+			want: map[string]want{
+				"metrics/hostCustomMetrics": {
+					receivers: []string{"telegraf_statsd"},
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

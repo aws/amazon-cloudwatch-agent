@@ -59,7 +59,7 @@ type EntityStore struct {
 
 	// ec2Info stores information about EC2 instances such as instance ID and
 	// auto scaling groups
-	ec2Info ec2Info
+	ec2Info EC2Info
 
 	// eksInfo stores information about EKS such as pod to service Env map
 	eksInfo *eksInfo
@@ -126,7 +126,7 @@ func (e *EntityStore) EKSInfo() *eksInfo {
 	return e.eksInfo
 }
 
-func (e *EntityStore) EC2Info() ec2Info {
+func (e *EntityStore) EC2Info() EC2Info {
 	return e.ec2Info
 }
 

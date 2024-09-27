@@ -20,6 +20,9 @@ type Config struct {
 	KubernetesMode string `mapstructure:"kubernetes_mode,omitempty"`
 	// Specific Mode agent is running on (i.e. EC2, EKS, ECS etc)
 	Platform string `mapstructure:"platform,omitempty"`
+	// EntityType determines the type of entity processing done for
+	// telemetry. Possible values are Service and Resource
+	EntityType string `mapstructure:"entity_type,omitempty"`
 }
 
 // Verify Config implements Processor interface.

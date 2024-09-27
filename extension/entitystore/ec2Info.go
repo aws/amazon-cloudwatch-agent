@@ -29,7 +29,7 @@ const (
 	autoScalingGroupSizeMax = 255
 )
 
-type ec2Info struct {
+type EC2Info struct {
 	InstanceID       string
 	AutoScalingGroup string
 
@@ -44,8 +44,8 @@ type ec2Info struct {
 	done             chan struct{}
 }
 
-func (ei *ec2Info) initEc2Info() {
-	ei.logger.Debug("Initializing ec2Info")
+func (ei *EC2Info) initEc2Info() {
+	ei.logger.Debug("Initializing EC2Info")
 	if err := ei.setInstanceId(); err != nil {
 		return
 	}
@@ -53,11 +53,11 @@ func (ei *ec2Info) initEc2Info() {
 	if err := ei.setAutoScalingGroup(); err != nil {
 		return
 	}
-	ei.logger.Debug("Finished initializing ec2Info")
+	ei.logger.Debug("Finished initializing EC2Info")
 	ei.ignoreInvalidFields()
 }
 
-func (ei *ec2Info) setInstanceId() error {
+func (ei *EC2Info) setInstanceId() error {
 	for {
 		metadataDoc, err := ei.metadataProvider.Get(context.Background())
 		if err != nil {
@@ -77,7 +77,7 @@ func (ei *ec2Info) setInstanceId() error {
 	}
 }
 
-func (ei *ec2Info) setAutoScalingGroup() error {
+func (ei *EC2Info) setAutoScalingGroup() error {
 	retry := 0
 	for {
 		var waitDuration time.Duration
@@ -115,7 +115,7 @@ func (ei *ec2Info) setAutoScalingGroup() error {
 This can also be implemented by just calling the InstanceTagValue and then DescribeTags on failure. But preferred the current implementation
 as we need to distinguish the tags not being fetchable at all, from the ASG tag in particular not existing.
 */
-func (ei *ec2Info) retrieveAsgName(ec2API ec2iface.EC2API) error {
+func (ei *EC2Info) retrieveAsgName(ec2API ec2iface.EC2API) error {
 	tags, err := ei.metadataProvider.InstanceTags(context.Background())
 	if err != nil {
 		ei.logger.Debug("Failed to get tags through metadata provider", zap.Error(err))
@@ -132,7 +132,7 @@ func (ei *ec2Info) retrieveAsgName(ec2API ec2iface.EC2API) error {
 	return nil
 }
 
-func (ei *ec2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error {
+func (ei *EC2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error {
 	tagFilters := []*ec2.Filter{
 		{
 			Name:   aws.String("resource-type"),
@@ -171,8 +171,8 @@ func (ei *ec2Info) retrieveAsgNameWithDescribeTags(ec2API ec2iface.EC2API) error
 	return nil
 }
 
-func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, region string, logger *zap.Logger) *ec2Info {
-	return &ec2Info{
+func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, region string, logger *zap.Logger) *EC2Info {
+	return &EC2Info{
 		metadataProvider: metadataProvider,
 		ec2Provider:      providerType,
 		ec2Credential:    ec2Credential,
@@ -182,7 +182,7 @@ func newEC2Info(metadataProvider ec2metadataprovider.MetadataProvider, providerT
 	}
 }
 
-func (ei *ec2Info) ignoreInvalidFields() {
+func (ei *EC2Info) ignoreInvalidFields() {
 	if idLength := len(ei.InstanceID); idLength > instanceIdSizeMax {
 		ei.logger.Warn("InstanceId length exceeds characters limit and will be ignored", zap.Int("length", idLength), zap.Int("character limit", instanceIdSizeMax))
 		ei.InstanceID = ""

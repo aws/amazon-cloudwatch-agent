@@ -4,6 +4,8 @@
 package awsentity
 
 import (
+	"strings"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
@@ -16,10 +18,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
-const name = "awsentity"
+const (
+	name     = "awsentity"
+	Service  = "Service"
+	Resource = "Resource"
+)
 
 type translator struct {
-	factory processor.Factory
+	factory    processor.Factory
+	entityType string
+	name       string
 }
 
 func NewTranslator() common.Translator[component.Config] {
@@ -28,12 +36,24 @@ func NewTranslator() common.Translator[component.Config] {
 	}
 }
 
+func NewTranslatorWithEntityType(entityType string) common.Translator[component.Config] {
+	return &translator{
+		factory:    awsentity.NewFactory(),
+		entityType: entityType,
+		name:       strings.ToLower(entityType),
+	}
+}
+
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), "")
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awsentity.Config)
+
+	if t.entityType != "" {
+		cfg.EntityType = t.entityType
+	}
 
 	if common.TelegrafMetricsEnabled(conf) {
 		cfg.ScrapeDatapointAttribute = true

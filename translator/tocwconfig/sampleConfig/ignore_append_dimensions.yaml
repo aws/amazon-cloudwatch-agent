@@ -21,7 +21,8 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
-    awsentity:
+    awsentity/resource:
+        entity_type: Resource
         scrape_datapoint_attribute: true
         platform:  ec2
     ec2tagger:
@@ -45,7 +46,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity
+                - awsentity/resource
                 - ec2tagger
             receivers:
                 - telegraf_disk

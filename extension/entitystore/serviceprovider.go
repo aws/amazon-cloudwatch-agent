@@ -63,7 +63,7 @@ type LogFileGlob string
 
 type serviceprovider struct {
 	mode              string
-	ec2Info           *ec2Info
+	ec2Info           *EC2Info
 	metadataProvider  ec2metadataprovider.MetadataProvider
 	ec2API            ec2iface.EC2API
 	ec2Provider       ec2ProviderType
@@ -303,7 +303,7 @@ func (s *serviceprovider) getEC2TagFilters() ([]*ec2.Filter, error) {
 	return tagFilters, nil
 }
 
-func newServiceProvider(mode string, region string, ec2Info *ec2Info, metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) serviceProviderInterface {
+func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) serviceProviderInterface {
 	return &serviceprovider{
 		mode:             mode,
 		region:           region,

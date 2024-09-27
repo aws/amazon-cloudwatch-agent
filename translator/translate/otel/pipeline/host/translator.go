@@ -64,10 +64,16 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 		log.Printf("D! pipeline %s has no receivers", t.name)
 		return nil, nil
 	}
+	var entityProcessor common.Translator[component.Config]
+	if common.PipelineNameHost == t.name || common.PipelineNameHostDeltaMetrics == t.name {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource)
+	} else {
+		entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service)
+	}
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
-		Processors: common.NewTranslatorMap(awsentity.NewTranslator()),
+		Processors: common.NewTranslatorMap(entityProcessor),
 		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
 	}

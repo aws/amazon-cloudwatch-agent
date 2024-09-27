@@ -25,7 +25,8 @@ extensions:
         region: us-west-2
         shared_credential_file: fake-path
 processors:
-    awsentity:
+    awsentity/resource:
+        entity_type: Resource
         scrape_datapoint_attribute: true
         platform: ec2
     ec2tagger:
@@ -74,7 +75,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity
+                - awsentity/resource
                 - ec2tagger
             receivers:
                 - telegraf_win_perf_counters/3762679655

@@ -74,6 +74,7 @@ const (
 
 const (
 	CollectDMetricKey = "collectd"
+	CollectDPluginKey = "socket_listener"
 	CPUMetricKey      = "cpu"
 	DiskMetricKey     = "disk"
 	DiskIoMetricKey   = "diskio"
@@ -98,13 +99,14 @@ const (
 )
 
 const (
-	PipelineNameHost             = "host"
-	PipelineNameHostDeltaMetrics = "hostDeltaMetrics"
-	PipelineNameJmx              = "jmx"
-	PipelineNameEmfLogs          = "emf_logs"
-	AppSignals                   = "application_signals"
-	AppSignalsFallback           = "app_signals"
-	AppSignalsRules              = "rules"
+	PipelineNameHost              = "host"
+	PipelineNameHostCustomMetrics = "hostCustomMetrics"
+	PipelineNameHostDeltaMetrics  = "hostDeltaMetrics"
+	PipelineNameJmx               = "jmx"
+	PipelineNameEmfLogs           = "emf_logs"
+	AppSignals                    = "application_signals"
+	AppSignalsFallback            = "app_signals"
+	AppSignalsRules               = "rules"
 )
 
 var (

@@ -104,16 +104,16 @@ func (m *mockMetadataProvider) InstanceTagValue(ctx context.Context, tagKey stri
 func TestEntityStore_EC2Info(t *testing.T) {
 	tests := []struct {
 		name         string
-		ec2InfoInput ec2Info
-		want         ec2Info
+		ec2InfoInput EC2Info
+		want         EC2Info
 	}{
 		{
 			name: "happypath",
-			ec2InfoInput: ec2Info{
+			ec2InfoInput: EC2Info{
 				InstanceID:       "i-1234567890",
 				AutoScalingGroup: "test-asg",
 			},
-			want: ec2Info{
+			want: EC2Info{
 				InstanceID:       "i-1234567890",
 				AutoScalingGroup: "test-asg",
 			},
@@ -175,7 +175,7 @@ func TestEntityStore_KubernetesMode(t *testing.T) {
 
 func TestEntityStore_createAttributeMaps(t *testing.T) {
 	type fields struct {
-		ec2Info ec2Info
+		ec2Info EC2Info
 		mode    string
 	}
 	tests := []struct {
@@ -186,7 +186,7 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 		{
 			name: "HappyPath",
 			fields: fields{
-				ec2Info: ec2Info{
+				ec2Info: EC2Info{
 					InstanceID:       "i-123456789",
 					AutoScalingGroup: "test-asg",
 				},
@@ -201,7 +201,7 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 		{
 			name: "HappyPath_AsgMissing",
 			fields: fields{
-				ec2Info: ec2Info{
+				ec2Info: EC2Info{
 					InstanceID: "i-123456789",
 				},
 				mode: config.ModeEC2,
@@ -223,7 +223,7 @@ func TestEntityStore_createAttributeMaps(t *testing.T) {
 		{
 			name: "NonEC2",
 			fields: fields{
-				ec2Info: ec2Info{
+				ec2Info: EC2Info{
 					InstanceID:       "i-123456789",
 					AutoScalingGroup: "test-asg",
 				},
@@ -297,7 +297,7 @@ func TestEntityStore_createLogFileRID(t *testing.T) {
 	sp.On("logFileServiceAttribute", glob, group).Return(serviceAttr)
 	e := EntityStore{
 		mode:             config.ModeEC2,
-		ec2Info:          ec2Info{InstanceID: instanceId},
+		ec2Info:          EC2Info{InstanceID: instanceId},
 		serviceprovider:  sp,
 		metadataprovider: mockMetadataProviderWithAccountId(accountId),
 		stsClient:        &mockSTSClient{accountId: accountId},
@@ -487,7 +487,7 @@ func TestEntityStore_GetMetricServiceNameSource(t *testing.T) {
 	sp := new(mockServiceProvider)
 	e := EntityStore{
 		mode:             config.ModeEC2,
-		ec2Info:          ec2Info{InstanceID: instanceId},
+		ec2Info:          EC2Info{InstanceID: instanceId},
 		serviceprovider:  sp,
 		metadataprovider: mockMetadataProviderWithAccountId(accountId),
 		stsClient:        &mockSTSClient{accountId: accountId},

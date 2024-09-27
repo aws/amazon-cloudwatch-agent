@@ -25,19 +25,26 @@ func NewTranslators(conf *confmap.Conf, os string) (pipeline.TranslatorMap, erro
 	// split out delta receiver types
 	deltaReceivers := common.NewTranslatorMap[component.Config]()
 	hostReceivers := common.NewTranslatorMap[component.Config]()
+	hostCustomReceivers := common.NewTranslatorMap[component.Config]()
 	adapterReceivers.Range(func(translator common.Translator[component.Config]) {
 		if translator.ID().Type() == adapter.Type(common.DiskIOKey) || translator.ID().Type() == adapter.Type(common.NetKey) {
 			deltaReceivers.Set(translator)
+		} else if translator.ID().Type() == adapter.Type(common.StatsDMetricKey) || translator.ID().Type() == adapter.Type(common.CollectDPluginKey) {
+			hostCustomReceivers.Set(translator)
 		} else {
 			hostReceivers.Set(translator)
 		}
 	})
 
 	hasHostPipeline := hostReceivers.Len() != 0
+	hasHostCustomPipeline := hostCustomReceivers.Len() != 0
 	hasDeltaPipeline := deltaReceivers.Len() != 0
 
 	if hasHostPipeline {
 		translators.Set(NewTranslator(common.PipelineNameHost, hostReceivers))
+	}
+	if hasHostCustomPipeline {
+		translators.Set(NewTranslator(common.PipelineNameHostCustomMetrics, hostCustomReceivers))
 	}
 	if hasDeltaPipeline {
 		translators.Set(NewTranslator(common.PipelineNameHostDeltaMetrics, deltaReceivers))

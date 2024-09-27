@@ -59,7 +59,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"awsentity"},
+				processors: []string{"awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -76,7 +76,24 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostDeltaMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"awsentity", "cumulativetodelta/hostDeltaMetrics"},
+				processors: []string{"awsentity/resource", "cumulativetodelta/hostDeltaMetrics"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
+		"WithMetricsKeyStatsD": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"statsd": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHostCustomMetrics,
+			want: &want{
+				pipelineID: "metrics/hostCustomMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"awsentity/service"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -100,7 +117,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"awsentity", "transform"},
+				processors: []string{"awsentity/resource", "transform"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -121,7 +138,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"awsentity"},
+				processors: []string{"awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},

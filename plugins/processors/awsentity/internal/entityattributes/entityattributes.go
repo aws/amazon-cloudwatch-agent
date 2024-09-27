@@ -4,7 +4,18 @@
 package entityattributes
 
 const (
-	AWSEntityPrefix                      = "com.amazonaws.cloudwatch.entity.internal."
+	// The following are the possible values for EntityType config options
+	Resource = "Resource"
+	Service  = "Service"
+
+	// The following are entity related attributes
+	AWSEntityPrefix                    = "com.amazonaws.cloudwatch.entity.internal."
+	AttributeEntityType                = AWSEntityPrefix + "type"
+	AttributeEntityAWSResource         = "AWS::Resource"
+	AttributeEntityResourceType        = AWSEntityPrefix + "resource.type"
+	AttributeEntityEC2InstanceResource = "AWS::EC2::Instance"
+	AttributeEntityIdentifier          = AWSEntityPrefix + "identifier"
+
 	AttributeEntityServiceName           = AWSEntityPrefix + "service.name"
 	AttributeEntityDeploymentEnvironment = AWSEntityPrefix + "deployment.environment"
 	AttributeEntityCluster               = AWSEntityPrefix + "k8s.cluster.name"

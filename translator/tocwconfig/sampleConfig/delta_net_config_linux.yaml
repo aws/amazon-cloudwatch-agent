@@ -21,7 +21,8 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
-    awsentity:
+    awsentity/resource:
+        entity_type: Resource
         scrape_datapoint_attribute: true
         platform:  ec2
     cumulativetodelta/hostDeltaMetrics:
@@ -54,7 +55,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity
+                - awsentity/resource
                 - cumulativetodelta/hostDeltaMetrics
                 - ec2tagger
             receivers:

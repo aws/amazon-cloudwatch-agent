@@ -21,7 +21,8 @@ extensions:
         mode: ec2
         region: us-west-2
 processors:
-    awsentity:
+    awsentity/service:
+        entity_type: Service
         scrape_datapoint_attribute: true
         platform:  ec2
 receivers:
@@ -34,11 +35,11 @@ service:
         - agenthealth/metrics
         - entitystore
     pipelines:
-        metrics/host:
+        metrics/hostCustomMetrics:
             exporters:
                 - awscloudwatch
             processors:
-                - awsentity
+                - awsentity/service
             receivers:
                 - telegraf_socket_listener
     telemetry:

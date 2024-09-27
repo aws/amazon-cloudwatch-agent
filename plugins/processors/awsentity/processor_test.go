@@ -70,9 +70,19 @@ func newMockGetServiceNameAndSource(service, source string) func() (string, stri
 	}
 }
 
+func newMockGetEC2InfoFromEntityStore(instance string) func() entitystore.EC2Info {
+	return func() entitystore.EC2Info {
+		return entitystore.EC2Info{
+			InstanceID: instance,
+		}
+	}
+}
+
 func TestProcessMetricsLogGroupAssociation(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	p := newAwsEntityProcessor(&Config{}, logger)
+	p := newAwsEntityProcessor(&Config{
+		EntityType: attributeService,
+	}, logger)
 	ctx := context.Background()
 
 	// empty metrics, no action
@@ -157,7 +167,7 @@ func TestProcessMetricsLogGroupAssociation(t *testing.T) {
 
 func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	p := newAwsEntityProcessor(&Config{ClusterName: "test-cluster"}, logger)
+	p := newAwsEntityProcessor(&Config{ClusterName: "test-cluster", EntityType: attributeService}, logger)
 	ctx := context.Background()
 	tests := []struct {
 		name    string
@@ -315,7 +325,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			if tt.mockGetMetricAttributesFromEntityStore != nil {
 				getMetricAttributesFromEntityStore = tt.mockGetMetricAttributesFromEntityStore
 			}
-			p := newAwsEntityProcessor(&Config{}, logger)
+			p := newAwsEntityProcessor(&Config{EntityType: attributeService}, logger)
 			p.config.Platform = config.ModeEC2
 			_, err := p.processMetrics(ctx, tt.metrics)
 			assert.NoError(t, err)
@@ -325,6 +335,53 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			}
 			getServiceNameSource = resetServiceNameSource
 			getMetricAttributesFromEntityStore = resetGetMetricAttributesFromEntityStore
+		})
+	}
+}
+
+func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	ctx := context.Background()
+	tests := []struct {
+		name     string
+		metrics  pmetric.Metrics
+		want     map[string]any
+		instance string
+	}{
+		{
+			name:    "EmptyMetrics",
+			metrics: pmetric.NewMetrics(),
+			want:    map[string]any{},
+		},
+		{
+			name:     "ResourceEntityEC2",
+			metrics:  generateMetrics(),
+			instance: "i-123456789",
+			want: map[string]any{
+				"com.amazonaws.cloudwatch.entity.internal.type":          "AWS::Resource",
+				"com.amazonaws.cloudwatch.entity.internal.resource.type": "AWS::EC2::Instance",
+				"com.amazonaws.cloudwatch.entity.internal.identifier":    "i-123456789",
+			},
+		},
+		{
+			name:     "ResourceEntityEC2NoInstance",
+			metrics:  generateMetrics(),
+			instance: "",
+			want:     map[string]any{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore(tt.instance)
+			p := newAwsEntityProcessor(&Config{EntityType: entityattributes.Resource}, logger)
+			p.config.Platform = config.ModeEC2
+			_, err := p.processMetrics(ctx, tt.metrics)
+			assert.NoError(t, err)
+			rm := tt.metrics.ResourceMetrics()
+			if rm.Len() > 0 {
+				assert.Equal(t, tt.want, rm.At(0).Resource().Attributes().AsRaw())
+			}
 		})
 	}
 }
@@ -387,7 +444,7 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			if tt.mockGetMetricAttributesFromEntityStore != nil {
 				getMetricAttributesFromEntityStore = tt.mockGetMetricAttributesFromEntityStore
 			}
-			p := newAwsEntityProcessor(&Config{ScrapeDatapointAttribute: true}, logger)
+			p := newAwsEntityProcessor(&Config{ScrapeDatapointAttribute: true, EntityType: attributeService}, logger)
 			p.config.Platform = config.ModeEC2
 			_, err := p.processMetrics(ctx, tt.metrics)
 			assert.NoError(t, err)
