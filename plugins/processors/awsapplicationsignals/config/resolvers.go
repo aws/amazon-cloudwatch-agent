@@ -42,6 +42,13 @@ func NewEC2Resolver(name string) Resolver {
 	}
 }
 
+func NewECSResolver(name string) Resolver {
+	return Resolver{
+		Name:     name,
+		Platform: PlatformECS,
+	}
+}
+
 func NewGenericResolver(name string) Resolver {
 	return Resolver{
 		Name:     name,

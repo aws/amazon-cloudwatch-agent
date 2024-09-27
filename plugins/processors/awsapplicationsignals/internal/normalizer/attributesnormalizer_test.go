@@ -86,7 +86,7 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 
 	// Create a pcommon.Map for resourceAttributes with some attributes
 	resourceAttributes := pcommon.NewMap()
-	for resourceAttrKey, attrKey := range copyMapForMetric {
+	for resourceAttrKey, attrKey := range resourceToMetricAttributes {
 		resourceAttributes.PutStr(resourceAttrKey, attrKey+"-value")
 	}
 	resourceAttributes.PutStr("host.id", "i-01ef7d37f42caa168")
@@ -98,7 +98,7 @@ func TestCopyResourceAttributesToAttributes(t *testing.T) {
 	normalizer.copyResourceAttributesToAttributes(attributes, resourceAttributes, false)
 
 	// Check that the attribute has been copied correctly
-	for _, attrKey := range copyMapForMetric {
+	for _, attrKey := range resourceToMetricAttributes {
 		if value, ok := attributes.Get(attrKey); !ok || value.AsString() != attrKey+"-value" {
 			t.Errorf("Attribute was not copied correctly: got %v, want %v", value.AsString(), attrKey+"-value")
 		}

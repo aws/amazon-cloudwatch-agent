@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
@@ -16,7 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/common"
 	appsignalsconfig "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/config"
 	attr "github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals/internal/attributes"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 const (
@@ -25,6 +23,7 @@ const (
 	AttributePlatformGeneric = "Generic"
 	AttributePlatformEC2     = "AWS::EC2"
 	AttributePlatformEKS     = "AWS::EKS"
+	AttributePlatformECS     = "AWS::ECS"
 	AttributePlatformK8S     = "K8s"
 )
 
@@ -59,12 +58,10 @@ func NewAttributesResolver(resolvers []appsignalsconfig.Resolver, logger *zap.Lo
 			subResolvers = append(subResolvers, getKubernetesResolver(resolver.Platform, resolver.Name, logger), newKubernetesResourceAttributesResolver(resolver.Platform, resolver.Name))
 		case appsignalsconfig.PlatformEC2:
 			subResolvers = append(subResolvers, newResourceAttributesResolver(resolver.Platform, AttributePlatformEC2, DefaultInheritedAttributes))
+		case appsignalsconfig.PlatformECS:
+			subResolvers = append(subResolvers, newECSResourceAttributesResolver(resolver.Platform, resolver.Name))
 		default:
-			if ecsutil.GetECSUtilSingleton().IsECS() {
-				subResolvers = append(subResolvers, newResourceAttributesResolver(appsignalsconfig.PlatformECS, AttributePlatformGeneric, DefaultInheritedAttributes))
-			} else {
-				subResolvers = append(subResolvers, newResourceAttributesResolver(resolver.Platform, AttributePlatformGeneric, GenericInheritedAttributes))
-			}
+			subResolvers = append(subResolvers, newResourceAttributesResolver(resolver.Platform, AttributePlatformGeneric, GenericInheritedAttributes))
 		}
 	}
 	return &attributesResolver{
@@ -121,40 +118,15 @@ func getLocalEnvironment(attributes, resourceAttributes pcommon.Map, defaultEnvP
 	if val, found := resourceAttributes.Get(attr.AWSHostedInEnvironment); found {
 		return val.Str()
 	}
-	if defaultEnvPrefix == appsignalsconfig.PlatformECS {
-		if clusterName, _ := getECSClusterName(resourceAttributes); clusterName != "" {
-			return getDefaultEnvironment(defaultEnvPrefix, clusterName)
-		}
-		if clusterName := ecsutil.GetECSUtilSingleton().Cluster; clusterName != "" {
-			return getDefaultEnvironment(defaultEnvPrefix, clusterName)
-		}
-	} else if defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
+	if defaultEnvPrefix == appsignalsconfig.PlatformEC2 {
 		if asgAttr, found := resourceAttributes.Get(attr.ResourceDetectionASG); found {
-			return getDefaultEnvironment(defaultEnvPrefix, asgAttr.Str())
+			return generateLocalEnvironment(defaultEnvPrefix, asgAttr.Str())
 		}
 	}
-	return getDefaultEnvironment(defaultEnvPrefix, AttributeEnvironmentDefault)
+	return generateLocalEnvironment(defaultEnvPrefix, AttributeEnvironmentDefault)
 }
 
-func getECSClusterName(resourceAttributes pcommon.Map) (string, bool) {
-	if clusterAttr, ok := resourceAttributes.Get(semconv.AttributeAWSECSClusterARN); ok {
-		parts := strings.Split(clusterAttr.Str(), "/")
-		clusterName := parts[len(parts)-1]
-		return clusterName, true
-	} else if taskAttr, ok := resourceAttributes.Get(semconv.AttributeAWSECSTaskARN); ok {
-		parts := strings.SplitAfterN(taskAttr.Str(), ":task/", 2)
-		if len(parts) == 2 {
-			taskParts := strings.Split(parts[1], "/")
-			// cluster name in ARN
-			if len(taskParts) == 2 {
-				return taskParts[0], true
-			}
-		}
-	}
-	return "", false
-}
-
-func getDefaultEnvironment(platformCode, val string) string {
+func generateLocalEnvironment(platformCode, val string) string {
 	return fmt.Sprintf("%s:%s", platformCode, val)
 }
 

@@ -19,6 +19,9 @@ const (
 	AWSRemoteDbUser                       = "aws.remote.db.user"
 	AWSRemoteResourceCfnPrimaryIdentifier = "aws.remote.resource.cfn.primary.identifier"
 
+	AWSECSClusterName = "aws.ecs.cluster.name"
+	AWSECSTaskID      = "aws.ecs.task.id"
+
 	// resource detection processor attributes
 	ResourceDetectionHostId   = "host.id"
 	ResourceDetectionHostName = "host.name"
