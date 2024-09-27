@@ -39,6 +39,7 @@ import (
 	"github.com/prometheus/prometheus/config"
 	"github.com/prometheus/prometheus/discovery"
 	_ "github.com/prometheus/prometheus/discovery/install"
+	"github.com/prometheus/prometheus/discovery/kubernetes"
 	"github.com/prometheus/prometheus/model/relabel"
 	"github.com/prometheus/prometheus/scrape"
 	"github.com/prometheus/prometheus/storage"
@@ -286,6 +287,11 @@ const (
 	savedScrapeInstanceLabel = "cwagent_saved_scrape_instance"
 	scrapeInstanceLabel      = "__address__"
 	savedScrapeNameLabel     = "cwagent_saved_scrape_name" // just arbitrary name that end user won't override in relabel config
+
+	// Labels for Entity population
+	EntityK8sPodLabel       = "cwagent_entity_k8s_pod_name"
+	EntityK8sNamespaceLabel = "cwagent_entity_k8s_namespace"
+	EntityK8sNodeLabel      = "cwagent_entity_K8s_node"
 )
 
 func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config) error) (err error) {
@@ -331,6 +337,33 @@ func reloadConfig(filename string, logger log.Logger, rls ...func(*config.Config
 			},
 		}
 
+		for _, sdc := range sc.ServiceDiscoveryConfigs {
+			if sdc.(*kubernetes.SDConfig).Role == kubernetes.RolePod {
+				relabelConfigs = append(relabelConfigs, []*relabel.Config{
+					{
+						Action:       relabel.Replace,
+						Regex:        relabel.MustNewRegexp("(.*)"),
+						Replacement:  "$1",
+						SourceLabels: model.LabelNames{"__meta_kubernetes_pod_name"},
+						TargetLabel:  EntityK8sPodLabel,
+					},
+					{
+						Action:       relabel.Replace,
+						Regex:        relabel.MustNewRegexp("(.*)"),
+						Replacement:  "$1",
+						SourceLabels: model.LabelNames{"__meta_kubernetes_namespace"},
+						TargetLabel:  EntityK8sNamespaceLabel,
+					},
+					{
+						Action:       relabel.Replace,
+						Regex:        relabel.MustNewRegexp("(.*)"),
+						Replacement:  "$1",
+						SourceLabels: model.LabelNames{"__meta_kubernetes_pod_node_name"},
+						TargetLabel:  EntityK8sNodeLabel,
+					},
+				}...)
+			}
+		}
 		level.Info(logger).Log("msg", "Add extra relabel_configs and metric_relabel_configs to save job, instance and __name__ before user relabel")
 
 		sc.RelabelConfigs = append(relabelConfigs, sc.RelabelConfigs...)

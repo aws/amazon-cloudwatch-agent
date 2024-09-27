@@ -4,6 +4,7 @@
 package k8sattributescraper
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 
+	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
 )
 
@@ -315,6 +317,44 @@ func Test_k8sattributescraper_scrapeWorkload(t *testing.T) {
 			e := &K8sAttributeScraper{}
 			e.scrapeWorkload(tt.args)
 			assert.Equal(t, tt.want, e.Workload)
+		})
+	}
+}
+
+func TestK8sAttributeScraper_relabelPrometheus(t *testing.T) {
+	tests := []struct {
+		name       string
+		attributes pcommon.Map
+		want       pcommon.Map
+	}{
+		{
+			name: "PrometheusPod",
+			attributes: getAttributeMap(map[string]any{
+				prometheus.EntityK8sPodLabel:       "test-pod",
+				prometheus.EntityK8sNamespaceLabel: "test-namespace",
+				prometheus.EntityK8sNodeLabel:      "test-node",
+			}),
+			want: getAttributeMap(map[string]any{
+				semconv.AttributeK8SPodName:       "test-pod",
+				semconv.AttributeK8SNamespaceName: "test-namespace",
+				semconv.AttributeK8SNodeName:      "test-node",
+			}),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &K8sAttributeScraper{}
+			e.relabelPrometheus(tt.attributes)
+			assert.Equal(t, tt.attributes.Len(), tt.want.Len())
+			tt.want.Range(func(k string, v pcommon.Value) bool {
+				actualValue, exists := tt.attributes.Get(k)
+				if !exists {
+					assert.Fail(t, fmt.Sprintf("%s does not exist in the attribute map", k))
+					return false
+				}
+				assert.Equal(t, actualValue.Str(), v.Str())
+				return true
+			})
 		})
 	}
 }
