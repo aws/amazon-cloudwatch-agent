@@ -28,7 +28,7 @@ func TestConfigProvider(t *testing.T) {
 	t.Setenv("ENV_REGION", envRegion)
 	factories, err := defaultcomponents.Factories()
 	require.NoError(t, err)
-	providerSettings := GetSettings(filepath.Join("../../translator/tocwconfig/sampleConfig", "config_with_env.yaml"), zap.NewNop())
+	providerSettings := GetSettings([]string{filepath.Join("../../translator/tocwconfig/sampleConfig", "config_with_env.yaml")}, zap.NewNop())
 	provider, err := otelcol.NewConfigProvider(providerSettings)
 	assert.NoError(t, err)
 	actualCfg, err := provider.Get(context.Background(), factories)
