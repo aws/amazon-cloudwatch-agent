@@ -37,6 +37,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
+	"github.com/aws/amazon-cloudwatch-agent/internal/merge/confmap"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -328,7 +329,28 @@ func runAgent(ctx context.Context,
 	// Else start OTEL and rely on adapter package to start the logfile plugin.
 	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
 	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
-	providerSettings := configprovider.GetSettings(fOtelConfigs, logger)
+
+	uris := fOtelConfigs
+	// merge configs together
+	if len(uris) > 1 {
+		log.Printf("D! Merging multiple OTEL configurations: %s", uris)
+		result := confmap.New()
+		for _, path := range fOtelConfigs {
+			conf, err := confmap.LoadConf(path)
+			if err != nil {
+				return fmt.Errorf("failed to load OTEL configs: %w", err)
+			}
+			if err = result.Merge(conf); err != nil {
+				return fmt.Errorf("failed to merge OTEL configs: %w", err)
+			}
+		}
+		_ = os.Setenv(envconfig.CWAgentMergedOtelConfig, toyamlconfig.ToYamlConfig(result.ToStringMap()))
+		uris = []string{"env:" + envconfig.CWAgentMergedOtelConfig}
+	} else {
+		_ = os.Unsetenv(envconfig.CWAgentMergedOtelConfig)
+	}
+
+	providerSettings := configprovider.GetSettings(uris, logger)
 	provider, err := otelcol.NewConfigProvider(providerSettings)
 	if err != nil {
 		return fmt.Errorf("error while initializing config provider: %v", err)
@@ -341,18 +363,15 @@ func runAgent(ctx context.Context,
 
 	cfg, err := provider.Get(ctx, factories)
 	if err != nil {
-		if len(fOtelConfigs) > 1 {
-			return fmt.Errorf("failed to merge OTEL configs: %v", err)
-		}
 		return err
 	}
 
-	if len(fOtelConfigs) > 1 {
+	if _, ok := os.LookupEnv(envconfig.CWAgentMergedOtelConfig); ok {
 		result, err := mapstructure.Marshal(cfg)
 		if err != nil {
-			return fmt.Errorf("failed to resolve OTEL configuration: %v", err)
+			return fmt.Errorf("failed to marshal OTEL configuration: %v", err)
 		}
-		log.Printf("I! Merged and resolved OTEL configuration: \n%s\n", toyamlconfig.ToYamlConfig(result))
+		log.Printf("I! Merged OTEL configuration: \n%s\n", toyamlconfig.ToYamlConfig(result))
 	}
 
 	useragent.Get().SetComponents(cfg, c)
@@ -367,8 +386,8 @@ func runAgent(ctx context.Context,
 	// docs: https://github.com/open-telemetry/opentelemetry-collector/blob/93cbae436ae61b832279dbbb18a0d99214b7d305/otelcol/command.go#L63
 	// *************************************************************************************************
 	var e []string
-	for _, fOtelConfig := range fOtelConfigs {
-		e = append(e, "--config="+fOtelConfig)
+	for _, uri := range uris {
+		e = append(e, "--config="+uri)
 	}
 	cmd.SetArgs(e)
 	return cmd.Execute()
