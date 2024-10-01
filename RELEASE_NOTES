@@ -1,23 +1,10 @@
 ========================================================================
-Amazon CloudWatch Agent 1.300046.2 (2024-09-11)
+Amazon CloudWatch Agent 1.300047.0 (2024-10-03)
 ========================================================================
-Bug Fixes:
-* Specifying region in EC2 and STS clients in entity store
-
-========================================================================
-Amazon CloudWatch Agent 1.300046.1 (2024-09-10)
-========================================================================
-Bug Fixes:
-* Fix DescribeTags retry on high-frequency and delay refresh interval
-
-========================================================================
-Amazon CloudWatch Agent 1.300046.0 (2024-09-05)
-========================================================================
-Features:
-* Attach Entity field to CloudWatch Logs PutLogEvent API
-
 Enhancements:
 * Increase retry delay on PLE for certain exceptions
+* [ApplicationSignals] Add new log attribute for AWS Resource CloudFormation Primary Identifier in EMF logs
+* [ApplicationSignals] Add ECS as a supported platform with ECS specific attributes for EMF logs
 
 ========================================================================
 Amazon CloudWatch Agent 1.300045.1 (2024-09-03)
