@@ -104,7 +104,7 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		// Starting the ttl cache will automatically evict all expired pods from the map
 		go e.StartPodToServiceEnvironmentMappingTtlCache(e.done)
 	}
-	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done)
+	e.serviceprovider = newServiceProvider(e.mode, e.config.Region, &e.ec2Info, e.metadataprovider, getEC2Provider, ec2CredentialConfig, e.done, e.logger)
 	go e.serviceprovider.startServiceProvider()
 	return nil
 }

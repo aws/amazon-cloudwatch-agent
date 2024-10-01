@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -20,6 +22,8 @@ import (
 
 type mockServiceNameEC2Client struct {
 	ec2iface.EC2API
+	throttleError bool
+	authError     bool
 }
 
 // construct the return results for the mocked DescribeTags api
@@ -30,6 +34,12 @@ var (
 )
 
 func (m *mockServiceNameEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
+	if m.throttleError {
+		return nil, awserr.New(RequestLimitExceeded, "throttle limit exceeded", nil)
+	}
+	if m.authError {
+		return nil, awserr.New("UnauthorizedOperation", "UnauthorizedOperation occurred", nil)
+	}
 	testTags := ec2.DescribeTagsOutput{
 		NextToken: nil,
 		Tags:      []*ec2.TagDescription{&tagDesService},
@@ -64,6 +74,7 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			done := make(chan struct{})
+			logger, _ := zap.NewDevelopment()
 			s := serviceprovider{
 				metadataProvider: tt.args.metadataProvider,
 				ec2Provider: func(s string, config *configaws.CredentialConfig) ec2iface.EC2API {
@@ -71,6 +82,7 @@ func Test_serviceprovider_startServiceProvider(t *testing.T) {
 				},
 				ec2API: tt.args.ec2Client,
 				done:   done,
+				logger: logger,
 			}
 			go s.startServiceProvider()
 			time.Sleep(3 * time.Second)
@@ -377,65 +389,6 @@ func Test_serviceprovider_getEC2TagServiceName(t *testing.T) {
 			}
 			s.getEC2TagServiceName()
 			assert.Equal(t, tt.wantTagServiceName, s.ec2TagServiceName)
-		})
-	}
-}
-
-func Test_refreshLoop(t *testing.T) {
-	type fields struct {
-		metadataProvider  ec2metadataprovider.MetadataProvider
-		ec2API            ec2iface.EC2API
-		iamRole           string
-		ec2TagServiceName string
-		refreshInterval   time.Duration
-		oneTime           bool
-	}
-	type expectedInfo struct {
-		iamRole           string
-		ec2TagServiceName string
-	}
-	tests := []struct {
-		name         string
-		fields       fields
-		expectedInfo expectedInfo
-	}{
-		{
-			name: "HappyPath_CorrectRefresh",
-			fields: fields{
-				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
-						InstanceID: "i-123456789"},
-				},
-				ec2API:            &mockServiceNameEC2Client{},
-				iamRole:           "original-role",
-				ec2TagServiceName: "original-tag-name",
-				refreshInterval:   time.Millisecond,
-			},
-			expectedInfo: expectedInfo{
-				iamRole:           "TestRole",
-				ec2TagServiceName: "test-service",
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			done := make(chan struct{})
-			s := &serviceprovider{
-				metadataProvider: tt.fields.metadataProvider,
-				ec2API:           tt.fields.ec2API,
-				ec2Provider: func(s string, config *configaws.CredentialConfig) ec2iface.EC2API {
-					return tt.fields.ec2API
-				},
-				iamRole:           tt.fields.iamRole,
-				ec2TagServiceName: tt.fields.ec2TagServiceName,
-				done:              done,
-			}
-			go refreshLoop(done, s.getEC2TagServiceName, tt.fields.oneTime)
-			go refreshLoop(done, s.getIAMRole, tt.fields.oneTime)
-			time.Sleep(time.Second)
-			close(done)
-			assert.Equal(t, tt.expectedInfo.iamRole, s.iamRole)
-			assert.Equal(t, tt.expectedInfo.ec2TagServiceName, s.ec2TagServiceName)
 		})
 	}
 }

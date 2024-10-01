@@ -7,15 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
-	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"go.uber.org/zap"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -40,8 +38,11 @@ const (
 	ServiceNameSourceUserConfiguration = "UserConfiguration"
 	ServiceNameSourceK8sWorkload       = "K8sWorkload"
 
-	jitterMax = 180
-	jitterMin = 60
+	describeTagsJitterMax = 3600
+	describeTagsJitterMin = 3000
+	defaultJitterMin      = 60
+	defaultJitterMax      = 180
+	maxRetry              = 3
 )
 
 var (
@@ -72,7 +73,7 @@ type serviceprovider struct {
 	ec2TagServiceName string
 	region            string
 	done              chan struct{}
-
+	logger            *zap.Logger
 	// logFiles stores the service attributes that were configured for log files in CloudWatch Agent configuration.
 	// Example:
 	// "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log": {ServiceName: "cloudwatch-agent"}
@@ -85,12 +86,15 @@ type serviceprovider struct {
 }
 
 func (s *serviceprovider) startServiceProvider() {
+	oneTimeRetryer := NewRetryer(true, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
+	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
+	limitedRetryer := NewRetryer(false, false, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.ThrottleBackOffArray, maxRetry, s.done, s.logger)
 	err := s.getEC2Client()
 	if err != nil {
-		go refreshLoop(s.done, s.getEC2Client, true)
+		go oneTimeRetryer.refreshLoop(s.getEC2Client)
 	}
-	go refreshLoop(s.done, s.getIAMRole, false)
-	go refreshLoop(s.done, s.getEC2TagServiceName, false)
+	go unlimitedRetryer.refreshLoop(s.getIAMRole)
+	go limitedRetryer.refreshLoop(s.getEC2TagServiceName)
 }
 
 // addEntryForLogFile adds an association between a log file glob and a service attribute, as configured in the
@@ -221,11 +225,11 @@ func (s *serviceprovider) serviceAttributeFallback() ServiceAttribute {
 func (s *serviceprovider) getIAMRole() error {
 	iamRole, err := s.metadataProvider.InstanceProfileIAMRole()
 	if err != nil {
-		return fmt.Errorf("failed to get instance profile role: %s", err)
+		return err
 	}
 	iamRoleArn, err := arn.Parse(iamRole)
 	if err != nil {
-		return fmt.Errorf("failed to parse IAM Role Arn: %s", err)
+		return err
 	}
 	iamRoleResource := iamRoleArn.Resource
 	if strings.HasPrefix(iamRoleResource, INSTANCE_PROFILE) {
@@ -252,7 +256,7 @@ func (s *serviceprovider) getEC2TagServiceName() error {
 		}
 		result, err := s.ec2API.DescribeTags(input)
 		if err != nil {
-			continue
+			return err
 		}
 		for _, tag := range result.Tags {
 			key := *tag.Key
@@ -303,7 +307,7 @@ func (s *serviceprovider) getEC2TagFilters() ([]*ec2.Filter, error) {
 	return tagFilters, nil
 }
 
-func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}) serviceProviderInterface {
+func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, logger *zap.Logger) serviceProviderInterface {
 	return &serviceprovider{
 		mode:             mode,
 		region:           region,
@@ -312,57 +316,8 @@ func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataPr
 		ec2Provider:      providerType,
 		ec2Credential:    ec2Credential,
 		done:             done,
+		logger:           logger,
 		logFiles:         make(map[LogFileGlob]ServiceAttribute),
 		logGroups:        make(map[LogGroupName]ServiceAttribute),
 	}
-}
-
-func refreshLoop(done chan struct{}, updateFunc func() error, oneTime bool) {
-	// Offset retry by 1 so we can start with 1 minute wait time
-	// instead of immediately retrying
-	retry := 1
-	for {
-		err := updateFunc()
-		if err == nil && oneTime {
-			return
-		}
-
-		waitDuration := calculateWaitTime(retry, err)
-		wait := time.NewTimer(waitDuration)
-		select {
-		case <-done:
-			log.Printf("D! serviceprovider: Shutting down now")
-			wait.Stop()
-			return
-		case <-wait.C:
-		}
-
-		if retry > 1 {
-			log.Printf("D! serviceprovider: attribute retrieval retry count: %d", retry-1)
-		}
-
-		if err != nil {
-			retry++
-			log.Printf("D! serviceprovider: there was an error when retrieving service attribute. Reason: %s", err)
-		} else {
-			retry = 1
-		}
-
-	}
-}
-
-// calculateWaitTime returns different time based on whether if
-// a function call was returned with error. If returned with error,
-// follow exponential backoff wait time, otherwise, refresh with jitter
-func calculateWaitTime(retry int, err error) time.Duration {
-	var waitDuration time.Duration
-	if err == nil {
-		return time.Duration(rand.Intn(jitterMax-jitterMin)+jitterMin) * time.Second
-	}
-	if retry < len(ec2tagger.BackoffSleepArray) {
-		waitDuration = ec2tagger.BackoffSleepArray[retry]
-	} else {
-		waitDuration = ec2tagger.BackoffSleepArray[len(ec2tagger.BackoffSleepArray)-1]
-	}
-	return waitDuration
 }
