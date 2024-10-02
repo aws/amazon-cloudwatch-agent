@@ -1113,6 +1113,10 @@
         "region_override": {
           "description": "The override region",
           "type": "string"
+        },
+        "transit_spans_in_otlp_format": {
+          "description": "Export X-Ray to OTEL format. If not set then send spans as X-Ray format",
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
