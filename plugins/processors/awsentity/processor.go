@@ -157,21 +157,29 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					entityPlatformType = entityattributes.AttributeEntityK8sPlatform
 				}
 
-				fallbackEnvironment := entityEnvironmentName
 				podInfo, ok := p.k8sscraper.(*k8sattributescraper.K8sAttributeScraper)
-				if fallbackEnvironment == EMPTY && p.config.KubernetesMode == config.ModeEKS && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
-					fallbackEnvironment = "eks:" + p.config.ClusterName + "/" + podInfo.Namespace
-				} else if fallbackEnvironment == EMPTY && (p.config.KubernetesMode == config.ModeK8sEC2 || p.config.KubernetesMode == config.ModeK8sOnPrem) && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
-					fallbackEnvironment = "k8s:" + p.config.ClusterName + "/" + podInfo.Namespace
+				// Perform fallback mechanism for service and environment name if they
+				// are empty
+				if entityServiceName == EMPTY && podInfo.Workload != EMPTY {
+					entityServiceName = podInfo.Workload
+					entityServiceNameSource = entitystore.ServiceNameSourceK8sWorkload
+				}
+
+				if entityEnvironmentName == EMPTY && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
+					if p.config.KubernetesMode == config.ModeEKS {
+						entityEnvironmentName = "eks:" + p.config.ClusterName + "/" + podInfo.Namespace
+					} else if p.config.KubernetesMode == config.ModeK8sEC2 || p.config.KubernetesMode == config.ModeK8sOnPrem {
+						entityEnvironmentName = "k8s:" + p.config.ClusterName + "/" + podInfo.Namespace
+					}
 				}
 
 				// Add service information for a pod to the pod association map
 				// so that agent can host this information in a server
 				fullPodName := scrapeK8sPodName(resourceAttrs)
 				if fullPodName != EMPTY && entityServiceName != EMPTY && entityServiceNameSource != EMPTY {
-					addPodToServiceEnvironmentMap(fullPodName, entityServiceName, fallbackEnvironment, entityServiceNameSource)
+					addPodToServiceEnvironmentMap(fullPodName, entityServiceName, entityEnvironmentName, entityServiceNameSource)
 				} else if fullPodName != EMPTY && entityServiceName != EMPTY && entityServiceNameSource == EMPTY {
-					addPodToServiceEnvironmentMap(fullPodName, entityServiceName, fallbackEnvironment, entitystore.ServiceNameSourceUnknown)
+					addPodToServiceEnvironmentMap(fullPodName, entityServiceName, entityEnvironmentName, entitystore.ServiceNameSourceUnknown)
 				}
 				eksAttributes := K8sServiceAttributes{
 					Cluster:           podInfo.Cluster,

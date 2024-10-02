@@ -15,11 +15,17 @@ var (
 		semconv.AttributeK8SNamespaceName,
 	}
 
+	// these kubernetes resource attributes are set by the openTelemtry operator
+	// see the code referecnes from upstream:
+	// * https://github.com/open-telemetry/opentelemetry-operator/blame/main/pkg/instrumentation/sdk.go#L421
 	workloadAllowlist = []string{
 		semconv.AttributeK8SDeploymentName,
-		semconv.AttributeK8SDaemonSetName,
-		semconv.AttributeK8SStatefulSetName,
 		semconv.AttributeK8SReplicaSetName,
+		semconv.AttributeK8SStatefulSetName,
+		semconv.AttributeK8SDaemonSetName,
+		semconv.AttributeK8SCronJobName,
+		semconv.AttributeK8SJobName,
+		semconv.AttributeK8SPodName,
 		semconv.AttributeK8SContainerName,
 	}
 	nodeAllowlist = []string{

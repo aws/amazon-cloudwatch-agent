@@ -234,7 +234,7 @@ func TestProcessMetricsForAddingPodToServiceMap(t *testing.T) {
 			name:    "WithPodNameAndEmptyServiceAndEnvironmentName",
 			metrics: generateMetrics(semconv.AttributeK8SPodName, "cloudwatch-agent-adhgaf"),
 			k8sMode: config.ModeEKS,
-			want:    map[string]entitystore.ServiceEnvironment{},
+			want:    map[string]entitystore.ServiceEnvironment{"cloudwatch-agent-adhgaf": {ServiceName: "cloudwatch-agent-adhgaf", ServiceNameSource: entitystore.ServiceNameSourceK8sWorkload}},
 		},
 		{
 			name:    "WithEmptyPodName",
@@ -266,19 +266,24 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
 		name                          string
+		platform                      string
+		kubernetesMode                string
+		clusterName                   string
 		metrics                       pmetric.Metrics
 		mockServiceNameSource         func() (string, string)
 		mockGetEC2InfoFromEntityStore func() entitystore.EC2Info
 		want                          map[string]any
 	}{
 		{
-			name:    "EmptyMetrics",
-			metrics: pmetric.NewMetrics(),
-			want:    map[string]any{},
+			name:     "EmptyMetrics",
+			platform: config.ModeEC2,
+			metrics:  pmetric.NewMetrics(),
+			want:     map[string]any{},
 		},
 		//NOTE 2 SELF: These tests assume that we are on the EC2 platform, so make sure to mock the ServiceNameSource function
 		{
 			name:                          "ResourceAttributeServiceNameOnly",
+			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(attributeServiceName, "test-service"),
 			mockServiceNameSource:         newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
@@ -293,6 +298,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 		},
 		{
 			name:                          "ResourceAttributeEnvironmentOnly",
+			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(attributeDeploymentEnvironment, "test-environment"),
 			mockServiceNameSource:         newMockGetServiceNameAndSource("unknown_service", "Unknown"),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
@@ -309,6 +315,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 		},
 		{
 			name:                          "ResourceAttributeServiceNameAndEnvironment",
+			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
 			mockServiceNameSource:         newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
 			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "test-auto-scaling"),
@@ -324,6 +331,26 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 				entityattributes.AttributeEntityAutoScalingGroup:      "test-auto-scaling",
 			},
 		},
+		{
+			name:           "ResourceAttributeWorkloadFallback",
+			kubernetesMode: config.ModeEKS,
+			clusterName:    "test-cluster",
+			metrics:        generateMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node"),
+			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-workload",
+				entityattributes.AttributeEntityDeploymentEnvironment: "eks:test-cluster/test-namespace",
+				entityattributes.AttributeEntityCluster:               "test-cluster",
+				entityattributes.AttributeEntityNamespace:             "test-namespace",
+				entityattributes.AttributeEntityNode:                  "test-node",
+				entityattributes.AttributeEntityWorkload:              "test-workload",
+				entityattributes.AttributeEntityServiceNameSource:     "K8sWorkload",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EKS",
+				semconv.AttributeK8SNamespaceName:                     "test-namespace",
+				semconv.AttributeK8SDeploymentName:                    "test-workload",
+				semconv.AttributeK8SNodeName:                          "test-node",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -336,8 +363,9 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			if tt.mockGetEC2InfoFromEntityStore != nil {
 				getEC2InfoFromEntityStore = tt.mockGetEC2InfoFromEntityStore
 			}
-			p := newAwsEntityProcessor(&Config{EntityType: attributeService}, logger)
-			p.config.Platform = config.ModeEC2
+			p := newAwsEntityProcessor(&Config{EntityType: attributeService, ClusterName: tt.clusterName}, logger)
+			p.config.Platform = tt.platform
+			p.config.KubernetesMode = tt.kubernetesMode
 			_, err := p.processMetrics(ctx, tt.metrics)
 			assert.NoError(t, err)
 			rm := tt.metrics.ResourceMetrics()
