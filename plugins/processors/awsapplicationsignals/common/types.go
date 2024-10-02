@@ -28,6 +28,14 @@ const (
 	AttributeHost                = "Host"
 )
 
+// Platform attribute used as CloudWatch EMF log field.
+const (
+	MetricAttributeECSCluster                = "ECS.Cluster"
+	MetricAttributeECSTaskId                 = "ECS.TaskId"
+	MetricAttributeECSTaskDefinitionFamily   = "ECS.TaskDefinitionFamily"
+	MetricAttributeECSTaskDefinitionRevision = "ECS.TaskDefinitionRevision"
+)
+
 // Telemetry attributes used as CloudWatch EMF log fields.
 const (
 	MetricAttributeTelemetrySDK    = "Telemetry.SDK"

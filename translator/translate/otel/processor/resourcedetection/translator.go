@@ -11,11 +11,17 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 //go:embed configs/config.yaml
-var appSignalsAwsResourceDetectionConfig string
+var appSignalsDefaultResourceDetectionConfig string
+
+//go:embed configs/ecs_config.yaml
+var appSignalsECSResourceDetectionConfig string
 
 type translator struct {
 	name     string
@@ -57,5 +63,21 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
-	return common.GetYamlFileToYamlConfig(cfg, appSignalsAwsResourceDetectionConfig)
+
+	mode := context.CurrentContext().KubernetesMode()
+	if mode == "" {
+		mode = context.CurrentContext().Mode()
+	}
+	if mode == config.ModeEC2 {
+		if ecsutil.GetECSUtilSingleton().IsECS() {
+			mode = config.ModeECS
+		}
+	}
+
+	switch mode {
+	case config.ModeECS:
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsECSResourceDetectionConfig)
+	default:
+		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)
+	}
 }
