@@ -31,16 +31,17 @@ type attributesNormalizer struct {
 }
 
 var attributesRenamingForMetric = map[string]string{
-	attr.AWSLocalService:             common.CWMetricAttributeLocalService,
-	attr.AWSLocalOperation:           common.CWMetricAttributeLocalOperation,
-	attr.AWSLocalEnvironment:         common.CWMetricAttributeEnvironment,
-	attr.AWSRemoteService:            common.CWMetricAttributeRemoteService,
-	attr.AWSRemoteOperation:          common.CWMetricAttributeRemoteOperation,
-	attr.AWSRemoteEnvironment:        common.CWMetricAttributeRemoteEnvironment,
-	attr.AWSRemoteTarget:             common.CWMetricAttributeRemoteResourceIdentifier,
-	attr.AWSRemoteResourceIdentifier: common.CWMetricAttributeRemoteResourceIdentifier,
-	attr.AWSRemoteResourceType:       common.CWMetricAttributeRemoteResourceType,
-	attr.AWSRemoteDbUser:             common.MetricAttributeRemoteDbUser,
+	attr.AWSLocalService:                       common.CWMetricAttributeLocalService,
+	attr.AWSLocalOperation:                     common.CWMetricAttributeLocalOperation,
+	attr.AWSLocalEnvironment:                   common.CWMetricAttributeEnvironment,
+	attr.AWSRemoteService:                      common.CWMetricAttributeRemoteService,
+	attr.AWSRemoteOperation:                    common.CWMetricAttributeRemoteOperation,
+	attr.AWSRemoteEnvironment:                  common.CWMetricAttributeRemoteEnvironment,
+	attr.AWSRemoteTarget:                       common.CWMetricAttributeRemoteResourceIdentifier,
+	attr.AWSRemoteResourceIdentifier:           common.CWMetricAttributeRemoteResourceIdentifier,
+	attr.AWSRemoteResourceType:                 common.CWMetricAttributeRemoteResourceType,
+	attr.AWSRemoteDbUser:                       common.MetricAttributeRemoteDbUser,
+	attr.AWSRemoteResourceCfnPrimaryIdentifier: common.MetricAttributeRemoteResourceCfnPrimaryIdentifier,
 }
 
 var resourceAttributesRenamingForTrace = map[string]string{
