@@ -9,12 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 const (
@@ -51,6 +54,13 @@ func createTestMetrics(
 ) pmetric.Metrics {
 	metrics := pmetric.NewMetrics()
 	rm := metrics.ResourceMetrics().AppendEmpty()
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityType, "Service")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "MyEnvironment")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityServiceName, "MyServiceName")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityInstanceID, "i-123456789")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityAutoScalingGroup, "asg-123")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "AWS::EC2")
+
 	sm := rm.ScopeMetrics().AppendEmpty()
 
 	for i := 0; i < numMetrics; i++ {
@@ -210,9 +220,158 @@ func TestConvertOtelMetrics_Dimensions(t *testing.T) {
 	}
 }
 
+func TestConvertOtelMetrics_Entity(t *testing.T) {
+	metrics := createTestMetrics(1, 1, 1, "s")
+	datums := ConvertOtelMetrics(metrics)
+	expectedEntity := cloudwatch.Entity{
+		KeyAttributes: map[string]*string{
+			"Type":        aws.String("Service"),
+			"Environment": aws.String("MyEnvironment"),
+			"Name":        aws.String("MyServiceName"),
+		},
+		Attributes: map[string]*string{
+			"InstanceID":       aws.String("i-123456789"),
+			"Platform":         aws.String("AWS::EC2"),
+			"AutoScalingGroup": aws.String("asg-123"),
+		},
+	}
+	assert.Equal(t, 1, len(datums))
+	assert.Equal(t, expectedEntity, datums[0].entity)
+
+}
+
+func TestProcessEntityAttributes(t *testing.T) {
+	testCases := []struct {
+		name               string
+		entityMap          []map[string]string
+		resourceAttributes map[string]any
+		wantedAttributes   map[string]*string
+		leftoverAttributes map[string]any
+	}{
+		{
+			name:      "key_attributes",
+			entityMap: []map[string]string{entityattributes.KeyAttributeEntityToShortNameMap},
+			resourceAttributes: map[string]any{
+				entityattributes.AttributeEntityServiceName:           "my-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "my-environment",
+			},
+			wantedAttributes: map[string]*string{
+				entityattributes.ServiceName:           aws.String("my-service"),
+				entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+			},
+			leftoverAttributes: make(map[string]any),
+		},
+		{
+			name:      "non-key_attributes",
+			entityMap: []map[string]string{entityattributes.AttributeEntityToShortNameMap},
+			resourceAttributes: map[string]any{
+				entityattributes.AttributeEntityCluster:   "my-cluster",
+				entityattributes.AttributeEntityNamespace: "my-namespace",
+				entityattributes.AttributeEntityNode:      "my-node",
+				entityattributes.AttributeEntityWorkload:  "my-workload",
+			},
+			wantedAttributes: map[string]*string{
+				entityattributes.Cluster:   aws.String("my-cluster"),
+				entityattributes.Namespace: aws.String("my-namespace"),
+				entityattributes.Node:      aws.String("my-node"),
+				entityattributes.Workload:  aws.String("my-workload"),
+			},
+			leftoverAttributes: make(map[string]any),
+		},
+		{
+			name:      "key_and_non_key_attributes",
+			entityMap: []map[string]string{entityattributes.KeyAttributeEntityToShortNameMap, entityattributes.AttributeEntityToShortNameMap},
+			resourceAttributes: map[string]any{
+				entityattributes.AttributeEntityServiceName:           "my-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "my-environment",
+				entityattributes.AttributeEntityCluster:               "my-cluster",
+				entityattributes.AttributeEntityNamespace:             "my-namespace",
+				entityattributes.AttributeEntityNode:                  "my-node",
+				entityattributes.AttributeEntityWorkload:              "my-workload",
+			},
+			wantedAttributes: map[string]*string{
+				entityattributes.ServiceName:           aws.String("my-service"),
+				entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+				entityattributes.Cluster:               aws.String("my-cluster"),
+				entityattributes.Namespace:             aws.String("my-namespace"),
+				entityattributes.Node:                  aws.String("my-node"),
+				entityattributes.Workload:              aws.String("my-workload"),
+			},
+			leftoverAttributes: make(map[string]any),
+		},
+		{
+			name:      "key_and_non_key_attributes_plus_extras",
+			entityMap: []map[string]string{entityattributes.KeyAttributeEntityToShortNameMap, entityattributes.AttributeEntityToShortNameMap},
+			resourceAttributes: map[string]any{
+				"extra_attribute": "extra_value",
+				entityattributes.AttributeEntityServiceName:           "my-service",
+				entityattributes.AttributeEntityDeploymentEnvironment: "my-environment",
+				entityattributes.AttributeEntityCluster:               "my-cluster",
+				entityattributes.AttributeEntityNamespace:             "my-namespace",
+				entityattributes.AttributeEntityNode:                  "my-node",
+				entityattributes.AttributeEntityWorkload:              "my-workload",
+			},
+			wantedAttributes: map[string]*string{
+				entityattributes.ServiceName:           aws.String("my-service"),
+				entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+				entityattributes.Cluster:               aws.String("my-cluster"),
+				entityattributes.Namespace:             aws.String("my-namespace"),
+				entityattributes.Node:                  aws.String("my-node"),
+				entityattributes.Workload:              aws.String("my-workload"),
+			},
+			leftoverAttributes: map[string]any{
+				"extra_attribute": "extra_value",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			attrs := pcommon.NewMap()
+			err := attrs.FromRaw(tc.resourceAttributes)
+			assert.Nil(t, err)
+			targetMap := make(map[string]*string)
+			for _, entityMap := range tc.entityMap {
+				processEntityAttributes(entityMap, targetMap, attrs)
+			}
+			assert.Equal(t, tc.leftoverAttributes, attrs.AsRaw())
+			assert.Equal(t, tc.wantedAttributes, targetMap)
+		})
+	}
+}
+
+func TestFetchEntityFields(t *testing.T) {
+	resourceMetrics := pmetric.NewResourceMetrics()
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityType, "Service")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "my-environment")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityServiceName, "my-service")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityNode, "my-node")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityCluster, "my-cluster")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityNamespace, "my-namespace")
+	resourceMetrics.Resource().Attributes().PutStr(entityattributes.AttributeEntityWorkload, "my-workload")
+	assert.Equal(t, 7, resourceMetrics.Resource().Attributes().Len())
+
+	expectedEntity := cloudwatch.Entity{KeyAttributes: map[string]*string{
+		entityattributes.EntityType:            aws.String(entityattributes.Service),
+		entityattributes.ServiceName:           aws.String("my-service"),
+		entityattributes.DeploymentEnvironment: aws.String("my-environment"),
+	},
+		Attributes: map[string]*string{
+			entityattributes.Node:      aws.String("my-node"),
+			entityattributes.Cluster:   aws.String("my-cluster"),
+			entityattributes.Namespace: aws.String("my-namespace"),
+			entityattributes.Workload:  aws.String("my-workload"),
+		},
+	}
+	entity := fetchEntityFields(resourceMetrics.Resource().Attributes())
+	assert.Equal(t, 0, resourceMetrics.Resource().Attributes().Len())
+	assert.Equal(t, expectedEntity, entity)
+
+}
+
 func TestInvalidMetric(t *testing.T) {
 	m := pmetric.NewMetric()
 	m.SetName("name")
 	m.SetUnit("unit")
-	assert.Empty(t, ConvertOtelMetric(m))
+	assert.Empty(t, ConvertOtelMetric(m, cloudwatch.Entity{}))
 }

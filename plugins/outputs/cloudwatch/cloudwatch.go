@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/jellydator/ttlcache/v3"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/exporter"
@@ -60,18 +61,19 @@ type CloudWatch struct {
 	// todo: may want to increase the size of the chan since the type changed.
 	// 1 telegraf Metric could have many Fields.
 	// Each field corresponds to a MetricDatum.
-	metricChan             chan *aggregationDatum
-	datumBatchChan         chan []*cloudwatch.MetricDatum
-	metricDatumBatch       *MetricDatumBatch
-	shutdownChan           chan struct{}
-	retries                int
-	publisher              *publisher.Publisher
-	retryer                *retryer.LogThrottleRetryer
-	droppingOriginMetrics  collections.Set[string]
-	aggregator             Aggregator
-	aggregatorShutdownChan chan struct{}
-	aggregatorWaitGroup    sync.WaitGroup
-	lastRequestBytes       int
+	metricChan               chan *aggregationDatum
+	datumBatchChan           chan []*cloudwatch.MetricDatum
+	metricDatumBatch         *MetricDatumBatch
+	shutdownChan             chan struct{}
+	retries                  int
+	publisher                *publisher.Publisher
+	retryer                  *retryer.LogThrottleRetryer
+	droppingOriginMetrics    collections.Set[string]
+	aggregator               Aggregator
+	aggregatorShutdownChan   chan struct{}
+	aggregatorWaitGroup      sync.WaitGroup
+	lastRequestBytes         int
+	entityToMetricDatumCache *ttlcache.Cache[string, []*cloudwatch.MetricDatum]
 }
 
 // Compile time interface check.
@@ -115,6 +117,7 @@ func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	c.config.RollupDimensions = GetUniqueRollupList(c.config.RollupDimensions)
 	c.svc = svc
 	c.retryer = logThrottleRetryer
+	c.entityToMetricDatumCache = ttlcache.New[string, []*cloudwatch.MetricDatum](ttlcache.WithTTL[string, []*cloudwatch.MetricDatum](5 * time.Minute))
 	c.startRoutines()
 	return nil
 }
@@ -128,6 +131,7 @@ func (c *CloudWatch) startRoutines() {
 	c.aggregator = NewAggregator(c.metricChan, c.aggregatorShutdownChan, &c.aggregatorWaitGroup)
 	perRequestConstSize := overallConstPerRequestSize + len(c.config.Namespace) + namespaceOverheads
 	c.metricDatumBatch = newMetricDatumBatch(c.config.MaxDatumsPerCall, perRequestConstSize)
+	go c.entityToMetricDatumCache.Start()
 	go c.pushMetricDatum()
 	go c.publish()
 }
@@ -148,6 +152,7 @@ func (c *CloudWatch) Shutdown(ctx context.Context) error {
 	close(c.shutdownChan)
 	c.publisher.Close()
 	c.retryer.Stop()
+	c.entityToMetricDatumCache.Stop()
 	log.Println("D! Stopped the CloudWatch output plugin")
 	return nil
 }
@@ -334,11 +339,26 @@ func (c *CloudWatch) backoffSleep() {
 	time.Sleep(d)
 }
 
+func createEntityMetricData(entityToMetricDatumCache *ttlcache.Cache[string, []*cloudwatch.MetricDatum]) []*cloudwatch.EntityMetricData {
+	var entityMetricData []*cloudwatch.EntityMetricData
+	for _, item := range entityToMetricDatumCache.Items() {
+		entity := stringToEntity(item.Key())
+		entityMetricData = append(entityMetricData, &cloudwatch.EntityMetricData{
+			Entity:     &entity,
+			MetricData: item.Value(),
+		})
+	}
+	return entityMetricData
+}
+
 func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	datums := req.([]*cloudwatch.MetricDatum)
+	entityMetricData := createEntityMetricData(c.entityToMetricDatumCache)
 	params := &cloudwatch.PutMetricDataInput{
-		MetricData: datums,
-		Namespace:  aws.String(c.config.Namespace),
+		MetricData:             datums,
+		Namespace:              aws.String(c.config.Namespace),
+		EntityMetricData:       entityMetricData,
+		StrictEntityValidation: aws.Bool(false),
 	}
 	var err error
 	for i := 0; i < defaultRetryCount; i++ {
@@ -437,6 +457,7 @@ func (c *CloudWatch) BuildMetricDatum(metric *aggregationDatum) []*cloudwatch.Me
 			}
 		}
 	}
+	c.entityToMetricDatumCache.Set(entityToString(metric.entity), datums, ttlcache.DefaultTTL)
 	return datums
 }
 

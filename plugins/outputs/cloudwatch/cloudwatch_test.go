@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -386,6 +387,7 @@ func newCloudWatchClient(
 			MaxDatumsPerCall:   defaultMaxDatumsPerCall,
 			MaxValuesPerDatum:  defaultMaxValuesPerDatum,
 		},
+		entityToMetricDatumCache: ttlcache.New[string, []*cloudwatch.MetricDatum](),
 	}
 	cloudwatch.startRoutines()
 	return cloudwatch
@@ -495,6 +497,7 @@ func TestPublish(t *testing.T) {
 	// 10K metrics in batches of 20...
 	time.Sleep(interval)
 	assert.Equal(t, expectedCalls, len(svc.Calls))
+	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	cw.Shutdown(ctx)
 }
 
@@ -581,4 +584,34 @@ func TestCloudWatch_metricDatumBatchFull(t *testing.T) {
 	assert.True(t, c.metricDatumBatchFull())
 	<-c.datumBatchChan
 	assert.False(t, c.metricDatumBatchFull())
+}
+
+func TestCreateEntityMetricData(t *testing.T) {
+	svc := new(mockCloudWatchClient)
+	cw := newCloudWatchClient(svc, time.Second)
+	entity := cloudwatch.Entity{
+		KeyAttributes: map[string]*string{
+			"Type":        aws.String("Service"),
+			"Environment": aws.String("Environment"),
+			"Name":        aws.String("MyServiceName"),
+		},
+		Attributes: map[string]*string{
+			"InstanceID": aws.String("i-123456789"),
+			"Platform":   aws.String("AWS::EC2"),
+		},
+	}
+	entityToAttributesMap := ttlcache.New[string, []*cloudwatch.MetricDatum](ttlcache.WithTTL[string, []*cloudwatch.MetricDatum](5 * time.Minute))
+	metrics := createTestMetrics(1, 1, 1, "s")
+	assert.Equal(t, 6, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
+	aggregations := ConvertOtelMetrics(metrics)
+	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
+	metricDatum := cw.BuildMetricDatum(aggregations[0])
+	entityToAttributesMap.Set(entityToString(entity), metricDatum, ttlcache.DefaultTTL)
+	wantedEntityMetricData := []*cloudwatch.EntityMetricData{
+		{
+			Entity:     &entity,
+			MetricData: metricDatum,
+		},
+	}
+	assert.Equal(t, wantedEntityMetricData, createEntityMetricData(entityToAttributesMap))
 }

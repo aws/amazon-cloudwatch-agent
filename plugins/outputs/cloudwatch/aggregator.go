@@ -28,6 +28,7 @@ type aggregationDatum struct {
 	cloudwatch.MetricDatum
 	aggregationInterval time.Duration
 	distribution        distribution.Distribution
+	entity              cloudwatch.Entity
 }
 
 type Aggregator interface {
