@@ -9,6 +9,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awscloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
@@ -73,9 +75,13 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 
 	translators := common.ComponentTranslators{
 		Receivers:  t.receivers,
-		Processors: common.NewTranslatorMap(entityProcessor),
+		Processors: common.NewTranslatorMap[component.Config](),
 		Exporters:  common.NewTranslatorMap(awscloudwatch.NewTranslator()),
 		Extensions: common.NewTranslatorMap(agenthealth.NewTranslator(component.DataTypeMetrics, []string{agenthealth.OperationPutMetricData})),
+	}
+	currentContext := context.CurrentContext()
+	if currentContext.Mode() == config.ModeEC2 && !currentContext.RunInContainer() {
+		translators.Processors.Set(entityProcessor)
 	}
 
 	// we need to add delta processor because (only) diskio and net input plugins report delta metric

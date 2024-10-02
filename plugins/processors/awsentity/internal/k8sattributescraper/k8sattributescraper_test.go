@@ -13,7 +13,6 @@ import (
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
 )
 
 func TestNewK8sAttributeScraper(t *testing.T) {
@@ -27,113 +26,39 @@ func Test_k8sattributescraper_Scrape(t *testing.T) {
 		name        string
 		clusterName string
 		args        pcommon.Resource
-		want        pcommon.Map
+		want        *K8sAttributeScraper
 	}{
 		{
 			name:        "Empty",
 			clusterName: "",
 			args:        pcommon.NewResource(),
-			want:        pcommon.NewMap(),
+			want:        &K8sAttributeScraper{},
 		},
 		{
 			name:        "ClusterOnly",
 			clusterName: "test-cluster",
 			args:        pcommon.NewResource(),
-			want: getAttributeMap(map[string]any{
-				entityattributes.AttributeEntityCluster: "test-cluster",
-			}),
+			want: &K8sAttributeScraper{
+				Cluster: "test-cluster",
+			},
 		},
 		{
 			name:        "AllAppSignalAttributes",
 			clusterName: "test-cluster",
 			args:        generateResourceMetrics(semconv.AttributeK8SNamespaceName, "test-namespace", semconv.AttributeK8SDeploymentName, "test-workload", semconv.AttributeK8SNodeName, "test-node"),
-			want: getAttributeMap(map[string]any{
-				semconv.AttributeK8SNamespaceName:         "test-namespace",
-				semconv.AttributeK8SDeploymentName:        "test-workload",
-				semconv.AttributeK8SNodeName:              "test-node",
-				entityattributes.AttributeEntityCluster:   "test-cluster",
-				entityattributes.AttributeEntityNamespace: "test-namespace",
-				entityattributes.AttributeEntityWorkload:  "test-workload",
-				entityattributes.AttributeEntityNode:      "test-node",
-			}),
-		},
-		{
-			name:        "AllContainerInsightsAttributes",
-			clusterName: "test-cluster",
-			args:        generateResourceMetrics(entityattributes.Namespace, "test-namespace", entityattributes.PodName, "test-workload", entityattributes.NodeName, "test-node"),
-			want: getAttributeMap(map[string]any{
-				entityattributes.Namespace:                "test-namespace",
-				entityattributes.PodName:                  "test-workload",
-				entityattributes.NodeName:                 "test-node",
-				entityattributes.AttributeEntityCluster:   "test-cluster",
-				entityattributes.AttributeEntityNamespace: "test-namespace",
-				entityattributes.AttributeEntityWorkload:  "test-workload",
-				entityattributes.AttributeEntityNode:      "test-node",
-			}),
+			want: &K8sAttributeScraper{
+				Cluster:   "test-cluster",
+				Namespace: "test-namespace",
+				Workload:  "test-workload",
+				Node:      "test-node",
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := NewK8sAttributeScraper(tt.clusterName)
 			e.Scrape(tt.args)
-			assert.Equal(t, tt.want.AsRaw(), tt.args.Attributes().AsRaw())
-		})
-	}
-}
-
-func Test_k8sattributescraper_decorateEntityAttributes(t *testing.T) {
-	type fields struct {
-		Cluster   string
-		Namespace string
-		Workload  string
-		Node      string
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   pcommon.Map
-	}{
-		{
-			name:   "Empty",
-			fields: fields{},
-			want:   pcommon.NewMap(),
-		},
-		{
-			name: "OneAttribute",
-			fields: fields{
-				Cluster: "test-cluster",
-			},
-			want: getAttributeMap(map[string]any{
-				entityattributes.AttributeEntityCluster: "test-cluster",
-			}),
-		},
-		{
-			name: "AllAttributes",
-			fields: fields{
-				Cluster:   "test-cluster",
-				Namespace: "test-namespace",
-				Workload:  "test-workload",
-				Node:      "test-node",
-			},
-			want: getAttributeMap(map[string]any{
-				entityattributes.AttributeEntityCluster:   "test-cluster",
-				entityattributes.AttributeEntityNamespace: "test-namespace",
-				entityattributes.AttributeEntityWorkload:  "test-workload",
-				entityattributes.AttributeEntityNode:      "test-node",
-			}),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := pcommon.NewMap()
-			e := &K8sAttributeScraper{
-				Cluster:   tt.fields.Cluster,
-				Namespace: tt.fields.Namespace,
-				Workload:  tt.fields.Workload,
-				Node:      tt.fields.Node,
-			}
-			e.decorateEntityAttributes(p)
-			assert.Equal(t, tt.want.AsRaw(), p.AsRaw())
+			assert.Equal(t, e, tt.want)
 		})
 	}
 }
@@ -208,11 +133,6 @@ func Test_k8sattributescraper_scrapeNamespace(t *testing.T) {
 			want: "namespace-name",
 		},
 		{
-			name: "ContainerInsightsNodeExists",
-			args: getAttributeMap(map[string]any{entityattributes.Namespace: "namespace-name"}),
-			want: "namespace-name",
-		},
-		{
 			name: "NonmatchingNamespace",
 			args: getAttributeMap(map[string]any{"namespace": "namespace-name"}),
 			want: "",
@@ -241,11 +161,6 @@ func Test_k8sattributescraper_scrapeNode(t *testing.T) {
 		{
 			name: "AppsignalNodeExists",
 			args: getAttributeMap(map[string]any{semconv.AttributeK8SNodeName: "node-name"}),
-			want: "node-name",
-		},
-		{
-			name: "ContainerInsightNodeExists",
-			args: getAttributeMap(map[string]any{entityattributes.NodeName: "node-name"}),
 			want: "node-name",
 		},
 		{
@@ -298,11 +213,6 @@ func Test_k8sattributescraper_scrapeWorkload(t *testing.T) {
 			name: "ContainerWorkload",
 			args: getAttributeMap(map[string]any{semconv.AttributeK8SContainerName: "test-container"}),
 			want: "test-container",
-		},
-		{
-			name: "ContainerInsightPodNameWorkload",
-			args: getAttributeMap(map[string]any{entityattributes.PodName: "test-workload"}),
-			want: "test-workload",
 		},
 		{
 			name: "MultipleWorkloads",

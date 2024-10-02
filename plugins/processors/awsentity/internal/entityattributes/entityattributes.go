@@ -26,12 +26,9 @@ const (
 	AttributeEntityPlatformType          = AWSEntityPrefix + "platform.type"
 	AttributeEntityInstanceID            = AWSEntityPrefix + "instance.id"
 	AttributeEntityAutoScalingGroup      = AWSEntityPrefix + "auto.scaling.group"
-)
 
-// Container Insights attributes used for scraping EKS related information
-const (
-	NodeName  = "NodeName"
-	Namespace = "Namespace"
-	// PodName in Container Insights is the workload(Deployment, Daemonset, etc) name
-	PodName = "PodName"
+	// The following are possible platform values
+	AttributeEntityEC2Platform = "AWS::EC2"
+	AttributeEntityEKSPlatform = "AWS::EKS"
+	AttributeEntityK8sPlatform = "K8s"
 )

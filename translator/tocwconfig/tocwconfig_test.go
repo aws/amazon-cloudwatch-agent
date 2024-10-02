@@ -156,7 +156,7 @@ func TestAppSignalsAndNativeKubernetesConfig(t *testing.T) {
 func TestCompassConfig(t *testing.T) {
 	resetContext(t)
 
-	context.CurrentContext().SetRunInContainer(true)
+	//context.CurrentContext().SetRunInContainer(true)
 	context.CurrentContext().SetMode(config.ModeEC2)
 
 	t.Setenv(config.HOST_NAME, "host_name_from_env")

@@ -12,6 +12,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -38,14 +40,17 @@ func TestTranslator(t *testing.T) {
 		extensions []string
 	}
 	testCases := map[string]struct {
-		input        map[string]interface{}
-		pipelineName string
-		want         *want
-		wantErr      error
+		input          map[string]interface{}
+		pipelineName   string
+		mode           string
+		runInContainer bool
+		want           *want
+		wantErr        error
 	}{
 		"WithoutMetricsKey": {
 			input:        map[string]interface{}{},
 			pipelineName: common.PipelineNameHost,
+			mode:         config.ModeEC2,
 			wantErr: &common.MissingKeyError{
 				ID:      component.NewIDWithName(component.DataTypeMetrics, common.PipelineNameHost),
 				JsonKey: common.MetricsKey,
@@ -56,6 +61,7 @@ func TestTranslator(t *testing.T) {
 				"metrics": map[string]interface{}{},
 			},
 			pipelineName: common.PipelineNameHost,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
@@ -73,6 +79,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			pipelineName: common.PipelineNameHostDeltaMetrics,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/hostDeltaMetrics",
 				receivers:  []string{"nop", "other"},
@@ -90,10 +97,30 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			pipelineName: common.PipelineNameHostCustomMetrics,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/hostCustomMetrics",
 				receivers:  []string{"nop", "other"},
 				processors: []string{"awsentity/service"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics"},
+			},
+		},
+		"WithMetricsKeyStatsDContainer": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"statsd": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName:   common.PipelineNameHostCustomMetrics,
+			mode:           config.ModeEC2,
+			runInContainer: true,
+			want: &want{
+				pipelineID: "metrics/hostCustomMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -114,6 +141,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			pipelineName: common.PipelineNameHost,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
@@ -135,6 +163,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			pipelineName: common.PipelineNameHost,
+			mode:         config.ModeEC2,
 			want: &want{
 				pipelineID: "metrics/host",
 				receivers:  []string{"nop", "other"},
@@ -148,6 +177,8 @@ func TestTranslator(t *testing.T) {
 		nopType, _ := component.NewType("nop")
 		otherType, _ := component.NewType("other")
 		t.Run(name, func(t *testing.T) {
+			context.CurrentContext().SetMode(testCase.mode)
+			context.CurrentContext().SetRunInContainer(testCase.runInContainer)
 			ht := NewTranslator(testCase.pipelineName, common.NewTranslatorMap[component.Config](
 				&testTranslator{id: component.NewID(nopType)},
 				&testTranslator{id: component.NewID(otherType)},

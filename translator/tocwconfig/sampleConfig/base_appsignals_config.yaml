@@ -162,7 +162,6 @@ extensions:
         region: us-east-1
         shared_credential_file: fake-path
 processors:
-    awsentity: {}
     awsapplicationsignals:
         resolvers:
             - name: ""
@@ -486,7 +485,6 @@ service:
                 - debug/application_signals
                 - awsemf/application_signals
             processors:
-                - awsentity
                 - resourcedetection
                 - awsapplicationsignals
             receivers:

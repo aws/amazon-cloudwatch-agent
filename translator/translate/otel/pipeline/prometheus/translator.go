@@ -56,18 +56,22 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 func (t *translator) translateProcessors() common.TranslatorMap[component.Config] {
 	mode := context.CurrentContext().KubernetesMode()
-	if mode != "" || ecsutil.GetECSUtilSingleton().IsECS() {
-		// we are on kubernetes or ECS we do not want resource detection processor
+	// if we are on kubernetes or ECS we do not want resource detection processor
+	// if we are on Kubernetes, enable entity processor
+	if mode != "" {
 		return common.NewTranslatorMap(
 			batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey), // prometheus sits under metrics_collected in "logs"
-			awsentity.NewTranslator(),
+			awsentity.NewTranslatorWithEntityType(awsentity.Service),
+		)
+	} else if mode != "" || ecsutil.GetECSUtilSingleton().IsECS() {
+		return common.NewTranslatorMap(
+			batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 		)
 	} else {
 		// we are on ec2/onprem
 		return common.NewTranslatorMap(
 			batchprocessor.NewTranslatorWithNameAndSection(pipelineName, common.LogsKey), // prometheus sits under metrics_collected in "logs"
 			resourcedetection.NewTranslator(),
-			awsentity.NewTranslator(),
 		)
 	}
 

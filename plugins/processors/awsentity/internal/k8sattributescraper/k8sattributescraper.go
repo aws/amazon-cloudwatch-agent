@@ -8,13 +8,11 @@ import (
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/prometheus"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/internal/entityattributes"
 )
 
 var (
 	namespaceAllowlist = []string{
 		semconv.AttributeK8SNamespaceName,
-		entityattributes.Namespace,
 	}
 
 	workloadAllowlist = []string{
@@ -23,11 +21,9 @@ var (
 		semconv.AttributeK8SStatefulSetName,
 		semconv.AttributeK8SReplicaSetName,
 		semconv.AttributeK8SContainerName,
-		entityattributes.PodName,
 	}
 	nodeAllowlist = []string{
 		semconv.AttributeK8SNodeName,
-		entityattributes.NodeName,
 	}
 )
 
@@ -51,7 +47,6 @@ func (e *K8sAttributeScraper) Scrape(rm pcommon.Resource) {
 	e.scrapeNamespace(resourceAttrs)
 	e.scrapeWorkload(resourceAttrs)
 	e.scrapeNode(resourceAttrs)
-	e.decorateEntityAttributes(resourceAttrs)
 }
 
 func (e *K8sAttributeScraper) relabelPrometheus(p pcommon.Map) {
@@ -100,21 +95,8 @@ func (e *K8sAttributeScraper) scrapeNode(p pcommon.Map) {
 	}
 }
 
-func (e *K8sAttributeScraper) decorateEntityAttributes(p pcommon.Map) {
-	addAttributeIfNonEmpty(p, entityattributes.AttributeEntityCluster, e.Cluster)
-	addAttributeIfNonEmpty(p, entityattributes.AttributeEntityNamespace, e.Namespace)
-	addAttributeIfNonEmpty(p, entityattributes.AttributeEntityWorkload, e.Workload)
-	addAttributeIfNonEmpty(p, entityattributes.AttributeEntityNode, e.Node)
-}
-
 func (e *K8sAttributeScraper) Reset() {
 	*e = K8sAttributeScraper{
 		Cluster: e.Cluster,
-	}
-}
-
-func addAttributeIfNonEmpty(p pcommon.Map, key string, value string) {
-	if value != "" {
-		p.PutStr(key, value)
 	}
 }

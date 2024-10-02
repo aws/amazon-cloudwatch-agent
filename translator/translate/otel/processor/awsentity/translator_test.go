@@ -15,10 +15,11 @@ import (
 )
 
 func TestTranslate(t *testing.T) {
-	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 	testCases := map[string]struct {
-		input map[string]interface{}
-		want  *awsentity.Config
+		input          map[string]interface{}
+		mode           string
+		kubernetesMode string
+		want           *awsentity.Config
 	}{
 		"OnlyProfile": {
 			input: map[string]interface{}{
@@ -29,15 +30,19 @@ func TestTranslate(t *testing.T) {
 						},
 					},
 				}},
+			mode:           config.ModeEC2,
+			kubernetesMode: config.ModeEKS,
 			want: &awsentity.Config{
 				ClusterName:    "test",
 				KubernetesMode: config.ModeEKS,
-				Platform:       config.ModeEKS,
+				Platform:       config.ModeEC2,
 			},
 		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
+			context.CurrentContext().SetMode(testCase.mode)
+			context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
 			tt := NewTranslator()
 			assert.Equal(t, "awsentity", tt.ID().String())
 			conf := confmap.NewFromStringMap(testCase.input)

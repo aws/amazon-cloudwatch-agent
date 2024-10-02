@@ -81,8 +81,6 @@ extensions:
         mode: ec2
         region: us-east-1
 processors:
-    awsentity:
-      platform: ec2
     batch/prometheus:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -391,7 +389,6 @@ service:
             processors:
                 - batch/prometheus
                 - resourcedetection
-                - awsentity
             receivers:
                 - telegraf_prometheus
     telemetry:

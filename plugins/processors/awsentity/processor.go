@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	semconv "go.opentelemetry.io/collector/semconv/v1.22.0"
@@ -32,6 +33,24 @@ type scraper interface {
 	Reset()
 }
 
+type EC2ServiceAttributes struct {
+	InstanceId        string `validate:"required"`
+	AutoScalingGroup  string `validate:"omitempty"`
+	ServiceNameSource string `validate:"omitempty"`
+}
+
+type K8sServiceAttributes struct {
+	Cluster           string `validate:"required"`
+	Namespace         string `validate:"required"`
+	Workload          string `validate:"required"`
+	Node              string `validate:"required"`
+	InstanceId        string `validate:"omitempty"`
+	ServiceNameSource string `validate:"omitempty"`
+}
+
+// use a single instance of Validate, it caches struct info
+var validate = validator.New(validator.WithRequiredStructEnabled())
+
 // exposed as a variable for unit testing
 var addToEntityStore = func(logGroupName entitystore.LogGroupName, serviceName string, environmentName string) {
 	es := entitystore.GetEntityStore()
@@ -47,15 +66,6 @@ var addPodToServiceEnvironmentMap = func(podName string, serviceName string, env
 		return
 	}
 	es.AddPodServiceEnvironmentMapping(podName, serviceName, environmentName, serviceNameSource)
-}
-
-var getMetricAttributesFromEntityStore = func() map[string]*string {
-	es := entitystore.GetEntityStore()
-	if es == nil {
-		return map[string]*string{}
-	}
-
-	return es.GetServiceMetricAttributesMap()
 }
 
 var getEC2InfoFromEntityStore = func() entitystore.EC2Info {
@@ -93,81 +103,60 @@ func newAwsEntityProcessor(config *Config, logger *zap.Logger) *awsEntityProcess
 }
 
 func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
-	var entityServiceNameSource string
 	// Get the following metric attributes from the EntityStore: PlatformType, EC2.InstanceId, EC2.AutoScalingGroup
-	metricAttributes := getMetricAttributesFromEntityStore()
-
-	var platformType, instanceID, autoScalingGroup string
-	if metricAttributes[entitystore.PlatformType] != nil {
-		platformType = *metricAttributes[entitystore.PlatformType]
-	}
-	if metricAttributes[entitystore.InstanceIDKey] != nil {
-		instanceID = *metricAttributes[entitystore.InstanceIDKey]
-	}
-	if metricAttributes[entitystore.ASGKey] != nil {
-		autoScalingGroup = *metricAttributes[entitystore.ASGKey]
-	}
 
 	rm := md.ResourceMetrics()
 	for i := 0; i < rm.Len(); i++ {
-		if p.config.KubernetesMode != "" {
-			p.k8sscraper.Scrape(rm.At(i).Resource())
-		}
+		var logGroupNames, serviceName, environmentName string
+		var entityServiceNameSource, entityPlatformType string
+		var ec2Info entitystore.EC2Info
 		resourceAttrs := rm.At(i).Resource().Attributes()
 		switch p.config.EntityType {
 		case entityattributes.Resource:
-			ec2Info := getEC2InfoFromEntityStore()
-			if p.config.Platform == config.ModeEC2 && ec2Info.InstanceID != EMPTY {
-				resourceAttrs.PutStr(entityattributes.AttributeEntityType, entityattributes.AttributeEntityAWSResource)
-				resourceAttrs.PutStr(entityattributes.AttributeEntityResourceType, entityattributes.AttributeEntityEC2InstanceResource)
-				resourceAttrs.PutStr(entityattributes.AttributeEntityIdentifier, ec2Info.InstanceID)
+			if p.config.Platform == config.ModeEC2 {
+				ec2Info := getEC2InfoFromEntityStore()
+				if ec2Info.InstanceID != EMPTY {
+					resourceAttrs.PutStr(entityattributes.AttributeEntityType, entityattributes.AttributeEntityAWSResource)
+					resourceAttrs.PutStr(entityattributes.AttributeEntityResourceType, entityattributes.AttributeEntityEC2InstanceResource)
+					resourceAttrs.PutStr(entityattributes.AttributeEntityIdentifier, ec2Info.InstanceID)
+				}
 			}
 		case entityattributes.Service:
-			logGroupNames, _ := resourceAttrs.Get(attributeAwsLogGroupNames)
-			serviceName, _ := resourceAttrs.Get(attributeServiceName)
-			environmentName, _ := resourceAttrs.Get(attributeDeploymentEnvironment)
+			if logGroupNamesAttr, ok := resourceAttrs.Get(attributeAwsLogGroupNames); ok {
+				logGroupNames = logGroupNamesAttr.Str()
+			}
+			if serviceNameAttr, ok := resourceAttrs.Get(attributeServiceName); ok {
+				serviceName = serviceNameAttr.Str()
+			}
+			if environmentNameAttr, ok := resourceAttrs.Get(attributeDeploymentEnvironment); ok {
+				environmentName = environmentNameAttr.Str()
+			}
 			if serviceNameSource, sourceExists := resourceAttrs.Get(entityattributes.AttributeEntityServiceNameSource); sourceExists {
 				entityServiceNameSource = serviceNameSource.Str()
 			}
 
 			entityServiceName := getServiceAttributes(resourceAttrs)
-			entityEnvironmentName := environmentName.Str()
+			entityEnvironmentName := environmentName
 			if (entityServiceName == EMPTY || entityEnvironmentName == EMPTY) && p.config.ScrapeDatapointAttribute {
 				entityServiceName, entityEnvironmentName = p.scrapeServiceAttribute(rm.At(i).ScopeMetrics())
 				// If the entityServiceNameSource is empty here, that means it was not configured via instrumentation
 				// If entityServiceName is a datapoint attribute, that means the service name is coming from the UserConfiguration source
 				if entityServiceNameSource == EMPTY && entityServiceName != EMPTY {
 					entityServiceNameSource = attributeServiceNameSourceUserConfig
-					resourceAttrs.PutStr(entityattributes.AttributeEntityServiceNameSource, attributeServiceNameSourceUserConfig)
-				}
-			}
-			if entityServiceName != EMPTY {
-				resourceAttrs.PutStr(entityattributes.AttributeEntityServiceName, entityServiceName)
-			}
-			if entityEnvironmentName != EMPTY {
-				resourceAttrs.PutStr(entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
-			}
-			if p.config.Platform == config.ModeEC2 {
-				//If entityServiceNameSource is empty, it was not configured via the config. Get the source in descending priority
-				//  1. Incoming telemetry attributes
-				//  2. CWA config
-				//  3. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
-				//  4. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
-				if entityServiceNameSource == EMPTY {
-					entityServiceName, entityServiceNameSource = getServiceNameSource()
-					resourceAttrs.PutStr(entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
-				}
-				if platformType != EMPTY {
-					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, platformType)
-				}
-				if instanceID != EMPTY {
-					resourceAttrs.PutStr(entityattributes.AttributeEntityInstanceID, instanceID)
-				}
-				if autoScalingGroup != EMPTY {
-					resourceAttrs.PutStr(entityattributes.AttributeEntityAutoScalingGroup, autoScalingGroup)
 				}
 			}
 			if p.config.KubernetesMode != "" {
+				p.k8sscraper.Scrape(rm.At(i).Resource())
+				if p.config.Platform == config.ModeEC2 {
+					ec2Info = getEC2InfoFromEntityStore()
+				}
+
+				if p.config.KubernetesMode == config.ModeEKS {
+					entityPlatformType = entityattributes.AttributeEntityEKSPlatform
+				} else {
+					entityPlatformType = entityattributes.AttributeEntityK8sPlatform
+				}
+
 				fallbackEnvironment := entityEnvironmentName
 				podInfo, ok := p.k8sscraper.(*k8sattributescraper.K8sAttributeScraper)
 				if fallbackEnvironment == EMPTY && p.config.KubernetesMode == config.ModeEKS && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
@@ -175,24 +164,78 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				} else if fallbackEnvironment == EMPTY && (p.config.KubernetesMode == config.ModeK8sEC2 || p.config.KubernetesMode == config.ModeK8sOnPrem) && ok && podInfo.Cluster != EMPTY && podInfo.Namespace != EMPTY {
 					fallbackEnvironment = "k8s:" + p.config.ClusterName + "/" + podInfo.Namespace
 				}
+
+				// Add service information for a pod to the pod association map
+				// so that agent can host this information in a server
 				fullPodName := scrapeK8sPodName(resourceAttrs)
 				if fullPodName != EMPTY && entityServiceName != EMPTY && entityServiceNameSource != EMPTY {
 					addPodToServiceEnvironmentMap(fullPodName, entityServiceName, fallbackEnvironment, entityServiceNameSource)
 				} else if fullPodName != EMPTY && entityServiceName != EMPTY && entityServiceNameSource == EMPTY {
 					addPodToServiceEnvironmentMap(fullPodName, entityServiceName, fallbackEnvironment, entitystore.ServiceNameSourceUnknown)
 				}
+				eksAttributes := K8sServiceAttributes{
+					Cluster:           podInfo.Cluster,
+					Namespace:         podInfo.Namespace,
+					Workload:          podInfo.Workload,
+					Node:              podInfo.Node,
+					InstanceId:        ec2Info.InstanceID,
+					ServiceNameSource: entityServiceNameSource,
+				}
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
+
+				if err := validate.Struct(eksAttributes); err == nil {
+					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityPlatformType)
+					resourceAttrs.PutStr(entityattributes.AttributeEntityCluster, eksAttributes.Cluster)
+					resourceAttrs.PutStr(entityattributes.AttributeEntityNamespace, eksAttributes.Namespace)
+					resourceAttrs.PutStr(entityattributes.AttributeEntityWorkload, eksAttributes.Workload)
+					resourceAttrs.PutStr(entityattributes.AttributeEntityNode, eksAttributes.Node)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Info.InstanceID)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
+				}
+				p.k8sscraper.Reset()
+			} else if p.config.Platform == config.ModeEC2 {
+				//If entityServiceNameSource is empty, it was not configured via the config. Get the source in descending priority
+				//  1. Incoming telemetry attributes
+				//  2. CWA config
+				//  3. instance tags - The tags attached to the EC2 instance. Only scrape for tag with the following key: service, application, app
+				//  4. IAM Role - The IAM role name retrieved through IMDS(Instance Metadata Service)
+				if entityServiceName == EMPTY && entityServiceNameSource == EMPTY {
+					entityServiceName, entityServiceNameSource = getServiceNameSource()
+				} else if entityServiceName != EMPTY && entityServiceNameSource == EMPTY {
+					entityServiceNameSource = entitystore.ServiceNameSourceUnknown
+				}
+
+				entityPlatformType = entityattributes.AttributeEntityEC2Platform
+				ec2Info = getEC2InfoFromEntityStore()
+
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
+
+				ec2Attributes := EC2ServiceAttributes{
+					InstanceId:        ec2Info.InstanceID,
+					AutoScalingGroup:  ec2Info.AutoScalingGroup,
+					ServiceNameSource: entityServiceNameSource,
+				}
+				if err := validate.Struct(ec2Attributes); err == nil {
+					resourceAttrs.PutStr(entityattributes.AttributeEntityPlatformType, entityPlatformType)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Attributes.InstanceId)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAutoScalingGroup, ec2Attributes.AutoScalingGroup)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, ec2Attributes.ServiceNameSource)
+				}
 			}
-			p.k8sscraper.Reset()
-			if logGroupNames.Str() == EMPTY || (serviceName.Str() == EMPTY && environmentName.Str() == EMPTY) {
+			if logGroupNames == EMPTY || (serviceName == EMPTY && environmentName == EMPTY) {
 				continue
 			}
 
-			logGroupNamesSlice := strings.Split(logGroupNames.Str(), "&")
+			logGroupNamesSlice := strings.Split(logGroupNames, "&")
 			for _, logGroupName := range logGroupNamesSlice {
 				if logGroupName == EMPTY {
 					continue
 				}
-				addToEntityStore(entitystore.LogGroupName(logGroupName), serviceName.Str(), environmentName.Str())
+				addToEntityStore(entitystore.LogGroupName(logGroupName), serviceName, environmentName)
 			}
 		}
 

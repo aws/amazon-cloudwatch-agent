@@ -302,10 +302,11 @@ processors:
         resolvers:
           - name: TestCluster
             platform: k8s
-    awsentity:
-      cluster_name: TestCluster
-      kubernetes_mode: K8sEC2
-      platform: K8sEC2
+    awsentity/service:
+        cluster_name: TestCluster
+        entity_type: Service
+        kubernetes_mode: K8sEC2
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -658,7 +659,7 @@ service:
             exporters:
                 - awsemf/application_signals
             processors:
-                - awsentity
+                - awsentity/service
                 - resourcedetection
                 - awsapplicationsignals
             receivers:

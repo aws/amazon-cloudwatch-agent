@@ -302,10 +302,11 @@ processors:
         resolvers:
             - name: TestCluster
               platform: eks
-    awsentity:
+    awsentity/service:
         cluster_name: TestCluster
+        entity_type: Service
         kubernetes_mode: EKS
-        platform: EKS
+        platform: ec2
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -678,7 +679,7 @@ service:
             exporters:
                 - awsemf/application_signals
             processors:
-                - awsentity
+                - awsentity/service
                 - resourcedetection
                 - awsapplicationsignals
             receivers:

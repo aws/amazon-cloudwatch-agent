@@ -75,28 +75,22 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	ctx := context.CurrentContext()
 	mode := ctx.KubernetesMode()
 	cfg.KubernetesMode = mode
-	if mode == "" {
-		mode = ctx.Mode()
-	}
-	if mode == config.ModeEC2 {
+
+	mode = ctx.Mode()
+	if context.CurrentContext().RunInContainer() {
 		if ecsutil.GetECSUtilSingleton().IsECS() {
 			mode = config.ModeECS
 		}
 	}
 
-	switch mode {
-	case config.ModeEKS:
+	if cfg.KubernetesMode != "" {
 		cfg.ClusterName = hostedIn
-		cfg.Platform = config.ModeEKS
-	case config.ModeK8sEC2:
-		cfg.ClusterName = hostedIn
-		cfg.Platform = config.ModeK8sEC2
-	case config.ModeK8sOnPrem:
-		cfg.Platform = config.ModeK8sOnPrem
-	case config.ModeEC2:
-		cfg.Platform = config.ModeEC2
-	case config.ModeECS:
-		cfg.Platform = config.ModeECS
 	}
+
+	// We want to keep platform config variable to be
+	// anything that is non-Kubernetes related so the
+	// processor can perform different logics for EKS
+	// in EC2 or Non-EC2
+	cfg.Platform = mode
 	return cfg, nil
 }

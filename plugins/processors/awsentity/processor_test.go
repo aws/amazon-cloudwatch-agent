@@ -70,10 +70,11 @@ func newMockGetServiceNameAndSource(service, source string) func() (string, stri
 	}
 }
 
-func newMockGetEC2InfoFromEntityStore(instance string) func() entitystore.EC2Info {
+func newMockGetEC2InfoFromEntityStore(instance string, asg string) func() entitystore.EC2Info {
 	return func() entitystore.EC2Info {
 		return entitystore.EC2Info{
-			InstanceID: instance,
+			InstanceID:       instance,
+			AutoScalingGroup: asg,
 		}
 	}
 }
@@ -264,11 +265,11 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ctx := context.Background()
 	tests := []struct {
-		name                                   string
-		metrics                                pmetric.Metrics
-		mockServiceNameSource                  func() (string, string)
-		mockGetMetricAttributesFromEntityStore func() map[string]*string
-		want                                   map[string]any
+		name                          string
+		metrics                       pmetric.Metrics
+		mockServiceNameSource         func() (string, string)
+		mockGetEC2InfoFromEntityStore func() entitystore.EC2Info
+		want                          map[string]any
 	}{
 		{
 			name:    "EmptyMetrics",
@@ -277,39 +278,50 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 		},
 		//NOTE 2 SELF: These tests assume that we are on the EC2 platform, so make sure to mock the ServiceNameSource function
 		{
-			name:                  "ResourceAttributeServiceNameOnly",
-			metrics:               generateMetrics(attributeServiceName, "test-service"),
-			mockServiceNameSource: newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
+			name:                          "ResourceAttributeServiceNameOnly",
+			metrics:                       generateMetrics(attributeServiceName, "test-service"),
+			mockServiceNameSource:         newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
 			want: map[string]any{
+				entityattributes.AttributeEntityType:              "Service",
 				entityattributes.AttributeEntityServiceName:       "test-service",
+				entityattributes.AttributeEntityPlatformType:      "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:        "i-123456789",
+				entityattributes.AttributeEntityServiceNameSource: "Unknown",
 				attributeServiceName:                              "test-service",
-				entityattributes.AttributeEntityServiceNameSource: "Instrumentation",
 			},
 		},
 		{
-			name:                  "ResourceAttributeEnvironmentOnly",
-			metrics:               generateMetrics(attributeDeploymentEnvironment, "test-environment"),
-			mockServiceNameSource: newMockGetServiceNameAndSource("unknown_service", "Unknown"),
+			name:                          "ResourceAttributeEnvironmentOnly",
+			metrics:                       generateMetrics(attributeDeploymentEnvironment, "test-environment"),
+			mockServiceNameSource:         newMockGetServiceNameAndSource("unknown_service", "Unknown"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
 			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "unknown_service",
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
-				attributeDeploymentEnvironment:                        "test-environment",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
 				entityattributes.AttributeEntityServiceNameSource:     "Unknown",
+
+				attributeDeploymentEnvironment: "test-environment",
 			},
 		},
 		{
-			name:                                   "ResourceAttributeServiceNameAndEnvironment",
-			metrics:                                generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
-			mockServiceNameSource:                  newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
-			mockGetMetricAttributesFromEntityStore: newMockGetMetricAttributesFromEntityStore(),
+			name:                          "ResourceAttributeServiceNameAndEnvironment",
+			metrics:                       generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
+			mockServiceNameSource:         newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "test-auto-scaling"),
 			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
 				attributeServiceName:                                  "test-service",
 				attributeDeploymentEnvironment:                        "test-environment",
-				entityattributes.AttributeEntityServiceNameSource:     "Instrumentation",
+				entityattributes.AttributeEntityServiceNameSource:     "Unknown",
 				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:            "i-123456789",
-				entityattributes.AttributeEntityAutoScalingGroup:      "auto-scaling",
+				entityattributes.AttributeEntityAutoScalingGroup:      "test-auto-scaling",
 			},
 		},
 	}
@@ -318,12 +330,11 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Make copy of original functions to use as resets later to prevent failing test when tests are ran in bulk
 			resetServiceNameSource := getServiceNameSource
-			resetGetMetricAttributesFromEntityStore := getMetricAttributesFromEntityStore
 			if tt.mockServiceNameSource != nil {
 				getServiceNameSource = tt.mockServiceNameSource
 			}
-			if tt.mockGetMetricAttributesFromEntityStore != nil {
-				getMetricAttributesFromEntityStore = tt.mockGetMetricAttributesFromEntityStore
+			if tt.mockGetEC2InfoFromEntityStore != nil {
+				getEC2InfoFromEntityStore = tt.mockGetEC2InfoFromEntityStore
 			}
 			p := newAwsEntityProcessor(&Config{EntityType: attributeService}, logger)
 			p.config.Platform = config.ModeEC2
@@ -334,7 +345,6 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 				assert.Equal(t, tt.want, rm.At(0).Resource().Attributes().AsRaw())
 			}
 			getServiceNameSource = resetServiceNameSource
-			getMetricAttributesFromEntityStore = resetGetMetricAttributesFromEntityStore
 		})
 	}
 }
@@ -347,6 +357,7 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 		metrics  pmetric.Metrics
 		want     map[string]any
 		instance string
+		asg      string
 	}{
 		{
 			name:    "EmptyMetrics",
@@ -373,7 +384,7 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore(tt.instance)
+			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore(tt.instance, tt.asg)
 			p := newAwsEntityProcessor(&Config{EntityType: entityattributes.Resource}, logger)
 			p.config.Platform = config.ModeEC2
 			_, err := p.processMetrics(ctx, tt.metrics)
@@ -390,11 +401,11 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ctx := context.Background()
 	tests := []struct {
-		name                                   string
-		metrics                                pmetric.Metrics
-		mockServiceNameAndSource               func() (string, string)
-		mockGetMetricAttributesFromEntityStore func() map[string]*string
-		want                                   map[string]any
+		name                          string
+		metrics                       pmetric.Metrics
+		mockServiceNameAndSource      func() (string, string)
+		mockGetEC2InfoFromEntityStore func() entitystore.EC2Info
+		want                          map[string]any
 	}{
 		{
 			name:    "EmptyMetrics",
@@ -402,10 +413,11 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			want:    map[string]any{},
 		},
 		{
-			name:                                   "DatapointAttributeServiceNameOnly",
-			metrics:                                generateDatapointMetrics(attributeServiceName, "test-service"),
-			mockGetMetricAttributesFromEntityStore: newMockGetMetricAttributesFromEntityStore(),
+			name:                          "DatapointAttributeServiceNameOnly",
+			metrics:                       generateDatapointMetrics(attributeServiceName, "test-service"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "auto-scaling"),
 			want: map[string]any{
+				entityattributes.AttributeEntityType:              "Service",
 				entityattributes.AttributeEntityServiceName:       "test-service",
 				entityattributes.AttributeEntityServiceNameSource: "UserConfiguration",
 				entityattributes.AttributeEntityPlatformType:      "AWS::EC2",
@@ -414,20 +426,29 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			},
 		},
 		{
-			name:                     "DatapointAttributeEnvironmentOnly",
-			metrics:                  generateDatapointMetrics(attributeDeploymentEnvironment, "test-environment"),
-			mockServiceNameAndSource: newMockGetServiceNameAndSource("test-service-name", "ClientIamRole"),
+			name:                          "DatapointAttributeEnvironmentOnly",
+			metrics:                       generateDatapointMetrics(attributeDeploymentEnvironment, "test-environment"),
+			mockServiceNameAndSource:      newMockGetServiceNameAndSource("test-service-name", "ClientIamRole"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
 			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
+				entityattributes.AttributeEntityServiceName:           "test-service-name",
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
 				entityattributes.AttributeEntityServiceNameSource:     "ClientIamRole",
 			},
 		},
 		{
-			name:    "DatapointAttributeServiceNameAndEnvironment",
-			metrics: generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
+			name:                          "DatapointAttributeServiceNameAndEnvironment",
+			metrics:                       generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
 			want: map[string]any{
+				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
+				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
+				entityattributes.AttributeEntityInstanceID:            "i-123456789",
 				entityattributes.AttributeEntityServiceNameSource:     "UserConfiguration",
 			},
 		},
@@ -437,12 +458,11 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Make copy of original functions to use as resets later to prevent failing test when tests are ran in bulk
 			resetServiceNameSource := getServiceNameSource
-			resetGetMetricAttributesFromEntityStore := getMetricAttributesFromEntityStore
 			if tt.mockServiceNameAndSource != nil {
 				getServiceNameSource = tt.mockServiceNameAndSource
 			}
-			if tt.mockGetMetricAttributesFromEntityStore != nil {
-				getMetricAttributesFromEntityStore = tt.mockGetMetricAttributesFromEntityStore
+			if tt.mockGetEC2InfoFromEntityStore != nil {
+				getEC2InfoFromEntityStore = tt.mockGetEC2InfoFromEntityStore
 			}
 			p := newAwsEntityProcessor(&Config{ScrapeDatapointAttribute: true, EntityType: attributeService}, logger)
 			p.config.Platform = config.ModeEC2
@@ -453,7 +473,6 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 				assert.Equal(t, tt.want, rm.At(0).Resource().Attributes().AsRaw())
 			}
 			getServiceNameSource = resetServiceNameSource
-			getMetricAttributesFromEntityStore = resetGetMetricAttributesFromEntityStore
 		})
 	}
 }

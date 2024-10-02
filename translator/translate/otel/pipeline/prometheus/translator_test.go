@@ -47,7 +47,7 @@ func TestTranslator(t *testing.T) {
 			kubernetesMode: translatorConfig.ModeEKS,
 			want: &want{
 				receivers:  []string{"telegraf_prometheus"},
-				processors: []string{"batch/prometheus", "awsentity"},
+				processors: []string{"batch/prometheus", "awsentity/service"},
 				exporters:  []string{"awsemf/prometheus"},
 				extensions: []string{"agenthealth/logs"},
 			},
@@ -63,7 +63,7 @@ func TestTranslator(t *testing.T) {
 			kubernetesMode: "",
 			want: &want{
 				receivers:  []string{"telegraf_prometheus"},
-				processors: []string{"batch/prometheus", "resourcedetection", "awsentity"},
+				processors: []string{"batch/prometheus", "resourcedetection"},
 				exporters:  []string{"awsemf/prometheus"},
 				extensions: []string{"agenthealth/logs"},
 			},
