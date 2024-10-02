@@ -104,7 +104,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.AWSSessionSettings.ResourceARN = resourceARN
 	}
 	if transitOtlp, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, transitSpansInOtlpFormatKey)); ok {
-		cfg.TransitSpanInOtlpFormat = transitOtlp
+		cfg.TransitSpansInOtlpFormat = transitOtlp
 	}
 	cfg.AWSSessionSettings.Region = getRegion(conf)
 	cfg.AWSSessionSettings.RoleARN = getRoleARN(conf)
