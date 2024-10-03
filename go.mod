@@ -2,7 +2,7 @@ module github.com/aws/amazon-cloudwatch-agent
 
 go 1.22.5
 
-replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20241001150426-8cfe5bbba399
+replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.20241003164222-69e43c131d55
 
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
