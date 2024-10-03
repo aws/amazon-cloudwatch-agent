@@ -12,7 +12,12 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-const defaultListenAddr = ":4311"
+const (
+	defaultListenAddr     = ":4311"
+	tlsServerCertFilePath = "/etc/amazon-cloudwatch-observability-agent-server-cert/server.crt"
+	tlsServerKeyFilePath  = "/etc/amazon-cloudwatch-observability-agent-server-cert/server.key"
+	caFilePath            = "/etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt"
+)
 
 type translator struct {
 	name    string
@@ -35,5 +40,8 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*server.Config)
 	cfg.ListenAddress = defaultListenAddr
+	cfg.TLSCAPath = caFilePath
+	cfg.TLSCertPath = tlsServerCertFilePath
+	cfg.TLSKeyPath = tlsServerKeyFilePath
 	return cfg, nil
 }

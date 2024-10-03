@@ -26,7 +26,9 @@ func TestCreateExtension(t *testing.T) {
 }
 
 func TestCreateExtensionWithConfig(t *testing.T) {
-	cfg := &Config{ListenAddress: ":8080"}
+	cfg := &Config{ListenAddress: ":8080", TLSCertPath: "./testdata/example-server-cert.pem",
+		TLSKeyPath: "./testdata/example-server-key.pem",
+		TLSCAPath:  "./testdata/example-CA-cert.pem"}
 	got, err := NewFactory().CreateExtension(context.Background(), extensiontest.NewNopCreateSettings(), cfg)
 	assert.NoError(t, err)
 	assert.NotNil(t, got)

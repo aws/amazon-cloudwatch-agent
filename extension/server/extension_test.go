@@ -66,46 +66,82 @@ func newMockTLSConfig(c *mockServerConfig) func() (*tls.Config, error) {
 
 func TestNewServer(t *testing.T) {
 	logger, _ := zap.NewProduction()
-	config := &Config{
-		ListenAddress: ":8080",
-	}
 	tests := []struct {
-		name       string
-		want       *Server
-		mockSvrCfg *mockServerConfig
-		isTLS      bool
+		name   string
+		want   *Server
+		config *Config
+		isTLS  bool
 	}{
 		{
-			name: "HTTPSServer",
+			name: "Should load valid HTTPS server",
 			want: &Server{
-				config: config,
 				logger: logger,
 			},
-			mockSvrCfg: &mockServerConfig{
-				TLSCert:           "cert",
-				TLSKey:            "key",
-				TLSAllowedCACerts: []string{"ca"},
+			config: &Config{
+				TLSCertPath:   "./testdata/example-server-cert.pem",
+				TLSKeyPath:    "./testdata/example-server-key.pem",
+				TLSCAPath:     "./testdata/example-CA-cert.pem",
+				ListenAddress: ":8080",
 			},
 			isTLS: true,
 		},
 		{
-			name: "EmptyHTTPSServer",
+			name: "should load server with empty HTTPS server as certs are empty",
 			want: &Server{
-				config: config,
 				logger: logger,
 			},
-			mockSvrCfg: &mockServerConfig{},
-			isTLS:      false,
+			config: &Config{
+				ListenAddress: ":8080",
+			},
+			isTLS: false,
+		},
+		{
+			name: "should load server with empty HTTPS server as CA cert is not valid",
+			want: &Server{
+				logger: logger,
+			},
+			config: &Config{
+				TLSCertPath:   "./testdata/example-server-cert.pem",
+				TLSKeyPath:    "./testdata/example-server-key.pem",
+				TLSCAPath:     "./testdata/bad-CA-cert.pem",
+				ListenAddress: ":8080",
+			},
+			isTLS: false,
+		},
+		{
+			name: "should load server with empty HTTPS server as server cert is not valid",
+			want: &Server{
+				logger: logger,
+			},
+			config: &Config{
+				TLSCertPath:   "./testdata/bad-CA-cert.pem",
+				TLSKeyPath:    "./testdata/example-server-key.pem",
+				TLSCAPath:     "./testdata/example-CA-cert.pem",
+				ListenAddress: ":8080",
+			},
+			isTLS: false,
+		},
+		{
+			name: "should load server with empty HTTPS server as server key is empty",
+			want: &Server{
+				logger: logger,
+			},
+			config: &Config{
+				TLSCertPath:   "./testdata/example-server-cert.pem",
+				TLSKeyPath:    "",
+				TLSCAPath:     "./testdata/example-CA-cert.pem",
+				ListenAddress: ":8080",
+			},
+			isTLS: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			getTlsConfig = newMockTLSConfig(tt.mockSvrCfg)
 
-			server := NewServer(logger, config)
+			server := NewServer(logger, tt.config)
 			assert.NotNil(t, server)
-			assert.Equal(t, config, server.config)
+			assert.Equal(t, tt.config, server.config)
 			assert.NotNil(t, server.logger)
 			if tt.isTLS {
 				assert.NotNil(t, server.httpsServer)
@@ -115,6 +151,8 @@ func TestNewServer(t *testing.T) {
 				assert.Equal(t, tls.RequireAndVerifyClientCert, server.httpsServer.TLSConfig.ClientAuth)
 				assert.NotNil(t, server.httpsServer.Handler)
 				assert.Equal(t, 90*time.Second, server.httpsServer.ReadHeaderTimeout)
+				assert.NotNil(t, server.watcher)
+				assert.Equal(t, server.watcher.GetTLSConfig(), server.httpsServer.TLSConfig)
 			} else {
 				assert.Nil(t, server.httpsServer)
 			}
@@ -219,35 +257,37 @@ func TestJSONHandler(t *testing.T) {
 
 func TestServerStartAndShutdown(t *testing.T) {
 	logger, _ := zap.NewProduction()
-	config := &Config{
-		ListenAddress: ":8080",
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	tests := []struct {
-		name       string
-		mockSvrCfg *mockServerConfig
+		name   string
+		config *Config
 	}{
 		{
 			name: "HTTPSServer",
-			mockSvrCfg: &mockServerConfig{
-				TLSCert:           "cert",
-				TLSKey:            "key",
-				TLSAllowedCACerts: []string{"ca"},
+			config: &Config{
+				TLSCertPath:   "./testdata/example-server-cert.pem",
+				TLSKeyPath:    "./testdata/example-server-key.pem",
+				TLSCAPath:     "./testdata/example-CA-cert.pem",
+				ListenAddress: ":8080",
 			},
 		},
 		{
-			name:       "EmptyHTTPSServer",
-			mockSvrCfg: &mockServerConfig{},
+			name: "EmptyHTTPSServer",
+			config: &Config{
+				TLSCertPath:   "./testdata/example-server-cert.pem",
+				TLSKeyPath:    "./testdata/example-server-key.pem",
+				TLSCAPath:     "./testdata/bad-CA-cert.pem",
+				ListenAddress: ":8080",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			getTlsConfig = newMockTLSConfig(tt.mockSvrCfg)
-			server := NewServer(logger, config)
+			server := NewServer(logger, tt.config)
 
 			err := server.Start(ctx, nil)
 			assert.NoError(t, err)

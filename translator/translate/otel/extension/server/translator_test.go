@@ -19,7 +19,7 @@ func TestTranslate(t *testing.T) {
 	}{
 		"DefaultConfig": {
 			input: map[string]interface{}{},
-			want:  &server.Config{ListenAddress: defaultListenAddr},
+			want:  &server.Config{ListenAddress: defaultListenAddr, TLSCAPath: caFilePath, TLSCertPath: tlsServerCertFilePath, TLSKeyPath: tlsServerKeyFilePath},
 		},
 	}
 	for name, testCase := range testCases {

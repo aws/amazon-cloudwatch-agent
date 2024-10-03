@@ -291,6 +291,9 @@ extensions:
     kubernetes_mode: EKS
   server:
     listen_addr: :4311
+    tls_ca_path: "/etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt"
+    tls_cert_path: "/etc/amazon-cloudwatch-observability-agent-server-cert/server.crt"
+    tls_key_path: "/etc/amazon-cloudwatch-observability-agent-server-cert/server.key"
 processors:
   awsapplicationsignals:
     limiter:
