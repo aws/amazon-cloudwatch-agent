@@ -95,21 +95,35 @@ func TestTracesTranslator(t *testing.T) {
 }
 
 func TestMetricsTranslator(t *testing.T) {
-	tt := NewTranslator(WithDataType(component.DataTypeMetrics))
+	multiConfig := map[string]interface{}{"metrics": map[string]interface{}{
+		"metrics_collected": map[string]interface{}{
+			"otlp": []any{
+				map[string]interface{}{},
+				map[string]interface{}{
+					"grpc_endpoint": "127.0.0.1:1234",
+					"http_endpoint": "127.0.0.1:2345",
+				},
+			},
+		},
+	}}
+
 	testCases := map[string]struct {
 		input   map[string]interface{}
+		index   int
 		want    *confmap.Conf
 		wantErr error
 	}{
 		"WithMissingKey": {
 			input: map[string]interface{}{"metrics": map[string]interface{}{}},
+			index: -1,
 			wantErr: &common.MissingKeyError{
-				ID:      tt.ID(),
+				ID:      NewTranslator(WithDataType(component.DataTypeMetrics)).ID(),
 				JsonKey: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey),
 			},
 		},
 		"WithDefault": {
 			input: map[string]interface{}{"metrics": map[string]interface{}{"metrics_collected": map[string]interface{}{"otlp": map[string]interface{}{}}}},
+			index: -1,
 			want: confmap.NewFromStringMap(map[string]interface{}{
 				"protocols": map[string]interface{}{
 					"grpc": map[string]interface{}{
@@ -121,8 +135,37 @@ func TestMetricsTranslator(t *testing.T) {
 				},
 			}),
 		},
+		"WithMultiple_0": {
+			input: multiConfig,
+			index: 0,
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:4317",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:4318",
+					},
+				},
+			}),
+		},
+		"WithMultiple_1": {
+			input: multiConfig,
+			index: 1,
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"protocols": map[string]interface{}{
+					"grpc": map[string]interface{}{
+						"endpoint": "127.0.0.1:1234",
+					},
+					"http": map[string]interface{}{
+						"endpoint": "127.0.0.1:2345",
+					},
+				},
+			}),
+		},
 		"WithCompleteConfig": {
 			input: testutil.GetJson(t, filepath.Join("testdata", "metrics", "config.json")),
+			index: -1,
 			want:  testutil.GetConf(t, filepath.Join("testdata", "metrics", "config.yaml")),
 		},
 	}
@@ -130,6 +173,10 @@ func TestMetricsTranslator(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(testCase.input)
+			tt := NewTranslator(WithDataType(component.DataTypeMetrics))
+			if testCase.index != -1 {
+				tt = NewTranslator(WithDataType(component.DataTypeMetrics), WithIndex(testCase.index))
+			}
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
 			if err == nil {
