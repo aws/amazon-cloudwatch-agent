@@ -16,6 +16,7 @@ const (
 	AttributeEntityResourceType          = AWSEntityPrefix + "resource.type"
 	AttributeEntityEC2InstanceResource   = "AWS::EC2::Instance"
 	AttributeEntityIdentifier            = AWSEntityPrefix + "identifier"
+	AttributeEntityAwsAccountId          = AWSEntityPrefix + "aws.account.id"
 	AttributeEntityServiceName           = AWSEntityPrefix + "service.name"
 	AttributeEntityDeploymentEnvironment = AWSEntityPrefix + "deployment.environment"
 	AttributeEntityCluster               = AWSEntityPrefix + "k8s.cluster.name"
@@ -38,6 +39,7 @@ const (
 	EntityType            = "Type"
 	ResourceType          = "ResourceType"
 	Identifier            = "Identifier"
+	AwsAccountId          = "AwsAccountId"
 	Cluster               = "Cluster"
 	Workload              = "Workload"
 	Node                  = "Node"
@@ -52,6 +54,7 @@ var KeyAttributeEntityToShortNameMap = map[string]string{
 	AttributeEntityType:                  EntityType,
 	AttributeEntityResourceType:          ResourceType,
 	AttributeEntityIdentifier:            Identifier,
+	AttributeEntityAwsAccountId:          AwsAccountId,
 	AttributeEntityServiceName:           ServiceName,
 	AttributeEntityDeploymentEnvironment: DeploymentEnvironment,
 }

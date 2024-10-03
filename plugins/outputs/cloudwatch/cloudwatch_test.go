@@ -591,9 +591,10 @@ func TestCreateEntityMetricData(t *testing.T) {
 	cw := newCloudWatchClient(svc, time.Second)
 	entity := cloudwatch.Entity{
 		KeyAttributes: map[string]*string{
-			"Type":        aws.String("Service"),
-			"Environment": aws.String("Environment"),
-			"Name":        aws.String("MyServiceName"),
+			"Type":         aws.String("Service"),
+			"Environment":  aws.String("Environment"),
+			"Name":         aws.String("MyServiceName"),
+			"AwsAccountId": aws.String("0123456789012"),
 		},
 		Attributes: map[string]*string{
 			"InstanceID": aws.String("i-123456789"),
@@ -602,7 +603,7 @@ func TestCreateEntityMetricData(t *testing.T) {
 	}
 	entityToAttributesMap := ttlcache.New[string, []*cloudwatch.MetricDatum](ttlcache.WithTTL[string, []*cloudwatch.MetricDatum](5 * time.Minute))
 	metrics := createTestMetrics(1, 1, 1, "s")
-	assert.Equal(t, 6, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
+	assert.Equal(t, 7, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	aggregations := ConvertOtelMetrics(metrics)
 	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	metricDatum := cw.BuildMetricDatum(aggregations[0])

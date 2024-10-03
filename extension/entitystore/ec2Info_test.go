@@ -23,6 +23,7 @@ import (
 
 var mockedInstanceIdentityDoc = &ec2metadata.EC2InstanceIdentityDocument{
 	InstanceID:   "i-01d2417c27a396e44",
+	AccountID:    "874389809020",
 	Region:       "us-east-1",
 	InstanceType: "m5ad.large",
 	ImageID:      "ami-09edd32d9b0990d49",
@@ -70,7 +71,7 @@ func (m *mockEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsO
 	return &allTags, nil
 }
 
-func mockEC2Provider(region string, credential *configaws.CredentialConfig) ec2iface.EC2API {
+func mockEC2Provider(_ string, _ *configaws.CredentialConfig) ec2iface.EC2API {
 	return &mockEC2Client{withASG: true}
 }
 
@@ -92,6 +93,7 @@ func TestSetInstanceIdAndRegion(t *testing.T) {
 			wantErr: false,
 			want: EC2Info{
 				InstanceID: mockedInstanceIdentityDoc.InstanceID,
+				AccountID:  mockedInstanceIdentityDoc.AccountID,
 			},
 		},
 	}
@@ -102,10 +104,11 @@ func TestSetInstanceIdAndRegion(t *testing.T) {
 				metadataProvider: tt.args.metadataProvider,
 				logger:           logger,
 			}
-			if err := ei.setInstanceId(); (err != nil) != tt.wantErr {
-				t.Errorf("setInstanceId() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ei.setInstanceIDAccountID(); (err != nil) != tt.wantErr {
+				t.Errorf("setInstanceIDAccountID() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			assert.Equal(t, tt.want.InstanceID, ei.InstanceID)
+			assert.Equal(t, tt.want.AccountID, ei.AccountID)
 		})
 	}
 }
@@ -214,6 +217,7 @@ func TestIgnoreInvalidFields(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	type want struct {
 		instanceId       string
+		accountId        string
 		autoScalingGroup string
 	}
 	tests := []struct {
@@ -225,11 +229,13 @@ func TestIgnoreInvalidFields(t *testing.T) {
 			name: "Happy path",
 			args: &EC2Info{
 				InstanceID:       "i-01d2417c27a396e44",
+				AccountID:        "0123456789012",
 				AutoScalingGroup: "asg",
 				logger:           logger,
 			},
 			want: want{
 				instanceId:       "i-01d2417c27a396e44",
+				accountId:        "0123456789012",
 				autoScalingGroup: "asg",
 			},
 		},
@@ -237,11 +243,13 @@ func TestIgnoreInvalidFields(t *testing.T) {
 			name: "InstanceId too large",
 			args: &EC2Info{
 				InstanceID:       strings.Repeat("a", 20),
+				AccountID:        "0123456789012",
 				AutoScalingGroup: "asg",
 				logger:           logger,
 			},
 			want: want{
 				instanceId:       "",
+				accountId:        "0123456789012",
 				autoScalingGroup: "asg",
 			},
 		},
@@ -249,11 +257,13 @@ func TestIgnoreInvalidFields(t *testing.T) {
 			name: "AutoScalingGroup too large",
 			args: &EC2Info{
 				InstanceID:       "i-01d2417c27a396e44",
+				AccountID:        "0123456789012",
 				AutoScalingGroup: strings.Repeat("a", 256),
 				logger:           logger,
 			},
 			want: want{
 				instanceId:       "i-01d2417c27a396e44",
+				accountId:        "0123456789012",
 				autoScalingGroup: "",
 			},
 		},
@@ -262,6 +272,7 @@ func TestIgnoreInvalidFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.ignoreInvalidFields()
 			assert.Equal(t, tt.want.instanceId, tt.args.InstanceID)
+			assert.Equal(t, tt.want.accountId, tt.args.AccountID)
 			assert.Equal(t, tt.want.autoScalingGroup, tt.args.AutoScalingGroup)
 		})
 	}

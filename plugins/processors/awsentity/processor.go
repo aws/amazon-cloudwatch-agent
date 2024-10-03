@@ -120,6 +120,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					resourceAttrs.PutStr(entityattributes.AttributeEntityResourceType, entityattributes.AttributeEntityEC2InstanceResource)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityIdentifier, ec2Info.InstanceID)
 				}
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.AccountID)
 			}
 		case entityattributes.Service:
 			if logGroupNamesAttr, ok := resourceAttrs.Get(attributeAwsLogGroupNames); ok {
@@ -200,6 +201,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 					resourceAttrs.PutStr(entityattributes.AttributeEntityWorkload, eksAttributes.Workload)
 					resourceAttrs.PutStr(entityattributes.AttributeEntityNode, eksAttributes.Node)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityInstanceID, ec2Info.InstanceID)
+					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.AccountID)
 					AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceNameSource, entityServiceNameSource)
 				}
 				p.k8sscraper.Reset()
@@ -221,6 +223,7 @@ func (p *awsEntityProcessor) processMetrics(_ context.Context, md pmetric.Metric
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityType, entityattributes.Service)
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityServiceName, entityServiceName)
 				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityDeploymentEnvironment, entityEnvironmentName)
+				AddAttributeIfNonEmpty(resourceAttrs, entityattributes.AttributeEntityAwsAccountId, ec2Info.AccountID)
 
 				ec2Attributes := EC2ServiceAttributes{
 					InstanceId:        ec2Info.InstanceID,

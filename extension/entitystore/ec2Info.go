@@ -31,6 +31,7 @@ const (
 
 type EC2Info struct {
 	InstanceID       string
+	AccountID        string
 	AutoScalingGroup string
 
 	// region is used while making call to describeTags Ec2 API for AutoScalingGroup
@@ -46,7 +47,7 @@ type EC2Info struct {
 
 func (ei *EC2Info) initEc2Info() {
 	ei.logger.Debug("Initializing EC2Info")
-	if err := ei.setInstanceId(); err != nil {
+	if err := ei.setInstanceIDAccountID(); err != nil {
 		return
 	}
 	ei.ec2API = ei.ec2Provider(ei.Region, ei.ec2Credential)
@@ -57,11 +58,11 @@ func (ei *EC2Info) initEc2Info() {
 	ei.ignoreInvalidFields()
 }
 
-func (ei *EC2Info) setInstanceId() error {
+func (ei *EC2Info) setInstanceIDAccountID() error {
 	for {
 		metadataDoc, err := ei.metadataProvider.Get(context.Background())
 		if err != nil {
-			ei.logger.Warn("Failed to get Instance Id through metadata provider", zap.Error(err))
+			ei.logger.Warn("Failed to get Instance ID / Account ID through metadata provider", zap.Error(err))
 			wait := time.NewTimer(1 * time.Minute)
 			select {
 			case <-ei.done:
@@ -71,8 +72,9 @@ func (ei *EC2Info) setInstanceId() error {
 				continue
 			}
 		}
-		ei.logger.Debug("Successfully retrieved Instance ID")
+		ei.logger.Debug("Successfully retrieved Instance ID and Account ID")
 		ei.InstanceID = metadataDoc.InstanceID
+		ei.AccountID = metadataDoc.AccountID
 		return nil
 	}
 }

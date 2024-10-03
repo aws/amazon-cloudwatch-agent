@@ -58,6 +58,7 @@ func createTestMetrics(
 	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityDeploymentEnvironment, "MyEnvironment")
 	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityServiceName, "MyServiceName")
 	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityInstanceID, "i-123456789")
+	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityAwsAccountId, "0123456789012")
 	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityAutoScalingGroup, "asg-123")
 	rm.Resource().Attributes().PutStr(entityattributes.AttributeEntityPlatformType, "AWS::EC2")
 
@@ -225,9 +226,10 @@ func TestConvertOtelMetrics_Entity(t *testing.T) {
 	datums := ConvertOtelMetrics(metrics)
 	expectedEntity := cloudwatch.Entity{
 		KeyAttributes: map[string]*string{
-			"Type":        aws.String("Service"),
-			"Environment": aws.String("MyEnvironment"),
-			"Name":        aws.String("MyServiceName"),
+			"Type":         aws.String("Service"),
+			"Environment":  aws.String("MyEnvironment"),
+			"Name":         aws.String("MyServiceName"),
+			"AwsAccountId": aws.String("0123456789012"),
 		},
 		Attributes: map[string]*string{
 			"InstanceID":       aws.String("i-123456789"),

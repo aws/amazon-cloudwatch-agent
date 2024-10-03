@@ -70,10 +70,11 @@ func newMockGetServiceNameAndSource(service, source string) func() (string, stri
 	}
 }
 
-func newMockGetEC2InfoFromEntityStore(instance string, asg string) func() entitystore.EC2Info {
+func newMockGetEC2InfoFromEntityStore(instance, accountId, asg string) func() entitystore.EC2Info {
 	return func() entitystore.EC2Info {
 		return entitystore.EC2Info{
 			InstanceID:       instance,
+			AccountID:        accountId,
 			AutoScalingGroup: asg,
 		}
 	}
@@ -286,12 +287,13 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(attributeServiceName, "test-service"),
 			mockServiceNameSource:         newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
-			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", ""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:              "Service",
 				entityattributes.AttributeEntityServiceName:       "test-service",
 				entityattributes.AttributeEntityPlatformType:      "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:        "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:      "0123456789012",
 				entityattributes.AttributeEntityServiceNameSource: "Unknown",
 				attributeServiceName:                              "test-service",
 			},
@@ -301,13 +303,14 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(attributeDeploymentEnvironment, "test-environment"),
 			mockServiceNameSource:         newMockGetServiceNameAndSource("unknown_service", "Unknown"),
-			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", ""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "unknown_service",
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
 				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
 				entityattributes.AttributeEntityServiceNameSource:     "Unknown",
 
 				attributeDeploymentEnvironment: "test-environment",
@@ -318,7 +321,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 			platform:                      config.ModeEC2,
 			metrics:                       generateMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
 			mockServiceNameSource:         newMockGetServiceNameAndSource("test-service-name", "Instrumentation"),
-			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "test-auto-scaling"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", "test-auto-scaling"),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
@@ -328,6 +331,7 @@ func TestProcessMetricsResourceAttributeScraping(t *testing.T) {
 				entityattributes.AttributeEntityServiceNameSource:     "Unknown",
 				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
 				entityattributes.AttributeEntityAutoScalingGroup:      "test-auto-scaling",
 			},
 		},
@@ -381,11 +385,12 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	ctx := context.Background()
 	tests := []struct {
-		name     string
-		metrics  pmetric.Metrics
-		want     map[string]any
-		instance string
-		asg      string
+		name      string
+		metrics   pmetric.Metrics
+		want      map[string]any
+		instance  string
+		accountId string
+		asg       string
 	}{
 		{
 			name:    "EmptyMetrics",
@@ -393,26 +398,29 @@ func TestProcessMetricsResourceEntityProcessing(t *testing.T) {
 			want:    map[string]any{},
 		},
 		{
-			name:     "ResourceEntityEC2",
-			metrics:  generateMetrics(),
-			instance: "i-123456789",
+			name:      "ResourceEntityEC2",
+			metrics:   generateMetrics(),
+			instance:  "i-123456789",
+			accountId: "0123456789012",
 			want: map[string]any{
-				"com.amazonaws.cloudwatch.entity.internal.type":          "AWS::Resource",
-				"com.amazonaws.cloudwatch.entity.internal.resource.type": "AWS::EC2::Instance",
-				"com.amazonaws.cloudwatch.entity.internal.identifier":    "i-123456789",
+				"com.amazonaws.cloudwatch.entity.internal.type":           "AWS::Resource",
+				"com.amazonaws.cloudwatch.entity.internal.resource.type":  "AWS::EC2::Instance",
+				"com.amazonaws.cloudwatch.entity.internal.identifier":     "i-123456789",
+				"com.amazonaws.cloudwatch.entity.internal.aws.account.id": "0123456789012",
 			},
 		},
 		{
-			name:     "ResourceEntityEC2NoInstance",
-			metrics:  generateMetrics(),
-			instance: "",
-			want:     map[string]any{},
+			name:      "ResourceEntityEC2NoInstance",
+			metrics:   generateMetrics(),
+			instance:  "",
+			accountId: "",
+			want:      map[string]any{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore(tt.instance, tt.asg)
+			getEC2InfoFromEntityStore = newMockGetEC2InfoFromEntityStore(tt.instance, tt.accountId, tt.asg)
 			p := newAwsEntityProcessor(&Config{EntityType: entityattributes.Resource}, logger)
 			p.config.Platform = config.ModeEC2
 			_, err := p.processMetrics(ctx, tt.metrics)
@@ -443,13 +451,14 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 		{
 			name:                          "DatapointAttributeServiceNameOnly",
 			metrics:                       generateDatapointMetrics(attributeServiceName, "test-service"),
-			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "auto-scaling"),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", "auto-scaling"),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:              "Service",
 				entityattributes.AttributeEntityServiceName:       "test-service",
 				entityattributes.AttributeEntityServiceNameSource: "UserConfiguration",
 				entityattributes.AttributeEntityPlatformType:      "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:        "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:      "0123456789012",
 				entityattributes.AttributeEntityAutoScalingGroup:  "auto-scaling",
 			},
 		},
@@ -457,26 +466,28 @@ func TestProcessMetricsDatapointAttributeScraping(t *testing.T) {
 			name:                          "DatapointAttributeEnvironmentOnly",
 			metrics:                       generateDatapointMetrics(attributeDeploymentEnvironment, "test-environment"),
 			mockServiceNameAndSource:      newMockGetServiceNameAndSource("test-service-name", "ClientIamRole"),
-			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", ""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service-name",
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
 				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
 				entityattributes.AttributeEntityServiceNameSource:     "ClientIamRole",
 			},
 		},
 		{
 			name:                          "DatapointAttributeServiceNameAndEnvironment",
 			metrics:                       generateDatapointMetrics(attributeServiceName, "test-service", attributeDeploymentEnvironment, "test-environment"),
-			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", ""),
+			mockGetEC2InfoFromEntityStore: newMockGetEC2InfoFromEntityStore("i-123456789", "0123456789012", ""),
 			want: map[string]any{
 				entityattributes.AttributeEntityType:                  "Service",
 				entityattributes.AttributeEntityServiceName:           "test-service",
 				entityattributes.AttributeEntityDeploymentEnvironment: "test-environment",
 				entityattributes.AttributeEntityPlatformType:          "AWS::EC2",
 				entityattributes.AttributeEntityInstanceID:            "i-123456789",
+				entityattributes.AttributeEntityAwsAccountId:          "0123456789012",
 				entityattributes.AttributeEntityServiceNameSource:     "UserConfiguration",
 			},
 		},
