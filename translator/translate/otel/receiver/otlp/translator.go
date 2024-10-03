@@ -98,7 +98,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if t.name == common.AppSignals {
 		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.dataType]
 		if !ok {
-			return nil, fmt.Errorf("no appplication_signals config key defined for data type: %s", t.dataType)
+			return nil, fmt.Errorf("no application_signals config key defined for data type: %s", t.dataType)
 		}
 		if conf.IsSet(appSignalsConfigKeys[0]) {
 			configKey = appSignalsConfigKeys[0]
