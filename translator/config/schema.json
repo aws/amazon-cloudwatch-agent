@@ -137,6 +137,9 @@
             },
             "jmx": {
               "$ref": "#/definitions/metricsDefinition/definitions/jmxDefinitions"
+            },
+            "otlp": {
+              "$ref": "#/definitions/otlpDefinitions"
             }
           },
           "minProperties": 1,
@@ -352,29 +355,6 @@
             }
           },
           "additionalProperties": false
-        },
-        "tlsDefinitions": {
-          "type": "object",
-          "properties": {
-            "ca_file": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            },
-            "cert_file": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            },
-            "key_file": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            },
-            "insecure": {
-              "type": "boolean"
-            }
-          }
         },
         "swapDefinitions": {
           "$ref": "#/definitions/metricsDefinition/definitions/basicMetricDefinition"
@@ -653,7 +633,7 @@
                 }
               },
               "tls": {
-                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
+                "$ref": "#/definitions/tlsDefinitions"
               },
               "additionalProperties": true
             },
@@ -737,7 +717,7 @@
                 }
               },
               "tls": {
-                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
+                "$ref": "#/definitions/tlsDefinitions"
               },
               "additionalProperties": true
             },
@@ -772,7 +752,7 @@
               },
               "additionalProperties": true
             },
-            "prometheus":{
+            "prometheus": {
               "type": "object",
               "properties": {
                 "cluster_name": {
@@ -1067,10 +1047,7 @@
               "$ref": "#/definitions/tracesDefinition/definitions/xrayDefinition"
             },
             "otlp": {
-              "tls": {
-                "$ref": "#/definitions/metricsDefinition/definitions/tlsDefinitions"
-              },
-              "$ref": "#/definitions/tracesDefinition/definitions/otlpDefinitions"
+              "$ref": "#/definitions/otlpDefinitions"
             }
           },
           "minProperties": 1,
@@ -1133,21 +1110,6 @@
             }
           },
           "additionalProperties": false
-        },
-        "otlpDefinitions": {
-          "oneOf": [
-            {
-              "type": "array",
-              "minItems": 1,
-              "maxItems": 255,
-              "items": {
-                "$ref": "#/definitions/otlpObjectDefinition"
-              }
-            },
-            {
-              "$ref": "#/definitions/otlpObjectDefinition"
-            }
-          ]
         }
       }
     },
@@ -1203,6 +1165,44 @@
       },
       "additionalProperties": false
     },
+    "tlsDefinitions": {
+      "type": "object",
+      "properties": {
+        "ca_file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "cert_file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "key_file": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "insecure": {
+          "type": "boolean"
+        }
+      }
+    },
+    "otlpDefinitions": {
+      "oneOf": [
+        {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 255,
+          "items": {
+            "$ref": "#/definitions/otlpObjectDefinition"
+          }
+        },
+        {
+          "$ref": "#/definitions/otlpObjectDefinition"
+        }
+      ]
+    },
     "otlpObjectDefinition": {
       "type": "object",
       "properties": {
@@ -1213,6 +1213,9 @@
         "http_endpoint": {
           "description": "HTTP endpoint to use to listen for OTLP JSON information",
           "$ref": "#/definitions/endpointOverrideDefinition"
+        },
+        "tls": {
+          "$ref": "#/definitions/tlsDefinitions"
         }
       },
       "additionalProperties": false
@@ -1431,7 +1434,7 @@
               "description": "Prometheus metrics port list of the exporters",
               "type": "string"
             },
-            "sd_service_name_pattern":{
+            "sd_service_name_pattern": {
               "description": "ECS service name pattern responsible for tasks which expose the Prometheus metrics",
               "type": "string"
             }

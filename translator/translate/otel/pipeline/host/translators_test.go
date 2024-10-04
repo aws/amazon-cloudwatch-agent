@@ -57,6 +57,20 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 		},
+		"WithOtlpMetrics": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"otlp": map[string]interface{}{},
+					},
+				},
+			},
+			want: map[string]want{
+				"metrics/hostDeltaMetrics": {
+					receivers: []string{"otlp/metrics"},
+				},
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

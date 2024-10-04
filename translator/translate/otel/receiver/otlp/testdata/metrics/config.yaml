@@ -1,0 +1,11 @@
+protocols:
+  grpc:
+    endpoint: 0.0.0.0:1234
+    tls:
+      cert_file: /path/to/cert.pem
+      key_file: /path/to/key.pem
+  http:
+    endpoint: 0.0.0.0:2345
+    tls:
+      cert_file: /path/to/cert.pem
+      key_file: /path/to/key.pem
