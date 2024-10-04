@@ -6,6 +6,7 @@ replace github.com/influxdata/telegraf => github.com/aws/telegraf v0.10.2-0.2024
 
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
+
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20240903195955-5944792b593a
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20240903195955-5944792b593a
@@ -38,7 +39,7 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20240903195955-5944792b593a
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20240903195955-5944792b593a
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20240903195955-5944792b593a
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20240903195955-5944792b593a
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => ../contrib-repo/receiver/prometheusreceiver
 )
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
@@ -170,6 +171,8 @@ require (
 	k8s.io/client-go v0.30.0
 	k8s.io/klog/v2 v2.120.1
 )
+
+require github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.103.0
 
 require (
 	cloud.google.com/go v0.112.1 // indirect
@@ -313,7 +316,6 @@ require (
 	github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -341,7 +343,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.103.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.103.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.103.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.103.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.12 // indirect
