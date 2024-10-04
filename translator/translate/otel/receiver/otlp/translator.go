@@ -26,16 +26,16 @@ const (
 
 var (
 	configKeys = map[component.DataType]string{
-		component.DataTypeTraces:  common.ConfigKey(common.TracesKey, common.TracesCollectedKey),
-		component.DataTypeMetrics: common.ConfigKey(common.LogsKey, common.MetricsCollectedKey),
+		component.DataTypeTraces:  common.ConfigKey(common.TracesKey, common.TracesCollectedKey, common.OtlpKey),
+		component.DataTypeMetrics: common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey),
 	}
 )
 
 type translator struct {
-	name        string
-	dataType    component.DataType
-	instanceNum int
-	factory     receiver.Factory
+	name     string
+	dataType component.DataType
+	index    int
+	factory  receiver.Factory
 }
 
 type Option interface {
@@ -55,9 +55,9 @@ func WithDataType(dataType component.DataType) Option {
 		t.dataType = dataType
 	})
 }
-func WithInstanceNum(instanceNum int) Option {
+func WithIndex(index int) Option {
 	return optionFunc(func(t *translator) {
-		t.instanceNum = instanceNum
+		t.index = index
 	})
 }
 
@@ -68,14 +68,14 @@ func NewTranslator(opts ...Option) common.Translator[component.Config] {
 }
 
 func NewTranslatorWithName(name string, opts ...Option) common.Translator[component.Config] {
-	t := &translator{name: name, instanceNum: -1, factory: otlpreceiver.NewFactory()}
+	t := &translator{name: name, index: -1, factory: otlpreceiver.NewFactory()}
 	for _, opt := range opts {
 		opt.apply(t)
 	}
 	if name == "" && t.dataType.String() != "" {
 		t.name = t.dataType.String()
-		if t.instanceNum != -1 {
-			t.name += strconv.Itoa(t.instanceNum)
+		if t.index != -1 {
+			t.name += strconv.Itoa(t.index)
 		}
 	}
 	return t
@@ -87,32 +87,39 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlpreceiver.Config)
-	// init default configuration
-	configBase, ok := configKeys[t.dataType]
+
+	configKey, ok := configKeys[t.dataType]
 	if !ok {
 		return nil, fmt.Errorf("no config key defined for data type: %s", t.dataType)
 	}
-	configKey := common.ConfigKey(configBase, common.OtlpKey)
 	cfg.GRPC.NetAddr.Endpoint = defaultGrpcEndpoint
 	cfg.HTTP.Endpoint = defaultHttpEndpoint
+
 	if t.name == common.AppSignals {
-		configKey = common.ConfigKey(configKeys[t.dataType], common.AppSignals)
-		if conf == nil || !conf.IsSet(configKey) {
-			configKey = common.ConfigKey(configBase, common.AppSignalsFallback)
+		appSignalsConfigKeys, ok := common.AppSignalsConfigKeys[t.dataType]
+		if !ok {
+			return nil, fmt.Errorf("no application_signals config key defined for data type: %s", t.dataType)
+		}
+		if conf.IsSet(appSignalsConfigKeys[0]) {
+			configKey = appSignalsConfigKeys[0]
+		} else {
+			configKey = appSignalsConfigKeys[1]
 		}
 		cfg.GRPC.NetAddr.Endpoint = defaultAppSignalsGrpcEndpoint
 		cfg.HTTP.Endpoint = defaultAppSignalsHttpEndpoint
 	}
+
 	if conf == nil || !conf.IsSet(configKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey}
 	}
 
 	var otlpKeyMap map[string]interface{}
-	if otlpSlice := common.GetArray[any](conf, configKey); t.instanceNum != -1 && len(otlpSlice) > t.instanceNum {
-		otlpKeyMap = otlpSlice[t.instanceNum].(map[string]interface{})
+	if otlpSlice := common.GetArray[any](conf, configKey); t.index != -1 && len(otlpSlice) > t.index {
+		otlpKeyMap = otlpSlice[t.index].(map[string]interface{})
 	} else {
 		otlpKeyMap = conf.Get(configKey).(map[string]interface{})
 	}
+
 	var tlsSettings *configtls.ServerConfig
 	if tls, ok := otlpKeyMap["tls"].(map[string]interface{}); ok {
 		tlsSettings = &configtls.ServerConfig{}

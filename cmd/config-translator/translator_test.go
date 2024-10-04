@@ -73,6 +73,14 @@ func TestJMXConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidJMX.json", false, expectedErrorMap)
 }
 
+func TestOTLPMetricsConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validOTLPMetrics.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["array_min_items"] = 1
+	expectedErrorMap["number_one_of"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidOTLPMetrics.json", false, expectedErrorMap)
+}
+
 func TestLogFilesConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogFiles.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}
