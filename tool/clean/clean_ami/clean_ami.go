@@ -59,13 +59,13 @@ func deregisterAMIs(ctx context.Context, ec2client *ec2.Client, images []types.I
     for _, image := range images {
 		if image.Name != nil && image.ImageId != nil && image.CreationDate != nil {
 			log.Printf("Try to delete ami %v tags %v image id %v image creation date raw %v", *image.Name, image.Tags, *image.ImageId, *image.CreationDate)
-			// deregisterImageInput := &ec2.DeregisterImageInput{ImageId: image.ImageId}
-			// _, err := ec2client.DeregisterImage(ctx, deregisterImageInput)
+			deregisterImageInput := &ec2.DeregisterImageInput{ImageId: image.ImageId}
+			_, err := ec2client.DeregisterImage(ctx, deregisterImageInput)
  
-			// if err != nil && errList != nil {
-			// 	log.Printf("Error while deregistering ami %v", *image.Name)
-			// 	*errList = append(*errList, err)
-			// }
+			if err != nil && errList != nil {
+				log.Printf("Error while deregistering ami %v", *image.Name)
+				*errList = append(*errList, err)
+			}
 		}
     }
 }
