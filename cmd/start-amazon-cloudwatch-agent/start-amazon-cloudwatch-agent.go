@@ -24,7 +24,7 @@ func translateConfig() error {
 	if envconfig.IsRunningInContainer() {
 		args = append(args, "--input-dir", paths.CONFIG_DIR_IN_CONTAINER)
 	} else {
-		args = append(args, "--input", paths.JsonConfigPath, "--input-dir", paths.JsonDirPath, "--config", paths.CommonConfigPath)
+		args = append(args, "--input", paths.JsonConfigPath, "--input-dir", paths.ConfigDirPath, "--config", paths.CommonConfigPath)
 	}
 	cmd := exec.Command(paths.TranslatorBinaryPath, args...)
 	cmd.Stdout = os.Stdout

@@ -30,6 +30,7 @@ const (
 	PodName                   = "POD_NAME"
 	HostIP                    = "HOST_IP"
 	CWConfigContent           = "CW_CONFIG_CONTENT"
+	CWAgentMergedOtelConfig   = "CWAGENT_MERGED_OTEL_CONFIG"
 )
 
 const (

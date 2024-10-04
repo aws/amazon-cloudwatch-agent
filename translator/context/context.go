@@ -10,10 +10,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
-const (
-	TmpFileSuffix = ".tmp"
-)
-
 var ctx *Context
 
 func CurrentContext() *Context {
