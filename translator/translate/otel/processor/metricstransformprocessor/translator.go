@@ -77,18 +77,16 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	fmt.Printf("I! The t.name is %s.", t.name)
 	if t.name == common.JmxKey {
 		fmt.Print("I! t.name is equal to common.JmxKey.")
-		for _, metric := range []string{"tomcat.sessions", "tomcat.rejected_sessions"} {
-			fmt.Printf("I! Aggregating context in %s.", metric)
-			transformRules = append(transformRules, map[string]interface{}{
-				"include": metric,
-				"action":  "update",
-				"operations": map[string]interface{}{
-					"action":           "aggregate_labels",
-					"label_set":        []string{"context"},
-					"aggregation_type": "sum",
-				},
-			})
-		}
+		fmt.Print("I! Aggregating context in tomcat.sessions.")
+		transformRules = append(transformRules, map[string]interface{}{
+			"include": "tomcat.sessions",
+			"action":  "update",
+			"operations": map[string]interface{}{
+				"action":           "aggregate_labels",
+				"label_set":        []string{"context"},
+				"aggregation_type": "sum",
+			},
+		})
 	}
 
 	if awscontainerinsight.AcceleratedComputeMetricsEnabled(conf) {
