@@ -16,6 +16,8 @@ import (
 
 func TestGetOTELConfigArgs(t *testing.T) {
 	dir := t.TempDir()
+	// skipped
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "bunchofyaml"), 0644))
 	for _, name := range []string{
 		"foo.yaml",
 		"bar.yaml",
