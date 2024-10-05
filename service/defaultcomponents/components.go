@@ -99,7 +99,7 @@ func Factories() (otelcol.Factories, error) {
 		probabilisticsamplerprocessor.NewFactory(),
 		resourceprocessor.NewFactory(),
 		resourcedetectionprocessor.NewFactory(),
-        rollupprocessor.NewFactory(),
+		rollupprocessor.NewFactory(),
 		spanprocessor.NewFactory(),
 		tailsamplingprocessor.NewFactory(),
 		transformprocessor.NewFactory(),

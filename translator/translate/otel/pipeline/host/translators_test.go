@@ -126,6 +126,7 @@ func TestTranslators(t *testing.T) {
 			want: map[string]want{
 				"metrics/hostDeltaMetrics": {
 					receivers: []string{"otlp/metrics"},
+					exporters: []string{"awscloudwatch"},
 				},
 			},
 		},
