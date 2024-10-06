@@ -81,10 +81,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		transformRules = append(transformRules, map[string]interface{}{
 			"include": "tomcat.sessions",
 			"action":  "update",
-			"operations": map[string]interface{}{
-				"action":           "aggregate_labels",
-				"label_set":        []string{"context"},
-				"aggregation_type": "sum",
+			"operations": []map[string]interface{}{
+				{
+					"action":           "aggregate_labels",
+					"aggregation_type": "sum",
+				},
+				{
+					"action": "delete_label_value",
+					"label":  "context",
+				},
 			},
 		})
 	}
