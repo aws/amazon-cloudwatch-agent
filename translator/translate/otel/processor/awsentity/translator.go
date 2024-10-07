@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -49,6 +48,11 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	// Do not send entity for ECS
+	if context.CurrentContext().RunInContainer() && ecsutil.GetECSUtilSingleton().IsECS() {
+		return nil, nil
+	}
+
 	cfg := t.factory.CreateDefaultConfig().(*awsentity.Config)
 
 	if t.entityType != "" {
@@ -77,12 +81,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.KubernetesMode = mode
 
 	mode = ctx.Mode()
-	if context.CurrentContext().RunInContainer() {
-		if ecsutil.GetECSUtilSingleton().IsECS() {
-			mode = config.ModeECS
-		}
-	}
-
 	if cfg.KubernetesMode != "" {
 		cfg.ClusterName = hostedIn
 	}
