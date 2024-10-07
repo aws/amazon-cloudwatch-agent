@@ -71,6 +71,10 @@ exporters:
         telemetry:
             enabled: true
             include_metadata: true
+    debug/jmx:
+        sampling_initial: 2
+        sampling_thereafter: 500
+        verbosity: Detailed
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
@@ -391,6 +395,7 @@ service:
         metrics/jmx/cloudwatch/0:
             exporters:
                 - awscloudwatch
+                - debug/jmx
             processors:
                 - filter/jmx/0
                 - resource/jmx
@@ -402,6 +407,7 @@ service:
         metrics/jmx/cloudwatch/1:
             exporters:
                 - awscloudwatch
+                - debug/jmx
             processors:
                 - filter/jmx/1
                 - resource/jmx

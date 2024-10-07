@@ -177,7 +177,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx",
 				receivers:  []string{"otlp/jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "cumulativetodelta/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "metricstransform/jmx", "cumulativetodelta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -237,7 +237,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/amp",
 				receivers:  []string{"otlp/jmx"},
-				processors: []string{"filter/jmx", "batch/jmx/amp"},
+				processors: []string{"filter/jmx", "metricstransform/jmx", "batch/jmx/amp"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
@@ -337,7 +337,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/amp/0",
 				receivers:  []string{"otlp/jmx"},
-				processors: []string{"filter/jmx/0", "transform/jmx/0", "batch/jmx/amp/0"},
+				processors: []string{"filter/jmx/0", "metricstransform/jmx", "transform/jmx/0", "batch/jmx/amp/0"},
 				exporters:  []string{"prometheusremotewrite/amp"},
 				extensions: []string{"sigv4auth"},
 			},
